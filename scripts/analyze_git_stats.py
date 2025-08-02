@@ -8,6 +8,7 @@ import json
 import re
 import subprocess
 import sys
+import statistics
 from collections import defaultdict
 from datetime import datetime, timedelta
 
@@ -82,19 +83,33 @@ def analyze_commits(since_date):
                 elif "feat:" in message or "feature" in message or "add" in message:
                     feature_commits += 1
 
+    # Create commit objects for weekly analysis
+    commit_objects = []
+    for commit in commits:
+        if not commit:
+            continue
+        parts = commit.split("|", 2)
+        if len(parts) >= 2:
+            commit_objects.append({
+                "hash": parts[0],
+                "date": parts[1],
+                "message": parts[2] if len(parts) >= 3 else ""
+            })
+
     return {
         "total": total_commits,
         "by_date": dict(commits_by_date),
         "fix_commits": fix_commits,
         "feature_commits": feature_commits,
         "other_commits": total_commits - fix_commits - feature_commits,
+        "commits": commit_objects  # Add commit data for weekly analysis
     }
 
 
 def analyze_prs(since_date):
     """Analyze PRs since given date."""
     cmd = (
-        "gh pr list --state merged --limit 1000 --json number,title,createdAt,mergedAt"
+        "gh pr list --state merged --limit 1000 --json number,title,createdAt,mergedAt,closedAt,additions,deletions"
     )
     output = run_git_command(cmd)
 
@@ -141,7 +156,11 @@ def analyze_prs(since_date):
         else:
             pr_types["other"] += 1
 
-    return {"total": len(filtered_prs), "by_type": dict(pr_types)}
+    return {
+        "total": len(filtered_prs),
+        "by_type": dict(pr_types),
+        "prs": filtered_prs  # Return the actual PR data for further analysis
+    }
 
 
 def analyze_changes(since_date):
@@ -193,6 +212,286 @@ def analyze_changes(since_date):
             "files": excluded_files,
         },
     }
+
+
+def parse_github_datetime(datetime_str):
+    """Parse GitHub datetime string to datetime object."""
+    if not datetime_str:
+        return None
+    # Remove timezone info for comparison
+    clean_str = datetime_str.replace("Z", "").replace("T", " ").split(".")[0]
+    try:
+        return datetime.fromisoformat(clean_str)
+    except (ValueError, AttributeError):
+        return None
+
+
+def calculate_pr_timing_metrics(prs):
+    """Calculate PR timing metrics (open to merge/close time)."""
+    timing_data = []
+
+    for pr in prs:
+        created_at = parse_github_datetime(pr.get("createdAt"))
+        merged_at = parse_github_datetime(pr.get("mergedAt"))
+
+        if created_at and merged_at:
+            # Calculate time difference in hours
+            time_diff = (merged_at - created_at).total_seconds() / 3600
+            timing_data.append({
+                "pr_number": pr.get("number"),
+                "title": pr.get("title", ""),
+                "hours": time_diff,
+                "days": time_diff / 24
+            })
+
+    if not timing_data:
+        return {"count": 0, "hours": [], "days": []}
+
+    hours = [item["hours"] for item in timing_data]
+    days = [item["days"] for item in timing_data]
+
+    return {
+        "count": len(timing_data),
+        "hours": hours,
+        "days": days,
+        "avg_hours": statistics.mean(hours),
+        "avg_days": statistics.mean(days),
+        "median_hours": statistics.median(hours),
+        "median_days": statistics.median(days),
+        "p95_hours": statistics.quantiles(hours, n=100)[94] if len(hours) > 5 else max(hours),
+        "p95_days": statistics.quantiles(days, n=100)[94] if len(days) > 5 else max(days),
+        "min_hours": min(hours),
+        "max_hours": max(hours),
+        "detailed": timing_data
+    }
+
+
+def categorize_prs_by_size(prs):
+    """Categorize PRs by line change buckets."""
+    buckets = {
+        "0-50": [],
+        "50-100": [],
+        "100-1000": [],
+        "1000-10000": [],
+        "10000+": []
+    }
+
+    for pr in prs:
+        additions = pr.get("additions", 0) or 0
+        deletions = pr.get("deletions", 0) or 0
+        total_lines = additions + deletions
+
+        # Add total_lines to PR data for later use
+        pr["total_lines"] = total_lines
+
+        if total_lines <= 50:
+            buckets["0-50"].append(pr)
+        elif total_lines <= 100:
+            buckets["50-100"].append(pr)
+        elif total_lines <= 1000:
+            buckets["100-1000"].append(pr)
+        elif total_lines <= 10000:
+            buckets["1000-10000"].append(pr)
+        else:
+            buckets["10000+"].append(pr)
+
+    return buckets
+
+
+def calculate_dora_metrics_by_size(prs, since_date):
+    """Calculate DORA metrics split by PR size buckets (excluding change failure rate)."""
+    buckets = categorize_prs_by_size(prs)
+    results = {}
+
+    for bucket_name, bucket_prs in buckets.items():
+        if bucket_prs:
+            # Calculate timing metrics only (no change failure rate per bucket)
+            timing_metrics = calculate_pr_timing_metrics(bucket_prs)
+
+            since_dt = datetime.fromisoformat(since_date.replace(" ", "T"))
+            days_in_period = (datetime.now() - since_dt).days
+            deployment_frequency = len(bucket_prs) / max(days_in_period, 1)
+
+            results[bucket_name] = {
+                "deployment_frequency": deployment_frequency,
+                "deployment_frequency_per_day": deployment_frequency,
+                "lead_time_hours": timing_metrics.get("median_hours", 0),
+                "lead_time_days": timing_metrics.get("median_hours", 0) / 24,
+                "pr_count": len(bucket_prs),
+                "avg_lines": statistics.mean([pr.get("total_lines", 0) for pr in bucket_prs]) if bucket_prs else 0
+            }
+        else:
+            results[bucket_name] = {
+                "deployment_frequency": 0,
+                "lead_time_hours": 0,
+                "pr_count": 0,
+                "avg_lines": 0
+            }
+
+    return results
+
+
+def calculate_dora_metrics(prs, since_date):
+    """Calculate DORA metrics from PR data."""
+    if not prs:
+        return {
+            "deployment_frequency": 0,
+            "lead_time_hours": 0,
+            "mttr_hours": 0,
+            "change_failure_rate": 0
+        }
+
+    # 1. Deployment Frequency - using merged PRs as deployment proxy
+    try:
+        since_dt = datetime.fromisoformat(since_date.replace(" ", "T"))
+    except (ValueError, TypeError):
+        print(f"Error: since_date '{since_date}' is not in a valid ISO format.", file=sys.stderr)
+        return {
+            "deployment_frequency": 0,
+            "lead_time_hours": 0,
+            "mttr_hours": 0,
+            "change_failure_rate": 0
+        }
+    days_in_period = (datetime.now() - since_dt).days
+    deployment_frequency = len(prs) / max(days_in_period, 1)
+
+    # 2. Lead Time for Changes - PR creation to merge time
+    timing_metrics = calculate_pr_timing_metrics(prs)
+    lead_time_hours = timing_metrics.get("median_hours", 0)
+
+    # 3. Change Failure Rate - approximate by looking at fix PRs following feature PRs
+    # NOTE: This heuristic matches PRs with 'fix' in title - may include false positives
+    # For more accuracy, consider GitHub labels (bug, fix, hotfix) if available
+    fix_prs = [pr for pr in prs if "fix" in pr.get("title", "").lower()]
+    feature_prs = [pr for pr in prs if any(word in pr.get("title", "").lower()
+                                          for word in ["feat", "feature"]) or
+                   pr.get("title", "").lower().startswith("add")]
+    change_failure_rate = len(fix_prs) / max(len(feature_prs), 1) * 100
+
+    # 4. MTTR - approximate by time between failure (fix PR creation) and resolution (fix PR merge)
+    fix_timing = calculate_pr_timing_metrics(fix_prs)
+    mttr_hours = fix_timing.get("median_hours", 0)
+
+    return {
+        "deployment_frequency": deployment_frequency,
+        "deployment_frequency_per_day": deployment_frequency,
+        "lead_time_hours": lead_time_hours,
+        "lead_time_days": lead_time_hours / 24,
+        "mttr_hours": mttr_hours,
+        "mttr_days": mttr_hours / 24,
+        "change_failure_rate": change_failure_rate,
+        "total_prs": len(prs),
+        "fix_prs": len(fix_prs),
+        "feature_prs": len(feature_prs)
+    }
+
+
+def group_data_by_week(data_list, date_field, since_date):
+    """Group data by week number and return weekly breakdowns."""
+    since_dt = datetime.fromisoformat(since_date.replace(" ", "T"))
+    weekly_data = defaultdict(list)
+
+    for item in data_list:
+        item_date = parse_github_datetime(item.get(date_field))
+        if item_date and item_date >= since_dt:
+            # Calculate week number from start date
+            days_diff = (item_date - since_dt).days
+            week_num = days_diff // 7 + 1
+            weekly_data[week_num].append(item)
+
+    return dict(weekly_data)
+
+
+def calculate_weekly_metrics(prs, commits, since_date):
+    """Calculate weekly DORA and PR metrics."""
+    # Group data by weeks
+    prs_by_week = group_data_by_week(prs, "mergedAt", since_date)
+    commits_by_week = group_data_by_week(commits, "date", since_date) if commits else {}
+
+    weekly_results = {}
+
+    for week_num in range(1, max(list(prs_by_week.keys()) + [1]) + 1):
+        week_prs = prs_by_week.get(week_num, [])
+        week_commits = commits_by_week.get(week_num, [])
+
+        if week_prs:
+            # Calculate DORA metrics for this week
+            timing = calculate_pr_timing_metrics(week_prs)
+
+            # Calculate change failure rate for this week
+            fix_prs = [pr for pr in week_prs if "fix" in pr.get("title", "").lower()]
+            feature_prs = [pr for pr in week_prs if any(word in pr.get("title", "").lower()
+                                                      for word in ["feat", "feature"]) or
+                           pr.get("title", "").lower().startswith("add")]
+            change_failure_rate = len(fix_prs) / max(len(feature_prs), 1) * 100 if feature_prs else 0
+
+            weekly_results[week_num] = {
+                "prs_count": len(week_prs),
+                "commits_count": len(week_commits),
+                "deployment_frequency": len(week_prs) / 7,  # per day
+                "lead_time_hours": timing.get("median_hours", 0),
+                "lead_time_days": timing.get("median_hours", 0) / 24,
+                "avg_pr_size": statistics.mean([pr.get("total_lines", 0) for pr in week_prs]) if week_prs else 0,
+                "change_failure_rate": change_failure_rate,
+                "fix_prs": len(fix_prs),
+                "feature_prs": len(feature_prs)
+            }
+        else:
+            weekly_results[week_num] = {
+                "prs_count": 0,
+                "commits_count": len(week_commits),
+                "deployment_frequency": 0,
+                "lead_time_hours": 0,
+                "lead_time_days": 0,
+                "avg_pr_size": 0,
+                "change_failure_rate": 0,
+                "fix_prs": 0,
+                "feature_prs": 0
+            }
+
+    return weekly_results
+
+
+def analyze_weekly_trends(weekly_metrics):
+    """Analyze trends in weekly metrics to show improvement/decline."""
+    if len(weekly_metrics) < 2:
+        return {"trend_analysis": "Insufficient data for trend analysis"}
+
+    weeks = sorted(weekly_metrics.keys())
+    trends = {}
+
+    # Calculate trends for key metrics
+    metrics_to_track = ["deployment_frequency", "lead_time_hours", "change_failure_rate", "avg_pr_size"]
+
+    for metric in metrics_to_track:
+        values = [weekly_metrics[week][metric] for week in weeks if weekly_metrics[week]["prs_count"] > 0]
+
+        if len(values) >= 2:
+            # Simple trend: compare first half vs second half
+            mid_point = len(values) // 2
+            first_half_avg = statistics.mean(values[:mid_point]) if values[:mid_point] else 0
+            second_half_avg = statistics.mean(values[mid_point:]) if values[mid_point:] else 0
+
+            if first_half_avg == 0:
+                trend = "insufficient_data"
+                change_pct = 0
+            else:
+                change_pct = ((second_half_avg - first_half_avg) / first_half_avg) * 100
+                if change_pct > 5:
+                    trend = "improving" if metric in ["deployment_frequency"] else "declining"
+                elif change_pct < -5:
+                    trend = "declining" if metric in ["deployment_frequency"] else "improving"
+                else:
+                    trend = "stable"
+
+            trends[metric] = {
+                "trend": trend,
+                "change_percent": change_pct,
+                "first_half_avg": first_half_avg,
+                "second_half_avg": second_half_avg
+            }
+
+    return trends
 
 
 def get_codebase_size():
@@ -252,6 +551,92 @@ def main():
         percentage = (count / prs["total"] * 100) if prs["total"] > 0 else 0
         print(f"  - {pr_type.capitalize()}: {count} ({percentage:.1f}%)")
     print()
+
+    # PR Timing Analysis
+    if prs["total"] > 0:
+        timing = calculate_pr_timing_metrics(prs["prs"])
+        print("## PR Timing Metrics (Open to Merge)")
+        print(f"PRs with timing data: {timing['count']}")
+        if timing['count'] > 0:
+            print(f"Average time to merge: {timing['avg_hours']:.1f} hours ({timing['avg_days']:.1f} days)")
+            print(f"Median time to merge: {timing['median_hours']:.1f} hours ({timing['median_days']:.1f} days)")
+            print(f"95th percentile: {timing['p95_hours']:.1f} hours ({timing['p95_days']:.1f} days)")
+            print(f"Fastest merge: {timing['min_hours']:.1f} hours")
+            print(f"Slowest merge: {timing['max_hours']:.1f} hours ({timing['max_hours']/24:.1f} days)")
+        print()
+
+        # DORA Metrics
+        dora = calculate_dora_metrics(prs["prs"], since_date)
+        print("## DORA Metrics")
+        print(f"Deployment Frequency: {dora['deployment_frequency_per_day']:.1f} deployments/day")
+        print(f"Lead Time for Changes: {dora['lead_time_hours']:.1f} hours ({dora['lead_time_days']:.1f} days)")
+        print(f"Mean Time to Recovery: {dora['mttr_hours']:.1f} hours ({dora['mttr_days']:.1f} days)")
+        print(f"Change Failure Rate: {dora['change_failure_rate']:.1f}%")
+        print(f"  (Based on {dora['fix_prs']} fix PRs vs {dora['feature_prs']} feature PRs)")
+        print()
+
+        # DORA Metrics by PR Size
+        dora_by_size = calculate_dora_metrics_by_size(prs["prs"], since_date)
+        print("## DORA Metrics by PR Size")
+        for bucket, metrics in dora_by_size.items():
+            print(f"\n### {bucket} lines ({metrics['pr_count']} PRs, avg: {metrics['avg_lines']:.0f} lines)")
+            if metrics['pr_count'] > 0:
+                print(f"  Deployment Frequency: {metrics['deployment_frequency_per_day']:.1f}/day")
+                print(f"  Lead Time: {metrics['lead_time_hours']:.1f}h ({metrics['lead_time_days']:.1f}d)")
+            else:
+                print("  No PRs in this size bucket")
+        print()
+
+        # Weekly Metrics Analysis
+        weekly_metrics = calculate_weekly_metrics(prs["prs"], commits.get("commits", []), since_date)
+        if len(weekly_metrics) > 1:
+            print("## Weekly Metrics Analysis")
+
+            # Show weekly breakdown
+            for week_num in sorted(weekly_metrics.keys()):
+                week = weekly_metrics[week_num]
+                print(f"\n### Week {week_num}")
+                print(f"  PRs: {week['prs_count']}, Commits: {week['commits_count']}")
+                if week['prs_count'] > 0:
+                    print(f"  Deployment Frequency: {week['deployment_frequency']:.1f}/day")
+                    print(f"  Lead Time: {week['lead_time_hours']:.1f}h")
+                    print(f"  Avg PR Size: {week['avg_pr_size']:.0f} lines")
+                    print(f"  Change Failure Rate: {week['change_failure_rate']:.1f}%")
+                else:
+                    print("  No PRs this week")
+
+            # Show trends
+            trends = analyze_weekly_trends(weekly_metrics)
+            print("\n### Trend Analysis (First Half vs Second Half)")
+
+            trend_labels = {
+                "deployment_frequency": "Deployment Frequency",
+                "lead_time_hours": "Lead Time",
+                "change_failure_rate": "Change Failure Rate",
+                "avg_pr_size": "Average PR Size"
+            }
+
+            for metric, trend_data in trends.items():
+                if metric in trend_labels:
+                    label = trend_labels[metric]
+                    trend = trend_data["trend"]
+                    change = trend_data["change_percent"]
+
+                    trend_emoji = "📈" if trend == "improving" else "📉" if trend == "declining" else "➡️"
+                    print(f"  {trend_emoji} {label}: {trend} ({change:+.1f}%)")
+
+            print()
+        else:
+            print("## Weekly Metrics Analysis")
+            print("Insufficient data for weekly analysis (need multiple weeks)")
+            print()
+    else:
+        print("## PR Timing Metrics")
+        print("No PR data available for timing analysis")
+        print()
+        print("## DORA Metrics")
+        print("No PR data available for DORA metrics")
+        print()
 
     # Analyze changes
     changes = analyze_changes(since_date)
