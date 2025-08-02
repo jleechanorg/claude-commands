@@ -4,7 +4,7 @@
 
 **Usage**: `/copilotsuper PR1 [PR2 PR3...]` or `/copilots PR1 [PR2 PR3...]`
 
-**Action**: Spawn orchestration agents to process multiple PRs in parallel with full Copilot analysis and fixes
+**Action**: Uses orchestration system (see `orchestrate.md`) to spawn individual agents for processing multiple PRs in parallel with full Copilot analysis and fixes
 
 ## 🚀 Key Features
 
@@ -19,34 +19,30 @@
 
 ## 🔧 Implementation Approach
 
+**🚨 ORCHESTRATION INTEGRATION**: Uses the orchestration system's agent reuse architecture (see `orchestrate.md` for complete details).
+
 **Core Workflow**:
 1. **Parse PR Numbers**: Validate and collect PR arguments
-2. **Spawn Orchestration Agents**: Create one agent per PR using `/orch`
-3. **Agent Tasks**: Each agent independently:
-   - Checkouts PR branch in isolated worktree
-   - Pulls latest from origin/main
-   - Resolves any merge conflicts
-   - Runs `/copilot` with intelligent stage optimization
-   - Commits and pushes fixes (only when changes made)
-4. **Monitor Progress**: Track all agents in real-time
+2. **Delegate to Orchestration**: Uses `/orchestrate` to spawn individual agents per PR
+3. **Agent Reuse Optimization**: Leverages orchestration's 50-80% efficiency gains through intelligent agent reuse
+4. **Monitor Progress**: Track all agents via orchestration system
 5. **Aggregate Results**: Compile summary from all agent results
 
-**Implementation Architecture**:
+**Individual Agent Per PR with Reuse**:
 ```bash
-# Uses orchestration system to spawn agents
-/orchestrate "Run copilot analysis on PR #$PR_NUMBER"
-
-# Each agent executes in isolation:
-python3 .claude/commands/copilot.py [PR_NUMBER]
+# Delegates to orchestration system for optimal agent management
+for PR in $PR_LIST; do
+    /orchestrate "Run copilot analysis on PR #$PR with agent reuse preference"
+done
 ```
 
-**Benefits of Orchestration Approach**:
-- ✅ **Parallel Execution**: All PRs processed simultaneously
-- ✅ **Resource Isolation**: Each agent has dedicated workspace
-- ✅ **No Branch Conflicts**: Worktrees prevent collisions
-- ✅ **Scalable**: Handle many PRs concurrently
-- ✅ **Fault Tolerant**: One agent failure doesn't affect others
-- ✅ **Real-time Visibility**: Monitor all agents' progress
+**Key Benefits** (via orchestration system):
+- ✅ **Agent Reuse**: 50-80% efficiency gains through intelligent reuse
+- ✅ **Complete Isolation**: Each PR gets dedicated agent workspace
+- ✅ **100% Coverage**: Every PR processed by individual agent
+- ✅ **Resource Optimization**: Strategic reuse without compromising quality
+
+→ **See `orchestrate.md`** for complete agent reuse architecture and implementation details.
 
 ## 📋 Command Specification
 
@@ -60,23 +56,18 @@ python3 .claude/commands/copilot.py [PR_NUMBER]
 User: /copilotsuper 718 719 720
 
 1. Validate PRs: Check accessibility of 718, 719, 720
-2. Spawn 3 agents simultaneously:
-   - Agent task-agent-XXXXX1 → PR #718
-   - Agent task-agent-XXXXX2 → PR #719
-   - Agent task-agent-XXXXX3 → PR #720
-3. Agents work in parallel:
-   - Each checks out PR in isolated worktree
-   - Pulls latest from main, resolves conflicts
-   - Runs copilot.py for analysis and fixes
-   - Commits and pushes changes
-4. Monitor progress:
-   - Real-time status updates
-   - Agent completion tracking
-5. Aggregate results:
-   - Agent 1: ✅ PR #718 - 5 issues fixed, ready to merge
-   - Agent 2: ✅ PR #719 - 3 security fixes, CI passing
-   - Agent 3: ⚠️ PR #720 - 1 blocking issue remains
-6. Present comprehensive summary report
+2. Delegate to orchestration system (see orchestrate.md):
+   - Spawns individual agents per PR with reuse optimization
+   - Each PR gets dedicated agent via orchestration system
+3. Orchestration handles:
+   - Agent reuse optimization (50-80% efficiency gains)
+   - Isolated worktree management
+   - Parallel execution coordination
+   - Progress monitoring
+4. Aggregate results from orchestration agents
+5. Present comprehensive summary report
+
+→ See orchestrate.md for detailed agent lifecycle and reuse architecture
 ```
 
 ### Output Format
@@ -133,19 +124,24 @@ User: /copilotsuper 718 719 720
 
 ## ⚡ Performance Considerations
 
-- **Parallel Processing**: All PRs processed simultaneously by independent agents
-- **Resource Limits**: System can handle ~10 agents concurrently
-- **Isolated Workspaces**: Each agent has dedicated worktree (no conflicts)
-- **Automatic Scaling**: Agents spawned based on PR count
-- **Timeout Handling**: Each agent has independent timeout (no blocking)
+**Performance is managed by the orchestration system** (see `orchestrate.md`):
+- **Agent Reuse**: 50-80% efficiency gains through intelligent reuse
+- **Parallel Processing**: All PRs processed simultaneously
+- **Resource Optimization**: Strategic agent lifecycle management
+- **Isolated Workspaces**: Dedicated worktrees prevent conflicts
+- **Scalable**: Handle 10+ PRs with optimal resource utilization
+
+→ **See `orchestrate.md`** for complete performance architecture and optimization details.
 
 ## 🚨 Safety Features
 
-- **No Current Branch Changes**: Your work remains untouched
+**Safety is handled by the orchestration system** (see `orchestrate.md`):
+- **Branch Isolation**: Absolute branch isolation protocol prevents contamination
 - **Agent Isolation**: Each agent works in separate worktree
-- **Failure Recovery**: Other agents continue if one fails
-- **Resource Cleanup**: Agents clean up their workspaces automatically
-- **Conflict Prevention**: Worktrees eliminate branch conflicts
+- **Failure Recovery**: Independent agent execution with fault tolerance
+- **Resource Cleanup**: Automatic workspace cleanup
+
+→ **See `orchestrate.md`** for complete safety protocols and branch isolation details.
 
 ## 🔄 Integration with Existing Commands
 
@@ -160,23 +156,11 @@ User: /copilotsuper 718 719 720
 
 ## 📝 Implementation Notes
 
-**Command Location**: `.claude/commands/copilotsuper.md`
-**Script Location**: `claude_command_scripts/commands/copilotsuper.sh`
-**Python Integration**: Leverages existing `copilot.py` infrastructure
+**Command Integration**: Uses orchestration system for all agent management
+**Dependencies**: Orchestration system + existing `copilot.py` infrastructure
+**Error Handling**: Managed by orchestration system's fault tolerance
 
-**Dependencies**:
-- GitHub CLI (`gh`) for PR operations
-- Python 3 for preferred copilot script execution
-- Bash for fallback copilot script execution
-- Git for branch management
-- Existing copilot command infrastructure (both Python and Shell)
-
-**Error Handling**:
-- Invalid PR numbers: Skip with warning
-- Agent failures: Other agents continue independently
-- Network issues: Each agent retries independently
-- Resource limits: Queue additional PRs if agent limit reached
-- Monitoring: Real-time status tracking for all agents
+→ **See `orchestrate.md`** for complete implementation details, dependencies, and error handling protocols.
 
 ## 🎉 Expected Benefits
 

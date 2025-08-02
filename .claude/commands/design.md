@@ -4,6 +4,9 @@
 
 **Usage**: `/design [feature-name] [--type=feature|bugfix|migration|refactor]` - Creates product spec and engineering design docs in `roadmap/`
 
+**Default Composition**: `/execute /arch /principalproductmanager /principalengineer /thinku /research [current_date_search]`
+
+🚨 **MANDATORY CURRENT DATE RESEARCH**: Must include fresh internet searches using current date (**$(date +"%B %d, %Y")**) to validate against latest industry trends, frameworks, and best practices. Avoid using outdated research when evaluating modern solutions.
 **Parameters**:
 - `feature-name`: Name of the feature/component to design
 - `--type`: Optional type for customized templates (default: feature)
@@ -33,6 +36,8 @@
 3. **Technical Clarity**: Define implementation approach before coding
 4. **Success Criteria**: Clear definition of "done" before starting
 5. **Methodology Enforcement**: Mandate /4layer, /tdd, /redgreen for quality
+6. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise
+7. **Current Industry Standards**: Validate approach against 2025 best practices and emerging technologies
 
 ## 🔄 Session Continuity
 
@@ -331,11 +336,19 @@ graph TD
 
 ## 🚨 Execution Protocol
 
+### Phase 0: Multi-Perspective Analysis (Enhanced)
+1. **Architecture Assessment** (`/arch`): Technical approach and system design
+2. **Product Strategy Review** (`/principalproductmanager`): User experience and business value
+3. **Engineering Leadership** (`/principalengineer`): Technical excellence and scalability
+4. **Critical Thinking** (`/thinku`): Challenge assumptions and identify risks
+5. **Current Research** (`/research [current_date_search]`): 2025 industry standards and best practices
+
 ### Phase 1: Requirements Gathering
 1. **Identify Feature Scope**: What are we building?
 2. **User Research**: Who uses this and why?
 3. **Existing Analysis**: What exists today (if migration)?
 4. **Success Definition**: When is it "done"?
+5. **Industry Validation**: How do current (2025) best practices inform our approach?
 
 ### Phase 2: Document Generation
 1. **Create Product Spec**: User-focused requirements
@@ -349,6 +362,9 @@ graph TD
 - ✅ All APIs have schemas documented
 - ✅ Testing strategy covers all user journeys
 - ✅ No placeholders or "TBD" sections
+- ✅ Multi-perspective analysis completed (product, engineering, architecture)
+- ✅ Current industry standards (2025) validation performed
+- ✅ Critical thinking challenges addressed
 
 ## 🎓 Lessons from React V2
 

@@ -242,10 +242,19 @@
 **CRITICAL**: ❌ NEVER execute orchestration tasks yourself | ✅ ALWAYS delegate to agents when /orch or /orchestrate is used
 
 🚨 **ORCHESTRATION DIRECT EXECUTION PREVENTION**: ⚠️ MANDATORY HARD STOP PROTOCOL
-- **Hard Stop Pattern**: Input scan for "/orch" prefix → immediate Task tool delegation, NO exceptions
-- **Mental Model**: "/orch" = "create agent to do this", NEVER "/orch" = "I should do this directly"
-- **Zero Exception Rule**: "/orch" ALWAYS triggers Task tool regardless of context or user statements
+- **Hard Stop Pattern**: Input scan for "/orch" prefix → immediate tmux orchestration delegation, NO exceptions
+- **Mental Model**: "/orch" = "create tmux agent to do this", NEVER "/orch" = "I should do this directly"
+- **Zero Exception Rule**: "/orch" ALWAYS triggers tmux orchestration system regardless of context or user statements
+- **CRITICAL**: Task tool ≠ orchestration system. Orchestration = tmux agents via `python3 .claude/commands/orchestrate.py`
 - 🔍 **Evidence**: Session violation (PR #979) when "just decide for me and start" bypassed delegation protocol
+
+🚨 **ABSOLUTE BRANCH ISOLATION PROTOCOL**: ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
+- ❌ **FORBIDDEN**: `git checkout`, `git switch`, or any branch switching commands
+- ❌ **FORBIDDEN**: Working on other branches, PRs, or repositories
+- ✅ **MANDATORY**: Stay on current branch for ALL work - delegate everything else to agents
+- ✅ **DELEGATION RULE**: Any work requiring different branch → `/orch` or orchestration agents
+- 🔍 **Evidence**: Branch switching violations cause context confusion and work contamination
+- **MENTAL MODEL**: "Current branch = My workspace, Other branches = Agent territory"
 
 **NO HARDCODING**: ❌ NEVER hardcode task patterns - agents execute EXACT tasks requested
 
@@ -595,8 +604,9 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - Context % | Complexity | Subagents? | Plan presented | Auto-approval applied
 
 🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`, `/orch`
-- ✅ ALWAYS trigger protocol workflow before task execution
-- ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor agents
+- ✅ ALWAYS trigger tmux orchestration protocol before task execution
+- ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor tmux agents
+- ❌ NEVER use Task tool for orchestration - use tmux system only
 
 **Key Commands**: `/execute` (auto-approval built-in) | `/plan` (requires manual approval) | `/fake` (code quality audit)
 

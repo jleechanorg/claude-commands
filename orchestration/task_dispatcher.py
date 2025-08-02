@@ -8,6 +8,7 @@ import glob
 import json
 import os
 import re
+import shutil
 import subprocess
 import time
 from typing import Any
@@ -27,8 +28,8 @@ except ImportError:
 TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
 AGENT_SESSION_TIMEOUT_SECONDS = 86400  # 24 hours
 
-# Production safety limits
-MAX_CONCURRENT_AGENTS = 5
+# Production safety limits - only counts actively working agents (not idle)
+MAX_CONCURRENT_AGENTS = int(os.environ.get('MAX_CONCURRENT_AGENTS', 5))
 
 
 # Shared configuration paths
@@ -44,30 +45,133 @@ class TaskDispatcher:
         self.orchestration_dir = orchestration_dir or os.path.dirname(__file__)
         self.tasks_dir = os.path.join(self.orchestration_dir, "tasks")
         # Removed complex task management - system just creates agents on demand
-        # Dynamic agent capabilities - agents register their own capabilities
-        # This allows agents to determine what they can handle based on task content
-        self.agent_capabilities = self._discover_agent_capabilities()
+        # Default agent capabilities - all agents have these basic capabilities
+        # Dynamic capability registration can be added in the future via Redis/file system
+        self.agent_capabilities = self._get_default_agent_capabilities()
 
-        # LLM-driven enhancements
-        self.active_agents = set()  # Track active agent names for collision detection
+        # LLM-driven enhancements - lazy loading to avoid subprocess overhead
+        self._active_agents = None  # Will be loaded lazily when needed
+        self._last_agent_check = 0  # Track when agents were last refreshed
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
 
-        # A2A Integration
+        # A2A Integration with enhanced robustness
         self.a2a_enabled = A2A_AVAILABLE
         if self.a2a_enabled:
-            self.task_pool = TaskPool()
-            print("A2A task broadcasting enabled")
+            try:
+                self.task_pool = TaskPool()
+                print("A2A task broadcasting enabled")
+            except Exception as e:
+                print(f"A2A TaskPool initialization failed: {e}")
+                print("Falling back to legacy mode")
+                self.a2a_enabled = False
+                self.task_pool = None
         else:
+            self.task_pool = None
             print("A2A not available - running in legacy mode")
 
         # Basic safety rules only - no constraint system needed
 
         # All tasks are now dynamic - no static loading needed
 
-    def _discover_agent_capabilities(self) -> dict:
-        """Discover agent capabilities dynamically from registered agents"""
-        # Default capabilities that all agents should have
+    @property
+    def active_agents(self) -> set:
+        """Lazy loading property for active agents with 30-second caching."""
+        current_time = time.time()
+        # Cache for 30 seconds to avoid excessive subprocess calls
+        if self._active_agents is None or (current_time - self._last_agent_check) > 30:
+            self._active_agents = self._get_active_tmux_agents()
+            self._last_agent_check = current_time
+        return self._active_agents
+
+    @active_agents.setter
+    def active_agents(self, value: set):
+        """Setter for active agents."""
+        self._active_agents = value
+        self._last_agent_check = time.time()
+
+    def _get_active_tmux_agents(self) -> set:
+        """Get set of actively working task-agent tmux sessions (not idle)."""
+        try:
+            # Check if tmux is available
+            if shutil.which("tmux") is None:
+                print("⚠️ 'tmux' command not found. Ensure tmux is installed and in PATH.")
+                return set()
+            result = subprocess.run(
+                ["tmux", "list-sessions", "-F", "#{session_name}"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode != 0:
+                return set()
+
+            sessions = result.stdout.strip().split('\n')
+            # Get all task-agent-* sessions
+            all_agent_sessions = {s for s in sessions if s.startswith('task-agent-')}
+
+            # Filter to only actively working agents (not idle)
+            active_agents = set()
+            idle_agents = set()
+
+            for session in all_agent_sessions:
+                if self._is_agent_actively_working(session):
+                    active_agents.add(session)
+                else:
+                    idle_agents.add(session)
+
+            # Print current status with breakdown
+            total_count = len(all_agent_sessions)
+            active_count = len(active_agents)
+            idle_count = len(idle_agents)
+
+            if total_count > 0:
+                print(f"📊 Found {active_count} actively working agent(s) (limit: {MAX_CONCURRENT_AGENTS})")
+                if idle_count > 0:
+                    print(f"   Plus {idle_count} idle agent(s) (completed but monitoring)")
+
+            return active_agents
+        except Exception as e:
+            print(f"⚠️ Error checking tmux sessions: {e}")
+            return set()
+
+    def _is_agent_actively_working(self, session_name: str) -> bool:
+        """Check if an agent session is actively working or idle."""
+        try:
+            # Capture the last few lines of the tmux session to check status
+            result = subprocess.run(
+                ["tmux", "capture-pane", "-t", session_name, "-p"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode != 0:
+                return False
+
+            output = result.stdout.strip()
+
+            # Check for completion indicators in the output
+            completion_indicators = [
+                "Agent completed successfully",
+                "Agent execution completed. Session remains active for monitoring",
+                "Session will auto-close in 24 hours",
+                "Monitor with: tmux attach"
+            ]
+
+            # If any completion indicator is found, agent is idle
+            for indicator in completion_indicators:
+                if indicator in output:
+                    return False
+
+            # If no completion indicators found, assume agent is actively working
+            return True
+
+        except Exception as e:
+            # If we can't determine, assume it's active to be safe
+            return True
+
+    def _get_default_agent_capabilities(self) -> dict:
+        """Get default capabilities that all dynamic agents should have."""
         return {
             "task_execution": "Execute assigned development tasks",
             "command_acceptance": "Accept and process commands",
@@ -77,9 +181,6 @@ class TaskDispatcher:
             "testing": "Run and debug tests",
             "server_management": "Start/stop servers and services",
         }
-
-        # In production, this would query Redis for registered agents
-        # and their self-reported capabilities, merged with defaults
 
     # =================== LLM-DRIVEN ENHANCEMENTS ===================
 
@@ -251,7 +352,7 @@ class TaskDispatcher:
         self, task_description: str, requirements: list[str] | None = None
     ) -> str | None:
         """Broadcast task to A2A system for agent claiming"""
-        if not self.a2a_enabled:
+        if not self.a2a_enabled or self.task_pool is None:
             return None
 
         try:
@@ -274,7 +375,10 @@ class TaskDispatcher:
             return {"a2a_enabled": False, "message": "A2A system not available"}
 
         try:
-            # Get overall A2A status
+            # Get overall A2A status - only if A2A is available
+            if not A2A_AVAILABLE:
+                return {"a2a_enabled": False, "message": "A2A system not available"}
+
             status = get_a2a_status()
 
             # Get monitor health
@@ -449,11 +553,15 @@ Complete the task, then use /pr to create a new pull request."""
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
 
-        # Check concurrent agent limit
+        # Refresh actively working agents count from tmux sessions (excludes idle agents)
+        self.active_agents = self._get_active_tmux_agents()
+
+        # Check concurrent active agent limit
         if len(self.active_agents) >= MAX_CONCURRENT_AGENTS:
             print(
-                f"⚠️ Agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}"
+                f"❌ Active agent limit reached ({MAX_CONCURRENT_AGENTS} max). Cannot create {agent_name}"
             )
+            print(f"   Currently working agents: {sorted(self.active_agents)}")
             return False
 
         # Initialize A2A protocol integration if available
