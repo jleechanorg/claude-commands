@@ -27,7 +27,11 @@ from debug_hybrid_system import process_story_for_display
 
 import firestore_service
 import gemini_service
-from firestore_service import get_user_settings, update_state_with_changes
+from firestore_service import (
+    _truncate_log_json,
+    get_user_settings,
+    update_state_with_changes,
+)
 from game_state import GameState
 
 # Initialize Firebase if not already initialized
@@ -137,17 +141,11 @@ def truncate_game_state_for_logging(
 ) -> str:
     """
     Truncates a game state dictionary for logging to improve readability.
-    Only shows the first max_lines lines of the JSON representation.
+    Uses the enhanced _truncate_log_json function from firestore_service.
     """
-    json_str = json.dumps(game_state_dict, indent=2, default=json_default_serializer)
-    lines = json_str.split("\n")
-
-    if len(lines) <= max_lines:
-        return json_str
-
-    truncated_lines = lines[:max_lines]
-    truncated_lines.append(f"... (truncated, showing {max_lines}/{len(lines)} lines)")
-    return "\n".join(truncated_lines)
+    return _truncate_log_json(
+        game_state_dict, max_lines=max_lines, json_serializer=json_default_serializer
+    )
 
 
 def _prepare_game_state(
@@ -605,7 +603,15 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
         processed_story = process_story_for_display(story_entries, debug_mode)
 
         # Calculate sequence_id (critical missing field)
+        # AI response should be next sequential number after user input
+        # User input gets len(story_context) + 1, AI response gets len(story_context) + 2
         sequence_id = len(story_context) + 2
+
+        # Calculate user_scene_number for this AI response (critical missing field)
+        # Count existing gemini responses in story_context
+        user_scene_number = (
+            sum(1 for entry in story_context if entry.get("actor") == "gemini") + 1
+        )
 
         # Extract structured fields from Gemini response (critical missing fields)
         structured_response = getattr(gemini_response_obj, "structured_response", None)
@@ -627,6 +633,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "entries_cleaned": num_cleaned,
             # CRITICAL: Add missing structured fields that frontend expects
             "sequence_id": sequence_id,
+            "user_scene_number": user_scene_number,  # Scene number for current AI response: count of existing Gemini responses + 1
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
         }
 
@@ -1265,8 +1272,10 @@ def _handle_set_command(
     logging_util.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
 
     proposed_changes = parse_set_command(payload_str)
-    # Need to use simple logging instead of _truncate_log_json for now
-    logging_util.info(f"GOD_MODE_SET parsed changes to be merged: {proposed_changes}")
+    # Enhanced logging with proper truncation
+    logging_util.info(
+        f"GOD_MODE_SET parsed changes to be merged:\n{_truncate_log_json(proposed_changes, json_serializer=json_default_serializer)}"
+    )
 
     if not proposed_changes:
         logging_util.warning("GOD_MODE_SET command resulted in no valid changes.")
@@ -1284,7 +1293,9 @@ def _handle_set_command(
         current_state_dict_before_update, proposed_changes
     )
     updated_state = apply_automatic_combat_cleanup(updated_state, proposed_changes)
-    logging_util.info(f"GOD_MODE_SET state AFTER update: {updated_state}")
+    logging_util.info(
+        f"GOD_MODE_SET state AFTER update:\n{_truncate_log_json(updated_state, json_serializer=json_default_serializer)}"
+    )
 
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 

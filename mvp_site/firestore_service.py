@@ -49,10 +49,14 @@ DELETE_TOKEN: str = (
 )
 
 
-def _truncate_log_json(data: Any, max_lines: int = MAX_LOG_LINES) -> str:
+def _truncate_log_json(
+    data: Any, max_lines: int = MAX_LOG_LINES, json_serializer=None
+) -> str:
     """Truncate JSON logs to max_lines to prevent log spam."""
     try:
-        json_str = json.dumps(data, indent=2, default=str)
+        # Use provided serializer or fallback to str
+        serializer = json_serializer if json_serializer is not None else str
+        json_str = json.dumps(data, indent=2, default=serializer)
         lines = json_str.split("\n")
         if len(lines) <= max_lines:
             return json_str

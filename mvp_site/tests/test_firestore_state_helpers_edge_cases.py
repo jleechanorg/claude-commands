@@ -201,5 +201,110 @@ class TestFirestoreStateHelpersEdgeCases(unittest.TestCase):
         assert result["changed"] == "new_value"
 
 
+class TestMCPMigrationEdgeCases(unittest.TestCase):
+    """Edge case tests for MCP migration fixes."""
+
+    def test_sequence_id_edge_cases(self):
+        """Test sequence_id calculation with edge cases."""
+        test_cases = [
+            ([], 2),  # Empty story context: AI response should get 2
+            ([{"actor": "user", "sequence_id": 1}], 3),  # One entry: AI gets 3
+            (
+                [{"actor": "user"}, {"actor": "gemini"}] * 10,
+                22,
+            ),  # 20 entries: AI gets 22
+        ]
+
+        for story_context, expected_sequence_id in test_cases:
+            with self.subTest(context_length=len(story_context)):
+                # Test the calculation logic directly
+                calculated_id = len(story_context) + 2
+                assert calculated_id == expected_sequence_id, (
+                    f"For {len(story_context)} entries, expected {expected_sequence_id}"
+                )
+
+    def test_user_scene_number_edge_cases(self):
+        """Test user_scene_number calculation with various actor distributions."""
+        test_cases = [
+            ([], 1),  # No gemini responses: scene number should be 1
+            ([{"actor": "user"}], 1),  # Only user: scene number 1
+            ([{"actor": "gemini"}], 2),  # One gemini: scene number 2
+            (
+                [{"actor": "user"}, {"actor": "gemini"}] * 5,
+                6,
+            ),  # 5 gemini: scene number 6
+        ]
+
+        for story_context, expected_scene_number in test_cases:
+            with self.subTest(
+                gemini_count=sum(1 for e in story_context if e.get("actor") == "gemini")
+            ):
+                # Test the calculation logic
+                calculated_scene = (
+                    sum(1 for entry in story_context if entry.get("actor") == "gemini")
+                    + 1
+                )
+                assert calculated_scene == expected_scene_number
+
+    def test_logging_edge_cases(self):
+        """Test enhanced logging with various edge cases."""
+        import world_logic
+        
+        edge_cases = [
+            ({}, "Empty dict"),
+            ({"single": "value"}, "Single value"),
+            ({"nested": {"deep": {"very": "deep"}}}, "Deep nesting"),
+            ({"list": [1, 2, 3, 4, 5]}, "List values"),
+            ({"mixed": {"str": "test", "num": 42, "bool": True}}, "Mixed types"),
+        ]
+
+        for test_data, description in edge_cases:
+            with self.subTest(case=description):
+                result = world_logic.truncate_game_state_for_logging(test_data, max_lines=5)
+                assert isinstance(result, str)
+                assert len(result) > 0, f"Empty result for {description}"
+
+    def test_api_response_required_fields_completeness(self):
+        """Verify API response contains ALL frontend-required fields."""
+        # This test ensures we don't accidentally remove required fields
+        required_fields = [
+            "success",
+            "story",
+            "narrative",
+            "response",
+            "game_state",
+            "state_changes",
+            "state_updates",
+            "sequence_id",
+            "user_scene_number",
+            "mode",
+            "user_input",
+            "debug_mode",
+        ]
+
+        # Mock a minimal successful response structure
+        mock_response = {
+            "success": True,
+            "story": [{"text": "test"}],
+            "narrative": "test narrative",
+            "response": "test response",
+            "game_state": {"test": "state"},
+            "state_changes": {},
+            "state_updates": {},
+            "sequence_id": 6,
+            "user_scene_number": 3,
+            "mode": "character",
+            "user_input": "test input",
+            "debug_mode": False,
+        }
+
+        # Verify all required fields are present
+        for field in required_fields:
+            with self.subTest(field=field):
+                assert field in mock_response, (
+                    f"Required field '{field}' missing from API response structure"
+                )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -3,13 +3,16 @@ Test file to verify world_logic.py structure and basic functionality.
 This test doesn't require external dependencies.
 """
 
+import asyncio
 import os
 import sys
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch, MagicMock
 
 # Add mvp_site to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+
+import world_logic
 
 
 class TestUnifiedAPIStructure(unittest.TestCase):
@@ -198,6 +201,189 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
         # Run async tests
         asyncio.run(run_tests())
+
+
+class TestMCPMigrationRedGreen(unittest.TestCase):
+    """Red-Green TDD tests for critical MCP migration bug fixes."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        # Mock story context with existing entries
+        self.mock_story_context = [
+            {"actor": "user", "sequence_id": 1, "text": "Hello"},
+            {"actor": "gemini", "sequence_id": 2, "text": "Hi there!"},
+            {"actor": "user", "sequence_id": 3, "text": "How are you?"},
+            {"actor": "gemini", "sequence_id": 4, "text": "I'm doing well!"},
+        ]
+
+        # Mock request data for process_action_unified
+        self.mock_request_data = {
+            "user_id": "test-user-123",
+            "campaign_id": "test-campaign-456",
+            "user_input": "Tell me a story",
+            "mode": "character",  # Use string directly instead of constants import
+        }
+
+    @patch("world_logic.firestore_service.get_campaign_by_id")
+    @patch("world_logic.firestore_service.update_campaign_game_state")
+    @patch("world_logic.firestore_service.add_story_entry")
+    @patch("world_logic.gemini_service.continue_story")
+    @patch("world_logic._prepare_game_state")
+    @patch("world_logic.get_user_settings")
+    def test_sequence_id_calculation_bug_red_phase(
+        self,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+    ):
+        """
+        🔴 RED PHASE: Test that would FAIL before sequence_id fix
+        
+        This test verifies that AI responses get the correct sequence_id calculation:
+        - User input should get: len(story_context) + 1 = 5
+        - AI response should get: len(story_context) + 2 = 6
+        
+        Before the fix, both would get len(story_context) + 1 = 5 (WRONG!)
+        """
+        # Mock the campaign data and story context
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            self.mock_story_context,
+        )
+
+        # Mock game state preparation
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {"test": "state"}
+        mock_prepare.return_value = (mock_game_state, False, 0)
+
+        # Mock user settings
+        mock_settings.return_value = {"debug_mode": False}
+
+        # Mock Gemini response with structured fields
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "Here's a test story"
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini.return_value = mock_gemini_response
+
+        # Execute the async function
+        result = asyncio.run(world_logic.process_action_unified(self.mock_request_data))
+
+        # CRITICAL TEST: Verify sequence_id is calculated correctly
+        # The AI response should get len(story_context) + 2 = 6
+        expected_sequence_id = len(self.mock_story_context) + 2  # Should be 6
+        actual_sequence_id = result.get("sequence_id")
+
+        self.assertEqual(
+            actual_sequence_id,
+            expected_sequence_id,
+            f"AI response sequence_id should be {expected_sequence_id} "
+            f"(len(story_context) + 2), but got {actual_sequence_id}. "
+            f"This indicates the sequence_id calculation bug is present!",
+        )
+
+    @patch("world_logic.firestore_service.get_campaign_by_id")
+    @patch("world_logic.firestore_service.update_campaign_game_state")
+    @patch("world_logic.firestore_service.add_story_entry")
+    @patch("world_logic.gemini_service.continue_story")
+    @patch("world_logic._prepare_game_state")
+    @patch("world_logic.get_user_settings")
+    def test_user_scene_number_field_red_phase(
+        self,
+        mock_settings,
+        mock_prepare,
+        mock_gemini,
+        mock_add_story,
+        mock_update_state,
+        mock_get_campaign,
+    ):
+        """
+        🔴 RED PHASE: Test that would FAIL before user_scene_number field addition
+        
+        This test verifies that the user_scene_number field is present in API responses.
+        Before the fix, this field was missing and would break frontend compatibility.
+        """
+        # Mock setup (same as sequence_id test)
+        mock_get_campaign.return_value = (
+            {"selected_prompts": [], "use_default_world": False},
+            self.mock_story_context,
+        )
+
+        mock_game_state = Mock()
+        mock_game_state.debug_mode = False
+        mock_game_state.to_dict.return_value = {"test": "state"}
+        mock_prepare.return_value = (mock_game_state, False, 0)
+
+        mock_settings.return_value = {"debug_mode": False}
+
+        mock_gemini_response = Mock()
+        mock_gemini_response.narrative_text = "Test story response"
+        mock_gemini_response.get_state_updates.return_value = {}
+        mock_gemini_response.structured_response = None
+        mock_gemini.return_value = mock_gemini_response
+
+        # Execute the async function
+        result = asyncio.run(world_logic.process_action_unified(self.mock_request_data))
+
+        # CRITICAL TEST: Verify user_scene_number field is present
+        self.assertIn(
+            "user_scene_number",
+            result,
+            "user_scene_number field is missing from API response! "
+            "This breaks frontend compatibility.",
+        )
+
+        # Verify the calculation is correct
+        # Should be: count of existing gemini responses + 1 = 2 + 1 = 3
+        expected_scene_number = (
+            sum(
+                1 for entry in self.mock_story_context if entry.get("actor") == "gemini"
+            )
+            + 1
+        )
+        actual_scene_number = result.get("user_scene_number")
+
+        self.assertEqual(
+            actual_scene_number,
+            expected_scene_number,
+            f"user_scene_number should be {expected_scene_number} "
+            f"(count of gemini responses + 1), but got {actual_scene_number}",
+        )
+
+    def test_enhanced_logging_json_serialization_red_phase(self):
+        """
+        🔴 RED PHASE: Test that would FAIL before enhanced logging fix
+        
+        This test verifies that the enhanced logging with JSON serialization
+        works correctly with complex objects that have custom serializers.
+        """
+        import world_logic
+        
+        # Create a complex game state dict that would cause JSON serialization issues
+        complex_game_state = {
+            "string_fields": {"name": "Test Campaign"},
+            "numeric_fields": {"level": 5, "health": 100},
+            "complex_object": Mock(),  # This would fail standard JSON serialization
+            "nested_dict": {"inner_complex": Mock(), "normal_field": "test_value"},
+        }
+
+        # CRITICAL TEST: This should not raise an exception with enhanced logging
+        # The function should handle complex objects via internal json_default_serializer
+        try:
+            result = world_logic.truncate_game_state_for_logging(complex_game_state, max_lines=10)
+            # Should return truncated JSON string without crashing
+            self.assertIsInstance(result, str)
+            # Should handle Mock objects gracefully (not crash)
+            self.assertTrue(len(result) > 0)
+        except (TypeError, ValueError) as e:
+            self.fail(
+                f"Enhanced logging failed with complex objects: {e}. "
+                f"This indicates the JSON serialization enhancement is missing!"
+            )
 
 
 if __name__ == "__main__":

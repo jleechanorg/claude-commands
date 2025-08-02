@@ -21,7 +21,7 @@ from typing import Any
 try:
     import logging_util
 
-    logger = logging_util.setup_logging(__name__)
+    logger = logging_util.getLogger(__name__)
 except ImportError:
     # Fallback to basic logging if logging_util not available
     logging.basicConfig(level=logging.INFO)
