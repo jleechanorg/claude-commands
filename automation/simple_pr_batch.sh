@@ -1,13 +1,16 @@
 #!/bin/bash
 
-# Enhanced PR automation with intelligent test fixing and email notifications
-# Processes PRs with status analysis, automated fixing, and detailed error reporting
+# Simplified PR automation - /copilot handles all analysis and workflow decisions
+# Focuses on batch processing, attempt tracking, cooldowns, and notifications
 
 PROCESSED_FILE="/tmp/pr_automation_processed.txt"
 LOG_FILE="/tmp/pr_automation.log"
 ATTEMPT_FILE="/tmp/pr_fix_attempts.txt"
 MAX_BATCH_SIZE=5
 MAX_FIX_ATTEMPTS=3
+
+# Timeout configuration (in seconds)
+COPILOT_TIMEOUT=1200   # 20 minutes for comprehensive /copilot processing
 
 # Create files if they don't exist
 touch "$PROCESSED_FILE" "$ATTEMPT_FILE"
@@ -77,12 +80,6 @@ except Exception as e:
 "
 }
 
-# Function to get PR status details
-get_pr_status() {
-    local pr_number="$1"
-    gh pr view "$pr_number" --json mergeable,mergeStateStatus,statusCheckRollup
-}
-
 # Function to count fix attempts for a PR
 get_fix_attempts() {
     local pr_number="$1"
@@ -115,89 +112,46 @@ reset_fix_attempts() {
     mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
 }
 
-# Function to attempt automated fix
-attempt_automated_fix() {
-    local pr_number="$1"
-    local issue_type="$2"
+# Function to handle command execution with timeout and error detection
+execute_with_timeout() {
+    local timeout_duration="$1"
+    local command="$2"
+    local pr_number="$3"
+    local operation_name="$4"
 
-    log "🔧 Attempting automated fix for PR #$pr_number ($issue_type)"
+    log "⏱️  Executing $operation_name for PR #$pr_number (timeout: ${timeout_duration}s)"
 
-    cd ~/projects/worldarchitect.ai
+    eval timeout "$timeout_duration" "$command"
+    local exit_code=$?
 
-    case "$issue_type" in
-        "failing_tests")
-            # Use /copilot to fix failing tests
-            if claude --dangerously-skip-permissions "/copilot $pr_number focus on fixing failing tests"; then
-                log "✅ Automated test fix succeeded for PR #$pr_number"
-                return 0
-            else
-                log "❌ Automated test fix failed for PR #$pr_number"
-                return 1
-            fi
-            ;;
-
-        "unknown_status")
-            # Refresh merge status by viewing the PR
-            log "🔄 Refreshing merge status for PR #$pr_number"
-            gh pr view "$pr_number" > /dev/null 2>&1
-            sleep 5  # Give GitHub time to refresh
-
-            # Check if status is still unknown
-            local status=$(gh pr view "$pr_number" --json mergeable | jq -r '.mergeable')
-            if [ "$status" != "UNKNOWN" ]; then
-                log "✅ Merge status refreshed for PR #$pr_number (now: $status)"
-                return 0
-            else
-                log "❌ Merge status still unknown for PR #$pr_number"
-                return 1
-            fi
-            ;;
-
-        "merge_conflicts")
-            # Use /copilot to resolve merge conflicts
-            if claude --dangerously-skip-permissions "/copilot $pr_number focus on resolving merge conflicts"; then
-                log "✅ Automated conflict resolution succeeded for PR #$pr_number"
-                return 0
-            else
-                log "❌ Automated conflict resolution failed for PR #$pr_number"
-                return 1
-            fi
-            ;;
-
-        *)
-            log "❓ Unknown issue type: $issue_type for PR #$pr_number"
-            return 1
-            ;;
-    esac
-}
-
-# Function to analyze PR and determine issues
-analyze_pr_status() {
-    local pr_number="$1"
-    local pr_status=$(get_pr_status "$pr_number")
-
-    local mergeable=$(echo "$pr_status" | jq -r '.mergeable')
-    local merge_state=$(echo "$pr_status" | jq -r '.mergeStateStatus')
-    local failed_checks=$(echo "$pr_status" | jq -r '.statusCheckRollup[] | select(.conclusion == "FAILURE") | .name' | wc -l)
-
-    log "📊 PR #$pr_number status: mergeable=$mergeable, state=$merge_state, failed_checks=$failed_checks"
-
-    # Determine primary issue
-    if [ "$failed_checks" -gt 0 ] || [ "$merge_state" = "UNSTABLE" ]; then
-        echo "failing_tests"
-    elif [ "$mergeable" = "UNKNOWN" ]; then
-        echo "unknown_status"
-    elif [ "$merge_state" = "DIRTY" ]; then
-        echo "merge_conflicts"
-    elif [ "$mergeable" = "MERGEABLE" ] && [ "$merge_state" = "CLEAN" ]; then
-        echo "ready"
+    if [ $exit_code -eq 0 ]; then
+        log "✅ $operation_name succeeded for PR #$pr_number"
+        return 0
+    elif [ $exit_code -eq 124 ]; then
+        log "⏰ $operation_name timed out after ${timeout_duration}s for PR #$pr_number"
+        return 2  # Special return code for timeout
     else
-        echo "other:$mergeable:$merge_state"
+        log "❌ $operation_name failed for PR #$pr_number (exit code: $exit_code)"
+        return 1
     fi
 }
 
+# Simplified PR processing - /copilot handles all analysis
+process_pr_with_copilot() {
+    local pr_number="$1"
+
+    log "🤖 Processing PR #$pr_number with comprehensive /copilot workflow"
+    cd ~/projects/worldarchitect.ai
+
+    execute_with_timeout "$COPILOT_TIMEOUT" \
+        "claude --dangerously-skip-permissions '/copilot $pr_number'" \
+        "$pr_number" "comprehensive PR processing"
+
+    return $?
+}
+
 # Main processing logic
-log "🚀 Starting enhanced PR batch processing"
+log "🚀 Starting simplified PR batch processing with /copilot"
 
 # Get PRs updated in last 24 hours
 RECENT_PRS=$(gh pr list --state open --limit 20 --json number,updatedAt | \
@@ -229,64 +183,62 @@ for PR in $RECENT_PRS; do
         fi
     fi
 
-    # Analyze PR status
-    ISSUE_TYPE=$(analyze_pr_status "$PR" 2>&1 | grep -v "📊" | tail -1)
+    # Simplified processing - /copilot handles all analysis and decisions
     ATTEMPT_COUNT=$(get_fix_attempts "$PR")
 
-    log "🔍 PR #$PR issue: $ISSUE_TYPE (attempt count: $ATTEMPT_COUNT)"
+    log "🤖 Processing PR #$PR with /copilot (attempt count: $ATTEMPT_COUNT)"
 
-    case "$ISSUE_TYPE" in
-        "ready")
-            log "✅ PR #$PR is ready to merge - running standard /copilot"
-            cd ~/projects/worldarchitect.ai
-            if claude --dangerously-skip-permissions "/copilot $PR"; then
-                # Mark as processed
-                TIMESTAMP=$(date +%s)
-                grep -v "^$PR:" "$PROCESSED_FILE" > "${PROCESSED_FILE}.tmp" 2>/dev/null || true
-                echo "$PR:$TIMESTAMP" >> "${PROCESSED_FILE}.tmp"
-                mv "${PROCESSED_FILE}.tmp" "$PROCESSED_FILE"
-                reset_fix_attempts "$PR"
-                log "✅ Successfully processed ready PR #$PR"
-                PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-            else
-                log "❌ Standard processing failed for PR #$PR"
+    if [ $ATTEMPT_COUNT -lt $MAX_FIX_ATTEMPTS ]; then
+        # Attempt comprehensive /copilot processing
+        NEW_ATTEMPT_COUNT=$(increment_fix_attempts "$PR")
+        log "🤖 Copilot attempt $NEW_ATTEMPT_COUNT/$MAX_FIX_ATTEMPTS for PR #$PR"
+
+        process_pr_with_copilot "$PR"
+        result=$?
+
+        if [ $result -eq 0 ]; then
+            # Processing succeeded - mark as completed
+            TIMESTAMP=$(date +%s)
+            grep -v "^$PR:" "$PROCESSED_FILE" > "${PROCESSED_FILE}.tmp" 2>/dev/null || true
+            echo "$PR:$TIMESTAMP" >> "${PROCESSED_FILE}.tmp"
+            mv "${PROCESSED_FILE}.tmp" "$PROCESSED_FILE"
+            reset_fix_attempts "$PR"
+            log "✅ Successfully processed PR #$PR with /copilot"
+            PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
+        elif [ $result -eq 2 ]; then
+            # Timeout - don't count as failure, will retry later
+            log "⏰ Copilot attempt $NEW_ATTEMPT_COUNT timed out for PR #$PR - will retry next cycle"
+            # Decrement attempt count since timeout shouldn't count as attempt
+            DECREMENTED_COUNT=$((NEW_ATTEMPT_COUNT - 1))
+            # Ensure DECREMENTED_COUNT doesn't go below 0
+            if [ $DECREMENTED_COUNT -lt 0 ]; then
+                DECREMENTED_COUNT=0
             fi
-            ;;
-
-        "failing_tests"|"unknown_status"|"merge_conflicts")
-            log "🔧 Processing PR #$PR with issue: $ISSUE_TYPE (attempts: $ATTEMPT_COUNT/$MAX_FIX_ATTEMPTS)"
-            if [ $ATTEMPT_COUNT -lt $MAX_FIX_ATTEMPTS ]; then
-                # Attempt automated fix
-                NEW_ATTEMPT_COUNT=$(increment_fix_attempts "$PR")
-                log "🔧 Fix attempt $NEW_ATTEMPT_COUNT/$MAX_FIX_ATTEMPTS for PR #$PR"
-
-                if attempt_automated_fix "$PR" "$ISSUE_TYPE"; then
-                    # Fix succeeded - mark as processed
-                    TIMESTAMP=$(date +%s)
-                    grep -v "^$PR:" "$PROCESSED_FILE" > "${PROCESSED_FILE}.tmp" 2>/dev/null || true
-                    echo "$PR:$TIMESTAMP" >> "${PROCESSED_FILE}.tmp"
-                    mv "${PROCESSED_FILE}.tmp" "$PROCESSED_FILE"
-                    reset_fix_attempts "$PR"
-                    log "✅ Successfully fixed and processed PR #$PR"
-                    PROCESSED_COUNT=$((PROCESSED_COUNT + 1))
-                else
-                    log "❌ Fix attempt $NEW_ATTEMPT_COUNT failed for PR #$PR"
-                fi
+            if [ $DECREMENTED_COUNT -gt 0 ]; then
+                grep -v "^$PR:" "$ATTEMPT_FILE" > "${ATTEMPT_FILE}.tmp" 2>/dev/null || true
+                echo "$PR:$DECREMENTED_COUNT" >> "${ATTEMPT_FILE}.tmp"
+                mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
             else
-                # Max attempts reached - send email notification
-                log "📧 Max fix attempts reached for PR #$PR - sending email notification"
-                FAILURE_DETAILS=$(gh pr checks "$PR" 2>/dev/null | grep -E "(FAILURE|ERROR)" | head -5 || echo "Could not retrieve failure details")
-                send_email_notification "$PR" "$ISSUE_TYPE" "$FAILURE_DETAILS" "$ATTEMPT_COUNT"
-
-                # Reset attempts to allow future processing
                 reset_fix_attempts "$PR"
             fi
-            ;;
+        else
+            log "❌ Copilot attempt $NEW_ATTEMPT_COUNT failed for PR #$PR"
+        fi
+    else
+        # Max attempts reached - send email notification
+        log "📧 Max copilot attempts reached for PR #$PR - sending email notification"
+        FAILURE_DETAILS_RAW=$(gh pr checks "$PR" 2>/dev/null | grep -E "(FAILURE|ERROR)" | head -5)
+        FAILURE_DETAILS_FALLBACK="Could not retrieve failure details for PR #$PR. Last attempt may have timed out - check automation logs for timeout vs failure details."
+        if [ -z "$FAILURE_DETAILS_RAW" ]; then
+            FAILURE_DETAILS="$FAILURE_DETAILS_FALLBACK"
+        else
+            FAILURE_DETAILS="$FAILURE_DETAILS_RAW"
+        fi
+        send_email_notification "$PR" "copilot_max_attempts" "$FAILURE_DETAILS" "$ATTEMPT_COUNT"
 
-        other:*)
-            log "❓ Unknown issue type for PR #$PR: $ISSUE_TYPE"
-            ;;
-    esac
+        # Reset attempts to allow future processing
+        reset_fix_attempts "$PR"
+    fi
 done
 
-log "🏁 Enhanced PR batch processing complete (processed: $PROCESSED_COUNT)"
+log "🏁 Simplified PR batch processing complete (processed: $PROCESSED_COUNT)"

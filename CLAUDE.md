@@ -219,6 +219,12 @@
 - **Execution Steps**: 1) Extract technical terms 2) Search Memory MCP 3) Log results transparently 4) Natural integration 5) Capture high-quality learnings
 - **Transparency**: Show "🔍 Searching memory..." → Report "📚 Found X relevant memories" → Indicate "📚 Enhanced with memory context"
 
+16. 🚨 **FILE CREATION PREVENTION**: ⚠️ MANDATORY - Stop unnecessary file proliferation
+- ❌ **FORBIDDEN PATTERNS**: Creating `_v2`, `_new`, `_backup`, `_temp` files when existing file can be edited
+- ✅ **REQUIRED CHECK**: Before any Write tool usage: "Can I edit an existing file instead?"
+- ✅ **GIT IS SAFETY**: Version control provides backup/history - no manual backup files needed
+- **Evidence**: PR #1127 - automation/simple_pr_batch_v2.sh violated this principle
+
 ### 🔧 GitHub MCP Setup
 **Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
 **Private Repos**: Use direct functions only (no search) | `mcp__github-server__get_pull_request()`
@@ -321,6 +327,14 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 ### Development Practices
 `tempfile.mkdtemp()` for test files | Verify before assuming | ❌ unsolicited refactoring
 **Logging**: ✅ `import logging_util` | ❌ `import logging` | Use project's unified logging
+
+🚨 **FILE EDITING PROTOCOL**: ⚠️ MANDATORY - Prevent unnecessary file proliferation
+- ❌ **NEVER create**: `file_v2.sh`, `file_backup.sh`, `file_new.sh` when editing existing file
+- ✅ **ALWAYS edit**: Existing files in place using Edit/MultiEdit tools
+- ✅ **Git handles safety**: Version control provides backup/rollback, no manual backup files needed
+- ✅ **Use branches**: For experimental changes, create git branches not new files
+- **Evidence**: PR #1127 - Created unnecessary automation/simple_pr_batch_v2.sh instead of direct edit
+- **Anti-Pattern**: "Let me create a new version..." → Should be "Let me edit the existing file..."
 
 🚨 **PR Review Verification**: Always verify current state before applying review suggestions
 - ✅ Check if suggested fix already exists in code | Read actual file content before changes
@@ -547,6 +561,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 
 ### 🚨 Anti-Patterns
 **Silent Breaking Changes**: Update all str() usage when changing objects | Test backward compatibility
+**Unnecessary File Creation**: ❌ NEVER create new files when editing existing ones suffices | Evidence: automation/simple_pr_batch_v2.sh creation instead of direct edit
 **Branch Confusion**: Verify context before changes | Check PR destination | Evidence: PR #627/628
 **Orchestration Hardcoding**: ❌ NEVER pattern-match tasks to agent types | ✅ Execute exact requested tasks | Evidence: task_dispatcher.py created test agents for all tasks
 
