@@ -169,6 +169,13 @@
 - ✅ Show actual output before suggesting fixes | Reference specific line numbers
 - 🔍 All claims must trace to specific evidence
 
+🚨 **NO UNVERIFIED SOURCE CITATION**: ⚠️ MANDATORY - Only cite sources you've actually read
+- ❌ NEVER present search result URLs as "sources" without reading their content first
+- ✅ ALWAYS distinguish between "potential sources found" vs "verified sources read"
+- ✅ ONLY cite URLs as evidence after successfully using WebFetch to read their content
+- **Pattern**: Search results ≠ Evidence | Only successfully fetched content = Evidence
+- **Evidence**: On 2024-05-12, attempted to cite Medium article https://medium.com/some-article-id as a source in PR #42 (commit 1a2b3c4), but received a 403 error when fetching content (see ticket #1234 for details).
+
 🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
 - 🔍 Evidence shown? | ✓ Claims match evidence? | ⚠️ Uncertainties marked? | ➡️ Next steps clear?
 

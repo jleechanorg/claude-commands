@@ -52,6 +52,20 @@
 - Critical evaluation of information quality
 - Strategic synthesis of findings
 
+## 🚨 Research Integrity Protocol
+
+### Source Verification Requirements
+1. **Search ≠ Sources**: Web search results are potential leads, not verified evidence
+2. **WebFetch Before Cite**: Only cite URLs after successfully reading content via WebFetch
+3. **Transparent Failures**: Clearly report when sources couldn't be accessed
+4. **Evidence-Based Claims**: All assertions must trace to successfully read content
+
+### Execution Standards
+- ✅ **Verified Sources**: Use WebFetch to confirm content before citing
+- ✅ **Access Tracking**: Document which sources were successfully read vs failed
+- ❌ **Unverified Citations**: Never present search result URLs as evidence without reading
+- ❌ **Assumption Claims**: Never claim source content based on search descriptions
+
 ## Research Process
 
 ### Phase 1: Research Planning (`/thinku`)
