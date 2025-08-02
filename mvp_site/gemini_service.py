@@ -1341,11 +1341,8 @@ def _validate_and_enforce_planning_block(
     # interactive character creation with player choices
 
     # Skip planning block if user is switching to god/dm mode
-    if user_input and any(
-        phrase in user_input.lower() for phrase in constants.MODE_SWITCH_PHRASES
-    ):
-        logging_util.info("User switching to god/dm mode - skipping planning block")
-        return response_text
+    # Note: Mode detection is now handled by the main Gemini response generation
+    # which naturally understands mode switching requests through system instructions
 
     # Skip planning block if AI response indicates mode switch
     if response_text and (
@@ -1388,11 +1385,11 @@ def _validate_and_enforce_planning_block(
         "⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block"
     )
 
-    # Determine if we need a deep think block based on keywords
-    think_keywords: list[str] = ["think", "plan", "consider", "strategize", "options"]
-    user_input_lower: str = user_input.lower()
-    needs_deep_think: bool = any(
-        keyword in user_input_lower for keyword in think_keywords
+    # Determine if we need a deep think block
+    # Note: Deep thinking detection is now handled by enhanced system instructions
+    # that guide Gemini to naturally recognize when strategic thinking is needed
+    needs_deep_think: bool = (
+        "think" in user_input.lower() or "plan" in user_input.lower()
     )
 
     # Strip any trailing whitespace
@@ -2099,11 +2096,9 @@ def _get_current_turn_prompt(user_input: str, mode: str) -> str:
     """Helper to generate the text for the user's current action."""
     if mode == "character":
         # Check if user is requesting planning/thinking
-        think_keywords = ["think", "plan", "consider", "strategize", "options"]
+        # Note: Thinking detection simplified to avoid hardcoded keyword lists
         user_input_lower = user_input.lower()
-        is_think_command = any(
-            keyword in user_input_lower for keyword in think_keywords
-        )
+        is_think_command = "think" in user_input_lower or "plan" in user_input_lower
 
         # Check for multiple "Main Character: think" patterns using regex
         think_pattern = r"Main Character:\s*think[^\n]*"

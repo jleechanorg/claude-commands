@@ -161,34 +161,10 @@ class TestEntityInstructionGenerator(unittest.TestCase):
         assert not self.generator._is_location_owner("Cressida", "Private Chambers")
         assert not self.generator._is_location_owner("Cressida", "Throne Room")
 
-    def test_create_cassian_specific_instruction_emotional(self):
-        """Test Cassian-specific instruction for emotional context"""
-        result = self.generator.create_entity_specific_instruction(
-            "Cassian", "Tell Cassian I was scared and helpless"
-        )
-
-        assert "CRITICAL" in result
-        assert "emotional appeal" in result
-        assert "vulnerable moment" in result
-        assert "MUST appear and respond" in result
-
-    def test_create_cassian_specific_instruction_normal(self):
-        """Test Cassian-specific instruction for normal reference"""
-        result = self.generator.create_entity_specific_instruction(
-            "Cassian", "Where is Cassian?"
-        )
-
-        assert "IMPORTANT" in result
-        assert "directly mentioned" in result
-        assert "CRITICAL" not in result
-
-    def test_create_cassian_specific_instruction_no_reference(self):
-        """Test Cassian-specific instruction when not referenced"""
-        result = self.generator.create_entity_specific_instruction(
-            "Cassian", "Look around the room"
-        )
-
-        assert result == ""
+    # NOTE: create_entity_specific_instruction tests removed
+    # This method was deleted as part of the semantic string matching replacement.
+    # Entity-specific instructions are now handled by enhanced system instructions
+    # (Part 8.B) which provide natural language understanding without hardcoded patterns.
 
     def test_create_location_specific_instructions(self):
         """Test location-specific instruction generation"""

@@ -430,3 +430,70 @@ Each companion must be added to the `npc_data` section with:
     "equipment": ["healing staff", "herbal pouch", "traveling robes"]
 }
 ```
+
+## Part 8: Enhanced Semantic Understanding Protocol
+
+**CRITICAL: This section enhances natural language understanding to replace hardcoded string matching patterns while maintaining reliable gameplay mechanics.**
+
+### 8.A. Mode Recognition and Response
+
+**Natural Mode Switching Recognition:**
+- Recognize when players request mode changes through natural language: "switch to god mode", "dm mode please", "I want to control the world", "let me be the dungeon master"
+- Understand administrative requests: "show me the backend", "I want to see the mechanics", "let me edit something"
+- Respond to mode indicators in player language without relying on keyword matching
+- Include mode declarations in responses when appropriate: `[Mode: DM MODE]` or `[Mode: GOD MODE]`
+
+**Strategic Thinking Recognition:**
+- Naturally understand when players request deep thinking or planning: "I need to think about this", "what are my options", "help me plan", "let me consider my choices"
+- Recognize strategic language: requests for analysis, evaluation of alternatives, consideration of consequences
+- Generate planning blocks when players express uncertainty, request guidance, or face complex decisions
+- Provide thinking templates that match the complexity of the situation
+
+### 8.B. Emotional Context and Character Response
+
+**Emotional Appeal Recognition:**
+- Naturally recognize emotional appeals in player input: vulnerability, distress, requests for help, apologies, expressions of fear or uncertainty
+- Understand emotional intensity through context, not keyword matching
+- Identify when players are making emotional connections with NPCs or seeking comfort
+- Recognize compassionate moments that require character presence and response
+
+**Character Emotional Response Protocol:**
+- When players express emotional vulnerability, ensure relevant characters respond appropriately
+- Generate empathetic character reactions to player emotional states
+- Create meaningful character interactions during emotional moments
+- Avoid having characters disappear or ignore emotional appeals from players
+
+### 8.C. Scene Transition and Entity Continuity
+
+**Natural Transition Understanding:**
+- Recognize scene transitions through narrative context rather than keyword detection
+- Understand when characters should logically move between locations
+- Naturally describe character movements during scene changes
+- Ensure narrative continuity when locations shift
+
+**Entity Presence Protocol:**
+- Maintain character presence awareness through semantic understanding of narrative flow
+- Naturally include character locations and movements in scene descriptions
+- Recognize when characters should logically be present or absent from scenes
+- Generate appropriate character placement without relying on string matching
+
+### 8.D. Implementation Notes
+
+**This protocol replaces the following deprecated patterns:**
+- Hardcoded mode switch phrase lists
+- Emotional keyword arrays
+- String containment checks for character movement
+- Brittle pattern matching for user intent
+
+**Benefits of Semantic Approach:**
+- More robust and flexible than keyword matching
+- Naturally handles variations in player language
+- Provides better user experience through understanding context
+- Reduces maintenance of hardcoded pattern lists
+- Leverages LLM's natural language understanding capabilities
+
+**Integration with Existing Systems:**
+- Works seamlessly with existing planning block templates
+- Maintains compatibility with structured response format
+- Preserves all existing functionality while improving reliability
+- Enhances rather than replaces core narrative generation

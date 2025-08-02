@@ -86,20 +86,9 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         # Old method should be gone
         assert not hasattr(generator, "create_cassian_specific_instruction")
 
-        # New generic method should exist
-        assert hasattr(generator, "create_entity_specific_instruction")
-
-        # Test it works for any entity
-        cassian_instruction = generator.create_entity_specific_instruction(
-            "Cassian", "I'm scared, Cassian help me"
-        )
-        assert "Cassian" in cassian_instruction
-
-        # And also works for other characters
-        bob_instruction = generator.create_entity_specific_instruction(
-            "Bob", "I'm scared, Bob help me"
-        )
-        assert "Bob" in bob_instruction
+        # Entity-specific instruction method was removed in favor of semantic understanding
+        # (Part 8.B: Emotional Context and Character Response in system instructions)
+        assert not hasattr(generator, "create_entity_specific_instruction")
 
     def test_entity_tracking_with_different_campaign(self):
         """Test full entity tracking with a non-Sariel campaign"""
@@ -181,20 +170,13 @@ class TestEntityTrackingGenericFixes(unittest.TestCase):
             custom_campaign_state={},
         )
 
-        # Generator should accept game state or PC name
-        # Not implemented yet, but this is the interface we need
-        # generator = EntityInstructionGenerator(player_character_name="Captain Rex")
-        # self.assertTrue(generator._is_player_character("Captain Rex"))
-        # self.assertFalse(generator._is_player_character("Some NPC"))
+        # Generator should accept game state or PC name (future enhancement)
 
     def test_proposed_dynamic_location_rules(self):
         """Test how location rules should work dynamically"""
         # Location rules should come from the campaign data, not hardcoded
 
-        # This is how it SHOULD work
-        # enforcer = LocationEntityEnforcer(location_rules=campaign_location_rules)
-        # rules = enforcer.get_required_entities_for_location("bridge")
-        # self.assertEqual(rules["required_roles"], ["officer", "navigator"])
+        # Future: Dynamic location rules from campaign data
 
     def test_proposed_no_character_specific_methods(self):
         """Test that generic system shouldn't have character-specific methods"""

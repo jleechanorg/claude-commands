@@ -189,16 +189,9 @@ class TestMitigationIntegration(unittest.TestCase):
 
     def test_cassian_problem_mitigation(self):
         """Test specific mitigation for The Cassian Problem"""
-        player_input = "Tell Cassian I was scared and helpless"
-
-        # Generate Cassian-specific instruction
-        cassian_instruction = self.instruction_gen.create_entity_specific_instruction(
-            "Cassian", player_input
-        )
-
-        # Should have emotional handling
-        assert "CRITICAL" in cassian_instruction
-        assert "emotional appeal" in cassian_instruction
+        # NOTE: create_entity_specific_instruction method was removed
+        # Emotional handling is now done through enhanced system instructions
+        # (Part 8.B: Emotional Context and Character Response)
 
         # Generate entity instructions with emotional context
         instructions = self.instruction_gen.generate_entity_instructions(

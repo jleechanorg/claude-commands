@@ -479,14 +479,9 @@ class EntityValidator:
                     f"⚠️ {entity}'s presence is ambiguous - unclear if physically present"
                 )
 
-        if len(transitions) > 0 and not any(
-            trans
-            for trans in transitions
-            if any(ent.lower() in trans.lower() for ent in expected_entities)
-        ):
-            warnings.append(
-                "⚠️ Scene transition detected but no character movement described"
-            )
+        # Note: Entity transition validation is now handled by enhanced system instructions
+        # that guide narrative generation to naturally include character movement descriptions
+        # This removes brittle string matching in favor of semantic understanding
 
         if len(mentioned_absent) > len(physically_present):
             warnings.append(

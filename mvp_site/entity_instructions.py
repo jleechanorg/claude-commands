@@ -208,12 +208,8 @@ class EntityInstructionGenerator:
         if entity in player_references:
             specific_instruction += " The player directly referenced this character, so ignoring them would break narrative continuity."
 
-        # Check for emotional context for any entity
-        if entity in player_references and any(
-            keyword in str(player_references).lower()
-            for keyword in ["scared", "helpless", "help"]
-        ):
-            specific_instruction += f" This is an emotional moment requiring {entity}'s response to the player's vulnerability."
+        # Note: Emotional context detection is now handled by enhanced system instructions
+        # that naturally understand emotional appeals and guide appropriate character responses
 
         return EntityInstruction(
             entity_name=entity,
@@ -222,7 +218,7 @@ class EntityInstructionGenerator:
             priority=priority,
         )
 
-    def _is_player_character(self, entity: str) -> bool:
+    def _is_player_character(self, entity: str) -> bool:  # noqa: ARG002
         """Determine if entity is a player character"""
         # This should be determined by game state, not hardcoded
         # For now, return False to avoid false positives
@@ -252,38 +248,15 @@ class EntityInstructionGenerator:
         critical_indicators = ["important", "key", "crucial", "main"]
         return any(indicator in story_lower for indicator in critical_indicators)
 
-    def create_entity_specific_instruction(
-        self, entity_name: str, player_input: str
-    ) -> str:
-        """Create specific instruction for handling entity references"""
-        if entity_name.lower() not in player_input.lower():
-            return ""
-
-        emotional_keywords = [
-            "scared",
-            "helpless",
-            "forgiveness",
-            "sorry",
-            "help",
-            "please",
-        ]
-        is_emotional = any(
-            keyword in player_input.lower() for keyword in emotional_keywords
-        )
-
-        if is_emotional:
-            return (
-                f"CRITICAL: The player is making an emotional appeal to {entity_name}. "
-                f"{entity_name} MUST appear and respond appropriately to this vulnerable moment. "
-                "Do not let this character disappear or ignore this direct emotional reference."
-            )
-        return (
-            f"IMPORTANT: {entity_name} has been directly mentioned and must be present "
-            "or respond in some way to acknowledge the reference."
-        )
+    # NOTE: create_entity_specific_instruction method removed
+    # Entity-specific instructions are now handled by enhanced system instructions
+    # (Part 8.B: Emotional Context and Character Response) which provide semantic
+    # understanding of entity references without hardcoded string matching.
 
     def create_location_specific_instructions(
-        self, location: str, expected_entities: list[str]
+        self,
+        location: str,
+        expected_entities: list[str],  # noqa: ARG002
     ) -> str:
         """Create location-specific entity instructions"""
         # Generic location-based instructions
@@ -336,7 +309,7 @@ class EntityEnforcementChecker:
         self, narrative: str, mandatory_entities: list[str]
     ) -> dict[str, Any]:
         """Check if narrative complies with entity instructions"""
-        compliance_report = {
+        compliance_report: dict[str, Any] = {
             "overall_compliance": True,
             "compliant_entities": [],
             "non_compliant_entities": [],
