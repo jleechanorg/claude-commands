@@ -16,7 +16,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from narrative_response_schema import parse_structured_response
 
-# from gemini_service import GeminiService  # Not available as class
 
 
 class TestStateUpdateIntegration(unittest.TestCase):
@@ -296,6 +295,7 @@ class TestStateUpdatePersistence(unittest.TestCase):
         # Verify specific updates
         assert state_updates["player_character_data"]["spell_slots_level_1"] == "2"
         assert state_updates["world_data"]["magical_energy"] == "increased"
+
 
 
 if __name__ == "__main__":

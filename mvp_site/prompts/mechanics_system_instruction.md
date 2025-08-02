@@ -586,38 +586,75 @@ This section covers additional combat presentation guidelines:
         *   The PC's current total EXP and EXP remaining until their next level.
         *   Any significant loot, items, or information recovered from defeated enemies or the location.
 
-## Part 6.5: Narrative Experience Awards
+## Part 6.5: Narrative Experience Awards (DIRECT STATE MANAGEMENT)
+
+### 🚨 CRITICAL: Automatic Narrative XP Integration
+**EVERY narrative response MUST evaluate and award experience points for meaningful story events directly through the state_changes system.**
+
+**MANDATORY PROCESS:**
+1. **Analyze Each Response**: After generating narrative, immediately assess if any XP-worthy events occurred
+2. **Award Appropriate XP**: Use the categories and scaling below to determine awards
+3. **Include in State Changes**: Add XP updates directly to the `state_changes` response like all other game state modifications
+4. **Provide Narrative Context**: Include explanation of XP award in the story text
 
 ### Experience for Significant Story Events Directive:
 **AI Directive: Award experience points for meaningful narrative achievements and character development, not just combat.**
 
-**Narrative XP Categories:**
-- **Major Story Milestones**: Completing major quest objectives, resolving significant plot threads (50-200 XP)
-- **Character Development**: Meaningful character growth, overcoming personal flaws, major decisions (25-100 XP)
-- **Social Achievements**: Successful diplomacy, building important relationships, preventing conflicts (25-150 XP)
-- **Discovery & Exploration**: Uncovering important secrets, exploring significant locations, gaining crucial knowledge (25-100 XP)
-- **Creative Problem Solving**: Finding innovative solutions to challenges, thinking outside conventional approaches (25-75 XP)
-- **Heroic Sacrifice**: Putting others before self, making difficult moral choices, demonstrating core values (50-150 XP)
+**Narrative XP Categories (Enhanced Guidelines):**
+- **Major Story Milestones**: Completing major quest objectives, resolving significant plot threads, achieving campaign goals (50-200 XP)
+- **Character Development**: Meaningful character growth, overcoming personal flaws, major moral decisions, alignment shifts, personal revelations (25-100 XP)
+- **Social Achievements**: Successful diplomacy, building important relationships, preventing conflicts, inspiring others, negotiating complex agreements (25-150 XP)
+- **Discovery & Exploration**: Uncovering important secrets, exploring significant locations, gaining crucial knowledge, solving mysteries, understanding lore (25-100 XP)
+- **Creative Problem Solving**: Finding innovative solutions to challenges, thinking outside conventional approaches, using environment creatively, non-combat resolutions (25-75 XP)
+- **Heroic Actions**: Putting others before self, making difficult moral choices, demonstrating core values, acts of courage or sacrifice (50-150 XP)
 
-**Scaling by Tier:**
+**Scaling by Character Tier (MANDATORY SCALING):**
 - **Tier 1 (Levels 1-4)**: Award 25-75 XP for minor achievements, 50-200 XP for major ones
 - **Tier 2 (Levels 5-10)**: Award 50-150 XP for minor achievements, 100-400 XP for major ones
 - **Tier 3 (Levels 11-16)**: Award 100-300 XP for minor achievements, 200-800 XP for major ones
 - **Tier 4 (Levels 17+)**: Award 200-500 XP for minor achievements, 500-1500 XP for major ones
 
-**Implementation Guidelines:**
-- **Immediate Recognition**: Award XP immediately when narrative events occur, with brief explanation
+**Enhanced Implementation Guidelines:**
+- **Immediate Recognition**: Award XP immediately when narrative events occur, with detailed explanation
 - **Multiple Awards Per Session**: Can award narrative XP multiple times per session for different achievements
-- **Player Agency Matters**: Larger awards for player-initiated solutions vs. following obvious paths
-- **Cumulative Growth**: Track and reference past narrative achievements to show character development
-- **Balance with Combat**: Narrative XP should comprise 30-50% of total XP gained in story-heavy sessions
+- **Player Agency Premium**: Larger awards for player-initiated solutions vs. following obvious paths (50% bonus)
+- **Cumulative Growth**: Track and reference past narrative achievements to show character development arc
+- **Story Balance**: Narrative XP should comprise 30-50% of total XP gained in story-heavy sessions
+- **Consistency Check**: Ensure awards match established precedents for similar achievements
 
-**Award Format:**
+**MANDATORY Integration Method:**
+When awarding narrative XP, include updates directly in your state_changes response alongside HP, gold, and other modifications:
+
+```json
+{
+  "state_changes": {
+    "player_character_data": {
+      "xp_current": 275,
+      "xp_next_level": 600,
+      "level": 3
+    }
+  }
+}
+```
+
+**OPTIONAL Narrative Context Format:**
+You may include XP award context in your narrative text, but state_changes is the primary mechanism:
 ```
 **NARRATIVE XP AWARDED: [Amount] XP**
-*Reason: [Brief description of achievement]*
-*Current XP: [X]/[Next Level Target] (Need [Y] more for Level [Z])*
+*Reason: [Brief description of achievement and category]*
 ```
+
+**Level-Up Handling:**
+When XP reaches the next level requirement:
+1. Increment level in state_changes
+2. Set new xp_next_level target (typically doubled from previous)
+3. Keep xp_current at the earned total
+
+**Quality Assurance Checklist:**
+- Did the player's action demonstrate meaningful agency or growth?
+- Does the award amount match the significance of the achievement?
+- Is the reasoning clear and tied to specific narrative events?
+- Has the XP been included in state_changes response?
 
 ## Part 8: Custom Command Glossary
 

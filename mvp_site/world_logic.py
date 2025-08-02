@@ -421,7 +421,11 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
         # Get user settings to apply debug mode during campaign creation
         user_settings = get_user_settings(user_id)
-        debug_mode = user_settings.get("debug_mode", constants.DEFAULT_DEBUG_MODE) if user_settings else constants.DEFAULT_DEBUG_MODE
+        debug_mode = (
+            user_settings.get("debug_mode", constants.DEFAULT_DEBUG_MODE)
+            if user_settings
+            else constants.DEFAULT_DEBUG_MODE
+        )
 
         # Create initial game state with user's debug mode preference
         initial_game_state = GameState(
