@@ -672,3 +672,57 @@ Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical pat
 - **Responses**: Bullet points | Minimal output | Essential info only
 - **Tools**: Batch calls | Smart search (Grep/Glob) | Avoid re-reads
 - **Complex tasks**: Split across messages | Monitor server load
+
+## AI-Assisted Development Protocols (🚨)
+
+### Development Velocity Benchmarks
+**Claude Code CLI Performance** (based on GitHub stats):
+- **Average**: 15.6 PRs/day, ~20K lines changed/day
+- **Peak**: 119 commits in single day
+- **Parallel Capacity**: 3-5 task agents simultaneously
+- **First-time-right**: 85% accuracy with proper specs
+
+### AI Development Planning (⚠️ MANDATORY)
+**All development timelines must use data-driven estimation**:
+- **Human estimate**: 3 weeks → **AI estimate**: 2-3 days
+- **Calculation Steps**:
+  1. Estimate lines of code (with 20% padding)
+  2. Apply velocity: 820 lines/hour average (excludes debugging, refactoring, and code review time)
+  3. Add PR overhead: 5-12 min per PR
+  4. Apply parallelism: 30-45% reduction
+     - Use **30%** if tasks are highly independent and agents are experienced
+     - Use **45%** if tasks are interdependent, agents are less experienced, or integration is complex
+  5. Add integration buffer: 10-30%
+- **Realistic multiplier**: 10-15x faster (not 20x)
+- **Avoid**: Anchoring bias from initial suggestions
+
+### Task Decomposition for AI Agents
+**Pattern for maximum efficiency**:
+```
+1. Break into independent, parallel tasks
+2. Each agent gets clear deliverable (1 PR)
+3. No inter-agent dependencies within phase
+4. Integration phase at end of each sprint
+```
+
+### AI Sprint Structure (1 Hour Sprint)
+**Phase 1 (15 min)**: Core functionality - 3-5 parallel agents
+**Phase 2 (15 min)**: Secondary features - 3-5 parallel agents
+**Phase 3 (15 min)**: Polish & testing - 2-3 parallel agents
+**Phase 4 (15 min)**: Integration & deploy - 1 agent
+
+### Success Patterns from Stats
+- **Micro-PR workflow**: Each agent creates focused PR
+- **Continuous integration**: Merge every 15 minutes
+- **Test-driven**: Tests in parallel with features
+- **Architecture-first**: Design before parallel execution
+
+### Anti-Patterns to Avoid
+- ❌ Sequential task chains (wastes AI parallelism)
+- ❌ Human-scale estimates (still too conservative)
+- ❌ Single large PR (harder to review/merge)
+- ❌ Waiting for perfection (iterate fast)
+- ❌ **Anchoring to user suggestions** (calculate independently)
+- ❌ **Over-optimistic estimates** (under 1 hour for major features)
+- ❌ **Ignoring PR overhead** (5-12 min per PR adds up)
+- ❌ **Assuming perfect parallelism** (45% max benefit)
