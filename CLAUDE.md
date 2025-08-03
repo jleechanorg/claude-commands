@@ -237,6 +237,11 @@
 **Private Repos**: Use direct functions only (no search) | `mcp__github-server__get_pull_request()`
 **Restart After Token Change**: Remove & re-add github-server MCP
 
+🚨 **GITHUB API SELF-APPROVAL LIMITATION**: ⚠️ MANDATORY - Cannot approve own PRs via API
+- ❌ **NEVER attempt**: `gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --method POST --field event=APPROVE` on own PRs
+- ✅ **ALWAYS use**: General issue comments `gh api repos/owner/repo/issues/{pr_number}/comments --method POST` instead
+- 🔍 **Evidence**: HTTP 422 "Can not approve your own pull request" error discovered during `/review /copilot` execution
+
 ## Orchestration System
 
 **Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
