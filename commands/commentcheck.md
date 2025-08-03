@@ -193,30 +193,30 @@ echo "=== FAKE COMMENT DETECTION ==="
 # Pattern 1: Identical repeated responses
 echo "Checking for identical repeated responses..."
 gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
+  jq -r '.[] | select(.user.login == "${USER}2015") | .body' | \
   sort | uniq -c | sort -nr | head -10
 
 # Pattern 2: Template-based responses
 echo "Checking for template patterns..."
 gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
+  jq -r '.[] | select(.user.login == "${USER}2015") | .body' | \
   grep -E "(Thank you .* for|Comment processed|The threading implementation|copilot threading system)" | \
   wc -l
 
 # Pattern 3: Generic acknowledgments without specifics
 echo "Checking for generic responses..."
 GENERIC_COUNT=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
+  jq -r '.[] | select(.user.login == "${USER}2015") | .body' | \
   grep -c "100% coverage achieved\|threading system is fully operational" || echo 0)
 echo "Generic template responses found: $GENERIC_COUNT"
 
 # Pattern 4: Author-based templating detection
 echo "Checking for author-based templating..."
 CODERABBIT_RESPONSES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
+  jq -r '.[] | select(.user.login == "${USER}2015") | .body' | \
   grep -c "Thank you CodeRabbit" || echo 0)
 COPILOT_RESPONSES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-  jq -r '.[] | select(.user.login == "jleechan2015") | .body' | \
+  jq -r '.[] | select(.user.login == "${USER}2015") | .body' | \
   grep -c "Thank you.*Copilot" || echo 0)
 
 echo "CodeRabbit-specific templates: $CODERABBIT_RESPONSES"

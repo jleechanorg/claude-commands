@@ -70,7 +70,7 @@ fi
 
 # Removed: Self-hosted LLM helper functions
 # These are now handled by the dedicated llm_selfhost repository
-# See: https://github.com/jleechanorg/llm_selfhost
+# See: https://github.com/${USER}org/llm_selfhost
 
 # SSH tunnel PID file
 SSH_TUNNEL_PID_FILE="/tmp/qwen_ssh_tunnel.pid"
@@ -488,8 +488,8 @@ if [ -n "$MODE" ]; then
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
                 echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/${USER}org/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/${USER}org/llm_selfhost${NC}"
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -654,7 +654,7 @@ if [ -n "$MODE" ]; then
                     # Create the instance with qwen label
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
+                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/${USER}org/llm_selfhost.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                     INSTANCE_RESULT=$(eval $INSTANCE_CMD)
                     # Handle both JSON and Python dict formats for new_contract
@@ -771,7 +771,7 @@ if [ -n "$MODE" ]; then
             API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/${USER}org/llm_selfhost.git${NC}"
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -895,8 +895,8 @@ if [ -n "$MODE" ]; then
             if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
                 echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/${USER}org/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/${USER}org/llm_selfhost${NC}"
                 echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1019,8 +1019,8 @@ else
         if [ ! -f "$API_PROXY_PATH" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
             echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/${USER}org/llm_selfhost.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/${USER}org/llm_selfhost${NC}"
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1181,7 +1181,7 @@ else
                     --disk 60 \\
                     --ssh \\
                     $ENV_VARS \\
-                    --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git \\
+                    --env GIT_REPO=https://github.com/${USER}org/llm_selfhost.git \\
                     --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                 INSTANCE_RESULT=$(eval $INSTANCE_CMD)
@@ -1448,8 +1448,8 @@ EOF
         if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
             echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/${USER}org/llm_selfhost.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/${USER}org/llm_selfhost${NC}"
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"

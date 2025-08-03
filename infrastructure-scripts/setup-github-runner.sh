@@ -24,7 +24,7 @@ fi
 
 # Configuration
 RUNNER_DIR="$HOME/actions-runner"
-REPO_URL="https://github.com/jleechanorg/your-project.com"
+REPO_URL="https://github.com/${USER}org/your-project.com"
 RUNNER_VERSION="2.311.0"
 LABELS="self-hosted,claude"
 

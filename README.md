@@ -25,12 +25,35 @@ This repository contains a comprehensive Claude Code command system designed for
 - **Automated PR processing** with intelligent code review and fixing
 - **Self-hosted Claude bot** for repository-based command processing
 
-### Quick Start
+## 🚀 Quick Start
 
-1. **Install**: Run `./install-claude-commands.sh` for automated setup
-2. **Explore**: Use `/help` and `/list` to discover available commands
-3. **Start Simple**: Try cognitive commands like `/think`, `/arch`, `/debug`
-4. **Scale Up**: Explore orchestration with `/orch` for parallel workflows
+**One-Command Installation:**
+```bash
+# Clone and install
+git clone https://github.com/jleechanorg/claude-commands.git
+cd claude-commands
+./install.sh
+```
+
+The installer will:
+- ✅ Copy commands to `.claude/commands/` in your project
+- ✅ Install `claude_start.sh` startup script  
+- ✅ Update `.gitignore` automatically
+- ✅ Provide adaptation guidance
+
+**Start Using:**
+```bash
+# Start Claude Code with MCP servers
+./claude_start.sh
+
+# Discover commands
+/list
+
+# Try cognitive commands
+/think "How should we architect this feature?"
+/arch "Review the current system design"
+/execute "implement user authentication"
+```
 
 ---
 
@@ -213,15 +236,15 @@ git clone https://github.com/jleechanorg/claude-commands.git
 cd claude-commands
 
 # Run the installer
-./install-claude-commands.sh
+./install.sh
 ```
 
 The installer will:
-- ✅ Check prerequisites (git, python3, pip)
-- ✅ Set up directory structure
-- ✅ Install command definitions and scripts
-- ✅ Configure infrastructure components
-- ✅ Validate the installation
+- ✅ Create `.claude/commands/` directory structure
+- ✅ Install 100+ command definitions and scripts  
+- ✅ Copy `claude_start.sh` startup script to root
+- ✅ Update `.gitignore` automatically
+- ✅ Provide adaptation guidance
 
 ### Manual Setup
 
@@ -234,7 +257,7 @@ The installer will:
    ```
    your-project/
    ├── .claude/commands/     # Command definitions
-   ├── claude_command_scripts/  # Script implementations
+   ├── scripts/              # Optional: Command script implementations
    ├── orchestration/        # Multi-agent system (optional)
    ├── automation/          # PR automation (optional)
    ├── claude-bot-commands/ # Self-hosted bot (optional)
@@ -242,9 +265,9 @@ The installer will:
    ```
 
 3. **Configuration**:
-   - Copy `CLAUDE.md` to your project root
-   - Adapt file paths and project references
-   - Configure MCP servers using `claude_mcp.sh`
+   - Adapt file paths and project references in installed commands
+   - Configure MCP servers using `claude_mcp.sh` from infrastructure-scripts
+   - Update `claude_start.sh` with your project-specific paths
 
 ---
 

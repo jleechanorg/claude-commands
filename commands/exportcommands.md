@@ -1,6 +1,6 @@
 # /exportcommands - Export Claude Commands to Reference Repository
 
-**Purpose**: Comprehensive export workflow to https://github.com/jleechanorg/claude-commands for reference and sharing
+**Purpose**: Comprehensive export workflow to https://github.com/${USER}org/claude-commands for reference and sharing
 
 **Usage**: `/exportcommands` - Executes complete export pipeline with Git operations
 
@@ -17,7 +17,7 @@
 **Content Filtering Setup**:
 - Initialize comprehensive export filter system with multiple filter types
 - Exclude project-specific directories and files ($PROJECT_ROOT/, run_tests.sh, testi.sh)
-- Filter out personal/project references (jleechan, your-project.com, Firebase specifics)
+- Filter out personal/project references (${USER}, your-project.com, Firebase specifics)
 - Transform project-specific paths to generic placeholders
 - Set up warning header templates for exported files
 
@@ -27,7 +27,7 @@
 ```bash
 # Clone fresh repository from main
 export REPO_DIR="/tmp/claude_commands_repo_fresh"
-gh repo clone jleechanorg/claude-commands "$REPO_DIR"
+gh repo clone ${USER}org/claude-commands "$REPO_DIR"
 cd "$REPO_DIR" && git checkout main
 
 # Create export branch from clean main
@@ -87,7 +87,7 @@ cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
 sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
 sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
-sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
+sed -i "s|${USER}|${USER}|g" /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```
 
@@ -109,7 +109,7 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     # Apply content transformations
     sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
-    sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
+    sed -i "s|${USER}|${USER}|g" "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
     # Add project-specific warning to commands with mvp_site references
@@ -144,7 +144,7 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         # Apply transformations
         sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/jleechan/projects/your-project.com|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
+        sed -i 's|/home/${USER}/projects/your-project.com|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
@@ -176,7 +176,7 @@ for script_name in "${ROOT_SCRIPTS[@]}"; do
         sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|${USER}|$USER|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
@@ -250,7 +250,7 @@ cp install-claude-commands.sh staging/install-claude-commands.sh
 
 # Apply content filtering to installer
 sed -i 's|worldarchitect\.ai|your-project.com|g' staging/install-claude-commands.sh
-sed -i 's|jleechan|$USER|g' staging/install-claude-commands.sh
+sed -i 's|${USER}|$USER|g' staging/install-claude-commands.sh
 
 # Ensure executable permissions
 chmod +x staging/install-claude-commands.sh
@@ -268,8 +268,8 @@ cp .claude/commands/README_EXPORT_TEMPLATE.md staging/README.md
 
 # Apply content filtering to README
 sed -i 's|worldarchitect\.ai|your-project.com|g' staging/README.md
-sed -i 's|jleechan|$USER|g' staging/README.md
-sed -i 's|github\.com/jleechanorg/claude-commands|github.com/$USER/claude-commands|g' staging/README.md
+sed -i 's|${USER}|$USER|g' staging/README.md
+sed -i 's|github\.com/${USER}org/claude-commands|github.com/$USER/claude-commands|g' staging/README.md
 ```
 - **Structure**: Disclaimer → Intro → Table of Contents → Main Highlights → Installation → Architecture
 - **Main Highlights**: Orchestration system, most interesting commands, most interesting scripts
@@ -449,14 +449,14 @@ See README.md for installation and adaptation guidance."
 # File content transformations
 sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "$file"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$file"
-sed -i "s|jleechan|${USER}|g" "$file"
+sed -i "s|${USER}|${USER}|g" "$file"
 sed -i 's|WorldArchitect\.AI|Your Project|g' "$file"
 sed -i 's|TESTING=true vpython|TESTING=true python|g' "$file"
 sed -i 's|Flask/Gunicorn|Web Framework|g' "$file"
 sed -i 's|Firebase/Firestore|Database|g' "$file"
 sed -i 's|serviceAccountKey\.json|database_credentials.json|g' "$file"
 sed -i 's|worktree_worker[0-9]*|workspace|g' "$file"
-sed -i 's|github\.com/jleechan|github.com/$USER|g' "$file"
+sed -i 's|github\.com/${USER}|github.com/$USER|g' "$file"
 sed -i 's|D&D 5e|Tabletop RPG|g' "$file"
 sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 ```
@@ -475,9 +475,9 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 
 **Path Generalization**:
 - `$PROJECT_ROOT/` → `$PROJECT_ROOT/`
-- `/home/jleechan/projects/your-project.com/` → `$WORKSPACE_ROOT/`
+- `/home/${USER}/projects/your-project.com/` → `$WORKSPACE_ROOT/`
 - `your-project.com` → `your-project.com`
-- `jleechan` → `$USER`
+- `${USER}` → `$USER`
 - Hardcoded file paths → Environment variable placeholders
 - Project-specific test commands → Generic test patterns
 
@@ -507,7 +507,7 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 - Continue export with warnings for failed items and skipped project-specific files
 - Provide recovery procedures for partial exports
 - Validate that all mvp_site references have been properly filtered
-- Ensure no personal information (jleechan, specific paths) remains in exported content
+- Ensure no personal information (${USER}, specific paths) remains in exported content
 
 **Git Operation Failures**:
 - Handle branch conflicts and naming issues

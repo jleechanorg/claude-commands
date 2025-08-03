@@ -516,13 +516,13 @@ else
     claude mcp remove "filesystem" >/dev/null 2>&1 || true
 
     # Add filesystem server with proper directory configuration
-    echo -e "${BLUE}  🔗 Adding filesystem server with /home/jleechan/projects access...${NC}"
-    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "/home/jleechan/projects" 2>&1)
+    echo -e "${BLUE}  🔗 Adding filesystem server with /home/${USER}/projects access...${NC}"
+    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "/home/${USER}/projects" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
-        log_with_timestamp "Successfully added filesystem server with /home/jleechan/projects access"
+        log_with_timestamp "Successfully added filesystem server with /home/${USER}/projects access"
         INSTALL_RESULTS["filesystem"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else

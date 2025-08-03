@@ -209,7 +209,7 @@ The orchestration system enables parallel AI agent execution for complex develop
 
 ```bash
 # Clone the repository
-git clone https://github.com/jleechanorg/claude-commands.git
+git clone https://github.com/${USER}org/claude-commands.git
 cd claude-commands
 
 # Run the installer
@@ -506,7 +506,7 @@ Enhanced commands automatically integrate Memory MCP for:
 
 ---
 
-**For support and updates, visit: https://github.com/jleechanorg/claude-commands**
+**For support and updates, visit: https://github.com/${USER}org/claude-commands**
 
 ---
 
