@@ -71,7 +71,7 @@ The current `/commentreply` system has a fundamental architecture flaw:
 
 ### File Modification Strategy
 ```markdown
-## FILE EDITING REQUIREMENTS (LLM-Native)
+## Example: LLM-Native File Editing Protocol
 
 ### 1. Issue Identification
 - Extract file path and line number from comment
@@ -95,7 +95,9 @@ The current `/commentreply` system has a fundamental architecture flaw:
 ## THREADING PROTOCOL (LLM-Native)
 
 ### Reply Format Template
-```
+
+**Example threaded reply format:**
+
 > [Original comment quote]
 
 **Fixed in [commit_hash]**: [file_path:line_number]
@@ -105,7 +107,6 @@ The current `/commentreply` system has a fundamental architecture flaw:
 - [Specific change 2]
 
 **Verification**: `git show [commit_hash] -- [file_path]`
-```
 
 ### Context Preservation
 - Reference original comment ID and thread

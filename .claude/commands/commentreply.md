@@ -393,6 +393,88 @@ reply_to_individual_comment() {
   create_fallback_general_comment "$comment_id" "$response_body" "$PR_NUMBER"
   return 1
 }
+
+# METHOD 5: Real threaded reply implementation (CRITICAL)
+# Creates actual GitHub threaded replies using correct API
+create_real_threaded_reply() {
+  local comment_id="$1"
+  local response_body="$2"
+  local pr_number="$3"
+  local owner="$4"
+  local repo="$5"
+
+  echo "🔗 CREATING: Real threaded reply to comment #$comment_id..."
+
+  # Use the correct GitHub API for creating threaded PR review comments
+  gh api "repos/$owner/$repo/pulls/$pr_number/comments" --method POST \
+    --field body="$response_body" \
+    --field in_reply_to="$comment_id"
+
+  if [ $? -eq 0 ]; then
+    echo "✅ SUCCESS: Real threaded reply created for comment #$comment_id"
+    return 0
+  else
+    echo "❌ FAILED: Real threaded reply creation failed for comment #$comment_id"
+    return 1
+  fi
+}
+
+# METHOD 6: Real threaded reply verification (CRITICAL)
+# Verifies that the reply was actually created with proper threading
+verify_real_threaded_reply() {
+  local original_comment_id="$1"
+  local reply_id="$2"
+  local owner="$3"
+  local repo="$4"
+  local pr_number="$5"
+
+  echo "🔍 VERIFYING: Real threaded reply $reply_id for comment #$original_comment_id..."
+
+  # Verify the reply exists and has correct in_reply_to_id
+  local reply_data=$(gh api "repos/$owner/$repo/pulls/$pr_number/comments" --paginate | \
+    jq ".[] | select(.id == $reply_id)")
+
+  if [ -z "$reply_data" ]; then
+    echo "❌ VERIFICATION FAILED: Reply $reply_id not found"
+    return 1
+  fi
+
+  local in_reply_to=$(echo "$reply_data" | jq -r '.in_reply_to_id')
+  local html_url=$(echo "$reply_data" | jq -r '.html_url')
+
+  if [ "$in_reply_to" = "$original_comment_id" ]; then
+    echo "✅ VERIFICATION PASSED: Reply $reply_id properly threaded to #$original_comment_id"
+    echo "🔗 URL format: $html_url (should be #discussion_r$reply_id)"
+    return 0
+  else
+    echo "❌ VERIFICATION FAILED: Reply $reply_id not properly threaded (in_reply_to: $in_reply_to, expected: $original_comment_id)"
+    return 1
+  fi
+}
+
+# METHOD 7: Fallback general comment (RELIABILITY)
+# Creates general comment when threading fails
+create_fallback_general_comment() {
+  local comment_id="$1"
+  local response_body="$2"
+  local pr_number="$3"
+
+  echo "⚠️ FALLBACK: Creating general comment for #$comment_id..."
+
+  gh pr comment "$pr_number" --body "**Response to Comment #$comment_id** (Note: Real threading unavailable):
+
+$response_body
+
+*(This is a general comment since threaded replies are not supported for this comment type)*"
+
+  if [ $? -eq 0 ]; then
+    echo "✅ FALLBACK SUCCESS: General comment created for #$comment_id"
+    return 0
+  else
+    echo "❌ FALLBACK FAILED: General comment creation failed for #$comment_id"
+    return 1
+  fi
+}
 ```
 
 **🚨 CRITICAL THREADING REQUIREMENTS**:
@@ -417,6 +499,8 @@ verify_file_changes() {
   local before_commit="$3"
 
   echo "🔍 VERIFYING: File changes for comment #$comment_id..."
+  echo "📋 Expected file: $expected_file"
+  echo "📋 Baseline commit: ${before_commit:-HEAD~1}"
 
   # Use before_commit as baseline, fall back to HEAD~1 if not provided
   local baseline_commit="${before_commit:-HEAD~1}"
