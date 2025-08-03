@@ -1,6 +1,6 @@
 # 🚨 PLAYWRIGHT MCP: PRIMARY BROWSER TESTING METHOD
 
-**MANDATORY**: Playwright MCP is the primary browser automation method for WorldArchitect.AI
+**MANDATORY**: Playwright MCP is the primary browser automation method for WorldArchitect.AI, always running in headless mode
 
 ## Why Playwright MCP is Primary
 
@@ -10,6 +10,7 @@
 - **Cross-Browser**: Chrome, Firefox, Safari support vs Puppeteer's Chrome-only
 - **Microsoft Standard**: Official 2025 MCP server from Microsoft
 - **Session Sharing**: Efficient test execution across multiple operations
+- **Headless Mode**: All automation runs headless (no visible browser windows)
 
 ### ✅ **2025 Industry Leadership**
 Based on comprehensive research:
@@ -36,19 +37,19 @@ mcp__puppeteer-server__puppeteer_click("button[data-testid='login']")
 ```
 
 ### 3. 🥉 **FALLBACK: Local Playwright**
-Only when MCP unavailable:
+Only when MCP unavailable (always headless):
 ```python
 from playwright.sync_api import sync_playwright
 with sync_playwright() as p:
-    browser = p.chromium.launch(headless=True)
+    browser = p.chromium.launch(headless=True)  # MANDATORY: headless=True
     # ... test code
 ```
 
 ## Command Integration
 
 ### Test Commands
-- `/testui` = Browser tests with Playwright MCP + Mock APIs
-- `/testuif` = Browser tests with Playwright MCP + Real APIs
+- `/testui` = Browser tests with Playwright MCP + Mock APIs (headless mode)
+- `/testuif` = Browser tests with Playwright MCP + Real APIs (headless mode)
 - `/testserver start` = Start server for Playwright MCP testing
 
 ### Test URL Format

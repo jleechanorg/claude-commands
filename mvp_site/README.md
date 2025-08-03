@@ -53,7 +53,7 @@ WorldArchitect.AI leverages a carefully selected stack that balances rapid devel
 
 #### Testing & Quality Assurance
 - **67% Test Coverage** - Comprehensive test suite covering thousands of statements
-- **Multi-Modal Testing** - Browser automation (Playwright), HTTP testing, and integration tests
+- **Multi-Modal Testing** - Browser automation (Playwright headless), HTTP testing, and integration tests
 - **Mock Service Architecture** - Granular mocking for cost-effective development and CI/CD
 - **Automated Code Quality** - Ruff linting, MyPy type checking, and Bandit security scanning
 
@@ -366,7 +366,7 @@ mvp_site/
 
 ### Browser Tests
 - **Location**: `../testing_ui/` directory
-- **Purpose**: Frontend UI testing with Playwright
+- **Purpose**: Frontend UI testing with Playwright (headless mode)
 - **Run Command**: `./run_ui_tests.sh mock`
 
 ## Key Features

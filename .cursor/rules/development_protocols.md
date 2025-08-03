@@ -64,9 +64,10 @@ Never confuse browser automation with HTTP simulation
 ## Browser Test Execution Protocol (🚨 MANDATORY)
 
 ### Tool Hierarchy:
-- 🚨 **PREFERRED**: Playwright MCP in Claude Code CLI - Accessibility-tree based, AI-optimized, cross-browser
-- 🚨 **SECONDARY**: Puppeteer MCP for Chrome-specific or stealth testing scenarios
+- 🚨 **PREFERRED**: Playwright MCP in Claude Code CLI - Accessibility-tree based, AI-optimized, cross-browser (headless mode)
+- 🚨 **SECONDARY**: Puppeteer MCP for Chrome-specific or stealth testing scenarios (headless mode)
 - 🚨 **FALLBACK**: Playwright IS installed in venv! Use headless=True | ❌ NEVER say "not installed"
+- 🚨 **HEADLESS MODE MANDATORY**: All browser automation runs headless (no visible browser windows)
 
 ### Commands:
 - `./run_ui_tests.sh mock --playwright` (default)

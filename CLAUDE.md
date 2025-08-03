@@ -199,7 +199,7 @@
    - ✅ ONLY mark completed when PR state = "MERGED"
 12. 🚨 **PLAYWRIGHT MCP DEFAULT**: ⚠️ MANDATORY - When running in Claude Code CLI:
    - ✅ ALWAYS use Playwright MCP (@playwright/mcp) for browser automation by default
-   - ✅ ALWAYS use headless mode for browser automation (no visible browser windows)
+   - ✅ ALWAYS use headless mode for browser automation (no visible browser windows), **except when debugging or developing new automation scripts, where non-headless mode is permitted for visibility**
    - ✅ Fallback to Puppeteer MCP for Chrome-specific or stealth testing when needed
 
 🚨 **INLINE SCREENSHOTS ARE USELESS**: ⚠️ MANDATORY - Screenshot documentation requirements:
@@ -418,6 +418,7 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 ### Browser Test Execution Protocol (🚨 MANDATORY)
 🚨 **PREFERRED**: Playwright MCP in Claude Code CLI - Accessibility-tree based, AI-optimized, cross-browser
 🚨 **SECONDARY**: Puppeteer MCP for Chrome-specific or stealth testing scenarios
+🚨 **HEADLESS MODE**: ⚠️ ALWAYS use headless mode for browser automation - no visible browser windows
 **Commands**: `./run_ui_tests.sh mock --playwright` (default) | `./run_ui_tests.sh mock --puppeteer` (secondary)
 **Test Mode URL**: `http://localhost:8081?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
 

@@ -22,6 +22,12 @@ Based on software engineering research showing:
   3. Click the "Export" button
   4. Observe the error message displayed
 
+**[Critical] Technical State Extraction:**
+- **DOM Inspector Output:** Extract CSS computed properties for visual elements
+- **Network Request Analysis:** Document asset loading, API calls, response codes
+- **Console Log Capture:** All errors, warnings, and relevant debug output
+- **Browser State:** Screenshots with technical overlays showing element inspection
+
 **[High] Observed vs. Expected Behavior:**
 - **Observed:** [e.g., "API returns 500 when user is admin"]
 - **Expected:** [e.g., "API should return 200 with user data"]
@@ -128,6 +134,12 @@ Create a precise, testable plan to validate the top hypothesis without changing 
 - [ ] Run related passing tests - confirm no regressions
 - [ ] Test edge cases related to the fix
 - [ ] Remove any temporary debugging logs added in Phase 2
+
+**Visual/UI Verification (if applicable):**
+- [ ] **Screenshot comparison:** Before/after visual verification
+- [ ] **DOM state verification:** CSS properties match expected values
+- [ ] **Asset loading verification:** Network requests successful
+- [ ] **Anti-bias check:** Test what should NOT be working
 
 **Documentation Updates:**
 - [ ] Update relevant documentation if fix changes behavior
