@@ -38,6 +38,16 @@ The `.claude/hooks/` directory contains hooks that are auto-recognized by Claude
 
 **Provides**: Current branch, remote status, and PR information
 
+### 🔄 Post-Commit Sync Hook (`post_commit_sync.sh`)
+**Purpose**: Automatically sync commits to remote after successful commits
+
+**Features**:
+- Triggers after every successful git commit
+- Uses smart sync check to detect unpushed commits
+- Automatically pushes to correct upstream remote
+- Respects existing git workflows and configurations
+- Portable across different development environments
+
 ## Integration
 
 ## Auto-Recognition
@@ -55,13 +65,25 @@ Add to your project's `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/anti_demo_check_claude.sh",
+            "command": "$(git rev-parse --show-toplevel)/.claude/hooks/anti_demo_check_claude.sh",
             "description": "Prevent demo/placeholder code"
           },
           {
             "type": "command",
-            "command": "./.claude/hooks/check_root_files.sh",
+            "command": "$(git rev-parse --show-toplevel)/.claude/hooks/check_root_files.sh",
             "description": "Prevent root directory pollution"
+          }
+        ]
+      }
+    ],
+    "PostCommit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$(git rev-parse --show-toplevel)/.claude/hooks/post_commit_sync.sh",
+            "description": "Auto-sync commits to remote after successful commit"
           }
         ]
       }
@@ -72,7 +94,7 @@ Add to your project's `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "./.claude/hooks/detect_speculation.sh",
+            "command": "$(git rev-parse --show-toplevel)/.claude/hooks/detect_speculation.sh",
             "description": "Detect speculation about command execution"
           }
         ]
@@ -84,7 +106,7 @@ Add to your project's `.claude/settings.json`:
         "hooks": [
           {
             "type": "command",
-            "command": "./claude_command_scripts/git-header.sh",
+            "command": "$(git rev-parse --show-toplevel)/claude_command_scripts/git-header.sh",
             "description": "Generate git branch header for response footer"
           }
         ]
@@ -133,6 +155,7 @@ All hooks are properly located in the auto-recognized Claude directory:
 ├── anti_demo_check_claude.sh        # Demo code prevention
 ├── detect_speculation.sh            # Command speculation blocker
 ├── check_root_files.sh              # Root directory protection
+├── post_commit_sync.sh              # Post-commit auto-sync
 ├── tests/                           # Test files directory
 │   ├── hook_test_*.py              # Red/green test files
 │   ├── test_hook_patterns.py       # Test file patterns

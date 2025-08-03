@@ -1,6 +1,6 @@
 # /commentcheck Command
 
-**Usage**: `/commentcheck [PR_NUMBER]`
+**Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`
 
 🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. Explicitly count and warn about any unresponded comments found.
 
@@ -30,7 +30,9 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 3. **Cross-references** original comments with posted responses
 4. **Verifies coverage** - ensures every comment has a corresponding response
 5. **Quality check** - confirms responses are substantial, not generic
-6. **Reports status** with detailed breakdown
+6. **URL validation** - verifies threaded reply URLs are accessible and properly formatted
+7. **Threading verification** - confirms real vs fake threading using URL patterns
+8. **Reports status** with detailed breakdown
 
 ## Individual Comment Verification Process (CRITICAL)
 
@@ -227,6 +229,168 @@ if [ "$GENERIC_COUNT" -gt 5 ] || [ "$CODERABBIT_RESPONSES" -gt 10 ] || [ "$COPIL
   echo "🚨 FAKE COMMENTS DETECTED - Template patterns found"
   echo "RECOMMENDATION: Delete fake responses and re-run with genuine analysis"
 fi
+```
+
+### Step 5: URL Validation and Threading Verification (NEW)
+🚨 **OPTIONAL WITH --verify-urls**: When `--verify-urls` flag is provided, validate all threaded reply URLs:
+
+```bash
+if [[ "$*" =~ --verify-urls ]]; then
+  echo "=== URL VALIDATION AND THREADING VERIFICATION ==="
+
+  # Check environment variables from recent /commentreply run
+  if [ -n "$CREATED_REPLY_URL" ]; then
+    echo "🔍 CHECKING: Recently created reply from /commentreply"
+    echo "📍 URL: $CREATED_REPLY_URL"
+    echo "🆔 Reply ID: $CREATED_REPLY_ID"
+    echo "👤 Parent ID: $PARENT_COMMENT_ID"
+
+    # Validate URL format
+    validate_url_format "$CREATED_REPLY_URL" "$CREATED_REPLY_ID"
+
+    # Test URL accessibility
+    test_url_accessibility "$CREATED_REPLY_URL" "$CREATED_REPLY_ID"
+  fi
+
+  # Comprehensive URL validation for all threaded replies
+  echo "🔍 COMPREHENSIVE: Validating all threaded reply URLs in PR #$PR_NUMBER"
+
+  THREADED_REPLIES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
+    jq -r '.[] | select(.in_reply_to_id != null) | "\(.id)|\(.html_url)|\(.in_reply_to_id)"')
+
+  TOTAL_VALIDATED=0
+  VALID_THREADING=0
+  VALID_URLS=0
+  ACCESSIBLE_URLS=0
+  FAKE_THREADING=0
+
+  # Use process substitution to avoid subshell and preserve counters
+  while IFS='|' read -r reply_id html_url parent_id; do
+    if [ -n "$reply_id" ]; then
+      TOTAL_VALIDATED=$((TOTAL_VALIDATED + 1))
+
+      echo ""
+      echo "🔍 VALIDATING: Reply #$reply_id"
+      echo "📍 URL: $html_url"
+      echo "👤 Parent: #$parent_id"
+
+      # Validate URL format
+      if validate_url_format "$html_url" "$reply_id"; then
+        VALID_URLS=$((VALID_URLS + 1))
+      else
+        FAKE_THREADING=$((FAKE_THREADING + 1))
+      fi
+
+      # Validate threading relationship
+      if validate_threading_relationship "$reply_id" "$parent_id"; then
+        VALID_THREADING=$((VALID_THREADING + 1))
+      fi
+
+      # Test URL accessibility
+      if test_url_accessibility "$html_url" "$reply_id"; then
+        ACCESSIBLE_URLS=$((ACCESSIBLE_URLS + 1))
+      fi
+    fi
+  done < <(echo "$THREADED_REPLIES")
+
+  # Generate URL validation report
+  generate_url_validation_report "$TOTAL_VALIDATED" "$VALID_THREADING" "$VALID_URLS" "$ACCESSIBLE_URLS" "$FAKE_THREADING"
+fi
+
+# URL Validation Functions
+validate_url_format() {
+  local url="$1"
+  local comment_id="$2"
+
+  echo "🔍 VALIDATING: URL format for comment #$comment_id"
+
+  if [[ "$url" =~ #discussion_r[0-9]+ ]]; then
+    echo "✅ VALID: Real threaded reply format (#discussion_r{id})"
+    return 0
+  elif [[ "$url" =~ #issuecomment-[0-9]+ ]]; then
+    echo "❌ INVALID: Fake threading format (#issuecomment-{id})"
+    echo "⚠️  WARNING: This is NOT a real threaded reply"
+    return 1
+  else
+    echo "❌ INVALID: Unknown URL format"
+    return 1
+  fi
+}
+
+validate_threading_relationship() {
+  local reply_id="$1"
+  local expected_parent_id="$2"
+
+  echo "🔍 VALIDATING: Threading relationship for reply #$reply_id"
+
+  # Get reply data from API
+  local reply_data=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
+    jq ".[] | select(.id == $reply_id)")
+
+  if [ -z "$reply_data" ]; then
+    echo "❌ ERROR: Reply #$reply_id not found"
+    return 1
+  fi
+
+  local actual_parent_id=$(echo "$reply_data" | jq -r '.in_reply_to_id')
+
+  if [ "$actual_parent_id" = "$expected_parent_id" ]; then
+    echo "✅ VALID: Reply #$reply_id properly threaded to parent #$expected_parent_id"
+    return 0
+  else
+    echo "❌ INVALID: Reply #$reply_id threading mismatch"
+    echo "   Expected parent: #$expected_parent_id"
+    echo "   Actual parent: #$actual_parent_id"
+    return 1
+  fi
+}
+
+test_url_accessibility() {
+  local url="$1"
+  local comment_id="$2"
+
+  echo "🔍 TESTING: URL accessibility for comment #$comment_id"
+
+  # Test HTTP accessibility
+  local http_status=$(curl -s -o /dev/null -w "%{http_code}" -L "$url" 2>/dev/null || echo "000")
+
+  if [ "$http_status" = "200" ]; then
+    echo "✅ ACCESSIBLE: URL returns HTTP 200"
+    return 0
+  else
+    echo "❌ INACCESSIBLE: URL returns HTTP $http_status"
+    return 1
+  fi
+}
+
+generate_url_validation_report() {
+  local total_checked="$1"
+  local valid_threading="$2"
+  local valid_urls="$3"
+  local accessible_urls="$4"
+  local fake_threading="$5"
+
+  echo ""
+  echo "📊 URL VALIDATION REPORT"
+  echo "========================"
+  echo "🔍 Total replies checked: $total_checked"
+  echo "✅ Valid threading: $valid_threading"
+  echo "✅ Valid URL format: $valid_urls"
+  echo "✅ Accessible URLs: $accessible_urls"
+  echo "❌ Fake threading detected: $fake_threading"
+
+  if [ "$fake_threading" -gt 0 ]; then
+    echo ""
+    echo "⚠️  WARNING: Fake threading detected!"
+    echo "   These replies are NOT properly threaded and appear as separate comments"
+    echo "   Use 'gh api repos/owner/repo/pulls/PR/comments --method POST --field in_reply_to=PARENT_ID'"
+  fi
+
+  if [ "$total_checked" -gt 0 ] && [ "$valid_threading" -eq "$total_checked" ] && [ "$fake_threading" -eq 0 ]; then
+    echo ""
+    echo "🎉 SUCCESS: All replies are properly threaded with valid URLs!"
+  fi
+}
 ```
 
 ## 🚨 UNRESPONDED COMMENT WARNING SYSTEM (MANDATORY FORMAT)

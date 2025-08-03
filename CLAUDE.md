@@ -488,6 +488,17 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
    - ✅ **Search logs**: `grep -i "pattern" /tmp/worldarchitect.ai/[branch]/[service].log`
    - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
 
+9. 🚨 **SMART SYNC CHECK PROTOCOL**: ⚠️ MANDATORY - Prevent local changes not pushed to remote
+   - **Purpose**: Automatically detect and push unpushed commits after tools create changes
+   - **Script Location**: `<project-root>/scripts/sync_check.sh` (e.g. `$(git rev-parse --show-toplevel)/scripts/sync_check.sh`)
+   - **Integration**: Tools that create commits MUST call sync check at completion
+   - **Usage**: `$(git rev-parse --show-toplevel)/scripts/sync_check.sh` or source common utilities
+   - **Tools Required**: `/fixpr`, `/commentreply`, `/integrate`, any commit-creating tools
+   - **Behavior**: Detects unpushed commits → Shows commits → Auto-pushes → Confirms success
+   - **Safety**: Only pushes when unpushed commits detected, handles edge cases gracefully
+   - **Error Handling**: Graceful fallback for no upstream, detached HEAD, push failures
+   - **Benefits**: Eliminates "forgot to push" syndrome while maintaining workflow transparency
+
 **Test Commands**: → `.cursor/rules/validation_commands.md`
 
 ## Data Integrity & AI Management

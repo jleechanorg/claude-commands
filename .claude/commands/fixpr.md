@@ -462,9 +462,11 @@ For every fix applied:
 # 2. MANDATORY: Verify fixes work in CI-equivalent environment
 ./run_ci_replica.sh
 
-# 3. If CI replica passes, push fixes to GitHub
-git add . && git commit -m "fix: Address CI failures and merge conflicts"
-git push
+# 3. If CI replica passes, commit and sync fixes to GitHub
+git add -A && git commit -m "fix: Address CI failures and merge conflicts"
+
+# 🚨 MANDATORY: Smart sync check to ensure changes reach remote
+$(git rev-parse --show-toplevel)/scripts/sync_check.sh
 
 # 4. Wait 30-60 seconds for GitHub CI to process
 sleep 60
