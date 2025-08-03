@@ -334,8 +334,11 @@ reply_to_individual_comment() {
     # Get current commit before changes
     local before_commit=$(git rev-parse --short HEAD)
 
-    # NOTE: Actual file editing should be done by Claude using Edit/MultiEdit tools
-    # This function provides the framework - Claude must implement the actual fixes
+    # LLM-NATIVE DESIGN PATTERN: Hybrid Architecture
+    # - Shell script: Provides workflow orchestration, git operations, API calls
+    # - Claude Code CLI: Handles intelligent file editing via Edit/MultiEdit tools
+    # - Benefits: Combines shell's system integration with LLM's code understanding
+    # - Responsibility: Script orchestrates; Claude executes contextual code changes
     echo "⚠️  CLAUDE MUST: Use Edit/MultiEdit tools to fix issue in $file_path:$line_number"
     echo "⚠️  CLAUDE MUST: Address specific issue: $(echo "$comment_body" | head -c 100)..."
 
@@ -358,8 +361,8 @@ reply_to_individual_comment() {
       echo "✅ COMMITTED: Changes in commit $commit_hash"
 
       # Run git diff to show what changed
-      echo "🔍 VERIFICATION: git diff $before_commit..$commit_hash"
-      git diff $before_commit..$commit_hash
+      echo "🔍 VERIFICATION: git diff \"$before_commit\"..\"$commit_hash\""
+      git diff "$before_commit".."$commit_hash"
     else
       echo "❌ NO CHANGES: No file modifications detected - MANDATORY for code issues!"
       echo "⚠️  This violates the mandatory file editing protocol"
