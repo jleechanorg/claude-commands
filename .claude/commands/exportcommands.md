@@ -48,11 +48,18 @@ testi.sh
 **/test_integration/**
 copilot_inline_reply_example.sh
 run_ci_replica.sh
+testing_http/
+testing_ui/
+testing_mcp/
+ci_replica/
 EOF
 
-# Filter files before export
+# Filter files before export from staging area
 while IFS= read -r pattern; do
-    find .claude/commands -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+    # Remove from staging area (covers both .claude/commands files and root directories)
+    find staging -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+    # Also remove root directories that may be copied during main export
+    rm -rf "staging/${pattern%/}" 2>/dev/null || true
 done < /tmp/export_exclusions.txt
 ```
 
@@ -180,29 +187,6 @@ done
 - **Requirements**: Claude Code CLI, GitHub CLI, email configuration, cron access
 - **Installation**: Cron setup, email notification configuration, GitHub token setup
 
-**🧪 Testing Infrastructure Export** - **PRODUCTION READY TESTING FRAMEWORKS**:
-- **HTTP Testing Framework** (`testing_http/` → `testing-frameworks/http/`):
-  - Comprehensive HTTP API testing with mock/real API support
-  - Direct HTTP requests using `requests` library for fast, reliable testing
-  - Mock mode (free) and real API mode (cost tracking) with clear separation
-  - Test runners for campaign creation, character creation, god mode, error cases
-- **Browser Testing Framework** (`testing_ui/` → `testing-frameworks/browser/`):
-  - Real browser automation using Playwright with accessibility-tree optimization
-  - Test mode URL bypassing, screenshot utilities, visual validation
-  - Mobile responsive testing, campaign wizard flows, settings UI validation
-- **MCP Testing Infrastructure** (`testing_mcp/` → `testing-frameworks/mcp/`):
-  - Complete MCP architecture testing with 158 passing tests
-  - Integration tests, performance benchmarks, deployment configurations
-  - Mock MCP server, test utilities, load testing capabilities
-
-**⚙️ CI Debugging System Export** (`ci_replica/` → `ci-debugging/`) - **PRODUCTION READY**:
-- Export comprehensive CI environment replication and debugging tools
-- **Core Scripts**: Local CI replica, debug replica, failure reproducer, interactive launcher
-- **Features**: Exact CI environment matching, Python 3.11 replication, dependency isolation
-- **Debugging**: Environment comparison, verbose logging, isolation modes, test output capture
-- **Use Cases**: "Tests pass locally but fail in CI" troubleshooting and environment matching
-- **Requirements**: Python 3.11, virtual environment support, exact CI workflow replication
-- **Installation**: Script permissions, Python version management, CI environment variables
 
 **🔬 Development Infrastructure Export** - **SPECIALIZED DEVELOPMENT TOOLS**:
 - **Prototype Framework** (`prototype/` → `prototyping/`):
@@ -246,15 +230,6 @@ done
   - Error handling: Timeout detection, attempt limits, email notifications
   - Installation: Cron setup → Email configuration → GitHub integration
   - Real-world metrics: Processing frequency, success rates, manual intervention triggers
-- **🧪 Testing Infrastructure**: Production-ready testing frameworks
-  - HTTP Testing: Mock/real API support with `requests` library integration
-  - Browser Testing: Playwright automation with accessibility optimization
-  - MCP Testing: Complete architecture testing with 158 passing tests
-  - Installation: Framework setup → Test configuration → CI integration
-- **⚙️ CI Debugging System**: Local CI environment replication
-  - Exact CI matching: Python 3.11, dependency isolation, environment variables
-  - Debug modes: Verbose logging, isolation levels, environment comparison
-  - Installation: Script permissions → Python setup → CI variable configuration
 - **🔬 Development Infrastructure**: Specialized development tools
   - Prototype Framework: Validation, benchmarking, experimental implementations
   - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
@@ -293,8 +268,6 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
 - Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
 - Automated PR Fixer System ($(ls automation/ | wc -l) files)
-- Testing Infrastructure: HTTP/Browser/MCP frameworks ($(find testing_*/ -name "*.py" | wc -l) files)
-- CI Debugging System ($(ls ci_replica/ | wc -l) files)
 - Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
 - Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
 - Comprehensive README and documentation
@@ -324,13 +297,6 @@ This export contains project-specific configurations that require adaptation.
   - Autonomous `/copilot` integration for comprehensive PR analysis
   - Error handling, timeout detection, and email notifications
   - 10-minute processing cycles with attempt tracking
-- **🧪 Testing Infrastructure (PRODUCTION READY)**: Complete testing framework suite
-  - HTTP Testing: Mock/real API support with `requests` library
-  - Browser Testing: Playwright automation with accessibility optimization
-  - MCP Testing: Architecture testing with 158 passing tests
-- **⚙️ CI Debugging System (PRODUCTION READY)**: Local CI environment replication
-  - Exact CI matching with Python 3.11 and dependency isolation
-  - Debug modes and environment comparison tools
 - **🔬 Development Infrastructure**: Specialized development tools
   - Prototype framework for validation and benchmarking
   - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
@@ -372,6 +338,10 @@ See README.md for installation and adaptation guidance."
 - Scripts requiring specific virtual environment setup
 - `scripts/` - Firebase and database-specific utilities (but INCLUDE automation/ and orchestration/ core)
 - `orchestration/` workspaces with hardcoded paths (but INCLUDE orchestration system core)
+- `testing_http/` - HTTP testing with project-specific endpoints and configurations
+- `testing_ui/` - Browser testing with project-specific UI elements and workflows
+- `testing_mcp/` - MCP testing infrastructure with project-specific integrations
+- `ci_replica/` - CI debugging tools with project-specific environment configurations
 - Business documentation (`business_plan_v1.md`, `product_spec.md`)
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
@@ -379,10 +349,6 @@ See README.md for installation and adaptation guidance."
 **NEW SYSTEM INCLUSIONS** (⚠️ MUST EXPORT):
 - `claude-bot-commands/` - Complete self-hosting repository system (PRODUCTION READY)
 - `automation/` - Automated PR fixer system with cron integration (PRODUCTION READY)
-- `testing_http/` - HTTP testing framework with mock/real API support (PRODUCTION READY)
-- `testing_ui/` - Browser automation testing framework with Playwright (PRODUCTION READY)
-- `testing_mcp/` - MCP architecture testing infrastructure (PRODUCTION READY)
-- `ci_replica/` - CI debugging and local replication tools (PRODUCTION READY)
 - `prototype/` - Validation and benchmarking framework (SPECIALIZED TOOLS)
 - `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
 - `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
