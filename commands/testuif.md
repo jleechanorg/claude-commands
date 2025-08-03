@@ -2,15 +2,18 @@
 
 **Purpose**: Run REAL browser tests with REAL APIs using Playwright MCP by default (costs money!)
 
-**Action**: Execute browser automation tests using Playwright MCP (preferred) or Puppeteer MCP with real API calls
+**Action**: Execute browser automation tests ONLY in testing_ui/core_tests/ with real Firebase + Gemini APIs
 
 **Usage**: `/testuif`
 
-**Default Action in Claude Code CLI**: Run with Playwright MCP for optimal AI-driven automation:
+**Default Action in Claude Code CLI**: Run core tests with Playwright MCP for optimal AI-driven automation:
 
 ```bash
 ./run_ui_tests.sh real --playwright
 ```
+
+**Target Directory**: ONLY `testing_ui/core_tests/` (focused, essential tests)
+**API Mode**: REAL Firebase + REAL Gemini (USE_MOCK_FIREBASE=false, USE_MOCK_GEMINI=false)
 
 **Secondary**: For Chrome-specific testing, use Puppeteer MCP:
 ```bash

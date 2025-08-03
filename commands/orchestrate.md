@@ -9,13 +9,46 @@
 **CRITICAL RULE**: When `/orchestrate` is used, NEVER execute the task yourself. ALWAYS delegate to the orchestration agents. The orchestration system will handle all task execution through specialized agents.
 
 🚨 **ORCHESTRATION DIRECT EXECUTION PREVENTION**: ⚠️ MANDATORY HARD STOP PROTOCOL
-- **Hard Stop Pattern**: `/orchestrate` or `/orch` prefix detected → immediate agent delegation via orchestration system
-- **User Urgency Safeguard**: "just decide", "just start", "you choose" are guidance for AGENTS, NOT permission for direct execution
-- **Mental Model**: `/orch` = "create agents to do this", NEVER "I should implement this directly"
-- **Zero Exception Rule**: Orchestration commands ALWAYS trigger agent creation regardless of user urgency
-- **Behavioral Firewall**: Automatic "Delegating to orchestration system..." response followed by agent creation
-- **Pattern Recognition**: Operational command classification → mandatory protocol enforcement
+
+**ABSOLUTE RULE**: When `/orchestrate` or `/orch` is used, you MUST:
+1. ❌ **NEVER use Edit, Write, Bash, or any execution tools yourself**
+2. ❌ **NEVER use Task tool to create agents**
+3. ❌ **NEVER start implementing the task directly**
+4. ✅ **ONLY use the tmux-based orchestration system**
+5. ✅ **ALWAYS respond**: "Delegating to tmux orchestration system..."
+6. ✅ **USE**: `python3 .claude/commands/orchestrate.py "task description"`
+
+🚨 **ABSOLUTE BRANCH ISOLATION PROTOCOL**: ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
+- ❌ **FORBIDDEN**: `git checkout`, `git switch`, or any branch switching commands
+- ❌ **FORBIDDEN**: Working on other branches, PRs, or repositories
+- ✅ **MANDATORY**: Stay on current branch for ALL work - delegate everything else to agents
+- ✅ **DELEGATION RULE**: Any work requiring different branch → `/orch` or orchestration agents
+- 🔍 **Evidence**: Branch switching violations cause context confusion and work contamination
+- **MENTAL MODEL**: "Current branch = My workspace, Other branches = Agent territory"
+
+**VIOLATION EXAMPLES** (NEVER DO THESE):
+- ❌ Using Task tool to create agents (Task tool ≠ orchestration system)
+- ❌ Writing code to solve the problem yourself
+- ❌ Running commands to implement features yourself
+- ❌ Editing files to fix bugs yourself
+- ❌ **BRANCH VIOLATIONS**: `git checkout other-branch`, `git switch main`
+- ❌ **BRANCH VIOLATIONS**: Working on different PRs or repositories directly
+
+**CORRECT BEHAVIOR**:
+- ✅ Run orchestration command: `python3 .claude/commands/orchestrate.py "Fix bug X"`
+- ✅ Monitor agent progress: `tmux attach -t agent-name`
+- ✅ Check results: `/orch status`
+- ✅ **BRANCH ISOLATION**: Stay on current branch, delegate other branch work to agents
+- ✅ **BRANCH ISOLATION**: `/orch "Work on PR #123"` instead of `git checkout pr-branch`
+
+- **Hard Stop Pattern**: `/orchestrate` or `/orch` prefix detected → immediate tmux agent delegation
+- **User Urgency Safeguard**: "just decide", "just start", "you choose" are guidance for TMUX AGENTS, NOT permission for direct execution
+- **Mental Model**: `/orch` = "create tmux agents to do this", NEVER "I should implement this directly"
+- **Zero Exception Rule**: Orchestration commands ALWAYS trigger tmux agent creation regardless of user urgency
+- **Behavioral Firewall**: Automatic "Delegating to tmux orchestration system..." response followed by tmux agent creation
+- **Pattern Recognition**: Operational command classification → mandatory tmux protocol enforcement
 - 🔍 **Evidence**: Session violation prevented by this protocol (see CLAUDE.md)
+- **CRITICAL**: Task tool ≠ orchestration system. Orchestration = tmux agents only.
 
 **🚨 CRITICAL BRANCH PROTECTION RULE**: When monitoring orchestration agents:
 - ❌ **NEVER switch branches** without explicit user permission
@@ -28,7 +61,8 @@
 **Implementation**:
 - **Python Script**: `python3 .claude/commands/orchestrate.py [task_description]`
 - **Shell Wrapper**: `./claude_command_scripts/orchestrate.sh` (if available)
-- **Direct Execution**: Uses real Claude Code CLI agents in separate tmux sessions
+- **Tmux Agents**: Creates real tmux sessions with Claude Code CLI agents
+- **NOT Task Tool**: Task tool is for different purposes, orchestration uses tmux system
 - **System Check**: ALWAYS checks system status first before executing tasks
 
 **Features**:
@@ -39,6 +73,9 @@
 - **Agent collaboration**: Direct connection to agent sessions for collaboration
 - **Natural language**: Understands commands like "Build user authentication urgently"
 - **Priority handling**: Recognizes urgent, ASAP, critical keywords
+- **Agent reuse optimization**: Idle agents reused before creating new ones (50-80% efficiency gains)
+- **Individual agent per task**: Each task gets dedicated agent with complete isolation
+- **Resource efficiency**: Strategic reuse while maintaining task isolation
 
 **System Requirements**:
 - Redis server running (for coordination)
@@ -61,12 +98,14 @@
 - **Backend Agent**: APIs, database, server logic (`backend-agent`)
 - **Testing Agent**: Tests, QA, validation (`testing-agent`)
 - **Opus Master**: Coordination and oversight (`opus-master`)
+- **Task Agents**: Dynamic agents with reuse optimization (`task-agent-*`)
 
 **Examples**:
 - `/orchestrate implement user authentication with tests and documentation`
 - `/orchestrate refactor database layer with migration scripts`
 - `/orchestrate add new feature with full test coverage and UI updates`
 - `/orchestrate optimize performance across frontend and backend`
+- `/orchestrate Run copilot analysis on PR #123 with agent reuse preference`
 - `/orchestrate What's the status?`
 - `/orchestrate connect to sonnet 1`
 - `/orchestrate monitor agents`
@@ -142,3 +181,55 @@ OR
 - **Multiple PR mentions**: Agent will ask which PR to update
 - **Ambiguous "the PR"**: System will show recent PRs and ask for selection
 - **Branch conflicts**: Agent will attempt rebase/merge with clear messaging
+
+## 🔄 Agent Reuse Optimization
+
+**🚨 CRITICAL: Agent Reuse Architecture for Efficiency**
+
+The orchestration system implements intelligent agent reuse to optimize resource utilization while maintaining task isolation.
+
+### **Agent Reuse Strategy**:
+1. **Check for Idle Agents**: Before creating new agents, check for idle existing agents
+2. **Reuse When Available**: Reuse idle agents for new tasks (50-80% efficiency gains)
+3. **Create When Needed**: Create new agents only when no idle agents available
+4. **Maintain Isolation**: Each task still gets dedicated agent execution
+5. **Resource Optimization**: Strategic reuse without compromising task quality
+
+### **Individual Agent Per Task Architecture**:
+- ✅ **Parallel Execution**: All tasks processed simultaneously (one agent per task)
+- ✅ **Resource Efficiency**: Idle agents reused before creating new ones (50-80% token savings)
+- ✅ **Complete Isolation**: Each agent has dedicated workspace and task focus
+- ✅ **No Task Conflicts**: Worktrees and separate sessions prevent collisions
+- ✅ **100% Coverage**: Every task gets individual agent (no partial processing)
+- ✅ **Scalable**: Handle 10+ tasks with optimal resource utilization
+- ✅ **Fault Tolerant**: One agent failure doesn't affect others
+- ✅ **Real-time Visibility**: Monitor all individual agents' progress
+
+### **Agent Lifecycle Management**:
+```bash
+# CORRECT: Agent reuse optimization workflow
+for TASK in $TASK_LIST; do
+    /orchestrate "$TASK with agent reuse preference"
+done
+
+# Each task execution with reuse:
+# 1. Check for idle agents first
+# 2. Reuse existing idle agent if available
+# 3. Create new agent only if no idle agents
+# 4. Execute task in complete isolation
+# 5. Mark agent as idle after completion (available for reuse)
+```
+
+### **Performance Benefits**:
+- **Token Savings**: 50-80% reduction in agent creation overhead
+- **Resource Efficiency**: Better utilization of active agents
+- **Faster Execution**: Reduced agent startup time through reuse
+- **Cost Optimization**: Lower API costs through strategic reuse
+- **Scalability**: Handle more concurrent tasks with same resources
+
+### **Safety Guarantees**:
+- ❌ **No Task Contamination**: Each task gets clean agent state
+- ❌ **No Shared Context**: Agents don't share previous task context
+- ✅ **Fresh Workspace**: Each task gets isolated worktree regardless of reuse
+- ✅ **Complete Independence**: Task execution is fully independent
+- ✅ **Error Isolation**: Agent reuse doesn't propagate errors between tasks

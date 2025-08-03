@@ -1,5 +1,3 @@
-# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
-
 # /fixpr Command - Intelligent PR Fix Analysis
 
 **Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`
@@ -280,7 +278,7 @@ def some_function_that_failed_in_ci():
 EOF
 
 # 3. Verify test fails locally (RED confirmed)
-# Use project-specific test runner (examples: python -m pytest, TESTING=true python, etc.)
+# Use project-specific test runner (examples: python -m pytest, TESTING=true vpython, etc.)
 <RUN_TEST_COMMAND> "$TESTS_DIR/test_ci_discrepancy_redgreen.py"
 # ❌ FAIL: AssertionError: Expected 'foo' but got 'FOO'
 ```

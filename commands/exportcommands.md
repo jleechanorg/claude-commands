@@ -1,5 +1,3 @@
-# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
-
 # /exportcommands - Export Claude Commands to Reference Repository
 
 **Purpose**: Comprehensive export workflow to https://github.com/jleechanorg/claude-commands for reference and sharing
@@ -50,11 +48,18 @@ testi.sh
 **/test_integration/**
 copilot_inline_reply_example.sh
 run_ci_replica.sh
+testing_http/
+testing_ui/
+testing_mcp/
+ci_replica/
 EOF
 
-# Filter files before export
+# Filter files before export from staging area
 while IFS= read -r pattern; do
-    find .claude/commands -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+    # Remove from staging area (covers both .claude/commands files and root directories)
+    find staging -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+    # Also remove root directories that may be copied during main export
+    rm -rf "staging/${pattern%/}" 2>/dev/null || true
 done < /tmp/export_exclusions.txt
 ```
 
@@ -62,16 +67,16 @@ done < /tmp/export_exclusions.txt
 ```bash
 # Add reference-only warning header
 cat > staging/CLAUDE.md << 'EOF'
-# ⚠️ REFERENCE ONLY - DO NOT USE DIRECTLY
+# 📚 Reference Export - Adaptation Guide
 
-**WARNING**: This is a reference export from a specific project setup. These configurations:
-- May contain project-specific paths and settings ($PROJECT_ROOT/, specific database configs)
-- Have not been tested in isolation
-- May require significant adaptation for your environment
-- Include setup-specific assumptions and dependencies
-- Reference personal GitHub repositories and specific project structure
+**Note**: This is a reference export from a working Claude Code project. You may need to personally debug some configurations, but Claude Code can easily adjust for your specific needs.
 
-Use this as inspiration and reference, not direct implementation.
+These configurations may include:
+- Project-specific paths and settings that need updating for your environment
+- Setup assumptions and dependencies specific to the original project
+- References to particular GitHub repositories and project structures
+
+Feel free to use these as a starting point - Claude Code excels at helping you adapt and customize them for your specific workflow.
 
 ---
 
@@ -105,7 +110,7 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
     sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
-    sed -i 's|TESTING=true python|TESTING=true python|g' "staging/commands/$(basename "$file")"
+    sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
     # Add project-specific warning to commands with mvp_site references
     if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
@@ -140,7 +145,7 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
         sed -i 's|/home/jleechan/projects/your-project.com|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
-        sed -i 's|TESTING=true python|TESTING=true python|g' "staging/scripts/$script_name"
+        sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
         sed -i '1i\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
@@ -152,6 +157,42 @@ done
 - Add setup requirements documentation for each script
 - Include execution environment requirements
 
+**🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
+```bash
+# Export development environment infrastructure scripts
+mkdir -p staging/infrastructure-scripts
+
+# Dynamically discover valuable root-level scripts to export
+mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\.sh$')
+
+for script_name in "${ROOT_SCRIPTS[@]}"; do
+    if [[ -f "$script_name" ]]; then
+        echo "Exporting infrastructure script: $script_name"
+
+        # Copy and transform
+        cp "$script_name" "staging/infrastructure-scripts/$script_name"
+
+        # Apply comprehensive content transformations
+        sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
+
+        # Add infrastructure script header with adaptation warning
+        sed -i '1i\#!/bin/bash\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This script provides development environment management patterns\n# Adapt paths, service names, and configurations for your project\n\n' "staging/infrastructure-scripts/$script_name"
+    else
+        echo "Warning: Infrastructure script not found: $script_name"
+    fi
+done
+```
+- Export complete development environment bootstrap and management scripts
+- Transform project-specific service names and paths to generic placeholders
+- Include comprehensive setup and adaptation documentation
+- Document multi-service management patterns (MCP servers, orchestration, bot servers)
+
 **🚨 Orchestration System Export** (`orchestration/` → `orchestration/`) - **WIP PROTOTYPE**:
 - Export complete multi-agent task delegation system with Redis coordination
 - **Architecture**: tmux-based agents (frontend, backend, testing, opus-master) with A2A communication
@@ -162,25 +203,106 @@ done
 - Add scaling guidance for agent capacity and workload distribution
 - **Status**: Active development prototype - successful task completion verified with PR generation
 
+**🤖 Claude Bot Self-Hosting System Export** (`claude-bot-commands/` → `claude-bot-commands/`) - **PRODUCTION READY**:
+- Export complete GitHub-based Claude command processing system for self-hosted deployments
+- **Architecture**: GitHub Actions workflow with self-hosted runner executing Claude commands via repository issues
+- **Components**: Server (`claude-bot-server.py`), workflow processor, debugging tools, comprehensive test suite
+- **Features**: Repository-based command processing, automated PR creation, threaded comment responses
+- **Usage**: Post command as GitHub issue → Self-hosted runner processes → Claude executes → Results posted
+- **Requirements**: GitHub repository, self-hosted runner, Python environment, Claude Code CLI
+- **Installation**: Complete setup guide with runner configuration and repository integration
+- **Benefits**: Repository-native command processing, version-controlled command history, automated workflows
+
+**⚙️ Automated PR Fixer System Export** (`automation/` → `automation/`) - **PRODUCTION READY**:
+- Export intelligent cron-based PR automation system with comprehensive error handling
+- **Core Script**: `simple_pr_batch.sh` - Autonomous PR analysis and fixing via `/copilot` integration
+- **Cron Configuration**: `cron_entry.txt` - Every 10 minutes automated PR processing
+- **Features**: Timeout handling (20min), attempt tracking (max 3), cooldown periods (4hr), email notifications
+- **Workflow**: Detect failing PRs → Execute `/copilot` comprehensive analysis → Apply fixes → Track attempts
+- **Error Handling**: Timeout detection, max attempt limits, email alerts for manual intervention required
+- **Requirements**: Claude Code CLI, GitHub CLI, email configuration, cron access
+- **Installation**: Cron setup, email notification configuration, GitHub token setup
+
+
+**🔬 Development Infrastructure Export** - **SPECIALIZED DEVELOPMENT TOOLS**:
+- **Prototype Framework** (`prototype/` → `prototyping/`):
+  - Validation and benchmarking framework for experimental implementations
+  - Performance profiling, accuracy measurement, alternative approach testing
+  - Migration paths from prototype to production code
+- **AI Prompting Templates** (`coding_prompts/` → `ai-prompts/`):
+  - Multi-agent development system with SUPERVISOR-WORKER-REVIEWER architecture
+  - Specialized prompts for code research, debugging, principal engineer reviews
+  - Virtual agent coordination and context independence protocols
+- **Analysis Framework** (`analysis/` → `analytics/`):
+  - Campaign analytics, user activity reporting, Firebase collection analytics
+  - Test result analysis, performance benchmarking, data validation tools
+
 **Configuration Export**:
 - Export relevant config files (filtered for sensitive data)
 - Include setup templates and environment examples
 - Document MCP server requirements and configuration
 - Provide installation verification procedures
 
+**Installer Script Export**:
+```bash
+# Export the automated installer script
+cp install-claude-commands.sh staging/install-claude-commands.sh
+
+# Apply content filtering to installer
+sed -i 's|worldarchitect\.ai|your-project.com|g' staging/install-claude-commands.sh
+sed -i 's|jleechan|$USER|g' staging/install-claude-commands.sh
+
+# Ensure executable permissions
+chmod +x staging/install-claude-commands.sh
+```
+- **Automated setup**: Complete installation with prerequisite checks
+- **System validation**: Directory creation, permissions, dependency verification
+- **User guidance**: Next steps and configuration instructions
+
 ### Phase 3: Documentation Generation
 
 **README Generation**:
-- Use /execute for comprehensive research and structure generation
-- Include prominent warning about reference-only status
-- Add detailed installation instructions with prerequisites
-- Document command categories and composition principles
+```bash
+# Use the pre-built README template with complete structure
+cp .claude/commands/README_EXPORT_TEMPLATE.md staging/README.md
+
+# Apply content filtering to README
+sed -i 's|worldarchitect\.ai|your-project.com|g' staging/README.md
+sed -i 's|jleechan|$USER|g' staging/README.md
+sed -i 's|github\.com/jleechanorg/claude-commands|github.com/$USER/claude-commands|g' staging/README.md
+```
+- **Structure**: Disclaimer → Intro → Table of Contents → Main Highlights → Installation → Architecture
+- **Main Highlights**: Orchestration system, most interesting commands, most interesting scripts
+- **Complete documentation**: Installation, troubleshooting, usage examples, contribution guide
 - **🚨 Orchestration System Highlight**: Dedicated section showcasing WIP prototype capabilities
   - Multi-agent architecture diagram and component overview
   - Real-world usage examples: `/orch "fix failing tests"`, `/orch "implement feature X"`
   - Setup walkthrough: Redis → tmux → agent workspaces → task delegation
   - Success metrics: Cost-per-task, completion rates, PR generation verification
   - Monitoring workflows: agent status, task progress, resource utilization
+- **🤖 Claude Bot Self-Hosting System**: Complete repository-based command processing
+  - GitHub Actions integration with self-hosted runner architecture
+  - Installation guide: Repository setup → Runner configuration → Command processing
+  - Usage examples: Issue-based commands → Automated execution → PR creation
+  - Production deployment patterns and scaling considerations
+- **⚙️ Automated PR Fixer System**: Intelligent cron-based PR maintenance
+  - Autonomous `/copilot` integration for comprehensive PR analysis and fixing
+  - Error handling: Timeout detection, attempt limits, email notifications
+  - Installation: Cron setup → Email configuration → GitHub integration
+  - Real-world metrics: Processing frequency, success rates, manual intervention triggers
+- **🔬 Development Infrastructure**: Specialized development tools
+  - Prototype Framework: Validation, benchmarking, experimental implementations
+  - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
+  - Analytics Framework: Campaign analytics, performance tracking, data validation
+- **🚨 Infrastructure Scripts**: Complete development environment management
+  - **Environment Bootstrap**: `claude_start.sh` - Multi-service startup with health checks
+  - **MCP Installation**: `claude_mcp.sh` - Comprehensive MCP server setup automation
+  - **GitHub Integration**: `start-claude-bot.sh` - Repository-based command processing
+  - **Git Workflows**: `integrate.sh`, `resolve_conflicts.sh`, `sync_branch.sh` - Branch management
+  - **CI/CD Setup**: `setup-github-runner.sh` - Self-hosted runner automation
+  - **Service Management**: `test_server_manager.sh` - Multi-service orchestration
+  - Installation guides with adaptation requirements for different projects
+  - Service configuration templates and health check patterns
 - Include troubleshooting and adaptation guidance
 
 **Support Documentation**:
@@ -212,8 +334,11 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - CLAUDE.md with reference warnings
 - All command definitions with categorization and proper filtering
 - Scripts with dependency documentation
-- Orchestration system with setup guides
-- Complete orchestration system ($(ls orchestration/ | wc -l) files)
+- Infrastructure Scripts: Complete development environment management ($(ls infrastructure-scripts/ | wc -l) scripts)
+- Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
+- Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
+- Automated PR Fixer System ($(ls automation/ | wc -l) files)
+- Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
 - Content filtering: mvp_site → \$PROJECT_ROOT, your-project.com → your-project.com
 - Comprehensive README and documentation
 
@@ -234,6 +359,25 @@ This export contains project-specific configurations that require adaptation.
   - Autonomous task execution with PR generation verification
   - Real-world cost metrics: $0.003-$0.050 per task
   - Monitoring and scaling procedures
+- **🤖 Claude Bot Self-Hosting System (PRODUCTION READY)**: Repository-based command processing
+  - GitHub Actions workflow with self-hosted runner architecture
+  - Issue-based command processing with automated PR creation
+  - Complete setup guide and debugging tools
+- **⚙️ Automated PR Fixer System (PRODUCTION READY)**: Intelligent cron-based automation
+  - Autonomous `/copilot` integration for comprehensive PR analysis
+  - Error handling, timeout detection, and email notifications
+  - 10-minute processing cycles with attempt tracking
+- **🔬 Development Infrastructure**: Specialized development tools
+  - Prototype framework for validation and benchmarking
+  - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
+  - Analytics framework for performance tracking and data validation
+- **🚨 Infrastructure Scripts**: Complete development environment management
+  - Environment bootstrap: claude_start.sh - Multi-service startup with health checks
+  - MCP installation: claude_mcp.sh - Comprehensive MCP server setup automation
+  - GitHub integration: start-claude-bot.sh - Repository-based command processing
+  - Git workflows: integrate.sh, resolve_conflicts.sh, sync_branch.sh - Branch management
+  - CI/CD setup: setup-github-runner.sh - Self-hosted runner automation
+  - Service management: test_server_manager.sh - Multi-service orchestration
 - Supporting scripts and utilities
 - Documentation and setup guides
 
@@ -264,21 +408,39 @@ See README.md for installation and adaptation guidance."
 - Testing scripts that require specific project setup
 - Firebase connection scripts (`scripts/debug_firebase_connection.py`)
 - Business plan and product specification documents
-- CI replica and debugging scripts (`ci_replica/`)
 - Worktree-specific paths and configurations
 
 **Directory Exclusions**:
 - Any directory containing project-specific database configurations
-- Test directories with hardcoded project paths
 - Scripts requiring specific virtual environment setup
-- `ci_replica/` - CI debugging and replication tools
-- `scripts/` - Firebase and database-specific utilities
-- `testing_http/` - HTTP testing with project endpoints
-- `testing_ui/` - Browser testing with project-specific setup
-- `orchestration/` workspaces with hardcoded paths
+- `scripts/` - Firebase and database-specific utilities (but INCLUDE automation/ and orchestration/ core)
+- `orchestration/` workspaces with hardcoded paths (but INCLUDE orchestration system core)
+- Testing infrastructure directories (as defined in export exclusion list above):
+  - `testing_http/` - HTTP testing with project-specific endpoints
+  - `testing_ui/` - Browser testing with project-specific UI elements
+  - `testing_mcp/` - MCP testing infrastructure with project-specific integrations
+  - `ci_replica/` - CI debugging tools with project-specific environment configurations
 - Business documentation (`business_plan_v1.md`, `product_spec.md`)
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
+
+**NEW SYSTEM INCLUSIONS** (⚠️ MUST EXPORT):
+- `claude-bot-commands/` - Complete self-hosting repository system (PRODUCTION READY)
+- `automation/` - Automated PR fixer system with cron integration (PRODUCTION READY)
+- `prototype/` - Validation and benchmarking framework (SPECIALIZED TOOLS)
+- `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
+- `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
+- Include installation guides and setup documentation for all systems
+
+**🚨 ROOT-LEVEL INFRASTRUCTURE SCRIPTS** (⚠️ MUST EXPORT):
+- `claude_start.sh` - Complete Claude Code + MCP ecosystem startup script with multi-service management
+- `claude_mcp.sh` - Comprehensive MCP server installation and configuration system
+- `start-claude-bot.sh` - GitHub-based Claude bot command server startup script
+- `integrate.sh` - Fresh branch creation workflow with cleanup and safety checks
+- `resolve_conflicts.sh` - Systematic Git conflict resolution workflow
+- `sync_branch.sh` - Branch synchronization and update patterns
+- `setup-github-runner.sh` - GitHub Actions self-hosted runner setup automation
+- `test_server_manager.sh` - Multi-service test server management utilities
 
 ## 🔍 CONTENT FILTERING RULES
 
@@ -289,7 +451,7 @@ sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "$file"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$file"
 sed -i "s|jleechan|${USER}|g" "$file"
 sed -i 's|WorldArchitect\.AI|Your Project|g' "$file"
-sed -i 's|TESTING=true python|TESTING=true python|g' "$file"
+sed -i 's|TESTING=true vpython|TESTING=true python|g' "$file"
 sed -i 's|Flask/Gunicorn|Web Framework|g' "$file"
 sed -i 's|Firebase/Firestore|Database|g' "$file"
 sed -i 's|serviceAccountKey\.json|database_credentials.json|g' "$file"
@@ -320,7 +482,7 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 - Project-specific test commands → Generic test patterns
 
 **Project References**:
-- `Your Project` → `Your Project`
+- `WorldArchitect.AI` → `Your Project`
 - `D&D/RPG` specific → Generic game/app references
 - Firebase/Firestore → Generic database references
 - Flask/Gunicorn specifics → Generic web framework references

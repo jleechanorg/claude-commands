@@ -31,8 +31,8 @@
 **Full Approval Workflow**:
 - **`/preapprove`**: Prepare approval context, validate plan completeness
 - **`/autoapprove`**: Trigger automatic approval mechanism and display message: "User already approves - proceeding with execution"
-- Bypass manual approval prompt that `/plan` normally requires
-- Proceed directly to execution phase
+- **Key difference from `/plan`**: Built-in auto-approval eliminates manual approval requirement
+- Proceed directly to execution phase with approval satisfied
 
 ### Phase 3: Implementation
 
@@ -117,8 +117,8 @@ Phase 3 - Implementation:
 ## Relationship to Other Commands
 
 - **`/plan`** - Just planning, requires manual approval, defines standard plan display format
-- **`/execute`** - Planning + full approval chain + execution, uses same display format as `/plan`
+- **`/execute`** - Planning + built-in auto-approval + execution (no manual approval needed), uses same display format as `/plan`
 - **`/preapprove`** - Prepare approval context and validation
-- **`/autoapprove`** - Automatic approval mechanism that skips the manual approval step required by `/plan`. When invoked, `/autoapprove` treats the plan as if the user explicitly approved it and proceeds directly to the execution phase. This command is integral to the `/execute` workflow, enabling seamless transitions from planning to implementation without user intervention.
+- **`/autoapprove`** - Automatic approval mechanism that satisfies the approval requirement internally. When invoked, `/autoapprove` treats the plan as if the user explicitly approved it and proceeds directly to the execution phase. This command is integral to the `/execute` workflow, enabling seamless transitions from planning to implementation without user intervention.
 
 **Format Consistency**: Both `/plan` and `/execute` use the centralized plan display format documented in `plan.md` to ensure consistent presentation of execution strategies and parallelization decisions.

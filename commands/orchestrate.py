@@ -10,11 +10,14 @@ import os
 import subprocess
 import sys
 
+
 def main():
     """Redirect to unified orchestration system."""
     if len(sys.argv) < 2:
         print("Usage: /orchestrate [task description]")
-        print("Example: /orchestrate Find security vulnerabilities and create coverage report")
+        print(
+            "Example: /orchestrate Find security vulnerabilities and create coverage report"
+        )
         return 1
 
     # Find orchestration directory
@@ -31,13 +34,14 @@ def main():
     task_args = sys.argv[1:]
 
     try:
-        result = subprocess.run([
-            sys.executable, unified_script
-        ] + task_args, cwd=project_root)
+        result = subprocess.run(
+            [sys.executable, unified_script] + task_args, cwd=project_root
+        )
         return result.returncode
     except Exception as e:
         print(f"❌ Failed to launch unified orchestration: {e}")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())
