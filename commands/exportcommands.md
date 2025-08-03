@@ -54,67 +54,49 @@ testing_mcp/
 ci_replica/
 EOF
 
-# Filter files before export from staging area
+# Filter files during export (no staging area needed)
 while IFS= read -r pattern; do
-    # Remove from staging area (covers both .claude/commands files and root directories)
-    find staging -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
-    # Also remove root directories that may be copied during main export
-    rm -rf "staging/${pattern%/}" 2>/dev/null || true
+    # Remove any matching files/directories from export
+    find . -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
 done < /tmp/export_exclusions.txt
 ```
 
-**CLAUDE.md Export**:
+**❌ CLAUDE.md NOT EXPORTED**:
 ```bash
-# Add reference-only warning header
-cat > staging/CLAUDE.md << 'EOF'
-# 📚 Reference Export - Adaptation Guide
-
-**Note**: This is a reference export from a working Claude Code project. You may need to personally debug some configurations, but Claude Code can easily adjust for your specific needs.
-
-These configurations may include:
-- Project-specific paths and settings that need updating for your environment
-- Setup assumptions and dependencies specific to the original project
-- References to particular GitHub repositories and project structures
-
-Feel free to use these as a starting point - Claude Code excels at helping you adapt and customize them for your specific workflow.
-
----
-
-EOF
-
-# Filter and append original CLAUDE.md
-cp CLAUDE.md /tmp/claude_filtered.md
-# Apply content filtering
-sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
-sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
-sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
-cat /tmp/claude_filtered.md >> staging/CLAUDE.md
+# CLAUDE.md contains project-specific rules and protocols
+# It should NOT be exported as it's specific to WorldArchitect.AI project
+echo "✅ CLAUDE.md excluded from export (project-specific rules)"
 ```
 
 **Commands Export** (`.claude/commands/` → `commands/`):
 ```bash
+# Create commands directory directly in repo (no staging)
+mkdir -p commands
+
 # Copy commands with filtering
-for file in .claude/commands/*.md .claude/commands/*.py; do
+find .claude/commands -name "*.md" -o -name "*.py" | while read file; do
+    filename=$(basename "$file")
+
     # Skip project-specific files
-    case "$(basename "$file")" in
+    case "$filename" in
         "testi.sh"|"run_tests.sh"|"copilot_inline_reply_example.sh")
-            echo "Skipping project-specific file: $file"
+            echo "Skipping project-specific file: $filename"
             continue
             ;;
     esac
 
-    # Copy and filter content
-    cp "$file" "staging/commands/$(basename "$file")"
+    # Copy and filter content directly to commands/
+    cp "$file" "commands/$filename"
 
     # Apply content transformations
-    sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
-    sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
-    sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
-    sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
+    sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "commands/$filename"
+    sed -i 's|worldarchitect\.ai|your-project.com|g' "commands/$filename"
+    sed -i "s|jleechan|${USER}|g" "commands/$filename"
+    sed -i 's|TESTING=true vpython|TESTING=true python|g' "commands/$filename"
 
     # Add project-specific warning to commands with mvp_site references
-    if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
-        sed -i '1i\# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment\n' "staging/commands/$(basename "$file")"
+    if grep -q "PROJECT_ROOT" "commands/$filename"; then
+        sed -i '1i\# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment\n' "commands/$filename"
     fi
 done
 ```
@@ -160,29 +142,27 @@ done
 **🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
 ```bash
 # Export development environment infrastructure scripts
-mkdir -p staging/infrastructure-scripts
+mkdir -p infrastructure-scripts
 
 # Dynamically discover valuable root-level scripts to export
-mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\.sh$')
-
-for script_name in "${ROOT_SCRIPTS[@]}"; do
+for script_name in claude_start.sh claude_mcp.sh start-claude-bot.sh integrate.sh resolve_conflicts.sh sync_branch.sh setup-github-runner.sh test_server_manager.sh; do
     if [[ -f "$script_name" ]]; then
         echo "Exporting infrastructure script: $script_name"
 
-        # Copy and transform
-        cp "$script_name" "staging/infrastructure-scripts/$script_name"
+        # Copy and transform directly to infrastructure-scripts/
+        cp "$script_name" "infrastructure-scripts/$script_name"
 
         # Apply comprehensive content transformations
-        sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "infrastructure-scripts/$script_name"
+        sed -i 's|jleechan|$USER|g' "infrastructure-scripts/$script_name"
+        sed -i 's|D&D campaign management|Content management|g' "infrastructure-scripts/$script_name"
+        sed -i 's|Game MCP Server|Content MCP Server|g' "infrastructure-scripts/$script_name"
+        sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "infrastructure-scripts/$script_name"
 
         # Add infrastructure script header with adaptation warning
-        sed -i '1i\#!/bin/bash\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This script provides development environment management patterns\n# Adapt paths, service names, and configurations for your project\n\n' "staging/infrastructure-scripts/$script_name"
+        sed -i '1i\#!/bin/bash\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This script provides development environment management patterns\n# Adapt paths, service names, and configurations for your project\n\n' "infrastructure-scripts/$script_name"
     else
         echo "Warning: Infrastructure script not found: $script_name"
     fi
@@ -243,37 +223,151 @@ done
 - Document MCP server requirements and configuration
 - Provide installation verification procedures
 
-**Installer Script Export**:
+### Phase 3: Install Script Generation
+
+**🚨 MANDATORY INSTALL SCRIPT CREATION**: Create install script in repository root
+
 ```bash
-# Export the automated installer script
-cp install-claude-commands.sh staging/install-claude-commands.sh
+# Create install.sh directly in repository root (no staging directory)
+if [ -f "install.sh" ]; then
+    echo "✅ Install script already exists in repository"
+    chmod +x "install.sh"
+else
+    echo "🚨 Creating install.sh script in repository root..."
 
-# Apply content filtering to installer
-sed -i 's|worldarchitect\.ai|your-project.com|g' staging/install-claude-commands.sh
-sed -i 's|jleechan|$USER|g' staging/install-claude-commands.sh
+    cat > "install.sh" << 'EOF'
+#!/bin/bash
+# Claude Commands Installation Script
+# Auto-generated by /exportcommands
 
-# Ensure executable permissions
-chmod +x staging/install-claude-commands.sh
+set -e  # Exit on any error
+
+echo "🚀 Installing Claude Commands..."
+echo "=================================="
+
+# Check if we're in a git repository and navigate to root
+if ! git_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+    echo "❌ Error: Not inside a git repository" >&2
+    exit 1
+fi
+cd "$git_root"
+
+# Create .claude/commands directory if it doesn't exist
+if [ ! -d ".claude" ]; then
+    echo "📁 Creating .claude directory..."
+    mkdir -p .claude
+fi
+
+if [ ! -d ".claude/commands" ]; then
+    echo "📁 Creating .claude/commands directory..."
+    mkdir -p .claude/commands
+fi
+
+# Copy commands from exported commands/ to .claude/commands/
+echo "📋 Installing command definitions..."
+if [ -d "commands" ]; then
+    for file in commands/*; do
+        if [ -f "$file" ]; then
+            filename=$(basename "$file")
+            # Skip README files - they belong in the repository root
+            if [[ "$filename" == "README"* ]]; then
+                echo "   ⏭ Skipping $filename (documentation file)"
+                continue
+            fi
+            echo "   • $filename"
+            cp "$file" ".claude/commands/$filename"
+        fi
+    done
+    echo "✅ Commands installed to .claude/commands/"
+else
+    echo "⚠️  Warning: commands/ directory not found"
+fi
+
+# Copy claude_start.sh from infrastructure-scripts to root
+echo "🚀 Installing startup script..."
+if [ -f "infrastructure-scripts/claude_start.sh" ]; then
+    echo "   • claude_start.sh"
+    cp "infrastructure-scripts/claude_start.sh" "./claude_start.sh"
+    chmod +x "./claude_start.sh"
+    echo "✅ Startup script installed to root directory"
+else
+    echo "⚠️  Warning: claude_start.sh not found in infrastructure-scripts/"
+fi
+
+# Update .gitignore with copied files
+echo "📝 Updating .gitignore..."
+gitignore_entries=""
+
+# Check if entries need to be added and build gitignore content
+claude_commands_missing=false
+claude_start_missing=false
+
+if ! grep -q "^# Claude Commands - Auto-installed by install.sh" .gitignore 2>/dev/null; then
+    claude_commands_missing=true
+fi
+
+if ! grep -q "^claude_start.sh" .gitignore 2>/dev/null; then
+    claude_start_missing=true
+fi
+
+# Build gitignore entries only if needed
+if [ "$claude_commands_missing" = true ] || [ "$claude_start_missing" = true ]; then
+    if [ "$claude_commands_missing" = true ]; then
+        gitignore_entries+="
+# Claude Commands - Auto-installed by install.sh
+.claude/
+.claude/commands/
+"
+    fi
+
+    if [ "$claude_start_missing" = true ]; then
+        gitignore_entries+="
+# Claude startup script - Auto-installed
+claude_start.sh
+"
+    fi
+    echo "$gitignore_entries" >> .gitignore
+    echo "✅ Updated .gitignore with installed files"
+else
+    echo "✅ .gitignore already contains necessary entries"
+fi
+
+echo ""
+echo "🎉 Installation Complete!"
+echo ""
+echo "Next steps:"
+echo "1. Adapt commands for your project (replace \$PROJECT_ROOT placeholders)"
+echo "2. Update claude_start.sh with your project-specific paths"
+echo "3. Run ./claude_start.sh to start Claude Code with MCP servers"
+echo ""
+echo "⚠️  Remember: These are reference commands that may need project-specific adaptation"
+EOF
+
+    chmod +x "install.sh"
+    echo "✅ Created install.sh script with command installation logic"
+fi
 ```
-- **Automated setup**: Complete installation with prerequisite checks
-- **System validation**: Directory creation, permissions, dependency verification
-- **User guidance**: Next steps and configuration instructions
 
-### Phase 3: Documentation Generation
+**Install Script Features**:
+- **Safety Checks**: Verifies git repository context
+- **Directory Creation**: Creates `.claude/commands/` if needed
+- **Command Installation**: Copies commands from `commands/` to `.claude/commands/` (excludes README files)
+- **Startup Script**: Copies `claude_start.sh` to root directory with executable permissions
+- **GitIgnore Management**: Automatically adds installed files to .gitignore
+- **User Guidance**: Provides clear next steps and adaptation requirements
+- **Error Handling**: Graceful handling of missing files with warnings
+
+### Phase 4: Documentation Generation
 
 **README Generation**:
-```bash
-# Use the pre-built README template with complete structure
-cp .claude/commands/README_EXPORT_TEMPLATE.md staging/README.md
-
-# Apply content filtering to README
-sed -i 's|worldarchitect\.ai|your-project.com|g' staging/README.md
-sed -i 's|jleechan|$USER|g' staging/README.md
-sed -i 's|github\.com/jleechanorg/claude-commands|github.com/$USER/claude-commands|g' staging/README.md
-```
-- **Structure**: Disclaimer → Intro → Table of Contents → Main Highlights → Installation → Architecture
-- **Main Highlights**: Orchestration system, most interesting commands, most interesting scripts
-- **Complete documentation**: Installation, troubleshooting, usage examples, contribution guide
+- Use /execute for comprehensive research and structure generation
+- Include prominent warning about reference-only status
+- **🚨 INSTALL SCRIPT DOCUMENTATION**: Prominently feature the install.sh script
+  - Quick start: `./install.sh` to auto-install commands and startup script
+  - Installation verification procedures
+  - Troubleshooting guide for common installation issues
+- Add detailed installation instructions with prerequisites
+- Document command categories and composition principles
 - **🚨 Orchestration System Highlight**: Dedicated section showcasing WIP prototype capabilities
   - Multi-agent architecture diagram and component overview
   - Real-world usage examples: `/orch "fix failing tests"`, `/orch "implement feature X"`
@@ -311,15 +405,14 @@ sed -i 's|github\.com/jleechanorg/claude-commands|github.com/$USER/claude-comman
 - Include troubleshooting guide with common issues
 - Provide usage examples with progressive complexity
 
-### Phase 4: Git Operations & Publishing
+### Phase 5: Git Operations & Publishing
 
 **Repository Management**:
 ```bash
 # Repository cleanup and fresh export already completed in Phase 2
 cd "$REPO_DIR"
 
-# Copy exported content from staging
-cp -r /tmp/claude_commands_export_*/. .
+# Export is done directly in repository (no staging copy needed)
 
 # Commit changes with cleanup notation
 git add .
@@ -333,6 +426,7 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 ✅ CURRENT EXPORT:
 - CLAUDE.md with reference warnings
 - All command definitions with categorization and proper filtering
+- **🚀 INSTALL SCRIPT**: Auto-install commands to .claude/commands/ and setup claude_start.sh
 - Scripts with dependency documentation
 - Infrastructure Scripts: Complete development environment management ($(ls infrastructure-scripts/ | wc -l) scripts)
 - Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
@@ -353,6 +447,7 @@ gh pr create --title "Claude Commands Export $(date +%Y-%m-%d)" \
 This export contains project-specific configurations that require adaptation.
 
 ## Contents
+- **🚀 ONE-CLICK INSTALL**: `./install.sh` script auto-installs commands to `.claude/commands/` and copies `claude_start.sh`
 - Complete command system (70+ commands)
 - **🚨 Orchestration Infrastructure (WIP Prototype)**: Multi-agent task delegation system
   - tmux-based agent architecture with Redis coordination
@@ -382,7 +477,8 @@ This export contains project-specific configurations that require adaptation.
 - Documentation and setup guides
 
 ## Usage
-See README.md for installation and adaptation guidance."
+**Quick Install**: Run `./install.sh` to auto-install commands and startup script
+See README.md for detailed installation and adaptation guidance."
 ```
 
 **Verification**:

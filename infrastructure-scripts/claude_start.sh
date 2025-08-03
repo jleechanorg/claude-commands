@@ -361,7 +361,7 @@ echo ""
 echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
 # Check if memory backup script exists (dedicated repository format)
-MEMORY_BACKUP_SCRIPT="$HOME/projects/worldarchitect-memory-backups/scripts/daily_backup.sh"
+MEMORY_BACKUP_SCRIPT="$HOME/projects/$PROJECT_NAME-memory-backups/scripts/daily_backup.sh"
 
 BACKUP_ISSUES=()
 
@@ -374,7 +374,7 @@ fi
 
 
 # Check if cron job exists (new dedicated repository format)
-if ! crontab -l 2>/dev/null | grep -q "worldarchitect-memory-backups/scripts/daily_backup.sh"; then
+if ! crontab -l 2>/dev/null | grep -q "$PROJECT_NAME-memory-backups/scripts/daily_backup.sh"; then
     BACKUP_ISSUES+=("❌ Cron job not configured for memory backups")
 fi
 
@@ -384,7 +384,7 @@ if [ ! -d "$HOME/.cache/mcp-memory" ]; then
 fi
 
 # Check if backup repository exists (new dedicated repository format)
-if [ ! -d "$HOME/projects/worldarchitect-memory-backups" ]; then
+if [ ! -d "$HOME/projects/$PROJECT_NAME-memory-backups" ]; then
     BACKUP_ISSUES+=("❌ Backup repository not found")
 fi
 
@@ -397,7 +397,7 @@ else
         echo -e "${YELLOW}  $issue${NC}"
     done
 
-    echo -e "${YELLOW}📝 For setup, use the dedicated memory backup repository at $HOME/projects/worldarchitect-memory-backups${NC}"
+    echo -e "${YELLOW}📝 For setup, use the dedicated memory backup repository at $HOME/projects/$PROJECT_NAME-memory-backups${NC}"
 fi
 
 echo ""
