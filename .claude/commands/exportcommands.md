@@ -67,16 +67,16 @@ done < /tmp/export_exclusions.txt
 ```bash
 # Add reference-only warning header
 cat > staging/CLAUDE.md << 'EOF'
-# ⚠️ REFERENCE ONLY - DO NOT USE DIRECTLY
+# 📚 Reference Export - Adaptation Guide
 
-**WARNING**: This is a reference export from a specific project setup. These configurations:
-- May contain project-specific paths and settings (mvp_site/, specific database configs)
-- Have not been tested in isolation
-- May require significant adaptation for your environment
-- Include setup-specific assumptions and dependencies
-- Reference personal GitHub repositories and specific project structure
+**Note**: This is a reference export from a working Claude Code project. You may need to personally debug some configurations, but Claude Code can easily adjust for your specific needs.
 
-Use this as inspiration and reference, not direct implementation.
+These configurations may include:
+- Project-specific paths and settings that need updating for your environment
+- Setup assumptions and dependencies specific to the original project
+- References to particular GitHub repositories and project structures
+
+Feel free to use these as a starting point - Claude Code excels at helping you adapt and customize them for your specific workflow.
 
 ---
 
@@ -157,6 +157,42 @@ done
 - Add setup requirements documentation for each script
 - Include execution environment requirements
 
+**🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
+```bash
+# Export development environment infrastructure scripts
+mkdir -p staging/infrastructure-scripts
+
+# Dynamically discover valuable root-level scripts to export
+mapfile -t ROOT_SCRIPTS < <(ls -1 *.sh 2>/dev/null | grep -E '^(claude_|start-claude-bot|integrate|resolve_conflicts|sync_branch|setup-github-runner|test_server_manager)\.sh$')
+
+for script_name in "${ROOT_SCRIPTS[@]}"; do
+    if [[ -f "$script_name" ]]; then
+        echo "Exporting infrastructure script: $script_name"
+
+        # Copy and transform
+        cp "$script_name" "staging/infrastructure-scripts/$script_name"
+
+        # Apply comprehensive content transformations
+        sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
+
+        # Add infrastructure script header with adaptation warning
+        sed -i '1i\#!/bin/bash\n# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This script provides development environment management patterns\n# Adapt paths, service names, and configurations for your project\n\n' "staging/infrastructure-scripts/$script_name"
+    else
+        echo "Warning: Infrastructure script not found: $script_name"
+    fi
+done
+```
+- Export complete development environment bootstrap and management scripts
+- Transform project-specific service names and paths to generic placeholders
+- Include comprehensive setup and adaptation documentation
+- Document multi-service management patterns (MCP servers, orchestration, bot servers)
+
 **🚨 Orchestration System Export** (`orchestration/` → `orchestration/`) - **WIP PROTOTYPE**:
 - Export complete multi-agent task delegation system with Redis coordination
 - **Architecture**: tmux-based agents (frontend, backend, testing, opus-master) with A2A communication
@@ -234,6 +270,15 @@ done
   - Prototype Framework: Validation, benchmarking, experimental implementations
   - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
   - Analytics Framework: Campaign analytics, performance tracking, data validation
+- **🚨 Infrastructure Scripts**: Complete development environment management
+  - **Environment Bootstrap**: `claude_start.sh` - Multi-service startup with health checks
+  - **MCP Installation**: `claude_mcp.sh` - Comprehensive MCP server setup automation
+  - **GitHub Integration**: `start-claude-bot.sh` - Repository-based command processing
+  - **Git Workflows**: `integrate.sh`, `resolve_conflicts.sh`, `sync_branch.sh` - Branch management
+  - **CI/CD Setup**: `setup-github-runner.sh` - Self-hosted runner automation
+  - **Service Management**: `test_server_manager.sh` - Multi-service orchestration
+  - Installation guides with adaptation requirements for different projects
+  - Service configuration templates and health check patterns
 - Include troubleshooting and adaptation guidance
 
 **Support Documentation**:
@@ -265,6 +310,7 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - CLAUDE.md with reference warnings
 - All command definitions with categorization and proper filtering
 - Scripts with dependency documentation
+- Infrastructure Scripts: Complete development environment management ($(ls infrastructure-scripts/ | wc -l) scripts)
 - Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
 - Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
 - Automated PR Fixer System ($(ls automation/ | wc -l) files)
@@ -301,6 +347,13 @@ This export contains project-specific configurations that require adaptation.
   - Prototype framework for validation and benchmarking
   - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
   - Analytics framework for performance tracking and data validation
+- **🚨 Infrastructure Scripts**: Complete development environment management
+  - Environment bootstrap: claude_start.sh - Multi-service startup with health checks
+  - MCP installation: claude_mcp.sh - Comprehensive MCP server setup automation
+  - GitHub integration: start-claude-bot.sh - Repository-based command processing
+  - Git workflows: integrate.sh, resolve_conflicts.sh, sync_branch.sh - Branch management
+  - CI/CD setup: setup-github-runner.sh - Self-hosted runner automation
+  - Service management: test_server_manager.sh - Multi-service orchestration
 - Supporting scripts and utilities
 - Documentation and setup guides
 
@@ -338,10 +391,11 @@ See README.md for installation and adaptation guidance."
 - Scripts requiring specific virtual environment setup
 - `scripts/` - Firebase and database-specific utilities (but INCLUDE automation/ and orchestration/ core)
 - `orchestration/` workspaces with hardcoded paths (but INCLUDE orchestration system core)
-- `testing_http/` - HTTP testing with project-specific endpoints and configurations
-- `testing_ui/` - Browser testing with project-specific UI elements and workflows
-- `testing_mcp/` - MCP testing infrastructure with project-specific integrations
-- `ci_replica/` - CI debugging tools with project-specific environment configurations
+- Testing infrastructure directories (as defined in export exclusion list above):
+  - `testing_http/` - HTTP testing with project-specific endpoints
+  - `testing_ui/` - Browser testing with project-specific UI elements
+  - `testing_mcp/` - MCP testing infrastructure with project-specific integrations
+  - `ci_replica/` - CI debugging tools with project-specific environment configurations
 - Business documentation (`business_plan_v1.md`, `product_spec.md`)
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
@@ -353,6 +407,16 @@ See README.md for installation and adaptation guidance."
 - `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
 - `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
 - Include installation guides and setup documentation for all systems
+
+**🚨 ROOT-LEVEL INFRASTRUCTURE SCRIPTS** (⚠️ MUST EXPORT):
+- `claude_start.sh` - Complete Claude Code + MCP ecosystem startup script with multi-service management
+- `claude_mcp.sh` - Comprehensive MCP server installation and configuration system
+- `start-claude-bot.sh` - GitHub-based Claude bot command server startup script
+- `integrate.sh` - Fresh branch creation workflow with cleanup and safety checks
+- `resolve_conflicts.sh` - Systematic Git conflict resolution workflow
+- `sync_branch.sh` - Branch synchronization and update patterns
+- `setup-github-runner.sh` - GitHub Actions self-hosted runner setup automation
+- `test_server_manager.sh` - Multi-service test server management utilities
 
 ## 🔍 CONTENT FILTERING RULES
 
