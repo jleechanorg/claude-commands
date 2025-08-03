@@ -11,7 +11,7 @@ export function Header() {
             <span className="text-white text-lg sm:text-xl">🎲</span>
           </div>
           <div>
-            <h1 className="text-white text-lg sm:text-xl">WorldArchitect.AI</h1>
+            <h1 className="text-white text-lg sm:text-xl">WorldAI</h1>
             <p className="text-purple-200 text-xs sm:text-sm">Campaign Dashboard</p>
           </div>
         </div>
@@ -25,7 +25,7 @@ export function Header() {
         <div className="flex items-center space-x-2 sm:space-x-4">
           <div className="text-right hidden md:block">
             <p className="text-white">Epic Adventurer</p>
-            <p className="text-purple-200 text-sm">adventurer@worldarchitect.ai</p>
+            <p className="text-purple-200 text-sm">adventurer@worldai.com</p>
           </div>
           <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
             <AvatarFallback className="bg-purple-600 text-white text-sm">EA</AvatarFallback>

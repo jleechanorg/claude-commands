@@ -169,6 +169,14 @@
 - ✅ Show actual output before suggesting fixes | Reference specific line numbers
 - 🔍 All claims must trace to specific evidence
 
+🚨 **TERMINAL SESSION PRESERVATION**: ⚠️ MANDATORY - Scripts must NOT exit terminal on errors
+- ❌ NEVER use `exit 1` that terminates user's terminal session
+- ✅ ALWAYS use graceful error handling: echo error + read prompt + fallback mode
+- ✅ Pattern: `echo "Error message"; read -p "Press Enter to continue..."; # fallback behavior`
+- ✅ Users need control over their terminal session - let them Ctrl+C to go back
+- ❌ Only use `exit` for truly unrecoverable situations
+- 🔍 Evidence: User correction "do not exit the whole terminal from an error, just let me ctrl c and go back"
+
 🚨 **NO UNVERIFIED SOURCE CITATION**: ⚠️ MANDATORY - Only cite sources you've actually read
 - ❌ NEVER present search result URLs as "sources" without reading their content first
 - ✅ ALWAYS distinguish between "potential sources found" vs "verified sources read"
@@ -590,6 +598,14 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 **Process**: Extract evidence → Analyze → Verify → Fix | Trace: Backend → API → Frontend
 **Evidence**: Primary (code/errors) > Secondary (docs) > General (patterns) > Speculation
 **Details**: → `.cursor/rules/debugging_guide.md`
+
+🚨 **NO PLATFORM BLAME WITHOUT FRESH INSTANCES**: ⚠️ MANDATORY - Before blaming external platforms
+- ❌ NEVER blame "platform instability" without systematic testing with fresh instances
+- ✅ ALWAYS test fresh instance creation with proper configuration before platform blame
+- ✅ REQUIRED: Fresh instance + proper onstart scripts + normal timing expectations
+- **Pattern**: Fresh instance test → Platform-specific requirements → Normal behavior expected
+- **Evidence**: Vast.ai "platform instability" was actually corrupted instances + missing SSH setup
+- **Anti-Pattern**: Blame platform → Research alternatives vs Debug systematically → Test fresh instances
 
 ### Critical Rules
 **Data Corruption**: Systemic issue - search all patterns | **Temp Fixes**: Flag + fix NOW

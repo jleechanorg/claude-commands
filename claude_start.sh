@@ -34,6 +34,18 @@ while [[ $# -gt 0 ]]; do
             MODE="supervisor"
             shift
             ;;
+        -q|--qwen)
+            MODE="qwen"
+            shift
+            ;;
+        --qwen-local)
+            MODE="qwen-local"
+            shift
+            ;;
+        --cerebras)
+            MODE="cerebras"
+            shift
+            ;;
         *)
             REMAINING_ARGS+=("$1")
             shift
@@ -43,6 +55,40 @@ done
 
 # Restore remaining arguments
 set -- "${REMAINING_ARGS[@]}"
+
+# Check for required dependencies
+if [ "$MODE" = "qwen" ] || [ "$MODE" = "cerebras" ]; then
+    if ! command -v jq >/dev/null 2>&1; then
+        echo -e "${RED}❌ jq is required but not installed${NC}"
+        echo "Please install jq: sudo apt-get install jq (or equivalent for your OS)"
+        echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+        read -p ""
+        echo -e "${BLUE}Falling back to default mode...${NC}"
+        MODE="default"
+    fi
+fi
+
+# Removed: Self-hosted LLM helper functions
+# These are now handled by the dedicated llm_selfhost repository
+# See: https://github.com/jleechanorg/llm_selfhost
+
+# SSH tunnel PID file
+SSH_TUNNEL_PID_FILE="/tmp/qwen_ssh_tunnel.pid"
+
+# Cleanup function for SSH tunnels
+cleanup_ssh_tunnel() {
+    if [ -f "$SSH_TUNNEL_PID_FILE" ]; then
+        local PID=$(cat "$SSH_TUNNEL_PID_FILE")
+        if kill -0 "$PID" 2>/dev/null; then
+            kill "$PID" 2>/dev/null || true
+            echo -e "${BLUE}🧹 Cleaned up SSH tunnel (PID: $PID)${NC}"
+        fi
+        rm -f "$SSH_TUNNEL_PID_FILE"
+    fi
+}
+
+# Set up trap for cleanup on exit
+trap cleanup_ssh_tunnel EXIT
 
 # Function to check if orchestration is running
 is_orchestration_running() {
@@ -122,7 +168,10 @@ echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
 # Check if claude command is available
 if ! command -v claude >/dev/null 2>&1; then
     echo -e "${RED}❌ Claude CLI not found. Please install Claude CLI first.${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠️  Cannot continue without Claude CLI. Press Enter to exit...${NC}"
+    read -p ""
+    echo -e "${BLUE}Script cannot function without Claude CLI. Please install it first.${NC}"
+    return 1 2>/dev/null || exit 1
 fi
 
 # Get MCP server list with better error handling
@@ -282,7 +331,7 @@ else
             # Calculate log directory for display
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
             LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
-            
+
             echo -e "${GREEN}✅ Game MCP server started successfully${NC}"
             echo -e "${BLUE}📋 Server info:${NC}"
             echo -e "   • Health check: http://127.0.0.1:7000/health"
@@ -295,7 +344,7 @@ else
             # Calculate log directory for troubleshooting
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
             LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
-            
+
             echo -e "${RED}❌ Failed to start Game MCP server${NC}"
             echo -e "${BLUE}💡 Check startup log: tail -f $LOG_DIR/game-mcp-server-startup.log${NC}"
             echo -e "${BLUE}💡 Check server log: tail -f $LOG_DIR/game-mcp-server.log${NC}"
@@ -427,6 +476,486 @@ if [ -n "$MODE" ]; then
             echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
             claude --model "$MODEL" $FLAGS "$@"
             ;;
+        qwen)
+            echo -e "${BLUE}🤖 Qwen mode selected - using Qwen3-Coder via vast.ai${NC}"
+            echo -e "${BLUE}💡 Features: Remote Qwen3-Coder model via vast.ai GPU instances${NC}"
+            echo -e "${BLUE}💡 Model: qwen3-coder (optimized for coding tasks)${NC}"
+            echo ""
+
+            # Check if API proxy is available
+            # TERMINAL SESSION PRESERVATION: Never exit terminal on errors - let users Ctrl+C to go back
+            API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+            if [ ! -f "$API_PROXY_PATH" ]; then
+                echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
+                echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            fi
+
+            # Check for Redis environment variables
+            if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PASSWORD" ]; then
+                echo -e "${YELLOW}⚠️  Redis credentials not found in environment${NC}"
+                echo -e "${BLUE}💡 Set Redis environment variables:${NC}"
+                echo -e "${BLUE}   export REDIS_HOST='your-redis-host.redis-cloud.com'${NC}"
+                echo -e "${BLUE}   export REDIS_PORT='14339'${NC}"
+                echo -e "${BLUE}   export REDIS_PASSWORD='your-redis-password'${NC}"
+                echo ""
+                echo -e "${YELLOW}⚠️  Continuing without Redis caching...${NC}"
+            else
+                echo -e "${GREEN}✅ Redis configuration found${NC}"
+            fi
+
+            # Automatic vast.ai workflow
+            echo -e "${BLUE}🔍 Checking for existing connections...${NC}"
+
+            # Check for existing proxies first
+            if curl -s --connect-timeout 3 http://localhost:8000/health > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8000${NC}"
+                API_BASE_URL="http://localhost:8000"
+            elif curl -s --connect-timeout 3 http://localhost:8001/health > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8001${NC}"
+                API_BASE_URL="http://localhost:8001"
+            else
+                echo -e "${YELLOW}⚠️  No existing proxy found, connecting to vast.ai...${NC}"
+
+                # Check if vastai CLI is installed
+                if ! command -v vastai >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Vast.ai CLI not found${NC}"
+                    echo -e "${BLUE}💡 Install with: pip install vastai${NC}"
+                    echo -e "${BLUE}💡 Set API key with: vastai set api-key YOUR_KEY${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                # Check API key
+                if ! vastai show user >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Vast.ai API key not configured${NC}"
+                    echo -e "${BLUE}💡 Set API key with: vastai set api-key YOUR_KEY${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${GREEN}✅ Vast.ai CLI configured${NC}"
+
+                # Look for existing running instances first
+                echo -e "${BLUE}🔍 Looking for existing qwen instances...${NC}"
+                EXISTING_INSTANCES=$(vastai show instances --raw | jq -r '.[] | select(.actual_status == "running" and (.label // "" | contains("qwen"))) | .id' 2>/dev/null || echo "")
+
+                if [ -n "$EXISTING_INSTANCES" ]; then
+                    # Try instances from newest to oldest until one works
+                    for INSTANCE_ID in $(echo "$EXISTING_INSTANCES" | tac); do
+                        echo -e "${GREEN}✅ Found existing qwen instance: $INSTANCE_ID${NC}"
+
+                        # Get connection details
+                        INSTANCE_DETAILS=$(vastai show instance $INSTANCE_ID --raw)
+                        SSH_HOST=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_host')
+                        SSH_PORT=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_port')
+
+                        echo -e "${BLUE}🔗 Connecting to existing instance $INSTANCE_ID at $SSH_HOST:$SSH_PORT${NC}"
+
+                        # Kill any existing tunnels on port 8000
+                        pkill -f "ssh.*8000" 2>/dev/null || true
+                        sleep 1
+
+                        # Create SSH tunnel (bypass host key verification for automation)
+                        # Clean up any existing tunnel first
+                        cleanup_ssh_tunnel
+                        ssh -N -L 8000:localhost:8000 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST" 2>/dev/null &
+                        local TUNNEL_PID=$!
+                        echo $TUNNEL_PID > "$SSH_TUNNEL_PID_FILE"
+
+                        # Test connection
+                        sleep 3
+                        if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                            echo -e "${GREEN}✅ Connected to existing vast.ai instance $INSTANCE_ID${NC}"
+                            API_BASE_URL="http://localhost:8000"
+                            break
+                        else
+                            echo -e "${YELLOW}⚠️  Instance $INSTANCE_ID not responding, trying next...${NC}"
+                        fi
+                    done
+
+                    if [ -z "$API_BASE_URL" ]; then
+                        echo -e "${YELLOW}⚠️  No existing instances responding, will create new one${NC}"
+                        INSTANCE_ID=""
+                    fi
+                fi
+
+                # Create new instance if no existing one found or connection failed
+                if [ -z "$API_BASE_URL" ]; then
+                    echo -e "${BLUE}🚀 Creating new vast.ai GPU instance...${NC}"
+                    echo -e "${BLUE}🔍 Searching for available GPU instances...${NC}"
+
+                    # Fix: Get full results then slice with jq to avoid JSON truncation
+                    SEARCH_RESULTS=$(vastai search offers 'cuda_vers >= 12.0 gpu_name:RTX_4090 inet_down >= 50' --raw 2>/dev/null | jq '.[0:10]' 2>/dev/null || echo "[]")
+
+                    # Debug: Check if search results are valid JSON and not empty array
+                    if [ -z "$SEARCH_RESULTS" ] || [ "$SEARCH_RESULTS" = "[]" ] || ! echo "$SEARCH_RESULTS" | jq empty 2>/dev/null; then
+                        echo -e "${YELLOW}⚠️  No RTX 4090 instances found or invalid response, trying broader search...${NC}"
+                        SEARCH_RESULTS=$(vastai search offers 'cuda_vers >= 11.8 gpu_ram >= 8' --raw 2>/dev/null | jq '.[0:10]' 2>/dev/null || echo "[]")
+
+                        if [ -z "$SEARCH_RESULTS" ] || [ "$SEARCH_RESULTS" = "[]" ] || ! echo "$SEARCH_RESULTS" | jq empty 2>/dev/null; then
+                            echo -e "${RED}❌ No suitable instances found or vast.ai API error${NC}"
+                            echo -e "${BLUE}💡 Try again later or check vast.ai marketplace${NC}"
+                            echo -e "${YELLOW}Debug: Search results: $SEARCH_RESULTS${NC}"
+                            echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                            read -p ""
+                            echo -e "${BLUE}Falling back to default mode...${NC}"
+                            MODEL=""
+                            FLAGS="--dangerously-skip-permissions"
+                            claude $FLAGS "$@"
+                            return
+                        fi
+                    fi
+
+                    # Get the best instance (lowest price) with error handling
+                    BEST_INSTANCE=$(echo "$SEARCH_RESULTS" | jq -r '.[0].id // empty' 2>/dev/null)
+                    BEST_PRICE=$(echo "$SEARCH_RESULTS" | jq -r '.[0].avail_vol_dph // empty' 2>/dev/null)
+                    GPU_NAME=$(echo "$SEARCH_RESULTS" | jq -r '.[0].gpu_name // "Unknown"' 2>/dev/null)
+
+                    # Validate extracted values
+                    if [ -z "$BEST_INSTANCE" ] || [ -z "$BEST_PRICE" ]; then
+                        echo -e "${RED}❌ Failed to parse instance data from vast.ai response${NC}"
+                        echo -e "${YELLOW}Debug: Search results: $SEARCH_RESULTS${NC}"
+                        echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                        read -p ""
+                        echo -e "${BLUE}Falling back to default mode...${NC}"
+                        MODEL=""
+                        FLAGS="--dangerously-skip-permissions"
+                        claude $FLAGS "$@"
+                        return
+                    fi
+
+                    echo -e "${GREEN}✅ Selected instance: ID $BEST_INSTANCE ($GPU_NAME) at \$${BEST_PRICE}/hour${NC}"
+
+                    # Prepare environment variables for instance
+                    ENV_VARS=""
+                    if [ -n "$REDIS_HOST" ]; then
+                        ENV_VARS="--env REDIS_HOST=$REDIS_HOST --env REDIS_PORT=${REDIS_PORT:-14339} --env REDIS_PASSWORD=$REDIS_PASSWORD"
+                    fi
+
+                    # Create the instance with qwen label
+                    echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
+
+                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
+
+                    INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                    # Handle both JSON and Python dict formats for new_contract
+                    INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o "'new_contract': [0-9]*" | grep -o '[0-9]*' || echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
+
+                    if [ -z "$INSTANCE_ID" ]; then
+                        echo -e "${RED}❌ Failed to create instance${NC}"
+                        echo "Result: $INSTANCE_RESULT"
+                        echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                        read -p ""
+                        echo -e "${BLUE}Falling back to default mode...${NC}"
+                        MODEL=""
+                        FLAGS="--dangerously-skip-permissions"
+                        claude $FLAGS "$@"
+                        return
+                    fi
+
+                    echo -e "${GREEN}✅ Instance created: $INSTANCE_ID${NC}"
+                    echo -e "${BLUE}⏳ Waiting for instance to start (2-3 minutes)...${NC}"
+
+                    # Wait for instance to start
+                    for i in {1..20}; do
+                        STATUS=$(vastai show instance $INSTANCE_ID --raw | jq -r '.actual_status')
+                        if [ "$STATUS" = "running" ]; then
+                            echo -e "${GREEN}✅ Instance is running!${NC}"
+                            break
+                        fi
+                        echo "Status: $STATUS (attempt $i/20)"
+                        sleep 15
+                    done
+
+                    if [ "$STATUS" != "running" ]; then
+                        echo -e "${RED}❌ Instance failed to start within 5 minutes${NC}"
+                        echo -e "${BLUE}💡 Check status with: vastai show instance $INSTANCE_ID${NC}"
+                        echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                        read -p ""
+                        echo -e "${BLUE}Falling back to default mode...${NC}"
+                        MODEL=""
+                        FLAGS="--dangerously-skip-permissions"
+                        claude $FLAGS "$@"
+                        return
+                    fi
+
+                    # Get SSH connection details
+                    INSTANCE_DETAILS=$(vastai show instance $INSTANCE_ID --raw)
+                    SSH_HOST=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_host')
+                    SSH_PORT=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_port')
+
+                    echo -e "${BLUE}🔗 Connection: $SSH_HOST:$SSH_PORT${NC}"
+
+                    # Wait for startup script to complete
+                    echo -e "${BLUE}⏳ Waiting for qwen3-coder setup (5-10 minutes)...${NC}"
+                    sleep 60  # Give initial setup time
+
+                    # Test API endpoint availability
+                    echo -e "${BLUE}🔍 Testing API endpoint...${NC}"
+                    for i in {1..30}; do
+                        if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST" 'curl -s http://localhost:8000/health' 2>/dev/null | grep -q "healthy"; then
+                            echo -e "${GREEN}✅ Qwen API is ready!${NC}"
+                            break
+                        fi
+                        echo "Testing API... (attempt $i/30)"
+                        sleep 20
+                    done
+
+                    # Create SSH tunnel
+                    echo -e "${BLUE}🔗 Creating SSH tunnel...${NC}"
+                    # Clean up any existing tunnel first
+                    cleanup_ssh_tunnel
+                    ssh -N -L 8000:localhost:8000 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST" &
+                    TUNNEL_PID=$!
+                    echo $TUNNEL_PID > "$SSH_TUNNEL_PID_FILE"
+
+                    # Test connection
+                    sleep 2
+                    if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                        echo -e "${GREEN}✅ SSH tunnel established successfully${NC}"
+                        API_BASE_URL="http://localhost:8000"
+
+                        echo -e "${YELLOW}💰 Cost: ~\$${BEST_PRICE}/hour${NC}"
+                        echo -e "${YELLOW}⚠️  Instance will continue running. Stop with: vastai stop instance $INSTANCE_ID${NC}"
+                    else
+                        echo -e "${RED}❌ Failed to establish SSH tunnel${NC}"
+                        echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                        read -p ""
+                        echo -e "${BLUE}Falling back to default mode...${NC}"
+                        MODEL=""
+                        FLAGS="--dangerously-skip-permissions"
+                        claude $FLAGS "$@"
+                        return
+                    fi
+                fi
+            fi
+
+            # Set environment variables to redirect Claude CLI to our proxy
+            export ANTHROPIC_BASE_URL="$API_BASE_URL"
+            export ANTHROPIC_MODEL="qwen3-coder"
+
+            echo -e "${GREEN}🔧 Environment: ANTHROPIC_BASE_URL=$API_BASE_URL${NC}"
+            echo -e "${GREEN}🔧 Model: qwen3-coder${NC}"
+            echo -e "${GREEN}🚀 Launching Claude CLI with Qwen3-Coder backend...${NC}"
+            echo ""
+
+            # Launch Claude CLI with our proxy
+            claude --model "qwen3-coder" $FLAGS "$@"
+            ;;
+        qwen-local)
+            echo -e "${BLUE}🤖 Qwen-local mode selected - using local Qwen3-Coder${NC}"
+            echo -e "${BLUE}💡 Features: Local Qwen3-Coder model via Ollama${NC}"
+            echo -e "${BLUE}💡 Model: qwen3-coder (optimized for coding tasks)${NC}"
+            echo ""
+
+            # Check if API proxy is available
+            API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+            if [ ! -f "$API_PROXY_PATH" ]; then
+                echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+                echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            fi
+
+            # Check for existing local proxy first
+            if curl -s --connect-timeout 3 http://localhost:8000/health > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8000${NC}"
+                API_BASE_URL="http://localhost:8000"
+            elif curl -s --connect-timeout 3 http://localhost:8001/health > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8001${NC}"
+                API_BASE_URL="http://localhost:8001"
+            else
+                echo -e "${BLUE}🚀 Starting local Qwen API proxy...${NC}"
+
+                # Kill any existing proxy processes
+                pkill -f "api_proxy.py" 2>/dev/null || true
+
+                # Use python3 from PATH or check for venv in current directory
+                if [ -f "./venv/bin/python" ]; then
+                    PYTHON_CMD="./venv/bin/python"
+                else
+                    PYTHON_CMD="python3"
+                fi
+
+                # Start proxy with environment variables
+                cd "$HOME/projects/llm_selfhost"
+                "$PYTHON_CMD" api_proxy.py &
+                PROXY_PID=$!
+
+                # Wait for proxy to start
+                sleep 5
+
+                # Test proxy health
+                if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                    echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
+                    API_BASE_URL="http://localhost:8000"
+                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                else
+                    echo -e "${RED}❌ Failed to start local proxy${NC}"
+                    echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
+                    echo -e "${BLUE}💡 Install Ollama: curl -fsSL https://ollama.com/install.sh | sh${NC}"
+                    echo -e "${BLUE}💡 Pull model: ollama pull qwen2.5-coder:7b${NC}"
+                    kill $PROXY_PID 2>/dev/null || true
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+            fi
+
+            # Set environment variables to redirect Claude CLI to our proxy
+            export ANTHROPIC_BASE_URL="$API_BASE_URL"
+            export ANTHROPIC_MODEL="qwen3-coder"
+
+            echo -e "${GREEN}🔧 Environment: ANTHROPIC_BASE_URL=$API_BASE_URL${NC}"
+            echo -e "${GREEN}🔧 Model: qwen3-coder${NC}"
+            echo -e "${GREEN}🚀 Launching Claude CLI with local Qwen3-Coder backend...${NC}"
+            echo ""
+
+            # Launch Claude CLI with our proxy
+            claude --model "qwen3-coder" $FLAGS "$@"
+            ;;
+        cerebras)
+            echo -e "${YELLOW}🧠 Cerebras mode selected - using optimized Qwen3-Coder-480B${NC}"
+            echo -e "${BLUE}💡 Features: Up to 2,000 tokens/second via Cerebras inference${NC}"
+            echo -e "${BLUE}💡 Model: qwen-3-coder-480b (optimized by Cerebras AI)${NC}"
+            echo ""
+
+            # Check if API key is provided, source bashrc if needed
+            if [ -z "$CEREBRAS_API_KEY" ]; then
+                # Try to source bashrc to get the API key
+                if [ -f ~/.bashrc ]; then
+                    source ~/.bashrc
+                fi
+            fi
+
+            if [ -z "$CEREBRAS_API_KEY" ]; then
+                echo -e "${RED}❌ CEREBRAS_API_KEY environment variable not set${NC}"
+                echo -e "${BLUE}💡 Get your API key from: https://cerebras.ai${NC}"
+                echo -e "${BLUE}💡 Set it with: export CEREBRAS_API_KEY='your-key-here'${NC}"
+                echo -e "${BLUE}💡 Example: CEREBRAS_API_KEY='csk-...' ./claude_start.sh --cerebras${NC}"
+                echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            fi
+
+            # Test API key validity
+            echo -e "${BLUE}🔍 Testing Cerebras API connection...${NC}"
+            RESPONSE=$(curl -s -H "Authorization: Bearer $CEREBRAS_API_KEY" https://api.cerebras.ai/v1/models)
+            if echo "$RESPONSE" | grep -q "Wrong API Key\|invalid_request_error"; then
+                echo -e "${RED}❌ Cerebras API key validation failed${NC}"
+                echo -e "${BLUE}💡 Please verify your API key is correct${NC}"
+                echo -e "${BLUE}💡 Get a valid key from: https://cerebras.ai${NC}"
+                echo -e "${YELLOW}Response: $RESPONSE${NC}"
+                echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            else
+                echo -e "${GREEN}✅ Cerebras API key validated${NC}"
+                echo -e "${BLUE}💡 Available models: $(echo "$RESPONSE" | jq -r '.data[]?.id // "qwen-3-coder-480b"' | head -3 | tr '\n' ' ')${NC}"
+            fi
+
+            # Check if llm_selfhost repo is available
+            LLM_SELFHOST_PROXY="$HOME/projects/llm_selfhost/cerebras_proxy.py"
+            if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
+                echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
+                echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            fi
+
+            # Start Cerebras API proxy in background
+            echo -e "${BLUE}🚀 Starting Cerebras API proxy from llm_selfhost repo...${NC}"
+
+            # Kill any existing proxy on port 8002
+            pkill -f "cerebras_proxy.py" 2>/dev/null || true
+
+            # Start proxy with Cerebras API key (using external repo)
+            # Use python3 from PATH or check for venv in current directory
+            if [ -f "./venv/bin/python" ]; then
+                PYTHON_CMD="./venv/bin/python"
+            else
+                PYTHON_CMD="python3"
+            fi
+
+            CEREBRAS_API_KEY="$CEREBRAS_API_KEY" "$PYTHON_CMD" "$LLM_SELFHOST_PROXY" &
+            PROXY_PID=$!
+
+            # Wait for proxy to start
+            sleep 3
+
+            # Test proxy health
+            if curl -s http://localhost:8002/health > /dev/null 2>&1; then
+                echo -e "${GREEN}✅ Cerebras API proxy started successfully${NC}"
+            else
+                echo -e "${RED}❌ Failed to start Cerebras API proxy${NC}"
+                kill $PROXY_PID 2>/dev/null || true
+                echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+            fi
+
+            # Store proxy PID for cleanup
+            echo $PROXY_PID > /tmp/cerebras_proxy.pid
+
+            # Set environment variables to redirect Claude CLI to our proxy
+            export ANTHROPIC_BASE_URL="http://localhost:8002"
+            export ANTHROPIC_MODEL="qwen-3-coder-480b"
+
+            echo -e "${GREEN}🔧 Environment: ANTHROPIC_BASE_URL=http://localhost:8002${NC}"
+            echo -e "${GREEN}🔧 Model: qwen-3-coder-480b${NC}"
+            echo -e "${GREEN}🚀 Launching Claude CLI with Cerebras backend via proxy...${NC}"
+            echo ""
+
+            # Launch Claude CLI with our proxy
+            claude --model "qwen-3-coder-480b" $FLAGS "$@"
+            ;;
     esac
 else
     # If no mode specified, show interactive menu
@@ -434,6 +963,8 @@ else
     echo -e "${GREEN}1) Worker (Sonnet 4)${NC}"
     echo -e "${BLUE}2) Default${NC}"
     echo -e "${YELLOW}3) Supervisor (Opus 4)${NC}"
+    echo -e "${BLUE}4) Qwen (Self-hosted API)${NC}"
+    echo -e "${YELLOW}5) Cerebras (Qwen3-Coder-480B - 2000 tokens/sec)${NC}"
     read -p "Choice [2]: " choice
 
     case ${choice:-2} in
@@ -476,6 +1007,507 @@ else
         MODEL="opus"
         echo -e "${YELLOW}🚀 Starting Claude Code with $MODEL (Latest Opus)...${NC}"
         claude --model "$MODEL" $FLAGS "$@"
+        ;;
+    4)
+        echo -e "${BLUE}🤖 Qwen mode selected - using self-hosted Qwen3-Coder${NC}"
+        echo -e "${BLUE}💡 Features: Local Qwen3-Coder model via vast.ai GPU instances${NC}"
+        echo -e "${BLUE}💡 Model: qwen3-coder (optimized for coding tasks)${NC}"
+        echo ""
+
+        # Check if API proxy is available
+        API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+        if [ ! -f "$API_PROXY_PATH" ]; then
+            echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
+            echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+            read -p ""
+            echo -e "${BLUE}Falling back to default mode...${NC}"
+            MODEL=""
+            FLAGS="--dangerously-skip-permissions"
+            claude $FLAGS "$@"
+            return
+        fi
+
+        # Check for Redis environment variables
+        if [ -z "$REDIS_HOST" ] || [ -z "$REDIS_PASSWORD" ]; then
+            echo -e "${YELLOW}⚠️  Redis credentials not found in environment${NC}"
+            echo -e "${BLUE}💡 Set Redis environment variables:${NC}"
+            echo -e "${BLUE}   export REDIS_HOST='your-redis-host.redis-cloud.com'${NC}"
+            echo -e "${BLUE}   export REDIS_PORT='14339'${NC}"
+            echo -e "${BLUE}   export REDIS_PASSWORD='your-redis-password'${NC}"
+            echo ""
+            echo -e "${YELLOW}⚠️  Continuing without Redis caching...${NC}"
+        else
+            echo -e "${GREEN}✅ Redis configuration found${NC}"
+        fi
+
+        # Qwen Instance Setup Menu
+        echo -e "${BLUE}🔍 Checking for available Qwen instances...${NC}"
+
+        # Check for existing proxies first
+        if curl -s --connect-timeout 3 http://localhost:8000/health > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8000${NC}"
+            API_BASE_URL="http://localhost:8000"
+        elif curl -s --connect-timeout 3 http://localhost:8001/health > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Found existing Qwen API proxy on localhost:8001${NC}"
+            API_BASE_URL="http://localhost:8001"
+        else
+            echo -e "${YELLOW}⚠️  No existing proxy found${NC}"
+            echo ""
+            echo -e "${BLUE}Select Qwen setup option:${NC}"
+            echo -e "${GREEN}1) Start local proxy (requires Ollama + qwen3-coder)${NC}"
+            echo -e "${BLUE}2) Create new vast.ai GPU instance${NC}"
+            echo -e "${YELLOW}3) Connect to existing vast.ai instance${NC}"
+            echo -e "${RED}4) Exit${NC}"
+            read -p "Choice [1]: " qwen_choice
+
+            case ${qwen_choice:-1} in
+            1)
+                echo -e "${BLUE}🚀 Starting local Qwen API proxy...${NC}"
+
+                # Kill any existing proxy processes
+                pkill -f "api_proxy.py" 2>/dev/null || true
+
+                # Use python3 from PATH or check for venv in current directory
+                if [ -f "./venv/bin/python" ]; then
+                    PYTHON_CMD="./venv/bin/python"
+                else
+                    PYTHON_CMD="python3"
+                fi
+
+                # Start proxy with environment variables
+                cd "$HOME/projects/llm_selfhost"
+                "$PYTHON_CMD" api_proxy.py &
+                PROXY_PID=$!
+
+                # Wait for proxy to start
+                sleep 5
+
+                # Test proxy health
+                if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                    echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
+                    API_BASE_URL="http://localhost:8000"
+                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                else
+                    echo -e "${RED}❌ Failed to start local proxy${NC}"
+                    echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
+                    kill $PROXY_PID 2>/dev/null || true
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+                ;;
+            2)
+                echo -e "${BLUE}🚀 Creating new vast.ai GPU instance...${NC}"
+
+                # Check if vastai CLI is installed
+                if ! command -v vastai >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Vast.ai CLI not found${NC}"
+                    echo -e "${BLUE}💡 Install with: pip install vastai${NC}"
+                    echo -e "${BLUE}💡 Set API key with: vastai set api-key YOUR_KEY${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                # Check API key
+                if ! vastai show user >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Vast.ai API key not configured${NC}"
+                    echo -e "${BLUE}💡 Set API key with: vastai set api-key YOUR_KEY${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${GREEN}✅ Vast.ai CLI configured${NC}"
+                echo -e "${BLUE}🔍 Searching for available GPU instances...${NC}"
+
+                SEARCH_RESULTS=$(vastai search offers 'cuda_vers >= 12.0 gpu_name:RTX_4090 inet_down >= 50' --raw | head -10)
+
+                if [ -z "$SEARCH_RESULTS" ]; then
+                    echo -e "${RED}❌ No suitable instances found${NC}"
+                    echo -e "${BLUE}💡 Try broader search: vastai search offers 'cuda_vers >= 11.8'${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${GREEN}✅ Found available instances:${NC}"
+                echo "$SEARCH_RESULTS" | jq -r '.[] | "ID: \(.id) | GPU: \(.gpu_name) | Price: $\(.dph_total)/hr | RAM: \(.gpu_ram)GB"' | head -5
+
+                # Get the best instance (lowest price)
+                BEST_INSTANCE=$(echo "$SEARCH_RESULTS" | jq -r '.[0].id')
+                BEST_PRICE=$(echo "$SEARCH_RESULTS" | jq -r '.[0].dph_total')
+
+                echo ""
+                echo -e "${BLUE}💰 Best instance: ID $BEST_INSTANCE at $${BEST_PRICE}/hour${NC}"
+
+                read -p "Create instance? (y/N): " -n 1 -r
+                echo
+                if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                    echo "Cancelled."
+                    exit 0
+                fi
+
+                # Prepare environment variables for instance
+                ENV_VARS=""
+                if [ -n "$REDIS_HOST" ]; then
+                    ENV_VARS="--env REDIS_HOST=$REDIS_HOST --env REDIS_PORT=${REDIS_PORT:-14339} --env REDIS_PASSWORD=$REDIS_PASSWORD"
+                fi
+
+                # Create the instance
+                echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
+
+                INSTANCE_CMD="vastai create instance $BEST_INSTANCE \\
+                    --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel \\
+                    --disk 60 \\
+                    --ssh \\
+                    $ENV_VARS \\
+                    --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git \\
+                    --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
+
+                INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
+
+                if [ -z "$INSTANCE_ID" ]; then
+                    echo -e "${RED}❌ Failed to create instance${NC}"
+                    echo "Result: $INSTANCE_RESULT"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${GREEN}✅ Instance created: $INSTANCE_ID${NC}"
+                echo -e "${BLUE}⏳ Waiting for instance to start (this may take 2-3 minutes)...${NC}"
+
+                # Wait for instance to start
+                for i in {1..20}; do
+                    STATUS=$(vastai show instance $INSTANCE_ID --raw | jq -r '.actual_status')
+                    if [ "$STATUS" = "running" ]; then
+                        echo -e "${GREEN}✅ Instance is running!${NC}"
+                        break
+                    fi
+                    echo "Status: $STATUS (attempt $i/20)"
+                    sleep 15
+                done
+
+                if [ "$STATUS" != "running" ]; then
+                    echo -e "${RED}❌ Instance failed to start within 5 minutes${NC}"
+                    echo -e "${BLUE}💡 Check status with: vastai show instance $INSTANCE_ID${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                # Get SSH connection details
+                INSTANCE_DETAILS=$(vastai show instance $INSTANCE_ID --raw)
+                SSH_HOST=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_host')
+                SSH_PORT=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_port')
+
+                echo ""
+                echo -e "${BLUE}🔗 Connection Details:${NC}"
+                echo "Instance ID: $INSTANCE_ID"
+                echo "SSH Host: $SSH_HOST"
+                echo "SSH Port: $SSH_PORT"
+
+                # Wait for startup script to complete
+                echo -e "${BLUE}⏳ Waiting for qwen3-coder model download and setup (5-10 minutes)...${NC}"
+                echo -e "${YELLOW}💡 You can monitor progress with: ssh -p $SSH_PORT root@$SSH_HOST 'tail -f /tmp/startup.log'${NC}"
+
+                sleep 60  # Give initial setup time
+
+                # Test API endpoint availability
+                echo -e "${BLUE}🔍 Testing API endpoint availability...${NC}"
+
+                for i in {1..30}; do
+                    if ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST" 'curl -s http://localhost:8000/health' 2>/dev/null | grep -q "healthy"; then
+                        echo -e "${GREEN}✅ Qwen API is ready!${NC}"
+                        break
+                    fi
+                    echo "Testing API... (attempt $i/30)"
+                    sleep 20
+                done
+
+                # Create SSH tunnel
+                echo -e "${BLUE}🔗 Creating SSH tunnel...${NC}"
+                ssh -f -N -L 8000:localhost:8000 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST"
+
+                # Test connection
+                sleep 2
+                if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                    echo -e "${GREEN}✅ SSH tunnel established successfully${NC}"
+                    API_BASE_URL="http://localhost:8000"
+
+                    # Save connection script for later use
+                    cat > "qwen_instance_$INSTANCE_ID.sh" << EOF
+#!/bin/bash
+# Qwen Instance $INSTANCE_ID Connection Script
+# Generated on $(date)
+
+INSTANCE_ID=$INSTANCE_ID
+SSH_HOST=$SSH_HOST
+SSH_PORT=$SSH_PORT
+
+# Create SSH tunnel
+echo "Creating SSH tunnel..."
+ssh -f -N -L 8000:localhost:8000 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p \${SSH_PORT} root@\${SSH_HOST}
+
+# Test connection
+echo "Testing connection..."
+sleep 2
+curl http://localhost:8000/health
+
+echo "Ready! Use: ./claude_start.sh --qwen"
+EOF
+                    chmod +x "qwen_instance_$INSTANCE_ID.sh"
+
+                    echo -e "${GREEN}💾 Connection script saved: qwen_instance_$INSTANCE_ID.sh${NC}"
+                    echo -e "${YELLOW}💰 Cost: ~$${BEST_PRICE}/hour${NC}"
+                    echo -e "${YELLOW}⚠️  Remember to stop the instance when done: vastai stop instance $INSTANCE_ID${NC}"
+                else
+                    echo -e "${RED}❌ Failed to establish SSH tunnel${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+                ;;
+            3)
+                echo -e "${BLUE}🔗 Connect to existing vast.ai instance${NC}"
+
+                # Check if vastai CLI is installed
+                if ! command -v vastai >/dev/null 2>&1; then
+                    echo -e "${RED}❌ Vast.ai CLI not found${NC}"
+                    echo -e "${BLUE}💡 Install with: pip install vastai${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${BLUE}🔍 Listing your running instances...${NC}"
+                vastai show instances --raw | jq -r '.[] | select(.actual_status == "running") | "ID: \(.id) | Host: \(.ssh_host):\(.ssh_port) | GPU: \(.gpu_name)"'
+
+                echo ""
+                read -p "Enter instance ID: " INSTANCE_ID
+
+                if [ -z "$INSTANCE_ID" ]; then
+                    echo -e "${RED}❌ Instance ID required${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                # Get connection details
+                INSTANCE_DETAILS=$(vastai show instance $INSTANCE_ID --raw)
+                SSH_HOST=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_host')
+                SSH_PORT=$(echo "$INSTANCE_DETAILS" | jq -r '.ssh_port')
+
+                if [ "$SSH_HOST" = "null" ] || [ "$SSH_PORT" = "null" ]; then
+                    echo -e "${RED}❌ Invalid instance ID or instance not running${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+
+                echo -e "${BLUE}🔗 Connecting to instance $INSTANCE_ID at $SSH_HOST:$SSH_PORT${NC}"
+
+                # Create SSH tunnel
+                ssh -f -N -L 8000:localhost:8000 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -p "$SSH_PORT" root@"$SSH_HOST"
+
+                # Test connection
+                sleep 2
+                if curl -s http://localhost:8000/health > /dev/null 2>&1; then
+                    echo -e "${GREEN}✅ Connected to existing vast.ai instance${NC}"
+                    API_BASE_URL="http://localhost:8000"
+                else
+                    echo -e "${RED}❌ Failed to connect to instance${NC}"
+                    echo -e "${BLUE}💡 Make sure the instance is running and has the API proxy started${NC}"
+                    echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                    read -p ""
+                    echo -e "${BLUE}Falling back to default mode...${NC}"
+                    MODEL=""
+                    FLAGS="--dangerously-skip-permissions"
+                    claude $FLAGS "$@"
+                    return
+                fi
+                ;;
+            4)
+                echo -e "${YELLOW}Exiting qwen mode${NC}"
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}Invalid choice${NC}"
+                echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+                read -p ""
+                echo -e "${BLUE}Falling back to default mode...${NC}"
+                MODEL=""
+                FLAGS="--dangerously-skip-permissions"
+                claude $FLAGS "$@"
+                return
+                ;;
+            esac
+        fi
+
+        # Set environment variables to redirect Claude CLI to our proxy
+        export ANTHROPIC_BASE_URL="$API_BASE_URL"
+        export ANTHROPIC_MODEL="qwen3-coder"
+
+        echo -e "${GREEN}🔧 Environment: ANTHROPIC_BASE_URL=$API_BASE_URL${NC}"
+        echo -e "${GREEN}🔧 Model: qwen3-coder${NC}"
+        echo -e "${GREEN}🚀 Launching Claude CLI with Qwen3-Coder backend...${NC}"
+        echo ""
+
+        # Launch Claude CLI with our proxy
+        claude --model "qwen3-coder" $FLAGS "$@"
+        ;;
+    5)
+        echo -e "${YELLOW}🧠 Cerebras mode selected - using optimized Qwen3-Coder-480B${NC}"
+        echo -e "${BLUE}💡 Features: Up to 2,000 tokens/second via Cerebras inference${NC}"
+        echo -e "${BLUE}💡 Model: qwen-3-coder-480b (optimized by Cerebras AI)${NC}"
+        echo ""
+
+        # Check if API key is provided, source bashrc if needed
+        if [ -z "$CEREBRAS_API_KEY" ]; then
+            # Try to source bashrc to get the API key
+            if [ -f ~/.bashrc ]; then
+                source ~/.bashrc
+            fi
+        fi
+
+        if [ -z "$CEREBRAS_API_KEY" ]; then
+            echo -e "${RED}❌ CEREBRAS_API_KEY environment variable not set${NC}"
+            echo -e "${BLUE}💡 Get your API key from: https://cerebras.ai${NC}"
+            echo -e "${BLUE}💡 Set it with: export CEREBRAS_API_KEY='your-key-here'${NC}"
+            echo -e "${BLUE}💡 Example: CEREBRAS_API_KEY='csk-...' ./claude_start.sh --cerebras${NC}"
+            exit 0
+        fi
+
+        # Test API key validity
+        echo -e "${BLUE}🔍 Testing Cerebras API connection...${NC}"
+        RESPONSE=$(curl -s -H "Authorization: Bearer $CEREBRAS_API_KEY" https://api.cerebras.ai/v1/models)
+        if echo "$RESPONSE" | grep -q "Wrong API Key\|invalid_request_error"; then
+            echo -e "${RED}❌ Cerebras API key validation failed${NC}"
+            echo -e "${BLUE}💡 Please verify your API key is correct${NC}"
+            echo -e "${BLUE}💡 Get a valid key from: https://cerebras.ai${NC}"
+            echo -e "${YELLOW}Response: $RESPONSE${NC}"
+            echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+            read -p ""
+            echo -e "${BLUE}Falling back to default mode...${NC}"
+            MODEL=""
+            FLAGS="--dangerously-skip-permissions"
+            claude $FLAGS "$@"
+            return
+        else
+            echo -e "${GREEN}✅ Cerebras API key validated${NC}"
+            echo -e "${BLUE}💡 Available models: $(echo "$RESPONSE" | jq -r '.data[]?.id // "qwen-3-coder-480b"' | head -3 | tr '\n' ' ')${NC}"
+        fi
+
+        # Check if llm_selfhost repo is available
+        LLM_SELFHOST_PROXY="$HOME/projects/llm_selfhost/cerebras_proxy.py"
+        if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
+            echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
+            echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+            read -p ""
+            echo -e "${BLUE}Falling back to default mode...${NC}"
+            MODEL=""
+            FLAGS="--dangerously-skip-permissions"
+            claude $FLAGS "$@"
+            return
+        fi
+
+        # Start Cerebras API proxy in background
+        echo -e "${BLUE}🚀 Starting Cerebras API proxy from llm_selfhost repo...${NC}"
+
+        # Kill any existing proxy on port 8002
+        pkill -f "cerebras_proxy.py" 2>/dev/null || true
+
+        # Start proxy with Cerebras API key (using external repo)
+        # Use python3 from PATH or check for venv in current directory
+        if [ -f "./venv/bin/python" ]; then
+            PYTHON_CMD="./venv/bin/python"
+        else
+            PYTHON_CMD="python3"
+        fi
+
+        CEREBRAS_API_KEY="$CEREBRAS_API_KEY" "$PYTHON_CMD" "$LLM_SELFHOST_PROXY" &
+        PROXY_PID=$!
+
+        # Wait for proxy to start
+        sleep 3
+
+        # Test proxy health
+        if curl -s http://localhost:8002/health > /dev/null 2>&1; then
+            echo -e "${GREEN}✅ Cerebras API proxy started successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to start Cerebras API proxy${NC}"
+            kill $PROXY_PID 2>/dev/null || true
+            echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
+            read -p ""
+            echo -e "${BLUE}Falling back to default mode...${NC}"
+            MODEL=""
+            FLAGS="--dangerously-skip-permissions"
+            claude $FLAGS "$@"
+            return
+        fi
+
+        # Store proxy PID for cleanup
+        echo $PROXY_PID > /tmp/cerebras_proxy.pid
+
+        # Set environment variables to redirect Claude CLI to our proxy
+        export ANTHROPIC_BASE_URL="http://localhost:8002"
+        export ANTHROPIC_MODEL="qwen-3-coder-480b"
+
+        echo -e "${GREEN}🔧 Environment: ANTHROPIC_BASE_URL=http://localhost:8002${NC}"
+        echo -e "${GREEN}🔧 Model: qwen-3-coder-480b${NC}"
+        echo -e "${GREEN}🚀 Launching Claude CLI with Cerebras backend via proxy...${NC}"
+        echo ""
+
+        # Launch Claude CLI with our proxy
+        claude --model "qwen-3-coder-480b" $FLAGS "$@"
         ;;
     *)
         echo -e "${YELLOW}Invalid choice, using default${NC}"

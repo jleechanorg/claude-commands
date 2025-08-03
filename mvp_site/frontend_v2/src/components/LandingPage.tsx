@@ -39,7 +39,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
       <div className="relative z-10 min-h-screen">
         {/* Header */}
         <header className="p-8">
-          <h1 className="text-white text-2xl">WorldArchitect.AI</h1>
+          <h1 className="text-white text-2xl">WorldAI</h1>
         </header>
 
         {/* Main Content */}
