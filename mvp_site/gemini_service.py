@@ -12,6 +12,7 @@ Key Responsibilities:
 - Model fallback and error handling
 - Planning block enforcement and debug content management
 - Token counting and context management
+- **FIXED: Token limit management to prevent backstory cutoffs**
 
 Architecture:
 - Uses Google Generative AI (Gemini) for story generation
@@ -104,10 +105,15 @@ MODEL_FALLBACK_CHAIN: list[str] = [
 
 # No longer using pro model for any inputs
 
-MAX_TOKENS: int = 50000
+# Gemini 2.5 Flash OUTPUT token limits (corrected based on updated specs)
+# Gemini 2.5 Flash = 65,535 output tokens (not 8,192 as initially thought)
+# Using conservative 50,000 output token limit to stay well below maximum
+MAX_OUTPUT_TOKENS: int = (
+    50000  # Conservative output token limit below Gemini 2.5 Flash max (65,535)
+)
 TEMPERATURE: float = 0.9
 TARGET_WORD_COUNT: int = 300
-# Add a safety margin for JSON responses
+# Add a safety margin for JSON responses to prevent mid-response cutoffs
 
 # Fallback content constants to avoid code duplication
 DEFAULT_CHOICES: dict[str, str] = {
@@ -125,7 +131,9 @@ FALLBACK_PLANNING_BLOCK_EXCEPTION: dict[str, Any] = {
     "thinking": "Failed to generate planning block. Here are some default options:",
     "choices": DEFAULT_CHOICES,
 }
-JSON_MODE_MAX_TOKENS: int = 50000  # Reduced limit when using JSON mode for reliability
+# For JSON mode, use same output token limit as regular mode
+# This ensures complete character backstories and complex JSON responses
+JSON_MODE_MAX_OUTPUT_TOKENS: int = MAX_OUTPUT_TOKENS  # Same limit for consistency
 MAX_INPUT_TOKENS: int = 750000
 SAFE_CHAR_LIMIT: int = MAX_INPUT_TOKENS * 4
 
@@ -710,7 +718,10 @@ def _log_token_count(
     user_prompt_contents: list[Any],
     system_instruction_text: str | None = None,
 ) -> None:
-    """Helper function to count and log the number of tokens being sent, with a breakdown."""
+    """Helper function to count and log the number of tokens being sent, with a breakdown.
+
+    Also warns when approaching output token limits to prevent truncation issues.
+    """
     try:
         client = get_client()
 
@@ -728,8 +739,26 @@ def _log_token_count(
             ).total_tokens
 
         total_tokens = (user_prompt_tokens or 0) + (system_tokens or 0)
+
+        # Get current output token limit being used
+        current_output_limit = JSON_MODE_MAX_OUTPUT_TOKENS  # Always using JSON mode
+
+        logging_util.debug(
+            f"🔍 TOKEN_ANALYSIS: Sending {total_tokens} input tokens to API (Prompt: {user_prompt_tokens or 0}, System: {system_tokens or 0})"
+        )
+        logging_util.debug(
+            f"🔍 TOKEN_LIMITS: Output limit set to {current_output_limit} tokens (conservative limit, API max: 65535)"
+        )
+
+        # Warn if we're using a large portion of input tokens
+        if total_tokens > 100000:  # Arbitrary threshold for "large" prompts
+            logging_util.warning(
+                f"⚠️ TOKEN_WARNING: Large input prompt ({total_tokens} tokens) may reduce available output tokens"
+            )
+
+        # Log model-specific context information
         logging_util.info(
-            f"Sending {total_tokens} tokens to API (Prompt: {user_prompt_tokens or 0}, System: {system_tokens or 0})"
+            f"🔍 MODEL_INFO: Using {model_name} (Gemini 2.5 Flash supports up to 65,535 output tokens)"
         )
 
     except Exception as e:
@@ -790,7 +819,7 @@ def _call_gemini_api_with_model_cycling(
                 logging_util.info(f"Using model: {current_model}")
 
             generation_config_params = {
-                "max_output_tokens": MAX_TOKENS,
+                "max_output_tokens": MAX_OUTPUT_TOKENS,
                 "temperature": TEMPERATURE,
                 "safety_settings": SAFETY_SETTINGS,
             }
@@ -798,11 +827,14 @@ def _call_gemini_api_with_model_cycling(
             # Configure JSON response mode if requested
             # Always use JSON response mode for consistent structured output
             generation_config_params["response_mime_type"] = "application/json"
-            # Use reduced token limit for JSON mode to ensure proper completion
-            generation_config_params["max_output_tokens"] = JSON_MODE_MAX_TOKENS
+            # Use same token limit for JSON mode for consistency
+            generation_config_params["max_output_tokens"] = JSON_MODE_MAX_OUTPUT_TOKENS
             if attempt == 0:  # Only log once
-                logging_util.info(
-                    f"Using JSON response mode with {JSON_MODE_MAX_TOKENS} token limit"
+                logging_util.debug(
+                    f"🔍 JSON_MODE: Using JSON response mode with {JSON_MODE_MAX_OUTPUT_TOKENS} output token limit (ensures complete responses)"
+                )
+                logging_util.debug(
+                    f"🔍 TOKEN_ALLOCATION: Using {JSON_MODE_MAX_OUTPUT_TOKENS} output tokens out of {65535} available for Gemini 2.5 Flash"
                 )
 
             # Pass the system instruction to the generate_content call

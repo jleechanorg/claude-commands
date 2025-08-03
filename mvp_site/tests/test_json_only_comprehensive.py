@@ -72,7 +72,10 @@ class TestJSONOnlyComprehensive(unittest.TestCase):
 
             # Check the generation config object attributes
             assert config_obj.response_mime_type == "application/json"
-            assert config_obj.max_output_tokens == gemini_service.JSON_MODE_MAX_TOKENS
+            assert (
+                config_obj.max_output_tokens
+                == gemini_service.JSON_MODE_MAX_OUTPUT_TOKENS
+            )
 
     def test_parse_function_removed(self):
         """Test that parse_llm_response_for_state_changes is removed"""
