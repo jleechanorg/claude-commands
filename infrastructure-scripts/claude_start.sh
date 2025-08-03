@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 # Enhanced Claude Code startup script with reliable MCP server detection and orchestration
 # Always uses --dangerously-skip-permissions and prompts for model choice
 # Uses simplified model names (opus/sonnet) that auto-select latest versions
@@ -274,8 +280,8 @@ fi
 
 echo ""
 
-# Game MCP Server auto-start
-echo -e "${BLUE}🎮 Checking Game MCP Server status...${NC}"
+# Content MCP Server auto-start
+echo -e "${BLUE}🎮 Checking Content MCP Server status...${NC}"
 
 # Function to check if Game MCP server is running
 is_game_mcp_running() {
@@ -301,18 +307,18 @@ start_game_mcp_background() {
     mkdir -p "$LOG_DIR"
 
     # Check if start script exists
-    if [ -f "$SCRIPT_DIR/start_game_mcp.sh" ]; then
+    if [ -f "$SCRIPT_DIR/start_content_mcp.sh" ]; then
         echo -e "${BLUE}🚀 Starting Game MCP server in background...${NC}"
 
         # Start the server in background, redirecting output to log file
-        nohup "$SCRIPT_DIR/start_game_mcp.sh" start > "$STARTUP_LOG_FILE" 2>&1 &
+        nohup "$SCRIPT_DIR/start_content_mcp.sh" start > "$STARTUP_LOG_FILE" 2>&1 &
 
         # Wait a moment for startup
         sleep 3
 
         return 0
     else
-        echo -e "${YELLOW}⚠️  start_game_mcp.sh not found${NC}"
+        echo -e "${YELLOW}⚠️  start_content_mcp.sh not found${NC}"
         return 1
     fi
 }
@@ -339,7 +345,7 @@ else
             echo -e "   • Log directory: $LOG_DIR"
             echo -e "   • Server log: $LOG_DIR/game-mcp-server.log"
             echo -e "   • Startup log: $LOG_DIR/game-mcp-server-startup.log"
-            echo -e "   • Available tools: D&D campaign management, character creation, etc."
+            echo -e "   • Available tools: Content management, character creation, etc."
         else
             # Calculate log directory for troubleshooting
             CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "unknown")
@@ -351,7 +357,7 @@ else
         fi
     else
         echo -e "${YELLOW}⚠️  Could not start Game MCP server automatically${NC}"
-        echo -e "${BLUE}💡 To start manually: ./start_game_mcp.sh start${NC}"
+        echo -e "${BLUE}💡 To start manually: ./start_content_mcp.sh start${NC}"
     fi
 fi
 
@@ -361,7 +367,7 @@ echo ""
 echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
 # Check if memory backup script exists (dedicated repository format)
-MEMORY_BACKUP_SCRIPT="$HOME/projects/worldarchitect-memory-backups/scripts/daily_backup.sh"
+MEMORY_BACKUP_SCRIPT="$HOME/projects/$PROJECT_NAME-memory-backups/scripts/daily_backup.sh"
 
 BACKUP_ISSUES=()
 
@@ -374,7 +380,7 @@ fi
 
 
 # Check if cron job exists (new dedicated repository format)
-if ! crontab -l 2>/dev/null | grep -q "worldarchitect-memory-backups/scripts/daily_backup.sh"; then
+if ! crontab -l 2>/dev/null | grep -q "$PROJECT_NAME-memory-backups/scripts/daily_backup.sh"; then
     BACKUP_ISSUES+=("❌ Cron job not configured for memory backups")
 fi
 
@@ -384,7 +390,7 @@ if [ ! -d "$HOME/.cache/mcp-memory" ]; then
 fi
 
 # Check if backup repository exists (new dedicated repository format)
-if [ ! -d "$HOME/projects/worldarchitect-memory-backups" ]; then
+if [ ! -d "$HOME/projects/$PROJECT_NAME-memory-backups" ]; then
     BACKUP_ISSUES+=("❌ Backup repository not found")
 fi
 
@@ -397,7 +403,7 @@ else
         echo -e "${YELLOW}  $issue${NC}"
     done
 
-    echo -e "${YELLOW}📝 For setup, use the dedicated memory backup repository at $HOME/projects/worldarchitect-memory-backups${NC}"
+    echo -e "${YELLOW}📝 For setup, use the dedicated memory backup repository at $HOME/projects/$PROJECT_NAME-memory-backups${NC}"
 fi
 
 echo ""

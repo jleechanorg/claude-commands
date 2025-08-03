@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 echo "🚀 Installing MCP Servers with Enhanced Reliability..."
 
 # Colors for output
@@ -542,9 +548,9 @@ else
     echo -e "${YELLOW}  ⚠️ Notion MCP server package not found, skipping...${NC}"
 fi
 
-echo -e "\n${BLUE}11/11 Setting up WorldArchitect Game MCP Server...${NC}"
+echo -e "\n${BLUE}11/11 Setting up WorldArchitect Content MCP Server...${NC}"
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🎮 Configuring local game MCP server for D&D campaign management...${NC}"
+echo -e "${BLUE}  🎮 Configuring local game MCP server for Content management...${NC}"
 log_with_timestamp "Setting up MCP server: worldarchitect-game (HTTP: http://localhost:7000/rpc)"
 
 # Check if server already exists
@@ -570,8 +576,8 @@ else
         echo -e "${BLUE}  📋 Server info:${NC}"
         echo -e "     • Health check: http://localhost:7000/health"
         echo -e "     • JSON-RPC endpoint: http://localhost:7000/rpc"
-        echo -e "     • Available tools: D&D campaign management, character creation, etc."
-        echo -e "     • Start server: ./start_game_mcp.sh start"
+        echo -e "     • Available tools: Content management, character creation, etc."
+        echo -e "     • Start server: ./start_content_mcp.sh start"
         log_with_timestamp "Successfully added WorldArchitect Game MCP server via HTTP"
         INSTALL_RESULTS["worldarchitect-game"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))

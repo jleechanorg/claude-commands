@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 # test_server_manager.sh - Manage multiple test servers for different branches
 # Usage: ./test_server_manager.sh [start|stop|list|cleanup] [branch_name]
 

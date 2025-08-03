@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 #
 # GitHub Self-Hosted Runner Setup Script for Claude Bot Commands
 # This script downloads, configures, and starts a GitHub Actions runner

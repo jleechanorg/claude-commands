@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 # integrate.sh - This script helps developers integrate the latest changes from main and start fresh on a new branch.
 # This script implements the standard integration pattern for the project
 #

@@ -1,4 +1,10 @@
 #!/bin/bash
+# 🚨 DEVELOPMENT INFRASTRUCTURE SCRIPT
+# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations
+# This script provides development environment management patterns
+# Adapt paths, service names, and configurations for your project
+
+#!/bin/bash
 #
 # Startup script for GitHub Claude Bot Commands system.
 # This script starts the local Claude bot server and provides helpful information.
@@ -28,7 +34,9 @@ else
     read -p "Continue anyway? (y/N): " -n 1 -r
     echo
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        exit 1
+        echo "❌ Setup cancelled by user."
+        read -p "Press Enter to return to terminal..."
+        return 1
     fi
 fi
 

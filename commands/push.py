@@ -136,7 +136,7 @@ def start_test_server(branch):
     current_branch = subprocess.check_output(
         ["git", "branch", "--show-current"], text=True
     ).strip()
-    log_dir = f"/tmp/worldarchitect.ai/{current_branch}"
+    log_dir = f"/tmp/your-project.com/{current_branch}"
     os.makedirs(log_dir, exist_ok=True)
     log_file = f"{log_dir}/{branch}.log"
 
