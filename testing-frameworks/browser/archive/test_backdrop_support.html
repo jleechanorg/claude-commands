@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {
+            background: linear-gradient(135deg, rgb(147 51 234), rgb(126 34 206), rgb(79 70 229));
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+        }
+        .card1 {
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            padding: 2rem;
+            border-radius: 8px;
+            color: white;
+            margin: 1rem;
+        }
+        .card2 {
+            background: rgba(0, 0, 0, 0.6);
+            padding: 2rem;
+            border-radius: 8px;
+            color: white;
+            margin: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <div class="card1">Card with backdrop-filter blur</div>
+        <div class="card2">Card without backdrop-filter</div>
+    </div>
+</body>
+</html>

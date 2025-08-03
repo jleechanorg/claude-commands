@@ -1,0 +1,77 @@
+HTTP 200 OK
+URL: http://localhost:8086/
+Headers: {'Server': 'Werkzeug/3.1.3 Python/3.12.3', 'Date': 'Sun, 06 Jul 2025 16:40:53 GMT, Sun, 06 Jul 2025 16:40:53 GMT', 'Content-Disposition': 'inline; filename=index.html', 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': '13299', 'Last-Modified': 'Sun, 06 Jul 2025 00:59:28 GMT', 'Cache-Control': 'no-cache', 'ETag': '"1751763568.2455728-13299-2414420311"', 'Connection': 'close'}
+Cookies: {}
+--------------------------------------------------------------------------------
+CONTENT:
+--------------------------------------------------------------------------------
+WorldArchitect.AI
+WorldArchitect.AI
+📰
+☀️
+Settings
+Interface Mode
+📰 Classic Interface
+✨ Modern Interface
+Choose Theme
+☀️ Light
+🌙 Dark
+⚔️ Fantasy
+🤖 Cyberpunk
+Loading...
+My Campaigns
+Start New Campaign
+Sign Out
+Start a New Campaign
+Campaign Title (Pick anything!)
+Describe your world. For inspiration you can pick you favorite movie, book or tv show, favorite character, and describe a scenario where you get to make an important decision.A brave knight in a land of dragons needs to choose between killing an evil dragon or joining its side.
+Choose your AI's expertise:
+Jeff's Narrative Flair (Storytelling & Character)
+Jeff's Mechanical Precision (Rules & Protocols)
+Custom Campaign Options:
+Generate starting Companions (Automatically creates complementary party members)
+Use Default Fantasy World (Celestial Wars/Assiah setting with rich lore and characters)
+Begin Adventure!
+🔍 Debug Mode Active
+Back to Dashboard
+Send
+Character Mode
+God Mode
+Download Story
+Share Story
+Loading...
+Download Story As...
+Choose a format to download your campaign story.
+Download as .txt
+Download as .pdf (takes long)
+Download as .docx
+Close
+Edit Campaign Title
+Campaign Title:
+Cancel
+Save Changes
+
+[HTML Structure]
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <title>
+   WorldArchitect.AI
+  </title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="/static/style.css" rel="stylesheet"/>
+  <!-- Theme CSS files -->
+  <link href="/static/themes/base.css" rel="stylesheet"/>
+  <link href="/static/themes/light.css" rel="stylesheet"/>
+  <link href="/static/themes/dark.css" rel="stylesheet"/>
+  <link href="/static/themes/fantasy.css" rel="stylesheet"/>
+  <link href="/static/themes/cyberpunk.css" rel="stylesheet"/>
+  <!-- Animation System - Milestone 3 -->
+  <link href="/static/styles/animations.css" rel="stylesheet"/>
+  <!-- Interactive Features - Milestone 4 -->
+  <link href="/static/styles/interactive-features.css" rel="stylesheet"/>
+  <!-- Loading Messages - TASK-005b -->
+  <link href="/static/loading-messages.css" rel="stylesheet"/>
+  <!

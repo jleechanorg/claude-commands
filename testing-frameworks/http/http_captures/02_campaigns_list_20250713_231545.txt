@@ -1,0 +1,97 @@
+HTTP 200 OK
+URL: http://localhost:8086/api/campaigns
+Headers: {'Server': 'Werkzeug/3.1.3 Python/3.12.3', 'Date': 'Mon, 14 Jul 2025 06:15:45 GMT', 'Content-Type': 'application/json', 'Content-Length': '17393', 'Access-Control-Allow-Origin': '*', 'Connection': 'close'}
+Cookies: {}
+--------------------------------------------------------------------------------
+CONTENT:
+--------------------------------------------------------------------------------
+[
+  {
+    "created_at": "2025-07-09T04:43:14.171438+00:00",
+    "id": "dss3zJKUrBAnOOwPZqPw",
+    "initial_prompt": "A wizard exploring a haunted tower",
+    "last_played": "2025-07-09T04:43:40.660034+00:00",
+    "selected_prompts": [],
+    "title": "Test Campaign",
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T19:59:26.994326+00:00",
+    "id": "UYCi7XRzopDQin5DmtRF",
+    "initial_prompt": "Test god mode field handling",
+    "last_played": "2025-07-06T19:59:43.633881+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T19:58:33.790090+00:00",
+    "id": "cW4aa4IWLrrBkofdvzxe",
+    "initial_prompt": "Test campaign for god mode JSON bug",
+    "last_played": "2025-07-06T19:59:22.170396+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T17:09:23.081024+00:00",
+    "id": "mrXX2lYNSfeY53qougNZ",
+    "initial_prompt": "A wizard exploring a haunted tower",
+    "last_played": "2025-07-06T17:09:44.621592+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T17:08:23.320285+00:00",
+    "id": "4vcm3NLCpD6LSxUodFjc",
+    "initial_prompt": "Pirates searching for treasure on a mysterious island",
+    "last_played": "2025-07-06T17:09:16.328206+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T17:07:44.246650+00:00",
+    "id": "G3elPqTIUnaDH8GLqY9B",
+    "initial_prompt": "A knight defending a castle from invaders",
+    "last_played": "2025-07-06T17:08:17.310526+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T16:42:44.980185+00:00",
+    "id": "L09wrZzwMkLwIn8TaWhp",
+    "initial_prompt": "A wizard exploring a haunted tower",
+    "last_played": "2025-07-06T16:43:37.103179+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T16:40:59.780482+00:00",
+    "id": "T4WndJhY5skN5rggGyka",
+    "initial_prompt": "A brave knight must save a kingdom from an ancient dragon terrorizing the countryside",
+    "last_played": "2025-07-06T16:41:00.132432+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T16:40:52.702573+00:00",
+    "id": "Tfhdbv6gyWya4PBqwV9l",
+    "initial_prompt": "Test with \u00e9mojis \ud83e\uddd9\u200d\u2642\ufe0f and unicode \u00f1 \u00e9 \u00fc",
+    "last_played": "2025-07-06T16:40:53.081225+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_world": false
+  },
+  {
+    "created_at": "2025-07-06T16:40:50.580132+00:00",
+    "id": "SZO95QyRGdzv8ZklmZs8",
+    "initial_prompt": "Test campaign",
+    "last_played": "2025-07-06T16:40:51.074798+00:00",
+    "selected_prompts": [],
+    "title": null,
+    "use_default_worl
