@@ -8,6 +8,9 @@ and new campaigns with structured debug_info fields.
 import re
 from typing import Any
 
+import logging_util
+from json_utils import unescape_json_string
+
 # Debug tag patterns - same as in gemini_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
 DEBUG_STATE_PATTERN = re.compile(r"\[DEBUG_STATE_START\][\s\S]*?\[DEBUG_STATE_END\]")
@@ -19,6 +22,143 @@ STATE_UPDATES_PATTERN = re.compile(
 STATE_UPDATES_MALFORMED_PATTERN = re.compile(
     r"S?TATE_UPDATES_PROPOSED\][\s\S]*?\[END_STATE_UPDATES_PROPOSED\]"
 )
+
+# JSON cleanup patterns - same as in narrative_response_schema.py
+NARRATIVE_PATTERN = re.compile(r'"narrative"\s*:\s*"([^"]*(?:\\.[^"]*)*)"')
+JSON_STRUCTURE_PATTERN = re.compile(r"[{}\[\]]")
+JSON_KEY_QUOTES_PATTERN = re.compile(r'"([^"]+)":')
+JSON_COMMA_SEPARATOR_PATTERN = re.compile(r'",\s*"')
+WHITESPACE_PATTERN = re.compile(
+    r"[^\S\r\n]+"
+)  # Normalize spaces while preserving line breaks
+
+
+def contains_json_artifacts(text: str) -> bool:
+    """
+    Check if text contains JSON artifacts that need cleaning.
+
+    Args:
+        text: Text to check for JSON artifacts
+
+    Returns:
+        True if text appears to contain JSON that should be cleaned
+    """
+    if not text:
+        return False
+
+    # Check multiple indicators to avoid corrupting valid narrative text
+    is_likely_json = (
+        "{" in text
+        and (text.strip().startswith("{") or text.strip().startswith('"'))
+        and (text.strip().endswith("}") or text.strip().endswith('"'))
+        and (
+            text.count('"') >= 4 or "entities_mentioned" in text or "narrative" in text
+        )  # Either quotes or JSON field names
+    )
+
+    # Also check for specific JSON field patterns that shouldn't appear in narrative
+    has_json_fields = (
+        '"narrative":' in text
+        or '"god_mode_response":' in text
+        or '"entities_mentioned":' in text
+        or '"state_updates":' in text
+        or '"description":' in text
+    )
+
+    # Check for JSON escape sequences that indicate this is escaped JSON content
+    has_json_escapes = (
+        "\\n" in text  # Literal \n characters
+        and '\\"' in text  # Escaped quotes
+        and (text.count("\\n") > 1 or text.count('\\"') > 1)  # Multiple escapes
+    )
+
+    return is_likely_json or has_json_fields or has_json_escapes
+
+
+def clean_json_artifacts(text: str) -> str:
+    """
+    Clean JSON artifacts from narrative text using the same logic as parse_structured_response.
+
+    Args:
+        text: Text that may contain JSON artifacts
+
+    Returns:
+        Cleaned text with JSON artifacts removed
+    """
+    if not text or not contains_json_artifacts(text):
+        return text
+
+    cleaned_text = text
+
+    # First, check for god_mode_response pattern (prioritize over narrative)
+    god_mode_match = re.search(
+        r'"god_mode_response"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', cleaned_text
+    )
+    if god_mode_match:
+        cleaned_text = god_mode_match.group(1)
+        # Properly unescape JSON string escapes
+        cleaned_text = unescape_json_string(cleaned_text)
+        logging_util.info(
+            "Frontend: Extracted god_mode_response from JSON structure in display processing"
+        )
+        return cleaned_text
+
+    # Then, try to extract just the narrative value if possible
+    if '"narrative"' in cleaned_text:
+        narrative_match = NARRATIVE_PATTERN.search(cleaned_text)
+        if narrative_match:
+            cleaned_text = narrative_match.group(1)
+            # Properly unescape JSON string escapes
+            cleaned_text = unescape_json_string(cleaned_text)
+            logging_util.info(
+                "Frontend: Extracted narrative from JSON structure in display processing"
+            )
+            return cleaned_text
+
+    # Check for description pattern (for campaign descriptions)
+    if '"description"' in cleaned_text:
+        description_match = re.search(
+            r'"description"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', cleaned_text
+        )
+        if description_match:
+            cleaned_text = description_match.group(1)
+            # Properly unescape JSON string escapes
+            cleaned_text = unescape_json_string(cleaned_text)
+            logging_util.info(
+                "Frontend: Extracted description from JSON structure in display processing"
+            )
+            return cleaned_text
+
+    # Check if this is just escaped JSON content (like Dragon Knight description)
+    if "\\n" in cleaned_text and '\\"' in cleaned_text and "{" not in cleaned_text:
+        # This appears to be just escaped text content, not JSON structure
+        cleaned_text = unescape_json_string(cleaned_text)
+        logging_util.info("Frontend: Unescaped JSON escape sequences in text content")
+        return cleaned_text
+
+    # Fallback to aggressive cleanup only as last resort
+    if contains_json_artifacts(cleaned_text):
+        logging_util.warning(
+            "Frontend: Applying aggressive JSON cleanup in display processing"
+        )
+        cleaned_text = JSON_STRUCTURE_PATTERN.sub(
+            "", cleaned_text
+        )  # Remove braces and brackets
+        cleaned_text = JSON_KEY_QUOTES_PATTERN.sub(
+            r"\1:", cleaned_text
+        )  # Remove quotes from keys
+        cleaned_text = JSON_COMMA_SEPARATOR_PATTERN.sub(
+            ". ", cleaned_text
+        )  # Replace JSON comma separators
+        cleaned_text = unescape_json_string(
+            cleaned_text
+        )  # Properly unescape all JSON escape sequences
+        cleaned_text = WHITESPACE_PATTERN.sub(
+            " ", cleaned_text
+        )  # Normalize spaces while preserving line breaks
+        cleaned_text = cleaned_text.strip()
+
+    return cleaned_text
 
 
 def contains_debug_tags(text: str) -> bool:
@@ -88,7 +228,7 @@ def process_story_entry_for_display(
     entry: dict[str, Any], debug_mode: bool
 ) -> dict[str, Any]:
     """
-    Process a single story entry for display, handling debug content appropriately.
+    Process a single story entry for display, handling debug content and JSON artifacts appropriately.
 
     Args:
         entry: Story entry from database
@@ -103,24 +243,30 @@ def process_story_entry_for_display(
 
     # Get the text content
     text = entry.get("text", "")
+    processed_text = text
 
-    # Check if this is an old campaign with embedded debug tags
-    if contains_debug_tags(text):
+    # First, clean any JSON artifacts that shouldn't appear in narrative text
+    if contains_json_artifacts(text):
+        processed_text = clean_json_artifacts(text)
+        logging_util.info("Frontend: Cleaned JSON artifacts from story entry")
+
+    # Then, check if this is an old campaign with embedded debug tags
+    if contains_debug_tags(processed_text):
         # Apply appropriate stripping based on debug mode
         if debug_mode:
             # In debug mode, only strip STATE_UPDATES blocks
-            processed_text = strip_state_updates_only(text)
+            processed_text = strip_state_updates_only(processed_text)
         else:
             # In non-debug mode, strip all debug content
-            processed_text = strip_debug_content(text)
+            processed_text = strip_debug_content(processed_text)
 
-        # Create a new entry dict to avoid modifying the original
+    # Create a new entry dict if any processing was done
+    if processed_text != text:
         processed_entry = entry.copy()
         processed_entry["text"] = processed_text
         return processed_entry
 
-    # For new campaigns, text should already be clean
-    # Debug info would be in separate field (not implemented yet)
+    # For new campaigns with no artifacts, text should already be clean
     return entry
 
 

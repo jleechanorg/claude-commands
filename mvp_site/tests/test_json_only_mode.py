@@ -39,7 +39,7 @@ class TestJSONOnlyMode(unittest.TestCase):
 
             # Test continue_story (need proper parameters)
 
-            test_game_state = GameState()
+            test_game_state = GameState(user_id="test-user-123")  # Add required user_id
             gemini_service.continue_story("test prompt", "story", [], test_game_state)
 
             # Verify JSON mode was used
@@ -103,7 +103,9 @@ class TestJSONOnlyMode(unittest.TestCase):
             test_cases = [
                 (
                     "continue_story",
-                    lambda: gemini_service.continue_story([], "prompt", "story"),
+                    lambda: gemini_service.continue_story(
+                        [], "prompt", "story", GameState(user_id="test-user")
+                    ),
                 ),
                 (
                     "generate_opening_story",

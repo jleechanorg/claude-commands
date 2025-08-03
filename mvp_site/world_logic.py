@@ -165,9 +165,9 @@ def _prepare_game_state(
             logging_util.warning(
                 "PREPARE_GAME_STATE: GameState.from_dict returned None, using default state"
             )
-            current_game_state = GameState()
+            current_game_state = GameState(user_id=user_id)
     else:
-        current_game_state = GameState()
+        current_game_state = GameState(user_id=user_id)
 
     # Perform cleanup on a dictionary copy
     cleaned_state_dict, was_cleaned, num_cleaned = _cleanup_legacy_state(
@@ -180,9 +180,9 @@ def _prepare_game_state(
             logging_util.error(
                 "PREPARE_GAME_STATE: GameState.from_dict returned None after cleanup, using original state"
             )
-            current_game_state = (
-                GameState.from_dict(current_game_state.to_dict()) or GameState()
-            )
+            current_game_state = GameState.from_dict(
+                current_game_state.to_dict()
+            ) or GameState(user_id=user_id)
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, current_game_state.to_dict()
         )
@@ -427,6 +427,7 @@ async def create_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
 
         # Create initial game state with user's debug mode preference
         initial_game_state = GameState(
+            user_id=user_id,
             custom_campaign_state={"attribute_system": attribute_system},
             debug_mode=debug_mode,
         ).to_dict()
@@ -624,9 +625,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "response": final_narrative,  # Fallback for older frontend versions
             "game_state": updated_game_state_dict,
             "state_changes": response.get("state_changes", {}),
-            "state_updates": response.get(
-                "state_changes", {}
-            ),  # API contract compatibility
+            # state_updates only included in debug mode
             "mode": mode,
             "user_input": user_input,
             "state_cleaned": was_cleaned,
@@ -637,10 +636,14 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
         }
 
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode:
+            unified_response["state_updates"] = response.get("state_changes", {})
+
         # Add structured response fields if available
         if structured_response:
-            # Essential structured fields from NarrativeResponse
-            if hasattr(structured_response, "entities_mentioned"):
+            # entities_mentioned only in debug mode
+            if debug_mode and hasattr(structured_response, "entities_mentioned"):
                 unified_response["entities_mentioned"] = (
                     structured_response.entities_mentioned
                 )
@@ -656,7 +659,8 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 unified_response["dice_rolls"] = structured_response.dice_rolls
             if hasattr(structured_response, "resources"):
                 unified_response["resources"] = structured_response.resources
-            if hasattr(structured_response, "debug_info"):
+            # debug_info only in debug mode
+            if debug_mode and hasattr(structured_response, "debug_info"):
                 unified_response["debug_info"] = structured_response.debug_info
             # God mode response (when applicable)
             if (
@@ -678,9 +682,11 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
                 current_state_changes, story_id_update
             )
             unified_response["state_changes"] = merged_state_changes
-            unified_response["state_updates"] = (
-                merged_state_changes  # API contract compatibility
-            )
+            # state_updates only in debug mode
+            if debug_mode:
+                unified_response["state_updates"] = (
+                    merged_state_changes  # API contract compatibility
+                )
 
             # Also update the game state dict that was already saved
             final_game_state_dict = update_state_with_changes(
@@ -729,6 +735,26 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
         )
         if not campaign_data:
             return {KEY_ERROR: "Campaign not found", "status_code": 404}
+
+        # Clean JSON artifacts from campaign description if present
+        if campaign_data and "description" in campaign_data:
+            from debug_hybrid_system import clean_json_artifacts
+
+            campaign_data["description"] = clean_json_artifacts(
+                campaign_data["description"]
+            )
+
+        # Also clean other text fields that might have JSON artifacts
+        text_fields_to_clean = ["prompt", "title"]
+        for field in text_fields_to_clean:
+            if (
+                campaign_data
+                and field in campaign_data
+                and isinstance(campaign_data[field], str)
+            ):
+                from debug_hybrid_system import clean_json_artifacts
+
+                campaign_data[field] = clean_json_artifacts(campaign_data[field])
 
         # Get game state and apply user settings
         game_state, was_cleaned, num_cleaned = _prepare_game_state(user_id, campaign_id)
@@ -931,6 +957,16 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
 
         # Get campaigns
         campaigns = firestore_service.get_campaigns_for_user(user_id)
+
+        # Clean JSON artifacts from campaign text fields
+        if campaigns:
+            from debug_hybrid_system import clean_json_artifacts
+
+            text_fields_to_clean = ["description", "prompt", "title"]
+            for campaign in campaigns:
+                for field in text_fields_to_clean:
+                    if field in campaign and isinstance(campaign[field], str):
+                        campaign[field] = clean_json_artifacts(campaign[field])
 
         return {
             KEY_SUCCESS: True,
@@ -1360,7 +1396,7 @@ def _handle_update_state_command(
             logging_util.error(
                 "PROCESS_ACTION: GameState.from_dict returned None after update, using fallback"
             )
-            final_game_state = GameState()
+            final_game_state = GameState(user_id=user_id)
 
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, final_game_state.to_dict()

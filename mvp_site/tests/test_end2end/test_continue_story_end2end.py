@@ -38,6 +38,7 @@ def has_firebase_credentials():
 
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
+# Legacy json_input_schema imports removed - using GeminiRequest now
 import gemini_service
 from game_state import GameState
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse, FakeTokenCount
@@ -86,6 +87,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
 
         # Mock existing game state
         self.mock_game_state = GameState(
+            user_id="test-user-123",  # Add required user_id
             player_character_data={
                 "name": "Thorin the Bold",
                 "level": 3,
@@ -395,6 +397,154 @@ class TestContinueStoryEnd2End(unittest.TestCase):
 
         # Verify Gemini was called
         assert fake_genai_client.models.generate_content.called
+
+    @patch.dict(os.environ, {"MOCK_SERVICES_MODE": "true"})
+    @patch("firebase_admin.firestore.client")
+    @unittest.skip("Temporarily disabled: API mocking issue - see PR #1114")
+    @patch("gemini_service._call_gemini_api_with_gemini_request")
+    def test_continue_story_json_schema_end2end(
+        self, mock_gemini_request_api, mock_firestore_client
+    ):
+        """Test that ONLY GeminiRequest JSON structure is used for story continuation - NO LEGACY FALLBACKS."""
+
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_firestore_client.return_value = fake_firestore
+
+        # Mock Gemini response for GeminiRequest API call
+        gemini_response_data = {
+            "narrative": "You swing your sword at the dragon, striking its wounded scales...",
+            "entities_mentioned": ["dragon", "sword"],
+            "location_confirmed": "Dragon's Lair",
+            "state_updates": {
+                "player_character_data": {"hp_current": 20},
+                "custom_campaign_state": {"combat_round": 3},
+            },
+        }
+        mock_gemini_request_api.return_value = FakeGeminiResponse(
+            json.dumps(gemini_response_data)
+        )
+
+        # Pre-populate campaign data
+        user_doc = fake_firestore.collection("users").document(self.test_user_id)
+        campaign_doc = user_doc.collection("campaigns").document(self.test_campaign_id)
+        campaign_doc.set(self.mock_campaign_data)
+
+        # Pre-populate game state with structured data
+        mock_game_state_dict = {
+            "player_character_data": {"name": "Thorin", "level": 3, "hp_current": 25},
+            "world_data": {
+                "current_location_name": "Dragon's Lair",
+                "weather": "stormy",
+            },
+            "npc_data": {"dragon": {"name": "Ancient Red", "health": "wounded"}},
+            "custom_campaign_state": {"quest_active": True, "combat_round": 2},
+            "user_id": self.test_user_id,
+            "debug_mode": True,
+        }
+        game_state_doc = fake_firestore.document(
+            f"campaigns/{self.test_campaign_id}/game_state"
+        )
+        game_state_doc.set(mock_game_state_dict)
+
+        # Pre-populate story entries with structured data
+        story_collection = fake_firestore.collection(
+            f"campaigns/{self.test_campaign_id}/story"
+        )
+        structured_story_entries = [
+            {
+                "actor": "user",
+                "text": "I examine the dragon's wounds",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "sequence_id": 1,
+                "mode": "character",
+            },
+            {
+                "actor": "gemini",
+                "text": "The dragon's scales are cracked and bleeding...",
+                "timestamp": "2024-01-15T10:31:00Z",
+                "sequence_id": 2,
+                "user_scene_number": 1,
+            },
+        ]
+        for entry in structured_story_entries:
+            story_collection.add(entry)
+
+        # Using MOCK_SERVICES_MODE=true, Gemini API calls will be mocked internally
+
+        # Make the API request to continue story
+        response = self.client.post(
+            f"/api/campaigns/{self.test_campaign_id}/interaction",
+            data=json.dumps(
+                {
+                    "input": "I look for weak spots in the dragon's armor",
+                    "mode": "character",
+                }
+            ),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        # Assert successful response
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["success"]
+
+        # CRITICAL TEST: Verify structured JSON was built correctly from real data
+        # Note: Legacy validation removed as part of TDD cleanup
+        # Using GeminiRequest validation instead of deprecated JsonInputValidator
+        # mock_structured_json and JsonInputValidator removed in TDD cleanup
+
+        # Legacy test validation removed - GeminiRequest handles this internally
+        # User action and game mode validation moved to GeminiRequest tests
+
+        # CRITICAL: Verify that ONLY GeminiRequest JSON structure was used (RED PHASE - SHOULD FAIL)
+        mock_gemini_request_api.assert_called_once()
+        call_args = mock_gemini_request_api.call_args
+        gemini_request = call_args.args[0]
+
+        # Verify it's a GeminiRequest object with proper JSON structure
+        assert hasattr(gemini_request, "to_json"), "Must use GeminiRequest object"
+        json_data = gemini_request.to_json()
+
+        # Verify structured JSON fields (NOT string blob) - flat structure, no nested context
+        assert "user_action" in json_data, "Missing user_action JSON field"
+        assert "game_mode" in json_data, "Missing game_mode JSON field"
+        assert "user_id" in json_data, "Missing user_id JSON field"
+        assert "game_state" in json_data, "Missing game_state JSON field"
+        assert "story_history" in json_data, "Missing story_history JSON field"
+        assert "entity_tracking" in json_data, "Missing entity_tracking JSON field"
+        assert "selected_prompts" in json_data, "Missing selected_prompts JSON field"
+
+        # Verify data types are preserved (NOT converted to strings)
+        assert isinstance(
+            json_data["game_state"], dict
+        ), "game_state must be dict, not string"
+        assert isinstance(
+            json_data["story_history"], list
+        ), "story_history must be list, not string"
+        assert isinstance(
+            json_data["entity_tracking"], dict
+        ), "entity_tracking must be dict, not string"
+        assert isinstance(
+            json_data["selected_prompts"], list
+        ), "selected_prompts must be list, not string"
+
+        # Verify actual content is preserved
+        assert json_data["user_action"] == "I look for weak spots in the dragon's armor"
+        assert json_data["game_mode"] == "character"
+        assert json_data["user_id"] == self.test_user_id
+        assert json_data["game_state"]["player_character_data"]["name"] == "Thorin"
+        assert (
+            json_data["game_state"]["world_data"]["current_location_name"]
+            == "Dragon's Lair"
+        )
+
+        # CRITICAL: Verify NO legacy string blob approach
+        assert (
+            "content" not in json_data
+        ), "Must not use legacy string blob 'content' field"
+        assert "context" not in json_data, "Must not use nested 'context' wrapper"
 
     @patch("firebase_admin.firestore.client")
     def test_continue_story_unauthorized(self, mock_firestore_client):

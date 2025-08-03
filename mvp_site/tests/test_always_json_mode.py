@@ -28,7 +28,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        self.game_state = GameState()
+        self.game_state = GameState(user_id="test-user-123")  # Add required user_id
         self.story_context = []
 
     def test_json_mode_without_entities(self):
@@ -37,7 +37,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
         self.game_state.player_character_data = {}
         self.game_state.npc_data = {}
 
-        with patch("gemini_service._call_gemini_api") as mock_api:
+        with patch("gemini_service._call_gemini_api_with_gemini_request") as mock_api:
             # Mock the API response - JSON-first with separate planning block field
             mock_response = MagicMock()
             mock_response.text = json.dumps(
@@ -148,7 +148,7 @@ class TestAlwaysJSONMode(unittest.TestCase):
             }
         }
 
-        with patch("gemini_service._call_gemini_api") as mock_api:
+        with patch("gemini_service._call_gemini_api_with_gemini_request") as mock_api:
             # Mock the API response
             mock_response = MagicMock()
             mock_response.text = json.dumps(

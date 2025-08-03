@@ -959,7 +959,7 @@ def get_campaign_game_state(
         logging_util.warning(
             "GET_CAMPAIGN_GAME_STATE: GameState.from_dict returned None, returning empty GameState"
         )
-        return GameState()
+        return GameState(user_id=user_id)
     return game_state
 
 

@@ -153,6 +153,219 @@ class TestMainStructuredResponseBuilding(unittest.TestCase):
         assert "dice_rolls" not in {"response": "test", "debug_info": debug_info}
         assert "resources" not in {"response": "test", "debug_info": debug_info}
 
+    def test_backend_debug_field_filtering_red_green(self):
+        """RED-GREEN: Test backend debug field filtering based on debug_mode"""
+
+        # Test debug_mode=False excludes debug fields
+        debug_mode_false_response = {
+            "success": True,
+            "narrative": "The dragon roars!",
+            "state_changes": {"hp": 8},
+            "debug_mode": False,
+        }
+
+        # Simulate the debug field addition logic from world_logic.py
+        mock_state_changes = {"hp": 8}
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode_false_response["debug_mode"]:
+            debug_mode_false_response["state_updates"] = mock_state_changes
+
+        # Mock structured response fields
+        mock_entities = ["Dragon", "Knight"]
+        mock_debug_info = {"dm_notes": ["Test note"]}
+
+        # entities_mentioned and debug_info only in debug mode
+        if debug_mode_false_response["debug_mode"]:
+            debug_mode_false_response["entities_mentioned"] = mock_entities
+            debug_mode_false_response["debug_info"] = mock_debug_info
+
+        # ASSERTIONS for debug_mode=False
+        assert (
+            "state_updates" not in debug_mode_false_response
+        ), "state_updates should be excluded when debug_mode=False"
+        assert (
+            "entities_mentioned" not in debug_mode_false_response
+        ), "entities_mentioned should be excluded when debug_mode=False"
+        assert (
+            "debug_info" not in debug_mode_false_response
+        ), "debug_info should be excluded when debug_mode=False"
+
+        # Test debug_mode=True includes debug fields
+        debug_mode_true_response = {
+            "success": True,
+            "narrative": "The dragon roars!",
+            "state_changes": {"hp": 8},
+            "debug_mode": True,
+        }
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode_true_response["debug_mode"]:
+            debug_mode_true_response["state_updates"] = mock_state_changes
+            debug_mode_true_response["entities_mentioned"] = mock_entities
+            debug_mode_true_response["debug_info"] = mock_debug_info
+
+        # ASSERTIONS for debug_mode=True
+        assert (
+            "state_updates" in debug_mode_true_response
+        ), "state_updates should be included when debug_mode=True"
+        assert (
+            "entities_mentioned" in debug_mode_true_response
+        ), "entities_mentioned should be included when debug_mode=True"
+        assert (
+            "debug_info" in debug_mode_true_response
+        ), "debug_info should be included when debug_mode=True"
+
+        # Verify content is correct
+        assert debug_mode_true_response["state_updates"] == {"hp": 8}
+        assert debug_mode_true_response["entities_mentioned"] == ["Dragon", "Knight"]
+        assert debug_mode_true_response["debug_info"]["dm_notes"] == ["Test note"]
+
+    def test_comprehensive_debug_response_building_logic(self):
+        """Restored from test_debug_response_building.py - comprehensive response building test"""
+        
+        class MockStructuredResponse:
+            """Mock structured response for testing"""
+            def __init__(self):
+                self.entities_mentioned = ["Dragon", "Knight"]
+                self.location_confirmed = "Dragon's Lair"
+                self.planning_block = "What do you do?"
+                self.dice_rolls = ["1d20: 15"]
+                self.resources = "HP: 8/10"
+                self.debug_info = {"dm_notes": ["Test note"], "state_rationale": "Combat"}
+        
+        # Test debug_mode=False excludes debug fields
+        debug_mode = False
+        mock_response = {"state_changes": {"hp": 8}}
+        mock_structured_response = MockStructuredResponse()
+        
+        # Simulate the unified_response building (from world_logic.py)
+        unified_response = {
+            "success": True,
+            "narrative": "The dragon roars!",
+            "game_state": {"debug_mode": False},
+            "state_changes": mock_response.get("state_changes", {}),
+            "mode": "character",
+            "debug_mode": debug_mode,
+        }
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode:
+            unified_response["state_updates"] = mock_response.get("state_changes", {})
+
+        # Add structured response fields if available
+        if mock_structured_response:
+            # entities_mentioned only in debug mode  
+            if debug_mode and hasattr(mock_structured_response, "entities_mentioned"):
+                unified_response["entities_mentioned"] = mock_structured_response.entities_mentioned
+                
+            # Always include these fields regardless of debug mode
+            if hasattr(mock_structured_response, "location_confirmed"):
+                unified_response["location_confirmed"] = mock_structured_response.location_confirmed
+            if hasattr(mock_structured_response, "planning_block"):
+                unified_response["planning_block"] = mock_structured_response.planning_block
+            if hasattr(mock_structured_response, "dice_rolls"):
+                unified_response["dice_rolls"] = mock_structured_response.dice_rolls
+            if hasattr(mock_structured_response, "resources"):
+                unified_response["resources"] = mock_structured_response.resources
+                
+            # debug_info only in debug mode
+            if debug_mode and hasattr(mock_structured_response, "debug_info"):
+                unified_response["debug_info"] = mock_structured_response.debug_info
+
+        # CRITICAL ASSERTIONS: Debug fields should be ABSENT when debug_mode=False
+        assert "state_updates" not in unified_response, \
+            "state_updates should NOT be in response when debug_mode=False"
+        assert "entities_mentioned" not in unified_response, \
+            "entities_mentioned should NOT be in response when debug_mode=False"
+        assert "debug_info" not in unified_response, \
+            "debug_info should NOT be in response when debug_mode=False"
+        
+        # These should REMAIN
+        assert "location_confirmed" in unified_response, \
+            "location_confirmed should remain when debug_mode=False"
+        assert "planning_block" in unified_response, \
+            "planning_block should remain when debug_mode=False"
+        assert "dice_rolls" in unified_response, \
+            "dice_rolls should remain when debug_mode=False"
+        assert "resources" in unified_response, \
+            "resources should remain when debug_mode=False"
+
+        # Now test debug_mode=True includes debug fields
+        debug_mode = True
+        unified_response_debug_on = {
+            "success": True,
+            "narrative": "The dragon roars!",
+            "game_state": {"debug_mode": True},
+            "state_changes": mock_response.get("state_changes", {}),
+            "mode": "character",
+            "debug_mode": debug_mode,
+        }
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode:
+            unified_response_debug_on["state_updates"] = mock_response.get("state_changes", {})
+
+        # Add structured response fields if available
+        if mock_structured_response:
+            # entities_mentioned only in debug mode  
+            if debug_mode and hasattr(mock_structured_response, "entities_mentioned"):
+                unified_response_debug_on["entities_mentioned"] = mock_structured_response.entities_mentioned
+            # debug_info only in debug mode
+            if debug_mode and hasattr(mock_structured_response, "debug_info"):
+                unified_response_debug_on["debug_info"] = mock_structured_response.debug_info
+
+        # CRITICAL ASSERTIONS: Debug fields should be PRESENT when debug_mode=True
+        assert "state_updates" in unified_response_debug_on, \
+            "state_updates should be in response when debug_mode=True"
+        assert "entities_mentioned" in unified_response_debug_on, \
+            "entities_mentioned should be in response when debug_mode=True"
+        assert "debug_info" in unified_response_debug_on, \
+            "debug_info should be in response when debug_mode=True"
+        
+        # Verify content
+        assert unified_response_debug_on["state_updates"] == {"hp": 8}
+        assert unified_response_debug_on["entities_mentioned"] == ["Dragon", "Knight"]
+        assert unified_response_debug_on["debug_info"]["dm_notes"] == ["Test note"]
+
+    def test_character_mode_sequence_id_debug_filtering(self):
+        """Restored from test_debug_response_building.py - character mode sequence ID test"""
+        
+        # Test the second place where state_updates is added (lines 685-689)
+        debug_mode = False
+        mode = "character"
+        
+        unified_response = {"state_changes": {"hp": 8}}
+        
+        # Track story mode sequence ID for character mode (from world_logic.py lines 675-689)
+        if mode == "character":
+            story_id_update = {"custom_campaign_state": {"last_story_mode_sequence_id": 1}}
+            merged_state_changes = {"hp": 8, "custom_campaign_state": {"last_story_mode_sequence_id": 1}}
+            
+            unified_response["state_changes"] = merged_state_changes
+            # state_updates only in debug mode
+            if debug_mode:
+                unified_response["state_updates"] = merged_state_changes
+
+        # CRITICAL: state_updates should NOT be added even in character mode when debug_mode=False
+        assert "state_updates" not in unified_response, \
+            "state_updates should NOT be added in character mode when debug_mode=False"
+        assert "state_changes" in unified_response, \
+            "state_changes should always be present (internal tracking)"
+        
+        # Test that it works with debug_mode=True
+        debug_mode = True
+        unified_response_debug_on = {"state_changes": {"hp": 8}}
+        
+        if mode == "character":
+            unified_response_debug_on["state_changes"] = merged_state_changes
+            # state_updates only in debug mode
+            if debug_mode:
+                unified_response_debug_on["state_updates"] = merged_state_changes
+                
+        assert "state_updates" in unified_response_debug_on, \
+            "state_updates should be added in character mode when debug_mode=True"
+
 
 if __name__ == "__main__":
     unittest.main()

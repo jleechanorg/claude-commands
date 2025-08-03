@@ -5,6 +5,7 @@ Automatically enhances LLM responses with relevant memory context.
 
 import re
 import time
+from datetime import UTC
 from typing import Any
 
 import logging_util
@@ -121,8 +122,39 @@ class MemoryIntegration:
         matches = sum(1 for term in query_lower.split() if term in obs_text)
         score += min(0.3, matches * 0.05)
 
-        # Recency bonus (if timestamp available)
-        # TODO: Add timestamp tracking to entities
+        # Recency bonus based on entity timestamps
+        try:
+            # Check if entity has timestamp information
+            entity_timestamp = entity_data.get("timestamp") or entity_data.get(
+                "last_seen"
+            )
+            if entity_timestamp:
+                from datetime import datetime
+
+                try:
+                    # Parse timestamp (handle multiple formats)
+                    if isinstance(entity_timestamp, str):
+                        # Try ISO format first
+                        timestamp = datetime.fromisoformat(
+                            entity_timestamp.replace("Z", "+00:00")
+                        )
+                    else:
+                        timestamp = entity_timestamp
+
+                    # Calculate recency bonus (entities seen within last 24 hours get bonus)
+                    now = datetime.now(UTC)
+                    time_diff = (now - timestamp).total_seconds()
+                    hours_ago = time_diff / 3600
+
+                    if hours_ago < 24:
+                        recency_bonus = 0.1 * (1 - hours_ago / 24)  # Up to 0.1 bonus
+                        score += recency_bonus
+                except Exception:
+                    # Skip recency bonus if timestamp parsing fails
+                    pass
+        except Exception:
+            # Skip recency calculation if no timestamp data available
+            pass
 
         return min(1.0, score)
 

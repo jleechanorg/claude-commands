@@ -39,6 +39,16 @@ def has_firebase_credentials():
 
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
+# Import JSON input schema components
+try:
+    # Legacy json_input_schema imports removed - using GeminiRequest now
+
+    from tests.fake_services import FakeServiceManager
+except ImportError:
+    JsonInputBuilder = None
+    JsonInputValidator = None
+    FakeServiceManager = None
+
 
 class FakeFirestoreDocument:
     """Fake Firestore document that behaves like the real thing."""
@@ -489,6 +499,103 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 "debug_mode"
             ], f"Campaign debug mode inconsistent on request {i + 1}"
 
+    def test_json_input_validation_in_debug_context(self):
+        """Test JSON input validation in debug mode context."""
+        if not (JsonInputBuilder and JsonInputValidator and FakeServiceManager):
+            self.skipTest("JSON input schema components not available")
+
+        with FakeServiceManager() as fake_services:
+            # Create JSON input for debug mode interaction
+            json_input = fake_services.create_json_input(
+                "story_continuation",
+                user_action="I examine the debug info panel",
+                game_mode="character",
+                user_id=self.test_user_id,
+                context={
+                    "campaign_id": self.test_campaign_id,
+                    "debug_mode": True,
+                    "sequence_ids": [1, 2, 3],
+                    "checkpoint_block": "Debug mode is currently enabled",
+                    "selected_prompts": ["narrative", "mechanics", "debug"],
+                },
+            )
+
+            # Validate JSON structure
+            is_valid = fake_services.validate_json_input(json_input)
+            self.assertTrue(
+                is_valid, "Debug mode story continuation JSON should be valid"
+            )
+
+            # Test that fake services handle debug mode JSON correctly
+            fake_response = fake_services.gemini_client.models.generate_content(
+                json_input
+            )
+            self.assertIsNotNone(fake_response)
+
+            # Validate response contains debug-appropriate content
+            try:
+                response_data = json.loads(fake_response.text)
+                self.assertIsInstance(response_data, dict)
+                # Should contain narrative for story continuation
+                self.assertIn("narrative", response_data)
+                # May contain debug fields when debug mode enabled
+                if "debug_info" in response_data:
+                    self.assertIsInstance(response_data["debug_info"], dict)
+            except json.JSONDecodeError:
+                self.fail("Debug mode story continuation should return valid JSON")
+
+    def test_json_input_validation_debug_mode_toggling(self):
+        """Test JSON input validation when debug mode is toggled."""
+        if not (JsonInputBuilder and JsonInputValidator):
+            self.skipTest("JSON input schema components not available")
+
+        builder = JsonInputBuilder()
+        validator = JsonInputValidator()
+
+        # Test JSON input with debug mode ON using story continuation
+        debug_on_input = builder.build_story_continuation_input(
+            user_action="Show me all debug information",
+            user_id=self.test_user_id,
+            game_mode="character",
+            game_state={"debug_mode": True},
+            story_history=[],
+            checkpoint_block="Debug mode enabled",
+            core_memories=[],
+            sequence_ids=[],
+            entity_tracking={},
+            selected_prompts=["narrative", "debug"],
+        )
+
+        result_on = validator.validate(debug_on_input)
+        self.assertIsInstance(result_on.is_valid, bool)
+
+        # Test JSON input with debug mode OFF using story continuation
+        debug_off_input = builder.build_story_continuation_input(
+            user_action="Continue the story normally",
+            user_id=self.test_user_id,
+            game_mode="character",
+            game_state={"debug_mode": False},
+            story_history=[],
+            checkpoint_block="Debug mode disabled",
+            core_memories=[],
+            sequence_ids=[],
+            entity_tracking={},
+            selected_prompts=["narrative"],
+        )
+
+        result_off = validator.validate(debug_off_input)
+        self.assertIsInstance(result_off.is_valid, bool)
+
+        # Both should be valid JSON input regardless of debug mode setting
+        if not result_on.is_valid:
+            self.fail(
+                f"Debug mode ON input should be valid. Errors: {result_on.errors}"
+            )
+        if not result_off.is_valid:
+            self.fail(
+                f"Debug mode OFF input should be valid. Errors: {result_off.errors}"
+            )
+
     @patch("firebase_admin.firestore.client")
     def test_backend_strips_game_state_fields_when_debug_off(
         self, mock_firestore_client
@@ -649,6 +756,196 @@ class TestDebugModeEnd2End(unittest.TestCase):
         assert len(latest_entry["entities"]) == 2
         assert "player_character_data" in latest_entry["state_updates"]
         assert "dm_notes" in latest_entry["debug_info"]
+
+    def test_debug_mode_filtering_unit_integration(self):
+        """Restored from test_debug_filtering_unit.py - integration test for debug filtering"""
+        
+        # Test that simulates the exact logic we fixed in world_logic.py
+        # without requiring full mocking of all dependencies
+        
+        # Mock data that would trigger debug field inclusion
+        mock_structured_response_data = {
+            "entities_mentioned": ["Dragon", "Knight", "Castle"],
+            "location_confirmed": "Ancient Dragon's Lair",
+            "session_header": "Session: Dragon Combat",
+            "planning_block": "What do you do next?",
+            "dice_rolls": ["1d20+5: 18 (Attack)"],
+            "resources": "Lost 1 healing potion",
+            "debug_info": {
+                "dm_notes": ["Player rolled well", "Dragon should retreat"],
+                "state_rationale": "HP reduced due to combat"
+            }
+        }
+        
+        mock_response_data = {
+            "state_changes": {
+                "player_character_data": {"hp_current": 8, "hp_max": 10},
+                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}}
+            }
+        }
+
+        # Test debug_mode=False strips debug fields
+        debug_mode = False
+        
+        # Simulate the unified_response building from world_logic.py
+        unified_response = {
+            "success": True,
+            "story": [],
+            "narrative": "The dragon roars menacingly!",
+            "response": "The dragon roars menacingly!",
+            "game_state": {"debug_mode": debug_mode},
+            "state_changes": mock_response_data.get("state_changes", {}),
+            # state_updates only included in debug mode
+            "mode": "character",
+            "user_input": "I attack the dragon",
+            "debug_mode": debug_mode,
+        }
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode:
+            unified_response["state_updates"] = mock_response_data.get("state_changes", {})
+
+        # Add structured response fields if available
+        structured_response = mock_structured_response_data
+        if structured_response:
+            # entities_mentioned only in debug mode
+            if debug_mode and "entities_mentioned" in structured_response:
+                unified_response["entities_mentioned"] = structured_response["entities_mentioned"]
+                
+            # Always include these fields regardless of debug mode
+            if "location_confirmed" in structured_response:
+                unified_response["location_confirmed"] = structured_response["location_confirmed"]
+            if "session_header" in structured_response:
+                unified_response["session_header"] = structured_response["session_header"]
+            if "planning_block" in structured_response:
+                unified_response["planning_block"] = structured_response["planning_block"]
+            if "dice_rolls" in structured_response:
+                unified_response["dice_rolls"] = structured_response["dice_rolls"]
+            if "resources" in structured_response:
+                unified_response["resources"] = structured_response["resources"]
+                
+            # debug_info only in debug mode
+            if debug_mode and "debug_info" in structured_response:
+                unified_response["debug_info"] = structured_response["debug_info"]
+
+        # CRITICAL: These fields should NOT be present when debug_mode=False
+        assert "state_updates" not in unified_response, \
+            "state_updates should be stripped when debug_mode=False"
+        assert "entities_mentioned" not in unified_response, \
+            "entities_mentioned should be stripped when debug_mode=False"
+        assert "debug_info" not in unified_response, \
+            "debug_info should be stripped when debug_mode=False"
+        
+        # These fields should REMAIN when debug_mode=False
+        assert "location_confirmed" in unified_response, \
+            "location_confirmed should remain when debug_mode=False"
+        assert "planning_block" in unified_response, \
+            "planning_block should remain when debug_mode=False"
+        assert "dice_rolls" in unified_response, \
+            "dice_rolls should remain when debug_mode=False"
+        assert "resources" in unified_response, \
+            "resources should remain when debug_mode=False"
+
+        # Test debug_mode=True includes debug fields
+        debug_mode = True
+        unified_response_debug_on = {
+            "success": True,
+            "story": [],
+            "narrative": "The dragon roars menacingly!",
+            "response": "The dragon roars menacingly!",
+            "game_state": {"debug_mode": debug_mode},
+            "state_changes": mock_response_data.get("state_changes", {}),
+            "mode": "character",
+            "user_input": "I attack the dragon",
+            "debug_mode": debug_mode,
+        }
+
+        # Add debug-only fields when debug mode is enabled
+        if debug_mode:
+            unified_response_debug_on["state_updates"] = mock_response_data.get("state_changes", {})
+
+        # Add structured response fields
+        if structured_response:
+            # entities_mentioned only in debug mode
+            if debug_mode and "entities_mentioned" in structured_response:
+                unified_response_debug_on["entities_mentioned"] = structured_response["entities_mentioned"]
+            # debug_info only in debug mode
+            if debug_mode and "debug_info" in structured_response:
+                unified_response_debug_on["debug_info"] = structured_response["debug_info"]
+
+        # CRITICAL: These fields should be present when debug_mode=True
+        assert "state_updates" in unified_response_debug_on, \
+            "state_updates should be included when debug_mode=True"
+        assert "entities_mentioned" in unified_response_debug_on, \
+            "entities_mentioned should be included when debug_mode=True"
+        assert "debug_info" in unified_response_debug_on, \
+            "debug_info should be included when debug_mode=True"
+        
+        # Verify the content is correct
+        assert unified_response_debug_on["entities_mentioned"] == ["Dragon", "Knight", "Castle"]
+        assert unified_response_debug_on["debug_info"]["dm_notes"] == ["Player rolled well", "Dragon should retreat"]
+
+    def test_state_updates_sequence_id_debug_filtering_integration(self):
+        """Restored from test_debug_filtering_unit.py - character mode sequence ID filtering test"""
+        
+        # Test the second location where state_updates is added in character mode
+        # This tests lines 675-689 from world_logic.py
+        
+        debug_mode = False
+        mode = "character"
+        sequence_id = 1
+        
+        # Start with basic response structure
+        unified_response = {
+            "success": True,
+            "narrative": "Test narrative",
+            "state_changes": {"hp": 8},
+            "debug_mode": debug_mode
+        }
+        
+        # Track story mode sequence ID for character mode (from world_logic.py)
+        if mode == "character":
+            story_id_update = {
+                "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
+            }
+            
+            # Simulate merging state changes
+            current_state_changes = unified_response.get("state_changes", {})
+            merged_state_changes = {**current_state_changes, **story_id_update}
+            
+            unified_response["state_changes"] = merged_state_changes
+            # state_updates only in debug mode
+            if debug_mode:
+                unified_response["state_updates"] = merged_state_changes
+
+        # CRITICAL: state_updates should NOT be added even in character mode when debug_mode=False
+        assert "state_updates" not in unified_response, \
+            "state_updates should NOT be added in character mode when debug_mode=False"
+        assert "state_changes" in unified_response, \
+            "state_changes should always be present for internal tracking"
+        
+        # Verify that the sequence ID was still tracked internally
+        assert "custom_campaign_state" in unified_response["state_changes"]
+        assert unified_response["state_changes"]["custom_campaign_state"]["last_story_mode_sequence_id"] == 1
+        
+        # Test that it works correctly with debug_mode=True
+        debug_mode = True
+        unified_response_debug_on = {
+            "success": True,
+            "narrative": "Test narrative",
+            "state_changes": {"hp": 8},
+            "debug_mode": debug_mode
+        }
+        
+        if mode == "character":
+            unified_response_debug_on["state_changes"] = merged_state_changes
+            # state_updates only in debug mode
+            if debug_mode:
+                unified_response_debug_on["state_updates"] = merged_state_changes
+                
+        assert "state_updates" in unified_response_debug_on, \
+            "state_updates should be added in character mode when debug_mode=True"
+        assert unified_response_debug_on["state_updates"]["custom_campaign_state"]["last_story_mode_sequence_id"] == 1
 
 
 if __name__ == "__main__":

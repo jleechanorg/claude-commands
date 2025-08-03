@@ -70,14 +70,21 @@ class TestEntityTrackingGeneric(unittest.TestCase):
         assert sariel_rules == {}
 
     def test_location_mappings_are_generic(self):
-        """Test that location owner mappings are not campaign-specific"""
+        """Test that location owner mappings are disabled (returns False for all)"""
         generator = EntityInstructionGenerator()
 
-        # After fix, should return False for all (not hardcoded)
+        # Location owner detection is now disabled to avoid hardcoded patterns
+        # All entities are categorized based on story_critical or background logic instead
         assert not generator._is_location_owner("Valerius", "valerius's study")
         assert not generator._is_location_owner("Lady Cressida", "cressida's chamber")
         assert not generator._is_location_owner("Innkeeper John", "John's Tavern")
         assert not generator._is_location_owner("Wizard Merlin", "Merlin's Tower")
+
+        # Test that random unrelated entities also return False
+        assert not generator._is_location_owner("Random Person", "Different Place")
+        assert not generator._is_location_owner(
+            "Sariel", "Wizard Tower"
+        )  # No hardcoded Sariel logic
 
     def test_entity_specific_instruction_is_generic(self):
         """Test that entity-specific methods are generic"""

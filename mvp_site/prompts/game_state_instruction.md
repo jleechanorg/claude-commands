@@ -12,6 +12,30 @@ The system uses structured JSON for BOTH input and output. This ensures:
 - Reliable parsing without ambiguity
 - Single source of truth for data format
 
+### JSON Input Schema (System Input)
+
+The system now uses a structured JSON input schema for LLM communication. Input messages are categorized by type with specific validation requirements:
+
+**Message Types:**
+- `user_input`: Player actions and commands (requires `game_mode`, `user_id`)
+- `system_instruction`: System prompts and instructions (requires `instruction_type`)
+- `story_continuation`: Narrative continuations (requires `checkpoint_block`, `sequence_id`)
+
+**Input Structure:**
+```json
+{
+    "message_type": "user_input|system_instruction|story_continuation",
+    "content": "The actual message content",
+    "context": {
+        // Required fields based on message_type
+        "game_mode": "character|campaign", // for user_input
+        "user_id": "user-identifier",     // for user_input
+        "instruction_type": "base_system", // for system_instruction
+        "checkpoint_block": "...",         // for story_continuation
+        "sequence_id": "seq_123"          // for story_continuation
+    }
+}
+
 ### JSON Response Format (Your Output)
 
 Every response you generate MUST be valid JSON with this exact structure:

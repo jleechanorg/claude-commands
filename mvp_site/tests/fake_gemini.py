@@ -88,10 +88,49 @@ class FakeModelAdapter:
         }
 
     def generate_content(
-        self, prompt: str, generation_config=None
+        self, prompt: str | dict, generation_config=None
     ) -> FakeGeminiResponse:
-        """Generate a fake response based on prompt content."""
+        """Generate a fake response based on prompt content.
 
+        Args:
+            prompt: Either a string prompt or structured JSON input dict
+            generation_config: Generation configuration (optional)
+        """
+
+        # Handle structured JSON input
+        if isinstance(prompt, dict):
+            return self._handle_json_input(prompt)
+
+        # Handle string prompt (legacy)
+        return self._handle_string_prompt(prompt)
+
+    def _handle_json_input(self, json_input: dict) -> FakeGeminiResponse:
+        """Handle structured JSON input and return appropriate response."""
+        message_type = json_input.get("message_type", "unknown")
+
+        if message_type == "initial_story":
+            template = self._response_templates["campaign_creation"]
+            character_prompt = json_input.get("character_prompt", "")
+            context = {"character": self._extract_character_from_text(character_prompt)}
+        elif message_type == "story_continuation":
+            template = self._response_templates["story_continuation"]
+            user_action = json_input.get("user_action", "")
+            context = {"user_input": user_action}
+        else:
+            # Default template for unknown message types
+            template = self._response_templates["story_continuation"]
+            context = {"user_input": str(json_input)}
+
+        # Fill template with context
+        response_data = self._fill_template(template, context)
+
+        # Convert to JSON string as Gemini would return
+        response_text = json.dumps(response_data, indent=2)
+
+        return FakeGeminiResponse(response_text)
+
+    def _handle_string_prompt(self, prompt: str) -> FakeGeminiResponse:
+        """Handle legacy string prompt."""
         # Extract context from prompt for more realistic responses
         context = self._extract_context(prompt)
 
@@ -108,6 +147,23 @@ class FakeModelAdapter:
         response_text = json.dumps(response_data, indent=2)
 
         return FakeGeminiResponse(response_text)
+
+    def _extract_character_from_text(self, text: str) -> str:
+        """Extract character name from character prompt text."""
+        # Simple extraction - first capitalized word sequence
+        words = text.split()
+        for i, word in enumerate(words):
+            if word and word[0].isupper():
+                # Take up to 3 words as character name
+                char_words = []
+                for j in range(i, min(i + 3, len(words))):
+                    if words[j] and words[j][0].isupper():
+                        char_words.append(words[j])
+                    else:
+                        break
+                if char_words:
+                    return " ".join(char_words)
+        return "Hero"  # Default fallback
 
     def _extract_context(self, prompt: str) -> dict[str, str]:
         """Extract character, setting, and other context from prompt."""
@@ -181,10 +237,15 @@ class FakeModelsManager:
             "gemini-1.5-flash": FakeModelAdapter("gemini-1.5-flash"),
             "gemini-1.5-pro": FakeModelAdapter("gemini-1.5-pro"),
         }
+        self._default_model = FakeModelAdapter("gemini-2.5-flash")
 
     def get(self, model_name: str) -> FakeModelAdapter:
         """Get a fake model adapter."""
         return self._models.get(model_name, FakeModelAdapter(model_name))
+
+    def generate_content(self, prompts, generation_config=None) -> FakeGeminiResponse:
+        """Generate content using the default model (for backward compatibility)."""
+        return self._default_model.generate_content(prompts, generation_config)
 
     def count_tokens(self, model: str, contents: list[str]) -> "FakeTokenCount":
         """Return fake token count."""

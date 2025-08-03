@@ -8,6 +8,7 @@ import re
 from typing import Any
 
 import logging_util
+from json_utils import unescape_json_string
 from robust_json_parser import parse_llm_json_response
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
@@ -551,12 +552,8 @@ def parse_structured_response(response_text: str) -> tuple[str, NarrativeRespons
 
     if narrative_match:
         extracted_narrative = narrative_match.group(1)
-        # Unescape JSON string escapes
-        extracted_narrative = (
-            extracted_narrative.replace("\\n", "\n")
-            .replace('\\"', '"')
-            .replace("\\\\", "\\")
-        )
+        # Properly unescape JSON string escapes
+        extracted_narrative = unescape_json_string(extracted_narrative)
         logging_util.info("Extracted narrative from JSON-like text pattern")
 
         fallback_response = NarrativeResponse(

@@ -44,42 +44,69 @@ jobs:
         # Install requirements (dependency resolver will handle compatibility)
         pip install -r mvp_site/requirements.txt
 
+        # Verify key dependencies are available
+        python -c "import pydantic; print(f'Pydantic {pydantic.__version__} installed')"
+        python -c "import sys; print(f'Python path: {sys.path}')"
+
         # Verify vpython works
         chmod +x vpython
         ./vpython --version
 
-    # Step 5: Run tests using project's test runner
+    # Step 5: Run tests directly with activated venv
     - name: Run test suite
       run: |
         # Activate the virtual environment
         source venv/bin/activate
 
-        # Use the project's established test runner script
-        chmod +x run_tests.sh
+        # Verify environment is correct
+        echo "Current Python: $(which python3)"
+        echo "Virtual env: $VIRTUAL_ENV"
+        python3 -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
 
-        echo "Running tests using project's run_tests.sh script..."
+        # Navigate to mvp_site and run tests directly
+        cd mvp_site
 
-        # Run the full test suite
-        if ./run_tests.sh; then
-          echo ""
-          echo "========================================"
-          echo "✅ ALL TESTS PASSED"
-          echo "========================================"
+        # Set test environment variables
+        export TESTING=true
+        export MOCK_SERVICES_MODE=true
+
+        echo "Running tests directly with activated virtual environment..."
+
+        # Run tests using Python discovery (same pattern as run_tests.sh)
+        test_count=0
+        failed_count=0
+
+        # Find and run all test files
+        for test_file in $(find tests/ -name "test_*.py" -type f | sort); do
+          if [[ "$test_file" == *"test_integration"* ]]; then
+            echo "Skipping integration test: $test_file"
+            continue
+          fi
+
+          test_count=$((test_count + 1))
+          echo "Running: $test_file"
+
+          if TESTING=true python3 "$test_file"; then
+            echo "✅ PASS: $test_file"
+          else
+            echo "❌ FAIL: $test_file"
+            failed_count=$((failed_count + 1))
+          fi
+          echo "----------------------------------------"
+        done
+
+        echo ""
+        echo "========================================"
+        if [ $failed_count -eq 0 ]; then
+          echo "✅ ALL $test_count TESTS PASSED"
         else
-          echo ""
-          echo "========================================"
-          echo "❌ SOME TESTS FAILED"
-          echo "========================================"
-          echo ""
-          echo "Note: Test failures in CI may be due to:"
-          echo "  - Missing local services (e.g., test server)"
-          echo "  - Test isolation issues"
-          echo "  - Timing-sensitive tests"
-          echo "  - Environment differences"
+          echo "❌ $failed_count/$test_count TESTS FAILED"
           exit 1
         fi
+        echo "========================================"
       env:
         TESTING: true
+        MOCK_SERVICES_MODE: true
 
     # Step 6: Upload test results (optional)
     - name: Upload test results

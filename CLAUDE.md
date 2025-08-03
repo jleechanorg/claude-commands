@@ -241,7 +241,7 @@
 - **Evidence**: PR #1127 - automation/simple_pr_batch_v2.sh violated this principle
 
 ### 🔧 GitHub MCP Setup
-**Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="your_token_here"`
+**Token**: Set in `claude_mcp.sh` line ~247 via `export GITHUB_TOKEN="<your-token>"`
 **Private Repos**: Use direct functions only (no search) | `mcp__github-server__get_pull_request()`
 **Restart After Token Change**: Remove & re-add github-server MCP
 

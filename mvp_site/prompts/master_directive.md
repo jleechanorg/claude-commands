@@ -9,9 +9,10 @@ This document establishes the authoritative hierarchy for all AI instructions in
 ### 1. CRITICAL FOUNDATION (Load First - Highest Authority)
 These instructions form the core operational framework and MUST be loaded before all others:
 
-1. **`game_state_instruction.md`** - State management protocol and entity schemas
-   - Authority over: All state updates, data persistence, timeline management, entity structures
-   - Critical because: Without proper state management, nothing else functions
+1. **`game_state_instruction.md`** - State management protocol, JSON input/output schemas, and entity structures
+   - Authority over: All state updates, data persistence, timeline management, entity structures, JSON input validation
+   - Critical because: Without proper state management and structured communication, nothing else functions
+   - Includes JSON input schema for structured LLM communication
 
 2. **`dnd_srd_instruction.md`** - Core D&D 5E mechanical authority
    - Authority over: All combat, attributes, spells, and mechanical resolution
