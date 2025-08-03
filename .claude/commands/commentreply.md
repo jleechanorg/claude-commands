@@ -405,6 +405,12 @@ create_real_threaded_reply() {
 
   echo "🔗 CREATING: Real threaded reply to comment #$comment_id..."
 
+  # Validate and sanitize parameters for safe API usage
+  if [[ ! "$owner" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+    echo "❌ SECURITY ERROR: Invalid characters in API parameters (owner: $owner, repo: $repo, pr: $pr_number)"
+    return 1
+  fi
+
   # Use the correct GitHub API for creating threaded PR review comments
   gh api "repos/$owner/$repo/pulls/$pr_number/comments" --method POST \
     --field body="$response_body" \
@@ -429,6 +435,12 @@ verify_real_threaded_reply() {
   local pr_number="$5"
 
   echo "🔍 VERIFYING: Real threaded reply $reply_id for comment #$original_comment_id..."
+
+  # Validate parameters before API call
+  if [[ ! "$owner" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
+    echo "❌ SECURITY ERROR: Invalid characters in verification API parameters"
+    return 1
+  fi
 
   # Verify the reply exists and has correct in_reply_to_id
   local reply_data=$(gh api "repos/$owner/$repo/pulls/$pr_number/comments" --paginate | \
