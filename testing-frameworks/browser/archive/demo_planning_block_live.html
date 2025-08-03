@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON Planning Block - Live Demo</title>
+    <link href="../mvp_site/static/style.css" rel="stylesheet">
+    <link href="../mvp_site/static/styles/planning-blocks.css" rel="stylesheet">
+    <style>
+        body {
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .demo-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .narrative-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .session-header {
+            font-weight: bold;
+            color: #6c757d;
+            margin-bottom: 10px;
+        }
+        .json-display {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+        .highlight { background: yellow; }
+    </style>
+</head>
+<body>
+    <h1>🎮 JSON Planning Block - Live Demo</h1>
+
+    <div class="demo-section">
+        <h2>Example Game Scenario</h2>
+
+        <div class="narrative-section">
+            <div class="session-header">[SESSION 1: THE MYSTERIOUS TAVERN]</div>
+            <p>You push open the heavy wooden door of the Rusty Goblet tavern. The warm air inside carries the scent of ale and roasted meat. Several patrons look up as you enter - a hooded figure in the corner quickly looks away, while the barkeep gives you a welcoming nod. A bard strums a lute by the fireplace, and you notice a posting board covered in various notices and wanted posters.</p>
+        </div>
+
+        <div id="planning-block-container"></div>
+
+        <h3>JSON Structure Being Rendered:</h3>
+        <pre class="json-display">{
+  "thinking": "The player has entered the tavern. I'll give them several options to explore different aspects of the location and interact with various NPCs.",
+  "context": "This is a classic tavern scene with multiple plot hooks available.",
+  "choices": {
+    "approach_barkeep": {
+      "text": "Approach the Barkeep",
+      "description": "Order a drink and ask about local rumors",
+      "risk_level": "safe"
+    },
+    "investigate_hooded_figure": {
+      "text": "Investigate Hooded Figure",
+      "description": "Cautiously approach the mysterious person in the corner",
+      "risk_level": "medium"
+    },
+    "check_posting_board": {
+      "text": "Check the Posting Board",
+      "description": "Examine the notices and wanted posters",
+      "risk_level": "low"
+    },
+    "listen_to_bard": {
+      "text": "Listen to the Bard",
+      "description": "Sit near the fireplace and enjoy the performance",
+      "risk_level": "safe"
+    },
+    "scan_room_carefully": {
+      "text": "Scan the Room",
+      "description": "Make a perception check to notice any hidden details",
+      "risk_level": "low"
+    }
+  }
+}</pre>
+    </div>
+
+    <div class="demo-section">
+        <h2>Features Demonstrated</h2>
+        <ul>
+            <li>✅ <strong>JSON-First Architecture</strong>: Planning blocks are structured data, not parsed strings</li>
+            <li>✅ <strong>Risk Level Styling</strong>: Choices are color-coded by risk (safe=blue, low=green, medium=orange, high=red)</li>
+            <li>✅ <strong>XSS Prevention</strong>: All text is properly escaped for security</li>
+            <li>✅ <strong>Semantic Choice IDs</strong>: Snake_case identifiers for backend processing</li>
+            <li>✅ <strong>Thinking & Context</strong>: DM reasoning shown to players for transparency</li>
+            <li>✅ <strong>Descriptive Text</strong>: Each choice has both a short label and detailed description</li>
+        </ul>
+    </div>
+
+    <div class="demo-section">
+        <h2>Click Events</h2>
+        <div id="click-log">
+            <p>Click any choice button above to see the event data...</p>
+        </div>
+    </div>
+
+    <!-- Include the actual app.js to use parsePlanningBlocks -->
+    <script src="../mvp_site/static/app.js"></script>
+
+    <script>
+        // The JSON planning block data
+        const planningBlockData = {
+            thinking: "The player has entered the tavern. I'll give them several options to explore different aspects of the location and interact with various NPCs.",
+            context: "This is a classic tavern scene with multiple plot hooks available.",
+            choices: {
+                approach_barkeep: {
+                    text: "Approach the Barkeep",
+                    description: "Order a drink and ask about local rumors",
+                    risk_level: "safe"
+                },
+                investigate_hooded_figure: {
+                    text: "Investigate Hooded Figure",
+                    description: "Cautiously approach the mysterious person in the corner",
+                    risk_level: "medium"
+                },
+                check_posting_board: {
+                    text: "Check the Posting Board",
+                    description: "Examine the notices and wanted posters",
+                    risk_level: "low"
+                },
+                listen_to_bard: {
+                    text: "Listen to the Bard",
+                    description: "Sit near the fireplace and enjoy the performance",
+                    risk_level: "safe"
+                },
+                scan_room_carefully: {
+                    text: "Scan the Room",
+                    description: "Make a perception check to notice any hidden details",
+                    risk_level: "low"
+                }
+            }
+        };
+
+        // Render the planning block
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('planning-block-container');
+
+            if (typeof parsePlanningBlocks === 'function') {
+                const html = parsePlanningBlocks(planningBlockData);
+                container.innerHTML = html;
+
+                // Add click handlers to demonstrate functionality
+                container.querySelectorAll('.choice-button').forEach(button => {
+                    button.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        const choiceId = this.getAttribute('data-choice-id');
+                        const choiceText = this.getAttribute('data-choice-text');
+                        const log = document.getElementById('click-log');
+
+                        log.innerHTML = `
+                            <h4>✅ Choice Selected!</h4>
+                            <p><strong>Choice ID:</strong> <code>${choiceId}</code></p>
+                            <p><strong>Choice Text:</strong> ${choiceText}</p>
+                            <p><strong>Timestamp:</strong> ${new Date().toLocaleTimeString()}</p>
+                            <p>In the actual game, this would send: <code>I choose to ${choiceText}</code></p>
+                        `;
+
+                        // Highlight the clicked button
+                        container.querySelectorAll('.choice-button').forEach(btn => {
+                            btn.style.opacity = '0.6';
+                        });
+                        this.style.opacity = '1';
+                        this.style.transform = 'scale(1.05)';
+                    });
+                });
+            } else {
+                container.innerHTML = '<div class="error">Error: parsePlanningBlocks function not found</div>';
+            }
+        });
+    </script>
+</body>
+</html>

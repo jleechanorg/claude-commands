@@ -1,0 +1,419 @@
+{
+  "test_date": "2025-06-30T01:52:58.348726",
+  "campaign": "sariel_v2_001",
+  "interactions_tested": 10,
+  "results": {
+    "validation_only": {
+      "results": [
+        {
+          "interaction": 1,
+          "player_input": "continue",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [],
+          "missing": [
+            "Sariel"
+          ],
+          "success": false
+        },
+        {
+          "interaction": 2,
+          "player_input": "ask for forgiveness. tell cassian i was scared and helpless",
+          "expected": [
+            "Sariel",
+            "Cassian"
+          ],
+          "found": [
+            "Sariel",
+            "Cassian"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 3,
+          "player_input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 4,
+          "player_input": "2",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 5,
+          "player_input": "1",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 6,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [
+            "Lady Cressida Valeriana"
+          ],
+          "success": false
+        },
+        {
+          "interaction": 7,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 8,
+          "player_input": "1",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 9,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [],
+          "missing": [
+            "Sariel"
+          ],
+          "success": false
+        },
+        {
+          "interaction": 10,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        }
+      ],
+      "cassian_tracked": true
+    },
+    "pydantic_only": {
+      "results": [
+        {
+          "interaction": 1,
+          "player_input": "continue",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 2,
+          "player_input": "ask for forgiveness. tell cassian i was scared and helpless",
+          "expected": [
+            "Sariel",
+            "Cassian"
+          ],
+          "found": [
+            "Sariel",
+            "Cassian"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 3,
+          "player_input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 4,
+          "player_input": "2",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 5,
+          "player_input": "1",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 6,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 7,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 8,
+          "player_input": "1",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 9,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 10,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        }
+      ],
+      "cassian_tracked": true
+    },
+    "combined": {
+      "results": [
+        {
+          "interaction": 1,
+          "player_input": "continue",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 2,
+          "player_input": "ask for forgiveness. tell cassian i was scared and helpless",
+          "expected": [
+            "Sariel",
+            "Cassian"
+          ],
+          "found": [
+            "Sariel",
+            "Cassian"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 3,
+          "player_input": "1.  Requesting me to advance the narrative and make a decision for Sariel's action?",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 4,
+          "player_input": "2",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 5,
+          "player_input": "1",
+          "expected": [
+            "Sariel",
+            "Valerius"
+          ],
+          "found": [
+            "Sariel",
+            "Valerius"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 6,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 7,
+          "player_input": "2",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 8,
+          "player_input": "1",
+          "expected": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "found": [
+            "Lady Cressida Valeriana",
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 9,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        },
+        {
+          "interaction": 10,
+          "player_input": "4",
+          "expected": [
+            "Sariel"
+          ],
+          "found": [
+            "Sariel"
+          ],
+          "missing": [],
+          "success": true
+        }
+      ],
+      "cassian_tracked": true
+    }
+  }
+}
