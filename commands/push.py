@@ -1,5 +1,3 @@
-# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
-
 #!/usr/bin/env python3
 """
 Enhanced /push command implementation
@@ -134,8 +132,11 @@ def start_test_server(branch):
 
     print(f"🚀 Starting test server on port {port}...")
 
-    # Create log directory
-    log_dir = "/tmp/worldarchitectai_logs"
+    # Create log directory - use standardized logging directory with branch isolation
+    current_branch = subprocess.check_output(
+        ["git", "branch", "--show-current"], text=True
+    ).strip()
+    log_dir = f"/tmp/worldarchitect.ai/{current_branch}"
     os.makedirs(log_dir, exist_ok=True)
     log_file = f"{log_dir}/{branch}.log"
 

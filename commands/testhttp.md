@@ -1,5 +1,3 @@
-# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
-
 # HTTP Tests (Mock) Command
 
 **Purpose**: Run HTTP request tests with mock APIs (free)
@@ -27,7 +25,7 @@
 
 3. **Run HTTP Test**
    ```bash
-   TESTING=true python testing_http/test_name.py
+   TESTING=true vpython testing_http/test_name.py
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded

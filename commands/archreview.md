@@ -1,5 +1,3 @@
-# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
-
 # Architecture Review Command
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`

@@ -31,7 +31,7 @@ def get_git_status():
             ["git", "status", "--porcelain"], capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
-    except:
+    except (subprocess.CalledProcessError, FileNotFoundError):
         return ""
 
 

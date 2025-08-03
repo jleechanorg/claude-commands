@@ -86,59 +86,160 @@ The `/copilot` command uses **universal composition** to intelligently orchestra
 
    **Note**: All substeps like `/fixpr`, `/commentreply` etc. also benefit from `/execute`'s intelligent optimization when invoked within the copilot workflow.
 
-## 🚨 MANDATORY WORKFLOW STEPS
+## 🚨 INTELLIGENT WORKFLOW PHASES
 
-**CRITICAL**: These steps are MANDATORY and CANNOT be skipped - each must complete before proceeding:
+**SMART EXECUTION**: These phases use intelligent optimization - executing only when needed while maintaining comprehensive coverage:
 
 ### Phase 1: GitHub Status Verification (MANDATORY)
 ```bash
-# REQUIRED: Fresh GitHub state verification
-gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup
+# REQUIRED: Fresh GitHub state verification + Skip Condition Evaluation
+pr_json=$(gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup,comments,reviews)
+PR_STATE=$(echo "$pr_json" | jq -r '.state')
+PR_MERGEABLE=$(echo "$pr_json" | jq -r '.mergeable')
+CI_STATUS=$(echo "$pr_json" | jq -r '.statusCheckRollup.state // "PENDING"')
+COMMENT_COUNT=$(echo "$pr_json" | jq '(.comments | length) + (.reviews | length)')
+
+# Evaluate skip conditions
+if [[ "$PR_MERGEABLE" == "MERGEABLE" && "$CI_STATUS" == "SUCCESS" && "$COMMENT_COUNT" -eq 0 ]]; then
+    export SKIP_CONDITIONS_MET="true"
+    echo "⚡ OPTIMIZATION ENABLED: All skip conditions met"
+    echo "   ✅ Mergeable: $PR_MERGEABLE"
+    echo "   ✅ CI Status: $CI_STATUS"
+    echo "   ✅ Comments: $COMMENT_COUNT"
+else
+    export SKIP_CONDITIONS_MET="false"
+    echo "🔧 FULL EXECUTION: Skip conditions not met"
+    echo "   📊 Mergeable: $PR_MERGEABLE | CI: $CI_STATUS | Comments: $COMMENT_COUNT"
+fi
 ```
 - ✅ **MUST verify**: PR is OPEN and accessible
 - ✅ **MUST check**: Current CI status (PASSING/FAILING/PENDING)
 - ✅ **MUST confirm**: Mergeable state (MERGEABLE/CONFLICTING/UNMERGEABLE)
+- ✅ **MUST evaluate**: Skip conditions for intelligent optimization
 - ❌ **CANNOT proceed** if PR is CLOSED or MERGED
 
-### Phase 2: Fresh Data Collection (MANDATORY)
+### Phase 2: Fresh Data Collection (CONDITIONAL)
 ```bash
-# REQUIRED: Current comment and issue state
-/commentfetch $PR_NUMBER
+# SMART: Check if data collection needed
+if [[ "$SKIP_CONDITIONS_MET" == "true" ]]; then
+    echo "⚡ OPTIMIZING: Skip conditions met, performing lightweight data verification"
+    # Quick verification with state update if comments found
+    read COMMENT_COUNT REVIEW_COUNT < <(gh pr view $PR_NUMBER --json comments,reviews | jq '.comments | length, .reviews | length')
+    if [[ "$COMMENT_COUNT" -eq 0 && "$REVIEW_COUNT" -eq 0 ]]; then
+        echo "✅ No comments or reviews detected. Maintaining skip conditions."
+    else
+        echo "📊 Comments: $COMMENT_COUNT, Reviews: $REVIEW_COUNT. Updating to full execution."
+        export SKIP_CONDITIONS_MET="false"
+        /commentfetch $PR_NUMBER
+    fi
+else
+    echo "📊 COLLECTING: Full data collection required"
+    /commentfetch $PR_NUMBER
+fi
 ```
-- ✅ **MUST fetch**: ALL comment sources (inline, general, review, bot)
-- ✅ **MUST ensure**: Fresh data (no cache dependencies)
-- ✅ **MUST count**: Total comments requiring responses
-- ❌ **CANNOT skip** even if "no comments expected"
+- ✅ **SMART EXECUTION**: Full fetch only when comments/reviews detected
+- ✅ **OPTIMIZATION**: Quick verification when skip conditions met
+- ✅ **SAFETY**: Falls back to full collection if verification shows activity
+- ✅ **TRANSPARENCY**: Logs decision reasoning
 
-### Phase 3: CI/Conflict Resolution (MANDATORY)
+### Phase 3: CI/Conflict Resolution (CONDITIONAL)
 ```bash
-# REQUIRED: Fix all GitHub-reported issues
-/fixpr $PR_NUMBER
-```
-- ✅ **MUST resolve**: ALL failing CI checks
-- ✅ **MUST fix**: ALL merge conflicts
-- ✅ **MUST verify**: GitHub shows PASSING status after fixes
-- ❌ **CANNOT proceed** with failing CI or conflicts
+# SMART: Check if CI/conflict fixes needed
+pr_status=$(gh pr view $PR_NUMBER --json mergeable,statusCheckRollup)
+ci_status=$(echo "$pr_status" | jq -r '.statusCheckRollup.state')
+mergeable=$(echo "$pr_status" | jq -r '.mergeable')
 
-### Phase 4: Comment Response Processing (MANDATORY)
-```bash
-# REQUIRED: Address every individual comment
-/commentreply $PR_NUMBER
+if [[ "$ci_status" == "SUCCESS" && "$mergeable" == "MERGEABLE" ]]; then
+    echo "⚡ OPTIMIZING: CI passing and mergeable, skipping fixpr"
+    echo "✅ CI Status: $ci_status | Mergeable: $mergeable"
+else
+    echo "🔧 FIXING: CI issues or conflicts detected"
+    /fixpr $PR_NUMBER
+fi
 ```
-- ✅ **MUST respond**: To EVERY individual comment (0 unresponded allowed)
-- ✅ **MUST post**: Direct threaded replies via GitHub API
-- ✅ **MUST include**: DONE/NOT DONE status for each
-- ❌ **CANNOT skip** bot comments (Copilot, CodeRabbit, etc.)
+- ✅ **SMART EXECUTION**: Skip when CI passing and no conflicts
+- ✅ **SAFETY**: Always verify fresh GitHub status before skipping
+- ✅ **COMPREHENSIVE**: Execute /fixpr if ANY issues detected
+- ✅ **TRANSPARENCY**: Log all status checks and decisions
 
-### Phase 5: Coverage Verification (MANDATORY)
+### Phase 4: Comment Response Processing (CONDITIONAL)
 ```bash
-# REQUIRED: 100% coverage validation
-/commentcheck $PR_NUMBER
+# SMART: Check if comment responses needed with enhanced context reply system
+unresponded_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
+
+if [[ "$unresponded_count" -eq 0 ]]; then
+    echo "⚡ OPTIMIZING: Zero comments detected, skipping comment processing"
+    echo "✅ Comment Status: $unresponded_count total comments"
+    export COMMENTS_PROCESSED="false"
+else
+    echo "💬 RESPONDING: $unresponded_count comments require enhanced context responses"
+    echo "🚀 EXECUTING: /commentreply $PR_NUMBER (Enhanced Context Reply System)"
+
+    # 🚨 CRITICAL: MUST actually execute the command, not just log it
+    /commentreply $PR_NUMBER
+
+    # 🚨 CRITICAL: Verify execution completed successfully
+    if [[ $? -eq 0 ]]; then
+        echo "✅ SUCCESS: Enhanced context replies posted successfully"
+
+        # 🚨 MANDATORY: Verify enhanced context reply compliance
+        echo "🔍 VERIFYING: Enhanced context reply requirements..."
+        current_commit=$(git rev-parse --short HEAD)
+
+        # Check that replies include commit hash references
+        recent_comment=$(gh pr view $PR_NUMBER --json comments | jq -r '.comments[-1].body // empty' 2>/dev/null)
+        if [[ "$recent_comment" =~ \(Commit:.*\) ]]; then
+            echo "✅ VERIFIED: Commit hash reference included"
+        else
+            echo "⚠️ WARNING: Missing commit hash - replies should include (Commit: $current_commit)"
+        fi
+
+        # Check for enhanced context reply format (🧵 **Reply to Inline Comment #[ID]**)
+        if [[ "$recent_comment" =~ 🧵.*Reply\ to\ Inline\ Comment\ # ]]; then
+            echo "✅ VERIFIED: Enhanced context reply format included"
+        else
+            echo "⚠️ WARNING: Missing enhanced context format for superior UX"
+        fi
+
+        export COMMENTS_PROCESSED="true"
+    else
+        echo "❌ FAILURE: Enhanced context reply execution failed"
+        export COMMENTS_PROCESSED="false"
+        echo "🚨 CRITICAL ERROR: Phase 4 cannot be marked complete"
+        exit 1
+    fi
+fi
 ```
-- ✅ **MUST verify**: ZERO unresponded comments detected
-- ✅ **MUST confirm**: All responses posted to GitHub
-- ✅ **MUST validate**: Threading success rate
-- ❌ **CANNOT proceed** if ANY unresponded comments found
+- ✅ **SMART EXECUTION**: Skip when no unresponded comments detected
+- ✅ **ENHANCED CONTEXT SYSTEM**: Use superior enhanced context reply format
+- ✅ **MANDATORY EXECUTION**: Actually run /commentreply when comments exist
+- ✅ **SUCCESS VERIFICATION**: Verify command completed before proceeding
+- ✅ **ENHANCED CONTEXT COMPLIANCE**: Verify 🧵 **Reply to Inline Comment #[ID]** format
+- ✅ **PROTOCOL VALIDATION**: Check replies follow enhanced context system
+- ✅ **FAILURE HANDLING**: Hard stop if comment processing fails
+- ✅ **STATE TRACKING**: Export COMMENTS_PROCESSED for Phase 5
+- ✅ **TRANSPARENCY**: Clear logging of all execution steps
+
+### Phase 5: Coverage Verification (CONDITIONAL) - Enhanced Context Verification
+```bash
+# SMART: Verify coverage only if comments were processed with enhanced context validation
+if [[ "$COMMENTS_PROCESSED" == "true" ]]; then
+    echo "🔍 VERIFYING: Enhanced context reply coverage validation"
+    /commentcheck $PR_NUMBER
+elif [[ "$SKIP_CONDITIONS_MET" == "true" ]]; then
+    echo "⚡ OPTIMIZING: No comments processed, performing quick verification"
+    final_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
+    echo "✅ Verification: $final_count total comments (expected: 0)"
+else
+    echo "🔍 VERIFYING: Full enhanced context coverage validation"
+    /commentcheck $PR_NUMBER
+fi
+```
+- ✅ **CONTEXT AWARE**: Skip detailed coverage when no comments processed
+- ✅ **ENHANCED CONTEXT FOCUS**: Verify enhanced context reply success
+- ✅ **SAFETY**: Quick verification when skip conditions met
+- ✅ **COMPREHENSIVE**: Full validation when comment processing occurred
+- ✅ **TRANSPARENCY**: Log verification method and results
 
 ### Phase 6: Final Sync (MANDATORY)
 ```bash
@@ -150,16 +251,44 @@ gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup
 - ✅ **MUST confirm**: Remote state matches local state
 - ❌ **CANNOT complete** without successful push
 
-## 🚨 ZERO-SKIP ENFORCEMENT
+## 🚨 INTELLIGENT STAGE OPTIMIZATION
 
-**CRITICAL PROTOCOL**: NO STEP CAN BE SKIPPED OR DECLARED "UNNECESSARY"
+**SMART PROTOCOL**: CONDITIONAL EXECUTION BASED ON PR STATE
 
-- ❌ **FORBIDDEN**: "No comments, skipping comment processing"
-- ❌ **FORBIDDEN**: "CI already passing, skipping fixpr"
-- ❌ **FORBIDDEN**: "No changes, skipping final push"
-- ✅ **REQUIRED**: Execute ALL 6 phases regardless of apparent need
-- ✅ **REQUIRED**: Each phase must complete successfully before next phase
-- ✅ **REQUIRED**: Visible progress reporting for each mandatory step
+### 🎯 **SKIP CONDITIONS** (All must be met for stage skipping):
+- ✅ **No merge conflicts**: PR shows MERGEABLE status
+- ✅ **CI clean**: All status checks PASSING
+- ✅ **No pending comments**: Zero unresponded comments detected
+
+### 📋 **CONDITIONAL EXECUTION LOGIC**:
+- ✅ **SMART SKIPPING**: Skip phases when conditions indicate no work needed
+- ✅ **SAFETY FIRST**: Always verify conditions before skipping
+- ✅ **TRANSPARENCY**: Log all skip decisions with reasoning
+- ✅ **FALLBACK**: Execute phase if ANY condition check fails
+- ✅ **REQUIRED**: Each phase must verify OR skip with logged reasoning
+- ✅ **REQUIRED**: Visible progress reporting for executed AND skipped steps
+
+### 🚨 **CRITICAL EXECUTION GUARANTEE**
+**MANDATORY**: When phases determine work is needed, commands MUST be executed:
+- ❌ **FORBIDDEN**: "Analysis complete" without execution
+- ❌ **FORBIDDEN**: Marking phases "COMPLETED" when work identified but not done
+- ✅ **REQUIRED**: Actually execute `/commentreply`, `/fixpr`, etc. when needed
+- ✅ **REQUIRED**: Verify command success before marking phase complete
+- 🚨 **HARD STOP**: Exit with error if any required execution fails
+
+### 🚨 **COMMENT THREADING PROTOCOL COMPLIANCE**
+**MANDATORY**: Comment replies must follow commentreply.md threading protocol:
+- ✅ **COMMIT HASH REQUIRED**: All replies must include `(Commit: abc1234)` reference
+- ✅ **COMMENT ID REFERENCE**: Use `📍 Reply to Comment #ID` for explicit threading
+- ✅ **STATUS MARKERS**: Include `✅ DONE` or `❌ NOT DONE` with technical details
+- ✅ **THREADING VERIFICATION**: Check replies include proper ID references and commit hashes
+- ❌ **FORBIDDEN**: Generic replies without commit hash proof of work
+- ❌ **FORBIDDEN**: Missing explicit comment ID references for threading
+- 🚨 **LEARNED**: General PR comments don't support true threading - use fallback method
+
+### ⚠️ **NEVER SKIP** (Always execute regardless of conditions):
+- **Phase 1**: GitHub Status Verification (need fresh state)
+- **Phase 6**: Final Sync (ensure all changes pushed)
 
 ## Universal Composition Benefits
 
