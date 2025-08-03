@@ -1,16 +1,18 @@
 # Browser Tests (Mock) Command
 
-**Purpose**: Run REAL browser tests with FAKE/MOCK APIs using Playwright MCP by default (fast & free)
+**Purpose**: Run REAL browser tests with FAKE/MOCK APIs using Playwright MCP by default in headless mode (fast & free)
 
 **Action**: Execute browser automation tests ONLY in testing_ui/core_tests/ with mock Firebase + Gemini APIs
 
 **Usage**: `/testui`
 
-**Default Action in Claude Code CLI**: Run core tests with Playwright MCP for optimal AI-driven automation:
+**Default Action in Claude Code CLI**: Run core tests with Playwright MCP in headless mode for optimal AI-driven automation:
 
 ```bash
 ./run_ui_tests.sh mock --playwright
 ```
+
+**🚨 HEADLESS MODE MANDATORY**: All browser automation runs in headless mode (no visible browser windows)
 
 **Target Directory**: ONLY `testing_ui/core_tests/` (focused, essential tests)
 **API Mode**: FAKE/MOCK Firebase + MOCK Gemini (USE_MOCK_FIREBASE=true, USE_MOCK_GEMINI=true)
