@@ -215,7 +215,7 @@ class A2AMonitor:
             if not agents_dir.exists():
                 return
 
-            cutoff_time = time.time() - (24 * 3600)  # 24 hours
+            cutoff_time = time.time() - (1 * 3600)   # 1 hour (was 24 hours)
 
             for agent_dir in agents_dir.iterdir():
                 if not agent_dir.is_dir():

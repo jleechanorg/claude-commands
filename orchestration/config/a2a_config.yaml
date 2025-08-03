@@ -116,7 +116,7 @@ monitoring:
   metrics:
     enabled: true
     collection_interval: 60  # seconds
-    retention_period: 86400  # 24 hours
+    retention_period: 3600   # 1 hour (was 24 hours)
 
     # Metrics to collect
     collect:

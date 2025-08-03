@@ -24,12 +24,15 @@ except ImportError:
 
 # Constraint system removed - using simple safety rules only
 
-# Constants
-TIMESTAMP_MODULO = 100000000  # 8 digits from microseconds for unique name generation
-AGENT_SESSION_TIMEOUT_SECONDS = 86400  # 24 hours
+# Import shared constants
+try:
+    from .constants import AGENT_SESSION_TIMEOUT_SECONDS, TIMESTAMP_MODULO, DEFAULT_MAX_CONCURRENT_AGENTS
+except ImportError:
+    # Fallback for direct execution
+    from constants import AGENT_SESSION_TIMEOUT_SECONDS, TIMESTAMP_MODULO, DEFAULT_MAX_CONCURRENT_AGENTS
 
 # Production safety limits - only counts actively working agents (not idle)
-MAX_CONCURRENT_AGENTS = int(os.environ.get('MAX_CONCURRENT_AGENTS', 5))
+MAX_CONCURRENT_AGENTS = int(os.environ.get('MAX_CONCURRENT_AGENTS', DEFAULT_MAX_CONCURRENT_AGENTS))
 
 
 # Shared configuration paths
@@ -154,7 +157,7 @@ class TaskDispatcher:
             completion_indicators = [
                 "Agent completed successfully",
                 "Agent execution completed. Session remains active for monitoring",
-                "Session will auto-close in 24 hours",
+                "Session will auto-close in 1 hour",
                 "Monitor with: tmux attach"
             ]
 
@@ -761,14 +764,14 @@ else
     echo '{{"agent": "{agent_name}", "status": "failed", "exit_code": '$CLAUDE_EXIT'}}' > {result_file}
 fi
 
-# Keep session alive for 24 hours for monitoring and debugging
+# Keep session alive for 1 hour for monitoring and debugging
 echo "[$(date)] Agent execution completed. Session remains active for monitoring."
-echo "[$(date)] Session will auto-close in 24 hours. Check log at: {log_file}"
+echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file}"
 echo "[$(date)] Monitor with: tmux attach -t {agent_name}"
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            # Use agent-specific tmux config for 24-hour sessions
+            # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
 
             # Build tmux command with optional config file

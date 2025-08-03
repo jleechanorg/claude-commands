@@ -235,7 +235,7 @@ class AgentHealthMonitor:
                 print(f"❌ Claude executable not found for agent {agent_name}")
                 return False
 
-            # Use agent-specific tmux config for 24-hour sessions
+            # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
 
             # Build tmux command with optional config file
