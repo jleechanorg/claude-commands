@@ -87,6 +87,9 @@ instruction_generator = EntityInstructionGenerator()
 entity_validator = EntityValidator()
 dual_pass_generator = DualPassGenerator()
 
+# Expected companion count for validation
+EXPECTED_COMPANION_COUNT = 3
+
 
 # Remove redundant json_datetime_serializer - use json_default_serializer instead
 # which properly handles Firestore Sentinels, datetime objects, and other special types
@@ -388,9 +391,26 @@ class PromptBuilder:
         # Fallback to static instruction used during initial story generation
         return (
             "\n**SPECIAL INSTRUCTION: COMPANION GENERATION ACTIVATED**\n"
-            "You have been specifically requested to generate 3 starting companions for this campaign. "
-            "Follow Part 7: Companion Generation Protocol from the narrative instructions. "
-            "In your opening narrative, introduce all 3 companions and include them in the initial STATE_UPDATES_PROPOSED block.\n\n"
+            "You have been specifically requested to generate EXACTLY 3 starting companions for this campaign.\n\n"
+            "**MANDATORY REQUIREMENTS:**\n"
+            "1. Generate exactly 3 unique companions with diverse party roles (e.g., warrior, healer, scout)\n"
+            "2. Each companion MUST have a valid MBTI personality type (e.g., ISTJ, INFP, ESTP)\n"
+            "3. Each companion MUST include: name, background story, skills array, personality traits, equipment\n"
+            "4. Set relationship field to 'companion' for all generated NPCs\n"
+            "5. Include all companions in the npc_data section of your JSON response\n\n"
+            "**JSON STRUCTURE EXAMPLE:**\n"
+            '"npc_data": {\n'
+            '  "Companion Name": {\n'
+            '    "mbti": "ISTJ",\n'
+            '    "role": "warrior",\n'
+            '    "background": "Detailed background story",\n'
+            '    "relationship": "companion",\n'
+            '    "skills": ["combat", "defense", "weapon mastery"],\n'
+            '    "personality_traits": ["loyal", "protective", "methodical"],\n'
+            '    "equipment": ["enchanted shield", "battle axe", "chainmail"]\n'
+            "  }\n"
+            "}\n\n"
+            "**VERIFICATION:** Ensure your response contains exactly 3 NPCs with relationship='companion' in npc_data.\n\n"
         )
 
     def build_background_summary_instruction(self) -> str:
@@ -1349,6 +1369,55 @@ def _truncate_context(
     return truncated_context
 
 
+# Mock response constants for better maintainability
+MOCK_INITIAL_STORY_WITH_COMPANIONS = """{
+"narrative": "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility. As you approach, three skilled adventurers emerge from the shadows to join your quest.",
+"entities_mentioned": ["dungeon", "runes"],
+"location_confirmed": "Dungeon Entrance",
+"characters": [{"name": "Aria Moonwhisper", "class": "Elf Ranger", "background": "A skilled archer from the Silverleaf Forest"}],
+"setting": {"location": "Dungeon Entrance", "atmosphere": "mysterious"},
+"mechanics": {"initiative_rolled": false, "characters_need_setup": true},
+"npc_data": {
+  "Thorin Ironshield": {
+    "mbti": "ISTJ",
+    "role": "warrior",
+    "background": "A steadfast dwarf fighter with decades of battle experience",
+    "relationship": "companion",
+    "skills": ["combat", "defense", "weapon mastery"],
+    "personality_traits": ["loyal", "protective", "methodical"],
+    "equipment": ["enchanted shield", "battle axe", "chainmail"]
+  },
+  "Luna Starweaver": {
+    "mbti": "INFP",
+    "role": "healer",
+    "background": "A gentle elf cleric devoted to the healing arts",
+    "relationship": "companion",
+    "skills": ["healing magic", "divine spells", "herbalism"],
+    "personality_traits": ["compassionate", "wise", "intuitive"],
+    "equipment": ["holy symbol", "healing potions", "staff of light"]
+  },
+  "Zara Swiftblade": {
+    "mbti": "ESTP",
+    "role": "scout",
+    "background": "A quick-witted halfling rogue skilled in stealth and traps",
+    "relationship": "companion",
+    "skills": ["stealth", "lockpicking", "trap detection"],
+    "personality_traits": ["agile", "clever", "bold"],
+    "equipment": ["thieves' tools", "daggers", "studded leather armor"]
+  }
+}
+}"""
+
+MOCK_INITIAL_STORY_NO_COMPANIONS = """{
+"narrative": "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.",
+"entities_mentioned": ["dungeon", "runes"],
+"location_confirmed": "Dungeon Entrance",
+"characters": [{"name": "Aria Moonwhisper", "class": "Elf Ranger", "background": "A skilled archer from the Silverleaf Forest"}],
+"setting": {"location": "Dungeon Entrance", "atmosphere": "mysterious"},
+"mechanics": {"initiative_rolled": false, "characters_need_setup": true}
+}"""
+
+
 @log_exceptions
 def get_initial_story(
     prompt: str,
@@ -1369,7 +1438,12 @@ def get_initial_story(
     mock_mode = os.environ.get("MOCK_SERVICES_MODE") == "true"
     if mock_mode:
         logging_util.info("Using mock mode - returning mock initial story response")
-        mock_response_text = """{"narrative": "Welcome to your adventure! You find yourself at the entrance of a mysterious dungeon, with stone walls covered in ancient runes. The air is thick with magic and possibility.", "entities_mentioned": ["dungeon", "runes"], "location_confirmed": "Dungeon Entrance", "characters": [{"name": "Aria Moonwhisper", "class": "Elf Ranger", "background": "A skilled archer from the Silverleaf Forest"}], "setting": {"location": "Dungeon Entrance", "atmosphere": "mysterious"}, "mechanics": {"initiative_rolled": false, "characters_need_setup": true}}"""
+        if generate_companions:
+            logging_util.info("Mock mode: Generating companions as requested")
+            mock_response_text = MOCK_INITIAL_STORY_WITH_COMPANIONS
+        else:
+            logging_util.info("Mock mode: No companions requested")
+            mock_response_text = MOCK_INITIAL_STORY_NO_COMPANIONS
 
         # Parse the mock response to get structured data
         narrative_text, structured_response = parse_structured_response(
@@ -1608,6 +1682,10 @@ def get_initial_story(
     logging_util.debug(
         f"Created GeminiResponse with narrative_text length: {len(gemini_response.narrative_text)}"
     )
+
+    # Companion validation (moved from world_logic.py for proper SRP)
+    if generate_companions:
+        _validate_companion_generation(gemini_response)
 
     # Return our custom GeminiResponse object (not raw API response)
     # This object contains:
@@ -2510,6 +2588,63 @@ def _get_current_turn_prompt(user_input: str, mode: str) -> str:
     # god mode
     prompt_template = "GOD MODE: {user_input}"
     return prompt_template.format(user_input=user_input)
+
+
+def _validate_companion_generation(gemini_response: GeminiResponse) -> None:
+    """Validate companion generation results.
+
+    Moved from world_logic.py to maintain Single Responsibility Principle.
+    Companion validation should be near companion generation logic.
+
+    Args:
+        gemini_response: The response from Gemini to validate
+    """
+    structured_response = getattr(gemini_response, "structured_response", None)
+    if not structured_response:
+        logging_util.error(
+            "🎭 COMPANION GENERATION: ❌ No structured response received from Gemini!"
+        )
+        return
+
+    # Access companions and npc_data from extra_fields (since they're not standard schema fields)
+    extra_fields = getattr(structured_response, "extra_fields", {})
+    companions = extra_fields.get("companions", {})
+    npc_data = extra_fields.get("npc_data", {})
+
+    # Also check state_updates in case they're there
+    state_updates = getattr(structured_response, "state_updates", {}) or {}
+    if not npc_data and "npc_data" in state_updates:
+        npc_data = state_updates["npc_data"]
+    if not companions and "companions" in state_updates:
+        companions = state_updates["companions"]
+
+    # Type safety check and deduplication
+    if not isinstance(companions, dict):
+        companions = {}
+    if not isinstance(npc_data, dict):
+        npc_data = {}
+
+    # Count unique companions (avoiding double-counting)
+    companion_names = set(companions.keys())
+    allied_npcs = {
+        name
+        for name, data in npc_data.items()
+        if isinstance(data, dict) and data.get("relationship") in ["companion", "ally"]
+    }
+    # Remove any companions already counted to avoid double-counting
+    unique_allied_npcs = allied_npcs - companion_names
+
+    companion_count = len(companion_names)
+    allied_npc_count = len(unique_allied_npcs)
+    total_companions = companion_count + allied_npc_count
+
+    # Minimal logging for companion validation
+    if total_companions == 0:
+        logging_util.warning(f"🎭 No companions generated despite request")
+    elif total_companions < EXPECTED_COMPANION_COUNT:
+        logging_util.warning(f"🎭 Only {total_companions}/{EXPECTED_COMPANION_COUNT} companions generated")
+    else:
+        logging_util.info(f"🎭 {total_companions} companions generated successfully")
 
 
 # --- Main block for rapid, direct testing ---
