@@ -1,0 +1,194 @@
+{
+  "analysis_date": "2025-06-29T18:57:23.534432",
+  "total_campaigns_analyzed": 5,
+  "sariel_v2_found": true,
+  "top_campaigns": [
+    {
+      "campaign_id": "sariel_v2_001",
+      "campaign_name": "Sariel v2: The Awakening",
+      "player_count": 4,
+      "total_sessions": 12,
+      "total_turns": 240,
+      "desync_rate": 0.15,
+      "desync_incidents": [
+        {
+          "turn": 45,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "Lyra"
+            },
+            {
+              "type": "missing_entity",
+              "entity": "Theron"
+            }
+          ],
+          "narrative_preview": "The battle raged on as Marcus and Elara fought the shadow demons..."
+        },
+        {
+          "turn": 78,
+          "issues": [
+            {
+              "type": "missing_combat_participant",
+              "entity": "Shadow Guardian"
+            },
+            {
+              "type": "location_mismatch",
+              "expected_location": "Temple of Shadows"
+            }
+          ],
+          "narrative_preview": "In the dimly lit chamber, the party pressed forward..."
+        },
+        {
+          "turn": 156,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "Elara"
+            },
+            {
+              "type": "missing_entity",
+              "entity": "NPC: High Priestess"
+            }
+          ],
+          "narrative_preview": "Lyra conversed with the ethereal spirits while Marcus kept watch..."
+        }
+      ],
+      "common_issues": {
+        "missing_entity": 12,
+        "missing_combat_participant": 4,
+        "location_mismatch": 2
+      }
+    },
+    {
+      "campaign_id": "thornwood_conspiracy_42",
+      "campaign_name": "The Thornwood Conspiracy",
+      "player_count": 3,
+      "total_sessions": 8,
+      "total_turns": 160,
+      "desync_rate": 0.22,
+      "desync_incidents": [
+        {
+          "turn": 23,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "Rogue (in stealth)"
+            },
+            {
+              "type": "location_mismatch",
+              "expected_location": "Sewers"
+            }
+          ],
+          "narrative_preview": "The wizard and cleric waited anxiously in the tavern..."
+        },
+        {
+          "turn": 67,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "Kira"
+            },
+            {
+              "type": "missing_entity",
+              "entity": "Aldric"
+            }
+          ],
+          "narrative_preview": "Only Finn was visible in the moonlit courtyard..."
+        }
+      ],
+      "common_issues": {
+        "missing_entity": 18,
+        "location_mismatch": 8,
+        "missing_combat_participant": 2
+      }
+    },
+    {
+      "campaign_id": "darkmoor_shadows_99",
+      "campaign_name": "Shadows of Darkmoor",
+      "player_count": 5,
+      "total_sessions": 6,
+      "total_turns": 120,
+      "desync_rate": 0.18,
+      "desync_incidents": [
+        {
+          "turn": 34,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "Invisible Wizard"
+            },
+            {
+              "type": "missing_entity",
+              "entity": "Hidden Rogue"
+            }
+          ],
+          "narrative_preview": "The paladin, fighter, and cleric stood ready..."
+        }
+      ],
+      "common_issues": {
+        "missing_entity": 15,
+        "missing_combat_participant": 6,
+        "location_mismatch": 1
+      }
+    },
+    {
+      "campaign_id": "brass_compass_17",
+      "campaign_name": "The Brass Compass Guild",
+      "player_count": 3,
+      "total_sessions": 15,
+      "total_turns": 300,
+      "desync_rate": 0.12,
+      "desync_incidents": [
+        {
+          "turn": 145,
+          "issues": [
+            {
+              "type": "missing_entity",
+              "entity": "First Mate Jenkins"
+            },
+            {
+              "type": "missing_combat_participant",
+              "entity": "Kraken Tentacle 3"
+            }
+          ],
+          "narrative_preview": "Captain Blackwater commanded the ship while the battle raged..."
+        }
+      ],
+      "common_issues": {
+        "missing_entity": 24,
+        "missing_combat_participant": 8,
+        "location_mismatch": 4
+      }
+    },
+    {
+      "campaign_id": "astral_war_55",
+      "campaign_name": "Echoes of the Astral War",
+      "player_count": 4,
+      "total_sessions": 7,
+      "total_turns": 140,
+      "desync_rate": 0.25,
+      "desync_incidents": [
+        {
+          "turn": 89,
+          "issues": [
+            {
+              "type": "location_mismatch",
+              "expected_location": "Astral Plane"
+            },
+            {
+              "type": "missing_entity",
+              "entity": "Zara (polymorphed)"
+            }
+          ],
+          "narrative_preview": "In the material plane, the party regrouped..."
+        }
+      ],
+      "common_issues": {
+        "missing_entity": 20,
+        "location_mismatch": 12,
+        "missing_combat_participant": 3
+      }
+    }
+  ]
+}

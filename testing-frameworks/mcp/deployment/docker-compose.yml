@@ -1,0 +1,147 @@
+# Docker Compose for MCP Architecture Testing
+# This configuration sets up the complete MCP architecture for testing:
+# - MCP Server (world_logic.py)
+# - Translation Layer (main.py)
+# - Supporting services (Redis, Firestore Emulator)
+
+version: '3.8'
+
+services:
+  # Firestore Emulator for testing
+  firestore-emulator:
+    image: gcr.io/google.com/cloudsdktool/cloud-sdk:latest
+    ports:
+      - "8080:8080"
+      - "4000:4000"  # Firestore Emulator UI
+    command: >
+      sh -c "gcloud emulators firestore start
+             --host-port=0.0.0.0:8080
+             --rules=firestore.rules"
+    volumes:
+      - ./firestore.rules:/workspace/firestore.rules
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for session management (if needed)
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MCP Server (world_logic.py)
+  mcp-server:
+    build:
+      context: ../../
+      dockerfile: testing_mcp/deployment/Dockerfile.mcp-server
+    ports:
+      - "8000:8000"
+    environment:
+      - MCP_SERVER_PORT=8000
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - REDIS_URL=redis://redis:6379
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-test-key}
+      - TESTING=true
+      - LOG_LEVEL=INFO
+    depends_on:
+      firestore-emulator:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../mvp_site:/app/mvp_site
+      - ./health_checks.py:/app/health_checks.py
+    healthcheck:
+      test: ["CMD", "python", "/app/health_checks.py", "--service", "mcp-server", "--port", "8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Translation Layer (main.py)
+  translation-layer:
+    build:
+      context: ../../
+      dockerfile: testing_mcp/deployment/Dockerfile.translation-layer
+    ports:
+      - "8081:8081"  # Different port to avoid conflicts
+    environment:
+      - FLASK_PORT=8081
+      - MCP_SERVER_URL=http://mcp-server:8000
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-test-secret-key-for-testing}
+      - CORS_ORIGINS=*
+      - STATIC_FOLDER=frontend_v1
+      - TESTING=true
+      - LOG_LEVEL=INFO
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+    volumes:
+      - ../../mvp_site:/app/mvp_site
+      - ./health_checks.py:/app/health_checks.py
+    healthcheck:
+      test: ["CMD", "python", "/app/health_checks.py", "--service", "translation-layer", "--port", "8081"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  # Mock MCP Server for unit testing
+  mock-mcp-server:
+    build:
+      context: ../../
+      dockerfile: testing_mcp/deployment/Dockerfile.mock-server
+    ports:
+      - "8001:8001"
+    environment:
+      - MOCK_SERVER_PORT=8001
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Test Runner Service
+  test-runner:
+    build:
+      context: ../../
+      dockerfile: testing_mcp/deployment/Dockerfile.test-runner
+    environment:
+      - MCP_SERVER_URL=http://mcp-server:8000
+      - TRANSLATION_LAYER_URL=http://translation-layer:8081
+      - MOCK_SERVER_URL=http://mock-mcp-server:8001
+      - FIRESTORE_EMULATOR_HOST=firestore-emulator:8080
+      - TESTING=true
+      - PYTEST_ARGS=${PYTEST_ARGS:--v}
+    depends_on:
+      mcp-server:
+        condition: service_healthy
+      translation-layer:
+        condition: service_healthy
+      mock-mcp-server:
+        condition: service_healthy
+    volumes:
+      - ../../testing_mcp:/app/testing_mcp
+      - ./test_results:/app/test_results
+    command: >
+      sh -c "echo 'Waiting for services to be ready...' &&
+             sleep 10 &&
+             python -m pytest testing_mcp/integration/ $$PYTEST_ARGS --junitxml=test_results/integration_results.xml"
+
+networks:
+  default:
+    name: worldarchitect-mcp-test
+
+volumes:
+  firestore_data:
+  redis_data:

@@ -1,0 +1,92 @@
+{
+  "test_type": "baseline_validation_only",
+  "timestamp": "2025-06-29T20:41:11.445071",
+  "summary": {
+    "total_tests": 25,
+    "average_success_rate": 0.31666666666666665,
+    "average_time_ms": 0.10223388671875,
+    "total_desyncs": 20
+  },
+  "by_campaign": {
+    "sariel_v2_001": {
+      "success_rate": 0.31666666666666665,
+      "desync_count": 4,
+      "average_time": 0.40869712829589844
+    },
+    "thornwood_001": {
+      "success_rate": 0.31666666666666665,
+      "desync_count": 4,
+      "average_time": 0.0263214111328125
+    },
+    "darkmoor_001": {
+      "success_rate": 0.31666666666666665,
+      "desync_count": 4,
+      "average_time": 0.025987625122070312
+    },
+    "brass_compass_001": {
+      "success_rate": 0.31666666666666665,
+      "desync_count": 4,
+      "average_time": 0.025081634521484375
+    },
+    "frostholm_001": {
+      "success_rate": 0.31666666666666665,
+      "desync_count": 4,
+      "average_time": 0.025081634521484375
+    }
+  },
+  "by_scenario": {
+    "multi_character": {
+      "success_rate": 0.25,
+      "desync_count": 5,
+      "common_patterns": [
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission"
+      ]
+    },
+    "split_party": {
+      "success_rate": 1.0,
+      "desync_count": 0,
+      "common_patterns": []
+    },
+    "combat_injured": {
+      "success_rate": 0.0,
+      "desync_count": 5,
+      "common_patterns": [
+        "combat_entity_missing",
+        "combat_entity_missing",
+        "combat_entity_missing",
+        "combat_entity_missing",
+        "combat_entity_missing"
+      ]
+    },
+    "hidden_characters": {
+      "success_rate": 0.0,
+      "desync_count": 5,
+      "common_patterns": [
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission"
+      ]
+    },
+    "npc_heavy": {
+      "success_rate": 0.3333333333333333,
+      "desync_count": 5,
+      "common_patterns": [
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission",
+        "general_omission"
+      ]
+    }
+  },
+  "pattern_distribution": {
+    "general_omission": 15,
+    "combat_entity_missing": 5
+  }
+}
