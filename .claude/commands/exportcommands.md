@@ -160,6 +160,63 @@ done
 - Add scaling guidance for agent capacity and workload distribution
 - **Status**: Active development prototype - successful task completion verified with PR generation
 
+**🤖 Claude Bot Self-Hosting System Export** (`claude-bot-commands/` → `claude-bot-commands/`) - **PRODUCTION READY**:
+- Export complete GitHub-based Claude command processing system for self-hosted deployments
+- **Architecture**: GitHub Actions workflow with self-hosted runner executing Claude commands via repository issues
+- **Components**: Server (`claude-bot-server.py`), workflow processor, debugging tools, comprehensive test suite
+- **Features**: Repository-based command processing, automated PR creation, threaded comment responses
+- **Usage**: Post command as GitHub issue → Self-hosted runner processes → Claude executes → Results posted
+- **Requirements**: GitHub repository, self-hosted runner, Python environment, Claude Code CLI
+- **Installation**: Complete setup guide with runner configuration and repository integration
+- **Benefits**: Repository-native command processing, version-controlled command history, automated workflows
+
+**⚙️ Automated PR Fixer System Export** (`automation/` → `automation/`) - **PRODUCTION READY**:
+- Export intelligent cron-based PR automation system with comprehensive error handling
+- **Core Script**: `simple_pr_batch.sh` - Autonomous PR analysis and fixing via `/copilot` integration
+- **Cron Configuration**: `cron_entry.txt` - Every 10 minutes automated PR processing
+- **Features**: Timeout handling (20min), attempt tracking (max 3), cooldown periods (4hr), email notifications
+- **Workflow**: Detect failing PRs → Execute `/copilot` comprehensive analysis → Apply fixes → Track attempts
+- **Error Handling**: Timeout detection, max attempt limits, email alerts for manual intervention required
+- **Requirements**: Claude Code CLI, GitHub CLI, email configuration, cron access
+- **Installation**: Cron setup, email notification configuration, GitHub token setup
+
+**🧪 Testing Infrastructure Export** - **PRODUCTION READY TESTING FRAMEWORKS**:
+- **HTTP Testing Framework** (`testing_http/` → `testing-frameworks/http/`):
+  - Comprehensive HTTP API testing with mock/real API support
+  - Direct HTTP requests using `requests` library for fast, reliable testing
+  - Mock mode (free) and real API mode (cost tracking) with clear separation
+  - Test runners for campaign creation, character creation, god mode, error cases
+- **Browser Testing Framework** (`testing_ui/` → `testing-frameworks/browser/`):
+  - Real browser automation using Playwright with accessibility-tree optimization
+  - Test mode URL bypassing, screenshot utilities, visual validation
+  - Mobile responsive testing, campaign wizard flows, settings UI validation
+- **MCP Testing Infrastructure** (`testing_mcp/` → `testing-frameworks/mcp/`):
+  - Complete MCP architecture testing with 158 passing tests
+  - Integration tests, performance benchmarks, deployment configurations
+  - Mock MCP server, test utilities, load testing capabilities
+
+**⚙️ CI Debugging System Export** (`ci_replica/` → `ci-debugging/`) - **PRODUCTION READY**:
+- Export comprehensive CI environment replication and debugging tools
+- **Core Scripts**: Local CI replica, debug replica, failure reproducer, interactive launcher
+- **Features**: Exact CI environment matching, Python 3.11 replication, dependency isolation
+- **Debugging**: Environment comparison, verbose logging, isolation modes, test output capture
+- **Use Cases**: "Tests pass locally but fail in CI" troubleshooting and environment matching
+- **Requirements**: Python 3.11, virtual environment support, exact CI workflow replication
+- **Installation**: Script permissions, Python version management, CI environment variables
+
+**🔬 Development Infrastructure Export** - **SPECIALIZED DEVELOPMENT TOOLS**:
+- **Prototype Framework** (`prototype/` → `prototyping/`):
+  - Validation and benchmarking framework for experimental implementations
+  - Performance profiling, accuracy measurement, alternative approach testing
+  - Migration paths from prototype to production code
+- **AI Prompting Templates** (`coding_prompts/` → `ai-prompts/`):
+  - Multi-agent development system with SUPERVISOR-WORKER-REVIEWER architecture
+  - Specialized prompts for code research, debugging, principal engineer reviews
+  - Virtual agent coordination and context independence protocols
+- **Analysis Framework** (`analysis/` → `analytics/`):
+  - Campaign analytics, user activity reporting, Firebase collection analytics
+  - Test result analysis, performance benchmarking, data validation tools
+
 **Configuration Export**:
 - Export relevant config files (filtered for sensitive data)
 - Include setup templates and environment examples
@@ -179,6 +236,29 @@ done
   - Setup walkthrough: Redis → tmux → agent workspaces → task delegation
   - Success metrics: Cost-per-task, completion rates, PR generation verification
   - Monitoring workflows: agent status, task progress, resource utilization
+- **🤖 Claude Bot Self-Hosting System**: Complete repository-based command processing
+  - GitHub Actions integration with self-hosted runner architecture
+  - Installation guide: Repository setup → Runner configuration → Command processing
+  - Usage examples: Issue-based commands → Automated execution → PR creation
+  - Production deployment patterns and scaling considerations
+- **⚙️ Automated PR Fixer System**: Intelligent cron-based PR maintenance
+  - Autonomous `/copilot` integration for comprehensive PR analysis and fixing
+  - Error handling: Timeout detection, attempt limits, email notifications
+  - Installation: Cron setup → Email configuration → GitHub integration
+  - Real-world metrics: Processing frequency, success rates, manual intervention triggers
+- **🧪 Testing Infrastructure**: Production-ready testing frameworks
+  - HTTP Testing: Mock/real API support with `requests` library integration
+  - Browser Testing: Playwright automation with accessibility optimization
+  - MCP Testing: Complete architecture testing with 158 passing tests
+  - Installation: Framework setup → Test configuration → CI integration
+- **⚙️ CI Debugging System**: Local CI environment replication
+  - Exact CI matching: Python 3.11, dependency isolation, environment variables
+  - Debug modes: Verbose logging, isolation levels, environment comparison
+  - Installation: Script permissions → Python setup → CI variable configuration
+- **🔬 Development Infrastructure**: Specialized development tools
+  - Prototype Framework: Validation, benchmarking, experimental implementations
+  - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
+  - Analytics Framework: Campaign analytics, performance tracking, data validation
 - Include troubleshooting and adaptation guidance
 
 **Support Documentation**:
@@ -210,8 +290,12 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - CLAUDE.md with reference warnings
 - All command definitions with categorization and proper filtering
 - Scripts with dependency documentation
-- Orchestration system with setup guides
-- Complete orchestration system ($(ls orchestration/ | wc -l) files)
+- Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
+- Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
+- Automated PR Fixer System ($(ls automation/ | wc -l) files)
+- Testing Infrastructure: HTTP/Browser/MCP frameworks ($(find testing_*/ -name "*.py" | wc -l) files)
+- CI Debugging System ($(ls ci_replica/ | wc -l) files)
+- Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
 - Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
 - Comprehensive README and documentation
 
@@ -232,6 +316,25 @@ This export contains project-specific configurations that require adaptation.
   - Autonomous task execution with PR generation verification
   - Real-world cost metrics: $0.003-$0.050 per task
   - Monitoring and scaling procedures
+- **🤖 Claude Bot Self-Hosting System (PRODUCTION READY)**: Repository-based command processing
+  - GitHub Actions workflow with self-hosted runner architecture
+  - Issue-based command processing with automated PR creation
+  - Complete setup guide and debugging tools
+- **⚙️ Automated PR Fixer System (PRODUCTION READY)**: Intelligent cron-based automation
+  - Autonomous `/copilot` integration for comprehensive PR analysis
+  - Error handling, timeout detection, and email notifications
+  - 10-minute processing cycles with attempt tracking
+- **🧪 Testing Infrastructure (PRODUCTION READY)**: Complete testing framework suite
+  - HTTP Testing: Mock/real API support with `requests` library
+  - Browser Testing: Playwright automation with accessibility optimization
+  - MCP Testing: Architecture testing with 158 passing tests
+- **⚙️ CI Debugging System (PRODUCTION READY)**: Local CI environment replication
+  - Exact CI matching with Python 3.11 and dependency isolation
+  - Debug modes and environment comparison tools
+- **🔬 Development Infrastructure**: Specialized development tools
+  - Prototype framework for validation and benchmarking
+  - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
+  - Analytics framework for performance tracking and data validation
 - Supporting scripts and utilities
 - Documentation and setup guides
 
@@ -262,21 +365,28 @@ See README.md for installation and adaptation guidance."
 - Testing scripts that require specific project setup
 - Firebase connection scripts (`scripts/debug_firebase_connection.py`)
 - Business plan and product specification documents
-- CI replica and debugging scripts (`ci_replica/`)
 - Worktree-specific paths and configurations
 
 **Directory Exclusions**:
 - Any directory containing project-specific database configurations
-- Test directories with hardcoded project paths
 - Scripts requiring specific virtual environment setup
-- `ci_replica/` - CI debugging and replication tools
-- `scripts/` - Firebase and database-specific utilities
-- `testing_http/` - HTTP testing with project endpoints
-- `testing_ui/` - Browser testing with project-specific setup
-- `orchestration/` workspaces with hardcoded paths
+- `scripts/` - Firebase and database-specific utilities (but INCLUDE automation/ and orchestration/ core)
+- `orchestration/` workspaces with hardcoded paths (but INCLUDE orchestration system core)
 - Business documentation (`business_plan_v1.md`, `product_spec.md`)
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
+
+**NEW SYSTEM INCLUSIONS** (⚠️ MUST EXPORT):
+- `claude-bot-commands/` - Complete self-hosting repository system (PRODUCTION READY)
+- `automation/` - Automated PR fixer system with cron integration (PRODUCTION READY)
+- `testing_http/` - HTTP testing framework with mock/real API support (PRODUCTION READY)
+- `testing_ui/` - Browser automation testing framework with Playwright (PRODUCTION READY)
+- `testing_mcp/` - MCP architecture testing infrastructure (PRODUCTION READY)
+- `ci_replica/` - CI debugging and local replication tools (PRODUCTION READY)
+- `prototype/` - Validation and benchmarking framework (SPECIALIZED TOOLS)
+- `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
+- `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
+- Include installation guides and setup documentation for all systems
 
 ## 🔍 CONTENT FILTERING RULES
 
