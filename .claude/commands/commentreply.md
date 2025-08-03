@@ -346,16 +346,21 @@ reply_to_individual_comment() {
     if ! git diff --quiet; then
       echo "✅ CHANGES DETECTED: Files modified, committing changes..."
 
-      # Stage only the specific file if it exists, otherwise stage all changes
+      # Stage only the specific file if it exists, otherwise require manual staging
       if [ "$file_path" != "N/A" ] && [ "$file_path" != "null" ] && [ -f "$file_path" ]; then
         echo "📁 STAGING: Specific file $file_path"
         git add "$file_path"
       else
-        echo "📁 STAGING: All modified files (no specific file path available)"
-        git add .
+        echo "⚠️  SECURITY: Cannot stage unknown files - manual staging required"
+        echo "📋 Modified files: $(git diff --name-only)"
+        echo "💡 Use: git add [specific-files] before running commit"
+        return 1
       fi
 
-      git commit -m "Fix issue from comment #$comment_id: $(echo "$comment_body" | head -c 50 | tr '\n' ' ')..."
+      # Safely construct commit message with proper escaping
+      local safe_comment_body
+      safe_comment_body=$(echo "$comment_body" | head -c 50 | tr '\n' ' ' | sed 's/["`$\\]/\\&/g')
+      git commit -m "Fix issue from comment #$comment_id: $safe_comment_body..."
 
       commit_hash=$(git rev-parse --short HEAD)
       echo "✅ COMMITTED: Changes in commit $commit_hash"
@@ -386,7 +391,7 @@ reply_to_individual_comment() {
     local reply_result_json=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '.[] | select(.in_reply_to_id == '$comment_id') | {id: .id, url: .html_url}' | tail -1)
     local reply_id=$(echo "$reply_result_json" | jq -r '.id')
 
-    if verify_real_threaded_reply "$comment_id" "$reply_id" "$OWNER" "$REPO" "$PR_NUMBER"; then
+    if verify_real_threaded_reply "$comment_id" "$reply_id" "$PR_NUMBER" "$OWNER" "$REPO"; then
       echo "✅ SUCCESS: REAL threaded reply created for #$comment_id"
       return 0
     fi
@@ -433,11 +438,17 @@ create_real_threaded_reply() {
 verify_real_threaded_reply() {
   local original_comment_id="$1"
   local reply_id="$2"
-  local owner="$3"
-  local repo="$4"
-  local pr_number="$5"
+  local pr_number="$3"
+  local owner="$4"
+  local repo="$5"
 
   echo "🔍 VERIFYING: Real threaded reply $reply_id for comment #$original_comment_id..."
+
+  # Validate reply_id is not empty/null to prevent jq syntax errors
+  if [ -z "$reply_id" ] || [ "$reply_id" = "null" ]; then
+    echo "❌ VERIFICATION FAILED: Empty or null reply_id provided"
+    return 1
+  fi
 
   # Validate parameters before API call
   if [[ ! "$owner" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$repo" =~ ^[a-zA-Z0-9._-]+$ ]] || [[ ! "$pr_number" =~ ^[0-9]+$ ]]; then
@@ -445,9 +456,9 @@ verify_real_threaded_reply() {
     return 1
   fi
 
-  # Verify the reply exists and has correct in_reply_to_id
+  # Verify the reply exists and has correct in_reply_to_id (safe jq with quoted variable)
   local reply_data=$(gh api "repos/$owner/$repo/pulls/$pr_number/comments" --paginate | \
-    jq ".[] | select(.id == $reply_id)")
+    jq ".[] | select(.id == \"$reply_id\")")
 
   if [ -z "$reply_data" ]; then
     echo "❌ VERIFICATION FAILED: Reply $reply_id not found"
