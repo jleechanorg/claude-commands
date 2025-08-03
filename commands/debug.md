@@ -39,11 +39,13 @@ When combined with protocol commands:
 
 1. **Reproduce**: Establish consistent reproduction steps
 2. **Isolate**: Narrow down the problem scope
-3. **Hypothesize**: Form theories about root cause
-4. **Test**: Validate hypotheses with evidence
-5. **Fix**: Apply targeted solution
-6. **Verify**: Confirm fix resolves issue
-7. **Learn**: Auto-capture debugging insights and patterns (triggered on successful resolution)
+3. **Technical Verification**: Auto-extract DOM state, CSS properties, network requests, console logs
+4. **Hypothesize**: Form theories about root cause
+5. **Test**: Validate hypotheses with evidence
+6. **Evidence Collection**: Screenshot + technical data + verification report before any success claims
+7. **Fix**: Apply targeted solution
+8. **Verify**: Confirm fix resolves issue with complete technical verification
+9. **Learn**: Auto-capture debugging insights and patterns (triggered on successful resolution)
 
 ## Examples
 
@@ -97,10 +99,16 @@ When the debugging session successfully identifies and resolves the root cause, 
 When `/debug` is active, ensure:
 - [ ] Exact error messages are captured
 - [ ] Stack traces include file:line references
+- [ ] **DOM inspector output** captured for UI issues
+- [ ] **CSS computed properties** extracted for visual elements
+- [ ] **Network request logs** captured for asset loading
+- [ ] **Console errors/warnings** documented
 - [ ] Reproduction steps are documented
 - [ ] Hypotheses are explicitly stated
 - [ ] Evidence supports conclusions
+- [ ] **Screenshot + technical verification** completed before any ✅ claims
 - [ ] Fix is validated with tests
+- [ ] **Anti-bias check**: "What should NOT be working?" tested
 - [ ] Learning captured (automatic `/learn` trigger when debugging succeeds)
 
 ## Automatic Learning Integration
