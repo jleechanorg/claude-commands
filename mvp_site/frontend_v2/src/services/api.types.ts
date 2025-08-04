@@ -20,6 +20,9 @@ export interface Campaign {
   user_id: string;
   selected_prompts?: string[];
   use_default_world?: boolean;
+  theme?: string;
+  difficulty?: string;
+  status?: string;
 }
 
 export interface CampaignCreateRequest {

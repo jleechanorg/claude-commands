@@ -22,24 +22,8 @@ The current `/commentreply` system has a fundamental architecture flaw:
 - Missing threaded reply format enforcement
 
 #### Required Enhancements
-1. **Explicit File Editing Mandates**
-   ```markdown
-   ## MANDATORY FILE EDITING PROTOCOL
-   When addressing code issues:
-   1. ALWAYS identify the exact file and line number
-   2. ALWAYS use Edit/MultiEdit tools to make actual changes
-   3. NEVER claim fixes without actual file modifications
-   4. ALWAYS verify changes with git diff
-   ```
-
-2. **Threaded Reply Format Enforcement**
-   ```markdown
-   ## MANDATORY THREADING FORMAT
-   All comment replies MUST use GitHub's threaded reply format:
-   - Include original comment quote using > prefix
-   - Reference specific line numbers and file paths
-   - Provide direct links to changed code sections
-   ```
+Refer to the existing "MANDATORY FILE EDITING PROTOCOL" and "THREADING FORMAT" sections inside
+`.claude/commands/commentreply.md` – do **not** duplicate them here.
 
 3. **Enhanced Verification Protocol**
    ```markdown
@@ -94,19 +78,8 @@ The current `/commentreply` system has a fundamental architecture flaw:
 ```markdown
 ## THREADING PROTOCOL (LLM-Native)
 
-### Reply Format Template
-
-**Example threaded reply format:**
-
-> [Original comment quote]
-
-**Fixed in [commit_hash]**: [file_path:line_number]
-
-**Changes Made**:
-- [Specific change 1]
-- [Specific change 2]
-
-**Verification**: `git show [commit_hash] -- [file_path]`
+See the authoritative reply template format in `.claude/commands/commentreply.md`.
+This handoff document focuses on the enhancement strategy, not duplicating the implementation details.
 
 ### Context Preservation
 - Reference original comment ID and thread

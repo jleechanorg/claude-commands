@@ -100,40 +100,56 @@ if [ -f ".git" ] && grep -q "gitdir:" .git 2>/dev/null; then
     fi
 fi
 
-# Function to check if a port is in use
-check_port() {
+# Function to kill processes using a specific port
+kill_port_processes() {
     local port=$1
-    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1 ; then
-        return 0  # Port is in use
+    echo "🔍 Checking for processes using port $port..."
+
+    local pids=$(lsof -ti:$port 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+        echo "⚔️  Attempting graceful shutdown of processes using port $port: $pids"
+        # Try graceful termination first (SIGTERM)
+        echo "$pids" | xargs kill -TERM 2>/dev/null || true
+        sleep 2
+
+        # Check if processes are still running
+        local remaining_pids=$(lsof -ti:$port 2>/dev/null || true)
+        if [ -n "$remaining_pids" ]; then
+            echo "⚔️  Forcefully killing remaining processes: $remaining_pids"
+            echo "$remaining_pids" | xargs kill -9 2>/dev/null || true
+            sleep 1
+        fi
+
+        # Verify port is now free
+        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+            echo "❌ ERROR: Port $port still in use after kill attempts (processes may be permission-protected)"
+            return 1
+        else
+            echo "✅ Port $port is now free"
+            return 0
+        fi
     else
-        return 1  # Port is free
+        echo "✅ Port $port is already free"
+        return 0
     fi
 }
 
-# Function to find available port
-find_available_port() {
-    local start_port=${1:-8081}
-    local port=$start_port
-    local max_attempts=10
+# Function to ensure port is available (kill if necessary)
+ensure_port_free() {
+    local port=$1
+    echo "🎯 Ensuring port $port is available..."
 
-    echo "🔍 Checking for available ports starting from $start_port..." >&2
-
-    for ((i=0; i<$max_attempts; i++)); do
-        if ! check_port $port; then
-            echo "✅ Port $port is available!" >&2
-            echo $port  # Only output the port number to stdout
-            return 0
-        else
-            echo "❌ Port $port is already in use" >&2
-            # Check what's using it
-            local process_info=$(lsof -i :$port | grep LISTEN | head -1 | awk '{print $1 " (PID: " $2 ")"}' || echo "Unknown process")
-            echo "   Used by: $process_info" >&2
-            ((port++))
+    if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1 ; then
+        echo "⚠️  Port $port is in use, killing conflicting processes..."
+        if ! kill_port_processes $port; then
+            echo "❌ CRITICAL: Failed to free port $port. Cannot continue."
+            echo "   Please manually kill processes using port $port and try again."
+            return 1
         fi
-    done
-
-    echo "❌ ERROR: Could not find an available port after $max_attempts attempts" >&2
-    return 1
+    else
+        echo "✅ Port $port is already free"
+    fi
+    return 0
 }
 
 # Check for virtual environment
@@ -168,11 +184,9 @@ else
     exit 1
 fi
 
-# Find available port
-PORT=$(find_available_port 8081)
-if [ $? -ne 0 ]; then
-    exit 1
-fi
+# Use fixed port and ensure it's available
+PORT=5005
+ensure_port_free $PORT
 
 # Set environment variables
 export TESTING=true
@@ -217,23 +231,83 @@ LOG_DIR="/tmp/worldarchitect.ai/${CURRENT_BRANCH}"
 mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/local-server_$(date +%Y%m%d_%H%M%S).log"
 
-# Run the server with better error handling
+# Function to validate server with curl
+validate_server() {
+    local port=$1
+    local max_attempts=10
+    local attempt=1
+
+    echo ""
+    echo "🔍 Validating server startup with curl..."
+    echo "─────────────────────────────────────────"
+
+    while [ $attempt -le $max_attempts ]; do
+        echo "Attempt $attempt/$max_attempts: Testing http://localhost:$port/"
+
+        if curl -s -f "http://localhost:$port/" > /dev/null; then
+            echo "✅ Server is responding correctly!"
+            echo "🌐 Server URL: http://localhost:$port/"
+            echo "🔬 Test Mode URL: http://localhost:$port/?test_mode=true&test_user_id=test-user-123"
+            return 0
+        else
+            echo "❌ Server not responding yet, waiting 2 seconds..."
+            sleep 2
+            ((attempt++))
+        fi
+    done
+
+    echo "❌ ERROR: Server failed to respond after $max_attempts attempts"
+    echo "🔍 Checking if server process is still running..."
+    if ps aux | grep -E "python.*main.py.*serve" | grep -v grep > /dev/null; then
+        echo "⚠️  Server process is running but not responding to HTTP requests"
+        echo "📋 Check the server logs for errors"
+    else
+        echo "💀 Server process has died"
+    fi
+    return 1
+}
+
+# Run the server with better error handling and validation
 if [ -f "mvp_site/main.py" ]; then
     case "${log_choice:-1}" in
         2)
             echo "📄 Logs will be saved to: $LOG_FILE"
             echo ""
-            exec $PYTHON_CMD mvp_site/main.py serve > "$LOG_FILE" 2>&1
+            $PYTHON_CMD mvp_site/main.py serve > "$LOG_FILE" 2>&1 &
+            SERVER_PID=$!
             ;;
         3)
             echo "📄 Logs will be displayed AND saved to: $LOG_FILE"
             echo ""
-            exec $PYTHON_CMD mvp_site/main.py serve 2>&1 | tee "$LOG_FILE"
+            $PYTHON_CMD mvp_site/main.py serve 2>&1 | tee "$LOG_FILE" &
+            SERVER_PID=$!
             ;;
         *)
-            exec $PYTHON_CMD mvp_site/main.py serve
+            $PYTHON_CMD mvp_site/main.py serve &
+            SERVER_PID=$!
             ;;
     esac
+
+    # Wait a moment for server to start
+    echo "⏳ Waiting for server to initialize..."
+    sleep 3
+
+    # Validate server startup
+    if validate_server $PORT; then
+        echo ""
+        echo "🎉 SUCCESS: WorldArchitect.AI server is ready!"
+        echo "📍 PID: $SERVER_PID"
+        echo "🛑 To stop: kill $SERVER_PID"
+        echo ""
+        echo "Press Ctrl+C to stop the server or close this terminal"
+        wait $SERVER_PID
+    else
+        echo ""
+        echo "💥 FAILURE: Server validation failed"
+        echo "🔪 Killing server process..."
+        kill $SERVER_PID 2>/dev/null || true
+        exit 1
+    fi
 else
     echo "❌ ERROR: mvp_site/main.py not found!"
     echo "   Current directory: $(pwd)"

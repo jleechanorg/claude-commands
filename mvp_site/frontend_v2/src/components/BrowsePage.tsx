@@ -179,7 +179,7 @@ export function BrowsePage({
             <Checkbox
               id="authentic"
               checked={showAuthentic}
-              onCheckedChange={setShowAuthentic}
+              onCheckedChange={(checked) => setShowAuthentic(checked === true)}
             />
             <label htmlFor="authentic" className="text-sm">Authentic Only</label>
           </div>
@@ -187,7 +187,7 @@ export function BrowsePage({
             <Checkbox
               id="vintage"
               checked={showVintage}
-              onCheckedChange={setShowVintage}
+              onCheckedChange={(checked) => setShowVintage(checked === true)}
             />
             <label htmlFor="vintage" className="text-sm">Vintage Only</label>
           </div>

@@ -473,10 +473,11 @@ create_real_threaded_reply() {
   fi
 
   # Use the correct GitHub API for creating threaded PR review comments
-  # FIX: Use JSON input instead of --field for robust multi-line content handling
-  local response=$(printf '%s\n' "{\"body\":$(
-      jq -Rs --arg body "$response_body" '$body'
-    ),\"in_reply_to\":$comment_id}" | \
+  # FIX: Use JSON input with proper escaping to prevent injection
+  local response=$(jq -n \
+    --arg body "$response_body" \
+    --arg reply_to "$comment_id" \
+    '{body: $body, in_reply_to: ($reply_to | tonumber)}' | \
     gh api "repos/$owner/$repo/pulls/$pr_number/comments" \
       --method POST --header "Content-Type: application/json" --input -)
 

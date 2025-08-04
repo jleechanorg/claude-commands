@@ -1,12 +1,9 @@
 import { create } from 'zustand';
-import { apiWithMock } from '../services/api-with-mock.service';
+import { apiService } from '../services/api.service';
 import type {
   Campaign,
   CampaignCreateRequest,
-  CampaignUpdateRequest,
-  CampaignListResponse,
-  CampaignDetailResponse,
-  ApiResponse
+  CampaignUpdateRequest
 } from '../services/api.types';
 
 interface CampaignState {
@@ -45,7 +42,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   fetchCampaigns: async () => {
     set({ isLoading: true, error: null });
     try {
-      const campaigns = await apiWithMock.getCampaigns();
+      const campaigns = await apiService.getCampaigns();
       set({
         campaigns,
         isLoading: false
@@ -63,7 +60,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   fetchCampaignById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiWithMock.getCampaign(id);
+      const response = await apiService.getCampaign(id);
       const campaign = response.campaign;
 
       set({
@@ -84,7 +81,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   createCampaign: async (data: CampaignCreateRequest) => {
     set({ isCreating: true, error: null });
     try {
-      const campaignId = await apiWithMock.createCampaign(data);
+      const campaignId = await apiService.createCampaign(data);
 
       // Refresh campaigns list
       await get().fetchCampaigns();
@@ -104,7 +101,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   updateCampaign: async (id: string, data: CampaignUpdateRequest) => {
     set({ isUpdating: true, error: null });
     try {
-      await apiWithMock.updateCampaign(id, data);
+      await apiService.updateCampaign(id, data);
 
       // Refresh campaigns list
       await get().fetchCampaigns();
@@ -128,7 +125,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   deleteCampaign: async (id: string) => {
     set({ isDeleting: true, error: null });
     try {
-      await apiWithMock.deleteCampaign(id);
+      await apiService.deleteCampaign(id);
 
       // Update local state
       set(state => ({

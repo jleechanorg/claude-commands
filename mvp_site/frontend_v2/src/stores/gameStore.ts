@@ -1,15 +1,12 @@
 import { create } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
-import { apiWithMock } from '../services/api-with-mock.service';
+import { apiService } from '../services/api.service';
 import type {
   GameState,
   StoryEntry,
-  InteractionRequest,
-  InteractionResponse,
   PlayerCharacterData,
   NPCData,
-  CombatState,
-  DiceRoll
+  CombatState
 } from '../services/api.types';
 
 interface GameStoreState {
@@ -68,7 +65,7 @@ export const useGameStore = create<GameStoreState>()(
     initializeGame: async (campaignId: string) => {
       set({ isLoading: true, error: null, campaignId });
       try {
-        const response = await apiWithMock.getCampaign(campaignId);
+        const response = await apiService.getCampaign(campaignId);
 
         set({
           gameState: response.game_state || initialGameState,
@@ -108,7 +105,7 @@ export const useGameStore = create<GameStoreState>()(
       }));
 
       try {
-        const response = await apiWithMock.sendInteraction(campaignId, { input, mode });
+        const response = await apiService.sendInteraction(campaignId, { input, mode });
 
         // Create AI response entry
         const aiEntry: StoryEntry = {
@@ -165,18 +162,25 @@ export const useGameStore = create<GameStoreState>()(
 
     // Update NPC
     updateNPC: (npcId: string, updates: Partial<NPCData>) => {
-      set(state => ({
-        gameState: {
-          ...state.gameState,
-          npc_data: {
-            ...state.gameState.npc_data,
-            [npcId]: {
-              ...state.gameState.npc_data?.[npcId],
-              ...updates
+      set(state => {
+        // Ensure the updated NPC has at least the required 'name' property
+        const existingNpc = state.gameState.npc_data?.[npcId] || {}
+        const updatedNpc: NPCData = {
+          name: existingNpc.name || updates.name || 'Unknown NPC',
+          ...existingNpc,
+          ...updates
+        };
+
+        return {
+          gameState: {
+            ...state.gameState,
+            npc_data: {
+              ...state.gameState.npc_data,
+              [npcId]: updatedNpc
             }
           }
-        }
-      }));
+        };
+      });
     },
 
     // Update combat state

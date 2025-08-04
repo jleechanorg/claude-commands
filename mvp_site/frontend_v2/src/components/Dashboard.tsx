@@ -16,15 +16,12 @@ import {
   Crown,
   LogOut,
   Sparkles,
-  Settings,
-  MoreVertical,
   TrendingUp,
   Scroll,
-  Sword,
-  Wand2
+  Sword
 } from 'lucide-react'
 
-import { heroImage } from '../src/assets/figma-assets'
+import { heroImage } from '../assets/figma-assets'
 import type { User, Campaign, Theme } from '../App'
 
 interface DashboardProps {

@@ -14,7 +14,6 @@ import {
   Campaign,
   CampaignCreateRequest,
   CampaignUpdateRequest,
-  CampaignListResponse,
   CampaignDetailResponse,
   CampaignCreateResponse,
   InteractionRequest,
@@ -25,8 +24,9 @@ import {
   ApiError
 } from './api.types';
 
-// Import Firebase (assuming it's available globally or imported separately)
-declare const firebase: any;
+// Import Firebase v9+ SDK
+import { auth, googleProvider } from '../lib/firebase';
+import { signInWithPopup, signOut, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 
 class ApiService {
   private baseUrl = '/api';
@@ -37,17 +37,25 @@ class ApiService {
   private testAuthBypass: { enabled: boolean; userId: string } | null = null;
 
   constructor() {
-    // Check for test mode using environment variables (development only)
+    // Check for test mode using environment variables OR URL parameters (development only)
     const isDevEnvironment = import.meta.env.DEV === true;
     const testModeEnabled = import.meta.env.VITE_TEST_MODE === 'true';
     const testUserId = import.meta.env.VITE_TEST_USER_ID || 'test-user-123';
 
-    // Only enable test mode in development environment with explicit env var
-    if (isDevEnvironment && testModeEnabled) {
+    // Also check URL parameters for test mode
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTestMode = urlParams.get('test_mode') === 'true';
+    const urlTestUserId = urlParams.get('test_user_id') || 'test-user-123';
+
+    // Enable test mode if either env var or URL param indicates test mode
+    const shouldEnableTestMode = isDevEnvironment && (testModeEnabled || urlTestMode);
+    const finalTestUserId = urlTestUserId || testUserId;
+
+    if (shouldEnableTestMode) {
       console.warn('⚠️ Test mode enabled - Authentication bypass active (DEV ONLY)');
       this.testAuthBypass = {
         enabled: true,
-        userId: testUserId
+        userId: finalTestUserId
       };
     }
   }
@@ -74,19 +82,42 @@ class ApiService {
       };
     } else {
       // Normal Firebase authentication
-      const user = firebase.auth().currentUser;
+      const user = auth.currentUser;
       if (!user) {
         throw new Error('User not authenticated');
       }
 
       // Get fresh token, forcing refresh on retries
       const forceRefresh = retryCount > 0;
-      const token = await user.getIdToken(forceRefresh);
+      try {
+        const token = await user.getIdToken(forceRefresh);
+        if (!token) {
+          throw new Error('Failed to get authentication token');
+        }
+        // Validate JWT token structure and content
+        if (!token || typeof token !== 'string') {
+          throw new Error('Authentication token is not a valid string');
+        }
 
-      headers = {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      };
+        // JWT tokens have 3 parts separated by dots (header.payload.signature)
+        const tokenParts = token.split('.');
+        if (tokenParts.length !== 3) {
+          throw new Error('Authentication token is not a valid JWT format');
+        }
+
+        // Basic validation that each part is not empty
+        if (tokenParts.some(part => !part || part.length === 0)) {
+          throw new Error('Authentication token has invalid JWT structure');
+        }
+
+        headers = {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        };
+      } catch (tokenError) {
+        console.error('Token retrieval error:', tokenError);
+        throw new Error(`Authentication token error: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
+      }
     }
 
     const config: RequestInit = {
@@ -115,22 +146,25 @@ class ApiService {
 
         // Handle clock skew errors with retry
         if (response.status === 401 && retryCount < 2) {
-          const errorMessage = errorData.error || '';
+          const errorMessage = errorData.error || errorData.message || '';
           const isClockSkewError =
             errorMessage.includes('Token used too early') ||
             errorMessage.includes('clock') ||
-            errorMessage.includes('time');
+            errorMessage.includes('time') ||
+            errorMessage.includes('Authentication failed: Token used too early');
 
           if (isClockSkewError) {
             if (import.meta.env?.DEV) {
-              console.log(`🔄 Clock skew detected, retrying (${retryCount + 1}/2)`);
+              console.log(`🔄 Clock skew detected, retrying (${retryCount + 1}/2) after ${(retryCount + 1) * 1500}ms delay`);
             }
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Increasing delay for clock skew - allows time for clock drift correction
+            await new Promise(resolve => setTimeout(resolve, (retryCount + 1) * 1500));
             return this.fetchApi<T>(path, options, retryCount + 1);
           }
         }
 
-        const error: ApiError = new Error(errorData.error || errorData.message || 'Unknown error');
+        const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        const error: ApiError = new Error(errorMessage);
         error.traceback = errorData.traceback;
         error.status = response.status;
         throw error;
@@ -161,7 +195,7 @@ class ApiService {
       };
     }
 
-    const firebaseUser = firebase.auth().currentUser;
+    const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
       return null;
     }
@@ -182,8 +216,7 @@ class ApiService {
       throw new Error('Cannot login in test mode');
     }
 
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const result = await firebase.auth().signInWithPopup(provider);
+    const result = await signInWithPopup(auth, googleProvider);
 
     return {
       uid: result.user.uid,
@@ -201,7 +234,7 @@ class ApiService {
       throw new Error('Cannot logout in test mode');
     }
 
-    await firebase.auth().signOut();
+    await signOut(auth);
   }
 
   /**
@@ -338,7 +371,7 @@ class ApiService {
       };
     }
 
-    const user = firebase.auth().currentUser;
+    const user = auth.currentUser;
     if (!user) {
       throw new Error('User not authenticated');
     }
@@ -357,7 +390,7 @@ class ApiService {
       return true;
     }
 
-    return firebase.auth().currentUser !== null;
+    return auth.currentUser !== null;
   }
 
   /**
@@ -377,7 +410,7 @@ class ApiService {
     }
 
     // Normal Firebase auth state listener
-    const unsubscribe = firebase.auth().onAuthStateChanged((firebaseUser: any) => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         callback({
           uid: firebaseUser.uid,

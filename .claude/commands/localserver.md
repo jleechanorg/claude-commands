@@ -11,49 +11,56 @@ Starts the local development server for testing with health verification.
 - `--stable`: Disable auto-reload for stable campaign creation testing (debug mode enabled by default)
 
 ## What it does
-1. **Detects current git branch** and calculates branch-specific ports
-2. **Lists all running servers** with branch names and PIDs
-3. **Warns if >5 servers running** with cleanup recommendations
-4. **Checks for existing servers** (doesn't kill automatically)
-5. Activates the virtual environment
-6. Sets TESTING=true (for mock AI responses)
-7. **Finds available ports** starting from branch-specific port (hash-based)
-8. Starts Flask server on available port
-9. Serves React V2 frontend at /v2 path (no separate server needed)
-10. **Performs health checks to verify servers respond**
+1. **Lists all running servers** with branch names and PIDs
+2. **Automatically kills conflicting processes** on target ports (5005 for Flask)
+3. **Ensures port availability** by force-killing any processes using the required ports
+4. Activates the virtual environment
+5. Sets TESTING=true (for mock AI responses)
+6. **Uses fixed ports** (Flask: 5005, React V2: served at /v2 path)
+7. Starts Flask server on port 5005
+8. Serves React V2 frontend at /v2 path (no separate server needed)
+9. **Performs health checks with curl** to verify server responds correctly
+10. **Validates server startup** before declaring success
 11. Reports actual server status (✅ Ready or ❌ Failed)
 
 ## Implementation
-Executes the `./run_local_server.sh` script which handles all the setup and startup, then performs automatic health verification using curl.
+Executes the `./run_local_server.sh` script which:
+1. **Force-kills processes** on port 5005 to ensure availability
+2. **Starts Flask server** on fixed port 5005
+3. **Performs curl validation** to verify server responds correctly
+4. **Reports final status** based on actual health check results
 
 ## Health Verification
-- **Flask backend API**: `curl http://localhost:{port}/` (expects HTTP 200)
-- **React V2 frontend**: `curl http://localhost:{port}/v2/` (expects correct content)
+- **Flask backend API**: `curl http://localhost:5005/` (expects HTTP 200)
+- **React V2 frontend**: `curl http://localhost:5005/v2/` (expects correct content)
 - **Content verification**: Checks for "WorldArchitect.AI" title in React app
 - **Failure handling**: If health checks fail, provides diagnostic information
 - **Success criteria**: Both API and React V2 must respond before declaring "ready"
+- **Mandatory validation**: Server startup always includes curl validation step
 
-## Branch-Based Port Assignment
-- **Algorithm**: MD5 hash of branch name → port offset (mod 1000)
-- **Base ports**: Flask 8081, React 3001
-- **Example**: Branch `feature-x` might get Flask port 8547, React port 3467
-- **Fallback**: If branch port is busy, finds next available port
-- **Benefit**: Different branches won't compete for same ports
+## Fixed Port Assignment
+- **Flask Server**: Always uses port 5005
+- **React V2 Frontend**: Served at `/v2` path on Flask server (no separate port)
+- **Port Management**: Automatically kills any processes using port 5005
+- **Simplicity**: No dynamic port finding - consistent port usage
+- **Reliability**: Eliminates port conflicts through force-killing
 
 ## Server Management
 - **Lists all running servers** with their branch names and PIDs
-- **Shows total count** of running servers
-- **Warning threshold**: >5 servers triggers cleanup recommendation
+- **Automatic process killing** for conflicting processes on port 5005
+- **Force cleanup**: Kills any processes using required ports before starting
+- **Process verification**: Uses `lsof` to identify and terminate port conflicts
 - **Cleanup commands**:
   ```bash
-  pkill -f 'python.*main.py'  # Stop all Flask servers
-  pkill -f 'vite'             # Stop all Vite servers
-  kill <pid>                  # Stop specific server
+  # Automatic cleanup (built into script):
+  lsof -ti:5005 | xargs kill -9  # Kill processes on port 5005
+  pkill -f 'python.*main.py'     # Stop all Flask servers (manual)
   ```
 
 ## Notes
 - The server runs in testing mode (no real AI API calls)
 - **Debug mode is enabled by default** for development auto-reload (use --stable to disable for campaign testing)
-- **Non-destructive**: Warns about existing servers but doesn't kill them
-- **Smart port detection**: Branch-specific ports with automatic fallback
-- **Health checks are mandatory** - never trust startup logs alone
+- **Aggressive process management**: Automatically kills conflicting processes on port 5005
+- **Fixed port usage**: Always uses port 5005 for predictable development
+- **Health checks are mandatory** - includes curl validation to verify server response
+- **Startup validation**: Never declares success without confirming server responds to requests

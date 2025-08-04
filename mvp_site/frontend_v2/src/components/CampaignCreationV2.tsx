@@ -10,7 +10,15 @@ import { ArrowLeft, ChevronDown, ChevronUp, Sparkles, Users, Settings, Globe } f
 import type { Campaign, Theme } from '../App'
 
 interface CampaignCreationV2Props {
-  onCreateCampaign: (campaign: Omit<Campaign, 'id' | 'createdAt' | 'lastPlayed' | 'storyLength'>) => void
+  onCreateCampaign: (campaign: Omit<Campaign, 'id' | 'createdAt' | 'lastPlayed' | 'storyLength'> & {
+    character?: string;
+    setting?: string;
+    aiPersonalities?: {
+      defaultWorld: boolean;
+      mechanicalPrecision: boolean;
+      companions: boolean;
+    };
+  }) => void
   onBack: () => void
   theme: Theme
   isCreating?: boolean
@@ -29,13 +37,13 @@ interface CampaignData {
   }
 }
 
-export function CampaignCreationV2({ onCreateCampaign, onBack, theme, isCreating }: CampaignCreationV2Props) {
+export function CampaignCreationV2({ onCreateCampaign, onBack, isCreating }: CampaignCreationV2Props) {
   const [currentStep, setCurrentStep] = useState(1)
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false)
 
   // Default values for each campaign type
   const dragonKnightDefaults = {
-    character: 'Ser Arion',
+    character: '',  // Remove hardcoded character name
     setting: 'World of Assiah. Caught between an oath to a ruthless tyrant who enforces a prosperous peace and the call of a chaotic dragon promising true freedom, a young knight must decide whether to slaughter innocents to preserve order or start a war to reclaim the world\'s soul.'
   }
 
@@ -89,14 +97,15 @@ export function CampaignCreationV2({ onCreateCampaign, onBack, theme, isCreating
 
   const handleCampaignCreation = async () => {
     try {
-      // Convert to Campaign format
-      const campaign: Omit<Campaign, 'id' | 'createdAt' | 'lastPlayed' | 'storyLength'> = {
+      // Convert to Campaign format with additional data
+      const campaign = {
         title: campaignData.title,
-        description: campaignData.setting,
-        theme: campaignData.type === 'dragon-knight' ? 'fantasy' : 'custom',
-        status: 'recruiting',
-        currentPlayers: 1,
-        maxPlayers: 6
+        description: campaignData.type === 'dragon-knight'
+          ? 'Embark on an epic journey as a knight in the world of Assiah'
+          : `A custom adventure: ${campaignData.setting}`,
+        character: campaignData.character,
+        setting: campaignData.setting,
+        aiPersonalities: campaignData.aiPersonalities
       }
       onCreateCampaign(campaign)
     } catch (error) {
@@ -246,7 +255,7 @@ export function CampaignCreationV2({ onCreateCampaign, onBack, theme, isCreating
                   <div className="flex-1">
                     <h3 className="text-white mb-1 text-lg">Dragon Knight Campaign</h3>
                     <p className="text-base text-purple-200">
-                      Play as Ser Arion in a morally complex world. Perfect for new players!
+                      Play as a knight in a morally complex world. Perfect for new players!
                     </p>
                   </div>
                 </div>
@@ -287,7 +296,7 @@ export function CampaignCreationV2({ onCreateCampaign, onBack, theme, isCreating
             value={campaignData.character}
             onChange={(e) => updateCampaignData('character', e.target.value)}
             className="bg-black/40 border-purple-500/30 text-white placeholder-purple-300/50 focus:border-purple-400 focus:ring-purple-400 text-lg md:text-xl"
-            placeholder="Ser Arion"
+            placeholder={campaignData.type === 'dragon-knight' ? 'Knight of Assiah' : 'Your character name'}
           />
           <p className="text-base text-purple-300 mt-1">
             Leave blank for a randomly generated character

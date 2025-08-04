@@ -266,15 +266,21 @@ def create_app() -> Flask:
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
                 id_token = request.headers[HEADER_AUTH].split(" ").pop()
-                decoded_token = auth.verify_id_token(id_token)
+                # Firebase token verification using Admin SDK
+                # check_revoked=True ensures revoked tokens are rejected for security
+                decoded_token = auth.verify_id_token(id_token, check_revoked=True)
                 kwargs["user_id"] = decoded_token["uid"]
             except Exception as e:
                 logging_util.error(f"Auth failed: {e}")
+                logging_util.error(
+                    f"Token received: {id_token[:50] if id_token else 'None'}..."
+                )
+                logging_util.error(f"Headers: {dict(request.headers)}")
                 logging_util.error(traceback.format_exc())
                 return jsonify(
                     {
                         KEY_SUCCESS: False,
-                        KEY_ERROR: "Authentication failed",
+                        KEY_ERROR: f"Authentication failed: {str(e)}",
                     }
                 ), 401
             return f(*args, **kwargs)
@@ -889,7 +895,7 @@ if __name__ == "__main__":
             )  # Default to True (skip HTTP), override with --mcp-http
             app._mcp_server_url = args.mcp_server_url
 
-            port = int(os.environ.get("PORT", 8081))
+            port = int(os.environ.get("PORT", 5005))
             mode = (
                 "direct calls"
                 if app._skip_mcp_http

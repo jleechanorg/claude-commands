@@ -151,7 +151,7 @@ export default defineConfig({
     // Proxy API requests to backend
     proxy: {
       '/api': {
-        target: 'http://localhost:8081',
+        target: 'http://localhost:5005',
         changeOrigin: true,
       },
     },

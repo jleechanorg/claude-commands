@@ -48,6 +48,9 @@ worktree_*/
 # Orchestration status files - auto-updated timestamps
 orchestration/tasks/shared_status.txt
 
+# Serena MCP files - language server cache
+.serena/
+
 # Node.js / JavaScript
 node_modules/
 mvp_site/node_modules/
@@ -125,6 +128,9 @@ mvp_site/*_Campaign_*.txt
 
 # Environment files with sensitive data
 testing_ui/testing_full/.env
+mvp_site/frontend_v2/.env
+# All .env files in frontend directories
+mvp_site/frontend*/.env
 
 # Browser binaries (Chrome/ChromeDriver) - large files that exceed GitHub's 100MB limit
 chrome/

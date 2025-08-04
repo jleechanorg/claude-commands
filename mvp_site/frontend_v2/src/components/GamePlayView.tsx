@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
@@ -122,7 +121,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
 
 
 
-  const generateAIResponse = (input: string): string => {
+  const generateAIResponse = (_input: string): string => {
     const responses = [
       "Your strategic decision proves effective. The shadows deepen around the Bastion as your operatives move into position. The faithful within grow increasingly uneasy, their prayers becoming more desperate as doubt creeps into their hearts.",
       "The operation unfolds smoothly. Your agents report back with updates on their progress, each piece of intelligence revealing new opportunities to exploit. The Bastion's defenses, once thought impregnable, show clear vulnerabilities.",

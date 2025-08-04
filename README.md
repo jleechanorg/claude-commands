@@ -78,6 +78,114 @@ cp .env.example .env
 MCP_SERVER_URL=http://localhost:8000 ./vpython mvp_site/main.py serve
 ```
 
+## 🔐 Credentials & Configuration
+
+WorldArchitect.AI requires several credentials and configuration files. Here's exactly where each one should be placed:
+
+### 🔥 Firebase Credentials
+
+**Firebase is used for both backend database operations and frontend user authentication.**
+
+#### Backend (Python/Flask) - Service Account Key
+```bash
+# Location (required):
+/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json
+
+# Purpose: Server-side Firebase Admin SDK operations
+# Used by: Backend Python code, integration tests, analytics scripts
+# Detection: Automatic via firebase_admin.initialize_app()
+```
+
+#### Frontend (React V2) - Client Configuration
+```bash
+# Location (required):
+/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env
+
+# Setup Instructions:
+1. Copy the template: cp mvp_site/frontend_v2/.env.example mvp_site/frontend_v2/.env
+2. Edit .env with your actual Firebase project credentials from Firebase Console
+3. The .env file is gitignored and will not be committed to version control
+
+# Required Variables (get from Firebase Console > Project Settings):
+VITE_FIREBASE_API_KEY=your-actual-firebase-api-key
+VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+# ... other Firebase config values
+```
+
+### 🤖 Gemini AI Credentials
+
+**Gemini API powers the AI Game Master functionality.**
+
+#### Option 1: Environment Variable (Recommended)
+```bash
+export GEMINI_API_KEY=your-gemini-api-key-here
+```
+
+#### Option 2: File-based (Legacy Support)
+```bash
+# Any of these locations work:
+~/.gemini_api_key.txt
+/home/jleechan/projects/worldarchitect.ai/gemini_api_key.txt
+/home/jleechan/projects/worldarchitect.ai/local_api_key.txt
+```
+
+### 🌍 Environment Files Summary
+
+| Component | File Location | Purpose |
+|-----------|---------------|---------|
+| **Backend** | `serviceAccountKey.json` (project root) | Firebase Admin SDK |
+| **Frontend V2** | `mvp_site/frontend_v2/.env` | Client-side Firebase config |
+| **Testing** | `testing_http/testing_full/.env` | HTTP testing configuration |
+| **Gemini** | Environment variable or `~/*.txt` file | AI API access |
+
+### 🛡️ Security Notes
+
+- ✅ **All credential files are gitignored** - Safe to place in specified locations
+- ✅ **No hardcoded credentials** - Everything uses environment variables or secure files
+- ✅ **Separate privileges** - Backend has admin access, frontend has user-level access
+- ⚠️ **Never commit** `.env` files or API keys to version control
+
+### 🔧 Troubleshooting Credential Issues
+
+#### Firebase Authentication Errors
+
+**"Token used too early" / Clock Skew Error**
+```
+Error: Authentication failed: Token used too early, 1754334195 < 1754334197
+```
+- **Cause**: System clock is slightly ahead of Firebase servers (2+ seconds)
+- **Fix**: Automatic retry with progressive delays (1.5s, 3s) - should resolve automatically
+- **Manual Fix**: Sync system clock with `sudo ntpdate -s time.nist.gov` (Linux/Mac)
+
+**"Missing Firebase environment variables"**
+```
+Error: Missing required Firebase environment variables: VITE_FIREBASE_API_KEY
+```
+- **Cause**: `.env` file missing or incorrect location
+- **Fix**: Ensure `.env` file exists at `mvp_site/frontend_v2/.env` with all VITE_FIREBASE_* variables
+
+**"Could not find Firebase key"**
+```
+Error: Could not find Firebase key at /path/to/serviceAccountKey.json
+```
+- **Cause**: Service account key not in project root
+- **Fix**: Copy `serviceAccountKey.json` to `/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json`
+
+#### Gemini API Errors
+
+**"GEMINI_API_KEY environment variable not found"**
+- **Cause**: API key not set in environment or file
+- **Fix**: Set environment variable or create file at `~/.gemini_api_key.txt`
+
+#### Quick Setup Verification
+```bash
+# Check if all credentials are in place:
+ls -la /home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json
+ls -la /home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env
+echo $GEMINI_API_KEY
+```
+
 ### Docker Deployment
 
 ```bash

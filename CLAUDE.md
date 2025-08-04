@@ -172,6 +172,38 @@
 🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
 - 🔍 Evidence shown? | ✓ Claims match evidence? | ⚠️ Uncertainties marked? | ➡️ Next steps clear?
 
+## 🚨 MANDATORY QUALITY ASSURANCE PROTOCOL
+
+**ZERO TOLERANCE**: Cannot declare "COMPLETE" without following ALL steps
+
+### 📋 Pre-Testing Checklist (⚠️ MANDATORY)
+- [ ] **Test Matrix Created**: Document ALL user paths/options before testing begins
+- [ ] **Code Scanning Checklist**: For hardcoded value fixes, search ALL related patterns
+- [ ] **Red Team Questions**: Prepare adversarial testing approach to break fixes
+
+### 🔍 Testing Evidence Requirements (⚠️ MANDATORY)
+- [ ] **Screenshot for EACH test matrix cell** with exact path labels
+- [ ] **Evidence documented for EACH ✅ claim** with specific file references
+- [ ] **Path Coverage Report**: Visual showing tested vs. untested combinations
+
+### ✅ Completion Validation Gates (⚠️ MANDATORY)
+- [ ] **Adversarial Testing Completed**: Actively tried to break the fixes
+- [ ] **Testing Debt Documented**: Related patterns verified after bug discovery
+- [ ] **All Evidence Screenshots**: Properly labeled and linked with path information
+
+### 🔒 Evidence Standards
+**Each Completion Claim Format**: "✅ [Claim] [Evidence: screenshot1.png, screenshot2.png]"
+**Path Label Format**: "Screenshot: Custom Campaign → Step 1 → Character Field"
+**Test Matrix Example**: Campaign Type (Dragon Knight, Custom) × Input Fields × Navigation
+
+### 🚨 Enforcement Rules
+- **RULE 1**: Any "COMPLETE" claim without this evidence is automatically INVALID
+- **RULE 2**: Cannot proceed to next milestone without validation gate completion
+- **RULE 3**: Missing path coverage must be documented as "testing debt" and addressed
+- **RULE 4**: All ✅ symbols require corresponding screenshot evidence or they become ❌
+
+**Purpose**: Prevent testing failures through systematic process adherence, not memory-dependent judgment
+
 ## Self-Learning Protocol
 
 🚨 **AUTO-LEARN**: Document corrections immediately when: User corrects | Self-realizing "Oh, I should have..." | Something fails | Pattern repeats
@@ -205,6 +237,7 @@
 🚨 **INLINE SCREENSHOTS ARE USELESS**: ⚠️ MANDATORY - Screenshot documentation requirements:
    - ❌ NEVER rely on inline screenshots in chat - they count for NOTHING
    - ✅ ONLY use screenshot tools that save actual files to filesystem
+   - ✅ **SCREENSHOT LOCATION**: All screenshots must be saved to `docs/` directory for proper organization and accessibility
 
 13. 🚨 **CONTEXT7 MCP PROACTIVE USAGE**: ⚠️ MANDATORY - When encountering API/library issues:
    - ✅ ALWAYS use Context7 MCP for accurate API documentation when facing errors
@@ -535,6 +568,54 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 **Multi-file Edits**: Use MultiEdit with 3-4 edits max per call to avoid timeouts
 **Context Management**: Check remaining % before complex operations | Split large tasks
 **Tool Recovery**: After 2 failures → Try alternative tool → Fetch from main if corrupted
+
+### Context Optimization for Large PRs (🚨 MANDATORY)
+**When working on PRs with 50+ changed files**, follow these patterns to prevent context exhaustion:
+
+**1. Use Serena MCP Semantic Navigation** (PRIMARY):
+- ✅ `find_symbol` for specific functions/classes instead of reading entire files
+- ✅ `get_symbols_overview` to understand file structure before diving in
+- ✅ `search_for_pattern` with targeted regex instead of broad file reads
+- ❌ NEVER read entire files when you only need specific sections
+
+**2. Smart File Reading Patterns**:
+- ✅ Use `limit` and `offset` parameters for large files
+- ✅ Target specific line ranges based on comment references
+- ✅ Use Grep with `-A`/`-B` context flags for targeted reads
+- ❌ AVOID reading files multiple times in same session
+
+**3. API Response Management**:
+- ✅ Use `--json` flags with specific fields (e.g., `--json id,path,line`)
+- ✅ Process comments in batches with focused queries
+- ✅ Use `jq` or grep to filter API responses before processing
+- ❌ AVOID fetching full comment bodies when only IDs needed
+
+**4. PR Analysis Workflow**:
+```bash
+# Step 1: Get high-level PR structure
+gh pr view [PR] --json changedFiles --jq '.changedFiles | length'
+
+# Step 2: Use Serena for targeted symbol analysis
+mcp__serena__find_symbol --name_path "functionName" --relative_path "specific/file.py"
+
+# Step 3: Process comments in focused batches
+gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate --jq '.[].id'
+```
+
+**Anti-Pattern Example** (AVOID):
+```bash
+# ❌ Reading 50+ files completely
+for file in $(gh pr view --json files); do
+  Read --file_path "$file"  # Context killer!
+done
+```
+
+**Best Practice Example**:
+```bash
+# ✅ Targeted semantic navigation
+mcp__serena__search_for_pattern --pattern "console\\.error" --restrict_search_to_code_files true
+mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
+```
 
 ## Knowledge Management
 

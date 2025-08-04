@@ -7,7 +7,10 @@ import { CampaignList } from './components/CampaignList'
 import { GamePlayView } from './components/GamePlayView'
 import { CampaignCreationV2 } from './components/CampaignCreationV2'
 import { MockModeToggle } from './components/MockModeToggle'
-import { handleAsyncError, showSuccessToast, logError } from './utils/errorHandling'
+import { handleAsyncError, showSuccessToast } from './utils/errorHandling'
+import { apiService } from './services/api.service'
+import type { CampaignCreateRequest } from './services/api.types'
+import { useAuth } from './hooks/useAuth'
 
 // Types for V2 Campaign System
 export interface Campaign {
@@ -21,20 +24,45 @@ export interface Campaign {
 
 export type Theme = 'light' | 'dark' | 'fantasy' | 'dark-fantasy' | 'cyberpunk'
 
+// User type for authentication
+export interface User {
+  id: string
+  name: string
+  email: string
+}
+
 export default function App() {
+  const { user, loading, signInWithGoogle } = useAuth()
   const [currentView, setCurrentView] = useState<'landing' | 'campaigns' | 'gameplay' | 'create-campaign-v2'>('landing')
   const [selectedCampaign, setSelectedCampaign] = useState<string>('The Dragon\'s Hoard')
   const [theme] = useState<Theme>('fantasy')
   const [isCreatingCampaign, setIsCreatingCampaign] = useState(false)
   const [isLoadingCampaign, setIsLoadingCampaign] = useState(false)
 
+  const handleCreateCampaignClick = async () => {
+    if (!user) {
+      // User not authenticated - trigger Google sign-in
+      try {
+        await signInWithGoogle()
+        // After successful sign-in, navigate to campaigns
+        setCurrentView('campaigns')
+      } catch (error) {
+        console.error('Sign-in failed:', error)
+        // User canceled or error occurred - stay on landing page
+      }
+    } else {
+      // User already authenticated - go directly to campaigns
+      setCurrentView('campaigns')
+    }
+  }
+
   if (currentView === 'campaigns') {
     return <CampaignList
-      onPlayCampaign={async (campaignTitle) => {
+      onPlayCampaign={async (campaignId) => {
         setIsLoadingCampaign(true);
         const result = await handleAsyncError(
           async () => {
-            setSelectedCampaign(campaignTitle);
+            setSelectedCampaign(campaignId);
             // Add any async operations here if needed
             return true;
           },
@@ -61,18 +89,25 @@ export default function App() {
         setIsCreatingCampaign(true);
         const result = await handleAsyncError(
           async () => {
-            // TODO: Call actual API service here
-            // const createdCampaign = await apiService.createCampaign(campaign);
+            // Convert campaign data to API request format
+            const apiRequest: CampaignCreateRequest = {
+              title: campaign.title,
+              description: campaign.description,
+              // Map additional fields from campaign data if available
+              character: campaign.character || undefined,
+              setting: campaign.setting || campaign.description,
+              selected_prompts: campaign.aiPersonalities ? Object.keys(campaign.aiPersonalities).filter(key => campaign.aiPersonalities[key]) : undefined,
+            };
 
-            // Simulate API call for now
-            await new Promise(resolve => setTimeout(resolve, 1000));
+            // Call actual API service
+            const campaignId = await apiService.createCampaign(apiRequest);
 
             // Remove console.log for production
             if (import.meta.env?.DEV) {
-              console.log('Campaign created (mock):', campaign);
+              console.log('Campaign created successfully with ID:', campaignId);
             }
 
-            return campaign;
+            return { ...campaign, id: campaignId };
           },
           {
             context: 'CampaignCreation',
@@ -142,10 +177,15 @@ export default function App() {
                 </h2>
                 <Button
                   className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-6 text-3xl rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
-                  onClick={() => setCurrentView('campaigns')}
+                  onClick={handleCreateCampaignClick}
+                  disabled={loading}
                 >
-                  <span className="hidden sm:inline">✨ Create Your First Campaign ✨</span>
-                  <span className="sm:hidden">✨ Start Adventure ✨</span>
+                    <span className="hidden sm:inline">
+                    ✨ Create Your First Campaign ✨
+                  </span>
+                  <span className="sm:hidden">
+                    ✨ Start Adventure ✨
+                  </span>
                 </Button>
               </div>
             </div>

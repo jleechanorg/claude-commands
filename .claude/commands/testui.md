@@ -1,60 +1,46 @@
 # Browser Tests (Mock) Command
 
-**Purpose**: Run REAL browser tests with FAKE/MOCK APIs using Playwright MCP by default in headless mode (fast & free)
+**Purpose**: Mock version of `/testuif` - identical functionality but runs with FAKE/MOCK APIs instead of real APIs
 
-**Action**: Execute browser automation tests ONLY in testing_ui/core_tests/ with mock Firebase + Gemini APIs
+**Action**: Redirect to `/testuif` command with mock mode configuration
 
 **Usage**: `/testui`
 
-**Default Action in Claude Code CLI**: Run core tests with Playwright MCP in headless mode for optimal AI-driven automation:
+## 🔄 **Command Redirect**
 
+This command is **exactly the same** as `/testuif` but runs in **mock mode**:
+
+- **Same testing methodology**: Claude vision analysis, accessibility trees, visual regression
+- **Same validation protocols**: Enhanced screenshot validation, progressive baselines
+- **Same execution workflow**: `/think` → `/execute` with comprehensive testing
+- **Same documentation**: Structured PR comments with visual evidence
+
+**ONLY DIFFERENCE**: Uses mock APIs instead of real APIs
+
+## 📋 **Full Documentation**
+
+**See**: `/testuif` command documentation for complete details
+
+**Mock Mode Configuration**:
 ```bash
-./run_ui_tests.sh mock --playwright
+# Environment variables for mock mode
+export USE_MOCK_FIREBASE=true
+export USE_MOCK_GEMINI=true
+export API_COST_MODE=free
+
+# Same execution as testuif but with mocks
+./run_ui_tests.sh mock --playwright --enhanced-validation
 ```
 
-**🚨 HEADLESS MODE MANDATORY**: All browser automation runs in headless mode (no visible browser windows)
+## 🚨 **API Mode Differences**
 
-**Target Directory**: ONLY `testing_ui/core_tests/` (focused, essential tests)
-**API Mode**: FAKE/MOCK Firebase + MOCK Gemini (USE_MOCK_FIREBASE=true, USE_MOCK_GEMINI=true)
+| Feature | `/testui` (Mock) | `/testuif` (Real) |
+|---------|------------------|-------------------|
+| Firebase | Mock responses | Real Firestore API |
+| Gemini | Mock responses | Real API calls ($) |
+| Cost | Free | Costs money |
+| Validation | Same methodology | Same methodology |
+| Screenshots | Same approach | Same approach |
+| PR Documentation | Same format | Same format |
 
-**Secondary**: For Chrome-specific testing, use Puppeteer MCP:
-```bash
-./run_ui_tests.sh mock --puppeteer
-```
-
-**Fallback**: If MCP unavailable, use Playwright:
-```bash
-./run_ui_tests.sh mock
-```
-
-**MANDATORY CONFIRMATIONS TO REPORT**:
-After test execution, ALWAYS explicitly confirm these 3 points:
-
-1. **📸 BROWSER TEST EVIDENCE**:
-   - List actual screenshot file paths from `/tmp/worldarchitectai/browser/`
-   - Confirm real Playwright browser automation worked
-   - Show count of PNG files generated
-
-2. **🔥 FIREBASE CONNECTION STATUS**:
-   - Confirm mock Firebase was used (not real Firebase)
-   - Verify no real Firestore API calls were made
-   - Report mock mode was active
-
-3. **🤖 GEMINI API STATUS**:
-   - Confirm mock Gemini responses were used (not real API calls)
-   - Verify no real Gemini API charges occurred
-   - Report mock AI mode was active
-
-**CRITICAL REQUIREMENTS**:
-- 🚨 **REAL browser automation only** - Must use Puppeteer MCP (preferred) or Playwright
-- 🚨 **NO HTTP simulation** - This is browser testing, not API testing
-- 🚨 **Mock APIs** - Uses mocked external API responses (free)
-- 🚨 **Real screenshots** - PNG/JPG images or visual captures, never text files
-- ❌ **NEVER simulate** - If browser tests can't run, report honestly
-- ✅ **ALWAYS provide visual evidence** - Screenshots through MCP or file paths
-
-**PUPPETEER MCP BENEFITS** (Claude Code CLI default):
-- ✅ **No dependencies** - Works immediately without setup
-- ✅ **Visual capture** - Built-in screenshot functionality
-- ✅ **Real browsers** - Actual Chrome/Chromium automation
-- ✅ **Direct integration** - Native Claude Code environment support
+**For complete command documentation, usage examples, and enhanced validation protocols, see**: `.claude/commands/testuif.md`

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { apiService } from '../services/api.service';
 import type { User } from '../services/api.types';
 
 interface AuthState {
@@ -21,7 +22,7 @@ interface AuthState {
 
 export const useAuthStore = create<AuthState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Initial state
       user: null,
       isLoading: false,
@@ -29,7 +30,7 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
 
       // Login with email/password
-      login: async (email: string, password: string) => {
+      login: async (email: string, _password: string) => {
         set({ isLoading: true, error: null });
         try {
           // TODO: Replace with actual API call when backend is ready
@@ -60,7 +61,7 @@ export const useAuthStore = create<AuthState>()(
       loginWithGoogle: async () => {
         set({ isLoading: true, error: null });
         try {
-          const user = await apiWithMock.login();
+          const user = await apiService.login();
 
           set({
             user,
@@ -80,7 +81,7 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ isLoading: true });
         try {
-          await apiWithMock.logout();
+          await apiService.logout();
 
           set({
             user: null,
@@ -100,7 +101,7 @@ export const useAuthStore = create<AuthState>()(
       checkAuth: async () => {
         set({ isLoading: true });
         try {
-          const user = await apiWithMock.getCurrentUser();
+          const user = await apiService.getCurrentUser();
 
           if (user) {
             set({

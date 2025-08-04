@@ -120,7 +120,7 @@ if [[ -f "mvp_site/test_integration/test_integration.py" ]] && [[ -z "$SPECIFIC_
     else
         BRANCH=$(git branch --show-current)
         SANITIZED_BRANCH=$(echo "$BRANCH" | sed 's/[^a-zA-Z0-9._-]/_/g' | sed 's/^[.-]*//g')
-        if $cmd > /tmp/integration_output_${SANITIZED_BRANCH}.log 2>&1; then
+        if $cmd > "/tmp/integration_output_${SANITIZED_BRANCH}.log" 2>&1; then
             echo -e "${GREEN}✅ Integration tests passed!${NC}"
             exit 0
         else

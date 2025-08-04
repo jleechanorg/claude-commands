@@ -2,55 +2,12 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
-import { Plus, Users, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play } from 'lucide-react'
+import { Plus, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play } from 'lucide-react'
+import { apiService } from '../services/api.service'
+import { useAuth } from '../hooks/useAuth'
+import type { Campaign as ApiCampaign } from '../services/api.types'
 
-interface Campaign {
-  id: string
-  title: string
-  description: string
-  theme: 'fantasy' | 'cyberpunk' | 'dark-fantasy'
-  players: number
-  maxPlayers: number
-  lastPlayed: string
-  status: 'active' | 'recruiting' | 'completed'
-  difficulty: 'beginner' | 'intermediate' | 'advanced'
-}
 
-const mockCampaigns: Campaign[] = [
-  {
-    id: '1',
-    title: 'The Dragon\'s Hoard',
-    description: 'A classic fantasy adventure where brave heroes must infiltrate an ancient dragon\'s lair to recover stolen treasures and save the kingdom.',
-    theme: 'fantasy',
-    players: 4,
-    maxPlayers: 6,
-    lastPlayed: '2 days ago',
-    status: 'active',
-    difficulty: 'intermediate'
-  },
-  {
-    id: '2',
-    title: 'Neon Shadows',
-    description: 'In the sprawling megacity of Neo-Tokyo 2087, corporate espionage and cyber-enhanced mercenaries clash in the digital underground.',
-    theme: 'cyberpunk',
-    players: 3,
-    maxPlayers: 5,
-    lastPlayed: '1 week ago',
-    status: 'recruiting',
-    difficulty: 'advanced'
-  },
-  {
-    id: '3',
-    title: 'The Cursed Crown',
-    description: 'Dark magic has corrupted the royal bloodline. Navigate political intrigue and supernatural horrors in this gothic fantasy campaign.',
-    theme: 'dark-fantasy',
-    players: 5,
-    maxPlayers: 6,
-    lastPlayed: '3 days ago',
-    status: 'active',
-    difficulty: 'beginner'
-  }
-]
 
 const themeColors = {
   fantasy: 'bg-gradient-to-br from-green-500/20 to-emerald-600/20 border-green-500/30',
@@ -71,13 +28,56 @@ const difficultyIcons = {
 }
 
 interface CampaignListProps {
-  onPlayCampaign: (campaignTitle: string) => void
+  onPlayCampaign: (campaignId: string) => void
   onCreateCampaign: () => void
   isLoading?: boolean
 }
 
 export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: CampaignListProps) {
-  const [campaigns] = useState<Campaign[]>(mockCampaigns)
+  const [campaigns, setCampaigns] = useState<ApiCampaign[]>([])
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Use Firebase auth state instead of apiService auth
+  const { user, loading: authLoading } = useAuth()
+
+  // Load campaigns from API
+  useEffect(() => {
+    async function loadCampaigns() {
+      try {
+        setLoadingCampaigns(true)
+        setError(null)
+
+        // Check authentication - user must be authenticated to load campaigns
+        if (!user) {
+          console.log('User not authenticated, skipping campaign load')
+          setCampaigns([])
+          return
+        }
+
+        console.log('Loading campaigns for user:', user.uid)
+
+        // Use real apiService for authenticated requests
+        const apiCampaigns = await apiService.getCampaigns()
+        setCampaigns(apiCampaigns)
+      } catch (err) {
+        console.error('Failed to load campaigns:', err)
+        let errorMessage = 'Failed to load campaigns. Please try again.'
+        if (err instanceof Error) {
+          errorMessage = `Failed to load campaigns: ${err.message}`
+        }
+        setError(errorMessage)
+        setCampaigns([])
+      } finally {
+        setLoadingCampaigns(false)
+      }
+    }
+
+    // Only load campaigns if auth is not loading
+    if (!authLoading) {
+      loadCampaigns()
+    }
+  }, [user, authLoading])
 
   // Apply campaigns-view body class when component mounts
   useEffect(() => {
@@ -86,6 +86,34 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
       document.body.classList.remove('campaigns-view')
     }
   }, [])
+
+  // Show loading state (either auth loading or campaigns loading)
+  if (authLoading || loadingCampaigns) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white text-lg">
+            {authLoading ? 'Checking authentication...' : 'Loading campaigns...'}
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-400 text-lg mb-4">{error}</p>
+          <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
@@ -108,68 +136,101 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
 
         {/* Campaign Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {campaigns.map((campaign) => {
-            const DifficultyIcon = difficultyIcons[campaign.difficulty]
+          {campaigns.length === 0 ? (
+            <div className="col-span-full text-center py-12">
+              <BookOpen className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+              <p className="text-gray-400 text-lg mb-4">No campaigns yet</p>
+              <p className="text-gray-500 mb-6">Create your first campaign to start your adventure!</p>
+              <Button onClick={onCreateCampaign} className="bg-purple-600 hover:bg-purple-700">
+                <Plus className="h-5 w-5 mr-2" />
+                Create Campaign
+              </Button>
+            </div>
+          ) : (
+            campaigns.map((campaign) => {
+              // Use real campaign data or fallback values
+              const theme = campaign.theme || 'fantasy'
+              const difficulty = campaign.difficulty || 'intermediate'
+              const status = campaign.status || 'active'
 
-            return (
-              <Card
-                key={campaign.id}
-                className={`bg-black/60 backdrop-blur-sm border hover:bg-black/70 transition-all duration-300 hover:scale-105 ${themeColors[campaign.theme]}`}
-              >
-                <CardHeader className="pb-3">
-                  <div className="flex justify-between items-start mb-2">
-                    <CardTitle className="text-white text-2xl">{campaign.title}</CardTitle>
-                    <Badge className={`${statusColors[campaign.status]} capitalize`}>
-                      {campaign.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 text-base text-purple-200">
-                    <DifficultyIcon className="w-4 h-4" />
-                    <span className="capitalize">{campaign.difficulty}</span>
-                    <span className="text-purple-300/50">•</span>
-                    <span className="capitalize">{campaign.theme.replace('-', ' ')}</span>
-                  </div>
-                </CardHeader>
+              // Type-safe icon and color lookups
+              const isValidDifficulty = difficulty in difficultyIcons
+              const DifficultyIcon = isValidDifficulty ? difficultyIcons[difficulty as keyof typeof difficultyIcons] : difficultyIcons['intermediate']
 
-                <CardContent className="space-y-4">
-                  <p className="text-purple-100 text-base leading-relaxed line-clamp-3">
-                    {campaign.description}
-                  </p>
+              const isValidTheme = theme in themeColors
+              const themeClass = isValidTheme ? themeColors[theme as keyof typeof themeColors] : themeColors['fantasy']
 
-                  <div className="flex justify-between items-center text-base">
-                    <div className="flex items-center gap-2 text-purple-200">
-                      <Users className="w-4 h-4" />
-                      <span>{campaign.players}/{campaign.maxPlayers} players</span>
+              const isValidStatus = status in statusColors
+              const statusClass = isValidStatus ? statusColors[status as keyof typeof statusColors] : statusColors['active']
+
+              return (
+                <Card
+                  key={campaign.id}
+                  className={`bg-black/60 backdrop-blur-sm border hover:bg-black/70 transition-all duration-300 hover:scale-105 ${themeClass}`}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-start mb-2">
+                      <CardTitle className="text-white text-2xl">{campaign.title}</CardTitle>
+                      <Badge className={`${statusClass} capitalize`}>
+                        {status}
+                      </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-purple-200">
-                      <Calendar className="w-4 h-4" />
-                      <span>{campaign.lastPlayed}</span>
+                    <div className="flex items-center gap-2 text-base text-purple-200">
+                      <DifficultyIcon className="w-4 h-4" />
+                      <span className="capitalize">{difficulty}</span>
+                      <span className="text-purple-300/50">•</span>
+                      <span className="capitalize">{theme.replace('-', ' ')}</span>
                     </div>
-                  </div>
+                  </CardHeader>
 
-                  <div className="flex gap-2 pt-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
-                      onClick={() => onPlayCampaign(campaign.title)}
-                      disabled={isLoading}
-                    >
-                      <Play className="w-4 h-4 mr-2" />
-                      {isLoading ? 'Loading...' : campaign.status === 'recruiting' ? 'Join' : 'Continue'}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
-                    >
-                      <Settings className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+                  <CardContent className="space-y-4">
+                    <p className="text-purple-100 text-base leading-relaxed line-clamp-3">
+                      {campaign.prompt || 'Loading campaign details...'}
+                    </p>
+
+                    <div className="flex justify-between items-center text-base">
+                      <div className="flex items-center gap-2 text-purple-200">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          Created: {campaign.created_at && !isNaN(new Date(campaign.created_at).getTime())
+                            ? new Date(campaign.created_at).toLocaleDateString()
+                            : 'N/A'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-purple-200">
+                        <Calendar className="w-4 h-4" />
+                        <span>
+                          Last played: {campaign.last_played && !isNaN(new Date(campaign.last_played).getTime())
+                            ? new Date(campaign.last_played).toLocaleDateString()
+                            : 'N/A'}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                        onClick={() => onPlayCampaign(campaign.id)}
+                        disabled={isLoading}
+                      >
+                        <Play className="w-4 h-4 mr-2" />
+                        {isLoading ? 'Loading...' : 'Continue'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20"
+                      >
+                        <Settings className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })
+          )}
 
           {/* Create New Campaign Card */}
           <Card

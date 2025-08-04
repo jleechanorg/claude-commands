@@ -1,7 +1,10 @@
 import { Badge } from './ui/badge'
 import { Avatar, AvatarFallback } from './ui/avatar'
+import { useAuth } from '../hooks/useAuth'
 
 export function Header() {
+  const { user, loading } = useAuth()
+
   return (
     <header className="w-full bg-gradient-to-r from-purple-900/80 to-purple-800/80 backdrop-blur-sm border-b border-purple-700/30">
       <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
@@ -21,16 +24,27 @@ export function Header() {
           🌟 Fantasy
         </Badge>
 
-        {/* Profile Section */}
-        <div className="flex items-center space-x-2 sm:space-x-4">
-          <div className="text-right hidden md:block">
-            <p className="text-white">Epic Adventurer</p>
-            <p className="text-purple-200 text-sm">adventurer@worldai.com</p>
+        {/* Profile Section - Only show when user is authenticated */}
+        {user && (
+          <div className="flex items-center space-x-2 sm:space-x-4">
+            <div className="text-right hidden md:block">
+              <p className="text-white">{user.displayName || 'Adventurer'}</p>
+              <p className="text-purple-200 text-sm">{user.email}</p>
+            </div>
+            <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+              <AvatarFallback className="bg-purple-600 text-white text-sm">
+                {user.displayName ? user.displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() : 'A'}
+              </AvatarFallback>
+            </Avatar>
           </div>
-          <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
-            <AvatarFallback className="bg-purple-600 text-white text-sm">EA</AvatarFallback>
-          </Avatar>
-        </div>
+        )}
+
+        {/* Loading state when checking auth */}
+        {loading && (
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8 animate-spin rounded-full border-2 border-purple-300 border-t-transparent"></div>
+          </div>
+        )}
       </div>
     </header>
   )
