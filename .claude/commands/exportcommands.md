@@ -316,35 +316,35 @@ fi
 echo "📝 Updating .gitignore..."
 gitignore_entries=""
 
-# Check if entries need to be added and build gitignore content
-claude_commands_missing=false
-claude_start_missing=false
+# Function to add gitignore entries atomically and prevent duplicates
+add_to_gitignore() {
+    local entry="$1"
+    local comment="$2"
 
-if ! grep -q "^# Claude Commands - Auto-installed by install.sh" .gitignore 2>/dev/null; then
-    claude_commands_missing=true
+    if ! grep -Fq "^$comment" .gitignore 2>/dev/null; then
+        echo "" >> .gitignore
+        echo "$comment" >> .gitignore
+        echo "$entry" >> .gitignore
+        return 0
+    fi
+    return 1
+}
+
+# Check and add entries only if needed
+entries_added=false
+
+if add_to_gitignore ".claude/" "# Claude Commands - Auto-installed by install.sh"; then
+    entries_added=true
+fi
+if add_to_gitignore ".claude/commands/" "# Claude Commands - Auto-installed by install.sh"; then
+    entries_added=true
 fi
 
-if ! grep -q "^claude_start.sh" .gitignore 2>/dev/null; then
-    claude_start_missing=true
+if add_to_gitignore "claude_start.sh" "# Claude startup script - Auto-installed"; then
+    entries_added=true
 fi
 
-# Build gitignore entries only if needed
-if [ "$claude_commands_missing" = true ] || [ "$claude_start_missing" = true ]; then
-    if [ "$claude_commands_missing" = true ]; then
-        gitignore_entries+="
-# Claude Commands - Auto-installed by install.sh
-.claude/
-.claude/commands/
-"
-    fi
-
-    if [ "$claude_start_missing" = true ]; then
-        gitignore_entries+="
-# Claude startup script - Auto-installed
-claude_start.sh
-"
-    fi
-    echo "$gitignore_entries" >> .gitignore
+if [ "$entries_added" = true ]; then
     echo "✅ Updated .gitignore with installed files"
 else
     echo "✅ .gitignore already contains necessary entries"
