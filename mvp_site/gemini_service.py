@@ -41,6 +41,7 @@ import os
 import re
 import sys
 import traceback
+from datetime import datetime
 from typing import Any
 
 import constants
@@ -212,7 +213,6 @@ def _load_instruction_file(instruction_type: str) -> str:
 
         try:
             content = read_file_cached(file_path).strip()
-            # logging_util.info(f'Loaded prompt "{instruction_type}" from file: {os.path.basename(file_path)}')
             _loaded_instructions_cache[instruction_type] = content
         except FileNotFoundError:
             logging_util.error(
@@ -226,7 +226,6 @@ def _load_instruction_file(instruction_type: str) -> str:
             raise
     else:
         pass
-        # logging_util.info(f'Loaded prompt "{instruction_type}" from cache.')
 
     return _loaded_instructions_cache[instruction_type]
 
@@ -615,7 +614,7 @@ def _build_continuation_prompt(
     )
 
 
-def _select_model_for_continuation(user_input_count: int) -> str:
+def _select_model_for_continuation(_user_input_count: int) -> str:
     """
     Select the appropriate model based on testing mode and input count.
 
@@ -863,8 +862,6 @@ def _call_gemini_api_with_gemini_request(
 
     # Convert JSON dict to formatted string for Gemini API
     # The API expects string content, not raw dicts
-    import json
-    from datetime import datetime
 
     def json_serializer(obj):
         """JSON serializer for objects not serializable by default json code"""
@@ -1066,8 +1063,6 @@ def _call_gemini_api_with_json_structure(
     Returns:
         Gemini API response object
     """
-    import json
-
     # Format the structured JSON as a clear, structured prompt
     # This maintains field separation while being readable by the LLM
     message_type = json_input.get("message_type", "")
@@ -2640,9 +2635,11 @@ def _validate_companion_generation(gemini_response: GeminiResponse) -> None:
 
     # Minimal logging for companion validation
     if total_companions == 0:
-        logging_util.warning(f"🎭 No companions generated despite request")
+        logging_util.warning("🎭 No companions generated despite request")
     elif total_companions < EXPECTED_COMPANION_COUNT:
-        logging_util.warning(f"🎭 Only {total_companions}/{EXPECTED_COMPANION_COUNT} companions generated")
+        logging_util.warning(
+            f"🎭 Only {total_companions}/{EXPECTED_COMPANION_COUNT} companions generated"
+        )
     else:
         logging_util.info(f"🎭 {total_companions} companions generated successfully")
 

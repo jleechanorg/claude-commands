@@ -41,6 +41,9 @@ WorldArchitect.AI, an AI-powered tabletop RPG platform (digital D&D 5e Game Mast
 # Standard library imports
 import argparse
 import asyncio
+import atexit
+import concurrent.futures
+import json
 import logging
 import os
 import subprocess
@@ -62,10 +65,12 @@ from flask import (
     Flask,
     Response,
     jsonify,
+    redirect,
     render_template,
     request,
     send_file,
     send_from_directory,
+    url_for,
 )
 from flask_cors import CORS
 
@@ -149,8 +154,6 @@ def safe_jsonify(data: Any) -> Response:
     This function processes the data through json_default_serializer to handle
     Firestore SERVER_TIMESTAMP and DELETE_FIELD sentinels before calling Flask's jsonify.
     """
-    import json
-
     # First convert the data using our custom serializer
     json_string = json.dumps(data, default=json_default_serializer)
     # Then parse it back to get clean, serializable data
@@ -231,8 +234,6 @@ def create_app() -> Flask:
     @app.route("/static/<path:filename>")
     def static_files_redirect(filename):
         """Redirect old /static/ paths to /frontend_v1/ for backward compatibility"""
-        from flask import redirect, url_for
-
         return redirect(
             url_for("frontend_files_with_cache_busting", filename=filename), code=301
         )
@@ -301,8 +302,6 @@ def create_app() -> Flask:
                     return asyncio.run(f(*args, **kwargs))
                 else:
                     # Already in an event loop, create a task and run it
-                    import concurrent.futures
-
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(asyncio.run, f(*args, **kwargs))
                         return future.result()
@@ -746,8 +745,6 @@ def create_app() -> Flask:
         # The session will be closed when the app shuts down.
 
     # Register cleanup handler for app shutdown
-    import atexit
-
     def cleanup_resources():
         """Cleanup resources on app shutdown"""
         if (
@@ -895,7 +892,7 @@ if __name__ == "__main__":
             )  # Default to True (skip HTTP), override with --mcp-http
             app._mcp_server_url = args.mcp_server_url
 
-            port = int(os.environ.get("PORT", 5005))
+            port = int(os.environ.get("PORT", "8081"))
             mode = (
                 "direct calls"
                 if app._skip_mcp_http

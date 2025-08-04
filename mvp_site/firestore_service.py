@@ -739,12 +739,7 @@ def _write_story_entry_to_firestore(
             # Create the story entry and capture document ID
             add_result = story_ref.collection("story").add(entry_data)
             # Handle both real Firestore (returns tuple) and mock (returns doc directly)
-            if isinstance(add_result, tuple):
-                doc_ref = add_result[
-                    1
-                ]  # Real Firestore: (Timestamp, DocumentReference)
-            else:
-                doc_ref = add_result  # Mock Firestore: doc_ref directly
+            doc_ref = add_result[1] if isinstance(add_result, tuple) else add_result
 
             if i == 0:  # Store the first chunk's document ID for verification
                 if doc_ref and hasattr(doc_ref, "id"):
@@ -1095,9 +1090,7 @@ def update_user_settings(user_id: UserId, settings: dict[str, Any]) -> bool:
             timestamp = firestore.SERVER_TIMESTAMP
         except Exception:
             # Fallback for CI environments where SERVER_TIMESTAMP might fail
-            import datetime
-
-            timestamp = datetime.datetime.utcnow()
+            timestamp = datetime.datetime.now(datetime.UTC)
 
         if user_doc.exists:
             # Use nested field update to avoid clobbering sibling settings

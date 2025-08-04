@@ -12,8 +12,12 @@ Architecture:
 """
 
 import collections
+import datetime
 import json
 import os
+import random
+import tempfile
+import uuid
 from typing import Any
 
 # WorldArchitect imports
@@ -23,7 +27,7 @@ import firebase_admin
 import logging_util
 import structured_fields_utils
 from custom_types import CampaignId, UserId
-from debug_hybrid_system import process_story_for_display
+from debug_hybrid_system import clean_json_artifacts, process_story_for_display
 
 import firestore_service
 import gemini_service
@@ -93,8 +97,6 @@ def json_default_serializer(obj):
     Default JSON serializer for objects that are not naturally JSON serializable.
     Handles specific known types with targeted exception handling.
     """
-    import datetime
-
     # Handle datetime objects
     if isinstance(obj, datetime.datetime | datetime.date):
         return obj.isoformat()
@@ -275,8 +277,6 @@ def _build_campaign_prompt(
 
     if not prompt_parts:
         # Use predefined random arrays for proper random campaign generation
-        import random
-
         random_character = random.choice(RANDOM_CHARACTERS)  # nosec B311
         random_setting = random.choice(RANDOM_SETTINGS)  # nosec B311
 
@@ -734,8 +734,6 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
 
         # Clean JSON artifacts from campaign description if present
         if campaign_data and "description" in campaign_data:
-            from debug_hybrid_system import clean_json_artifacts
-
             campaign_data["description"] = clean_json_artifacts(
                 campaign_data["description"]
             )
@@ -748,8 +746,6 @@ async def get_campaign_state_unified(request_data: dict[str, Any]) -> dict[str, 
                 and field in campaign_data
                 and isinstance(campaign_data[field], str)
             ):
-                from debug_hybrid_system import clean_json_artifacts
-
                 campaign_data[field] = clean_json_artifacts(campaign_data[field])
 
         # Get game state and apply user settings
@@ -871,10 +867,6 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
         campaign_title = campaign_data.get("title", "Untitled Campaign")
 
         # Generate file path
-        import os
-        import tempfile
-        import uuid
-
         temp_dir = os.path.join(tempfile.gettempdir(), "campaign_exports")
         os.makedirs(temp_dir, exist_ok=True)
 
@@ -956,8 +948,6 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
 
         # Clean JSON artifacts from campaign text fields
         if campaigns:
-            from debug_hybrid_system import clean_json_artifacts
-
             text_fields_to_clean = ["description", "prompt", "title"]
             for campaign in campaigns:
                 for field in text_fields_to_clean:
@@ -1104,7 +1094,7 @@ async def update_user_settings_unified(request_data: dict[str, Any]) -> dict[str
 
 
 def apply_automatic_combat_cleanup(
-    updated_state_dict: dict[str, Any], proposed_changes: dict[str, Any]
+    updated_state_dict: dict[str, Any], _proposed_changes: dict[str, Any]
 ) -> dict[str, Any]:
     """
     Automatically cleans up defeated enemies from combat state when combat updates are applied.
@@ -1196,8 +1186,8 @@ def parse_set_command(payload_str: str) -> dict[str, Any]:
     proposed_changes: dict[str, Any] = {}
     append_ops: dict[str, list[Any]] = collections.defaultdict(list)
 
-    for line in payload_str.strip().splitlines():
-        line = line.strip()
+    for line_raw in payload_str.strip().splitlines():
+        line = line_raw.strip()
         if not line or "=" not in line:
             continue
 
@@ -1259,9 +1249,9 @@ def _handle_ask_state_command(
     Returns:
         Response dict or None if not ASK_STATE command
     """
-    GOD_ASK_STATE_COMMAND = "GOD_ASK_STATE"
+    god_ask_state_command = "GOD_ASK_STATE"
 
-    if user_input.strip() != GOD_ASK_STATE_COMMAND:
+    if user_input.strip() != god_ask_state_command:
         return None
 
     game_state_dict = current_game_state.to_dict()
@@ -1293,13 +1283,13 @@ def _handle_set_command(
     Returns:
         Response dict or None if not a SET command
     """
-    GOD_MODE_SET_COMMAND = "GOD_MODE_SET:"
+    god_mode_set_command = "GOD_MODE_SET:"
     user_input_stripped = user_input.strip()
 
-    if not user_input_stripped.startswith(GOD_MODE_SET_COMMAND):
+    if not user_input_stripped.startswith(god_mode_set_command):
         return None
 
-    payload_str = user_input_stripped[len(GOD_MODE_SET_COMMAND) :]
+    payload_str = user_input_stripped[len(god_mode_set_command) :]
     logging_util.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
     logging_util.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
 
@@ -1356,12 +1346,12 @@ def _handle_update_state_command(
     Returns:
         Response dict or None if not UPDATE_STATE command
     """
-    GOD_MODE_UPDATE_STATE_COMMAND = "GOD_MODE_UPDATE_STATE:"
+    god_mode_update_state_command = "GOD_MODE_UPDATE_STATE:"
 
-    if not user_input.strip().startswith(GOD_MODE_UPDATE_STATE_COMMAND):
+    if not user_input.strip().startswith(god_mode_update_state_command):
         return None
 
-    json_payload = user_input.strip()[len(GOD_MODE_UPDATE_STATE_COMMAND) :]
+    json_payload = user_input.strip()[len(god_mode_update_state_command) :]
     try:
         state_changes = json.loads(json_payload)
         if not isinstance(state_changes, dict):
