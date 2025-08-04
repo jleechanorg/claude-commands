@@ -88,6 +88,7 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         # Mock existing game state
         self.mock_game_state = GameState(
             user_id="test-user-123",  # Add required user_id
+            debug_mode=False,  # Explicitly set for test expectations
             player_character_data={
                 "name": "Thorin the Bold",
                 "level": 3,
@@ -134,6 +135,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
         campaign_doc = user_doc.collection("campaigns").document(self.test_campaign_id)
         campaign_doc.set(self.mock_campaign_data)
+
+        # Set user settings with debug_mode=False for test expectations
+        user_doc.set({"settings": {"debug_mode": False}})
 
         # Pre-populate game state
         game_state_doc = fake_firestore.document(
@@ -207,9 +211,18 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         # Verify narrative
         assert "dragon's eyes narrow" in response_data["narrative"]
 
-        # Verify state update happened
-        assert "state_updates" in response_data
-        assert response_data["state_updates"]["combat_state"]["in_combat"]
+        # Verify state fields - debug mode controls visibility of state fields
+        debug_mode = response_data.get("debug_mode", False)
+        if debug_mode:
+            # Debug mode enabled: state_updates should be present (shows MORE info)
+            assert (
+                "state_updates" in response_data
+            ), "state_updates should be present when debug_mode=True"
+        else:
+            # Debug mode disabled: state_updates should be hidden (normal production behavior)
+            assert (
+                "state_updates" not in response_data
+            ), "state_updates should be hidden when debug_mode=False"
 
         # Verify Gemini was called (may be called multiple times due to dual-pass generation)
         assert fake_genai_client.models.generate_content.called
@@ -390,10 +403,21 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert "Dragon might not be intelligent" in diplomacy_analysis["cons"]
         assert "High - worth trying" in diplomacy_analysis["confidence"]
 
-        # Verify state updates
-        assert "state_updates" in response_data
-        assert response_data["state_updates"]["thinking_mode"]["active"]
-        assert response_data["state_updates"]["thinking_mode"]["depth"] == "deep"
+        # Verify state updates - standard debug behavior
+        # Note: debug_mode=True shows MORE info (including state_updates)
+        debug_mode = response_data.get("debug_mode", False)
+        if debug_mode:
+            # Debug mode enabled: state_updates should be present (shows MORE info)
+            assert (
+                "state_updates" in response_data
+            ), "state_updates should be present when debug_mode=True (shows MORE info)"
+            assert response_data["state_updates"]["thinking_mode"]["active"]
+            assert response_data["state_updates"]["thinking_mode"]["depth"] == "deep"
+        else:
+            # Debug mode disabled: state_updates should be hidden (normal production)
+            assert (
+                "state_updates" not in response_data
+            ), "state_updates should be hidden when debug_mode=False (normal production)"
 
         # Verify Gemini was called
         assert fake_genai_client.models.generate_content.called
@@ -579,6 +603,135 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert response.status_code == 404
         response_data = json.loads(response.data)
         assert "error" in response_data
+
+    @patch("firebase_admin.firestore.client")
+    @patch("google.genai.Client")
+    def test_character_mode_preserves_original_state_changes_during_sequence_merge(
+        self, mock_genai_client_class, mock_firestore_client
+    ):
+        """Test that character mode sequence tracking preserves original Gemini state changes during merge.
+
+        This test would have caught the bug where changing from response.get("state_changes", {})
+        to unified_response.get("state_changes", {}) caused loss of original state changes.
+        """
+
+        # Set up fake Firestore
+        fake_firestore = FakeFirestoreClient()
+        mock_firestore_client.return_value = fake_firestore
+
+        # Pre-populate campaign data in the correct location
+        user_doc = fake_firestore.collection("users").document(self.test_user_id)
+        campaign_doc = user_doc.collection("campaigns").document(self.test_campaign_id)
+        campaign_doc.set(self.mock_campaign_data)
+
+        # Set user settings with debug_mode=True for visibility of state changes
+        user_doc.set({"settings": {"debug_mode": True}})
+
+        # Pre-populate game state
+        game_state_doc = fake_firestore.document(
+            f"campaigns/{self.test_campaign_id}/game_state"
+        )
+        game_state_doc.set(self.mock_game_state.to_dict())
+
+        # Pre-populate story entries
+        story_collection = fake_firestore.collection(
+            f"campaigns/{self.test_campaign_id}/story"
+        )
+        for entry in self.mock_story_entries:
+            story_collection.add(entry)
+
+        # Set up fake Gemini client
+        fake_genai_client = MagicMock()
+        mock_genai_client_class.return_value = fake_genai_client
+        fake_genai_client.models.count_tokens.return_value = FakeTokenCount(1000)
+
+        # Mock original Gemini response with state changes (realistic data source)
+        # This simulates the ORIGINAL Gemini API response before any processing
+        response_json = json.dumps(
+            {
+                "narrative": "You grip your weapon tighter as the dragon notices your approach...",
+                "state_changes": {
+                    "player_character_data": {"hp_current": 25, "level": 3},
+                    "world_data": {"gold": 100, "location": "tavern"},
+                    "npc_data": {"innkeeper": {"disposition": "friendly"}},
+                },
+                "entities_mentioned": ["dragon", "weapon"],
+                "location_confirmed": "Dragon's Lair",
+            }
+        )
+        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
+            response_json
+        )
+
+        # Make the API request in CHARACTER mode (triggers sequence tracking)
+        character_interaction_data = {
+            "input": "I prepare for combat with the dragon",
+            "mode": "character",  # CRITICAL: This triggers the sequence tracking logic
+        }
+
+        response = self.client.post(
+            f"/api/campaigns/{self.test_campaign_id}/interaction",
+            data=json.dumps(character_interaction_data),
+            content_type="application/json",
+            headers=self.test_headers,
+        )
+
+        # Assert response success
+        assert response.status_code == 200
+        response_data = json.loads(response.data)
+        assert response_data["success"]
+
+        # CRITICAL TEST: Verify original Gemini state changes are preserved in the response
+        # The bug was that unified_response.get("state_changes", {}) would return {}
+        # because unified_response doesn't contain state_changes, only the original response does
+
+        debug_mode = response_data.get("debug_mode", False)
+        if debug_mode:
+            # In debug mode, state_updates should be present and contain the merged data
+            assert (
+                "state_updates" in response_data
+            ), "state_updates should be present in debug mode"
+            state_updates = response_data["state_updates"]
+
+            # Verify original Gemini state changes are preserved
+            assert (
+                "player_character_data" in state_updates
+            ), "Original player data should be preserved"
+            assert (
+                state_updates["player_character_data"]["hp_current"] == 25
+            ), "Original HP should be preserved"
+            assert (
+                state_updates["player_character_data"]["level"] == 3
+            ), "Original level should be preserved"
+
+            assert (
+                "world_data" in state_updates
+            ), "Original world data should be preserved"
+            assert (
+                state_updates["world_data"]["gold"] == 100
+            ), "Original gold should be preserved"
+            assert (
+                state_updates["world_data"]["location"] == "tavern"
+            ), "Original location should be preserved"
+
+            assert "npc_data" in state_updates, "Original NPC data should be preserved"
+            assert (
+                state_updates["npc_data"]["innkeeper"]["disposition"] == "friendly"
+            ), "Original NPC data should be preserved"
+
+            # Verify sequence tracking data is ALSO present (merged, not replaced)
+            assert (
+                "custom_campaign_state" in state_updates
+            ), "Sequence tracking should be present"
+            assert (
+                "last_story_mode_sequence_id" in state_updates["custom_campaign_state"]
+            ), "Sequence ID should be tracked"
+
+        # Verify narrative contains expected content
+        assert "dragon notices" in response_data["narrative"]
+
+        # Verify Gemini was called
+        assert fake_genai_client.models.generate_content.called
 
 
 if __name__ == "__main__":

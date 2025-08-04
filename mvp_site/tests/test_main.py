@@ -21,7 +21,7 @@ sys.path.insert(
 from main import create_app, setup_file_logging
 
 # Import moved functions from world_logic
-from world_logic import format_state_changes, parse_set_command
+from world_logic import format_game_state_updates, parse_set_command
 
 # Import test constants from main
 from firestore_service import _truncate_log_json as truncate_game_state_for_logging
@@ -205,38 +205,38 @@ player.class = "Warrior\""""
         result = parse_set_command("")
         assert result == {}
 
-    def test_format_state_changes_empty(self):
+    def test_format_game_state_updates_empty(self):
         """Test formatting empty state changes."""
-        result = format_state_changes({})
-        assert result == "No state changes."
+        result = format_game_state_updates({})
+        assert result == "No state updates."
 
-    def test_format_state_changes_single_entry(self):
+    def test_format_game_state_updates_single_entry(self):
         """Test formatting single state change."""
         changes = {"player.name": "John"}
-        result = format_state_changes(changes)
+        result = format_game_state_updates(changes)
         assert "Game state updated (1 entry):" in result
         assert 'player.name: "John"' in result
 
-    def test_format_state_changes_multiple_entries(self):
+    def test_format_game_state_updates_multiple_entries(self):
         """Test formatting multiple state changes."""
         changes = {"player.name": "John", "player.level": 5}
-        result = format_state_changes(changes)
+        result = format_game_state_updates(changes)
         assert "Game state updated (2 entries):" in result
         assert 'player.name: "John"' in result
         assert "player.level: 5" in result
 
-    def test_format_state_changes_nested_dict(self):
+    def test_format_game_state_updates_nested_dict(self):
         """Test formatting nested dictionary changes."""
         changes = {"player": {"stats": {"strength": 15, "dexterity": 12}}}
-        result = format_state_changes(changes)
+        result = format_game_state_updates(changes)
         assert "Game state updated (2 entries):" in result
         assert "player.stats.strength: 15" in result
         assert "player.stats.dexterity: 12" in result
 
-    def test_format_state_changes_html_mode(self):
+    def test_format_game_state_updates_html_mode(self):
         """Test formatting for HTML output."""
         changes = {"player.name": "John"}
-        result = format_state_changes(changes, for_html=True)
+        result = format_game_state_updates(changes, for_html=True)
         assert "<ul>" in result  # Should contain HTML list
         assert "<li>" in result  # Should contain list items
         assert "<code>" in result  # Should contain code tags

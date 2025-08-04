@@ -229,7 +229,7 @@ def get_mock_client():
 def parse_state_updates_from_response(response_text: str) -> dict[str, Any]:
     """
     Parse state updates from a mock AI response.
-    Mimics the real gemini_service.parse_llm_response_for_state_changes function.
+    Mimics the legacy state parsing function (now deprecated).
     """
     matches = re.findall(
         r"\[STATE_UPDATES_PROPOSED\](.*?)\[END_STATE_UPDATES_PROPOSED\]",

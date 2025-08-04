@@ -14,7 +14,11 @@ sys.path.insert(
 import datetime
 import unittest
 
-from world_logic import _cleanup_legacy_state, format_state_changes, parse_set_command
+from world_logic import (
+    _cleanup_legacy_state,
+    format_game_state_updates,
+    parse_set_command,
+)
 
 from firestore_service import _perform_append, update_state_with_changes
 from game_state import GameState
@@ -313,9 +317,7 @@ class TestGameState(unittest.TestCase):
         )
 
         # Test boolean values at 3rd level
-        assert (
-            gs.player_character_data["personal_info"]["basic_stats"]["is_alive"]
-        )
+        assert gs.player_character_data["personal_info"]["basic_stats"]["is_alive"]
         assert not gs.world_data["locations"]["current_area"]["is_safe"]
         assert gs.npc_data["relationships"]["allies"]["all_trusted"]
         assert not (
@@ -757,9 +759,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
         )
 
         # Test bool updates at 3rd level
-        assert not (
-            result["game_data"]["player_info"]["character_sheet"]["is_active"]
-        )
+        assert not (result["game_data"]["player_info"]["character_sheet"]["is_active"])
         assert not (
             result["world_state"]["environment"]["current_location"]["is_discovered"]
         )
@@ -825,9 +825,7 @@ class TestUpdateStateWithChanges(unittest.TestCase):
             ]
             == "mountain"
         )  # new
-        assert (
-            result["metadata"]["session_info"]["settings"]["auto_save"]
-        )  # new nested
+        assert result["metadata"]["session_info"]["settings"]["auto_save"]  # new nested
 
         # Test datetime at 3rd level
         assert result["metadata"]["session_info"]["start_time"] == test_datetime
@@ -1092,48 +1090,48 @@ class TestMainStateFunctions(unittest.TestCase):
         assert not was_changed
         assert num_deleted == 0
 
-    def test_format_state_changes_simple(self):
+    def test_format_game_state_updates_simple(self):
         """Test formatting simple state changes."""
         changes = {"player_name": "Hero", "level": 5}
 
-        result = format_state_changes(changes, for_html=False)
+        result = format_game_state_updates(changes, for_html=False)
 
         assert "Game state updated (2 entries):" in result
         assert 'player_name: "Hero"' in result
         assert "level: 5" in result
 
-    def test_format_state_changes_nested(self):
+    def test_format_game_state_updates_nested(self):
         """Test formatting nested state changes."""
         changes = {
             "player": {"name": "Hero", "stats": {"hp": 100}},
             "world": {"location": "Forest"},
         }
 
-        result = format_state_changes(changes, for_html=False)
+        result = format_game_state_updates(changes, for_html=False)
 
         assert "Game state updated (3 entries):" in result
         assert 'player.name: "Hero"' in result
         assert "player.stats.hp: 100" in result
         assert 'world.location: "Forest"' in result
 
-    def test_format_state_changes_html(self):
+    def test_format_game_state_updates_html(self):
         """Test formatting state changes for HTML output."""
         changes = {"key": "value"}
 
-        result = format_state_changes(changes, for_html=True)
+        result = format_game_state_updates(changes, for_html=True)
 
         assert "<ul>" in result
         assert "<li><code>" in result
         assert "</code></li>" in result
         assert "</ul>" in result
 
-    def test_format_state_changes_empty(self):
+    def test_format_game_state_updates_empty(self):
         """Test formatting empty state changes."""
-        result = format_state_changes({}, for_html=False)
-        assert result == "No state changes."
+        result = format_game_state_updates({}, for_html=False)
+        assert result == "No state updates."
 
-        result = format_state_changes(None, for_html=False)
-        assert result == "No state changes."
+        result = format_game_state_updates(None, for_html=False)
+        assert result == "No state updates."
 
     def test_parse_set_command_simple(self):
         """Test parsing simple set commands."""

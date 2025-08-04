@@ -624,8 +624,6 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "narrative": final_narrative,  # Add for frontend compatibility
             "response": final_narrative,  # Fallback for older frontend versions
             "game_state": updated_game_state_dict,
-            "state_changes": response.get("state_changes", {}),
-            # state_updates only included in debug mode
             "mode": mode,
             "user_input": user_input,
             "state_cleaned": was_cleaned,
@@ -636,7 +634,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             "debug_mode": debug_mode,  # Add debug_mode for test compatibility
         }
 
-        # Add debug-only fields when debug mode is enabled
+        # Include state fields only when debug mode is enabled (shows MORE info)
         if debug_mode:
             unified_response["state_updates"] = response.get("state_changes", {})
 
@@ -676,17 +674,15 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             story_id_update = {
                 "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
             }
-            # Merge this update with existing state changes
-            current_state_changes = unified_response.get("state_changes", {})
+            # Merge this update with existing state changes from Gemini response
+            current_state_changes = response.get("state_changes", {})
             merged_state_changes = update_state_with_changes(
                 current_state_changes, story_id_update
             )
-            unified_response["state_changes"] = merged_state_changes
-            # state_updates only in debug mode
+
+            # Include state fields only when debug mode is enabled (shows MORE info)
             if debug_mode:
-                unified_response["state_updates"] = (
-                    merged_state_changes  # API contract compatibility
-                )
+                unified_response["state_updates"] = merged_state_changes
 
             # Also update the game state dict that was already saved
             final_game_state_dict = update_state_with_changes(
@@ -1160,10 +1156,10 @@ def apply_automatic_combat_cleanup(
     return updated_state_dict
 
 
-def format_state_changes(changes: dict[str, Any], for_html: bool = False) -> str:
-    """Formats a dictionary of state changes into a readable string, counting the number of leaf-node changes."""
-    if not changes:
-        return "No state changes."
+def format_game_state_updates(updates: dict[str, Any], for_html: bool = False) -> str:
+    """Formats a dictionary of game state updates into a readable string, counting the number of leaf-node changes."""
+    if not updates:
+        return "No state updates."
 
     log_lines: list[str] = []
 
@@ -1175,11 +1171,11 @@ def format_state_changes(changes: dict[str, Any], for_html: bool = False) -> str
             else:
                 log_lines.append(f"{path}: {json.dumps(value)}")
 
-    recurse_items(changes)
+    recurse_items(updates)
 
     count = len(log_lines)
     if count == 0:
-        return "No effective state changes were made."
+        return "No effective state updates were made."
 
     header = f"Game state updated ({count} {'entry' if count == 1 else 'entries'}):"
 
@@ -1336,12 +1332,12 @@ def _handle_set_command(
     firestore_service.update_campaign_game_state(user_id, campaign_id, updated_state)
 
     # Log the formatted changes for both server and chat
-    log_message_for_log = format_state_changes(proposed_changes, for_html=False)
+    log_message_for_log = format_game_state_updates(proposed_changes, for_html=False)
     logging_util.info(
         f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}"
     )
 
-    log_message_for_chat = format_state_changes(proposed_changes, for_html=True)
+    log_message_for_chat = format_game_state_updates(proposed_changes, for_html=True)
 
     logging_util.info(f"--- GOD_MODE_SET for campaign {campaign_id} complete ---")
 
@@ -1402,7 +1398,7 @@ def _handle_update_state_command(
             user_id, campaign_id, final_game_state.to_dict()
         )
 
-        log_message = format_state_changes(state_changes, for_html=False)
+        log_message = format_game_state_updates(state_changes, for_html=False)
         return {
             KEY_SUCCESS: True,
             KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}",

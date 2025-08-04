@@ -45,7 +45,7 @@ sys.modules["firebase_admin.auth"] = mock_auth
 # Import after mocking
 from gemini_response import GeminiResponse
 from main import create_app
-from world_logic import format_state_changes
+from world_logic import format_game_state_updates
 
 
 # Create StateHelper wrapper for test compatibility
@@ -131,15 +131,15 @@ class TestStateHelper(unittest.TestCase):
 class TestUtilityFunctions(unittest.TestCase):
     """Test utility functions in main.py."""
 
-    def test_format_state_changes_for_html(self):
-        """Test format_state_changes with HTML formatting."""
+    def test_format_game_state_updates_for_html(self):
+        """Test format_game_state_updates with HTML formatting."""
         changes = {
             "current_scene": 2,
             "npcs": [{"name": "Gandalf", "level": 20}],
             "player_character.hp": 90,
         }
 
-        result = format_state_changes(changes, for_html=True)
+        result = format_game_state_updates(changes, for_html=True)
 
         # Should return a formatted string with HTML line breaks
         assert isinstance(result, str)
@@ -148,11 +148,11 @@ class TestUtilityFunctions(unittest.TestCase):
         if "<br>" in result:  # HTML formatting
             assert "<br>" in result
 
-    def test_format_state_changes_for_text(self):
-        """Test format_state_changes with text formatting."""
+    def test_format_game_state_updates_for_text(self):
+        """Test format_game_state_updates with text formatting."""
         changes = {"current_scene": 3, "story_progression": "advanced"}
 
-        result = format_state_changes(changes, for_html=False)
+        result = format_game_state_updates(changes, for_html=False)
 
         # Should return a formatted string with text line breaks
         assert isinstance(result, str)
@@ -161,15 +161,15 @@ class TestUtilityFunctions(unittest.TestCase):
         # Should not contain HTML
         assert "<br>" not in result
 
-    def test_format_state_changes_empty_dict(self):
-        """Test format_state_changes with empty changes."""
-        result = format_state_changes({}, for_html=True)
+    def test_format_game_state_updates_empty_dict(self):
+        """Test format_game_state_updates with empty changes."""
+        result = format_game_state_updates({}, for_html=True)
 
         # Should handle empty changes gracefully
         assert isinstance(result, str)
 
-    def test_format_state_changes_complex_nested(self):
-        """Test format_state_changes with complex nested data."""
+    def test_format_game_state_updates_complex_nested(self):
+        """Test format_game_state_updates with complex nested data."""
         changes = {
             "npcs": [
                 {"name": "Wizard", "spells": ["fireball", "teleport"]},
@@ -185,7 +185,7 @@ class TestUtilityFunctions(unittest.TestCase):
             },
         }
 
-        result = format_state_changes(changes, for_html=True)
+        result = format_game_state_updates(changes, for_html=True)
 
         assert isinstance(result, str)
         assert "Wizard" in result

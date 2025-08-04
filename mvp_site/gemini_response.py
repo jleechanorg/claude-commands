@@ -430,15 +430,14 @@ class GeminiResponse:
         clean_narrative = cls._strip_all_debug_tags(clean_narrative)
 
         # Detect debug tags from structured response content
-        debug_tags = {"dm_notes": False, "dice_rolls": False, "state_changes": False}
+        debug_tags = {"dm_notes": False, "dice_rolls": False}
 
         if structured_response:
             debug_info = structured_response.debug_info or {}
             # Check for non-empty debug content
             debug_tags["dm_notes"] = bool(debug_info.get("dm_notes"))
             debug_tags["dice_rolls"] = bool(debug_info.get("dice_rolls"))
-            # Check for state changes
-            debug_tags["state_changes"] = bool(structured_response.state_updates)
+            # state_changes debug tag removed - only state_updates used now
 
         return cls(
             narrative_text=clean_narrative,

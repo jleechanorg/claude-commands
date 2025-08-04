@@ -61,7 +61,7 @@ class TestGeminiResponse(unittest.TestCase):
         assert isinstance(response.debug_tags_present, dict)
         assert "dm_notes" in response.debug_tags_present
         assert "dice_rolls" in response.debug_tags_present
-        assert "state_changes" in response.debug_tags_present
+        # state_changes debug tag removed as part of cleanup
 
     def test_debug_tags_detection_with_content(self):
         """Test debug tags are properly detected when content exists."""

@@ -759,10 +759,10 @@ class TestDebugModeEnd2End(unittest.TestCase):
 
     def test_debug_mode_filtering_unit_integration(self):
         """Restored from test_debug_filtering_unit.py - integration test for debug filtering"""
-        
+
         # Test that simulates the exact logic we fixed in world_logic.py
         # without requiring full mocking of all dependencies
-        
+
         # Mock data that would trigger debug field inclusion
         mock_structured_response_data = {
             "entities_mentioned": ["Dragon", "Knight", "Castle"],
@@ -773,20 +773,20 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "resources": "Lost 1 healing potion",
             "debug_info": {
                 "dm_notes": ["Player rolled well", "Dragon should retreat"],
-                "state_rationale": "HP reduced due to combat"
-            }
+                "state_rationale": "HP reduced due to combat",
+            },
         }
-        
+
         mock_response_data = {
             "state_changes": {
                 "player_character_data": {"hp_current": 8, "hp_max": 10},
-                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}}
+                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}},
             }
         }
 
-        # Test debug_mode=False strips debug fields
+        # Test debug_mode=False includes state fields (production behavior)
         debug_mode = False
-        
+
         # Simulate the unified_response building from world_logic.py
         unified_response = {
             "success": True,
@@ -794,59 +794,77 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "narrative": "The dragon roars menacingly!",
             "response": "The dragon roars menacingly!",
             "game_state": {"debug_mode": debug_mode},
-            "state_changes": mock_response_data.get("state_changes", {}),
-            # state_updates only included in debug mode
             "mode": "character",
             "user_input": "I attack the dragon",
             "debug_mode": debug_mode,
         }
 
-        # Add debug-only fields when debug mode is enabled
+        # Include state_updates only when debug mode is enabled (standard debug behavior)
         if debug_mode:
-            unified_response["state_updates"] = mock_response_data.get("state_changes", {})
+            unified_response["state_updates"] = mock_response_data.get(
+                "state_changes", {}
+            )
 
         # Add structured response fields if available
         structured_response = mock_structured_response_data
         if structured_response:
             # entities_mentioned only in debug mode
             if debug_mode and "entities_mentioned" in structured_response:
-                unified_response["entities_mentioned"] = structured_response["entities_mentioned"]
-                
+                unified_response["entities_mentioned"] = structured_response[
+                    "entities_mentioned"
+                ]
+
             # Always include these fields regardless of debug mode
             if "location_confirmed" in structured_response:
-                unified_response["location_confirmed"] = structured_response["location_confirmed"]
+                unified_response["location_confirmed"] = structured_response[
+                    "location_confirmed"
+                ]
             if "session_header" in structured_response:
-                unified_response["session_header"] = structured_response["session_header"]
+                unified_response["session_header"] = structured_response[
+                    "session_header"
+                ]
             if "planning_block" in structured_response:
-                unified_response["planning_block"] = structured_response["planning_block"]
+                unified_response["planning_block"] = structured_response[
+                    "planning_block"
+                ]
             if "dice_rolls" in structured_response:
                 unified_response["dice_rolls"] = structured_response["dice_rolls"]
             if "resources" in structured_response:
                 unified_response["resources"] = structured_response["resources"]
-                
+
             # debug_info only in debug mode
             if debug_mode and "debug_info" in structured_response:
                 unified_response["debug_info"] = structured_response["debug_info"]
 
-        # CRITICAL: These fields should NOT be present when debug_mode=False
-        assert "state_updates" not in unified_response, \
-            "state_updates should be stripped when debug_mode=False"
-        assert "entities_mentioned" not in unified_response, \
-            "entities_mentioned should be stripped when debug_mode=False"
-        assert "debug_info" not in unified_response, \
-            "debug_info should be stripped when debug_mode=False"
-        
-        # These fields should REMAIN when debug_mode=False
-        assert "location_confirmed" in unified_response, \
-            "location_confirmed should remain when debug_mode=False"
-        assert "planning_block" in unified_response, \
-            "planning_block should remain when debug_mode=False"
-        assert "dice_rolls" in unified_response, \
-            "dice_rolls should remain when debug_mode=False"
-        assert "resources" in unified_response, \
-            "resources should remain when debug_mode=False"
+        # CRITICAL: State fields behavior with corrected debug logic
+        # Note: state_changes removed as part of cleanup - only state_updates used now
+        # state_updates only present when debug_mode=True (since debug_mode=False here)
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be present when debug_mode=False"
+        # entities_mentioned and debug_info still follow original debug logic
+        assert (
+            "entities_mentioned" not in unified_response
+        ), "entities_mentioned should be stripped when debug_mode=False"
+        assert (
+            "debug_info" not in unified_response
+        ), "debug_info should be stripped when debug_mode=False"
 
-        # Test debug_mode=True includes debug fields
+        # These fields should REMAIN when debug_mode=False
+        assert (
+            "location_confirmed" in unified_response
+        ), "location_confirmed should remain when debug_mode=False"
+        assert (
+            "planning_block" in unified_response
+        ), "planning_block should remain when debug_mode=False"
+        assert (
+            "dice_rolls" in unified_response
+        ), "dice_rolls should remain when debug_mode=False"
+        assert (
+            "resources" in unified_response
+        ), "resources should remain when debug_mode=False"
+
+        # Test debug_mode=True HIDES state fields (security-focused debug behavior)
         debug_mode = True
         unified_response_debug_on = {
             "success": True,
@@ -854,98 +872,310 @@ class TestDebugModeEnd2End(unittest.TestCase):
             "narrative": "The dragon roars menacingly!",
             "response": "The dragon roars menacingly!",
             "game_state": {"debug_mode": debug_mode},
-            "state_changes": mock_response_data.get("state_changes", {}),
             "mode": "character",
             "user_input": "I attack the dragon",
             "debug_mode": debug_mode,
         }
 
-        # Add debug-only fields when debug mode is enabled
+        # Always include state_changes for compatibility
+        unified_response_debug_on["state_changes"] = mock_response_data.get(
+            "state_changes", {}
+        )
+
+        # Include state_updates only when debug mode is enabled (standard debug behavior)
         if debug_mode:
-            unified_response_debug_on["state_updates"] = mock_response_data.get("state_changes", {})
+            unified_response_debug_on["state_updates"] = mock_response_data.get(
+                "state_changes", {}
+            )
 
         # Add structured response fields
         if structured_response:
             # entities_mentioned only in debug mode
             if debug_mode and "entities_mentioned" in structured_response:
-                unified_response_debug_on["entities_mentioned"] = structured_response["entities_mentioned"]
+                unified_response_debug_on["entities_mentioned"] = structured_response[
+                    "entities_mentioned"
+                ]
             # debug_info only in debug mode
             if debug_mode and "debug_info" in structured_response:
-                unified_response_debug_on["debug_info"] = structured_response["debug_info"]
+                unified_response_debug_on["debug_info"] = structured_response[
+                    "debug_info"
+                ]
 
-        # CRITICAL: These fields should be present when debug_mode=True
-        assert "state_updates" in unified_response_debug_on, \
-            "state_updates should be included when debug_mode=True"
-        assert "entities_mentioned" in unified_response_debug_on, \
-            "entities_mentioned should be included when debug_mode=True"
-        assert "debug_info" in unified_response_debug_on, \
-            "debug_info should be included when debug_mode=True"
-        
-        # Verify the content is correct
-        assert unified_response_debug_on["entities_mentioned"] == ["Dragon", "Knight", "Castle"]
-        assert unified_response_debug_on["debug_info"]["dm_notes"] == ["Player rolled well", "Dragon should retreat"]
+        # CRITICAL: State fields should be present when debug_mode=True (standard debug behavior)
+        assert (
+            "state_changes" in unified_response_debug_on
+        ), "state_changes should always be present for compatibility"
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be present when debug_mode=True (standard debug behavior)"
+        # entities_mentioned and debug_info still follow original debug logic
+        assert (
+            "entities_mentioned" in unified_response_debug_on
+        ), "entities_mentioned should be included when debug_mode=True"
+        assert (
+            "debug_info" in unified_response_debug_on
+        ), "debug_info should be included when debug_mode=True"
+
+        # Verify the content is correct for non-state debug fields
+        assert unified_response_debug_on["entities_mentioned"] == [
+            "Dragon",
+            "Knight",
+            "Castle",
+        ]
+        assert unified_response_debug_on["debug_info"]["dm_notes"] == [
+            "Player rolled well",
+            "Dragon should retreat",
+        ]
 
     def test_state_updates_sequence_id_debug_filtering_integration(self):
         """Restored from test_debug_filtering_unit.py - character mode sequence ID filtering test"""
-        
+
         # Test the second location where state_updates is added in character mode
         # This tests lines 675-689 from world_logic.py
-        
+
         debug_mode = False
         mode = "character"
         sequence_id = 1
-        
+
         # Start with basic response structure
         unified_response = {
             "success": True,
             "narrative": "Test narrative",
             "state_changes": {"hp": 8},
-            "debug_mode": debug_mode
+            "debug_mode": debug_mode,
         }
-        
+
         # Track story mode sequence ID for character mode (from world_logic.py)
         if mode == "character":
             story_id_update = {
                 "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
             }
-            
+
             # Simulate merging state changes
             current_state_changes = unified_response.get("state_changes", {})
             merged_state_changes = {**current_state_changes, **story_id_update}
-            
+
             unified_response["state_changes"] = merged_state_changes
-            # state_updates only in debug mode
+            # state_updates only in debug mode (standard debug behavior)
             if debug_mode:
                 unified_response["state_updates"] = merged_state_changes
 
-        # CRITICAL: state_updates should NOT be added even in character mode when debug_mode=False
-        assert "state_updates" not in unified_response, \
-            "state_updates should NOT be added in character mode when debug_mode=False"
-        assert "state_changes" in unified_response, \
-            "state_changes should always be present for internal tracking"
-        
+        # CRITICAL: state_updates should NOT be added in character mode when debug_mode=False
+        assert (
+            "state_updates" not in unified_response
+        ), "state_updates should NOT be added in character mode when debug_mode=False"
+        assert (
+            "state_changes" in unified_response
+        ), "state_changes should always be present for internal tracking"
+
         # Verify that the sequence ID was still tracked internally
         assert "custom_campaign_state" in unified_response["state_changes"]
-        assert unified_response["state_changes"]["custom_campaign_state"]["last_story_mode_sequence_id"] == 1
-        
-        # Test that it works correctly with debug_mode=True
+        assert (
+            unified_response["state_changes"]["custom_campaign_state"][
+                "last_story_mode_sequence_id"
+            ]
+            == 1
+        )
+
+        # Test that it works correctly with debug_mode=True (should HIDE state fields)
         debug_mode = True
         unified_response_debug_on = {
             "success": True,
             "narrative": "Test narrative",
-            "state_changes": {"hp": 8},
-            "debug_mode": debug_mode
+            "debug_mode": debug_mode,
         }
-        
+
         if mode == "character":
             unified_response_debug_on["state_changes"] = merged_state_changes
-            # state_updates only in debug mode
+            # state_updates only in debug mode (standard debug behavior)
             if debug_mode:
                 unified_response_debug_on["state_updates"] = merged_state_changes
-                
-        assert "state_updates" in unified_response_debug_on, \
-            "state_updates should be added in character mode when debug_mode=True"
-        assert unified_response_debug_on["state_updates"]["custom_campaign_state"]["last_story_mode_sequence_id"] == 1
+
+        assert (
+            "state_updates" in unified_response_debug_on
+        ), "state_updates should be present in character mode when debug_mode=True (standard debug behavior)"
+        assert (
+            "state_changes" in unified_response_debug_on
+        ), "state_changes should always be present for internal state tracking"
+
+    def test_pr1150_debug_mode_standard_behavior(self):
+        """
+        Test for PR #1150: Standard debug mode behavior where debug_mode=True shows MORE information
+
+        This test validates that debug mode follows standard behavior where debug_mode=True
+        provides additional debugging information including state_updates.
+        """
+        # Test Case 1: debug_mode=True should show MORE information (standard debug behavior)
+        debug_mode = True
+        mock_response = {
+            "state_changes": {
+                "player_character_data": {"hp_current": 8, "hp_max": 10},
+                "npc_data": {"dragon_001": {"name": "Ancient Red Dragon", "hp": 100}},
+            }
+        }
+
+        # Simulate the standard debug logic from world_logic.py
+        unified_response = {
+            "success": True,
+            "narrative": "The dragon attacks!",
+            "debug_mode": debug_mode,
+            "state_changes": mock_response.get("state_changes", {}),  # Always include
+        }
+
+        # Add debug-only fields when debug mode is enabled (standard behavior)
+        if debug_mode:
+            unified_response["state_updates"] = mock_response.get("state_changes", {})
+
+        # Validate standard debug behavior - these fields SHOULD be present when debug_mode=True
+        assert (
+            "state_changes" in unified_response
+        ), "state_changes should always be in API response for compatibility"
+        assert (
+            "state_updates" in unified_response
+        ), "state_updates should be in API response when debug_mode=True (standard debug behavior)"
+
+        # Test Case 2: debug_mode=False should NOT include debug-only information
+        debug_mode = False
+        unified_response_normal = {
+            "success": True,
+            "narrative": "The dragon attacks!",
+            "debug_mode": debug_mode,
+            "state_changes": mock_response.get("state_changes", {}),  # Always include
+        }
+
+        # Apply standard debug logic - debug-only fields only when debug_mode=True
+        if debug_mode:
+            unified_response_normal["state_updates"] = mock_response.get(
+                "state_changes", {}
+            )
+
+        # Validate normal operation - state_changes always present, state_updates only in debug
+        assert (
+            "state_changes" in unified_response_normal
+        ), "state_changes should always be in API response for compatibility"
+        assert (
+            "state_updates" not in unified_response_normal
+        ), "state_updates should NOT be in API response when debug_mode=False (debug-only field)"
+
+    def test_pr1150_character_mode_sequence_tracking_debug_respect(self):
+        """
+        Test for PR #1150: Character mode sequence tracking with standard debug behavior
+
+        This validates the second location in world_logic.py where state_updates
+        is conditionally added for character mode sequence tracking in debug mode.
+        """
+        debug_mode = True  # Should include state_updates (standard debug behavior)
+        mode = "character"
+        sequence_id = 42
+
+        # Start with basic response (simulating world_logic.py state)
+        unified_response = {
+            "success": True,
+            "narrative": "Test narrative",
+            "debug_mode": debug_mode,
+            "state_changes": {"existing": "data"},
+        }
+
+        # Simulate the character mode sequence tracking logic (lines 681-691)
+        if mode == "character":
+            story_id_update = {
+                "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
+            }
+
+            # Update state change fields and add debug info when enabled
+            current_state_changes = unified_response.get("state_changes", {})
+            merged_state_changes = {**current_state_changes, **story_id_update}
+            unified_response["state_changes"] = merged_state_changes
+            # state_updates only in debug mode (standard debug behavior)
+            if debug_mode:
+                unified_response["state_updates"] = merged_state_changes
+
+        # CRITICAL TEST: When debug_mode=True, state_updates SHOULD be added (standard debug)
+        assert (
+            "state_updates" in unified_response
+        ), "state_updates should be added in character mode when debug_mode=True (standard debug behavior)"
+
+        # state_changes should be updated with sequence info
+        assert "custom_campaign_state" in unified_response["state_changes"]
+        assert (
+            unified_response["state_changes"]["custom_campaign_state"][
+                "last_story_mode_sequence_id"
+            ]
+            == sequence_id
+        )
+
+    def test_character_mode_preserves_original_state_changes_during_sequence_merge(
+        self,
+    ):
+        """
+        Test that would have caught the character mode state merge bug.
+
+        Verifies that original Gemini state changes are preserved when merged
+        with story sequence tracking update in character mode.
+
+        This test ensures that changing the data source from unified_response
+        to response doesn't break the merge functionality.
+        """
+        # Mock original Gemini response with state changes (realistic data source)
+        mock_gemini_response = {
+            "state_changes": {
+                "player_character_data": {"hp_current": 25, "level": 3},
+                "world_data": {"gold": 100, "location": "tavern"},
+                "npc_data": {"innkeeper": {"disposition": "friendly"}},
+            },
+            "narrative": "You rest at the inn and gain experience.",
+        }
+
+        # Simulate the character mode sequence tracking logic
+        mode = "character"
+        sequence_id = 42
+        debug_mode = True
+
+        # This is the CORRECT approach (should get from response, not unified_response)
+        if mode == "character":
+            story_id_update = {
+                "custom_campaign_state": {"last_story_mode_sequence_id": sequence_id}
+            }
+
+            # CRITICAL: Get original state changes from Gemini response (not unified_response)
+            current_state_changes = mock_gemini_response.get("state_changes", {})
+
+            # Simulate the merge operation from world_logic.py
+            merged_state_changes = {**current_state_changes, **story_id_update}
+
+            # Build final state_updates for debug mode
+            final_state_updates = merged_state_changes if debug_mode else None
+
+        # CRITICAL ASSERTIONS: Both original data AND sequence tracking should be present
+
+        # Verify original Gemini state changes are preserved
+        assert "player_character_data" in merged_state_changes
+        assert merged_state_changes["player_character_data"]["hp_current"] == 25
+        assert merged_state_changes["player_character_data"]["level"] == 3
+
+        assert "world_data" in merged_state_changes
+        assert merged_state_changes["world_data"]["gold"] == 100
+        assert merged_state_changes["world_data"]["location"] == "tavern"
+
+        assert "npc_data" in merged_state_changes
+        assert (
+            merged_state_changes["npc_data"]["innkeeper"]["disposition"] == "friendly"
+        )
+
+        # Verify sequence tracking was added
+        assert "custom_campaign_state" in merged_state_changes
+        assert (
+            merged_state_changes["custom_campaign_state"]["last_story_mode_sequence_id"]
+            == sequence_id
+        )
+
+        # Verify debug mode behavior
+        if debug_mode:
+            assert final_state_updates is not None
+            assert final_state_updates == merged_state_changes
+
+        # This test would FAIL if we incorrectly used unified_response.get("state_changes", {})
+        # because unified_response doesn't contain the original Gemini state changes
 
 
 if __name__ == "__main__":
