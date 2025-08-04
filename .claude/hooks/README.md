@@ -38,11 +38,11 @@ The `.claude/hooks/` directory contains hooks that are auto-recognized by Claude
 
 **Provides**: Current branch, remote status, and PR information
 
-### 🔄 Post-Commit Sync Hook (`post_commit_sync.sh`)
-**Purpose**: Automatically sync commits to remote after successful commits
+### 🔄 Post-Tool-Use Sync Hook (`post_commit_sync.sh`)
+**Purpose**: Automatically sync commits to remote after git commit operations
 
 **Features**:
-- Triggers after every successful git commit
+- Triggers after git commit tool operations via PostToolUse hook
 - Uses smart sync check to detect unpushed commits
 - Automatically pushes to correct upstream remote
 - Respects existing git workflows and configurations
@@ -76,14 +76,14 @@ Add to your project's `.claude/settings.json`:
         ]
       }
     ],
-    "PostCommit": [
+    "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash(git commit*)",
         "hooks": [
           {
             "type": "command",
             "command": "$(git rev-parse --show-toplevel)/.claude/hooks/post_commit_sync.sh",
-            "description": "Auto-sync commits to remote after successful commit"
+            "description": "Auto-sync commits to remote after git commit operations"
           }
         ]
       }
@@ -155,7 +155,7 @@ All hooks are properly located in the auto-recognized Claude directory:
 ├── anti_demo_check_claude.sh        # Demo code prevention
 ├── detect_speculation.sh            # Command speculation blocker
 ├── check_root_files.sh              # Root directory protection
-├── post_commit_sync.sh              # Post-commit auto-sync
+├── post_commit_sync.sh              # Post-tool-use (git commit) auto-sync
 ├── tests/                           # Test files directory
 │   ├── hook_test_*.py              # Red/green test files
 │   ├── test_hook_patterns.py       # Test file patterns

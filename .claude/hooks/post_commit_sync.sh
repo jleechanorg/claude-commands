@@ -1,9 +1,9 @@
 #!/bin/bash
-# post_commit_sync.sh - Post-Commit Sync Check Hook
+# post_commit_sync.sh - Post-Tool-Use Sync Check Hook
 #
-# Purpose: Automatically run sync check after commits to ensure changes are pushed
+# Purpose: Automatically run sync check after git commit operations to ensure changes are pushed
 #
-# Integration: Add to .claude/settings.json hooks section for PostCommit events
+# Integration: Add to .claude/settings.json hooks section for PostToolUse events with git commit matcher
 #
 # Features:
 #   - Triggers automatically after successful commits
@@ -28,7 +28,7 @@ if [[ ! -f "$SYNC_SCRIPT" ]]; then
 fi
 
 echo ""
-echo "🔄 Post-Commit Hook: Running sync check..."
+echo "🔄 Post-Tool-Use Hook: Running sync check..."
 echo "============================================"
 
 # Execute sync check

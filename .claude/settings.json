@@ -187,14 +187,14 @@
         ]
       }
     ],
-    "PostCommit": [
+    "PostToolUse": [
       {
-        "matcher": "",
+        "matcher": "Bash(git commit *)",
         "hooks": [
           {
             "type": "command",
             "command": "$(git rev-parse --show-toplevel)/.claude/hooks/post_commit_sync.sh",
-            "description": "Auto-sync commits to remote after successful commit"
+            "description": "Auto-sync commits to remote after git commit operations"
           }
         ]
       }

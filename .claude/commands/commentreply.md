@@ -433,9 +433,10 @@ reply_to_individual_comment() {
     # Use real threading for PR review comments (VALIDATED WORKING)
     echo "🔗 THREADING: Creating real threaded reply (supports in_reply_to_id)"
     if create_real_threaded_reply "$comment_id" "$response_body" "$PR_NUMBER" "$OWNER" "$REPO"; then
-      # Step 5: Verify real threading worked
-      local reply_result_json=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '.[] | select(.in_reply_to_id == '$comment_id') | {id: .id, url: .html_url}' | tail -1)
-      local reply_id=$(echo "$reply_result_json" | jq -r '.id')
+      # Step 5: Verify real threading worked using exported reply ID from API response
+      # FIX: Use the reply ID directly from the API response (exported by create_real_threaded_reply)
+      # instead of the dangerous tail -1 pattern that could grab wrong comment in parallel operations
+      local reply_id="$CREATED_REPLY_ID"
 
       if verify_real_threaded_reply "$comment_id" "$reply_id" "$PR_NUMBER" "$OWNER" "$REPO"; then
         echo "✅ SUCCESS: REAL threaded reply created for #$comment_id"
@@ -472,9 +473,12 @@ create_real_threaded_reply() {
   fi
 
   # Use the correct GitHub API for creating threaded PR review comments
-  local response=$(gh api "repos/$owner/$repo/pulls/$pr_number/comments" --method POST \
-    --field body="$response_body" \
-    --field in_reply_to="$comment_id")
+  # FIX: Use JSON input instead of --field for robust multi-line content handling
+  local response=$(printf '%s\n' "{\"body\":$(
+      jq -Rs --arg body "$response_body" '$body'
+    ),\"in_reply_to\":$comment_id}" | \
+    gh api "repos/$owner/$repo/pulls/$pr_number/comments" \
+      --method POST --header "Content-Type: application/json" --input -)
 
   if [ $? -eq 0 ]; then
     # Extract the new comment ID and URL from response
@@ -604,8 +608,15 @@ verify_file_changes() {
   echo "📋 Expected file: $expected_file"
   echo "📋 Baseline commit: ${before_commit:-HEAD~1}"
 
-  # Use before_commit as baseline, fall back to HEAD~1 if not provided
+  # Use before_commit as baseline, fall back to safe baseline for single-commit repos
   local baseline_commit="${before_commit:-HEAD~1}"
+
+  # FIX: Validate baseline commit exists to prevent git diff failures in single-commit repos
+  if ! git rev-parse -q --verify "${baseline_commit}^{commit}" >/dev/null 2>&1; then
+    # Use first commit as a safe baseline when HEAD has no parent
+    baseline_commit="$(git rev-list --max-parents=0 HEAD | tail -1)"
+    echo "🔧 SAFE FALLBACK: Using first commit $baseline_commit as baseline (single-commit repo detected)"
+  fi
 
   # Check if any files were modified since baseline
   if git diff --quiet "$baseline_commit"; then
