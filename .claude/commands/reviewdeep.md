@@ -19,9 +19,12 @@
 The command executes three specialized commands in sequence for comprehensive analysis:
 
 ### 1. `/review` - Code Quality Analysis
+
+**🚨 POSTS COMMENTS**
 - Virtual [AI reviewer] agent performs comprehensive code analysis
 - Identifies bugs, security issues, performance problems, best practice violations
-- Posts categorized review comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
+- **ALWAYS POSTS** categorized review comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
+- **ALWAYS POSTS** general review comment with comprehensive findings summary
 - Provides file-by-file analysis with specific line references
 
 ### 2. `/arch` - Architectural Assessment
@@ -63,7 +66,9 @@ OUTPUT: Comprehensive multi-perspective analysis
 - **Strategic Perspective**: From `/thinku` - deep reasoning and synthesis
 
 ### Actionable Output
-- Specific inline code comments with improvement suggestions
+**🚨 POSTS TO GITHUB PR**
+- **POSTS** specific inline code comments with improvement suggestions directly to PR
+- **POSTS** general review comment with comprehensive findings summary to PR
 - Architectural recommendations with design alternatives
 - Reasoned conclusions with prioritized action items
 
