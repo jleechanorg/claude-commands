@@ -216,6 +216,18 @@ class TaskDispatcher:
 
         return existing
 
+    def _cleanup_stale_prompt_files(self, agent_name: str):
+        """Clean up stale prompt files to prevent task reuse from previous runs."""
+        try:
+            # Clean up specific agent prompt file only - exact match to avoid deleting other agents' files
+            agent_prompt_file = f"/tmp/agent_prompt_{agent_name}.txt"
+            if os.path.exists(agent_prompt_file):
+                os.remove(agent_prompt_file)
+                print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
+        except Exception as e:
+            # Don't fail agent creation if cleanup fails
+            print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
+
     def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
         """Generate unique agent name with collision detection."""
         # Use microsecond precision for better uniqueness
@@ -555,6 +567,9 @@ Complete the task, then use /pr to create a new pull request."""
         agent_prompt = agent_spec.get("prompt", "Complete the assigned task")
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
+
+        # Clean up any existing stale prompt files for this agent to prevent task reuse
+        self._cleanup_stale_prompt_files(agent_name)
 
         # Refresh actively working agents count from tmux sessions (excludes idle agents)
         self.active_agents = self._get_active_tmux_agents()

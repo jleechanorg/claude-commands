@@ -4,6 +4,7 @@ Unified Orchestration System - LLM-Driven with File-based Coordination
 Pure file-based A2A protocol without Redis dependencies
 """
 
+import glob
 import json
 import os
 import subprocess
@@ -24,11 +25,100 @@ class UnifiedOrchestration:
     # Configuration constants
     INITIAL_DELAY = 5  # Initial delay before checking for PRs
     POLLING_INTERVAL = 2  # Interval between PR checks
+    STALE_PROMPT_FILE_AGE_SECONDS = 300  # 5 minutes
 
     def __init__(self):
         self.task_dispatcher = TaskDispatcher()
         # Simple safety boundaries only - no complex constraint parsing needed
         print("📁 File-based A2A coordination initialized")
+
+        # Clean up stale prompt files on orchestration startup to prevent task reuse
+        self._cleanup_stale_orchestration_state()
+
+    def _cleanup_stale_orchestration_state(self):
+        """Clean up stale prompt files and tmux sessions to prevent task reuse."""
+        try:
+            # Clean up all stale agent prompt files
+            stale_prompt_files = glob.glob("/tmp/agent_prompt_*.txt")
+            cleaned_count = 0
+            for prompt_file in stale_prompt_files:
+                try:
+                    # Check if file is older than 5 minutes to avoid cleaning active tasks
+                    file_age = time.time() - os.path.getmtime(prompt_file)
+                    if file_age > self.STALE_PROMPT_FILE_AGE_SECONDS:
+                        os.remove(prompt_file)
+                        cleaned_count += 1
+                except OSError:
+                    pass  # File might have been removed by another process
+
+            if cleaned_count > 0:
+                print(f"🧹 Cleaned up {cleaned_count} stale prompt files")
+
+            # Clean up completed tmux agent sessions (keep running ones)
+            self._cleanup_completed_tmux_sessions()
+
+        except Exception as e:
+            print(f"⚠️ Warning: Could not fully clean orchestration state: {e}")
+
+    def _cleanup_completed_tmux_sessions(self):
+        """Clean up tmux sessions for agents that have completed their work."""
+        try:
+            # Get all task-agent tmux sessions
+            result = subprocess.run(
+                ["tmux", "list-sessions", "-F", "#{session_name}"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode != 0:
+                return
+
+            sessions = result.stdout.strip().split('\n')
+            agent_sessions = [s for s in sessions if s.startswith('task-agent-')]
+
+            cleaned_sessions = 0
+            for session in agent_sessions:
+                if self._is_session_completed(session):
+                    try:
+                        subprocess.run(["tmux", "kill-session", "-t", session],
+                                     check=False, capture_output=True)
+                        cleaned_sessions += 1
+                    except (subprocess.SubprocessError, OSError):
+                        pass
+
+            if cleaned_sessions > 0:
+                print(f"🧹 Cleaned up {cleaned_sessions} completed tmux sessions")
+
+        except Exception as e:
+            print(f"⚠️ Warning: Could not clean tmux sessions: {e}")
+
+    def _is_session_completed(self, session_name: str) -> bool:
+        """Check if a tmux session has completed its work."""
+        try:
+            result = subprocess.run(
+                ["tmux", "capture-pane", "-t", session_name, "-p"],
+                capture_output=True,
+                text=True,
+                check=False
+            )
+            if result.returncode != 0:
+                return True  # Session might be dead already
+
+            output = result.stdout.strip()
+            completion_indicators = [
+                "Agent completed successfully",
+                "Agent execution completed. Session remains active for monitoring",
+                "Session will auto-close in 1 hour"
+            ]
+
+            # If completion indicators found, session is done
+            for indicator in completion_indicators:
+                if indicator in output:
+                    return True
+
+            return False
+        except (subprocess.SubprocessError, OSError):
+            return True  # If we can't check, assume it's safe to clean
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
