@@ -144,7 +144,7 @@ process_pr_with_copilot() {
     cd ~/projects/worldarchitect.ai
 
     execute_with_timeout "$COPILOT_TIMEOUT" \
-        "claude --dangerously-skip-permissions '/copilot $pr_number'" \
+        "claude --dangerously-skip-permissions --model sonnet '/copilot $pr_number'" \
         "$pr_number" "comprehensive PR processing"
 
     return $?
