@@ -69,8 +69,8 @@ if [ "$MODE" = "qwen" ] || [ "$MODE" = "cerebras" ]; then
 fi
 
 # Removed: Self-hosted LLM helper functions
-# These are now handled by the dedicated llm_selfhost repository
-# See: https://github.com/jleechanorg/llm_selfhost
+# These are now handled by the dedicated claude_llm_proxy repository
+# See: https://github.com/jleechanorg/claude_llm_proxy
 
 # SSH tunnel PID file
 SSH_TUNNEL_PID_FILE="/tmp/qwen_ssh_tunnel.pid"
@@ -484,12 +484,12 @@ if [ -n "$MODE" ]; then
 
             # Check if API proxy is available
             # TERMINAL SESSION PRESERVATION: Never exit terminal on errors - let users Ctrl+C to go back
-            API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+            API_PROXY_PATH="$HOME/projects/claude_llm_proxy/api_proxy.py"
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-                echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${BLUE}💡 LLM proxy (for Qwen and Cerebras) is maintained in the separate claude_llm_proxy repository${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -654,7 +654,7 @@ if [ -n "$MODE" ]; then
                     # Create the instance with qwen label
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
+                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                     INSTANCE_RESULT=$(eval $INSTANCE_CMD)
                     # Handle both JSON and Python dict formats for new_contract
@@ -768,10 +768,10 @@ if [ -n "$MODE" ]; then
             echo ""
 
             # Check if API proxy is available
-            API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+            API_PROXY_PATH="$HOME/projects/claude_llm_proxy/api_proxy.py"
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -802,7 +802,7 @@ if [ -n "$MODE" ]; then
                 fi
 
                 # Start proxy with environment variables
-                cd "$HOME/projects/llm_selfhost"
+                cd "$HOME/projects/claude_llm_proxy"
                 "$PYTHON_CMD" api_proxy.py &
                 PROXY_PID=$!
 
@@ -890,13 +890,13 @@ if [ -n "$MODE" ]; then
                 echo -e "${BLUE}💡 Available models: $(echo "$RESPONSE" | jq -r '.data[]?.id // "qwen-3-coder-480b"' | head -3 | tr '\n' ' ')${NC}"
             fi
 
-            # Check if llm_selfhost repo is available
-            LLM_SELFHOST_PROXY="$HOME/projects/llm_selfhost/cerebras_proxy.py"
+            # Check if claude_llm_proxy repo is available
+            LLM_SELFHOST_PROXY="$HOME/projects/claude_llm_proxy/cerebras_proxy.py"
             if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-                echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+                echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate claude_llm_proxy repository${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
+                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
                 echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -907,7 +907,7 @@ if [ -n "$MODE" ]; then
             fi
 
             # Start Cerebras API proxy in background
-            echo -e "${BLUE}🚀 Starting Cerebras API proxy from llm_selfhost repo...${NC}"
+            echo -e "${BLUE}🚀 Starting Cerebras API proxy from claude_llm_proxy repo...${NC}"
 
             # Kill any existing proxy on port 8002
             pkill -f "cerebras_proxy.py" 2>/dev/null || true
@@ -1015,12 +1015,12 @@ else
         echo ""
 
         # Check if API proxy is available
-        API_PROXY_PATH="$HOME/projects/llm_selfhost/api_proxy.py"
+        API_PROXY_PATH="$HOME/projects/claude_llm_proxy/api_proxy.py"
         if [ ! -f "$API_PROXY_PATH" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-            echo -e "${BLUE}💡 Qwen proxy is maintained in the separate llm_selfhost repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${BLUE}💡 LLM proxy (for Qwen and Cerebras modes) is maintained in the separate claude_llm_proxy repository${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1078,7 +1078,7 @@ else
                 fi
 
                 # Start proxy with environment variables
-                cd "$HOME/projects/llm_selfhost"
+                cd "$HOME/projects/claude_llm_proxy"
                 "$PYTHON_CMD" api_proxy.py &
                 PROXY_PID=$!
 
@@ -1181,7 +1181,7 @@ else
                     --disk 60 \\
                     --ssh \\
                     $ENV_VARS \\
-                    --env GIT_REPO=https://github.com/jleechanorg/llm_selfhost.git \\
+                    --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git \\
                     --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                 INSTANCE_RESULT=$(eval $INSTANCE_CMD)
@@ -1443,13 +1443,13 @@ EOF
             echo -e "${BLUE}💡 Available models: $(echo "$RESPONSE" | jq -r '.data[]?.id // "qwen-3-coder-480b"' | head -3 | tr '\n' ' ')${NC}"
         fi
 
-        # Check if llm_selfhost repo is available
-        LLM_SELFHOST_PROXY="$HOME/projects/llm_selfhost/cerebras_proxy.py"
+        # Check if claude_llm_proxy repo is available
+        LLM_SELFHOST_PROXY="$HOME/projects/claude_llm_proxy/cerebras_proxy.py"
         if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-            echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate llm_selfhost repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/llm_selfhost.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/llm_selfhost${NC}"
+            echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate claude_llm_proxy repository${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
+            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1460,7 +1460,7 @@ EOF
         fi
 
         # Start Cerebras API proxy in background
-        echo -e "${BLUE}🚀 Starting Cerebras API proxy from llm_selfhost repo...${NC}"
+        echo -e "${BLUE}🚀 Starting Cerebras API proxy from claude_llm_proxy repo...${NC}"
 
         # Kill any existing proxy on port 8002
         pkill -f "cerebras_proxy.py" 2>/dev/null || true
