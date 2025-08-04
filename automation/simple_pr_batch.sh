@@ -139,15 +139,61 @@ execute_with_timeout() {
 # Simplified PR processing - /copilot handles all analysis
 process_pr_with_copilot() {
     local pr_number="$1"
+    local workspace_dir
+    local original_dir=$(pwd)
 
-    log "🤖 Processing PR #$pr_number with comprehensive /copilot workflow"
-    cd ~/projects/worldarchitect.ai
+    log "🤖 Processing PR #$pr_number with comprehensive /copilot workflow (isolated)"
 
+    # Create isolated workspace
+    if ! workspace_dir=$(create_isolated_workspace "$pr_number"); then
+        log "❌ Failed to create isolated workspace for PR #$pr_number"
+        return 1
+    fi
+
+    # Process in isolated workspace
+    cd "$workspace_dir" || {
+        log "❌ Failed to enter workspace for PR #$pr_number"
+        cleanup_isolated_workspace "$pr_number"
+        return 1
+    }
+
+    # Run copilot in isolated environment
+    local copilot_result
     execute_with_timeout "$COPILOT_TIMEOUT" \
-        "claude --dangerously-skip-permissions --model sonnet '/copilot $pr_number'" \
+        "claude --dangerously-skip-permissions --model sonnet '/copilot $pr_number --isolated-workspace'" \
         "$pr_number" "comprehensive PR processing"
+    copilot_result=$?
 
-    return $?
+    # If copilot succeeded, push changes to remote PR branch
+    if [ $copilot_result -eq 0 ]; then
+        push_to_remote_pr_branch "$pr_number" "$workspace_dir"
+        local push_result=$?
+
+        # Notify about completion status
+        if [ $push_result -eq 0 ]; then
+            notify_pr_completion "$pr_number" "success" ""
+        else
+            notify_pr_completion "$pr_number" "failure" "Push failed"
+        fi
+
+        # Return to original directory and cleanup
+        cd "$original_dir"
+        cleanup_isolated_workspace "$pr_number"
+
+        return $push_result
+    elif [ $copilot_result -eq 2 ]; then
+        # Timeout case
+        notify_pr_completion "$pr_number" "timeout" ""
+        cd "$original_dir"
+        cleanup_isolated_workspace "$pr_number"
+        return $copilot_result
+    else
+        # Failure case
+        notify_pr_completion "$pr_number" "failure" "Copilot processing failed"
+        cd "$original_dir"
+        cleanup_isolated_workspace "$pr_number"
+        return $copilot_result
+    fi
 }
 
 # Main processing logic
@@ -270,17 +316,18 @@ create_isolated_workspace() {
 
     local branch_name=$(echo "$pr_info" | jq -r '.headRefName // "unknown"')
     local repo_owner=$(echo "$pr_info" | jq -r '.headRepository.owner.login // "unknown"')
+    local repo_name=$(echo "$pr_info" | jq -r '.headRepository.name // "unknown"')
 
-    if [ "$branch_name" = "unknown" ] || [ "$repo_owner" = "unknown" ]; then
+    if [ "$branch_name" = "unknown" ] || [ "$repo_owner" = "unknown" ] || [ "$repo_name" = "unknown" ]; then
         log "❌ Could not extract branch info for PR #$pr_number"
         return 1
     fi
 
     # Clone the PR branch to isolated workspace
     cd "$workspace_dir" || return 1
-    local repo_url="https://github.com/$repo_owner/worldarchitect.ai.git"
+    local repo_url="https://github.com/$repo_owner/$repo_name.git"
 
-    if \! git clone --depth 1 --single-branch --branch "$branch_name" "$repo_url" . 2>/dev/null; then
+    if ! git clone --depth 1 --single-branch --branch "$branch_name" "$repo_url" . 2>/dev/null; then
         log "❌ Failed to clone PR #$pr_number branch $branch_name from $repo_url"
         cd - >/dev/null
         rm -rf "$workspace_dir"
@@ -290,6 +337,28 @@ create_isolated_workspace() {
     log "✅ Isolated workspace created for PR #$pr_number"
     cd - >/dev/null
     echo "$workspace_dir"
+}
+
+# Function to notify about automation completion
+notify_pr_completion() {
+    local pr_number="$1"
+    local status="$2"  # success, failure, timeout
+    local details="$3"
+
+    case "$status" in
+        "success")
+            log "✅ Automated processing completed successfully for PR #$pr_number"
+            ;;
+        "failure")
+            log "❌ Automated processing failed for PR #$pr_number. Details: $details"
+            ;;
+        "timeout")
+            log "⏰ Automated processing timed out for PR #$pr_number after ${COPILOT_TIMEOUT}s"
+            ;;
+        *)
+            log "📝 Automated processing completed with status: $status for PR #$pr_number"
+            ;;
+    esac
 }
 
 # Function to post threaded comment replies with AI Cron Responder prefix
