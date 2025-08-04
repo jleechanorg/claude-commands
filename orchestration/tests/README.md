@@ -19,12 +19,16 @@ tests/
 │   ├── mock_tmux.py    # Mock tmux session management
 │   ├── mock_claude.py  # Mock Claude CLI execution
 │   └── mock_redis.py   # Mock Redis operations
-├── test_orchestrate_unified.py  # Main orchestration system tests
-├── test_task_dispatcher.py      # Task analysis and agent creation tests
-├── test_a2a_integration.py      # A2A protocol integration tests
-├── test_end_to_end.py           # Complete workflow integration tests
-├── run_tests.py                 # Test runner script
-└── README.md                    # This file
+├── test_orchestrate_unified.py      # Main orchestration system tests
+├── test_task_dispatcher.py          # Task analysis and agent creation tests
+├── test_a2a_integration.py          # A2A protocol integration tests
+├── test_end_to_end.py               # Complete workflow integration tests
+├── test_stale_task_prevention.py   # Stale task queue bug prevention tests
+├── test_prompt_file_lifecycle.py   # Prompt file lifecycle management tests
+├── test_task_execution_verification.py  # Task execution verification tests
+├── test_tmux_session_lifecycle.py  # Tmux session lifecycle tests
+├── run_tests.py                     # Test runner script
+└── README.md                        # This file
 ```
 
 ## Running Tests
@@ -41,6 +45,10 @@ python3 run_tests.py unified        # test_orchestrate_unified.py
 python3 run_tests.py dispatcher     # test_task_dispatcher.py
 python3 run_tests.py a2a            # test_a2a_integration.py
 python3 run_tests.py end_to_end     # test_end_to_end.py
+python3 run_tests.py stale_prevention  # test_stale_task_prevention.py
+python3 run_tests.py prompt_lifecycle  # test_prompt_file_lifecycle.py
+python3 run_tests.py task_verification # test_task_execution_verification.py
+python3 run_tests.py tmux_lifecycle    # test_tmux_session_lifecycle.py
 ```
 
 ### List Available Tests
@@ -90,6 +98,39 @@ python3 run_tests.py --verbose
 - **test_error_handling_and_recovery**: Graceful error handling
 - **test_agent_completion_verification_flow**: Completion detection
 - **test_dependency_integration**: All dependencies working together
+
+### 5. Stale Task Prevention Tests (`test_stale_task_prevention.py`)
+- **test_stale_prompt_file_cleanup_on_startup**: Cleanup of stale prompt files during startup
+- **test_multi_run_task_isolation**: Task isolation between orchestration runs
+- **test_agent_prompt_file_cleanup_before_creation**: Per-agent prompt file cleanup
+- **test_task_prompt_freshness_verification**: Ensure prompts reflect current tasks
+- **test_prompt_file_age_based_cleanup**: Age-based cleanup (5-minute threshold)
+- **test_large_scale_stale_file_scenario**: Handle large numbers of stale files (289+)
+- **test_concurrent_orchestration_safety**: Safe operation with concurrent instances
+
+### 6. Prompt File Lifecycle Tests (`test_prompt_file_lifecycle.py`)
+- **test_prompt_file_creation_contains_correct_task**: Verify prompt file content accuracy
+- **test_prompt_file_cleanup_age_threshold**: Exact 5-minute age threshold testing
+- **test_prompt_file_content_isolation**: Content isolation between different tasks
+- **test_memory_leak_prevention**: Prevent accumulation of prompt files
+- **test_cross_user_isolation**: Multi-user/context isolation
+- **test_realistic_production_scenario**: Production bug scenario simulation
+
+### 7. Task Execution Verification Tests (`test_task_execution_verification.py`)
+- **test_agent_prompt_contains_exact_user_request**: Verify prompts match user requests
+- **test_agent_workspace_reflects_task_context**: Workspace setup verification
+- **test_task_context_isolation_between_agents**: Isolation between simultaneous agents
+- **test_pr_context_detection_accuracy**: PR update vs create mode detection
+- **test_task_prompt_includes_mandatory_completion_steps**: Completion requirement verification
+- **test_unique_agent_naming_prevents_conflicts**: Agent naming collision prevention
+
+### 8. Tmux Session Lifecycle Tests (`test_tmux_session_lifecycle.py`)
+- **test_tmux_session_creation_for_agents**: Proper session creation for each agent
+- **test_tmux_session_cleanup_on_startup**: Cleanup of completed sessions on startup
+- **test_session_completion_detection_accuracy**: Accurate completion status detection
+- **test_session_resource_leak_prevention**: Prevent resource leaks from accumulated sessions
+- **test_active_agent_counting_excludes_idle_sessions**: Correct active agent counting
+- **test_session_naming_uniqueness**: Unique session names under high load
 
 ## Mock Strategy
 
