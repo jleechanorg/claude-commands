@@ -214,14 +214,20 @@
    - ✅ **PRIMARY**: GitHub MCP tools (`mcp__github-server__*`) for all GitHub operations
    - ✅ **SECONDARY**: `gh` CLI as fallback when MCP fails or unavailable
 
-15. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
+15. 🚨 **SERENA MCP FILE OPERATIONS PRIORITY**: ⚠️ MANDATORY - Tool hierarchy for semantic file operations:
+   - ✅ **PRIMARY**: Serena MCP tools for semantic code analysis and file operations when available
+   - ✅ **SECONDARY**: Standard file tools (Read, Edit, MultiEdit) as fallback
+   - ✅ **Pattern**: Complex file operations → Use Serena for semantic understanding → Fallback to basic file tools
+   - ✅ **Use Cases**: Code analysis, symbol finding, refactoring, project understanding
+
+16. 🚨 **MEMORY ENHANCEMENT PROTOCOL**: ⚠️ MANDATORY for specific commands
 - **Enhanced Commands**: `/think`, `/learn`, `/debug`, `/analyze`, `/fix`, `/plan`, `/execute`, `/arch`, `/test`, `/pr`, `/perp`, `/research`
 - **High-Quality Memory Standards**: Include exact error messages, file paths with line numbers, code snippets, actionable information, external references
 - **Enhanced Entity Types**: `technical_learning`, `implementation_pattern`, `debug_session`, `workflow_insight`, `architecture_decision`
 - **Execution Steps**: 1) Extract technical terms 2) Search Memory MCP 3) Log results transparently 4) Natural integration 5) Capture high-quality learnings
 - **Transparency**: Show "🔍 Searching memory..." → Report "📚 Found X relevant memories" → Indicate "📚 Enhanced with memory context"
 
-16. 🚨 **FILE CREATION PREVENTION**: ⚠️ MANDATORY - Stop unnecessary file proliferation
+17. 🚨 **FILE CREATION PREVENTION**: ⚠️ MANDATORY - Stop unnecessary file proliferation
 - ❌ **FORBIDDEN PATTERNS**: Creating `_v2`, `_new`, `_backup`, `_temp` files when existing file can be edited
 - ✅ **REQUIRED CHECK**: Before any Write tool usage: "Can I edit an existing file instead?"
 - ✅ **GIT IS SAFETY**: Version control provides backup/history - no manual backup files needed

@@ -583,6 +583,61 @@ else
     fi
 fi
 
+echo -e "\n${BLUE}12/12 Setting up Serena MCP Server...${NC}"
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
+log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
+
+# Pre-flight check: Ensure uvx is available
+echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
+if ! command -v uvx >/dev/null 2>&1; then
+    echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
+    echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
+    log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
+    INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
+    FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    TOTAL_SERVERS=$((TOTAL_SERVERS - 1))  # Correct count since we're not installing
+else
+    echo -e "${GREEN}  ✅ uvx found: $(uvx --version 2>/dev/null || echo "available")${NC}"
+    log_with_timestamp "uvx dependency check passed"
+
+    # Check if server already exists
+    if server_already_exists "serena"; then
+    echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
+    log_with_timestamp "Server serena already exists, skipping"
+    INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Remove existing serena server to reconfigure
+    claude mcp remove "serena" >/dev/null 2>&1 || true
+
+    # Add Serena MCP server using uvx with git repository
+    echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
+    log_with_timestamp "Attempting to add Serena MCP server via uvx"
+
+    # Use add-json for uvx configuration
+    add_output=$(claude mcp add-json --scope user "serena" '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"]}' 2>&1)
+    add_exit_code=$?
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
+        echo -e "${BLUE}  📋 Server info:${NC}"
+        echo -e "     • Repository: https://github.com/oraios/serena"
+        echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
+        echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
+        echo -e "     • Configuration: ~/.serena/serena_config.yml"
+        log_with_timestamp "Successfully added Serena MCP server via uvx"
+        INSTALL_RESULTS["serena"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
+        log_error_details "claude mcp add-json serena" "serena" "$add_output"
+        INSTALL_RESULTS["serena"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+    fi
+fi
+
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"
 MCP_LIST=$(claude mcp list 2>/dev/null)
@@ -616,6 +671,9 @@ for server in "${!INSTALL_RESULTS[@]}"; do
             ;;
         "ADD_FAILED")
             echo -e "${RED}  ❌ $server: Failed to add to Claude MCP${NC}"
+            ;;
+        "DEPENDENCY_MISSING")
+            echo -e "${RED}  ❌ $server: Required dependency not found${NC}"
             ;;
     esac
 done
