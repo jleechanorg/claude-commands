@@ -138,17 +138,159 @@ All agents work independently → Create individual PRs → Integration verifica
 tmux attach-session -t task-agent-frontend  # Direct agent access
 ```
 
-## 💡 The Composition Architecture
+## 💡 The Composition Architecture - How It Actually Works
 
-### How Simple .md Files Create Complex Workflows
+### The Hook Mechanism
 
-Each command is designed to **compose** with others through shared protocols:
+Each command is a **simple .md file** that Claude Code reads as executable instructions. When you type `/pr "fix bug"`, Claude:
 
-- **TodoWrite Integration**: Commands break down into trackable steps
-- **Memory Enhancement**: Learning from previous executions
-- **Git Workflow Integration**: Automatic branch management and PR creation
-- **Testing Integration**: Automatic test running and validation
-- **Error Recovery**: Smart handling of failures and retries
+1. **Reads** `.claude/commands/pr.md` 
+2. **Parses** the structured prompt template
+3. **Executes** the workflow defined in the markdown
+4. **Composes** with other commands through shared protocols
+
+### Multi-Command Chaining in Single Sentences
+
+You can chain multiple commands in one request:
+
+```bash
+# Sequential execution
+"/think about authentication then /arch the solution then /execute it"
+
+# Conditional execution  
+"/test the login flow and if it fails /fix it then /pr the changes"
+
+# Parallel analysis
+"/debug the performance issue while /research best practices then /plan implementation"
+
+# Full workflow composition
+"/analyze the codebase /design a solution /execute with tests /pr with documentation then /copilot any issues"
+```
+
+### Nested Command Layers - The Real Architecture
+
+#### `/copilot` - 7-Layer Autonomous System
+```
+Layer 1: PR Context Analysis
+├── /commentfetch - Gather all PR comments  
+├── /reviewstatus - Check review states
+└── /context - Build comprehensive PR understanding
+
+Layer 2: Issue Detection & Prioritization  
+├── /debug - Identify technical issues
+├── /commentcheck - Parse review feedback
+└── /ghfixtests - Analyze CI failures
+
+Layer 3: Automated Resolution
+├── /fixpr - Apply systematic fixes
+├── /test - Validate changes
+└── /integrate - Handle merge conflicts
+
+Layer 4: Quality Assurance
+├── /coverage - Verify test coverage
+├── /lint - Code style validation  
+└── /reviewdeep - Self-review changes
+
+Layer 5: Documentation & Communication
+├── /commentreply - Respond to reviewers
+├── /pr - Update PR description
+└── /pushl - Push with sync verification
+
+Layer 6: Validation Loop
+├── /testserver - Integration testing
+├── /ghfixtests - Re-verify CI status
+└── /reviewstatus - Confirm resolution
+
+Layer 7: Completion Verification
+└── Final status check and user notification
+```
+
+#### `/execute` - 3-Layer Orchestration System
+```
+Layer 1: Planning & Analysis
+├── /think - Task decomposition
+├── /arch - Technical approach  
+└── /research - Background investigation
+
+Layer 2: Auto-Approval & Setup
+├── TodoWrite initialization
+├── Progress tracking setup
+└── Error recovery preparation
+
+Layer 3: Implementation Loop
+├── /plan - Detailed execution steps
+├── /test - Continuous validation
+├── /fix - Issue resolution
+├── /integrate - Change integration
+└── /pushl - Completion with sync
+```
+
+#### `/pr` - 4-Layer Development Lifecycle
+```
+Layer 1: Analysis
+├── /debug - Issue identification
+├── /arch - Solution architecture
+└── /research - Context gathering
+
+Layer 2: Implementation  
+├── /execute - Code changes
+├── /test - Validation
+└── /coverage - Quality verification
+
+Layer 3: Git Workflow
+├── /newbranch - Branch management
+├── /pushl - Push with verification
+└── /integrate - Merge preparation
+
+Layer 4: PR Creation & Management
+├── GitHub PR creation
+├── /reviewstatus - Status monitoring
+└── /copilot - Autonomous issue handling
+```
+
+#### `/orch` - Multi-Agent Delegation
+```
+Agent Assignment Layer:
+├── Frontend Agent (/execute frontend tasks)
+├── Backend Agent (/execute API tasks)  
+├── Testing Agent (/execute test tasks)
+└── Opus-Master (/arch + integration)
+
+Coordination Layer:
+├── Redis-based communication
+├── Task dependency management
+└── Resource allocation
+
+Integration Layer:
+├── Individual PR creation per agent
+├── Cross-agent validation
+└── Final integration verification
+```
+
+### Composition Through Shared Protocols
+
+**TodoWrite Integration**: All commands break down into trackable steps
+```bash
+/execute "build dashboard" 
+# Internally creates: [plan task] → [implement components] → [add tests] → [create PR]
+```
+
+**Memory Enhancement**: Commands learn from previous executions
+```bash
+/learn "React patterns" then /execute "build React component"
+# Second command applies learned patterns automatically
+```
+
+**Git Workflow Integration**: Automatic branch management and PR creation
+```bash
+/pr "fix authentication"
+# Internally: /newbranch → code changes → /pushl → GitHub PR creation
+```
+
+**Error Recovery**: Smart handling of failures and retries
+```bash
+/copilot  # If tests fail → /fix → /test → retry until success
+```
 
 ### Building Block Composition Patterns
 
