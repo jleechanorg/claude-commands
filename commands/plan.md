@@ -4,6 +4,34 @@
 
 **Usage**: `/plan` - Present execution plan and wait for approval
 
+## 🚨 CRITICAL: SERENA MCP USAGE FOR PR WORK
+
+**MANDATORY for Large PRs (50+ files)**: When working on PR analysis or fixes, ALWAYS use Serena MCP tools as primary approach:
+
+### Serena MCP First Protocol
+1. **❌ NEVER start by reading entire files** - This wastes context immediately
+2. **✅ ALWAYS use Serena semantic tools first**:
+   - `mcp__serena__find_symbol` - Target specific functions/classes
+   - `mcp__serena__get_symbols_overview` - Understand file structure
+   - `mcp__serena__search_for_pattern` - Find code patterns efficiently
+   - `mcp__serena__find_referencing_symbols` - Track dependencies
+
+### Example PR Fix Workflow
+```bash
+# ❌ WRONG: Reading entire files
+Read --file_path="$PROJECT_ROOT/frontend_v2/src/App.tsx"  # Wastes 1000+ lines of context!
+
+# ✅ RIGHT: Targeted Serena analysis
+mcp__serena__search_for_pattern --pattern="\\(campaign as any\\)" --restrict_search_to_code_files=true
+mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
+```
+
+### Context Preservation Rules
+- **First 20% of context**: Use Serena for analysis and discovery
+- **Middle 60% of context**: Apply targeted fixes using Edit/MultiEdit
+- **Final 20% of context**: Verification and testing
+- **If context < 30%**: Split task or summarize findings
+
 ## 🧠 MEMORY INTEGRATION
 
 **Enhanced Planning with Memory MCP**: `/plan` automatically consults Memory MCP before creating execution plans to apply learned patterns, user preferences, and corrections.

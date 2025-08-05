@@ -53,9 +53,11 @@
    - Provide actionable feedback with suggested improvements
 
 5. **Post Review Comments**:
-   - Post inline comments using GitHub API (see canonical GitHub API documentation)
-   - Post general review comment with overall findings summary
-   - Include file-by-file breakdown with key issues identified
+   **🚨 MANDATORY: You MUST post review comments as described below.**
+   - **ALWAYS POST** inline comments using GitHub API (see canonical GitHub API documentation)
+   - **ALWAYS POST** general review comment with comprehensive findings summary
+   - **ALWAYS POST** file-by-file breakdown with key issues identified
+   - **NEVER SKIP** comment posting - this is the primary purpose of the command
 
 6. **Review Completion**:
    - Generate comprehensive review report
