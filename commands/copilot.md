@@ -164,7 +164,7 @@ fi
 
 ### Phase 4: Comment Response Processing (CONDITIONAL)
 ```bash
-# SMART: Check if comment responses needed with enhanced context reply system
+# SMART: Check if comment responses needed
 unresponded_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
 
 if [[ "$unresponded_count" -eq 0 ]]; then
@@ -172,38 +172,18 @@ if [[ "$unresponded_count" -eq 0 ]]; then
     echo "✅ Comment Status: $unresponded_count total comments"
     export COMMENTS_PROCESSED="false"
 else
-    echo "💬 RESPONDING: $unresponded_count comments require enhanced context responses"
-    echo "🚀 EXECUTING: /commentreply $PR_NUMBER (Enhanced Context Reply System)"
+    echo "💬 RESPONDING: $unresponded_count comments require responses"
+    echo "🚀 DELEGATING: /commentreply $PR_NUMBER"
 
-    # 🚨 CRITICAL: MUST actually execute the command, not just log it
+    # Delegate to commentreply command - it handles all verification internally
     /commentreply $PR_NUMBER
 
-    # 🚨 CRITICAL: Verify execution completed successfully
+    # Trust commentreply to handle success/failure - no reimplementation
     if [[ $? -eq 0 ]]; then
-        echo "✅ SUCCESS: Enhanced context replies posted successfully"
-
-        # 🚨 MANDATORY: Verify enhanced context reply compliance
-        echo "🔍 VERIFYING: Enhanced context reply requirements..."
-        current_commit=$(git rev-parse --short HEAD)
-
-        # Check that replies include commit hash references
-        recent_comment=$(gh pr view $PR_NUMBER --json comments | jq -r '.comments[-1].body // empty' 2>/dev/null)
-        if [[ "$recent_comment" =~ \(Commit:.*\) ]]; then
-            echo "✅ VERIFIED: Commit hash reference included"
-        else
-            echo "⚠️ WARNING: Missing commit hash - replies should include (Commit: $current_commit)"
-        fi
-
-        # Check for enhanced context reply format (🧵 **Reply to Inline Comment #[ID]**)
-        if [[ "$recent_comment" =~ 🧵.*Reply\ to\ Inline\ Comment\ # ]]; then
-            echo "✅ VERIFIED: Enhanced context reply format included"
-        else
-            echo "⚠️ WARNING: Missing enhanced context format for superior UX"
-        fi
-
+        echo "✅ SUCCESS: Comment replies processed successfully"
         export COMMENTS_PROCESSED="true"
     else
-        echo "❌ FAILURE: Enhanced context reply execution failed"
+        echo "❌ FAILURE: Comment reply processing failed"
         export COMMENTS_PROCESSED="false"
         echo "🚨 CRITICAL ERROR: Phase 4 cannot be marked complete"
         exit 1
@@ -211,14 +191,11 @@ else
 fi
 ```
 - ✅ **SMART EXECUTION**: Skip when no unresponded comments detected
-- ✅ **ENHANCED CONTEXT SYSTEM**: Use superior enhanced context reply format
-- ✅ **MANDATORY EXECUTION**: Actually run /commentreply when comments exist
-- ✅ **SUCCESS VERIFICATION**: Verify command completed before proceeding
-- ✅ **ENHANCED CONTEXT COMPLIANCE**: Verify 🧵 **Reply to Inline Comment #[ID]** format
-- ✅ **PROTOCOL VALIDATION**: Check replies follow enhanced context system
+- ✅ **DELEGATION**: Delegate to /commentreply instead of reimplementing
+- ✅ **TRUST EXISTING COMMANDS**: Let /commentreply handle all verification internally
 - ✅ **FAILURE HANDLING**: Hard stop if comment processing fails
 - ✅ **STATE TRACKING**: Export COMMENTS_PROCESSED for Phase 5
-- ✅ **TRANSPARENCY**: Clear logging of all execution steps
+- ✅ **NO REIMPLEMENTATION**: Removed duplicate verification logic
 
 ### Phase 5: Coverage Verification (CONDITIONAL) - Enhanced Context Verification
 ```bash

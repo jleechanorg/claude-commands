@@ -25,7 +25,7 @@
 
 3. **Run HTTP Test**
    ```bash
-   TESTING=true vpython testing_http/test_name.py
+   TESTING=true python testing_http/test_name.py
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded
