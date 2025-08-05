@@ -1,513 +1,299 @@
-# 📚 Claude Commands - Reference Export
+# Claude Commands - Command Composition System
 
-## ⚠️ Important Disclaimer
+Transform Claude Code into an autonomous development powerhouse through simple command hooks that enable complex workflow orchestration.
 
-**This is a reference export from a working Claude Code project.** These commands and configurations contain project-specific paths, settings, and assumptions that require adaptation for your environment.
+## 🚀 ONE-CLICK INSTALL
 
-**You may need to personally debug some configurations, but Claude Code can easily adjust for your specific needs.**
+```bash
+./install.sh
+```
 
-These configurations may include:
-- Project-specific paths and settings that need updating for your environment
-- Setup assumptions and dependencies specific to the original project
-- References to particular GitHub repositories and project structures
+Auto-installs commands to `.claude/commands/` and sets up your environment with proper .gitignore management.
 
-Feel free to use these as a starting point - Claude Code excels at helping you adapt and customize them for your specific workflow.
+## 🎯 The Magic: Simple Hooks → Powerful Workflows
 
----
+This isn't just a collection of commands - it's a **complete workflow composition architecture** that transforms how you develop software.
 
-## 🚀 Introduction
+### Before: Manual Step-by-Step Development
+```
+1. Analyze the issue manually
+2. Write code manually  
+3. Test manually
+4. Create PR manually
+5. Handle review comments manually
+```
 
-This repository contains a comprehensive Claude Code command system designed for AI-powered development workflows. The system includes:
+### After: Single Command Workflows
+```bash
+/pr "fix authentication bug"     # → analyze → implement → test → create PR
+/copilot                        # → comprehensive PR analysis → apply all fixes
+/execute "add user dashboard"   # → plan → implement → test → document
+/orch "implement notifications" # → multi-agent parallel development
+```
 
-- **70+ slash commands** for development, testing, debugging, and automation
-- **Multi-agent orchestration system** for parallel task delegation
-- **Complete infrastructure scripts** for development environment management
-- **Automated PR processing** with intelligent code review and fixing
-- **Self-hosted Claude bot** for repository-based command processing
+## 🔍 Command Deep Dive - The Composition Powerhouses
+
+### `/execute` - Auto-Approval Development Orchestrator
+
+**What It Does**: The ultimate autonomous development command with built-in auto-approval and TodoWrite orchestration.
+
+**3-Phase Workflow**:
+1. **Planning**: Complexity assessment, execution method, timeline estimation
+2. **Auto-Approval**: "User already approves - proceeding with execution"  
+3. **Implementation**: TodoWrite tracking with real-time progress updates
+
+**Real Example**:
+```bash
+/execute "focus on command composition and explain details on /execute..."
+↓
+Phase 1 - Planning: [complexity assessment, timeline, approach]
+Phase 2 - Auto-approval: "User already approves - proceeding"  
+Phase 3 - Implementation: [TodoWrite tracking, step execution]
+```
+
+### `/plan` - Manual Approval Development Planning
+
+**What It Does**: Structured development planning with explicit user approval gates.
+
+**Perfect For**: Complex architectural changes, high-risk modifications, learning new patterns.
+
+**Workflow**:
+1. **Deep Analysis**: Research existing system, constraints, requirements
+2. **Multi-Approach Planning**: Present 2-3 different implementation approaches  
+3. **Resource Assessment**: Timeline, complexity, tool requirements, risk analysis
+4. **Approval Gate**: User must explicitly approve before implementation
+5. **Guided Execution**: Step-by-step implementation with checkpoints
+
+### `/pr` - Complete PR Workflow Orchestrator
+
+**What It Does**: End-to-end PR creation handling the entire development lifecycle autonomously.
+
+**Internal Workflow Chain**:
+```
+Analysis Phase: Issue analysis → root cause → impact assessment
+↓
+Implementation Phase: Code changes → testing → documentation  
+↓
+Quality Assurance: Test execution → code review → performance check
+↓
+Git Workflow: Branch creation → commits → push → PR creation
+```
+
+**Real Example**:
+```bash
+/pr "fix login timeout issue"
+↓
+Analyze login flow → Identify timeout problem → Implement fix → 
+Run tests → Create branch → Commit changes → Push → Create PR
+```
+
+### `/copilot` - Autonomous PR Analysis & Comprehensive Fixing
+
+**What It Does**: Comprehensive PR analysis with autonomous fixing - **no approval prompts**.
+
+**Autonomous Workflow**:
+1. **Comprehensive Scanning**: Merge conflicts + CI failures + review comments + quality gates
+2. **Intelligent Fixing**: Automated resolution with smart merging strategies  
+3. **Validation Loop**: Re-run tests → verify success → continue until all resolved
+
+**Perfect For**: Continuous integration workflows where you want full automation.
+
+**Real Example**:
+```bash
+PR has: merge conflicts + failing tests + 5 review comments
+/copilot
+↓ 
+Resolve conflicts → Fix failing tests → Address all comments → 
+Re-run validation → Push fixes → Verify success
+```
+
+### `/orch` - Multi-Agent Task Delegation System
+
+**What It Does**: Delegates tasks to autonomous tmux-based agents working in parallel across different branches.
+
+**Multi-Agent Architecture**:
+- **Frontend Agent**: UI/UX implementation, browser testing, styling
+- **Backend Agent**: API development, database integration, server logic  
+- **Testing Agent**: Test automation, validation, performance testing
+- **Opus-Master**: Architecture decisions, code review, integration
+
+**Real Example**:
+```bash
+/orch "add user notifications system"
+↓
+Frontend Agent: notification UI components (parallel)
+Backend Agent: notification API endpoints (parallel)  
+Testing Agent: notification test suite (parallel)
+Opus-Master: architecture review and integration
+↓
+All agents work independently → Create individual PRs → Integration verification
+```
+
+**Cost**: $0.003-$0.050 per task (highly efficient)
+
+**Monitoring**:
+```bash
+/orch monitor agents    # Check agent status
+/orch "What's running?" # Current task overview
+tmux attach-session -t task-agent-frontend  # Direct agent access
+```
+
+## 💡 The Composition Architecture
+
+### How Simple .md Files Create Complex Workflows
+
+Each command is designed to **compose** with others through shared protocols:
+
+- **TodoWrite Integration**: Commands break down into trackable steps
+- **Memory Enhancement**: Learning from previous executions
+- **Git Workflow Integration**: Automatic branch management and PR creation
+- **Testing Integration**: Automatic test running and validation
+- **Error Recovery**: Smart handling of failures and retries
+
+### Building Block Composition Patterns
+
+**Cognitive Chains**: `/think` + `/arch` + `/debug` = Deep analysis workflows  
+**Quality Chains**: `/test` + `/fix` + `/verify` = Quality assurance workflows  
+**Development Chains**: `/plan` + `/implement` + `/validate` = Development workflows
+
+### The Hook Architecture
+
+**Simple**: Each command is just a `.md` file that Claude Code reads as executable instructions  
+**Powerful**: These simple hooks enable complex behavior through composition rather than complexity  
+**Autonomous**: Commands chain together for complete workflows like "analyze → implement → test → create PR"
+
+## 🎯 What You're Really Getting
+
+This export contains **90+ commands** that transform Claude Code into:
+
+1. **Autonomous Development Environment**: Single commands handle complete workflows
+2. **Multi-Agent System**: Parallel task execution with specialized agents  
+3. **Quality Assurance Integration**: Automatic testing and validation
+4. **Git Workflow Automation**: Branch management and PR creation
+5. **Memory-Enhanced Learning**: System learns from previous executions
+
+## 🔧 Installation & Setup
 
 ### Quick Start
-
-1. **Install**: Run `./install-claude-commands.sh` for automated setup
-2. **Explore**: Use `/help` and `/list` to discover available commands
-3. **Start Simple**: Try cognitive commands like `/think`, `/arch`, `/debug`
-4. **Scale Up**: Explore orchestration with `/orch` for parallel workflows
-
----
-
-## 📋 Table of Contents
-
-- [🎯 Main Highlights](#-main-highlights)
-  - [Orchestration System](#orchestration-system)
-  - [Most Interesting Commands](#most-interesting-commands)
-  - [Most Interesting Scripts](#most-interesting-scripts)
-- [🛠️ Installation & Setup](#️-installation--setup)
-- [📂 System Architecture](#-system-architecture)
-- [🔧 Command Categories](#-command-categories)
-- [🚀 Advanced Systems](#-advanced-systems)
-- [📖 Usage Examples](#-usage-examples)
-- [🔍 Troubleshooting](#-troubleshooting)
-- [🤝 Contributing](#-contributing)
-
----
-
-## 🎯 Main Highlights
-
-### Orchestration System
-
-**🚨 Multi-Agent Task Delegation (WIP Prototype)**
-
-The orchestration system enables parallel AI agent execution for complex development workflows:
-
 ```bash
-# Autonomous multi-agent task delegation
-/orch "fix all failing tests and create PR"
-/orch "implement user authentication feature"
-/orch "analyze performance bottlenecks"
-
-# Real-time agent monitoring
-/orch monitor agents
-/orch What's the status?
-```
-
-**Key Features:**
-- **tmux-based agents** with specialized capabilities (frontend, backend, testing, opus-master)
-- **Redis coordination** for A2A communication and task distribution
-- **Cost-effective**: $0.003-$0.050 per task
-- **Autonomous workflow**: task creation → agent assignment → execution → PR creation
-- **Production verified**: Successfully creates PRs and completes complex workflows
-
-**Architecture:**
-- **Agent Management**: Dynamic task agents (task-agent-*) managed by Python monitor
-- **Scaling**: 3-5 parallel agents simultaneously
-- **Monitoring**: Real-time status via `/orch monitor` and direct tmux attachment
-- **Recovery**: Timeout handling, failed agent cleanup, orphaned task management
-
-### Most Interesting Commands
-
-#### 🧠 Cognitive Commands (AI-Enhanced)
-
-1. **`/think`** - Sequential thinking with memory enhancement
-   ```bash
-   /think "How should we architect the user authentication system?"
-   ```
-   - Multi-step reasoning with memory integration
-   - Persistent learning across sessions
-   - Technical problem decomposition
-
-2. **`/arch`** - Architecture analysis and design
-   ```bash
-   /arch "Review the current microservices setup"
-   ```
-   - System architecture evaluation
-   - Design pattern recommendations
-   - Scalability assessment
-
-3. **`/copilot`** - Autonomous PR analysis and fixing
-   ```bash
-   /copilot  # Analyzes current PR context
-   /copilot 1234  # Analyzes specific PR
-   ```
-   - **6-phase workflow**: Status → Comments → CI/Conflicts → Responses → Coverage → Sync
-   - **Enhanced context replies** with threaded conversation analysis
-   - **Autonomous operation** with merge approval safeguards
-
-#### ⚙️ Operational Commands (Workflow Automation)
-
-4. **`/execute`** - Auto-approved task execution
-   ```bash
-   /execute "refactor the database layer"
-   ```
-   - Built-in auto-approval for streamlined workflows
-   - TodoWrite progress tracking
-   - Complexity assessment and parallel execution decisions
-
-5. **`/fake`** - Comprehensive fake code detection
-   ```bash
-   /fake  # Audits entire codebase for fake implementations
-   ```
-   - **Composition**: `/arch /thinku /devilsadvocate /diligent`
-   - Identifies placeholder code, demo implementations, duplicate protocols
-   - Prevents shipping non-functional code
-
-#### 🔬 Meta Commands (System Management)
-
-6. **`/learn`** - Unified learning with Memory MCP integration
-   ```bash
-   /learn "API integration patterns"
-   ```
-   - Persistent knowledge graph storage
-   - Auto-learning from corrections and failures
-   - Cross-session knowledge retention
-
-### Most Interesting Scripts
-
-#### 🚀 Development Environment Management
-
-1. **`claude_start.sh`** - Complete ecosystem startup
-   ```bash
-   ./claude_start.sh
-   ```
-   - **Multi-service management**: Claude Code CLI, MCP servers, orchestration system
-   - **Health checks**: Service verification and dependency validation
-   - **Logging**: Branch-isolated logs in `/tmp/your-project.com/[branch]/`
-   - **Auto-recovery**: Failed service restart and monitoring
-
-2. **`claude_mcp.sh`** - Comprehensive MCP server installation
-   ```bash
-   ./claude_mcp.sh
-   ```
-   - **20+ MCP servers**: GitHub, filesystem, memory, browser automation, AI models
-   - **Automated installation**: Package management, configuration, testing
-   - **Error handling**: Detailed diagnostics and recovery procedures
-   - **Integration testing**: End-to-end MCP functionality validation
-
-#### 🤖 Autonomous Systems
-
-3. **`automation/simple_pr_batch.sh`** - Intelligent PR automation (Production Ready)
-   ```bash
-   # Runs via cron every 10 minutes
-   */10 * * * * /path/to/simple_pr_batch.sh
-   ```
-   - **Autonomous `/copilot` integration** for comprehensive PR analysis
-   - **Error handling**: Timeout detection (20min), attempt limits (max 3), cooldown (4hr)
-   - **Email notifications**: Manual intervention alerts
-   - **Production metrics**: Success rates, processing frequency, failure patterns
-
-4. **`start-claude-bot.sh`** - GitHub-based command processing (Production Ready)
-   ```bash
-   ./start-claude-bot.sh
-   ```
-   - **Repository-native commands**: Post GitHub issue → Self-hosted runner → Claude execution
-   - **Automated PR creation**: Command results posted as PR with threaded responses
-   - **Version-controlled history**: All commands tracked in repository issues
-   - **Debugging tools**: Comprehensive test suite and error diagnostics
-
-#### 🔧 Git Workflow Management
-
-5. **`integrate.sh`** - Fresh branch creation workflow
-   ```bash
-   ./integrate.sh
-   ```
-   - **Fresh branches from main**: Automated cleanup and safety checks
-   - **Context preservation**: Scratchpad migration and progress tracking
-   - **Conflict prevention**: Pre-integration validation and dependency checks
-
-6. **`resolve_conflicts.sh`** - Systematic conflict resolution
-   ```bash
-   ./resolve_conflicts.sh
-   ```
-   - **Critical file analysis**: CSS, main.py, configs, schemas prioritization
-   - **Both-version assessment**: Intelligent merge strategy selection
-   - **Test integration**: Conflict resolution validation
-   - **Documentation**: Decision tracking and rollback procedures
-
----
-
-## 🛠️ Installation & Setup
-
-### Automated Installation
-
-```bash
-# Clone the repository
+# 1. Clone this repository to your project
 git clone https://github.com/jleechanorg/claude-commands.git
+
+# 2. Run one-click install
 cd claude-commands
+./install.sh
 
-# Run the installer
-./install-claude-commands.sh
+# 3. Start using composition commands
+/execute "implement user authentication"
+/pr "fix performance issues"  
+/copilot  # Fix any PR issues
 ```
 
-The installer will:
-- ✅ Check prerequisites (git, python3, pip)
-- ✅ Set up directory structure
-- ✅ Install command definitions and scripts
-- ✅ Configure infrastructure components
-- ✅ Validate the installation
-
-### Manual Setup
-
-1. **Prerequisites**:
-   - Claude Code CLI: https://claude.ai/code
-   - Git, Python 3.8+, pip
-   - Optional: Redis (for orchestration), tmux (for agents)
-
-2. **Directory Structure**:
-   ```
-   your-project/
-   ├── .claude/commands/     # Command definitions
-   ├── claude_command_scripts/  # Script implementations
-   ├── orchestration/        # Multi-agent system (optional)
-   ├── automation/          # PR automation (optional)
-   ├── claude-bot-commands/ # Self-hosted bot (optional)
-   └── infrastructure-scripts/  # Environment management
-   ```
-
-3. **Configuration**:
-   - Copy `CLAUDE.md` to your project root
-   - Adapt file paths and project references
-   - Configure MCP servers using `claude_mcp.sh`
-
----
-
-## 📂 System Architecture
-
-### Command Processing Architecture
-
-**Dual Composition System:**
-- **Cognitive Commands**: `/think`, `/arch`, `/debug` - Universal semantic understanding
-- **Operational Commands**: `/orchestrate`, `/handoff` - Protocol enforcement
-- **Tool Commands**: `/execute`, `/test`, `/pr` - Direct task execution
-
-### Data Flow
-
-```
-User Input → Command Recognition → Type Classification → Workflow Execution
-     ↓              ↓                    ↓                    ↓
-Slash Command → .md Template → Command Logic → Tool Execution
-     ↓              ↓                    ↓                    ↓
-Context → Memory Enhancement → Result Generation → Progress Tracking
-```
-
-### Memory Enhancement
-
-Enhanced commands automatically integrate Memory MCP for:
-- Previous experiences and patterns
-- Technical learnings from corrections
-- Cross-session knowledge retention
-- Workflow insights and optimizations
-
----
-
-## 🔧 Command Categories
-
-### 🧠 Cognitive (AI-Enhanced Thinking)
-- `/think` - Sequential reasoning with memory
-- `/arch` - Architecture analysis and design
-- `/debug` - Enhanced debugging with context
-- `/learn` - Knowledge capture and retention
-- `/analyze` - Deep technical analysis
-
-### ⚙️ Operational (Workflow Automation)
-- `/execute` - Auto-approved task execution
-- `/orchestrate` - Multi-agent delegation
-- `/copilot` - Autonomous PR processing
-- `/handoff` - Context-aware task transfer
-
-### 🔧 Tool (Direct Execution)
-- `/test` - Comprehensive testing workflows
-- `/pr` - Pull request management
-- `/pushl` - Git operations with verification
-- `/fixpr` - CI failure analysis and resolution
-
-### 🎯 Meta (System Management)
-- `/fake` - Code quality auditing
-- `/exportcommands` - System sharing and backup
-- `/header` - Branch context tracking
-- `/list` - Command discovery
-
----
-
-## 🚀 Advanced Systems
-
-### Orchestration System Setup
-
-1. **Prerequisites**:
-   ```bash
-   # Install Redis
-   sudo apt-get install redis-server  # Ubuntu/Debian
-   brew install redis                 # macOS
-   
-   # Install tmux
-   sudo apt-get install tmux         # Ubuntu/Debian
-   brew install tmux                 # macOS
-   ```
-
-2. **Start the system**:
-   ```bash
-   ./orchestration/start_system.sh start
-   ```
-
-3. **Usage examples**:
-   ```bash
-   /orch "fix failing tests in the authentication module"
-   /orch "implement user dashboard with real-time updates"
-   /orch monitor agents
-   ```
-
-### Automation System Setup
-
-1. **Install**:
-   ```bash
-   # Set up cron job
-   crontab -e
-   # Add: */10 * * * * /path/to/automation/simple_pr_batch.sh
-   ```
-
-2. **Configure email notifications**:
-   ```bash
-   # Edit automation/simple_pr_batch.sh
-   # Set EMAIL_RECIPIENT and SMTP settings
-   ```
-
-### Claude Bot System Setup
-
-1. **GitHub repository setup**:
-   ```bash
-   # Create repository for command processing
-   gh repo create claude-commands --private
-   ```
-
-2. **Self-hosted runner setup**:
-   ```bash
-   ./setup-github-runner.sh
-   ```
-
-3. **Bot server startup**:
-   ```bash
-   ./start-claude-bot.sh
-   ```
-
----
-
-## 📖 Usage Examples
-
-### Basic Workflow
-
+### Manual Installation
 ```bash
-# Discover available commands
-/list
+# Create commands directory
+mkdir -p .claude/commands
 
-# Start with thinking
-/think "How should we approach this refactoring?"
+# Copy command definitions
+cp commands/* .claude/commands/
 
-# Execute the plan
-/execute "refactor user authentication system"
-
-# Create PR and review
-/pr "Refactor authentication for better security"
-/copilot  # Autonomous PR analysis and fixing
+# Update .gitignore
+echo ".claude/" >> .gitignore
+echo "# Claude Commands - Auto-installed" >> .gitignore
 ```
 
-### Advanced Orchestration
+## 🎯 Adaptation Guide
 
+### Project-Specific Placeholders
+
+Commands contain placeholders that need adaptation:
+- `$PROJECT_ROOT/` → Your project's main directory
+- `your-project.com` → Your domain/project name
+- `$USER` → Your username
+- `TESTING=true python` → Your test execution pattern
+
+### Example Adaptations
+
+**Before** (exported):
 ```bash
-# Parallel development
-/orch "implement login API endpoints"
-/orch "create user dashboard UI"
-/orch "write integration tests"
-
-# Monitor progress
-/orch monitor agents
-/orch What's the status?
-
-# Complex workflows
-/orch "analyze performance, fix bottlenecks, and optimize database queries"
+TESTING=true python $PROJECT_ROOT/test_file.py
 ```
 
-### Automated Maintenance
-
+**After** (adapted):
 ```bash
-# Set up automation (one-time)
-./automation/setup_automation.sh
-
-# Commands run automatically:
-# - PR analysis every 10 minutes
-# - CI failure fixing
-# - Comment response generation
-# - Email alerts for manual intervention
+npm test src/components/test_file.js
 ```
 
----
+## 🚀 Advanced Features
 
-## 🔍 Troubleshooting
+### Multi-Command Compositions
 
-### Common Issues
-
-1. **Command not found**:
-   ```bash
-   # Check if Claude Code CLI is installed
-   claude --version
-   
-   # Verify command exists
-   ls .claude/commands/
-   ```
-
-2. **MCP server failures**:
-   ```bash
-   # Reinstall MCP servers
-   ./claude_mcp.sh
-   
-   # Check specific server status
-   claude list-mcps
-   ```
-
-3. **Orchestration issues**:
-   ```bash
-   # Check Redis connection
-   redis-cli ping
-   
-   # Restart orchestration system
-   ./orchestration/start_system.sh restart
-   ```
-
-### Debug Commands
-
+Chain commands for complex workflows:
 ```bash
-# System diagnostics
-/debug "MCP server connectivity"
-
-# Memory analysis
-/learn --debug
-
-# Architecture review
-/arch --validate
+/execute "analyze codebase architecture"  # Deep analysis with TodoWrite
+/plan "redesign authentication system"    # Structured planning with approval
+/pr "implement OAuth integration"         # Full development lifecycle  
+/copilot                                 # Autonomous issue resolution
 ```
 
+### Agent Orchestration
+
+Parallel development with specialized agents:
+```bash
+/orch "build user dashboard"
+# Spawns: Frontend agent + Backend agent + Testing agent + Architecture reviewer
+# Result: 4 parallel PRs with integrated final solution
+```
+
+### Memory-Enhanced Development
+
+Commands learn from previous executions:
+```bash
+/learn "authentication patterns"  # Capture knowledge
+/execute "implement SSO"         # Apply learned patterns
+# System remembers successful approaches and applies them
+```
+
+## 📚 Command Categories
+
+### 🧠 Cognitive Commands (Semantic Composition)
+`/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/research`
+
+### ⚙️ Operational Commands (Protocol Enforcement)  
+`/headless`, `/handoff`, `/orchestrate`, `/orch`
+
+### 🔧 Tool Commands (Direct Execution)
+`/execute`, `/test`, `/pr`, `/copilot`, `/plan`
+
+### 🎯 Workflow Orchestrators
+`/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step workflows
+
+### 🔨 Building Blocks
+Individual commands that compose into larger workflows
+
+## ⚠️ Important Notes
+
+### Reference Export
+This is a reference export from a working Claude Code project. Commands may need adaptation for your specific environment, but Claude Code excels at helping you customize them.
+
+### Requirements
+- Claude Code CLI
+- Git repository context
+- Project-specific adaptations for paths and commands
+
+### Support
+- Commands include adaptation warnings where project-specific changes needed
+- Install script provides clear guidance for customization
+- README examples show adaptation patterns
+
+## 🎉 The Result: Workflow Transformation
+
+Transform your development process from manual step-by-step work to autonomous workflow orchestration where single commands handle complex multi-phase processes.
+
+This isn't just command sharing - it's **workflow transformation** through the power of command composition.
+
 ---
 
-## 🤝 Contributing
+🚀 **Generated with [Claude Code](https://claude.ai/code)**
 
-### Adding New Commands
-
-1. **Create command definition**:
-   ```bash
-   # Add to .claude/commands/new-command.md
-   # Follow existing patterns and documentation
-   ```
-
-2. **Implement functionality**:
-   ```bash
-   # Add script to claude_command_scripts/ if needed
-   # Keep Python minimal, leverage Claude intelligence
-   ```
-
-3. **Test integration**:
-   ```bash
-   # Test command execution
-   /new-command --test
-   
-   # Verify with fake code detection
-   /fake
-   ```
-
-### Best Practices
-
-- **Minimal Python**: Use for data collection only
-- **Maximum Claude**: Leverage AI intelligence in .md files
-- **Explicit execution**: Users should see what's running
-- **Memory integration**: Enhance commands with learning
-- **Error handling**: Graceful degradation with helpful messages
-
-### Development Principles
-
-- **Single Responsibility**: Each command does one thing well
-- **Clear Interfaces**: Obvious inputs, outputs, side effects
-- **Documentation**: Every command has usage examples
-- **Testing**: Validate both automated and manual execution
-
----
-
-**For support and updates, visit: https://github.com/jleechanorg/claude-commands**
-
----
-
-*Generated with Claude Code - AI-powered development workflows*
+**Co-Authored-By: Claude <noreply@anthropic.com>**
