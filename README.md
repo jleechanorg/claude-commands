@@ -27,6 +27,18 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 
 This isn't just a collection of commands - it's a **complete workflow composition architecture** that transforms how you develop software.
 
+### Command Chaining Examples
+```bash
+# Multi-command composition in single request (like /fake command)
+"/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
+
+# Sequential workflow chains
+"/think about auth then /execute the solution"  # → analysis → implementation
+
+# Conditional execution flows  
+"/test login flow and if fails /fix then /pr"  # → test → fix → create PR
+```
+
 ### Before: Manual Step-by-Step Development
 ```
 1. Analyze the issue manually
@@ -38,30 +50,30 @@ This isn't just a collection of commands - it's a **complete workflow compositio
 
 ### After: Single Command Workflows
 ```bash
-/pr "fix authentication bug"     # → analyze → implement → test → create PR
-/copilot                        # → comprehensive PR analysis → apply all fixes
-/execute "add user dashboard"   # → plan → implement → test → document
+/pr "fix authentication bug"     # → think → execute → push → copilot → review
+/copilot                        # → analyze PR → fix all issues autonomously
+/execute "add user dashboard"   # → plan → auto-approve → implement
 /orch "implement notifications" # → multi-agent parallel development
 ```
 
 ## 🔍 Command Deep Dive - The Composition Powerhouses
 
-### `/execute` - Auto-Approval Development Orchestrator
+### `/execute` - Plan-Approve-Execute Composition
 
-**What It Does**: The ultimate autonomous development command with built-in auto-approval and TodoWrite orchestration.
+**What It Does**: Combines `/plan` → `/preapprove` → `/autoapprove` → execute in one seamless workflow with TodoWrite tracking.
 
 **3-Phase Workflow**:
-1. **Planning**: Complexity assessment, execution method, timeline estimation
-2. **Auto-Approval**: "User already approves - proceeding with execution"  
-3. **Implementation**: TodoWrite tracking with real-time progress updates
+1. **Planning Phase**: Executes `/plan` command - creates TodoWrite checklist and displays execution plan
+2. **Approval Chain**: `/preapprove` validation followed by `/autoapprove` with message "User already approves - proceeding with execution"  
+3. **Implementation**: Systematic execution following the approved plan with progress updates
 
 **Real Example**:
 ```bash
-/execute "focus on command composition and explain details on /execute..."
+/execute "fix login button styling"
 ↓
-Phase 1 - Planning: [complexity assessment, timeline, approach]
-Phase 2 - Auto-approval: "User already approves - proceeding"  
-Phase 3 - Implementation: [TodoWrite tracking, step execution]
+Phase 1 - Planning (/plan): Creates TodoWrite checklist and execution plan
+Phase 2 - Approval Chain: /preapprove → /autoapprove → "User already approves - proceeding"  
+Phase 3 - Implementation: [Check styles → Update CSS → Test → Commit]
 ```
 
 ### `/plan` - Manual Approval Development Planning
@@ -77,47 +89,55 @@ Phase 3 - Implementation: [TodoWrite tracking, step execution]
 4. **Approval Gate**: User must explicitly approve before implementation
 5. **Guided Execution**: Step-by-step implementation with checkpoints
 
-### `/pr` - Complete PR Workflow Orchestrator
+### `/pr` - Complete Development Lifecycle
 
-**What It Does**: End-to-end PR creation handling the entire development lifecycle autonomously.
+**What It Does**: Executes the complete 5-phase development lifecycle: `/think` → `/execute` → `/push` → `/copilot` → `/review`
 
-**Internal Workflow Chain**:
+**Mandatory 5-Phase Workflow**:
 ```
-Analysis Phase: Issue analysis → root cause → impact assessment
+Phase 1: Think - Strategic analysis and approach planning
 ↓
-Implementation Phase: Code changes → testing → documentation  
+Phase 2: Execute - Implementation using /execute workflow  
 ↓
-Quality Assurance: Test execution → code review → performance check
+Phase 3: Push - Commit, push, and create PR with details
 ↓
-Git Workflow: Branch creation → commits → push → PR creation
+Phase 4: Copilot - Auto-executed PR analysis and issue fixing
+↓
+Phase 5: Review - Comprehensive code review and validation
 ```
 
 **Real Example**:
 ```bash
 /pr "fix login timeout issue"
 ↓
-Analyze login flow → Identify timeout problem → Implement fix → 
-Run tests → Create branch → Commit changes → Push → Create PR
+Think: Analyze login flow and timeout causes →
+Execute: Implement timeout fix systematically →
+Push: Create PR with comprehensive details →
+Copilot: Fix any automated feedback →
+Review: Complete code review and validation
 ```
 
-### `/copilot` - Autonomous PR Analysis & Comprehensive Fixing
+### `/copilot` - Universal PR Composition with Execute
 
-**What It Does**: Comprehensive PR analysis with autonomous fixing - **no approval prompts**.
+**What It Does**: Targets current branch PR by default, delegates to `/execute` for intelligent 6-phase autonomous workflow.
 
-**Autonomous Workflow**:
-1. **Comprehensive Scanning**: Merge conflicts + CI failures + review comments + quality gates
-2. **Intelligent Fixing**: Automated resolution with smart merging strategies  
-3. **Validation Loop**: Re-run tests → verify success → continue until all resolved
+**6-Phase Autonomous System**:
+1. **PR Analysis**: Status check, CI analysis, comment gathering
+2. **Issue Detection**: Systematic problem identification and prioritization
+3. **Automated Resolution**: Intelligent fixing with `/execute` optimization  
+4. **Quality Assurance**: Test coverage, lint validation, self-review
+5. **Communication**: Reply to comments, update PR descriptions
+6. **Validation**: Final verification and completion confirmation
 
-**Perfect For**: Continuous integration workflows where you want full automation.
+**Perfect For**: Full autonomous PR management without manual intervention.
 
 **Real Example**:
 ```bash
-PR has: merge conflicts + failing tests + 5 review comments
-/copilot
+/copilot  # Auto-targets current branch PR
 ↓ 
-Resolve conflicts → Fix failing tests → Address all comments → 
-Re-run validation → Push fixes → Verify success
+🎯 Targeting current branch PR: #123 → 
+🚀 Delegating to /execute for intelligent workflow → 
+Analyze → Fix → Test → Document → Reply → Verify
 ```
 
 ### `/orch` - Multi-Agent Task Delegation System
@@ -354,6 +374,33 @@ Each test follows a structured `.md` format designed for LLM execution:
 ## Bug Analysis
 **Root Cause**: Analysis of why test fails
 **Fix Location**: Files/components that need changes
+```
+
+### Generic Testing Examples
+
+The framework works across any web application:
+
+```markdown
+# Test: E-commerce Checkout Flow
+## Test Steps
+1. **Navigate**: Load product page, add items to cart
+2. **Execute**: Click checkout, fill payment form, submit order
+3. **Verify**: Order confirmation displayed, email sent
+4. **Evidence**: Screenshots of each step
+
+# Test: Social Media Login
+## Test Steps  
+1. **Navigate**: Go to login page
+2. **Execute**: Test OAuth providers (Google, Facebook, Twitter)
+3. **Verify**: Profile data populated correctly
+4. **Evidence**: User dashboard screenshot
+
+# Test: API Documentation Interface
+## Test Steps
+1. **Navigate**: Load API docs page  
+2. **Execute**: Test endpoint examples, copy code snippets
+3. **Verify**: Code examples work, responses match docs
+4. **Evidence**: Network tab screenshots
 ```
 
 ### Integration with Command Composition
