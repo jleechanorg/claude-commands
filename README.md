@@ -1,5 +1,7 @@
 # Claude Commands - Command Composition System
 
+⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but note it hasn't been extensively tested outside of the original workflow. Expect adaptation needed for your specific setup.
+
 Transform Claude Code into an autonomous development powerhouse through simple command hooks that enable complex workflow orchestration.
 
 ## 🚀 ONE-CLICK INSTALL
@@ -10,26 +12,16 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 
 Auto-installs commands to `.claude/commands/` and sets up your environment with proper .gitignore management.
 
-## 📖 Table of Contents
+## Table of Contents
 
-### 🎯 Core Systems
-- [Command Composition Architecture](#-command-composition-architecture---how-it-actually-works) - The hook mechanism that transforms simple .md files into autonomous workflows
-- [Meta-AI Testing Framework](#-meta-ai-testing-framework) - LLM-native test-driven development with Playwright MCP integration  
-- [WIP: Orchestration System](#-wip-orchestration-system) - Multi-agent task delegation prototype (tmux + Redis coordination)
-
-### 🔍 Deep Dives
-- [Command Powerhouses](#-command-deep-dive---the-composition-powerhouses) - `/execute`, `/plan`, `/pr`, `/copilot`, `/orch` detailed breakdowns
-- [Multi-Command Chaining](#multi-command-chaining-in-single-sentences) - Sequential, conditional, parallel workflow compositions
-- [Nested Command Layers](#nested-command-layers---the-real-architecture) - Internal architecture of major commands
-
-### 🔧 Implementation
-- [Installation & Setup](#-installation--setup) - Quick start and manual installation
-- [Adaptation Guide](#-adaptation-guide) - Project-specific customization
-- [Advanced Features](#-advanced-features) - Multi-command compositions and agent orchestration
-
-### 📚 Reference  
-- [Command Categories](#-command-categories) - Complete command classification
-- [What You're Really Getting](#-what-youre-really-getting) - System capabilities overview
+1. [Command Composition Architecture](#-command-composition-architecture---how-it-actually-works)
+2. [Command Deep Dive](#-command-deep-dive---the-composition-powerhouses)
+3. [Meta-AI Testing Framework](#-meta-ai-testing-framework)
+4. [WIP: Orchestration System](#-wip-orchestration-system)
+5. [Installation & Setup](#-installation--setup)
+6. [Adaptation Guide](#-adaptation-guide)
+7. [Command Categories](#-command-categories)
+8. [Important Notes](#️-important-notes)
 
 ## 🎯 The Magic: Simple Hooks → Powerful Workflows
 
