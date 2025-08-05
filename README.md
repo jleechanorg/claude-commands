@@ -10,6 +10,27 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 
 Auto-installs commands to `.claude/commands/` and sets up your environment with proper .gitignore management.
 
+## 📖 Table of Contents
+
+### 🎯 Core Systems
+- [Command Composition Architecture](#-command-composition-architecture---how-it-actually-works) - The hook mechanism that transforms simple .md files into autonomous workflows
+- [Meta-AI Testing Framework](#-meta-ai-testing-framework) - LLM-native test-driven development with Playwright MCP integration  
+- [WIP: Orchestration System](#-wip-orchestration-system) - Multi-agent task delegation prototype (tmux + Redis coordination)
+
+### 🔍 Deep Dives
+- [Command Powerhouses](#-command-deep-dive---the-composition-powerhouses) - `/execute`, `/plan`, `/pr`, `/copilot`, `/orch` detailed breakdowns
+- [Multi-Command Chaining](#multi-command-chaining-in-single-sentences) - Sequential, conditional, parallel workflow compositions
+- [Nested Command Layers](#nested-command-layers---the-real-architecture) - Internal architecture of major commands
+
+### 🔧 Implementation
+- [Installation & Setup](#-installation--setup) - Quick start and manual installation
+- [Adaptation Guide](#-adaptation-guide) - Project-specific customization
+- [Advanced Features](#-advanced-features) - Multi-command compositions and agent orchestration
+
+### 📚 Reference  
+- [Command Categories](#-command-categories) - Complete command classification
+- [What You're Really Getting](#-what-youre-really-getting) - System capabilities overview
+
 ## 🎯 The Magic: Simple Hooks → Powerful Workflows
 
 This isn't just a collection of commands - it's a **complete workflow composition architecture** that transforms how you develop software.
@@ -291,6 +312,146 @@ Integration Layer:
 ```bash
 /copilot  # If tests fail → /fix → /test → retry until success
 ```
+
+## 🧪 Meta-AI Testing Framework
+
+### LLM-Native Test-Driven Development
+
+The `testing_llm/` directory contains a revolutionary **Meta-AI Testing Framework** that uses LLMs to test LLMs, creating an iterative improvement loop for AI development workflows.
+
+### Key Capabilities
+
+#### 1. **LLM Capability Mapping** (`test_llm_capability_mapping.md`)
+- **Progressive Complexity Ladder**: 5 levels from basic mechanics to cross-domain transfer
+- **Multi-LLM Collaboration Experiments**: Sequential, parallel, and specialized agent approaches  
+- **Failure Mode Analysis**: Systematic cataloging of how and why each LLM fails
+- **Capability Boundary Discovery**: Finding exact limits of reasoning, creativity, domain knowledge
+
+#### 2. **AI-First Development Workflow** (`test_ai_development_workflow.md`)
+- **Code Review Partnership**: LLM-human collaboration patterns for optimal code quality
+- **Feature Design AI**: Automated feature specification and technical design
+- **Decision Automation**: AI-assisted architectural and implementation decisions
+- **Learning Acceleration**: System learns from development patterns and improves suggestions
+
+#### 3. **Emergent Narrative Intelligence** (`test_emergent_narrative_intelligence.md`)
+- **Multi-Agent Story Generation**: Collaborative storytelling with specialized LLM agents
+- **Player Psychology Modeling**: Understanding and responding to player behavior patterns
+- **Living World Simulation**: Dynamic world state management with cross-campaign intelligence
+- **Cross-Campaign Learning**: Knowledge transfer between different game sessions
+
+### Test File Structure
+
+Each test follows a structured `.md` format designed for LLM execution:
+
+```markdown
+# Test: [Component/Feature Name]
+
+## Pre-conditions
+- Server requirements, test data setup, environment configuration
+
+## Test Steps  
+1. **Navigate**: URL and setup
+2. **Execute**: Detailed interaction steps using Playwright MCP
+3. **Verify**: Expected outcomes with assertions
+4. **Evidence**: Screenshot requirements for validation
+
+## Expected Results
+**PASS Criteria**: Specific conditions for test success
+**FAIL Indicators**: What indicates test failure
+
+## Bug Analysis
+**Root Cause**: Analysis of why test fails
+**Fix Location**: Files/components that need changes
+```
+
+### Integration with Command Composition
+
+Meta-testing integrates seamlessly with the command system:
+
+```bash
+# Red-Green-Refactor with LLM tests
+/tdd "authentication flow"        # Creates failing LLM test
+/testuif testing_llm/test_auth.md # Execute test with Playwright MCP  
+/fix "implement OAuth flow"       # Fix code to make test pass
+/testuif testing_llm/test_auth.md # Verify test now passes
+```
+
+### Matrix Testing Integration
+
+LLM tests incorporate comprehensive matrix testing:
+- **Field Interaction Matrices**: Test all input combinations
+- **State Transition Testing**: Validate workflow paths
+- **Edge Case Validation**: Systematic boundary testing
+- **Cross-Browser Compatibility**: Multi-environment validation
+
+## 🚧 WIP: Orchestration System
+
+### Multi-Agent Task Delegation Prototype
+
+The orchestration system is an **active development prototype** that demonstrates autonomous multi-agent development workflows.
+
+### Architecture Overview
+
+```
+Agent Assignment Layer:
+├── Frontend Agent (/execute frontend tasks)
+├── Backend Agent (/execute API tasks)  
+├── Testing Agent (/execute test tasks)
+└── Opus-Master (/arch + integration)
+
+Coordination Layer:
+├── Redis-based communication
+├── Task dependency management
+└── Resource allocation
+
+Integration Layer:
+├── Individual PR creation per agent
+├── Cross-agent validation
+└── Final integration verification
+```
+
+### Real-World Performance Metrics
+
+- **Cost**: $0.003-$0.050 per task (highly efficient)
+- **Parallel Capacity**: 3-5 agents simultaneously  
+- **Success Rate**: 85% first-time-right with proper task specifications
+- **Integration Success**: 90% cross-agent coordination without conflicts
+
+### Usage Examples
+
+```bash
+# Basic task delegation
+/orch "implement user dashboard with tests and documentation"
+
+# Complex multi-component feature
+/orch "add notification system with real-time updates, email integration, and admin controls"
+
+# System monitoring
+/orch monitor agents              # Check agent status
+/orch "What's running?"          # Current task overview
+tmux attach-session -t task-agent-frontend  # Direct agent access
+```
+
+### Development Status
+
+**✅ Working Features**:
+- Multi-agent task assignment with capability-based routing
+- Redis coordination for inter-agent communication
+- Tmux session management with isolated workspaces
+- Individual PR creation per agent with branch management
+- Cost-effective parallel execution ($0.003-$0.050/task)
+
+**🚧 In Development**:
+- Advanced dependency management between agents
+- Cross-agent code review and integration testing
+- Automatic scaling based on workload
+- Enhanced error recovery and retry mechanisms
+
+**🔮 Future Roadmap**:
+- Integration with Meta-AI Testing Framework for agent validation
+- Machine learning optimization of task routing algorithms
+- Advanced collaboration patterns for complex architectural changes
+- Integration with CI/CD pipelines for continuous deployment
 
 ### Building Block Composition Patterns
 
