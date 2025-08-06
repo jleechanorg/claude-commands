@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # /learn Command
 
 **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage

@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # /fixpr Command - Intelligent PR Fix Analysis
 
 **Usage**: `/fixpr <PR_NUMBER> [--auto-apply]`

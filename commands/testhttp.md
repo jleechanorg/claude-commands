@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # HTTP Tests (Mock) Command
 
 **Purpose**: Run HTTP request tests with mock APIs (free)

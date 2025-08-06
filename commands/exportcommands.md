@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # /exportcommands - Export Claude Commands to Reference Repository
 
 **Purpose**: Export your complete command composition system to https://github.com/jleechanorg/claude-commands for reference and sharing
@@ -633,21 +635,40 @@ echo "✅ Created install.sh script with command installation logic"
 ### Phase 4: Documentation Generation
 
 **README Generation**:
-- Use /execute for comprehensive research and structure generation
-- **🎯 COMPOSITION-FIRST DOCUMENTATION**: Lead with the transformative workflow capabilities
-  - Highlight how simple command hooks enable autonomous development workflows
-  - Show before/after examples of manual vs. composed command workflows
-  - Emphasize that this isn't just "command sharing" but "workflow transformation"
-- **🚨 INSTALL SCRIPT DOCUMENTATION**: Prominently feature the install.sh script
+- **🚨 ALWAYS USE REFERENCE TEMPLATE**: Copy from `.claude/commands/README_EXPORT_TEMPLATE.md` as base
+```bash
+# Use the maintained reference template
+cp .claude/commands/README_EXPORT_TEMPLATE.md "$STAGING_DIR/README.md"
+
+# Apply project-agnostic transformations
+sed -i 's|your-project.com|your-project.com|g' "$STAGING_DIR/README.md"
+sed -i "s|jleechan|${USER}|g" "$STAGING_DIR/README.md"
+sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
+```
+- **🎯 COMPOSITION-FIRST DOCUMENTATION**: Template includes comprehensive technical details
+  - Hook mechanism: How .md files become executable workflows
+  - Multi-command chaining in single sentences with real examples
+  - Nested command layers showing the full architecture depth
+  - Before/after workflow transformation examples
+- **🔧 TECHNICAL ARCHITECTURE DETAILS**: Template reveals the composition system depth
+  - `/copilot`: 7-layer autonomous system breakdown
+  - `/execute`: 3-layer orchestration system structure
+  - `/pr`: 4-layer development lifecycle workflow
+  - `/orch`: Multi-agent delegation with coordination layers
+- **🚨 INSTALL SCRIPT DOCUMENTATION**: Template prominently features installation
   - Quick start: `./install.sh` to auto-install commands and startup script
   - Installation verification procedures
   - Troubleshooting guide for common installation issues
-- Include prominent warning about reference-only status
-- Add detailed installation instructions with prerequisites
-- **🎯 COMMAND COMPOSITION SHOWCASE**: Document how commands chain together
-  - Multi-step workflow examples: `/pr`, `/copilot`, `/execute`
-  - Building block composition patterns: cognitive + testing + git workflows
-  - The "hook architecture" that makes complex workflows possible with simple `.md` files
+- **💡 COMPOSITION THROUGH SHARED PROTOCOLS**: Template explains how commands integrate
+  - TodoWrite integration with trackable steps
+  - Memory enhancement learning from executions
+  - Git workflow integration with automatic branch/PR management
+  - Error recovery with smart retry and failure handling
+- **🎯 MULTI-COMMAND CHAINING EXAMPLES**: Template shows real composition patterns
+  - Sequential: "/think about X then /arch the solution then /execute it"
+  - Conditional: "/test and if fails /fix then /pr the changes"
+  - Parallel: "/debug issue while /research best practices then /plan"
+  - Full workflow: "/analyze /design /execute /pr then /copilot any issues"
 - **🚨 Orchestration System Highlight**: Dedicated section showcasing WIP prototype capabilities
   - Multi-agent architecture diagram and component overview
   - Real-world usage examples: `/orch "fix failing tests"`, `/orch "implement feature X"`

@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # Plan Command - Execute with Approval
 
 **Purpose**: Same as `/execute` but requires user approval before implementation

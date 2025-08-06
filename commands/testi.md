@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # Integration Test Command
 
 **Purpose**: Run HTTP integration tests with real APIs

@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # Claude Commands - Command Composition System
 
 ⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but note it hasn't been extensively tested outside of the original workflow. Expect adaptation needed for your specific setup.
