@@ -27,10 +27,22 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 
 This isn't just a collection of commands - it's a **complete workflow composition architecture** that transforms how you develop software.
 
+### Command Chaining Examples
+```bash
+# Multi-command composition in single request (like /fake command)
+"/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
+
+# Sequential workflow chains
+"/think about auth then /execute the solution"  # → analysis → implementation
+
+# Conditional execution flows
+"/test login flow and if fails /fix then /pr"  # → test → fix → create PR
+```
+
 ### Before: Manual Step-by-Step Development
 ```
 1. Analyze the issue manually
-2. Write code manually  
+2. Write code manually
 3. Test manually
 4. Create PR manually
 5. Handle review comments manually
@@ -38,30 +50,30 @@ This isn't just a collection of commands - it's a **complete workflow compositio
 
 ### After: Single Command Workflows
 ```bash
-/pr "fix authentication bug"     # → analyze → implement → test → create PR
-/copilot                        # → comprehensive PR analysis → apply all fixes
-/execute "add user dashboard"   # → plan → implement → test → document
+/pr "fix authentication bug"     # → think → execute → push → copilot → review
+/copilot                        # → analyze PR → fix all issues autonomously
+/execute "add user dashboard"   # → plan → auto-approve → implement
 /orch "implement notifications" # → multi-agent parallel development
 ```
 
 ## 🔍 Command Deep Dive - The Composition Powerhouses
 
-### `/execute` - Auto-Approval Development Orchestrator
+### `/execute` - Plan-Approve-Execute Composition
 
-**What It Does**: The ultimate autonomous development command with built-in auto-approval and TodoWrite orchestration.
+**What It Does**: Combines `/plan` → `/preapprove` → `/autoapprove` → execute in one seamless workflow with TodoWrite tracking.
 
 **3-Phase Workflow**:
-1. **Planning**: Complexity assessment, execution method, timeline estimation
-2. **Auto-Approval**: "User already approves - proceeding with execution"  
-3. **Implementation**: TodoWrite tracking with real-time progress updates
+1. **Planning Phase**: Executes `/plan` command - creates TodoWrite checklist and displays execution plan
+2. **Approval Chain**: `/preapprove` validation followed by `/autoapprove` with message "User already approves - proceeding with execution"
+3. **Implementation**: Systematic execution following the approved plan with progress updates
 
 **Real Example**:
 ```bash
-/execute "focus on command composition and explain details on /execute..."
+/execute "fix login button styling"
 ↓
-Phase 1 - Planning: [complexity assessment, timeline, approach]
-Phase 2 - Auto-approval: "User already approves - proceeding"  
-Phase 3 - Implementation: [TodoWrite tracking, step execution]
+Phase 1 - Planning (/plan): Creates TodoWrite checklist and execution plan
+Phase 2 - Approval Chain: /preapprove → /autoapprove → "User already approves - proceeding"
+Phase 3 - Implementation: [Check styles → Update CSS → Test → Commit]
 ```
 
 ### `/plan` - Manual Approval Development Planning
@@ -72,52 +84,60 @@ Phase 3 - Implementation: [TodoWrite tracking, step execution]
 
 **Workflow**:
 1. **Deep Analysis**: Research existing system, constraints, requirements
-2. **Multi-Approach Planning**: Present 2-3 different implementation approaches  
+2. **Multi-Approach Planning**: Present 2-3 different implementation approaches
 3. **Resource Assessment**: Timeline, complexity, tool requirements, risk analysis
 4. **Approval Gate**: User must explicitly approve before implementation
 5. **Guided Execution**: Step-by-step implementation with checkpoints
 
-### `/pr` - Complete PR Workflow Orchestrator
+### `/pr` - Complete Development Lifecycle
 
-**What It Does**: End-to-end PR creation handling the entire development lifecycle autonomously.
+**What It Does**: Executes the complete 5-phase development lifecycle: `/think` → `/execute` → `/push` → `/copilot` → `/review`
 
-**Internal Workflow Chain**:
+**Mandatory 5-Phase Workflow**:
 ```
-Analysis Phase: Issue analysis → root cause → impact assessment
+Phase 1: Think - Strategic analysis and approach planning
 ↓
-Implementation Phase: Code changes → testing → documentation  
+Phase 2: Execute - Implementation using /execute workflow
 ↓
-Quality Assurance: Test execution → code review → performance check
+Phase 3: Push - Commit, push, and create PR with details
 ↓
-Git Workflow: Branch creation → commits → push → PR creation
+Phase 4: Copilot - Auto-executed PR analysis and issue fixing
+↓
+Phase 5: Review - Comprehensive code review and validation
 ```
 
 **Real Example**:
 ```bash
 /pr "fix login timeout issue"
 ↓
-Analyze login flow → Identify timeout problem → Implement fix → 
-Run tests → Create branch → Commit changes → Push → Create PR
+Think: Analyze login flow and timeout causes →
+Execute: Implement timeout fix systematically →
+Push: Create PR with comprehensive details →
+Copilot: Fix any automated feedback →
+Review: Complete code review and validation
 ```
 
-### `/copilot` - Autonomous PR Analysis & Comprehensive Fixing
+### `/copilot` - Universal PR Composition with Execute
 
-**What It Does**: Comprehensive PR analysis with autonomous fixing - **no approval prompts**.
+**What It Does**: Targets current branch PR by default, delegates to `/execute` for intelligent 6-phase autonomous workflow.
 
-**Autonomous Workflow**:
-1. **Comprehensive Scanning**: Merge conflicts + CI failures + review comments + quality gates
-2. **Intelligent Fixing**: Automated resolution with smart merging strategies  
-3. **Validation Loop**: Re-run tests → verify success → continue until all resolved
+**6-Phase Autonomous System**:
+1. **PR Analysis**: Status check, CI analysis, comment gathering
+2. **Issue Detection**: Systematic problem identification and prioritization
+3. **Automated Resolution**: Intelligent fixing with `/execute` optimization
+4. **Quality Assurance**: Test coverage, lint validation, self-review
+5. **Communication**: Reply to comments, update PR descriptions
+6. **Validation**: Final verification and completion confirmation
 
-**Perfect For**: Continuous integration workflows where you want full automation.
+**Perfect For**: Full autonomous PR management without manual intervention.
 
 **Real Example**:
 ```bash
-PR has: merge conflicts + failing tests + 5 review comments
-/copilot
-↓ 
-Resolve conflicts → Fix failing tests → Address all comments → 
-Re-run validation → Push fixes → Verify success
+/copilot  # Auto-targets current branch PR
+↓
+🎯 Targeting current branch PR: #123 →
+🚀 Delegating to /execute for intelligent workflow →
+Analyze → Fix → Test → Document → Reply → Verify
 ```
 
 ### `/orch` - Multi-Agent Task Delegation System
@@ -126,7 +146,7 @@ Re-run validation → Push fixes → Verify success
 
 **Multi-Agent Architecture**:
 - **Frontend Agent**: UI/UX implementation, browser testing, styling
-- **Backend Agent**: API development, database integration, server logic  
+- **Backend Agent**: API development, database integration, server logic
 - **Testing Agent**: Test automation, validation, performance testing
 - **Opus-Master**: Architecture decisions, code review, integration
 
@@ -135,7 +155,7 @@ Re-run validation → Push fixes → Verify success
 /orch "add user notifications system"
 ↓
 Frontend Agent: notification UI components (parallel)
-Backend Agent: notification API endpoints (parallel)  
+Backend Agent: notification API endpoints (parallel)
 Testing Agent: notification test suite (parallel)
 Opus-Master: architecture review and integration
 ↓
@@ -157,7 +177,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 Each command is a **simple .md file** that Claude Code reads as executable instructions. When you type `/pr "fix bug"`, Claude:
 
-1. **Reads** `.claude/commands/pr.md` 
+1. **Reads** `.claude/commands/pr.md`
 2. **Parses** the structured prompt template
 3. **Executes** the workflow defined in the markdown
 4. **Composes** with other commands through shared protocols
@@ -170,7 +190,7 @@ You can chain multiple commands in one request:
 # Sequential execution
 "/think about authentication then /arch the solution then /execute it"
 
-# Conditional execution  
+# Conditional execution
 "/test the login flow and if it fails /fix it then /pr the changes"
 
 # Parallel analysis
@@ -185,11 +205,11 @@ You can chain multiple commands in one request:
 #### `/copilot` - 7-Layer Autonomous System
 ```
 Layer 1: PR Context Analysis
-├── /commentfetch - Gather all PR comments  
+├── /commentfetch - Gather all PR comments
 ├── /reviewstatus - Check review states
 └── /context - Build comprehensive PR understanding
 
-Layer 2: Issue Detection & Prioritization  
+Layer 2: Issue Detection & Prioritization
 ├── /debug - Identify technical issues
 ├── /commentcheck - Parse review feedback
 └── /ghfixtests - Analyze CI failures
@@ -201,7 +221,7 @@ Layer 3: Automated Resolution
 
 Layer 4: Quality Assurance
 ├── /coverage - Verify test coverage
-├── /lint - Code style validation  
+├── /lint - Code style validation
 └── /reviewdeep - Self-review changes
 
 Layer 5: Documentation & Communication
@@ -222,7 +242,7 @@ Layer 7: Completion Verification
 ```
 Layer 1: Planning & Analysis
 ├── /think - Task decomposition
-├── /arch - Technical approach  
+├── /arch - Technical approach
 └── /research - Background investigation
 
 Layer 2: Auto-Approval & Setup
@@ -245,7 +265,7 @@ Layer 1: Analysis
 ├── /arch - Solution architecture
 └── /research - Context gathering
 
-Layer 2: Implementation  
+Layer 2: Implementation
 ├── /execute - Code changes
 ├── /test - Validation
 └── /coverage - Quality verification
@@ -265,7 +285,7 @@ Layer 4: PR Creation & Management
 ```
 Agent Assignment Layer:
 ├── Frontend Agent (/execute frontend tasks)
-├── Backend Agent (/execute API tasks)  
+├── Backend Agent (/execute API tasks)
 ├── Testing Agent (/execute test tasks)
 └── Opus-Master (/arch + integration)
 
@@ -284,7 +304,7 @@ Integration Layer:
 
 **TodoWrite Integration**: All commands break down into trackable steps
 ```bash
-/execute "build dashboard" 
+/execute "build dashboard"
 # Internally creates: [plan task] → [implement components] → [add tests] → [create PR]
 ```
 
@@ -309,13 +329,13 @@ Integration Layer:
 
 ### LLM-Native Test-Driven Development
 
-The `testing_llm/` directory contains a revolutionary **Meta-AI Testing Framework** that uses LLMs to test LLMs, creating an iterative improvement loop for AI development workflows.
+The testing framework demonstrates **LLM-Native Testing** patterns that work across any web application or system, using AI to create, execute, and validate complex test scenarios.
 
 ### Key Capabilities
 
 #### 1. **LLM Capability Mapping** (`test_llm_capability_mapping.md`)
 - **Progressive Complexity Ladder**: 5 levels from basic mechanics to cross-domain transfer
-- **Multi-LLM Collaboration Experiments**: Sequential, parallel, and specialized agent approaches  
+- **Multi-LLM Collaboration Experiments**: Sequential, parallel, and specialized agent approaches
 - **Failure Mode Analysis**: Systematic cataloging of how and why each LLM fails
 - **Capability Boundary Discovery**: Finding exact limits of reasoning, creativity, domain knowledge
 
@@ -341,7 +361,7 @@ Each test follows a structured `.md` format designed for LLM execution:
 ## Pre-conditions
 - Server requirements, test data setup, environment configuration
 
-## Test Steps  
+## Test Steps
 1. **Navigate**: URL and setup
 2. **Execute**: Detailed interaction steps using Playwright MCP
 3. **Verify**: Expected outcomes with assertions
@@ -356,6 +376,33 @@ Each test follows a structured `.md` format designed for LLM execution:
 **Fix Location**: Files/components that need changes
 ```
 
+### Generic Testing Examples
+
+The framework works across any web application:
+
+```markdown
+# Test: E-commerce Checkout Flow
+## Test Steps
+1. **Navigate**: Load product page, add items to cart
+2. **Execute**: Click checkout, fill payment form, submit order
+3. **Verify**: Order confirmation displayed, email sent
+4. **Evidence**: Screenshots of each step
+
+# Test: Social Media Login
+## Test Steps
+1. **Navigate**: Go to login page
+2. **Execute**: Test OAuth providers (Google, Facebook, Twitter)
+3. **Verify**: Profile data populated correctly
+4. **Evidence**: User dashboard screenshot
+
+# Test: API Documentation Interface
+## Test Steps
+1. **Navigate**: Load API docs page
+2. **Execute**: Test endpoint examples, copy code snippets
+3. **Verify**: Code examples work, responses match docs
+4. **Evidence**: Network tab screenshots
+```
+
 ### Integration with Command Composition
 
 Meta-testing integrates seamlessly with the command system:
@@ -363,9 +410,9 @@ Meta-testing integrates seamlessly with the command system:
 ```bash
 # Red-Green-Refactor with LLM tests
 /tdd "authentication flow"        # Creates failing LLM test
-/testuif testing_llm/test_auth.md # Execute test with Playwright MCP  
+/testuif test_auth.md             # Execute test with Playwright MCP
 /fix "implement OAuth flow"       # Fix code to make test pass
-/testuif testing_llm/test_auth.md # Verify test now passes
+/testuif test_auth.md             # Verify test now passes
 ```
 
 ### Matrix Testing Integration
@@ -387,7 +434,7 @@ The orchestration system is an **active development prototype** that demonstrate
 ```
 Agent Assignment Layer:
 ├── Frontend Agent (/execute frontend tasks)
-├── Backend Agent (/execute API tasks)  
+├── Backend Agent (/execute API tasks)
 ├── Testing Agent (/execute test tasks)
 └── Opus-Master (/arch + integration)
 
@@ -405,7 +452,7 @@ Integration Layer:
 ### Real-World Performance Metrics
 
 - **Cost**: $0.003-$0.050 per task (highly efficient)
-- **Parallel Capacity**: 3-5 agents simultaneously  
+- **Parallel Capacity**: 3-5 agents simultaneously
 - **Success Rate**: 85% first-time-right with proper task specifications
 - **Integration Success**: 90% cross-agent coordination without conflicts
 
@@ -447,14 +494,14 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ### Building Block Composition Patterns
 
-**Cognitive Chains**: `/think` + `/arch` + `/debug` = Deep analysis workflows  
-**Quality Chains**: `/test` + `/fix` + `/verify` = Quality assurance workflows  
+**Cognitive Chains**: `/think` + `/arch` + `/debug` = Deep analysis workflows
+**Quality Chains**: `/test` + `/fix` + `/verify` = Quality assurance workflows
 **Development Chains**: `/plan` + `/implement` + `/validate` = Development workflows
 
 ### The Hook Architecture
 
-**Simple**: Each command is just a `.md` file that Claude Code reads as executable instructions  
-**Powerful**: These simple hooks enable complex behavior through composition rather than complexity  
+**Simple**: Each command is just a `.md` file that Claude Code reads as executable instructions
+**Powerful**: These simple hooks enable complex behavior through composition rather than complexity
 **Autonomous**: Commands chain together for complete workflows like "analyze → implement → test → create PR"
 
 ## 🎯 What You're Really Getting
@@ -462,7 +509,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 This export contains **90+ commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
-2. **Multi-Agent System**: Parallel task execution with specialized agents  
+2. **Multi-Agent System**: Parallel task execution with specialized agents
 3. **Quality Assurance Integration**: Automatic testing and validation
 4. **Git Workflow Automation**: Branch management and PR creation
 5. **Memory-Enhanced Learning**: System learns from previous executions
@@ -480,7 +527,7 @@ cd claude-commands
 
 # 3. Start using composition commands
 /execute "implement user authentication"
-/pr "fix performance issues"  
+/pr "fix performance issues"
 /copilot  # Fix any PR issues
 ```
 
@@ -527,7 +574,7 @@ Chain commands for complex workflows:
 ```bash
 /execute "analyze codebase architecture"  # Deep analysis with TodoWrite
 /plan "redesign authentication system"    # Structured planning with approval
-/pr "implement OAuth integration"         # Full development lifecycle  
+/pr "implement OAuth integration"         # Full development lifecycle
 /copilot                                 # Autonomous issue resolution
 ```
 
@@ -554,7 +601,7 @@ Commands learn from previous executions:
 ### 🧠 Cognitive Commands (Semantic Composition)
 `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/research`
 
-### ⚙️ Operational Commands (Protocol Enforcement)  
+### ⚙️ Operational Commands (Protocol Enforcement)
 `/headless`, `/handoff`, `/orchestrate`, `/orch`
 
 ### 🔧 Tool Commands (Direct Execution)
