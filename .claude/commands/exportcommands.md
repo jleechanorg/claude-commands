@@ -1,8 +1,264 @@
 # /exportcommands - Export Claude Commands to Reference Repository
 
-**Purpose**: Comprehensive export workflow to https://github.com/jleechanorg/claude-commands for reference and sharing
+**Purpose**: Export your complete command composition system to https://github.com/jleechanorg/claude-commands for reference and sharing
+
+**The Magic**: This simple export hook enables powerful workflow slash commands like `/pr`, `/copilot`, `/execute`, and complex multi-command compositions that turn Claude Code into an autonomous development powerhouse.
+
+**What You're Really Exporting**: Not just commands, but a complete workflow composition architecture that enables:
+- **Powerful Multi-Command Workflows**: `/pr` (analyze → fix → test → create PR), `/copilot` (comprehensive PR analysis + fixes)
+- **Autonomous Development**: `/execute` with TodoWrite orchestration, `/orch` for multi-agent delegation
+- **Advanced Compositions**: Commands that chain together for complex workflows like "analyze issue → implement fix → run tests → create PR → handle review comments"
 
 **Usage**: `/exportcommands` - Executes complete export pipeline with Git operations
+
+## 🎯 COMMAND COMPOSITION ARCHITECTURE
+
+**The Simple Hook That Changes Everything**: At its core, `/exportcommands` is just a file export script. But what makes it powerful is that it's exporting a complete **command composition system** that transforms how you interact with Claude Code.
+
+### Multi-Command Workflows Made Simple
+
+**Before**: Manual step-by-step development
+```
+1. Analyze the issue manually
+2. Write code manually
+3. Test manually
+4. Create PR manually
+5. Handle review comments manually
+```
+
+**After**: Single command workflows
+```bash
+/pr "fix authentication bug"     # → analyze → implement → test → create PR
+/copilot                        # → comprehensive PR analysis → apply all fixes
+/execute "add user dashboard"   # → plan → implement → test → document
+```
+
+### The Composition Pattern
+
+Each command is designed to **compose** with others through a shared protocol:
+- **TodoWrite Integration**: Commands break down into trackable steps
+- **Memory Enhancement**: Learning from previous executions
+- **Git Workflow Integration**: Automatic branch management and PR creation
+- **Testing Integration**: Automatic test running and validation
+- **Error Recovery**: Smart handling of failures and retries
+
+### Key Compositional Commands Being Exported
+
+**Workflow Orchestrators**:
+- `/pr` - Complete PR workflow (analyze → fix → test → create)
+- `/copilot` - Autonomous PR analysis and fixing
+- `/execute` - Auto-approval development with TodoWrite tracking
+- `/orch` - Multi-agent task delegation system
+
+**Building Blocks**:
+- `/think` + `/arch` + `/debug` = Cognitive analysis chain
+- `/test` + `/fix` + `/verify` = Quality assurance chain
+- `/plan` + `/implement` + `/validate` = Development chain
+
+**The Hook Architecture**: Simple `.md` files that Claude Code reads as executable instructions, enabling complex behavior through composition rather than complexity.
+
+## 🔍 COMMAND DEEP DIVE - The Composition Powerhouses
+
+### `/execute` - Auto-Approval Development Orchestrator
+
+**What It Does**: The ultimate autonomous development command that handles everything from planning to implementation with built-in auto-approval.
+
+**The Magic**: Turns complex development tasks into structured, trackable workflows without manual approval gates.
+
+**Composition Architecture**:
+```bash
+/execute "implement user authentication"
+```
+
+**Internal Workflow**:
+1. **Phase 1 - Planning**:
+   - Complexity assessment (simple/medium/complex)
+   - Execution method decision (parallel vs sequential)
+   - Tool requirements analysis
+   - Timeline estimation
+   - Implementation approach design
+
+2. **Phase 2 - Auto-Approval**:
+   - Built-in approval bypass: "User already approves - proceeding with execution"
+   - No manual intervention required
+
+3. **Phase 3 - TodoWrite Orchestration**:
+   - Breaks task into trackable steps
+   - Real-time progress updates
+   - Error handling and recovery
+   - Completion verification
+
+**Real Example** (This very task demonstrates `/execute`):
+```
+User: /execute "focus on command composition and explain details on /execute..."
+Claude:
+  Phase 1 - Planning: [complexity assessment, timeline, approach]
+  Phase 2 - Auto-approval: "User already approves - proceeding"
+  Phase 3 - Implementation: [TodoWrite tracking, step execution]
+```
+
+### `/plan` - Manual Approval Development Planning
+
+**What It Does**: Structured development planning with explicit user approval required before execution.
+
+**The Magic**: Perfect for complex tasks where you want to review the approach before committing resources.
+
+**Composition Architecture**:
+```bash
+/plan "redesign authentication system"
+```
+
+**Workflow**:
+1. **Deep Analysis**: Research existing system, identify constraints, analyze requirements
+2. **Multi-Approach Planning**: Present 2-3 different implementation approaches
+3. **Resource Assessment**: Timeline, complexity, tool requirements, risk analysis
+4. **Approval Gate**: User must explicitly approve before any implementation begins
+5. **Guided Execution**: Step-by-step implementation with checkpoints
+
+**When to Use**:
+- Complex architectural changes
+- When you want oversight of the approach
+- High-risk modifications
+- Learning new patterns/technologies
+
+### `/pr` - Complete PR Workflow Orchestrator
+
+**What It Does**: End-to-end PR creation from analysis to submission, handling the entire development lifecycle.
+
+**The Magic**: Single command that handles analysis, implementation, testing, and PR creation autonomously.
+
+**Composition Architecture**:
+```bash
+/pr "fix authentication validation bug"
+```
+
+**Internal Workflow Chain**:
+1. **Analysis Phase**:
+   - Issue analysis and root cause identification
+   - Codebase understanding and impact assessment
+   - Solution design and approach selection
+
+2. **Implementation Phase**:
+   - Code changes with proper error handling
+   - Integration testing and validation
+   - Documentation updates
+
+3. **Quality Assurance Phase**:
+   - Test execution and verification
+   - Code review and quality checks
+   - Performance impact assessment
+
+4. **Git Workflow Phase**:
+   - Branch creation and management
+   - Commit message generation
+   - PR creation with detailed description
+
+**Real Workflow Example**:
+```
+/pr "fix login timeout issue"
+↓
+Analyze login flow → Identify timeout problem → Implement fix →
+Run tests → Create branch → Commit changes → Push → Create PR
+```
+
+### `/copilot` - Autonomous PR Analysis & Comprehensive Fixing
+
+**What It Does**: Comprehensive PR analysis with autonomous fixing of all detected issues - no approval prompts.
+
+**The Magic**: Scans PRs for every type of issue (conflicts, CI failures, code quality, comments) and fixes everything automatically.
+
+**Composition Architecture**:
+```bash
+/copilot  # Analyzes current PR context
+```
+
+**Autonomous Workflow Chain**:
+1. **Comprehensive Scanning**:
+   - Merge conflicts detection and resolution
+   - CI/CD failure analysis and fixes
+   - Code review comment processing
+   - Quality gate validation
+
+2. **Intelligent Fixing**:
+   - Automated conflict resolution with smart merging
+   - Test fixes and dependency updates
+   - Code style and formatting corrections
+   - Documentation and comment updates
+
+3. **Validation Loop**:
+   - Re-run tests after each fix
+   - Verify merge status and CI success
+   - Continue until all issues resolved
+
+**No Approval Required**: Unlike other commands, `/copilot` operates autonomously - perfect for continuous integration workflows.
+
+**Real Example**:
+```
+PR has: merge conflicts + failing tests + 5 review comments
+/copilot
+↓
+Resolve conflicts → Fix failing tests → Address all comments →
+Re-run validation → Push fixes → Verify success
+```
+
+### `/orch` - Multi-Agent Task Delegation System
+
+**What It Does**: Delegates tasks to autonomous tmux-based agents that work in parallel across different branches and contexts.
+
+**The Magic**: Spawns specialized agents (frontend, backend, testing, opus-master) that execute tasks independently with full Git workflow management.
+
+**Composition Architecture**:
+```bash
+/orch "implement user dashboard with tests and documentation"
+```
+
+**Multi-Agent Workflow**:
+1. **Task Analysis & Delegation**:
+   - Break complex task into parallel workstreams
+   - Assign to specialized agents based on capabilities
+   - Create isolated tmux sessions with agent workspaces
+
+2. **Autonomous Agent Execution**:
+   - Each agent gets dedicated branch and workspace
+   - Independent execution with full development lifecycle
+   - Real-time progress monitoring and coordination
+
+3. **Agent Coordination**:
+   - Redis-based inter-agent communication
+   - Task dependency management
+   - Resource allocation and load balancing
+
+4. **Integration & Delivery**:
+   - Agent results aggregation
+   - PR creation from agent branches
+   - Success verification and reporting
+
+**Agent Types**:
+- **Frontend Agent**: UI/UX implementation, browser testing, styling
+- **Backend Agent**: API development, database integration, server logic
+- **Testing Agent**: Test automation, validation, performance testing
+- **Opus-Master**: Architecture decisions, code review, integration
+
+**Cost**: $0.003-$0.050 per task (highly efficient)
+
+**Real Example**:
+```
+/orch "add user notifications system"
+↓
+Frontend Agent: notification UI components
+Backend Agent: notification API endpoints
+Testing Agent: notification test suite
+Opus-Master: architecture review and integration
+↓
+All agents work in parallel → Create individual PRs → Integration verification
+```
+
+**Monitoring**:
+```bash
+/orch monitor agents    # Check agent status
+/orch "What's running?" # Current task overview
+tmux attach-session -t task-agent-frontend  # Direct agent access
+```
 
 ## 🚨 EXPORT PROTOCOL
 
@@ -95,10 +351,10 @@ cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```bash
 # Copy commands with filtering
 for file in .claude/commands/*.md .claude/commands/*.py; do
-    # Skip project-specific files
+    # Skip project-specific files and template files
     case "$(basename "$file")" in
-        "testi.sh"|"run_tests.sh"|"copilot_inline_reply_example.sh")
-            echo "Skipping project-specific file: $file"
+        "testi.sh"|"run_tests.sh"|"copilot_inline_reply_example.sh"|"README_EXPORT_TEMPLATE.md")
+            echo "Skipping project-specific/template file: $file"
             continue
             ;;
     esac
@@ -106,16 +362,14 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     # Copy and filter content
     cp "$file" "staging/commands/$(basename "$file")"
 
-    # Apply content transformations
-    sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
+    # Apply content transformations - completely remove project-specific references
+    sed -i 's|mvp_site/||g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
     sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
-    # Add project-specific warning to commands with mvp_site references
-    if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
-        sed -i '1i\# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment\n' "staging/commands/$(basename "$file")"
-    fi
+    # Remove any remaining project-specific path references
+    sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
 done
 ```
 - Export filtered command definitions with proper categorization
@@ -141,10 +395,10 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         # Copy and transform
         cp "$script" "staging/scripts/$script_name"
 
-        # Apply transformations
-        sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
+        # Apply transformations - completely remove project-specific references
+        sed -i 's|mvp_site/||g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/jleechan/projects/worldarchitect.ai|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
+        sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/scripts/$script_name"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
@@ -374,17 +628,115 @@ echo "✅ Created install.sh script with command installation logic"
 - **User Guidance**: Provides clear next steps and adaptation requirements
 - **Error Handling**: Graceful handling of missing files with warnings
 
-### Phase 4: Documentation Generation
+### Phase 4: README Accuracy Validation & Documentation Generation
 
-**README Generation**:
-- Use /execute for comprehensive research and structure generation
-- Include prominent warning about reference-only status
-- **🚨 INSTALL SCRIPT DOCUMENTATION**: Prominently feature the install.sh script
+**🚨 MANDATORY README ACCURACY VALIDATION**: Verify README reflects current repo state before export
+
+```bash
+echo "🔍 Validating README accuracy against current repo state..."
+
+# 1. Check copilot architecture accuracy
+CURRENT_COPILOT_PHASES=$(grep -o "Phase [0-9]" .claude/commands/copilot.md | wc -l)
+TEMPLATE_COPILOT_LAYERS=$(grep -o "Layer [0-9]" .claude/commands/README_EXPORT_TEMPLATE.md | wc -l)
+echo "   Copilot phases in repo: $CURRENT_COPILOT_PHASES"
+echo "   Copilot layers in template: $TEMPLATE_COPILOT_LAYERS"
+
+if [ "$CURRENT_COPILOT_PHASES" != "$TEMPLATE_COPILOT_LAYERS" ]; then
+    echo "❌ WARNING: Copilot architecture mismatch detected!"
+    echo "   Current repo has $CURRENT_COPILOT_PHASES phases, template shows $TEMPLATE_COPILOT_LAYERS layers"
+fi
+
+# 2. Verify key directory structures exist
+MISSING_DIRS=""
+for dir in orchestration automation claude-bot-commands prototype; do
+    if [ ! -d "$dir" ]; then
+        MISSING_DIRS="$MISSING_DIRS $dir"
+    fi
+done
+
+if [ -n "$MISSING_DIRS" ]; then
+    echo "❌ WARNING: Template references missing directories:$MISSING_DIRS"
+else
+    echo "✅ All referenced directories exist in repo"
+fi
+
+# 3. Count actual commands vs template claims
+ACTUAL_COMMANDS=$(find .claude/commands/ -name "*.md" -not -name "README*" | wc -l)
+TEMPLATE_CLAIM=$(grep -o "[0-9]\++" .claude/commands/README_EXPORT_TEMPLATE.md | head -1)
+echo "   Actual commands: $ACTUAL_COMMANDS"
+echo "   Template claims: $TEMPLATE_CLAIM"
+
+# 4. Verify export exclusions are still accurate
+echo "🔍 Checking export exclusions against current repo state..."
+while IFS= read -r pattern; do
+    if find . -path "*${pattern}" -type f 2>/dev/null | grep -q .; then
+        echo "   Found files matching exclusion pattern: $pattern"
+    fi
+done << 'EOF'
+tests/run_tests.sh
+testi.sh
+**/test_integration/**
+copilot_inline_reply_example.sh
+run_ci_replica.sh
+testing_http/
+testing_ui/
+testing_mcp/
+ci_replica/
+EOF
+
+echo "✅ README validation complete - proceeding with export"
+```
+
+**🚨 MANDATORY README GENERATION**: README.md is ALWAYS included in export
+```bash
+# CRITICAL: Always copy README from reference template to staging directory
+echo "📖 Generating README.md from reference template..."
+if [[ ! -f ".claude/commands/README_EXPORT_TEMPLATE.md" ]]; then
+    echo "❌ ERROR: README_EXPORT_TEMPLATE.md not found"
+    exit 1
+fi
+
+# Copy template to staging directory (NOT to repository directly)
+cp .claude/commands/README_EXPORT_TEMPLATE.md "$STAGING_DIR/README.md"
+
+# Apply project-agnostic transformations
+sed -i 's|your-project.com|your-project.com|g' "$STAGING_DIR/README.md"
+sed -i "s|jleechan|${USER}|g" "$STAGING_DIR/README.md"
+sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
+
+echo "✅ README.md generated successfully in staging directory"
+```
+
+**🚨 CRITICAL: README must be copied from STAGING_DIR to REPO_DIR**:
+```bash
+# Copy README from staging to repository (happens in Phase 5)
+cp "$STAGING_DIR/README.md" "$REPO_DIR/README.md"
+echo "✅ README.md copied to repository"
+```
+- **🎯 COMPOSITION-FIRST DOCUMENTATION**: Template includes comprehensive technical details
+  - Hook mechanism: How .md files become executable workflows
+  - Multi-command chaining in single sentences with real examples
+  - Nested command layers showing the full architecture depth
+  - Before/after workflow transformation examples
+- **🔧 TECHNICAL ARCHITECTURE DETAILS**: Template reveals the composition system depth
+  - `/copilot`: 7-layer autonomous system breakdown
+  - `/execute`: 3-layer orchestration system structure
+  - `/pr`: 4-layer development lifecycle workflow
+  - `/orch`: Multi-agent delegation with coordination layers
+- **🚨 INSTALL SCRIPT DOCUMENTATION**: Template prominently features installation
   - Quick start: `./install.sh` to auto-install commands and startup script
   - Installation verification procedures
   - Troubleshooting guide for common installation issues
-- Add detailed installation instructions with prerequisites
-- Document command categories and composition principles
+- **💡 COMPOSITION THROUGH SHARED PROTOCOLS**: Template explains how commands integrate
+  - TodoWrite integration with trackable steps
+  - Memory enhancement learning from executions
+  - Git workflow integration with automatic branch/PR management
+  - Error recovery with smart retry and failure handling
+- **🎯 MULTI-COMMAND CHAINING EXAMPLES**: Template shows real composition patterns
+  - Sequential: "/think about X then /arch the solution then /execute it"
+  - Conditional: "/test and if fails /fix then /pr the changes"
+  - Parallel: "/debug issue while /research best practices then /plan"
+  - Full workflow: "/analyze /design /execute /pr then /copilot any issues"
 - **🚨 Orchestration System Highlight**: Dedicated section showcasing WIP prototype capabilities
   - Multi-agent architecture diagram and component overview
   - Real-world usage examples: `/orch "fix failing tests"`, `/orch "implement feature X"`
@@ -499,11 +851,79 @@ This export contains project-specific configurations that require adaptation.
 See README.md for detailed installation and adaptation guidance."
 ```
 
-**Verification**:
+**🚨 MANDATORY POST-EXPORT VALIDATION**:
+```bash
+echo "🔍 Post-export validation - checking exported content accuracy..."
+
+cd "$REPO_DIR"
+
+# 1. Validate README claims against exported content
+echo "📊 Validating README claims against actual export..."
+README_COMMAND_COUNT=$(grep -o "[0-9]\++" README.md | head -1)
+ACTUAL_EXPORTED_COMMANDS=$(find commands/ -name "*.md" -not -name "README*" | wc -l)
+echo "   README claims: ${README_COMMAND_COUNT} commands"
+echo "   Actually exported: $ACTUAL_EXPORTED_COMMANDS commands"
+
+if [ "${README_COMMAND_COUNT//+}" -gt "$ACTUAL_EXPORTED_COMMANDS" ]; then
+    echo "❌ WARNING: README overstates command count!"
+fi
+
+# 2. Verify copilot architecture consistency
+if grep -q "6-Layer" README.md && grep -q "7-Layer" README.md; then
+    echo "❌ ERROR: Mixed copilot layer references detected in export!"
+elif grep -q "6-Layer" README.md; then
+    echo "✅ Copilot architecture: 6-Layer system (current)"
+elif grep -q "7-Layer" README.md; then
+    echo "❌ WARNING: 7-Layer system in README may be outdated"
+fi
+
+# 3. Check for accidentally exported project-specific content
+echo "🔍 Scanning for project-specific content that should have been filtered..."
+PROJECT_SPECIFIC_FOUND=""
+if grep -r "mvp_site/" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND mvp_site/"
+fi
+if grep -r "jleechan" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND jleechan"
+fi
+if grep -r "worldarchitect\.ai" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND worldarchitect.ai"
+fi
+
+if [ -n "$PROJECT_SPECIFIC_FOUND" ]; then
+    echo "❌ WARNING: Project-specific content found:$PROJECT_SPECIFIC_FOUND"
+    echo "   This content should have been filtered during export"
+else
+    echo "✅ No project-specific content detected"
+fi
+
+# 4. Verify install script exists and is executable
+if [ -f "install.sh" ] && [ -x "install.sh" ]; then
+    echo "✅ Install script present and executable"
+else
+    echo "❌ ERROR: Install script missing or not executable"
+fi
+
+# 5. Check that referenced directories exist in export
+echo "🔍 Verifying referenced directories exist in export..."
+for dir in orchestration automation claude-bot-commands prototype; do
+    if [ -d "$dir" ]; then
+        FILE_COUNT=$(find "$dir" -type f | wc -l)
+        echo "   ✅ $dir/ ($FILE_COUNT files)"
+    else
+        echo "   ❌ Missing: $dir/ (referenced in README)"
+    fi
+done
+
+echo "✅ Post-export validation complete"
+```
+
+**Final Verification**:
 - Confirm PR creation and return link
-- Validate exported content structure
+- Validate exported content structure matches README claims
 - Test basic command loading in clean environment
 - Document any export-specific issues or requirements
+- Run accuracy validation against current vs. exported state
 
 ## 🚨 MANDATORY FILE EXCLUSIONS
 
