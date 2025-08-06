@@ -202,40 +202,57 @@ You can chain multiple commands in one request:
 
 ### Nested Command Layers - The Real Architecture
 
-#### `/copilot` - 7-Layer Autonomous System
+#### `/copilot` - 6-Layer Universal Composition System
 ```
-Layer 1: PR Context Analysis
-├── /commentfetch - Gather all PR comments
-├── /reviewstatus - Check review states
-└── /context - Build comprehensive PR understanding
+Layer 1: Universal Composition Bridge
+└── /execute - Intelligent workflow optimization
+    ├── Task complexity analysis (PR size, comment count, CI failures)
+    ├── Execution strategy determination (parallel vs sequential)
+    ├── Resource allocation and optimization decisions
+    └── Orchestrates all 6 phases through universal composition
 
-Layer 2: Issue Detection & Prioritization
-├── /debug - Identify technical issues
-├── /commentcheck - Parse review feedback
-└── /ghfixtests - Analyze CI failures
+Layer 2: GitHub Status Verification (Phase 1 - MANDATORY)
+├── gh pr view - Fresh GitHub state verification
+├── Status evaluation - CI, mergeable, comment analysis
+├── Skip condition assessment - Optimization opportunity detection
+└── Execution path determination - Full vs optimized workflow
 
-Layer 3: Automated Resolution
-├── /fixpr - Apply systematic fixes
-├── /test - Validate changes
-└── /integrate - Handle merge conflicts
+Layer 3: Data Collection Layer (Phase 2 - CONDITIONAL)
+├── /commentfetch - Complete comment/review data gathering
+│   ├── GitHub API pagination handling
+│   ├── Comment threading analysis
+│   └── Review status compilation
+├── Optimization bypass - Skip when zero comments detected
+└── Smart verification - Quick check before full collection
 
-Layer 4: Quality Assurance
-├── /coverage - Verify test coverage
-├── /lint - Code style validation
-└── /reviewdeep - Self-review changes
+Layer 4: Resolution Engine (Phase 3 - CONDITIONAL)
+├── /fixpr - CI failure and conflict resolution
+│   ├── Test failure analysis and automatic fixes
+│   ├── Merge conflict detection and resolution
+│   ├── Build error correction
+│   └── Code quality improvements
+├── Skip logic - Bypass when CI passing and mergeable
+└── Status verification - Always check before skipping
 
-Layer 5: Documentation & Communication
-├── /commentreply - Respond to reviewers
-├── /pr - Update PR description
-└── /pushl - Push with sync verification
+Layer 5: Communication Layer (Phase 4 - CONDITIONAL)
+├── /commentreply - Enhanced context comment responses
+│   ├── Comment threading with ID references
+│   ├── Commit hash inclusion for proof of work
+│   ├── Technical context enhancement
+│   └── Status marker integration (✅ DONE / ❌ NOT DONE)
+├── Optimization - Skip when zero unresponded comments
+└── Delegation trust - Let commentreply handle verification
 
-Layer 6: Validation Loop
-├── /testserver - Integration testing
-├── /ghfixtests - Re-verify CI status
-└── /reviewstatus - Confirm resolution
-
-Layer 7: Completion Verification
-└── Final status check and user notification
+Layer 6: Validation & Sync (Phases 5-6 - CONDITIONAL/MANDATORY)
+├── /commentcheck - Enhanced context reply verification (Phase 5)
+│   ├── Coverage validation for processed comments
+│   ├── Context quality assessment
+│   └── Threading completeness verification
+├── /pushl - Final synchronization (Phase 6 - MANDATORY)
+│   ├── Local to remote sync with verification
+│   ├── GitHub API confirmation
+│   └── Push success validation
+└── Merge approval protocol integration - Zero tolerance enforcement
 ```
 
 #### `/execute` - 3-Layer Orchestration System
@@ -333,23 +350,17 @@ The testing framework demonstrates **LLM-Native Testing** patterns that work acr
 
 ### Key Capabilities
 
-#### 1. **LLM Capability Mapping** (`test_llm_capability_mapping.md`)
-- **Progressive Complexity Ladder**: 5 levels from basic mechanics to cross-domain transfer
-- **Multi-LLM Collaboration Experiments**: Sequential, parallel, and specialized agent approaches
-- **Failure Mode Analysis**: Systematic cataloging of how and why each LLM fails
-- **Capability Boundary Discovery**: Finding exact limits of reasoning, creativity, domain knowledge
+#### 1. **Multi-Domain Test Patterns**
+- **E-commerce Workflows**: Checkout flows, payment processing, inventory management
+- **Authentication Systems**: OAuth, SSO, multi-factor authentication, session management
+- **Content Management**: CRUD operations, media upload, content moderation
+- **API Testing**: Endpoint validation, response verification, error handling
 
-#### 2. **AI-First Development Workflow** (`test_ai_development_workflow.md`)
-- **Code Review Partnership**: LLM-human collaboration patterns for optimal code quality
-- **Feature Design AI**: Automated feature specification and technical design
-- **Decision Automation**: AI-assisted architectural and implementation decisions
-- **Learning Acceleration**: System learns from development patterns and improves suggestions
-
-#### 3. **Emergent Narrative Intelligence** (`test_emergent_narrative_intelligence.md`)
-- **Multi-Agent Story Generation**: Collaborative storytelling with specialized LLM agents
-- **Player Psychology Modeling**: Understanding and responding to player behavior patterns
-- **Living World Simulation**: Dynamic world state management with cross-campaign intelligence
-- **Cross-Campaign Learning**: Knowledge transfer between different game sessions
+#### 2. **AI-First Test Development**
+- **Intelligent Test Generation**: AI creates comprehensive test scenarios
+- **Dynamic Assertion Creation**: Context-aware validation criteria
+- **Failure Analysis**: Automatic root cause identification
+- **Test Maintenance**: AI updates tests when systems change
 
 ### Test File Structure
 
@@ -506,7 +517,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **90+ commands** that transform Claude Code into:
+This export contains **80+ commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents

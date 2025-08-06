@@ -206,8 +206,8 @@ Please respond with a JSON object containing:
 - success: true if interpretation successful, false if unclear
 
 Examples:
-Input: "/debug /paranoid /test $PROJECT_ROOT/"
-Output: {{"protocol_command": "/test", "arguments": ["$PROJECT_ROOT/"], "context_flags": {{"debug": true, "paranoid": true}}, "execution_plan": "Run comprehensive tests on $PROJECT_ROOT/ with debug output and paranoid validation", "success": true}}
+Input: "/debug /paranoid /test mvp_site/"
+Output: {{"protocol_command": "/test", "arguments": ["mvp_site/"], "context_flags": {{"debug": true, "paranoid": true}}, "execution_plan": "Run comprehensive tests on mvp_site/ with debug output and paranoid validation", "success": true}}
 
 Input: "/please /carefully /test the integration folder"
 Output: {{"protocol_command": "/test", "arguments": ["integration"], "context_flags": {{"careful": true, "thorough": true}}, "execution_plan": "Run careful comprehensive tests on integration folder", "success": true}}
@@ -410,7 +410,7 @@ if __name__ == "__main__":
         "/test src/",  # Single command (should return None)
         "/debug /test src/",  # Debug test
         "/paranoid /deploy production",  # Paranoid deploy
-        "/debug /paranoid /minimal /test $PROJECT_ROOT/",  # Multiple modifiers
+        "/debug /paranoid /minimal /test mvp_site/",  # Multiple modifiers
         "/think /arch codebase",  # Thinking architecture review
         "/complete /coverage integration/",  # Thorough coverage
     ]

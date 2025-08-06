@@ -184,7 +184,7 @@ Store new architectural insights discovered during review:
 ```bash
 /arch                                    # Review current changes for MVP readiness
 /arch codebase                          # Full MVP architecture health check
-/arch $PROJECT_ROOT/main.py                  # Review core app file for solo maintainability
+/arch mvp_site/main.py                  # Review core app file for solo maintainability
 /arch api                               # API design - simple and shippable?
 /archreview security                    # Security for MVP (basics, not enterprise)
 ```
