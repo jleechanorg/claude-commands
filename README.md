@@ -350,23 +350,17 @@ The testing framework demonstrates **LLM-Native Testing** patterns that work acr
 
 ### Key Capabilities
 
-#### 1. **LLM Capability Mapping** (`test_llm_capability_mapping.md`)
-- **Progressive Complexity Ladder**: 5 levels from basic mechanics to cross-domain transfer
-- **Multi-LLM Collaboration Experiments**: Sequential, parallel, and specialized agent approaches
-- **Failure Mode Analysis**: Systematic cataloging of how and why each LLM fails
-- **Capability Boundary Discovery**: Finding exact limits of reasoning, creativity, domain knowledge
+#### 1. **Multi-Domain Test Patterns**
+- **E-commerce Workflows**: Checkout flows, payment processing, inventory management
+- **Authentication Systems**: OAuth, SSO, multi-factor authentication, session management
+- **Content Management**: CRUD operations, media upload, content moderation
+- **API Testing**: Endpoint validation, response verification, error handling
 
-#### 2. **AI-First Development Workflow** (`test_ai_development_workflow.md`)
-- **Code Review Partnership**: LLM-human collaboration patterns for optimal code quality
-- **Feature Design AI**: Automated feature specification and technical design
-- **Decision Automation**: AI-assisted architectural and implementation decisions
-- **Learning Acceleration**: System learns from development patterns and improves suggestions
-
-#### 3. **Emergent Narrative Intelligence** (`test_emergent_narrative_intelligence.md`)
-- **Multi-Agent Story Generation**: Collaborative storytelling with specialized LLM agents
-- **Player Psychology Modeling**: Understanding and responding to player behavior patterns
-- **Living World Simulation**: Dynamic world state management with cross-campaign intelligence
-- **Cross-Campaign Learning**: Knowledge transfer between different game sessions
+#### 2. **AI-First Test Development**
+- **Intelligent Test Generation**: AI creates comprehensive test scenarios
+- **Dynamic Assertion Creation**: Context-aware validation criteria
+- **Failure Analysis**: Automatic root cause identification
+- **Test Maintenance**: AI updates tests when systems change
 
 ### Test File Structure
 
