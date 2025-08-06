@@ -329,7 +329,7 @@ Integration Layer:
 
 ### LLM-Native Test-Driven Development
 
-The `testing_llm/` directory contains a revolutionary **Meta-AI Testing Framework** that uses LLMs to test LLMs, creating an iterative improvement loop for AI development workflows.
+The testing framework demonstrates **LLM-Native Testing** patterns that work across any web application or system, using AI to create, execute, and validate complex test scenarios.
 
 ### Key Capabilities
 
@@ -410,9 +410,9 @@ Meta-testing integrates seamlessly with the command system:
 ```bash
 # Red-Green-Refactor with LLM tests
 /tdd "authentication flow"        # Creates failing LLM test
-/testuif testing_llm/test_auth.md # Execute test with Playwright MCP
+/testuif test_auth.md             # Execute test with Playwright MCP
 /fix "implement OAuth flow"       # Fix code to make test pass
-/testuif testing_llm/test_auth.md # Verify test now passes
+/testuif test_auth.md             # Verify test now passes
 ```
 
 ### Matrix Testing Integration
