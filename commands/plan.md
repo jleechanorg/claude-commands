@@ -19,7 +19,7 @@
 ### Example PR Fix Workflow
 ```bash
 # ❌ WRONG: Reading entire files
-Read --file_path="$PROJECT_ROOT/frontend_v2/src/App.tsx"  # Wastes 1000+ lines of context!
+Read --file_path="mvp_site/frontend_v2/src/App.tsx"  # Wastes 1000+ lines of context!
 
 # ✅ RIGHT: Targeted Serena analysis
 mcp__serena__search_for_pattern --pattern="\\(campaign as any\\)" --restrict_search_to_code_files=true

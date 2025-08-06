@@ -272,8 +272,8 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 **Content Filtering Setup**:
 - Initialize comprehensive export filter system with multiple filter types
-- Exclude project-specific directories and files ($PROJECT_ROOT/, run_tests.sh, testi.sh)
-- Filter out personal/project references (jleechan, your-project.com, Firebase specifics)
+- Exclude project-specific directories and files (mvp_site/, run_tests.sh, testi.sh)
+- Filter out personal/project references (jleechan, worldarchitect.ai, Firebase specifics)
 - Transform project-specific paths to generic placeholders
 - Set up warning header templates for exported files
 
@@ -341,7 +341,7 @@ EOF
 # Filter and append original CLAUDE.md
 cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
-sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
+sed -i 's|mvp_site/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
 sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
 sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
@@ -351,10 +351,10 @@ cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```bash
 # Copy commands with filtering
 for file in .claude/commands/*.md .claude/commands/*.py; do
-    # Skip project-specific files
+    # Skip project-specific files and template files
     case "$(basename "$file")" in
-        "testi.sh"|"run_tests.sh"|"copilot_inline_reply_example.sh")
-            echo "Skipping project-specific file: $file"
+        "testi.sh"|"run_tests.sh"|"copilot_inline_reply_example.sh"|"README_EXPORT_TEMPLATE.md")
+            echo "Skipping project-specific/template file: $file"
             continue
             ;;
     esac
@@ -363,10 +363,10 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     cp "$file" "staging/commands/$(basename "$file")"
 
     # Apply content transformations
-    sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
+    sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
     sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
-    sed -i 's|TESTING=true python|TESTING=true python|g' "staging/commands/$(basename "$file")"
+    sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
     # Add project-specific warning to commands with mvp_site references
     if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
@@ -398,10 +398,10 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         cp "$script" "staging/scripts/$script_name"
 
         # Apply transformations
-        sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
+        sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/jleechan/projects/your-project.com|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
-        sed -i 's|TESTING=true python|TESTING=true python|g' "staging/scripts/$script_name"
+        sed -i 's|/home/jleechan/projects/worldarchitect.ai|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
+        sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
         sed -i '1i\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
@@ -633,21 +633,40 @@ echo "✅ Created install.sh script with command installation logic"
 ### Phase 4: Documentation Generation
 
 **README Generation**:
-- Use /execute for comprehensive research and structure generation
-- **🎯 COMPOSITION-FIRST DOCUMENTATION**: Lead with the transformative workflow capabilities
-  - Highlight how simple command hooks enable autonomous development workflows
-  - Show before/after examples of manual vs. composed command workflows
-  - Emphasize that this isn't just "command sharing" but "workflow transformation"
-- **🚨 INSTALL SCRIPT DOCUMENTATION**: Prominently feature the install.sh script
+- **🚨 ALWAYS USE REFERENCE TEMPLATE**: Copy from `.claude/commands/README_EXPORT_TEMPLATE.md` as base
+```bash
+# Use the maintained reference template
+cp .claude/commands/README_EXPORT_TEMPLATE.md "$STAGING_DIR/README.md"
+
+# Apply project-agnostic transformations
+sed -i 's|your-project.com|your-project.com|g' "$STAGING_DIR/README.md"
+sed -i "s|jleechan|${USER}|g" "$STAGING_DIR/README.md"
+sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
+```
+- **🎯 COMPOSITION-FIRST DOCUMENTATION**: Template includes comprehensive technical details
+  - Hook mechanism: How .md files become executable workflows
+  - Multi-command chaining in single sentences with real examples
+  - Nested command layers showing the full architecture depth
+  - Before/after workflow transformation examples
+- **🔧 TECHNICAL ARCHITECTURE DETAILS**: Template reveals the composition system depth
+  - `/copilot`: 7-layer autonomous system breakdown
+  - `/execute`: 3-layer orchestration system structure
+  - `/pr`: 4-layer development lifecycle workflow
+  - `/orch`: Multi-agent delegation with coordination layers
+- **🚨 INSTALL SCRIPT DOCUMENTATION**: Template prominently features installation
   - Quick start: `./install.sh` to auto-install commands and startup script
   - Installation verification procedures
   - Troubleshooting guide for common installation issues
-- Include prominent warning about reference-only status
-- Add detailed installation instructions with prerequisites
-- **🎯 COMMAND COMPOSITION SHOWCASE**: Document how commands chain together
-  - Multi-step workflow examples: `/pr`, `/copilot`, `/execute`
-  - Building block composition patterns: cognitive + testing + git workflows
-  - The "hook architecture" that makes complex workflows possible with simple `.md` files
+- **💡 COMPOSITION THROUGH SHARED PROTOCOLS**: Template explains how commands integrate
+  - TodoWrite integration with trackable steps
+  - Memory enhancement learning from executions
+  - Git workflow integration with automatic branch/PR management
+  - Error recovery with smart retry and failure handling
+- **🎯 MULTI-COMMAND CHAINING EXAMPLES**: Template shows real composition patterns
+  - Sequential: "/think about X then /arch the solution then /execute it"
+  - Conditional: "/test and if fails /fix then /pr the changes"
+  - Parallel: "/debug issue while /research best practices then /plan"
+  - Full workflow: "/analyze /design /execute /pr then /copilot any issues"
 - **🚨 Orchestration System Highlight**: Dedicated section showcasing WIP prototype capabilities
   - Multi-agent architecture diagram and component overview
   - Real-world usage examples: `/orch "fix failing tests"`, `/orch "implement feature X"`
@@ -714,7 +733,7 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
 - Automated PR Fixer System ($(ls automation/ | wc -l) files)
 - Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
-- Content filtering: mvp_site → \$PROJECT_ROOT, your-project.com → your-project.com
+- Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
 - Comprehensive README and documentation
 
 ⚠️ Reference export - requires adaptation for other projects"
@@ -779,7 +798,7 @@ See README.md for detailed installation and adaptation guidance."
 - `run_local_server.sh` - Server launcher with hardcoded paths
 - `run_test_server.sh` - Test server with project structure
 - `tools/localserver.sh` - Local development server
-- Files with hardcoded `$PROJECT_ROOT/` dependencies
+- Files with hardcoded `mvp_site/` dependencies
 - Personal configuration files with sensitive paths
 - Project-specific Python scripts with database connections
 - Testing scripts that require specific project setup
@@ -824,11 +843,11 @@ See README.md for detailed installation and adaptation guidance."
 **Automatic Text Replacements**:
 ```bash
 # File content transformations
-sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "$file"
+sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "$file"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$file"
 sed -i "s|jleechan|${USER}|g" "$file"
 sed -i 's|WorldArchitect\.AI|Your Project|g' "$file"
-sed -i 's|TESTING=true python|TESTING=true python|g' "$file"
+sed -i 's|TESTING=true vpython|TESTING=true python|g' "$file"
 sed -i 's|Flask/Gunicorn|Web Framework|g' "$file"
 sed -i 's|Firebase/Firestore|Database|g' "$file"
 sed -i 's|serviceAccountKey\.json|database_credentials.json|g' "$file"
@@ -851,9 +870,9 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 ## Content Transformation Rules
 
 **Path Generalization**:
-- `$PROJECT_ROOT/` → `$PROJECT_ROOT/`
-- `/home/jleechan/projects/your-project.com/` → `$WORKSPACE_ROOT/`
-- `your-project.com` → `your-project.com`
+- `mvp_site/` → `$PROJECT_ROOT/`
+- `/home/jleechan/projects/worldarchitect.ai/` → `$WORKSPACE_ROOT/`
+- `worldarchitect.ai` → `your-project.com`
 - `jleechan` → `$USER`
 - Hardcoded file paths → Environment variable placeholders
 - Project-specific test commands → Generic test patterns

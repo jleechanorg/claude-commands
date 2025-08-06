@@ -9,7 +9,7 @@
 **Implementation**:
 - Run: `./testi.sh` (preferred) or fallback to manual execution
 - Script location: `./testi.sh` in project root
-- Alternative: `source venv/bin/activate && TESTING=true python3 $PROJECT_ROOT/test_integration/test_integration.py`
+- Alternative: `source venv/bin/activate && TESTING=true python3 mvp_site/test_integration/test_integration.py`
 - Execute from project root with virtual environment activated
 - Use TESTING=true environment variable for real API testing
 - Analyze integration test results
