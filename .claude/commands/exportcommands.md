@@ -411,6 +411,93 @@ done
 - Add setup requirements documentation for each script
 - Include execution environment requirements
 
+**🚨 Hooks Export** (`.claude/hooks/` → `hooks/`) - **ESSENTIAL CLAUDE CODE FUNCTIONALITY**:
+```bash
+# Export Claude Code hooks with comprehensive filtering
+echo "📎 Exporting Claude Code hooks..."
+
+# Create hooks destination directory
+mkdir -p staging/hooks
+
+# Check if source hooks directory exists
+if [[ ! -d ".claude/hooks" ]]; then
+    echo "⚠️  Warning: .claude/hooks directory not found - skipping hooks export"
+else
+    echo "📁 Found .claude/hooks directory - proceeding with export"
+    
+    # Enable nullglob to handle cases where no files match patterns
+    shopt -s nullglob
+    
+    # Export hook scripts with filtering (including nested subdirectories)
+    find .claude/hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
+        hook_name=$(basename "$hook_file")
+        relative_path="${hook_file#.claude/hooks/}"
+        
+        # Skip test and example files
+        case "$hook_name" in
+            *test*|*example*|debug_hook.sh)
+                echo "   ⏭ Skipping $hook_name (test/debug file)"
+                continue
+                ;;
+        esac
+            
+        echo "   📎 Copying: $relative_path"
+        
+        # Create subdirectory structure if needed
+        hook_dir=$(dirname "staging/hooks/$relative_path")
+        mkdir -p "$hook_dir"
+        
+        # Copy and transform hook files
+        cp "$hook_file" "staging/hooks/$relative_path"
+            
+        # Apply comprehensive content transformations
+        sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/hooks/$relative_path"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/hooks/$relative_path"
+        sed -i "s|jleechan|${USER}|g" "staging/hooks/$relative_path"
+        sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/hooks/$relative_path"
+        sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
+            
+        # Make scripts executable and add adaptation headers
+        case "$hook_name" in
+            *.sh)
+                chmod +x "staging/hooks/$relative_path"
+                # Add adaptation header only if file doesn't start with shebang
+                if ! head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
+                    sed -i '1i\#!/bin/bash\n# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                else
+                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                fi
+                ;;
+            *.py)
+                chmod +x "staging/hooks/$relative_path"
+                # Add adaptation note after any existing shebang
+                if head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
+                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                else
+                    sed -i '1i\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                fi
+                ;;
+        esac
+    done
+    
+    # Restore nullglob setting
+    shopt -u nullglob
+    
+    # Note: Subdirectories are now handled by the find loop above
+    
+    echo "✅ Hooks export completed successfully"
+fi
+```
+- **🔧 Core Claude Code Functionality**: Essential hooks that enable automatic workflow management
+- **PreToolUse Hooks**: Code quality validation before file operations (anti_demo_check_claude.sh, check_root_files.sh)
+- **PostToolUse Hooks**: Automated sync after git operations (post_commit_sync.sh)
+- **PostResponse Hooks**: Response quality validation (detect_speculation.sh)
+- **Command Composition**: Hook utilities for advanced workflow orchestration (compose-commands.sh)
+- **Testing Framework**: Complete hook testing utilities for validation and debugging
+- **Project Adaptation**: Comprehensive filtering of project-specific paths and references
+- **Executable Permissions**: Automatic permission setting for shell scripts
+- **Documentation**: Clear adaptation requirements and functionality descriptions
+
 **🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
 ```bash
 # Export development environment infrastructure scripts
@@ -555,6 +642,37 @@ else
     echo "⚠️  Warning: commands/ directory not found"
 fi
 
+# Create .claude/hooks directory if it doesn't exist
+if [ ! -d ".claude/hooks" ]; then
+    echo "📁 Creating .claude/hooks directory..."
+    mkdir -p .claude/hooks
+fi
+
+# Copy hooks from exported hooks/ to .claude/hooks/ (with subdirectory support)
+echo "📎 Installing Claude Code hooks..."
+if [ -d "hooks" ]; then
+    # Use find with NUL-delimited output to handle filenames with spaces safely
+    find hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
+        relative_path="${hook_file#hooks/}"
+        target_path=".claude/hooks/$relative_path"
+        target_dir=$(dirname "$target_path")
+        
+        # Create target directory if needed
+        mkdir -p "$target_dir"
+        
+        echo "   📎 $relative_path"
+        cp "$hook_file" "$target_path"
+        
+        # Ensure executables keep their bit
+        case "$relative_path" in
+            *.sh|*.py) chmod +x "$target_path" ;;
+        esac
+    done
+    echo "✅ Hooks installed to .claude/hooks/"
+else
+    echo "⚠️  Warning: hooks/ directory not found"
+fi
+
 # Copy claude_start.sh from infrastructure-scripts to root
 echo "🚀 Installing startup script..."
 if [ -f "infrastructure-scripts/claude_start.sh" ]; then
@@ -593,6 +711,9 @@ fi
 if add_to_gitignore ".claude/commands/" "# Claude Commands - Auto-installed by install.sh"; then
     entries_added=true
 fi
+if add_to_gitignore ".claude/hooks/" "# Claude Code Hooks - Auto-installed by install.sh"; then
+    entries_added=true
+fi
 
 if add_to_gitignore "claude_start.sh" "# Claude startup script - Auto-installed"; then
     entries_added=true
@@ -621,10 +742,12 @@ echo "✅ Created install.sh script with command installation logic"
 
 **Install Script Features**:
 - **Safety Checks**: Verifies git repository context
-- **Directory Creation**: Creates `.claude/commands/` if needed
+- **Directory Creation**: Creates `.claude/commands/` and `.claude/hooks/` if needed
 - **Command Installation**: Copies commands from `commands/` to `.claude/commands/` (excludes README files)
+- **🚨 Hooks Installation**: Copies essential Claude Code hooks from `hooks/` to `.claude/hooks/` with proper permissions
+- **Executable Permissions**: Ensures all shell scripts (.sh files) are executable
 - **Startup Script**: Copies `claude_start.sh` to root directory with executable permissions
-- **GitIgnore Management**: Automatically adds installed files to .gitignore
+- **GitIgnore Management**: Automatically adds installed files (.claude/, hooks, startup script) to .gitignore
 - **User Guidance**: Provides clear next steps and adaptation requirements
 - **Error Handling**: Graceful handling of missing files with warnings
 
@@ -817,8 +940,12 @@ gh pr create --title "Claude Commands Export $(date +%Y-%m-%d)" \
 This export contains project-specific configurations that require adaptation.
 
 ## Contents
-- **🚀 ONE-CLICK INSTALL**: `./install.sh` script auto-installs commands to `.claude/commands/` and copies `claude_start.sh`
+- **🚀 ONE-CLICK INSTALL**: `./install.sh` script auto-installs commands to `.claude/commands/`, hooks to `.claude/hooks/`, and copies `claude_start.sh`
 - Complete command system (70+ commands)
+- **🚨 Essential Claude Code Hooks**: Core workflow automation hooks (PreToolUse, PostToolUse, PostResponse, Stop)
+  - Code quality validation before file operations
+  - Automated sync after git operations
+  - Response quality validation and branch header generation
 - **🚨 Orchestration Infrastructure (WIP Prototype)**: Multi-agent task delegation system
   - tmux-based agent architecture with Redis coordination
   - Autonomous task execution with PR generation verification
