@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # /learn Command
 
 **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage
@@ -86,7 +88,7 @@
 - **Related Issues**: Connected problems this addresses
 
 **Quality Requirements**:
-- ✅ Specific file paths with line numbers (mvp_site/auth.py:45)
+- ✅ Specific file paths with line numbers ($PROJECT_ROOT/auth.py:45)
 - ✅ Exact error messages or code snippets
 - ✅ Actionable implementation steps
 - ✅ References to PRs, commits, or external resources

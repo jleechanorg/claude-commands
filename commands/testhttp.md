@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 # HTTP Tests (Mock) Command
 
 **Purpose**: Run HTTP request tests with mock APIs (free)
@@ -17,7 +19,7 @@
 
 2. **Start Test Server (if needed)**
    ```bash
-   TESTING=true PORT=8086 vpython mvp_site/main.py serve &
+   TESTING=true PORT=8086 vpython $PROJECT_ROOT/main.py serve &
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
@@ -25,7 +27,7 @@
 
 3. **Run HTTP Test**
    ```bash
-   TESTING=true vpython testing_http/test_name.py
+   TESTING=true python testing_http/test_name.py
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded

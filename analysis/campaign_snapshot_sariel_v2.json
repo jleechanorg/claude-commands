@@ -1,0 +1,103 @@
+{
+  "campaign_id": "sariel_v2_001",
+  "campaign_name": "Sariel v2: The Awakening",
+  "metadata": {
+    "players": [
+      "Player1",
+      "Player2",
+      "Player3",
+      "Player4"
+    ],
+    "total_sessions": 1,
+    "date_range": {
+      "start": "2024-01-15",
+      "end": "2024-03-20"
+    }
+  },
+  "desync_turns": [
+    {
+      "session": 1,
+      "turn": 1,
+      "game_state": {
+        "player_character_data": {
+          "name": "Sariel"
+        },
+        "npc_data": {
+          "Cassian": {
+            "present": true
+          },
+          "Valerius": {
+            "present": true
+          }
+        },
+        "location": "Throne Room"
+      },
+      "narrative": "Sariel stood before the throne as Valerius approached.",
+      "desync_info": {
+        "session": 1,
+        "turn": 1,
+        "pattern_type": "presence_ambiguity",
+        "expected_entities": [
+          "Sariel",
+          "Cassian",
+          "Valerius"
+        ],
+        "found_entities": [],
+        "missing_entities": [
+          "Cassian"
+        ],
+        "narrative_excerpt": "Sariel stood before the throne as Valerius approached.",
+        "timestamp": "2025-06-29T19:32:37.849395"
+      }
+    },
+    {
+      "session": 1,
+      "turn": 2,
+      "game_state": {
+        "player_character_data": {
+          "name": "Sariel"
+        },
+        "npc_data": {
+          "Cassian": {
+            "present": true,
+            "location": "throne"
+          },
+          "Valerius": {
+            "present": true,
+            "location": "entrance"
+          },
+          "Guard": {
+            "present": true
+          }
+        },
+        "combat_state": {
+          "in_combat": true,
+          "participants": [
+            "Sariel",
+            "Cassian",
+            "Guard"
+          ]
+        }
+      },
+      "narrative": "The guard attacked! Sariel dodged while engaging in combat.",
+      "desync_info": {
+        "session": 1,
+        "turn": 2,
+        "pattern_type": "combat_entity_missing",
+        "expected_entities": [
+          "Sariel",
+          "Cassian",
+          "Valerius",
+          "Guard"
+        ],
+        "found_entities": [],
+        "missing_entities": [
+          "Cassian",
+          "Valerius"
+        ],
+        "narrative_excerpt": "The guard attacked! Sariel dodged while engaging in combat.",
+        "timestamp": "2025-06-29T19:32:37.849530"
+      }
+    }
+  ]
+}

@@ -11,7 +11,6 @@ Feel free to use these as a starting point - Claude Code excels at helping you a
 
 ---
 
-EOF < /dev/null
 # CLAUDE.md - Primary Rules and Operating Protocol
 
 **Primary rules file for AI collaboration on WorldArchitect.AI**

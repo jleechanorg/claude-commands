@@ -1,3 +1,5 @@
+# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment
+
 #!/usr/bin/env python3
 """
 Enhanced /push command implementation
@@ -136,7 +138,7 @@ def start_test_server(branch):
     current_branch = subprocess.check_output(
         ["git", "branch", "--show-current"], text=True
     ).strip()
-    log_dir = f"/tmp/worldarchitect.ai/{current_branch}"
+    log_dir = f"/tmp/your-project.com/{current_branch}"
     os.makedirs(log_dir, exist_ok=True)
     log_file = f"{log_dir}/{branch}.log"
 
@@ -144,7 +146,7 @@ def start_test_server(branch):
     try:
         with open(log_file, "w") as log:
             subprocess.Popen(
-                ["python", "mvp_site/main.py"],
+                ["python", "$PROJECT_ROOT/main.py"],
                 env={**os.environ, "PORT": str(port)},
                 stdout=log,
                 stderr=subprocess.STDOUT,
