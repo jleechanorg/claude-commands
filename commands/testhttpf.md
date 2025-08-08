@@ -17,7 +17,7 @@
 
 2. **Start Test Server (if needed)**
    ```bash
-   TESTING=false PORT=8086 vpython mvp_site/main.py serve &
+   TESTING=false PORT=8086 vpython $PROJECT_ROOT/main.py serve &
    sleep 3
    curl -s http://localhost:8086 || echo "Note: Using different port or external server"
    ```
