@@ -8,6 +8,7 @@ __pycache__/
 .token
 
 # Ignore Python virtual environments
+venv
 venv/
 mvp_site/venv/
 test_venv/
