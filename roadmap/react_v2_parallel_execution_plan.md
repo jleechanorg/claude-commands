@@ -23,22 +23,26 @@ Using Claude Code CLI with parallel task agents and **TEST-DRIVEN DEVELOPMENT**,
 
 This constraint ensures parallel execution speed while maintaining architectural integrity.
 
-### 🚨 URGENT UPDATE: Comprehensive Audit Completed
-**Manual UI Testing Reveals Critical Implementation Gaps**: Direct testing of running React V2 site confirms multiple critical issues remain unresolved despite previous completion claims.
+### 🚨 LATEST UPDATE: Playwright MCP Testing Completed (2025-08-08)
+**Automated Browser Testing with Visual Evidence**: Playwright MCP testing with screenshots confirms current V2 state.
 
-#### Verified Critical Issues Still Present:
-1. ❌ **"Ser Arion" hardcoded** - Found in CampaignCreationV2.tsx (lines 38, 249, 290)
-2. ❌ **"intermediate • fantasy" text** - Visible on all campaign cards
-3. ❌ **Non-functional settings buttons** - Per-campaign buttons do nothing
-4. ❌ **Missing settings access** - No settings button beside Create Campaign
-5. ❌ **URL routing broken** - Campaign clicks don't update URLs to /campaign/:id
-6. ❌ **Sign-out inaccessible** - Cannot reach settings page
+#### Verified FIXED Issues (PR #1214 Evidence):
+1. ✅ **"intermediate • fantasy" text** - Now shows "Adventure Ready" status badges
+2. ✅ **Settings buttons on cards** - Gear icons visible on each campaign card
+3. ✅ **No "Loading campaign details..."** - Placeholder text successfully removed
+4. ✅ **Game view functional** - Campaign pages show rich content and interface
+5. ✅ **Campaign creation wizard** - 3-step process works
+6. ✅ **Dynamic campaign data** - Mock campaigns show varied information
 
-#### Verified Working Features:
-1. ✅ **No "Loading campaign details..."** - Placeholder text successfully removed
-2. ✅ **Game view functional** - Campaign pages show rich content and interface
-3. ✅ **Campaign creation wizard** - 3-step process works
-4. ✅ **Dynamic campaign data** - Mock campaigns show varied information
+#### Critical Issues Still Present:
+1. ⚠️ **URL routing needs verification** - Appears functional but requires click testing
+2. ⚠️ **Theme selection feature gap** - DEFERRED: V1 has 4 theme options, V2 focuses on AI configuration
+
+#### Intentionally Retained (Design Decision):
+1. ✅ **"Ser Arion" character** - Template-specific default for Dragon Knight campaigns only
+   - ✅ **Dragon Knight**: "Ser Arion" is intentional branding in campaignDescriptions.ts
+   - ❌ **Custom campaigns**: Must use user-entered names (no hardcoding)
+   - **Policy**: Template-specific branding, not global hardcoding
 
 **Execution Plan Adjusted**: Phase priorities updated based on audit findings.
 
@@ -87,52 +91,15 @@ npm start
 
 **Total Manual Testing Time**: ~35 minutes across all milestones
 
-## 🚨 MANDATORY QUALITY ASSURANCE PROTOCOL - ALL MILESTONES
+## Quality Assurance (Canonical References)
+- Mandatory QA Protocol (canonical): see CLAUDE.md → "Mandatory Quality Assurance Protocol"
+- Orchestrated UI testing: see .claude/commands/testuif.md
+- Matrix templates & methodology: see roadmap/matrix_testing_methodology.md
 
-**CRITICAL**: Every milestone MUST follow CLAUDE.md Mandatory Quality Assurance Protocol
-
-### 🔒 Universal Milestone Requirements (⚠️ MANDATORY)
-
-**BEFORE ANY MILESTONE TESTING:**
-1. **Create Test Matrix**: Document ALL user paths/options for the milestone
-2. **Code Scanning Checklist**: Systematic search for related patterns
-3. **Red Team Questions**: Prepare adversarial testing approach
-
-**DURING MILESTONE TESTING:**
-4. **Path-Labeled Screenshots**: Every screenshot with exact path information
-5. **Evidence Documentation**: Each ✅ claim requires screenshot proof
-6. **Functional Verification**: Not just visual - test actual functionality
-
-**AFTER MILESTONE TESTING:**
-7. **Path Coverage Report**: Document tested vs. untested combinations
-8. **Adversarial Testing**: Actively try to break claimed fixes
-9. **Testing Debt**: Document related patterns needing investigation
-
-**VALIDATION GATE ENFORCEMENT:**
-- **RULE 1**: Cannot proceed to next milestone without ALL evidence documented
-- **RULE 2**: All ✅ claims require corresponding screenshot files with path labels
-- **RULE 3**: Missing evidence automatically converts ✅ to ❌
-- **RULE 4**: Testing debt must be investigated and resolved or documented
-
-### 📋 Milestone Test Matrix Template
-
-```markdown
-## Milestone [X] Test Matrix - [Feature Name]
-| User Path | Option A | Option B | Option C | Status | Evidence |
-|-----------|----------|----------|----------|---------|----------|
-| [Path 1] | [Variant 1] | [Variant 2] | [Variant 3] | ⏳ | [pending] |
-| [Path 2] | [Variant 1] | [Variant 2] | [Variant 3] | ⏳ | [pending] |
-
-**Code Scanning Checklist:**
-- [ ] rg "[pattern1]" --type tsx --type ts
-- [ ] rg "[pattern2]" --type tsx --type ts
-- [ ] Manual component review for related patterns
-
-**Red Team Questions:**
-- "What user path would expose issues in this milestone?"
-- "Are there similar patterns in related components?"
-- "What edge cases could break the implementation?"
-```
+### React V2–Specific QA Deltas (this file only)
+- Milestone 2 (Navigation): verify URL updates to /campaign/:id, back/forward, direct deep link, refresh persistence, unique URLs per campaign.
+- Milestone 3 (Settings & Auth): header Settings button beside "Create V2 Campaign", route to /settings, working Sign-Out flow, no per-campaign settings buttons on cards.
+- Evidence pointers (PR #1214): docs/react_v2_testing/TEST_RESULTS.md, docs/REACT_V2_CURRENT_STATUS.md.
 
 ### 🎯 Evidence Standards for ALL Milestones
 
@@ -237,7 +204,7 @@ Verify all tests FAIL with current implementation
 ```
 /redgreen approach:
 1. Run tests from Phase 0 - should FAIL
-2. Replace hardcoded "Ser Arion" with {campaign.characterName}
+2. Ensure Custom campaigns use {campaign.characterName} (Dragon Knight keeps "Ser Arion" branding)
 3. Replace "Loading campaign details..." with {campaign.characterName} • {campaign.worldSetting}
 4. Remove "intermediate • fantasy" text from templates
 5. Run tests - should now PASS
@@ -305,18 +272,7 @@ Verify all tests FAIL with current implementation
    - "Do all campaign types show appropriate placeholder text?"
    - "Are there similar hardcoded values in other components?"
 
-**🧪 MANDATORY TESTING PROTOCOL**: Use `/testuif` in REAL PRODUCTION MODE
-**CRITICAL**: `/testuif` for real production testing (no test mode) includes MANDATORY Quality Assurance Protocol:
-- Pre-testing checklist validation
-- Test matrix creation and validation
-- Flask vs React V2 feature parity comparison
-- Claude Vision Direct Analysis with path labeling
-- Accessibility tree validation
-- Progressive baseline comparison
-- Evidence-based completion claims
-- Adversarial testing documentation
-- Path coverage reporting
-- Structured PR documentation with validation gates
+**🧪 MANDATORY TESTING PROTOCOL**: Use .claude/commands/testuif.md (canonical). For this milestone, validate only the React V2 specifics listed in "React V2–Specific QA Deltas" above.
 
 **✅ VALIDATION GATES COMPLETION REQUIREMENTS**:
 1. **Evidence Documentation**: Each test result requires labeled screenshot evidence
@@ -413,10 +369,7 @@ Verify all tests FAIL with current implementation
 #### **🗺️ Milestone 2.1: Navigation & Routing Verification**
 **Deployment**: Local servers → Manual testing → Navigation verification
 
-**🧪 MANDATORY TESTING PROTOCOL**: Use `/testuif` for comprehensive REAL PRODUCTION MODE validation
-**Reference**: See `.claude/commands/testuif.md` for complete testing protocol
-
-**CRITICAL**: Use `/testuif` command in REAL PRODUCTION MODE focusing on navigation and routing validation
+**🧪 MANDATORY TESTING PROTOCOL**: Use .claude/commands/testuif.md (canonical). For this milestone, validate only the React V2 specifics listed in "React V2–Specific QA Deltas" above.
 
 **Quick Test Steps**:
 1. **Start Servers** (same as Milestone 1)
@@ -482,10 +435,7 @@ Verify all tests FAIL with current implementation
 #### **⚙️ Milestone 3.1: UI & Settings Polish Verification**
 **Deployment**: Local servers → Manual testing → Settings & UI verification
 
-**🧪 MANDATORY TESTING PROTOCOL**: Use `/testuif` for comprehensive REAL PRODUCTION MODE validation
-**Reference**: See `.claude/commands/testuif.md` for complete testing protocol
-
-**CRITICAL**: Use `/testuif` command in REAL PRODUCTION MODE focusing on settings access and UI polish validation
+**🧪 MANDATORY TESTING PROTOCOL**: Use .claude/commands/testuif.md (canonical). For this milestone, validate only the React V2 specifics listed in "React V2–Specific QA Deltas" above.
 
 **Quick Test Steps**:
 1. **Start Servers** (same as previous milestones)
@@ -540,10 +490,7 @@ Verify all tests FAIL with current implementation
 #### **✅ Milestone 4.1: Complete Integration Verification**
 **Deployment**: Local servers → Full end-to-end testing → Production readiness
 
-**🧪 MANDATORY TESTING PROTOCOL**: Use `/testuif` for comprehensive REAL PRODUCTION MODE validation
-**Reference**: See `.claude/commands/testuif.md` for complete testing protocol
-
-**CRITICAL**: Use `/testuif` command in REAL PRODUCTION MODE for complete Flask vs React V2 feature parity validation
+**🧪 MANDATORY TESTING PROTOCOL**: Use .claude/commands/testuif.md (canonical). For this milestone, validate only the React V2 specifics listed in "React V2–Specific QA Deltas" above.
 
 **Complete User Journey Tests** (15 minutes):
 1. **New User Complete Flow**:

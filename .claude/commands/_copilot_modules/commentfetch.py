@@ -12,10 +12,12 @@ Based on copilot_comment_fetch.py from PR #796 but adapted for modular architect
 """
 
 import json
+import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, List
 
 from base import CopilotCommandBase
@@ -31,8 +33,21 @@ class CommentFetch(CopilotCommandBase):
             pr_number: GitHub PR number
         """
         super().__init__(pr_number)
-        # No file output - stateless operation
         self.comments = []
+
+        # Get current branch for file path
+        try:
+            result = subprocess.run(['git', 'branch', '--show-current'],
+                                  capture_output=True, text=True, check=True)
+            branch_name = result.stdout.strip()
+            # Sanitize branch name for filesystem safety
+            self.branch_name = self._sanitize_branch_name(branch_name) if branch_name else "unknown-branch"
+        except subprocess.CalledProcessError:
+            # Use consistent fallback with base class
+            self.branch_name = "unknown-branch"
+
+        # Set output file path using sanitized branch name
+        self.output_file = Path(f"/tmp/{self.branch_name}/comments.json")
 
     def _get_inline_comments(self) -> List[Dict[str, Any]]:
         """Fetch inline code review comments."""
@@ -225,37 +240,47 @@ class CommentFetch(CopilotCommandBase):
         # Count comments needing responses
         needs_response = sum(1 for c in self.comments if c.get("requires_response"))
 
-        # Prepare result
-        result = {
-            "success": True,
-            "message": f"Fetched {len(self.comments)} comments ({needs_response} need responses)",
-            "data": {
-                "pr": self.pr_number,
-                "fetched_at": datetime.now().isoformat(),
-                "comments": self.comments,
-                "metadata": {
-                    "total": len(self.comments),
-                    "by_type": {
-                        "inline": len(
-                            [c for c in self.comments if c["type"] == "inline"]
-                        ),
-                        "general": len(
-                            [c for c in self.comments if c["type"] == "general"]
-                        ),
-                        "review": len(
-                            [c for c in self.comments if c["type"] == "review"]
-                        ),
-                        "copilot": len(
-                            [c for c in self.comments if c["type"] == "copilot"]
-                        ),
-                    },
-                    "needs_response": needs_response,
-                    "repo": self.repo,
+        # Prepare data to save
+        data = {
+            "pr": self.pr_number,
+            "fetched_at": datetime.now().isoformat(),
+            "comments": self.comments,
+            "metadata": {
+                "total": len(self.comments),
+                "by_type": {
+                    "inline": len(
+                        [c for c in self.comments if c["type"] == "inline"]
+                    ),
+                    "general": len(
+                        [c for c in self.comments if c["type"] == "general"]
+                    ),
+                    "review": len(
+                        [c for c in self.comments if c["type"] == "review"]
+                    ),
+                    "copilot": len(
+                        [c for c in self.comments if c["type"] == "copilot"]
+                    ),
                 },
+                "needs_response": needs_response,
+                "repo": self.repo,
             },
         }
 
-        # No file saving - return data directly
+        # Create directory if it doesn't exist
+        self.output_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Save to file (always replace)
+        with open(self.output_file, 'w') as f:
+            json.dump(data, f, indent=2)
+
+        self.log(f"Comments saved to {self.output_file}")
+
+        # Prepare result
+        result = {
+            "success": True,
+            "message": f"Fetched {len(self.comments)} comments ({needs_response} need responses) - saved to {self.output_file}",
+            "data": data,
+        }
 
         return result
 
@@ -273,7 +298,21 @@ def main():
     args = parser.parse_args()
 
     fetcher = CommentFetch(args.pr_number)
-    return fetcher.run()
+    try:
+        result = fetcher.execute()
+        result["execution_time"] = fetcher.get_execution_time()
+
+        # Output JSON data to stdout as documented
+        print(json.dumps(result["data"], indent=2))
+
+        # Log success to stderr so it doesn't interfere with JSON output
+        import sys
+        print(f"[CommentFetch] ✅ Success: {result.get('message', 'Command completed')}", file=sys.stderr)
+
+        return 0 if result.get("success") else 1
+    except Exception as e:
+        fetcher.log_error(f"Unexpected error: {e}")
+        return 1
 
 
 if __name__ == "__main__":

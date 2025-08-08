@@ -4,17 +4,17 @@
 
 # Load shared utilities
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
 source "$SCRIPT_DIR/scripts/server-utils.sh"
+source "$SCRIPT_DIR/scripts/venv_utils.sh"
 
 print_banner "WorldArchitect.AI Development Server Launcher" "Dual server setup: Flask backend + React v2 frontend"
 
 # Kill any existing server processes
 kill_worldarchitect_servers true
 
-# Setup virtual environment
-if ! detect_and_activate_venv; then
-    exit 1
-fi
+# Setup virtual environment using new venv_utils
+ensure_venv
 
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."

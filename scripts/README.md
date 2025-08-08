@@ -1,56 +1,73 @@
-# WorldArchitect.AI Development Scripts
+# Development Scripts
 
-This directory contains shared development utilities and tools for the WorldArchitect.AI project.
+This directory contains scripts that automate virtual environment setup for seamless development workflow.
 
-## Scripts
+## Quick Setup for Fresh Branches
 
-### sync_check.sh
-**Purpose**: Smart post-command sync check to prevent local changes not being pushed to remote.
+For developers working on fresh branches from main who don't want to manually activate venv:
 
-**Features**:
-- Automatically detects unpushed commits
-- Works from any directory (finds git root automatically)
-- Robust error handling for edge cases
-- Clear, actionable feedback with visual indicators
-- Safe: only pushes when unpushed commits are detected
-- Idempotent: safe to run multiple times
-
-**Usage**:
 ```bash
-# Direct execution (dynamic path)
-$(git rev-parse --show-toplevel)/scripts/sync_check.sh
-
-# Or source and call function
-source $(git rev-parse --show-toplevel)/scripts/sync_check.sh
-sync_check
+# One-time setup for any fresh branch
+./scripts/setup-dev-env.sh
 ```
 
-### common_utils.sh
-**Purpose**: Shared utility functions for development tools.
+This automatically:
+- Creates virtual environment if missing
+- Installs all Python dependencies
+- Sets up git hooks that work with venv
+- Configures pre-commit to run automatically
 
-**Features**:
-- Project root detection from any directory
-- Smart sync check wrapper function
-- Quick commit and sync utilities
-- Project validation functions
+## Git Hooks with Automatic Venv
 
-**Usage**:
+After running the setup, git commits will automatically:
+- Activate virtual environment
+- Install missing dependencies
+- Run code quality checks
+- Work on any fresh branch without manual venv activation
+
+## Available Scripts
+
+### `setup-dev-env.sh`
+Complete development environment setup for fresh branches.
+- Creates venv if missing
+- Installs dependencies from `mvp_site/requirements.txt`
+- Sets up pre-commit hooks
+- Configures everything needed for development
+
+### `install-git-hooks.sh`
+Installs enhanced git hooks that automatically handle virtual environment activation.
+- Creates robust pre-commit hook
+- Handles fresh branch scenarios
+- Auto-installs dependencies when needed
+
+### `venv-pre-commit.sh`
+Wrapper script for pre-commit that ensures venv is activated.
+- Used internally by git hooks
+- Can be called directly if needed
+
+## Usage Examples
+
 ```bash
-# Source utilities (dynamic path)
-source $(git rev-parse --show-toplevel)/scripts/common_utils.sh
+# Fresh clone/branch setup (one-time)
+git checkout -b my-feature-branch
+./scripts/setup-dev-env.sh
 
-# Use functions
-smart_sync_check
-quick_commit_and_sync "commit message"
+# Normal git workflow (venv handled automatically)
+git add .
+git commit -m "My changes"  # Pre-commit runs automatically with venv
+
+# Run tests (venv handled automatically)
+./run_tests.sh
 ```
 
-## Integration
+## Integration with Existing Workflow
 
-These scripts are integrated into key development tools:
-- `/fixpr` - Uses sync check after applying fixes
-- `/commentreply` - Uses sync check after creating responses
-- `/integrate` - Uses sync check before branch cleanup
+These scripts enhance existing scripts like `run_tests.sh` which already handle venv activation. The key improvement is that git hooks now work seamlessly on fresh branches without requiring manual `source venv/bin/activate` steps.
 
-## Protocol
+## Benefits
 
-According to CLAUDE.md, tools that create git commits MUST call the sync check at completion to prevent the "forgot to push" syndrome while maintaining workflow transparency.
+- ✅ Fresh branches work immediately after `./scripts/setup-dev-env.sh`
+- ✅ No more "forgot to activate venv" errors
+- ✅ Git hooks work reliably across different environment
+- ✅ Developers can focus on code instead of environment setup
+- ✅ Compatible with existing scripts and workflow

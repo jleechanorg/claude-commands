@@ -3,6 +3,7 @@ import { LandingPage } from './pages/LandingPage'
 import { CampaignListPage } from './pages/CampaignListPage'
 import { CampaignPage } from './pages/CampaignPage'
 import { CampaignCreationPage } from './pages/CampaignCreationPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { useAuth } from './hooks/useAuth'
 // import { MockModeToggle } from './components/MockModeToggle'
 
@@ -88,6 +89,17 @@ export default function AppWithRouter() {
                 </div>
               </div>
             ) : user ? <CampaignPage /> : <Navigate to="/" replace />
+          } />
+
+          <Route path="/settings" element={
+            loading ? (
+              <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+                  <h3 className="text-white text-xl">Loading...</h3>
+                </div>
+              </div>
+            ) : user ? <SettingsPage /> : <Navigate to="/" replace />
           } />
 
           {/* REMOVED: Character creation route - character creation happens in-game */}

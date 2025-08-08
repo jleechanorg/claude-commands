@@ -88,16 +88,13 @@ case "$MODE" in
         ;;
 esac
 
-# 1. Activate virtual environment
-echo "🔧 Activating virtual environment..."
-if [ -f "venv/bin/activate" ]; then
-    source venv/bin/activate
-    echo "✅ Virtual environment activated"
-    echo "🧪 Real-Mode Testing Framework: TEST_MODE=$TEST_MODE"
-else
-    echo "❌ Virtual environment not found at venv/bin/activate"
-    exit 1
-fi
+# 1. Setup and activate virtual environment
+PROJECT_ROOT="$(pwd)"
+source "$PROJECT_ROOT/scripts/venv_utils.sh"
+echo "🔧 Setting up virtual environment..."
+ensure_venv
+echo "✅ Virtual environment ready"
+echo "🧪 Real-Mode Testing Framework: TEST_MODE=$TEST_MODE"
 
 # 2. Verify Playwright installation
 echo "🔍 Verifying Playwright installation..."

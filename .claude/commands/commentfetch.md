@@ -6,11 +6,11 @@
 
 ## Description
 
-Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Always fetches fresh data on each execution - no caching or temp files. Returns structured comment data for immediate downstream processing.
+Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
 
 ## Output Format
 
-Returns structured JSON data directly (no file creation) with:
+Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 
 ```json
 {
@@ -73,16 +73,24 @@ For comments that are NOT already replied, determine if they need responses base
 - **Fresh Data**: Always fetches current GitHub state, no stale cache issues
 - **Efficiency**: Downstream commands process only comments needing responses
 
+## Implementation
+
+The command runs the Python script directly:
+```bash
+python3 .claude/commands/_copilot_modules/commentfetch.py <PR_NUMBER>
+```
+
 ## Examples
 
 ```bash
 # Fetch all fresh comments for PR 820
 /commentfetch 820
+# Internally runs: python3 .claude/commands/_copilot_modules/commentfetch.py 820
 
-# Returns JSON data directly - no file output
-# Downstream commands receive fresh comment data immediately
+# Saves comments to /tmp/{branch_name}/comments.json
+# Downstream commands read from the saved file
 ```
 
 ## Integration
 
-This command is typically the first step in the `/copilot` workflow, providing fresh comment data directly to other commands like `/fixpr` and `/commentreply`. No caching means always current data.
+This command is typically the first step in the `/copilot` workflow, providing fresh comment data to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. Always fetches current data and overwrites the comments file.

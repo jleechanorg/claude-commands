@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
-import { Plus, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play, AlertCircle, LogOut, Menu } from 'lucide-react'
+import { Plus, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play, AlertCircle } from 'lucide-react'
 import { campaignService } from '../services'
 import { useAuth } from '../hooks/useAuth'
-import { handleAsyncError, createLoadingManager, NetworkMonitor, PerformanceMonitor } from '../utils/errorHandling'
+import { handleAsyncError, NetworkMonitor, PerformanceMonitor } from '../utils/errorHandling'
 import type { Campaign as ApiCampaign } from '../services/api.types'
 
 
@@ -39,23 +40,14 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
   const [loadingCampaigns, setLoadingCampaigns] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
-  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
+  const navigate = useNavigate()
 
   // Use Firebase auth state instead of apiService auth
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading } = useAuth()
 
   // Create loading manager for better UX (future enhancement)
   // const loadingManager = createLoadingManager()
 
-  // Handle sign out
-  const handleSignOut = async () => {
-    try {
-      await signOut()
-      setShowSettingsMenu(false)
-    } catch (error) {
-      console.error('Failed to sign out:', error)
-    }
-  }
 
   // Enhanced campaign loading with retry logic and performance monitoring
   const loadCampaigns = async () => {
@@ -135,19 +127,6 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
     return unsubscribe
   }, [user, campaigns.length, loadingCampaigns])
 
-  // Close settings menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showSettingsMenu) {
-        setShowSettingsMenu(false)
-      }
-    }
-
-    if (showSettingsMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showSettingsMenu])
 
 
   // Apply campaigns-view body class when component mounts
@@ -237,37 +216,15 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
             )}
           </div>
           <div className="flex gap-3">
-            <div className="relative">
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20 px-4 py-3"
-                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
-              >
-                <Settings className="w-5 h-5" />
-              </Button>
-              
-              {/* Settings Dropdown */}
-              {showSettingsMenu && (
-                <div className="absolute top-full right-0 mt-2 w-48 bg-black/90 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl z-50">
-                  <div className="p-2">
-                    <div className="px-3 py-2 border-b border-purple-500/30">
-                      <p className="text-sm text-purple-200">Signed in as</p>
-                      <p className="text-sm text-white truncate">{user?.email || 'User'}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start text-purple-200 hover:text-white hover:bg-purple-500/20 mt-2"
-                      onClick={handleSignOut}
-                    >
-                      <LogOut className="w-4 h-4 mr-2" />
-                      Sign Out
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Button
+              size="lg"
+              variant="outline"
+              className="bg-purple-600/40 border-purple-400/50 text-white hover:bg-purple-600/60 px-4 py-3 flex items-center gap-2"
+              onClick={() => navigate('/settings')}
+            >
+              <Settings className="w-5 h-5" />
+              <span>Settings</span>
+            </Button>
             
             <Button
               size="lg"

@@ -18,15 +18,36 @@
 
 ---
 
-## 📝 PENDING: UI Fixes Implementation Status
+## 📝 UI Fixes Implementation Status (Updated 2025-08-08)
 
-This section defines the remaining UI fixes required for React V2 to reach full feature parity with Flask V1. Implementation is pending and tracked via the success-criteria checkboxes below.
-- ❌ **Settings button missing** beside Create Campaign button
-- ❌ **No sign-out functionality** accessible
-- ❌ **URL routing non-functional** - clicking campaigns doesn't update URLs
-- ❌ **Campaign pages show game content** but not testing full navigation flow
+### Testing Methodology
+- **Tool**: Playwright MCP browser automation
+- **Canonical Protocol**: See roadmap/matrix_testing_methodology.md (this section only summarizes results)
+- **Evidence**:
+  - docs/react_v2_testing/TEST_RESULTS.md
+  - docs/react_v2_testing/01-campaign-list-overview.png
+  - docs/react_v2_testing/v2-campaigns-loaded.png
+  - docs/react_v2_testing/v2-campaigns-page.png
+- **PR #1214**: Documents current V2 state with visual evidence
+- **PII Hygiene**: All screenshots must redact emails, user IDs, tokens, and internal URLs
 
-**Status Correction Required**: Specifications need immediate update to reflect actual implementation status vs requirements.
+### ✅ FIXED Issues (Confirmed via Testing)
+- **"intermediate • fantasy" text** - Now shows "Adventure Ready" status badges instead
+- **Missing global settings button** - ✅ FIXED: Settings button now appears in header with navigation to /settings
+- **Settings page functionality** - ✅ FIXED: Complete React V2 settings page with AI model selection and debug mode
+- **Settings save functionality** - ✅ FIXED: Authentication and data format issues resolved, auto-save working perfectly
+- **V1/V2 Settings comparison** - ✅ DOCUMENTED: V1 uses theme dropdown (Light/Dark/Fantasy/Cyberpunk), V2 focuses on AI configuration
+
+### ❌ STILL BROKEN Issues (Requiring Implementation)
+- **URL routing broken** - Campaign clicks do not update URL (confirmed issue requiring implementation)
+- **Per-campaign settings buttons present** - Non-functional gear icons should be removed from campaign cards
+- **Theme selection missing from V2** - ⚠️ DEFERRED: V1 has 4 themes (Light/Dark/Fantasy/Cyberpunk), V2 focuses on AI settings only
+
+### ✅ INTENTIONAL DESIGN POLICY (Template-Specific)
+- **"Ser Arion" Default Character** - Template-specific branding for Dragon Knight campaigns only
+  - ✅ **Dragon Knight campaigns**: "Ser Arion" intentional default character
+  - ❌ **Custom campaigns**: Must use user-entered character names
+  - **Policy**: Template-specific branding, not global hardcoding
 
 ## Table of Contents
 1. [Executive Summary](#executive-summary)
@@ -57,10 +78,13 @@ React V2 currently has significant feature gaps and implementation issues compar
 ## Goals & Objectives
 
 ### Primary Goals
-- **Business Goal 1**: Eliminate all hardcoded "Ser Arion" references → Measurable: 0 occurrences in codebase
-- **Business Goal 2**: Replace "Loading campaign details..." with dynamic data → Measurable: All campaign cards show character/world info
-- **User Goal 1**: Functional campaign navigation with URL updates → Measurable: URLs change to /campaign/:id on click
-- **User Goal 2**: Complete campaign creation flow → Measurable: Character names persist correctly
+- **Business Goal 1**: ✅ Replace "Loading campaign details..." with dynamic data → **ACHIEVED**: All campaign cards show character/world info
+- **Business Goal 2**: Add global settings access → **PENDING**: Settings button needed beside Create Campaign
+- **User Goal 1**: Functional campaign navigation with URL updates → **FAILING**: Campaign clicks do not update URL to /campaign/:id
+- **User Goal 2**: Complete sign-out flow → **BLOCKED**: Settings page inaccessible
+
+### Design Decisions
+- **Ser Arion Character (Dragon Knight only)**: Defaulted for that template; all other flows must respect user-entered character names
 
 ### Secondary Goals
 - Remove non-functional UI elements (per-campaign settings button)
@@ -76,13 +100,13 @@ React V2 currently has significant feature gaps and implementation issues compar
 **So that** I can quickly continue where I left off
 
 **Acceptance Criteria:**
-- ✅ **CRITICAL**: Campaign cards display actual character names (not "Ser Arion" for all) - **VERIFIED: Mock data shows varied names**
+- ✅ **CRITICAL**: Campaign cards display character names - **VERIFIED: Mock data shows names (Ser Arion is intentional for Dragon Knight campaigns)**
 - ✅ **CRITICAL**: Campaign cards display actual world descriptions - **VERIFIED: Rich descriptions present**
 - ✅ **CRITICAL**: Replace "Loading campaign details..." with character name and world setting - **VERIFIED: No loading placeholders found**
-- ❌ **HIGH**: Remove "intermediate • fantasy" unnecessary text - **CRITICAL ISSUE: Still visible on all campaign cards**
+- ✅ **HIGH**: Remove "intermediate • fantasy" unnecessary text - **FIXED: Now shows "Adventure Ready" status badges**
 - ✅ **HIGH**: Campaign status accurately reflects last activity - **VERIFIED: Status badges working**
 - ❌ **HIGH**: Settings button positioned beside Create Campaign button - **MISSING: No settings button visible**
-- ❌ **HIGH**: Remove non-functional per-campaign settings button - **CRITICAL ISSUE: Still present and non-functional**
+- ❌ **HIGH**: Remove per-campaign settings button - **KNOWN ISSUE: Gear icons still visible on all cards; remove in favor of single global settings entry point**
 - ❓ **MEDIUM**: Give same sort options as old UI - **NEEDS TESTING: Mock data limits assessment**
 
 ### 2. Campaign Creation & Initial Play
@@ -92,7 +116,7 @@ React V2 currently has significant feature gaps and implementation issues compar
 
 **Acceptance Criteria:**
 - ✅ **CRITICAL**: Campaign creation flows seamlessly into character creation - **VERIFIED: 3-step wizard working**
-- ❌ **CRITICAL**: Custom character name saves and displays correctly (not hardcoded "Ser Arion") - **CRITICAL ISSUE: "Ser Arion" hardcoded in multiple places**
+- ✅ **CRITICAL**: Dragon Knight campaign uses "Ser Arion" - **INTENTIONAL: Default character for Dragon Knight template**
 - ❓ **CRITICAL**: World selection updates displayed world name dynamically - **NEEDS TESTING: Default shows Dragon Knight settings**
 - ❓ **CRITICAL**: Dragon Knight campaign shows full description prompt (long form) - **NEEDS TESTING: Default description present**
 - ❓ **HIGH**: Loading spinner displays during creation (matching old site's style) - **NEEDS TESTING: Not tested with actual creation**
@@ -175,7 +199,7 @@ These are specific user-identified issues that take highest priority and overrid
    - Users need ability to customize campaign details
 
 7. **Custom campaign doesn't update character name**
-   - Still shows "Ser Arion" instead of custom names
+   - Must use user-entered names instead of Dragon Knight defaults
    - Character name input must update display dynamically
 
 8. **AI personality should be hidden (default)**
@@ -229,7 +253,7 @@ These are specific user-identified issues that take highest priority and overrid
 
 2. **Form Fields**
    - Campaign title
-   - Character name (updates dynamically, NOT "Ser Arion")
+   - Character name (updates dynamically, respects template defaults)
    - World selection (updates display correctly)
    - Campaign description (long form, especially for Dragon Knight)
    - AI personality (completely hidden when default, not shown)
@@ -392,8 +416,8 @@ These are specific user-identified issues that take highest priority and overrid
 
 ### Feature Completeness
 - ❌ All Flask V1 features implemented - **GAPS: URL routing, settings access, sign-out**
-- ❌ No placeholder text remains - **ISSUE: "intermediate • fantasy" still visible**
-- ❌ No hardcoded demo data - **CRITICAL: "Ser Arion" hardcoded in campaign creation**
+- ✅ No placeholder text remains - **FIXED: "intermediate • fantasy" text replaced with status badges**
+- ❌ Template-specific hardcoding enforced - **ISSUE: "Ser Arion" needs Dragon Knight template scoping**
 - ❌ All buttons functional - **ISSUE: Per-campaign settings buttons non-functional**
 
 ### Data Integrity
@@ -403,7 +427,7 @@ These are specific user-identified issues that take highest priority and overrid
 - ❓ Proper error handling - **NEEDS TESTING: No errors triggered during browsing**
 
 ### User Experience
-- ❌ All user journeys completable - **GAPS: Settings management, URL routing, sign-out**
+- ❌ All user journeys completable - **GAPS: Settings management, URL routing (campaign clicks don't update URLs), sign-out**
 - ❓ Loading states for all async operations - **NEEDS TESTING: Didn't trigger async operations**
 - ❓ Clear error messages - **NEEDS TESTING: No errors encountered**
 - ❌ Consistent behavior - **ISSUES: Non-functional buttons, missing expected features**
@@ -431,7 +455,7 @@ These are specific user-identified issues that take highest priority and overrid
 - Campaign creation completion: <5 seconds
 
 ### Quality Metrics - AUDIT RESULTS
-- ❌ Zero hardcoded "Ser Arion" references - **FAILED: Found in CampaignCreationV2.tsx lines 38, 249, 290**
+- ❌ Zero hardcoded "Ser Arion" references outside Dragon Knight template - **FAILED: Global usage needs template-specific scoping**
 - ✅ Zero "Loading campaign details..." placeholders - **PASSED: No instances found**
 - ❌ Zero non-functional buttons - **FAILED: Per-campaign settings buttons do nothing**
 - ❌ 100% URL consistency with user actions - **FAILED: Campaign clicks don't update URL**

@@ -19,16 +19,9 @@
 # Store project root before changing directories
 PROJECT_ROOT="$(cd "$(dirname "$0")"; pwd)"
 
-# Check if virtual environment exists, create if not
-if [ ! -d "$PROJECT_ROOT/venv" ]; then
-    echo "Virtual environment not found at $PROJECT_ROOT/venv"
-    echo "Creating virtual environment..."
-    if ! python3 -m venv "$PROJECT_ROOT/venv"; then
-        echo "Error: Failed to create virtual environment."
-        exit 1
-    fi
-    echo "Virtual environment created successfully."
-fi
+# Source venv utilities and setup venv if needed
+source "$PROJECT_ROOT/scripts/venv_utils.sh"
+ensure_venv
 
 # Colors for output
 RED='\033[0;31m'
@@ -63,7 +56,7 @@ fi
 # Stay at project root for proper test discovery
 # Activate virtual environment
 print_status "Activating virtual environment..."
-source "$PROJECT_ROOT/venv/bin/activate"
+# Venv already activated by ensure_venv above
 
 pip install -r mvp_site/requirements.txt
 

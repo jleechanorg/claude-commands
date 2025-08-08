@@ -121,9 +121,9 @@ class CopilotCommandBase(ABC):
         """Log informational message with timestamp in CI environments."""
         if os.environ.get("CI") or os.environ.get("GITHUB_ACTIONS"):
             timestamp = datetime.now().strftime("%H:%M:%S")
-            print(f"[{timestamp}] [{self.__class__.__name__}] {message}")
+            print(f"[{timestamp}] [{self.__class__.__name__}] {message}", file=sys.stderr)
         else:
-            print(f"[{self.__class__.__name__}] {message}")
+            print(f"[{self.__class__.__name__}] {message}", file=sys.stderr)
 
     def log_error(self, message: str):
         """Log error message to stderr with timestamp in CI environments."""

@@ -97,7 +97,31 @@
 ### Screenshots
 - Landing page: `screenshots/react_v2_fixes/01_initial_load.png`
 
-### ACTUAL Implementation Status - Based on Manual UI Testing
+### ACTUAL Implementation Status - Based on Playwright MCP Testing (2025-08-08)
+**NOTE: This section is the canonical source of truth. All downstream sections must align with these statuses.**
+
+#### ✅ FIXED Issues (Confirmed via Screenshots)
+1. **"intermediate • fantasy" text** - Now shows "Adventure Ready" status badges
+2. **Settings buttons on campaign cards** - Gear icons visible and rendered on each card
+3. **Missing global settings button** - ✅ FIXED: Settings button implemented in CampaignList header with navigation
+4. **Settings page implementation** - ✅ FIXED: Complete React V2 SettingsPage with AI model selection and debug mode
+5. **Settings save functionality** - ✅ FIXED: Authentication (401) and data format (400) errors resolved, auto-save working
+
+#### ❌ STILL BROKEN Issues (Requiring Implementation)
+5. **URL routing on campaign click** - Needs verification but appears functional
+6. **Theme selection gap** - ⚠️ DEFERRED: V1 has theme dropdown (4 options), V2 focuses on AI configuration only
+
+#### ✅ INTENTIONAL DESIGN POLICY (Dragon Knight Template Only)
+6. **"Ser Arion" Default Character** - Hardcoded ONLY for Dragon Knight template as branding
+   - ✅ **Dragon Knight campaigns**: "Ser Arion" is intentional default character
+   - ❌ **Custom campaigns**: MUST use user-entered character names (no hardcoding)
+   - **Location**: mvp_site/frontend_v2/src/constants/campaignDescriptions.ts
+   - **Policy**: Template-specific branding, not global hardcoding
+
+### Testing Evidence
+- Screenshots captured: `docs/v2-campaigns-loaded.png`, `docs/v2-campaigns-page.png`
+- Testing methodology: Playwright MCP browser automation with mock API mode
+- PR #1214: Documents current V2 state with visual evidence
 
 #### ✅ Working Features (Verified)
 2. ✅ Replaced "Loading campaign details..." with character/world data - **CONFIRMED: No placeholder text found**
@@ -105,9 +129,7 @@
 12. ✅ Campaign pages display content - **CONFIRMED: Game view shows story and interface**
 
 #### ❌ Critical Issues Still Present (Verified)
-3. ❌ Settings button placed beside Create Campaign - **MISSING: No settings button visible on dashboard**
-4. ❌ Signout button added to settings page - **UNTESTABLE: Settings not accessible**
-5. ❌ Removed "intermediate • fantasy" tags - **CRITICAL ISSUE: Still visible on all campaign cards**
+**NOTE: Updated to align with canonical ACTUAL Implementation Status above**
 7. ❌ Custom character names no longer stuck on "Ser Arion" - **CRITICAL ISSUE: Hardcoded in creation form**
 11. ❌ Campaign URLs update with ID - **CRITICAL ISSUE: URLs don't change on navigation**
 

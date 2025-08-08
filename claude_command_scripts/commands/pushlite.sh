@@ -1,6 +1,6 @@
 #!/bin/bash
-# pushlite.sh - Enhanced reliable push command with selective staging and error handling
-# Enhanced version addressing reliability issues from PR #1057
+# pushlite.sh - Enhanced reliable push command with selective staging and uncommitted change verification
+# Enhanced version focusing on push reliability and clean state verification
 # Primary implementation - pushl.sh is an alias that calls this script
 
 set -euo pipefail
@@ -44,10 +44,11 @@ show_help() {
     echo "  1. Comprehensive error handling and reporting"
     echo "  2. Selective staging with include/exclude patterns"
     echo "  3. Automatic lint fixes for staged files only"
-    echo "  4. Verbose mode for debugging complex scenarios"
-    echo "  5. Dry-run mode to preview operations"
-    echo "  6. Progress indicators and status messages"
-    echo "  7. Always creates result JSON for automation"
+    echo "  4. Post-push verification of uncommitted changes"
+    echo "  5. Interactive handling of unclean repository state"
+    echo "  6. Verbose mode for debugging complex scenarios"
+    echo "  7. Dry-run mode to preview operations"
+    echo "  8. Always creates result JSON for automation"
     echo ""
     echo "Examples:"
     echo "  $0                                    # Simple push"
@@ -220,31 +221,69 @@ apply_file_filters() {
     local status="$1"
     local filtered_status="$status"
 
-    # Apply include patterns
+    # Apply include patterns (using glob matching)
     if [[ ${#INCLUDE_PATTERNS[@]} -gt 0 ]]; then
         local included=""
-        for pattern in "${INCLUDE_PATTERNS[@]}"; do
-            log_verbose "Applying include pattern: $pattern"
-            local matches=$(echo "$status" | grep "$pattern" || true)
-            if [[ -n "$matches" ]]; then
-                included="$included$matches"$'\n'
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            # Git status --porcelain format: "XY filename" where X and Y are status codes
+            # Extract filename starting from position 3 (after "XY ")
+            local file_path="${line:3}"
+            
+            # Handle renamed files (format: "R  old -> new")
+            if [[ "${line:0:1}" == "R" ]]; then
+                # Extract the new filename after " -> "
+                file_path="${file_path#* -> }"
             fi
-        done
+            
+            for pattern in "${INCLUDE_PATTERNS[@]}"; do
+                # Use bash glob matching
+                if [[ "$file_path" == $pattern ]] || [[ "$(basename "$file_path")" == $pattern ]]; then
+                    log_verbose "File '$file_path' matches include pattern: $pattern"
+                    included="$included$line"$'\n'
+                    break
+                fi
+            done
+        done <<< "$status"
         filtered_status="$included"
     fi
 
-    # Apply exclude patterns
+    # Apply exclude patterns (using glob matching)
     if [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
-        for pattern in "${EXCLUDE_PATTERNS[@]}"; do
-            log_verbose "Applying exclude pattern: $pattern"
-            filtered_status=$(echo "$filtered_status" | grep -v "$pattern" || true)
-        done
+        local excluded=""
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            # Git status --porcelain format: "XY filename" where X and Y are status codes
+            # Extract filename starting from position 3 (after "XY ")
+            local file_path="${line:3}"
+            
+            # Handle renamed files (format: "R  old -> new")
+            if [[ "${line:0:1}" == "R" ]]; then
+                # Extract the new filename after " -> "
+                file_path="${file_path#* -> }"
+            fi
+            
+            local should_exclude=false
+            for pattern in "${EXCLUDE_PATTERNS[@]}"; do
+                # Use bash glob matching
+                if [[ "$file_path" == $pattern ]] || [[ "$(basename "$file_path")" == $pattern ]]; then
+                    log_verbose "File '$file_path' matches exclude pattern: $pattern"
+                    should_exclude=true
+                    break
+                fi
+            done
+            
+            if [[ "$should_exclude" == false ]]; then
+                excluded="$excluded$line"$'\n'
+            fi
+        done <<< "$filtered_status"
+        filtered_status="$excluded"
     fi
 
     echo "$filtered_status"
 }
 
-# Safe execution wrapper for dry runs
+# Safe execution wrapper for dry runs (eval-based for backward compatibility)
 safe_execute() {
     local command="$1"
     local description="$2"
@@ -261,6 +300,28 @@ safe_execute() {
         else
             log_error "Failed: $description"
             log_error "Command: $command"
+            return 1
+        fi
+    fi
+}
+
+# Safe execution wrapper without eval (preferred for security)
+safe_exec() {
+    local description="$1"
+    shift  # Remove description from arguments
+    
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo -e "${YELLOW}[DRY RUN]${NC} Would execute: $*"
+        log_verbose "Dry run - skipping: $description"
+        return 0
+    else
+        log_verbose "Executing: $description"
+        if "$@" 2>>"$ERROR_LOG"; then
+            log_verbose "Success: $description"
+            return 0
+        else
+            log_error "Failed: $description"
+            log_error "Command: $*"
             return 1
         fi
     fi
@@ -348,10 +409,53 @@ if [[ ${#INCLUDE_PATTERNS[@]} -gt 0 ]] || [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; t
 fi
 
 # Parse status with enhanced categorization
-untracked_files=$(echo "$filtered_status" | grep "^??" | cut -c4- || true)
-staged_files=$(echo "$filtered_status" | grep "^[MARCDT]" | cut -c4- || true)
-modified_files=$(echo "$filtered_status" | grep "^.[MARCDT]" | cut -c4- || true)
-conflicted_files=$(echo "$git_status" | grep "^UU\|^AA\|^DD" | cut -c4- || true)
+# Extract untracked files (status code "??")
+untracked_files=""
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "${line:0:2}" == "??" ]]; then
+        # Extract filename starting from position 3
+        untracked_files="${untracked_files}${line:3}"$'\n'
+    fi
+done <<< "$filtered_status"
+
+# Extract staged files (first char is not space)
+staged_files=""
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "${line:0:1}" =~ [MARCDT] ]]; then
+        file_path="${line:3}"
+        # Handle renamed files
+        if [[ "${line:0:1}" == "R" ]]; then
+            file_path="${file_path#* -> }"
+        fi
+        staged_files="${staged_files}${file_path}"$'\n'
+    fi
+done <<< "$filtered_status"
+
+# Extract modified files (second char is not space)
+modified_files=""
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    if [[ "${line:1:1}" =~ [MARCDT] ]]; then
+        file_path="${line:3}"
+        # Handle renamed files
+        if [[ "${line:0:1}" == "R" ]]; then
+            file_path="${file_path#* -> }"
+        fi
+        modified_files="${modified_files}${file_path}"$'\n'
+    fi
+done <<< "$filtered_status"
+
+# Extract conflicted files (all conflict states)
+conflicted_files=""
+while IFS= read -r line; do
+    [[ -z "$line" ]] && continue
+    # Include all conflict states: UU, AA, DD, UA, AU, UD, DU
+    if [[ "${line:0:2}" =~ ^(UU|AA|DD|UA|AU|UD|DU)$ ]]; then
+        conflicted_files="${conflicted_files}${line:3}"$'\n'
+    fi
+done <<< "$git_status"
 
 # Enhanced file counting with conflict detection
 untracked_count=$(echo "$untracked_files" | sed '/^$/d' | wc -l)
@@ -432,36 +536,42 @@ apply_conditional_lint_fixes() {
     if [[ "$DRY_RUN" == "true" ]]; then
         echo -e "${YELLOW}[DRY RUN]${NC} Would run: ./run_lint.sh fix (on staged files only)"
     else
-        # Run lint fixes on the staged files
-        if ./run_lint.sh fix 2>>"$ERROR_LOG"; then
-            log_verbose "Lint fixes applied successfully"
+        # Get list of staged Python files for targeted linting
+        local staged_py_files
+        staged_py_files=$(git diff --cached --name-only --diff-filter=d | grep '\.py$' || true)
+        
+        if [[ -n "$staged_py_files" ]]; then
+            # Run lint fixes only on the staged files
+            if echo "$staged_py_files" | xargs ./run_lint.sh fix 2>>"$ERROR_LOG"; then
+                log_verbose "Lint fixes applied successfully"
 
-            # Re-stage any files that were modified by lint fixes
-            local modified_by_lint
-            if modified_by_lint=$(git diff --name-only 2>/dev/null); then
-                local restage_files=""
-                # Check each Python file to see if it was modified by lint fixes
-                while IFS= read -r python_file; do
-                    if echo "$modified_by_lint" | grep -Fxq "$python_file"; then
-                        restage_files="${restage_files}${python_file}"$'\n'
+                # Re-stage any files that were modified by lint fixes
+                local modified_by_lint
+                if modified_by_lint=$(git diff --name-only 2>/dev/null); then
+                    local restage_files=""
+                    # Check each Python file to see if it was modified by lint fixes
+                    while IFS= read -r python_file; do
+                        if echo "$modified_by_lint" | grep -Fxq "$python_file"; then
+                            restage_files="${restage_files}${python_file}"$'\n'
+                        fi
+                    done <<< "$staged_py_files"
+
+                    if [[ -n "$restage_files" ]]; then
+                        log_info "Re-staging $(echo "$restage_files" | wc -l) files modified by lint fixes"
+                        if [[ "$VERBOSE" == "true" ]]; then
+                            echo -e "${CYAN}Re-staging files:${NC}"
+                            echo "$restage_files" | sed 's/^/  - /'
+                        fi
+
+                        while IFS= read -r file; do
+                            [[ -n "$file" ]] && safe_exec "Re-stage lint-fixed file: $file" git add -- "$file"
+                        done <<< "$restage_files"
                     fi
-                done <<< "$python_files"
-
-                if [[ -n "$restage_files" ]]; then
-                    log_info "Re-staging $(echo "$restage_files" | wc -l) files modified by lint fixes"
-                    if [[ "$VERBOSE" == "true" ]]; then
-                        echo -e "${CYAN}Re-staging files:${NC}"
-                        echo "$restage_files" | sed 's/^/  - /'
-                    fi
-
-                    while IFS= read -r file; do
-                        [[ -n "$file" ]] && safe_execute "git add '$file'" "Re-stage lint-fixed file: $file"
-                    done <<< "$restage_files"
                 fi
+            else
+                log_warning "Lint fixes encountered issues (non-fatal)"
+                log_verbose "Check $ERROR_LOG for lint fix details"
             fi
-        else
-            log_warning "Lint fixes encountered issues (non-fatal)"
-            log_verbose "Check $ERROR_LOG for lint fix details"
         fi
     fi
 }
@@ -492,13 +602,20 @@ handle_files() {
             # Stage specific untracked files if filtered, otherwise all
             if [[ ${#INCLUDE_PATTERNS[@]} -gt 0 ]] || [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
                 while IFS= read -r file; do
-                    [[ -n "$file" ]] && safe_execute "git add '$file'" "Stage filtered file: $file"
+                    [[ -n "$file" ]] && safe_exec "Stage filtered file: $file" git add -- "$file"
                 done <<< "$files"
             else
-                safe_execute "git add ." "Stage all untracked files"
+                safe_exec "Stage all untracked files" git add .
             fi
         else
-            safe_execute "git add ." "Stage all modified files"
+            # Stage specific modified files if filtered, otherwise all
+            if [[ ${#INCLUDE_PATTERNS[@]} -gt 0 ]] || [[ ${#EXCLUDE_PATTERNS[@]} -gt 0 ]]; then
+                while IFS= read -r file; do
+                    [[ -n "$file" ]] && safe_exec "Stage filtered modified file: $file" git add -- "$file"
+                done <<< "$files"
+            else
+                safe_exec "Stage all modified files (including deletions)" git add -A
+            fi
         fi
 
         # Apply lint fixes to staged files before committing
@@ -534,7 +651,7 @@ handle_files() {
                 fi
 
                 log_info "Adding all $file_type files..."
-                safe_execute "git add ." "Stage all $file_type files"
+                safe_exec "Stage all $file_type files" git add -A
 
                 # Apply lint fixes to staged files before committing
                 apply_conditional_lint_fixes
@@ -560,7 +677,7 @@ handle_files() {
                     log_info "Adding selected files:"
                     for file in "${selected_files[@]}"; do
                         echo "  + $file"
-                        safe_execute "git add '$file'" "Stage selected file: $file"
+                        safe_exec "Stage selected file: $file" git add -- "$file"
                     done
 
                     local commit_msg="${COMMIT_MESSAGE:-Add selected $file_type files}"
@@ -698,10 +815,12 @@ if [[ "$CREATE_PR" == "true" ]]; then
             # Create new PR
             log_info "Creating new PR..."
             local pr_title="${COMMIT_MESSAGE:-$(git log -1 --pretty=format:'%s')}"
+            local default_branch
+            default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f2 || echo "main")
             local pr_body="Enhanced PR creation via pushl
 
 ## Changes
-$(git log --oneline --no-merges origin/main..HEAD | head -5 | sed 's/^/- /')
+$(git log --oneline --no-merges "origin/${default_branch}"..HEAD | head -5 | sed 's/^/- /')
 
 🤖 Generated with enhanced pushl command"
 
@@ -722,47 +841,89 @@ $(git log --oneline --no-merges origin/main..HEAD | head -5 | sed 's/^/- /')
     fi
 fi
 
-# Enhanced post-push operations
-run_post_push_checks() {
-    log_info "Running post-push checks..."
+# Post-push verification - check for any remaining uncommitted changes
+verify_clean_state() {
+    log_info "Verifying clean repository state..."
 
-    # Run linting checks (non-blocking)
-    if [[ "${SKIP_LINT:-false}" != "true" && -f "./run_lint.sh" ]]; then
-        log_info "Running post-push linting checks..."
-        if [[ -x "./run_lint.sh" ]]; then
-            if safe_execute "./run_lint.sh mvp_site" "Run linting checks"; then
-                log_success "All linting checks passed"
-            else
-                log_warning "Some linting issues found"
-                echo -e "${CYAN}💡 Run './run_lint.sh mvp_site fix' to auto-fix issues${NC}"
-                echo -e "${CYAN}💡 Consider fixing before next push${NC}"
-            fi
-        else
-            log_warning "Lint script found but not executable"
-        fi
-    else
-        if [[ "${SKIP_LINT:-false}" == "true" ]]; then
-            log_verbose "Skipping post-push linting (SKIP_LINT=true)"
-        else
-            log_verbose "Linting script not found, skipping"
-        fi
+    # Check for any uncommitted changes after push
+    local post_push_status
+    if ! post_push_status=$(git status --porcelain 2>"$ERROR_LOG"); then
+        log_error "Failed to get post-push git status"
+        return 1
     fi
 
-    # Run CI replica test
-    if [[ -f "./run_ci_replica.sh" ]]; then
-        log_info "Running CI replica test..."
-        if safe_execute "./run_ci_replica.sh" "Run CI replica test"; then
-            log_success "CI replica tests passed"
-        else
-            log_warning "CI replica tests failed - review before merging"
+    if [[ -n "$post_push_status" ]]; then
+        log_warning "Uncommitted changes detected after push:"
+        echo "$post_push_status" | head -20 | sed 's/^/  /'
+
+        # In non-interactive mode, continue with uncommitted changes
+        if [[ "${AUTOMATION_MODE:-false}" == "true" ]] || [[ ! -t 0 ]]; then
+            log_warning "Non-interactive mode - continuing with uncommitted changes"
+            return 0
         fi
+
+        echo -e "\n${YELLOW}⚠️  Repository is not clean after push!${NC}"
+        echo -e "${CYAN}Options:${NC}"
+        echo "  [1] Stage and commit remaining changes"
+        echo "  [2] Show what changed (git diff)"
+        echo "  [3] Continue anyway (leave uncommitted)"
+        echo "  [4] Stash uncommitted changes"
+        echo ""
+
+        while true; do
+            read -p "Choose option [1-4]: " -n 1 -r choice
+            echo
+
+            case "$choice" in
+                1)
+                    log_info "Staging and committing remaining changes..."
+                    if safe_exec "Stage remaining changes (including deletions)" git add -A; then
+                        local commit_msg="Additional changes after push"
+                        if safe_execute "git commit -m '$commit_msg'" "Commit remaining changes"; then
+                            log_warning "Additional commit created - consider pushing again"
+                            return 1  # Indicate more work needed
+                        fi
+                    fi
+                    break
+                    ;;
+                2)
+                    echo -e "\n${CYAN}Current changes:${NC}"
+                    git diff --stat
+                    echo ""
+                    git diff | head -50
+                    echo -e "\n${CYAN}Staged changes:${NC}"
+                    git diff --cached --stat
+                    continue
+                    ;;
+                3)
+                    log_warning "Continuing with uncommitted changes"
+                    return 0
+                    ;;
+                4)
+                    if safe_execute "git stash push -m 'Auto-stash after push'" "Stash uncommitted changes"; then
+                        log_success "Changes stashed successfully"
+                        return 0
+                    fi
+                    break
+                    ;;
+                *)
+                    echo "Invalid choice. Please select 1-4."
+                    continue
+                    ;;
+            esac
+        done
     else
-        log_verbose "CI replica script not found"
+        log_success "Repository is clean - all changes committed and pushed"
     fi
+
+    return 0
 }
 
-# Execute post-push checks
-run_post_push_checks
+# Execute post-push verification
+if ! verify_clean_state; then
+    log_warning "Repository state requires attention after push"
+    echo -e "${YELLOW}💡 Consider running '/pushl' again if you committed additional changes${NC}"
+fi
 
 # Enhanced completion summary
 echo -e "\n${GREEN}✅ pushlite Enhanced Complete${NC}"
