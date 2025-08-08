@@ -16,13 +16,13 @@ Auto-installs **104 commands** + **12 hooks** + **infrastructure scripts** to yo
 
 This comprehensive export includes:
 - **📋 104 Command Definitions** - Complete workflow orchestration system (.claude/commands/)
-- **📎 12 Claude Code Hooks** - Essential workflow automation (.claude/hooks/)  
+- **📎 12 Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
 - **🔧 5 Infrastructure Scripts** - Development environment management
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
 - **📚 Complete Documentation** - Installation guide with adaptation examples
 
 🚨 **DIRECTORY EXCLUSIONS APPLIED**: This export excludes the following project-specific directories:
-- ❌ `analysis/` - Project-specific analytics  
+- ❌ `analysis/` - Project-specific analytics
 - ❌ `automation/` - Project-specific automation
 - ❌ `claude-bot-commands/` - Project-specific bot implementation
 - ❌ `coding_prompts/` - Project-specific AI prompting templates
@@ -35,7 +35,7 @@ This comprehensive export includes:
 # Multi-command composition
 "/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
 
-# Sequential workflow chains  
+# Sequential workflow chains
 "/think about auth then /execute the solution"  # → analysis → implementation
 
 # Conditional execution flows
@@ -53,7 +53,7 @@ This export includes **12 Claude Code hooks** that provide essential workflow au
 # 1. Clone this repository to your project
 git clone https://github.com/jleechanorg/claude-commands.git
 
-# 2. Run one-click install  
+# 2. Run one-click install
 cd claude-commands
 ./install.sh
 
@@ -62,7 +62,7 @@ cd claude-commands
 
 # 4. Begin using composition commands
 /execute "implement user authentication"
-/pr "fix performance issues" 
+/pr "fix performance issues"
 /copilot  # Fix any PR issues
 ```
 
@@ -95,7 +95,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 
 ### Requirements
 - **Claude Code CLI** - Primary requirement for command execution
-- **Git Repository Context** - Commands operate within git repositories  
+- **Git Repository Context** - Commands operate within git repositories
 - **MCP Server Setup** - Some commands require MCP (Model Context Protocol) servers
 - **Project-Specific Adaptation** - Paths and commands need customization for your environment
 

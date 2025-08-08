@@ -41,11 +41,11 @@ if [ -d "hooks" ]; then
         relative_path="${hook_file#hooks/}"
         target_path=".claude/hooks/$relative_path"
         target_dir=$(dirname "$target_path")
-        
+
         mkdir -p "$target_dir"
         echo "   📎 $relative_path"
         cp "$hook_file" "$target_path"
-        
+
         case "$relative_path" in
             *.sh|*.py) chmod +x "$target_path" ;;
         esac
@@ -78,7 +78,7 @@ echo "🎉 Installation Complete!"
 echo ""
 echo "Next steps:"
 echo "1. Adapt commands for your project (replace \$PROJECT_ROOT placeholders)"
-echo "2. Update claude_start.sh with your project-specific paths"  
+echo "2. Update claude_start.sh with your project-specific paths"
 echo "3. Run ./claude_start.sh to start Claude Code with MCP servers"
 echo ""
 echo "⚠️  Remember: These are reference commands that may need adaptation"

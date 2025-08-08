@@ -22,7 +22,7 @@ class ClaudeCommandsExporter:
         self.repo_dir = f"/tmp/claude_commands_repo_{int(time.time())}"
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
         self.github_token = os.environ.get('GITHUB_TOKEN')
-        
+
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
@@ -30,7 +30,7 @@ class ClaudeCommandsExporter:
 
     def _get_project_root(self):
         """Get the project root directory"""
-        result = subprocess.run(['git', 'rev-parse', '--show-toplevel'], 
+        result = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
                               capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception("Not in a git repository")
@@ -41,11 +41,11 @@ class ClaudeCommandsExporter:
         try:
             print("🚀 Starting Claude Commands Export...")
             print("=" * 50)
-            
+
             self.phase1_local_export()
             pr_url = self.phase2_github_publish()
             self.report_success(pr_url)
-            
+
         except Exception as e:
             self.handle_error(e)
             sys.exit(1)
@@ -54,169 +54,169 @@ class ClaudeCommandsExporter:
         """Phase 1: Create local export with directory exclusions"""
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
-        
+
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
         os.makedirs(staging_dir, exist_ok=True)
-        
+
         print(f"📁 Created export directory: {self.export_dir}")
-        
+
         # Create subdirectories
         subdirs = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
         for subdir in subdirs:
             os.makedirs(os.path.join(staging_dir, subdir), exist_ok=True)
-        
+
         # Export commands
         self._export_commands(staging_dir)
-        
-        # Export hooks  
+
+        # Export hooks
         self._export_hooks(staging_dir)
-        
+
         # Export infrastructure scripts
         self._export_infrastructure_scripts(staging_dir)
-        
+
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
-        
+
         # Generate install script and README
         self._generate_install_script()
         self._generate_readme()
-        
+
         # Create archive
         self._create_archive()
-        
+
         print("✅ Phase 1 complete - Local export created")
 
     def _export_commands(self, staging_dir):
         """Export command definitions with content filtering"""
         print("📋 Exporting command definitions...")
-        
+
         commands_dir = os.path.join(self.project_root, '.claude', 'commands')
         if not os.path.exists(commands_dir):
             print("⚠️  Warning: .claude/commands directory not found")
             return
-            
+
         target_dir = os.path.join(staging_dir, 'commands')
-        
+
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
-        
+
         for file_path in Path(commands_dir).glob('*'):
             if file_path.is_file() and file_path.suffix in ['.md', '.py']:
                 filename = file_path.name
-                
+
                 # Skip project-specific files
                 if filename in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
                     print(f"   ⏭ Skipping {filename} (project-specific)")
                     continue
-                    
+
                 target_path = os.path.join(target_dir, filename)
                 shutil.copy2(file_path, target_path)
-                
+
                 # Apply content transformations
                 self._apply_content_filtering(target_path)
-                
+
                 print(f"   • {filename}")
                 self.commands_count += 1
-        
+
         print(f"✅ Exported {self.commands_count} commands")
 
     def _export_hooks(self, staging_dir):
         """Export Claude Code hooks with proper permissions, avoiding duplicates"""
         print("📎 Exporting Claude Code hooks...")
-        
+
         hooks_dir = os.path.join(self.project_root, '.claude', 'hooks')
         if not os.path.exists(hooks_dir):
             print("⚠️  Warning: .claude/hooks directory not found")
             return
-            
+
         target_dir = os.path.join(staging_dir, 'hooks')
-        
+
         # Use rsync with exclusions to avoid nested .claude directories that create duplicates
         # CRITICAL: Exclusions must come before inclusions in rsync
         cmd = [
             'rsync', '-av',
             '--exclude=*/.claude/',      # Exclude nested .claude directories FIRST
-            '--exclude=*/.claude/**',    # Exclude all content within nested .claude directories  
+            '--exclude=*/.claude/**',    # Exclude all content within nested .claude directories
             '--include=*/',              # Then include directories
             '--include=*.sh',
-            '--include=*.py', 
+            '--include=*.py',
             '--include=*.md',
             '--exclude=*',               # Finally exclude everything else
             f"{hooks_dir}/",
             f"{target_dir}/"
         ]
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(f"Hook export failed: {result.stderr}")
-        
+
         # Apply content filtering and count files
         for root, dirs, files in os.walk(target_dir):
             for file in files:
                 if file.endswith(('.sh', '.py', '.md')):
                     file_path = os.path.join(root, file)
                     self._apply_content_filtering(file_path)
-                    
+
                     # Ensure scripts are executable
                     if file.endswith(('.sh', '.py')):
                         os.chmod(file_path, 0o755)
-                    
+
                     self.hooks_count += 1
                     rel_path = os.path.relpath(file_path, target_dir)
                     print(f"   📎 {rel_path}")
-        
+
         print(f"✅ Exported {self.hooks_count} hooks")
 
     def _export_infrastructure_scripts(self, staging_dir):
         """Export root-level infrastructure scripts"""
         print("🚀 Exporting infrastructure scripts...")
-        
+
         target_dir = os.path.join(staging_dir, 'infrastructure-scripts')
-        
+
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
-        
+
         script_patterns = [
-            'claude_start.sh', 'claude_mcp.sh', 'integrate.sh', 
+            'claude_start.sh', 'claude_mcp.sh', 'integrate.sh',
             'resolve_conflicts.sh', 'sync_branch.sh'
         ]
-        
+
         for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
                 target_path = os.path.join(target_dir, script_name)
                 shutil.copy2(script_path, target_path)
                 self._apply_content_filtering(target_path)
-                
+
                 print(f"   • {script_name}")
                 self.scripts_count += 1
-        
+
         print(f"✅ Exported {self.scripts_count} infrastructure scripts")
 
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
         print("🤖 Exporting orchestration system (with exclusions)...")
-        
+
         source_dir = os.path.join(self.project_root, 'orchestration')
         if not os.path.exists(source_dir):
             print("⚠️  Orchestration directory not found - skipping")
             return
-            
+
         target_dir = os.path.join(staging_dir, 'orchestration')
-        
+
         # Use rsync with explicit exclusions
         exclude_patterns = [
             '--exclude=analysis/',
             '--exclude=automation/',
-            '--exclude=claude-bot-commands/', 
+            '--exclude=claude-bot-commands/',
             '--exclude=coding_prompts/',
             '--exclude=prototype/',
             '--exclude=tasks/',
         ]
-        
+
         cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"⏭ Orchestration export partial or skipped: {result.stderr}")
@@ -228,17 +228,17 @@ class ClaudeCommandsExporter:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
+
             # Apply transformations - FIXED: These now perform actual replacements
             content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)  
+            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
             content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
-            
+
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
-                
+
         except Exception as e:
             print(f"⚠️  Warning: Content filtering failed for {file_path}: {e}")
 
@@ -287,11 +287,11 @@ if [ -d "hooks" ]; then
         relative_path="${hook_file#hooks/}"
         target_path=".claude/hooks/$relative_path"
         target_dir=$(dirname "$target_path")
-        
+
         mkdir -p "$target_dir"
         echo "   📎 $relative_path"
         cp "$hook_file" "$target_path"
-        
+
         case "$relative_path" in
             *.sh|*.py) chmod +x "$target_path" ;;
         esac
@@ -324,7 +324,7 @@ echo "🎉 Installation Complete!"
 echo ""
 echo "Next steps:"
 echo "1. Adapt commands for your project (replace \\$PROJECT_ROOT placeholders)"
-echo "2. Update claude_start.sh with your project-specific paths"  
+echo "2. Update claude_start.sh with your project-specific paths"
 echo "3. Run ./claude_start.sh to start Claude Code with MCP servers"
 echo ""
 echo "⚠️  Remember: These are reference commands that may need adaptation"
@@ -332,12 +332,12 @@ echo "⚠️  Remember: These are reference commands that may need adaptation"
 
         # Ensure export directory exists
         os.makedirs(self.export_dir, exist_ok=True)
-        
+
         install_path = os.path.join(self.export_dir, 'install.sh')
         with open(install_path, 'w') as f:
             f.write(install_content)
         os.chmod(install_path, 0o755)
-        
+
         print("✅ Generated install.sh script")
 
     def _generate_readme(self):
@@ -362,13 +362,13 @@ Auto-installs **{self.commands_count} commands** + **{self.hooks_count} hooks** 
 
 This comprehensive export includes:
 - **📋 {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
-- **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)  
+- **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
 - **🔧 {self.scripts_count} Infrastructure Scripts** - Development environment management
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
 - **📚 Complete Documentation** - Installation guide with adaptation examples
 
 🚨 **DIRECTORY EXCLUSIONS APPLIED**: This export excludes the following project-specific directories:
-- ❌ `analysis/` - Project-specific analytics  
+- ❌ `analysis/` - Project-specific analytics
 - ❌ `automation/` - Project-specific automation
 - ❌ `claude-bot-commands/` - Project-specific bot implementation
 - ❌ `coding_prompts/` - Project-specific AI prompting templates
@@ -381,7 +381,7 @@ This comprehensive export includes:
 # Multi-command composition
 "/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
 
-# Sequential workflow chains  
+# Sequential workflow chains
 "/think about auth then /execute the solution"  # → analysis → implementation
 
 # Conditional execution flows
@@ -399,7 +399,7 @@ This export includes **{self.hooks_count} Claude Code hooks** that provide essen
 # 1. Clone this repository to your project
 git clone https://github.com/jleechanorg/claude-commands.git
 
-# 2. Run one-click install  
+# 2. Run one-click install
 cd claude-commands
 ./install.sh
 
@@ -408,7 +408,7 @@ cd claude-commands
 
 # 4. Begin using composition commands
 /execute "implement user authentication"
-/pr "fix performance issues" 
+/pr "fix performance issues"
 /copilot  # Fix any PR issues
 ```
 
@@ -441,7 +441,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 
 ### Requirements
 - **Claude Code CLI** - Primary requirement for command execution
-- **Git Repository Context** - Commands operate within git repositories  
+- **Git Repository Context** - Commands operate within git repositories
 - **MCP Server Setup** - Some commands require MCP (Model Context Protocol) servers
 - **Project-Specific Adaptation** - Paths and commands need customization for your environment
 
@@ -454,24 +454,24 @@ This is a filtered reference export from a working Claude Code project. Commands
 
         # Ensure export directory exists
         os.makedirs(self.export_dir, exist_ok=True)
-        
+
         readme_path = os.path.join(self.export_dir, 'README.md')
         with open(readme_path, 'w') as f:
             f.write(readme_content)
-            
+
         print("✅ Generated README.md based on current export state")
 
     def _create_archive(self):
         """Create compressed archive of export"""
         archive_name = f"claude_commands_export_{time.strftime('%Y%m%d_%H%M%S')}.tar.gz"
         archive_path = os.path.join(self.export_dir, archive_name)
-        
+
         cmd = [
             'tar', '-czf', archive_path,
             '-C', self.export_dir,
             'staging/', 'install.sh', 'README.md'
         ]
-        
+
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             print(f"⚠️  Archive creation failed: {result.stderr}")
@@ -480,69 +480,69 @@ This is a filtered reference export from a working Claude Code project. Commands
 
     def phase2_github_publish(self):
         """Phase 2: Publish to GitHub with automatic PR creation"""
-        print("\n🚀 Phase 2: Publishing to GitHub...")  
+        print("\n🚀 Phase 2: Publishing to GitHub...")
         print("-" * 40)
-        
+
         if not self.github_token:
             raise Exception("GITHUB_TOKEN environment variable not set")
-            
+
         # Clone repository
         self._clone_repository()
-        
+
         # Create and switch to export branch
         self._create_export_branch()
-        
-        # Copy exported content 
+
+        # Copy exported content
         self._copy_to_repository()
-        
+
         # Verify exclusions
         self._verify_exclusions()
-        
+
         # Commit and push
         self._commit_and_push()
-        
+
         # Create PR
         pr_url = self._create_pull_request()
-        
+
         return pr_url
 
     def _clone_repository(self):
         """Clone the target repository"""
         print("📂 Cloning target repository...")
-        
+
         cmd = ['gh', 'repo', 'clone', 'jleechanorg/claude-commands', self.repo_dir]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
             raise Exception(f"Repository clone failed: {result.stderr}")
-            
+
         print("✅ Repository cloned")
 
     def _create_export_branch(self):
         """Create and switch to export branch"""
         print(f"🌟 Creating export branch: {self.export_branch}")
-        
+
         os.chdir(self.repo_dir)
-        
+
         # Ensure we're on main and up to date
         subprocess.run(['git', 'checkout', 'main'], check=True)
         subprocess.run(['git', 'pull', 'origin', 'main'], check=True)
-        
+
         # Create export branch
         subprocess.run(['git', 'checkout', '-b', self.export_branch], check=True)
-        
+
         print("✅ Export branch created")
 
     def _copy_to_repository(self):
         """Copy exported content to repository - ADDITIVE BEHAVIOR (preserves existing)"""
         print("📋 Copying exported content (preserving existing)...")
-        
+
         # 🚨 FIXED: ADDITIVE BEHAVIOR - No clearing of existing content!
         # Create target directories if they don't exist
         dirs_to_ensure = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
         for dir_name in dirs_to_ensure:
             dir_path = os.path.join(self.repo_dir, dir_name)
             os.makedirs(dir_path, exist_ok=True)
-        
+
         # Copy new content ADDITIVELY (preserves existing files)
         staging_dir = os.path.join(self.export_dir, 'staging')
         for item in os.listdir(staging_dir):
@@ -554,41 +554,41 @@ This is a filtered reference export from a working Claude Code project. Commands
             else:
                 # Copy individual files (overwrites if exists, preserves others)
                 shutil.copy2(src, dst)
-        
+
         # Copy install script and README (these can overwrite)
         shutil.copy2(os.path.join(self.export_dir, 'install.sh'), self.repo_dir)
         shutil.copy2(os.path.join(self.export_dir, 'README.md'), self.repo_dir)
-        
+
         print("✅ Content copied additively - existing commands preserved")
-        
+
     def _copy_directory_additive(self, src_dir, dst_dir):
         """Copy directory contents while preserving existing files"""
         os.makedirs(dst_dir, exist_ok=True)
-        
+
         for item in os.listdir(src_dir):
             src_item = os.path.join(src_dir, item)
             dst_item = os.path.join(dst_dir, item)
-            
+
             if os.path.isdir(src_item):
                 self._copy_directory_additive(src_item, dst_item)
             else:
                 # Copy file (overwrites if exists, but preserves other files in directory)
                 shutil.copy2(src_item, dst_item)
                 print(f"   • Added/Updated: {item}")
-        
+
         print("✅ Content copied to repository")
 
     def _verify_exclusions(self):
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
-        
+
         excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
         found_excluded = []
-        
+
         for dir_name in excluded_dirs:
             if os.path.exists(os.path.join(self.repo_dir, dir_name)):
                 found_excluded.append(dir_name)
-        
+
         if found_excluded:
             print(f"❌ ERROR: Excluded directories found: {', '.join(found_excluded)}")
             # Clean them up
@@ -601,10 +601,10 @@ This is a filtered reference export from a working Claude Code project. Commands
     def _commit_and_push(self):
         """Commit changes and push branch"""
         print("💾 Committing and pushing changes...")
-        
+
         # Add all changes
         subprocess.run(['git', 'add', '.'], check=True)
-        
+
         # Create commit message
         commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
 
@@ -614,14 +614,14 @@ This is a filtered reference export from a working Claude Code project. Commands
 
 ✅ EXPORT CONTENTS:
 - 📋 Commands: {self.commands_count} command definitions with content filtering
-- 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure  
+- 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure
 - 🚀 Infrastructure: {self.scripts_count} scripts for development environment management
 - 🤖 Orchestration: Multi-agent task delegation system (core components only)
 - 📚 Documentation: Complete README with installation guide and adaptation examples
 
 🔄 CONTENT TRANSFORMATIONS:
 - $PROJECT_ROOT/ → $PROJECT_ROOT/ (generic project paths)
-- your-project.com → your-project.com (generic domain)  
+- your-project.com → your-project.com (generic domain)
 - $USER → $USER (generic username)
 - TESTING=true python → TESTING=true python (generic test commands)
 
@@ -631,23 +631,23 @@ This is a filtered reference export from a working Claude Code project. Commands
 🤖 Generated with Claude Code CLI"""
 
         subprocess.run(['git', 'commit', '-m', commit_message], check=True)
-        
+
         # Push branch
         subprocess.run(['git', 'push', '-u', 'origin', self.export_branch], check=True)
-        
+
         print("✅ Changes committed and pushed")
 
     def _create_pull_request(self):
         """Create pull request using GitHub API"""
         print("📝 Creating pull request...")
-        
+
         pr_title = f"Claude Commands Export {time.strftime('%Y-%m-%d')}: Directory Exclusions Applied"
         pr_body = f"""**🚨 AUTOMATED EXPORT** with directory exclusions applied per requirements.
 
 ## 🎯 Directory Exclusions Applied
 This export **excludes** the following project-specific directories:
 - ❌ `analysis/` - Project-specific analytics and reporting
-- ❌ `automation/` - Project-specific automation scripts  
+- ❌ `automation/` - Project-specific automation scripts
 - ❌ `claude-bot-commands/` - Project-specific bot implementation
 - ❌ `coding_prompts/` - Project-specific AI prompting templates
 - ❌ `prototype/` - Project-specific experimental code
@@ -665,10 +665,10 @@ This export **excludes** the following project-specific directories:
 ```
 Auto-installs commands to `.claude/commands/`, hooks to `.claude/hooks/`, and copies `claude_start.sh`
 
-## 🔄 Content Filtering Applied  
+## 🔄 Content Filtering Applied
 - **Generic Paths**: $PROJECT_ROOT/ → \\$PROJECT_ROOT/
 - **Generic Domain**: your-project.com → your-project.com
-- **Generic User**: $USER → \\$USER  
+- **Generic User**: $USER → \\$USER
 - **Generic Commands**: TESTING=true python → TESTING=true python
 
 ## ⚠️ Reference Export
@@ -681,26 +681,26 @@ This is a filtered reference export. Commands may need adaptation for specific e
             'Authorization': f'token {self.github_token}',
             'Accept': 'application/vnd.github.v3+json'
         }
-        
+
         data = {
             'title': pr_title,
             'body': pr_body,
             'head': self.export_branch,
             'base': 'main'
         }
-        
+
         response = requests.post(
             'https://api.github.com/repos/jleechanorg/claude-commands/pulls',
             headers=headers,
             json=data
         )
-        
+
         if response.status_code != 201:
             raise Exception(f"PR creation failed: {response.status_code} {response.text}")
-            
+
         pr_data = response.json()
         pr_url = pr_data['html_url']
-        
+
         print(f"✅ Pull request created: {pr_url}")
         return pr_url
 
@@ -708,7 +708,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         """Report successful export completion"""
         print("\n🎉 EXPORT COMPLETE!")
         print("=" * 50)
-        print(f"📂 Local Export: {self.export_dir}")  
+        print(f"📂 Local Export: {self.export_dir}")
         archive_files = [f for f in os.listdir(self.export_dir) if f.endswith('.tar.gz')]
         if archive_files:
             print(f"📦 Archive: {archive_files[0]}")
@@ -716,7 +716,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"🔗 Pull Request: {pr_url}")
         print(f"\n📊 Export Summary:")
         print(f"   Commands: {self.commands_count}")
-        print(f"   Hooks: {self.hooks_count}") 
+        print(f"   Hooks: {self.hooks_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
         print(f"\n🎯 The export has been published and is ready for review!")
