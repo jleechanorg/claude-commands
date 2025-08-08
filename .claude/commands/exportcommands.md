@@ -308,6 +308,11 @@ testing_http/
 testing_ui/
 testing_mcp/
 ci_replica/
+analysis/
+automation/
+claude-bot-commands/
+coding_prompts/
+prototype/
 EOF
 
 # Filter files before export from staging area
@@ -544,39 +549,6 @@ done
 - Add scaling guidance for agent capacity and workload distribution
 - **Status**: Active development prototype - successful task completion verified with PR generation
 
-**🤖 Claude Bot Self-Hosting System Export** (`claude-bot-commands/` → `claude-bot-commands/`) - **PRODUCTION READY**:
-- Export complete GitHub-based Claude command processing system for self-hosted deployments
-- **Architecture**: GitHub Actions workflow with self-hosted runner executing Claude commands via repository issues
-- **Components**: Server (`claude-bot-server.py`), workflow processor, debugging tools, comprehensive test suite
-- **Features**: Repository-based command processing, automated PR creation, threaded comment responses
-- **Usage**: Post command as GitHub issue → Self-hosted runner processes → Claude executes → Results posted
-- **Requirements**: GitHub repository, self-hosted runner, Python environment, Claude Code CLI
-- **Installation**: Complete setup guide with runner configuration and repository integration
-- **Benefits**: Repository-native command processing, version-controlled command history, automated workflows
-
-**⚙️ Automated PR Fixer System Export** (`automation/` → `automation/`) - **PRODUCTION READY**:
-- Export intelligent cron-based PR automation system with comprehensive error handling
-- **Core Script**: `simple_pr_batch.sh` - Autonomous PR analysis and fixing via `/copilot` integration
-- **Cron Configuration**: `cron_entry.txt` - Every 10 minutes automated PR processing
-- **Features**: Timeout handling (20min), attempt tracking (max 3), cooldown periods (4hr), email notifications
-- **Workflow**: Detect failing PRs → Execute `/copilot` comprehensive analysis → Apply fixes → Track attempts
-- **Error Handling**: Timeout detection, max attempt limits, email alerts for manual intervention required
-- **Requirements**: Claude Code CLI, GitHub CLI, email configuration, cron access
-- **Installation**: Cron setup, email notification configuration, GitHub token setup
-
-
-**🔬 Development Infrastructure Export** - **SPECIALIZED DEVELOPMENT TOOLS**:
-- **Prototype Framework** (`prototype/` → `prototyping/`):
-  - Validation and benchmarking framework for experimental implementations
-  - Performance profiling, accuracy measurement, alternative approach testing
-  - Migration paths from prototype to production code
-- **AI Prompting Templates** (`coding_prompts/` → `ai-prompts/`):
-  - Multi-agent development system with SUPERVISOR-WORKER-REVIEWER architecture
-  - Specialized prompts for code research, debugging, principal engineer reviews
-  - Virtual agent coordination and context independence protocols
-- **Analysis Framework** (`analysis/` → `analytics/`):
-  - Campaign analytics, user activity reporting, Firebase collection analytics
-  - Test result analysis, performance benchmarking, data validation tools
 
 **Configuration Export**:
 - Export relevant config files (filtered for sensitive data)
@@ -771,7 +743,7 @@ fi
 
 # 2. Verify key directory structures exist
 MISSING_DIRS=""
-for dir in orchestration automation claude-bot-commands prototype; do
+for dir in orchestration; do
     if [ ! -d "$dir" ]; then
         MISSING_DIRS="$MISSING_DIRS $dir"
     fi
@@ -866,20 +838,6 @@ echo "✅ README.md copied to repository"
   - Setup walkthrough: Redis → tmux → agent workspaces → task delegation
   - Success metrics: Cost-per-task, completion rates, PR generation verification
   - Monitoring workflows: agent status, task progress, resource utilization
-- **🤖 Claude Bot Self-Hosting System**: Complete repository-based command processing
-  - GitHub Actions integration with self-hosted runner architecture
-  - Installation guide: Repository setup → Runner configuration → Command processing
-  - Usage examples: Issue-based commands → Automated execution → PR creation
-  - Production deployment patterns and scaling considerations
-- **⚙️ Automated PR Fixer System**: Intelligent cron-based PR maintenance
-  - Autonomous `/copilot` integration for comprehensive PR analysis and fixing
-  - Error handling: Timeout detection, attempt limits, email notifications
-  - Installation: Cron setup → Email configuration → GitHub integration
-  - Real-world metrics: Processing frequency, success rates, manual intervention triggers
-- **🔬 Development Infrastructure**: Specialized development tools
-  - Prototype Framework: Validation, benchmarking, experimental implementations
-  - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
-  - Analytics Framework: Campaign analytics, performance tracking, data validation
 - **🚨 Infrastructure Scripts**: Complete development environment management
   - **Environment Bootstrap**: `claude_start.sh` - Multi-service startup with health checks
   - **MCP Installation**: `claude_mcp.sh` - Comprehensive MCP server setup automation
@@ -904,8 +862,24 @@ echo "✅ README.md copied to repository"
 # Repository cleanup and fresh export already completed in Phase 2
 cd "$REPO_DIR"
 
-# Copy exported content from staging
-cp -r /tmp/claude_commands_export_*/. .
+# 🚨 CRITICAL: Copy exported content EXCLUDING unwanted directories
+echo "📂 Copying export content with exclusions..."
+
+# Get the export directory path
+EXPORT_DIR=$(ls -d /tmp/claude_commands_export_* | head -1)
+
+# Copy specific directories and files, EXCLUDING the unwanted ones
+rsync -av --exclude='analysis/' --exclude='automation/' --exclude='claude-bot-commands/' --exclude='coding_prompts/' --exclude='prototype/' "$EXPORT_DIR/" . --delete-excluded
+
+# Verify exclusions worked
+echo "✅ Export copied with exclusions applied"
+if [[ -d "analysis" || -d "automation" || -d "claude-bot-commands" || -d "coding_prompts" || -d "prototype" ]]; then
+    echo "❌ ERROR: Unwanted directories found in export! Cleaning up..."
+    rm -rf analysis automation claude-bot-commands coding_prompts prototype
+    echo "✅ Cleaned up unwanted directories"
+else
+    echo "✅ Confirmed: No unwanted directories in export"
+fi
 
 # Commit changes with cleanup notation
 git add .
@@ -923,9 +897,6 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - Scripts with dependency documentation
 - Infrastructure Scripts: Complete development environment management ($(ls infrastructure-scripts/ | wc -l) scripts)
 - Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
-- Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
-- Automated PR Fixer System ($(ls automation/ | wc -l) files)
-- Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
 - Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
 - Comprehensive README and documentation
 
@@ -951,18 +922,6 @@ This export contains project-specific configurations that require adaptation.
   - Autonomous task execution with PR generation verification
   - Real-world cost metrics: $0.003-$0.050 per task
   - Monitoring and scaling procedures
-- **🤖 Claude Bot Self-Hosting System (PRODUCTION READY)**: Repository-based command processing
-  - GitHub Actions workflow with self-hosted runner architecture
-  - Issue-based command processing with automated PR creation
-  - Complete setup guide and debugging tools
-- **⚙️ Automated PR Fixer System (PRODUCTION READY)**: Intelligent cron-based automation
-  - Autonomous `/copilot` integration for comprehensive PR analysis
-  - Error handling, timeout detection, and email notifications
-  - 10-minute processing cycles with attempt tracking
-- **🔬 Development Infrastructure**: Specialized development tools
-  - Prototype framework for validation and benchmarking
-  - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
-  - Analytics framework for performance tracking and data validation
 - **🚨 Infrastructure Scripts**: Complete development environment management
   - Environment bootstrap: claude_start.sh - Multi-service startup with health checks
   - MCP installation: claude_mcp.sh - Comprehensive MCP server setup automation
@@ -1033,7 +992,7 @@ fi
 
 # 5. Check that referenced directories exist in export
 echo "🔍 Verifying referenced directories exist in export..."
-for dir in orchestration automation claude-bot-commands prototype; do
+for dir in orchestration; do
     if [ -d "$dir" ]; then
         FILE_COUNT=$(find "$dir" -type f | wc -l)
         echo "   ✅ $dir/ ($FILE_COUNT files)"
@@ -1085,13 +1044,6 @@ echo "✅ Post-export validation complete"
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
 
-**NEW SYSTEM INCLUSIONS** (⚠️ MUST EXPORT):
-- `claude-bot-commands/` - Complete self-hosting repository system (PRODUCTION READY)
-- `automation/` - Automated PR fixer system with cron integration (PRODUCTION READY)
-- `prototype/` - Validation and benchmarking framework (SPECIALIZED TOOLS)
-- `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
-- `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
-- Include installation guides and setup documentation for all systems
 
 **🚨 ROOT-LEVEL INFRASTRUCTURE SCRIPTS** (⚠️ MUST EXPORT):
 - `claude_start.sh` - Complete Claude Code + MCP ecosystem startup script with multi-service management
