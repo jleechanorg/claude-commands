@@ -33,7 +33,7 @@ Executes the `./run_local_server.sh` script which:
 ## Health Verification
 - **Flask backend API**: `curl http://localhost:5005/` (expects HTTP 200)
 - **React V2 frontend**: `curl http://localhost:5005/v2/` (expects correct content)
-- **Content verification**: Checks for "WorldArchitect.AI" title in React app
+- **Content verification**: Checks for "Your Project" title in React app
 - **Failure handling**: If health checks fail, provides diagnostic information
 - **Success criteria**: Both API and React V2 must respond before declaring "ready"
 - **Mandatory validation**: Server startup always includes curl validation step
