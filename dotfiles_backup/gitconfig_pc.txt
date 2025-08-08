@@ -1,14 +1,13 @@
 [user]
-	email = jleechan@gmail.com
-	name = Jeff
+	name = jleechan2015
 [push]
 	autoSetupRemote = true
 	default = upstream
 [credential "https://github.com"]
-	helper =
+	helper = 
 	helper = !/usr/bin/gh auth git-credential
 [credential "https://gist.github.com"]
-	helper =
+	helper = 
 	helper = !/usr/bin/gh auth git-credential
 [alias]
 	header = "\\!git_root=$(git rev-parse --show-toplevel 2>/dev/null); if [ -f \"$git_root/claude_command_scripts/git-header.sh\" ]; then \"$git_root/claude_command_scripts/git-header.sh\" \"$@\"; elif [ -f \"$git_root/worktree_roadmap/claude_command_scripts/git-header.sh\" ]; then \"$git_root/worktree_roadmap/claude_command_scripts/git-header.sh\" \"$@\"; else echo \"[git-header.sh not found]\"; fi"
