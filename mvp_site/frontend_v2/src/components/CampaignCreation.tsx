@@ -26,7 +26,7 @@ import {
   User,
   Play
 } from 'lucide-react'
-import type { Campaign, Theme } from '../App'
+import type { Campaign, Theme } from '../types'
 
 interface CampaignCreationProps {
   onCreateCampaign: (campaign: Omit<Campaign, 'id' | 'createdAt' | 'lastPlayed' | 'storyLength'>) => void

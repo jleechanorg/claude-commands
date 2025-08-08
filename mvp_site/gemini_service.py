@@ -1595,8 +1595,9 @@ def get_initial_story(
                     model_to_use = constants.GEMINI_MODEL_MAPPING.get(
                         user_preferred_model, DEFAULT_MODEL
                     )
+                    # Only warn if the mapping fell back to default (key not found in mapping)
                     if (
-                        model_to_use == DEFAULT_MODEL
+                        user_preferred_model not in constants.GEMINI_MODEL_MAPPING
                         and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
                     ):
                         logging_util.warning(

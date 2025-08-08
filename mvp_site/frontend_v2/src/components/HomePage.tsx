@@ -16,7 +16,7 @@ import {
   Truck,
   RotateCcw
 } from 'lucide-react'
-import type { Jersey, AppView, Sport } from '../App'
+import type { Jersey, AppView, Sport } from '../types'
 
 interface HomePageProps {
   jerseys: Jersey[]

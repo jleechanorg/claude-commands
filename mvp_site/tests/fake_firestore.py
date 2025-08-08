@@ -134,6 +134,38 @@ class FakeGeminiResponse:
 
     def __init__(self, text):
         self.text = text
+        self.narrative_text = text
+        # Parse JSON if it looks like JSON for state updates
+        import json
+
+        try:
+            data = json.loads(text)
+            # Create a mock structured response for get_state_updates()
+            self._state_updates = data.get("state_changes", {})
+            self._entities_mentioned = data.get("entities_mentioned", [])
+            self._location_confirmed = data.get("location_confirmed")
+        except (json.JSONDecodeError, TypeError):
+            self._state_updates = {}
+            self._entities_mentioned = []
+            self._location_confirmed = None
+
+    def get_state_updates(self):
+        """Return state updates from the fake response."""
+        return self._state_updates
+
+    @property
+    def structured_response(self):
+        """Mock structured response object."""
+
+        class MockStructuredResponse:
+            def __init__(self, state_updates, entities_mentioned, location_confirmed):
+                self.state_updates = state_updates
+                self.entities_mentioned = entities_mentioned
+                self.location_confirmed = location_confirmed
+
+        return MockStructuredResponse(
+            self._state_updates, self._entities_mentioned, self._location_confirmed
+        )
 
 
 class FakeTokenCount:

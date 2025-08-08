@@ -1,0 +1,634 @@
+import { useState, useEffect } from 'react'
+import { backgroundImage1 } from './assets/figma-assets'
+import { Button } from './components/ui/button'
+import { Header } from './components/Header'
+import { FeatureCards } from './components/FeatureCards'
+import { CampaignList } from './components/CampaignList'
+import { GamePlayView } from './components/GamePlayView'
+import { CampaignCreationV2 } from './components/CampaignCreationV2'
+import { MockModeToggle } from './components/MockModeToggle'
+import { handleAsyncError, showSuccessToast, showErrorToast, NetworkMonitor, PerformanceMonitor, validateApiRequest } from './utils/errorHandling'
+import { apiService } from './services'
+import type { CampaignCreateRequest, Campaign as ApiCampaign } from './services/api.types'
+import { useAuth } from './hooks/useAuth'
+
+// Types for V2 Campaign System
+export interface Campaign {
+  id: string
+  title: string
+  description: string
+  createdAt: string
+  lastPlayed: string
+  storyLength: number
+}
+
+export interface Character {
+  name: string
+  race: string
+  class: string
+  background: string
+  level: number
+  stats: {
+    strength: number
+    dexterity: number
+    constitution: number
+    intelligence: number
+    wisdom: number
+    charisma: number
+  }
+  hitPoints: number
+  armorClass: number
+  skills: string[]
+  equipment: string[]
+}
+
+export type Theme = 'light' | 'dark' | 'fantasy' | 'dark-fantasy' | 'cyberpunk'
+
+// User type for authentication
+export interface User {
+  id: string
+  name: string
+  email: string
+}
+
+export default function App() {
+  const { user, loading, signInWithGoogle } = useAuth()
+  const [selectedCampaign, setSelectedCampaign] = useState<string>('The Dragon\'s Hoard')
+  const [selectedCampaignId, setSelectedCampaignId] = useState<string>('')
+  const [campaignCharacters] = useState<Record<string, Character>>({})
+  const [theme] = useState<Theme>('fantasy')
+  const [isCreatingCampaign, setIsCreatingCampaign] = useState(false)
+  const [isLoadingCampaign, setIsLoadingCampaign] = useState(false)
+
+  // Simple campaign fetching state
+  const [campaigns, setCampaigns] = useState<ApiCampaign[]>([])
+  const [campaignsLoaded, setCampaignsLoaded] = useState(false)
+
+  const isTestMode = new URLSearchParams(window.location.search).get('test_mode') === 'true'
+
+  // Enhanced function to fetch a single campaign with detailed information
+  const fetchSingleCampaign = async (campaignId: string) => {
+    if (!user || loading) {
+      if (import.meta.env?.DEV) {
+        console.log('🔍 Skipping single campaign fetch - user not ready:', { user: !!user, loading })
+      }
+      return null
+    }
+
+    const performanceKey = `fetchSingleCampaign-${campaignId}-${Date.now()}`
+    PerformanceMonitor.startMeasurement(performanceKey)
+
+    if (import.meta.env?.DEV) {
+      console.log('🎯 Starting single campaign fetch for ID:', campaignId)
+    }
+
+    const result = await handleAsyncError(
+      () => apiService.getCampaign(campaignId),
+      {
+        context: 'FetchSingleCampaign',
+        showToast: false,
+        retryOptions: {
+          maxRetries: NetworkMonitor.isOnline() ? 2 : 0,
+          retryDelay: 1000,
+          exponentialBackoff: true,
+          shouldRetry: (error: any, retryCount: number) => {
+            const message = error?.message?.toLowerCase() || ''
+            if (message.includes('authentication') || message.includes('401')) {
+              return retryCount < 1 // Limited auth retries for single campaign
+            }
+            if (message.includes('network') || message.includes('timeout')) {
+              return retryCount < 2
+            }
+            return retryCount < 1
+          }
+        },
+        onRetry: (retryCount, maxRetries) => {
+          if (import.meta.env?.DEV) {
+            console.log(`🔄 Retrying single campaign fetch (${retryCount}/${maxRetries})...`)
+          }
+        }
+      }
+    )
+
+    const duration = PerformanceMonitor.endMeasurement(performanceKey)
+
+    if (result) {
+      if (import.meta.env?.DEV) {
+        console.log(`✅ Successfully fetched campaign ${campaignId} in ${duration?.toFixed(2)}ms`)
+      }
+      return result
+    } else {
+      if (import.meta.env?.DEV) {
+        console.error(`❌ Failed to fetch campaign ${campaignId} after retries`)
+      }
+      return null
+    }
+  }
+
+  // Simple campaign fetching - no complex error handling
+  const fetchCampaigns = async () => {
+    if (!user) return
+
+    try {
+      if (import.meta.env?.DEV) {
+        console.log('🎯 Fetching campaigns for user:', user.email)
+      }
+
+      const result = await apiService.getCampaigns()
+      setCampaigns(result || [])
+
+      if (import.meta.env?.DEV) {
+        console.log(`✅ Fetched ${result?.length || 0} campaigns`)
+      }
+    } catch (error) {
+      console.error('❌ Campaign fetch error:', error)
+      setCampaigns([])
+    } finally {
+      setCampaignsLoaded(true)
+    }
+  }
+
+  // Simple parallel fetching when user is authenticated
+  useEffect(() => {
+    // DIAGNOSTIC LOGGING - Always log
+    console.log('🔍 USEEFFECT DEBUG:', {
+      user: user ? { email: user.email, uid: user.uid } : null,
+      loading,
+      condition: user && !loading
+    })
+
+    if (user && !loading) {
+      if (import.meta.env?.DEV) {
+        console.log('✅ User authenticated, fetching campaigns...')
+      }
+      fetchCampaigns()
+    }
+  }, [user, loading])
+
+  const handleCreateCampaignClick = async () => {
+    if (!user) {
+      // User not authenticated - trigger Google sign-in with enhanced error handling
+      try {
+        if (import.meta.env?.DEV) {
+          console.log('🔐 Initiating Google sign-in...')
+        }
+
+        await signInWithGoogle()
+
+        if (import.meta.env?.DEV) {
+          console.log('✅ Sign-in successful, navigating to campaigns...')
+        }
+
+        // After successful sign-in, campaigns will load automatically
+
+        // Show success message
+        showSuccessToast('Welcome! Sign-in successful.', { context: 'Authentication' })
+
+      } catch (error) {
+        console.error('❌ Sign-in failed:', error)
+
+        // Enhanced error handling for different sign-in failure scenarios
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+        if (errorMessage.includes('popup') || errorMessage.includes('closed')) {
+          // User likely closed the popup - no need for error toast
+          if (import.meta.env?.DEV) {
+            console.log('ℹ️ User closed sign-in popup')
+          }
+        } else if (errorMessage.includes('network') || errorMessage.includes('offline')) {
+          showErrorToast('Unable to sign in. Please check your internet connection.', {
+            context: 'Authentication',
+            actionable: true
+          })
+        } else {
+          showErrorToast('Sign-in failed. Please try again or contact support if the issue persists.', {
+            context: 'Authentication',
+            actionable: true
+          })
+        }
+      }
+    } else {
+      // User already authenticated - show campaign creation
+      if (import.meta.env?.DEV) {
+        console.log('🎯 User already authenticated, showing campaign creation...')
+      }
+      setIsCreatingCampaign(true)
+    }
+  }
+
+  // SIMPLE LOGIC: Direct conditional rendering based on user and campaigns
+  // if (user && campaigns.length > 0) → show campaigns
+  // if (user && campaigns.length === 0) → show welcome
+  // if (!user) → show sign in
+
+  // DIAGNOSTIC LOGGING - Always log
+  console.log('🔍 RENDER DEBUG:', {
+    user: user ? { email: user.email, uid: user.uid } : null,
+    campaignsLoaded,
+    campaignsLength: campaigns.length,
+    loading,
+    showCampaigns: user && campaignsLoaded && campaigns.length > 0
+  })
+
+  // Show campaigns if user has campaigns and they're loaded
+  if (user && campaignsLoaded && campaigns.length > 0) {
+    return <CampaignList
+      onPlayCampaign={async (campaignId) => {
+        setIsLoadingCampaign(true);
+
+        if (import.meta.env?.DEV) {
+          console.log('🎮 Loading campaign for gameplay:', campaignId)
+        }
+
+        const result = await handleAsyncError(
+          async () => {
+            // Fetch detailed campaign data for gameplay
+            const campaignDetails = await fetchSingleCampaign(String(campaignId))
+
+            if (campaignDetails) {
+              setSelectedCampaign(campaignDetails.title || String(campaignId))
+              setSelectedCampaignId(String(campaignId))
+
+              if (import.meta.env?.DEV) {
+                console.log('✅ Campaign loaded successfully:', {
+                  id: campaignId,
+                  title: campaignDetails.title,
+                  hasGameState: !!campaignDetails.game_state
+                })
+              }
+
+              return true
+            } else {
+              throw new Error('Failed to fetch campaign details')
+            }
+          },
+          {
+            context: 'LoadCampaign',
+            fallbackMessage: 'Failed to load campaign. Please try again.',
+            showToast: true
+          }
+        );
+
+        setIsLoadingCampaign(false);
+
+        if (result) {
+          // Go directly to gameplay - character creation happens in-game
+          // selectedCampaignId already set above, no need to set view
+        }
+      }}
+      onCreateCampaign={() => setIsCreatingCampaign(true)}
+      isLoading={isLoadingCampaign}
+    />
+  }
+
+  // Show campaign creation if user explicitly clicked create
+  if (isCreatingCampaign) {
+    return <CampaignCreationV2
+      onCreateCampaign={async (campaign) => {
+        setIsCreatingCampaign(true);
+
+        const result = await handleAsyncError(
+          async () => {
+            if (import.meta.env?.DEV) {
+              console.log('🚀 Starting campaign creation:', {
+                title: campaign.title,
+                type: campaign.type,
+                hasCharacter: !!campaign.character,
+                hasSetting: !!campaign.setting,
+                hasDescription: !!campaign.description
+              })
+            }
+
+            // Enhanced client-side validation before API call
+            const validation = validateApiRequest(campaign, ['title'])
+            if (!validation.valid) {
+              throw new Error(`Input validation failed: ${validation.errors.join(', ')}`)
+            }
+
+            // Additional validation for campaign-specific fields
+            if (campaign.title.trim().length < 3) {
+              throw new Error('Campaign title must be at least 3 characters long')
+            }
+
+            if (campaign.title.trim().length > 100) {
+              throw new Error('Campaign title must be 100 characters or less')
+            }
+
+            const performanceKey = `createCampaign-${Date.now()}`
+            PerformanceMonitor.startMeasurement(performanceKey)
+
+            // Convert campaign data to API request format with proper mapping and enhanced validation
+            const apiRequest: CampaignCreateRequest = {
+              title: campaign.title.trim(),
+              character: campaign.character?.trim() || undefined,
+              setting: campaign.setting?.trim() || undefined,
+              description: campaign.description?.trim() || undefined,
+              // Enhanced mapping of aiPersonalities boolean flags to API selected_prompts format
+              selected_prompts: campaign.aiPersonalities ? Object.entries(campaign.aiPersonalities)
+                .filter(([_, enabled]) => enabled)
+                .map(([key, _]) => {
+                  const mapping: Record<string, string> = {
+                    'defaultWorld': 'narrative',
+                    'mechanicalPrecision': 'mechanics',
+                    'companions': 'companions'
+                  }
+                  return mapping[key] || key
+                }).filter(Boolean) : undefined,
+              // Add campaign type as custom option for backend processing
+              custom_options: campaign.type ? [campaign.type] : undefined
+            };
+
+            // Enhanced API request validation
+            const apiValidation = validateApiRequest(apiRequest, ['title'])
+            if (!apiValidation.valid) {
+              throw new Error(`API request validation failed: ${apiValidation.errors.join(', ')}`)
+            }
+
+            if (import.meta.env?.DEV) {
+              console.log('📡 Sending API request:', {
+                title: apiRequest.title,
+                hasCharacter: !!apiRequest.character,
+                hasSetting: !!apiRequest.setting,
+                hasDescription: !!apiRequest.description,
+                selectedPrompts: apiRequest.selected_prompts?.length || 0,
+                customOptions: apiRequest.custom_options?.length || 0
+              })
+            }
+
+            // Call actual API service with comprehensive error handling
+            const campaignId = await apiService.createCampaign(apiRequest);
+
+            const duration = PerformanceMonitor.endMeasurement(performanceKey)
+
+            if (import.meta.env?.DEV) {
+              console.log(`✅ Campaign created successfully in ${duration?.toFixed(2)}ms with ID: ${campaignId}`);
+            }
+
+            return { ...campaign, id: campaignId };
+          },
+          {
+            context: 'CampaignCreation',
+            fallbackMessage: 'Failed to create your campaign. Please check your inputs and try again.',
+            showToast: false, // Handle success/error manually for better UX
+            retryOptions: {
+              maxRetries: 2,
+              retryDelay: 3000,
+              exponentialBackoff: true,
+              shouldRetry: (error: any, retryCount: number) => {
+                const message = error?.message?.toLowerCase() || ''
+                // Retry on network/server errors, but not on validation errors
+                if (message.includes('validation') || message.includes('invalid')) {
+                  return false // Don't retry validation errors
+                }
+                if (message.includes('network') || message.includes('timeout') || message.includes('server')) {
+                  return retryCount < 2
+                }
+                return retryCount < 1
+              }
+            },
+            onRetry: (retryCount, maxRetries) => {
+              if (import.meta.env?.DEV) {
+                console.log(`🔄 Retrying campaign creation (${retryCount}/${maxRetries})...`)
+              }
+              showErrorToast(`Creation attempt ${retryCount} failed, retrying...`, {
+                context: 'CampaignCreation',
+                actionable: false
+              })
+            }
+          }
+        );
+
+        setIsCreatingCampaign(false);
+
+        if (result) {
+          // Enhanced success handling with detailed feedback
+          showSuccessToast(`🎉 "${result.title}" campaign created successfully!`, {
+            context: 'CampaignCreation',
+            duration: 5000
+          });
+
+          // Clear campaigns cache to ensure fresh data
+          apiService.clearCacheByPath('/campaigns')
+
+          // Set the selected campaign to the newly created one
+          setSelectedCampaign(result.title);
+          setSelectedCampaignId(result.id);
+
+          // Refresh campaigns list to show the new campaign
+          try {
+            await fetchCampaigns();
+          } catch (refreshError) {
+            console.warn('⚠️ Failed to refresh campaigns list after creation:', refreshError)
+            // Don't block the user flow if refresh fails
+          }
+
+          // Go directly to gameplay - character creation happens in-game
+          setIsCreatingCampaign(false)
+        } else {
+          // Enhanced error handling with actionable feedback
+          showErrorToast('Campaign creation failed. Please check your inputs and try again.', {
+            context: 'CampaignCreation',
+            actionable: true,
+            persistent: false
+          })
+        }
+      }}
+      onBack={() => setIsCreatingCampaign(false)}
+      theme={theme}
+      isCreating={isCreatingCampaign}
+    />
+  }
+
+
+  // Show gameplay if user selected a campaign
+  if (selectedCampaignId) {
+    return <GamePlayView
+      campaignTitle={selectedCampaign}
+      campaignId={selectedCampaignId}
+      character={campaignCharacters[selectedCampaignId]}
+      onBack={() => setSelectedCampaignId('')}
+    />
+  }
+
+  return (
+    <div className="min-h-screen">
+      {/* Test Mode Indicator */}
+      {isTestMode && (
+        <div className="fixed top-4 right-4 z-50 bg-yellow-500/90 text-black px-3 py-1 rounded-lg text-sm font-medium shadow-lg">
+          🧪 TEST MODE
+        </div>
+      )}
+
+      {/* Background Section */}
+      <div className="relative min-h-screen">
+        {/* Fantasy Background Image */}
+        <div
+          className="absolute inset-0 bg-center bg-cover md:bg-center"
+          style={{
+            backgroundImage: `url(${backgroundImage1})`,
+            backgroundSize: 'cover',
+            backgroundPosition: 'center center'
+          }}
+        />
+
+        {/* Light Purple Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-600/40 via-purple-500/35 to-indigo-600/40" />
+
+        {/* Content over background */}
+        <div className="relative z-10 min-h-screen flex flex-col">
+          <Header />
+
+          {/* Main Content - Upper portion */}
+          <main className="flex-1 flex flex-col items-center justify-start px-4 sm:px-6 pt-4 sm:pt-8 md:pt-8 pb-8 sm:pb-12">
+            <div className="text-center max-w-4xl mx-auto">
+              {/* Welcome Section */}
+              <div className="mb-8 sm:mb-12 md:mb-16">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl text-white mb-4 sm:mb-6 leading-tight">
+                  Welcome, Adventurer
+                </h1>
+                <p className="text-sm sm:text-lg md:text-xl text-purple-200 mb-8 sm:mb-12 max-w-2xl mx-auto leading-relaxed px-2 md:px-0">
+                  Every hero's journey begins with a single step. Create your campaign and let the AI Game Master guide you through an unforgettable adventure.
+                </p>
+              </div>
+
+              {/* Dynamic Content: Campaigns or Create First Campaign */}
+              <div className="mb-8 sm:mb-12 md:mb-16">
+                {loadingCampaigns ? (
+                  // Enhanced branded loading state
+                  <div className="text-center">
+                    <div className="relative mb-6">
+                      {/* Primary spinning ring */}
+                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-300 border-t-purple-600 mx-auto"></div>
+                      {/* Outer glow ring */}
+                      <div className="animate-pulse absolute inset-0 rounded-full h-16 w-16 border-2 border-purple-400 opacity-30 mx-auto"></div>
+                      {/* Inner sparkle */}
+                      <div className="absolute inset-0 flex items-center justify-center mx-auto">
+                        <span className="text-purple-300 text-2xl animate-pulse">✨</span>
+                      </div>
+                    </div>
+                    <h3 className="text-white text-2xl mb-2 font-semibold">Awakening Your Adventures</h3>
+                    <p className="text-purple-200 text-lg mb-2">Loading your campaigns...</p>
+                    <p className="text-purple-300 text-sm">Preparing the realm for your return</p>
+                  </div>
+                ) : campaignsError ? (
+                  // Enhanced error recovery state with better UX
+                  <div className="text-center animate-fade-in">
+                    <div className="mb-8">
+                      <div className="relative mb-6">
+                        <div className="w-20 h-20 bg-gradient-to-br from-amber-500/20 to-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                          <span className="text-amber-400 text-3xl">🔮</span>
+                        </div>
+                        <div className="absolute inset-0 rounded-full w-20 h-20 mx-auto border-2 border-amber-400/20 animate-pulse"></div>
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl md:text-4xl text-white mb-4 leading-tight font-bold">
+                        The Crystal Ball is Cloudy
+                      </h2>
+                      <p className="text-amber-300 mb-3 text-lg font-medium">
+                        {campaignsError.includes('network') || campaignsError.includes('timeout')
+                          ? 'Connection to the realm seems unstable'
+                          : 'Having trouble accessing your adventures'
+                        }
+                      </p>
+                      <p className="text-purple-300 text-base mb-6 max-w-lg mx-auto">
+                        Don't worry, brave adventurer! Your progress is safe. You can still create new campaigns while we restore the connection.
+                      </p>
+                    </div>
+                    <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+                      <Button
+                        variant="outline"
+                        onClick={fetchCampaigns}
+                        disabled={loadingCampaigns}
+                        className="border-amber-500/50 text-amber-200 hover:bg-amber-500/20 hover:border-amber-400/70 px-8 py-3 text-lg rounded-xl transition-all duration-300 hover:scale-105"
+                      >
+                        {loadingCampaigns ? (
+                          <div className="flex items-center gap-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-2 border-current border-t-transparent"></div>
+                            <span>Reconnecting...</span>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <span>🔄</span>
+                            <span>Try Again</span>
+                          </div>
+                        )}
+                      </Button>
+                      <Button
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-3 text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105"
+                        onClick={handleCreateCampaignClick}
+                        disabled={loading}
+                      >
+                        <span className="hidden sm:inline">
+                          ✨ Create New Campaign ✨
+                        </span>
+                        <span className="sm:hidden">
+                          ✨ Start Adventure ✨
+                        </span>
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Default fallback: show welcome/login page for users with no campaigns or not authenticated
+                  <div className="text-center animate-fade-in">
+                    <div className="mb-8">
+                      <div className="relative mb-6">
+                        <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
+                          <span className="text-white text-4xl">⚔️</span>
+                        </div>
+                        <div className="absolute inset-0 rounded-full w-24 h-24 mx-auto bg-gradient-to-br from-purple-400 to-pink-400 opacity-20 animate-pulse"></div>
+                      </div>
+                      <h2 className="text-2xl sm:text-3xl md:text-5xl text-white mb-4 leading-tight font-bold">
+                        Your Legend Awaits
+                      </h2>
+                      <p className="text-purple-200 text-lg mb-8 max-w-2xl mx-auto">
+                        {user
+                          ? "Welcome back, adventurer! Ready to embark on your first epic quest?"
+                          : "Every great hero needs an origin story. Sign in and forge your destiny."
+                        }
+                      </p>
+                    </div>
+                    <div className="space-y-4">
+                      <Button
+                        className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-12 py-6 text-2xl sm:text-3xl rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 animate-bounce-subtle"
+                        onClick={handleCreateCampaignClick}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <div className="flex items-center gap-3">
+                            <div className="animate-spin rounded-full h-6 w-6 border-2 border-current border-t-transparent"></div>
+                            <span>{user ? 'Preparing...' : 'Signing In...'}</span>
+                          </div>
+                        ) : (
+                          <>
+                            <span className="hidden sm:inline">
+                              ✨ {user ? 'Create Your First Campaign' : 'Begin Your Journey'} ✨
+                            </span>
+                            <span className="sm:hidden">
+                              ✨ {user ? 'Start Adventure' : 'Begin Journey'} ✨
+                            </span>
+                          </>
+                        )}
+                      </Button>
+                      {!user && (
+                        <p className="text-purple-300 text-sm animate-fade-in-delayed">
+                          Sign in with Google to save your progress and create campaigns
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </main>
+
+          {/* Bottom section for Feature Cards */}
+          <div className="flex-shrink-0 px-4 sm:px-6 pb-6 md:h-48 md:flex md:items-center md:justify-center">
+            <FeatureCards />
+          </div>
+        </div>
+      </div>
+
+      {/* Mock Mode Toggle - Only in development */}
+      <MockModeToggle />
+    </div>
+  )
+}

@@ -22,7 +22,7 @@ import {
 } from 'lucide-react'
 
 import { heroImage } from '../assets/figma-assets'
-import type { User, Campaign, Theme } from '../App'
+import type { User, Campaign, Theme } from '../types'
 
 interface DashboardProps {
   user: User

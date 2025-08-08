@@ -1,3 +1,83 @@
+// Clock skew detection and compensation system
+let clockSkewOffset = 0; // Detected clock skew in milliseconds
+let clockSkewDetected = false;
+
+/**
+ * Detect and compensate for clock skew between client and server
+ */
+async function detectClockSkew() {
+  try {
+    console.log('🕐 Detecting clock skew...');
+    const clientTimeStart = Date.now();
+    const response = await fetch('/api/time', {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' }
+    });
+    const clientTimeEnd = Date.now();
+    
+    if (response.ok) {
+      const data = await response.json();
+      const serverTime = data.timestamp_ms;
+      const clientTimeAtRequest = clientTimeStart;
+      const estimatedServerTime = serverTime - ((clientTimeEnd - clientTimeStart) / 2);
+      
+      // Calculate clock skew (positive means client is ahead, negative means behind)
+      clockSkewOffset = clientTimeAtRequest - estimatedServerTime;
+      clockSkewDetected = true;
+      
+      if (Math.abs(clockSkewOffset) > 500) {
+        console.log(`🕐 Clock skew detected: ${clockSkewOffset}ms (client ${clockSkewOffset > 0 ? 'ahead' : 'behind'})`);
+      }
+    }
+  } catch (error) {
+    console.warn('⚠️ Could not detect clock skew:', error);
+  }
+}
+
+/**
+ * Apply clock skew compensation to token timing
+ */
+async function applyClockSkewCompensation() {
+  // If we have detected clock skew and client is behind, wait before token generation
+  if (clockSkewDetected && clockSkewOffset < 0) {
+    const waitTime = Math.abs(clockSkewOffset) + 500; // Add 500ms buffer
+    console.log(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
+    await new Promise(resolve => setTimeout(resolve, waitTime));
+  }
+}
+
+/**
+ * Handle clock skew errors with enhanced detection and compensation
+ */
+async function handleClockSkewError(errorData) {
+  if (errorData.error_type === 'clock_skew' && errorData.server_time_ms) {
+    const clientTime = Date.now();
+    const serverTime = errorData.server_time_ms;
+    const detectedSkew = clientTime - serverTime;
+    
+    // Update our clock skew offset with the server's measurement
+    clockSkewOffset = detectedSkew;
+    clockSkewDetected = true;
+    
+    console.log(`🔄 Updated clock skew from server error: ${detectedSkew}ms`);
+    
+    // Additional compensation delay for severe skew
+    if (Math.abs(detectedSkew) > 2000) {
+      await new Promise(resolve => setTimeout(resolve, Math.abs(detectedSkew) + 1000));
+    }
+  } else if (!clockSkewDetected) {
+    // Fallback: detect clock skew if we haven't already
+    await detectClockSkew();
+  }
+}
+
+// Initialize clock skew detection when the API module loads
+if (typeof window !== 'undefined') {
+  detectClockSkew().catch(error => {
+    console.warn('Could not perform initial clock skew detection:', error);
+  });
+}
+
 async function fetchApi(path, options = {}, retryCount = 0) {
   const startTime = performance.now();
 
@@ -14,6 +94,9 @@ async function fetchApi(path, options = {}, retryCount = 0) {
     // Normal authentication flow
     const user = firebase.auth().currentUser;
     if (!user) throw new Error('User not authenticated');
+
+    // Apply clock skew compensation before token generation
+    await applyClockSkewCompensation();
 
     // Get fresh token, forcing refresh on retries to handle clock skew
     const forceRefresh = retryCount > 0;
@@ -37,9 +120,10 @@ async function fetchApi(path, options = {}, retryCount = 0) {
       message: `HTTP Error: ${response.status} ${response.statusText}`,
       traceback: `Status code ${response.status} indicates a server-side problem. Check the Cloud Run logs for details.`,
     };
+    let jsonError = {};
     try {
       // Attempt to parse the body as JSON, it might contain our detailed error
-      const jsonError = await response.json();
+      jsonError = await response.json();
       errorPayload.message = jsonError.error || errorPayload.message;
       errorPayload.traceback = jsonError.traceback || errorPayload.traceback;
     } catch (e) {
@@ -47,7 +131,7 @@ async function fetchApi(path, options = {}, retryCount = 0) {
       console.error('Failed to parse error response as JSON.', e);
     }
 
-    // RESILIENCE: Auto-retry auth failures that might be clock-related
+    // Enhanced clock skew error handling with server synchronization
     if (response.status === 401 && retryCount < 2) {
       const isClockSkewError =
         errorPayload.message.includes('Token used too early') ||
@@ -58,8 +142,20 @@ async function fetchApi(path, options = {}, retryCount = 0) {
         console.log(
           `🔄 Clock skew detected, retrying with fresh token (attempt ${retryCount + 1}/2)`,
         );
-        // Wait a moment before retry to let any timing issues settle
-        await new Promise((resolve) => setTimeout(resolve, 1000));
+        
+        // Handle clock skew errors with enhanced compensation
+        await handleClockSkewError(jsonError);
+        
+        // Additional delay for severe clock skew
+        const baseDelay = 1000;
+        const skewDelay = clockSkewDetected && Math.abs(clockSkewOffset) > 1000 ? Math.abs(clockSkewOffset) : 0;
+        const totalDelay = baseDelay + skewDelay;
+        
+        if (skewDelay > 0) {
+          console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation`);
+        }
+        
+        await new Promise((resolve) => setTimeout(resolve, totalDelay));
         return fetchApi(path, options, retryCount + 1);
       }
     }

@@ -34,6 +34,8 @@ jobs:
     # Step 4: Create virtual environment and install dependencies (required for vpython)
     - name: Install dependencies
       run: |
+        # Remove any existing venv from previous runs to prevent conflicts
+        rm -rf venv
         # Create virtual environment that vpython expects
         python -m venv venv
         source venv/bin/activate

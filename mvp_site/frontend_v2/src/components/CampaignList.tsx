@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react'
 import { Button } from './ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
 import { Badge } from './ui/badge'
-import { Plus, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play } from 'lucide-react'
-import { apiService } from '../services/api.service'
+import { Plus, Calendar, Sword, Shield, Crown, BookOpen, Settings, Play, AlertCircle, LogOut, Menu } from 'lucide-react'
+import { campaignService } from '../services'
 import { useAuth } from '../hooks/useAuth'
+import { handleAsyncError, createLoadingManager, NetworkMonitor, PerformanceMonitor } from '../utils/errorHandling'
 import type { Campaign as ApiCampaign } from '../services/api.types'
 
 
@@ -37,47 +38,117 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
   const [campaigns, setCampaigns] = useState<ApiCampaign[]>([])
   const [loadingCampaigns, setLoadingCampaigns] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const [showSettingsMenu, setShowSettingsMenu] = useState(false)
 
   // Use Firebase auth state instead of apiService auth
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, signOut } = useAuth()
 
-  // Load campaigns from API
-  useEffect(() => {
-    async function loadCampaigns() {
-      try {
-        setLoadingCampaigns(true)
-        setError(null)
+  // Create loading manager for better UX (future enhancement)
+  // const loadingManager = createLoadingManager()
 
-        // Check authentication - user must be authenticated to load campaigns
-        if (!user) {
-          console.log('User not authenticated, skipping campaign load')
-          setCampaigns([])
-          return
-        }
+  // Handle sign out
+  const handleSignOut = async () => {
+    try {
+      await signOut()
+      setShowSettingsMenu(false)
+    } catch (error) {
+      console.error('Failed to sign out:', error)
+    }
+  }
 
-        console.log('Loading campaigns for user:', user.uid)
-
-        // Use real apiService for authenticated requests
-        const apiCampaigns = await apiService.getCampaigns()
-        setCampaigns(apiCampaigns)
-      } catch (err) {
-        console.error('Failed to load campaigns:', err)
-        let errorMessage = 'Failed to load campaigns. Please try again.'
-        if (err instanceof Error) {
-          errorMessage = `Failed to load campaigns: ${err.message}`
-        }
-        setError(errorMessage)
-        setCampaigns([])
-      } finally {
-        setLoadingCampaigns(false)
-      }
+  // Enhanced campaign loading with retry logic and performance monitoring
+  const loadCampaigns = async () => {
+    if (!user) {
+      console.log('User not authenticated, skipping campaign load')
+      setCampaigns([])
+      setLoadingCampaigns(false)
+      return
     }
 
+    setLoadingCampaigns(true)
+
+    setError(null)
+    const performanceKey = `loadCampaigns-${Date.now()}`
+    PerformanceMonitor.startMeasurement(performanceKey)
+
+    console.log('Loading campaigns for user:', user.uid)
+
+    const result = await handleAsyncError(
+      () => campaignService.getCampaignsForDisplay(),
+      {
+        context: 'LoadCampaigns',
+        showToast: false, // We'll handle error display ourselves
+        retryOptions: {
+          maxRetries: NetworkMonitor.isOnline() ? 2 : 0, // No retries if offline
+          retryDelay: 1500,
+          exponentialBackoff: true
+        },
+        onLoadingChange: (loadingState) => {
+          // Update UI based on loading state
+          if (loadingState.status && retryCount > 0) {
+            console.log('Loading status:', loadingState.status)
+          }
+        },
+        onRetry: (currentRetry, maxRetries) => {
+          console.log(`Retrying campaign load: ${currentRetry}/${maxRetries}`)
+        }
+      }
+    )
+
+    PerformanceMonitor.endMeasurement(performanceKey)
+
+    if (result) {
+      setCampaigns(result)
+      setRetryCount(0) // Reset retry count on success
+    } else {
+      const isOffline = !NetworkMonitor.isOnline()
+      const errorMessage = isOffline
+        ? 'You appear to be offline. Please check your internet connection and try again.'
+        : 'Failed to load campaigns. Please check your connection and try again.'
+      setError(errorMessage)
+      setCampaigns([])
+      setRetryCount(prev => prev + 1)
+    }
+
+    setLoadingCampaigns(false)
+  }
+
+  // Load campaigns from API and set up network monitoring
+  useEffect(() => {
     // Only load campaigns if auth is not loading
     if (!authLoading) {
       loadCampaigns()
     }
   }, [user, authLoading])
+
+  // Set up network monitoring
+  useEffect(() => {
+    const unsubscribe = NetworkMonitor.addListener((online) => {
+      if (online && user && campaigns.length === 0 && !loadingCampaigns) {
+        // Auto-reload campaigns when coming back online if we have no data
+        console.log('Network restored, reloading campaigns...')
+        loadCampaigns()
+      }
+    })
+
+    return unsubscribe
+  }, [user, campaigns.length, loadingCampaigns])
+
+  // Close settings menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (showSettingsMenu) {
+        setShowSettingsMenu(false)
+      }
+    }
+
+    if (showSettingsMenu) {
+      document.addEventListener('click', handleClickOutside)
+      return () => document.removeEventListener('click', handleClickOutside)
+    }
+  }, [showSettingsMenu])
+
 
   // Apply campaigns-view body class when component mounts
   useEffect(() => {
@@ -96,20 +167,53 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
           <p className="text-white text-lg">
             {authLoading ? 'Checking authentication...' : 'Loading campaigns...'}
           </p>
+          {!authLoading && !NetworkMonitor.isOnline() && (
+            <p className="text-yellow-300 text-sm mt-2">
+              🌐 You appear to be offline
+            </p>
+          )}
         </div>
       </div>
     )
   }
 
-  // Show error state
-  if (error) {
+  // Enhanced error state with better UX
+  if (error && !loadingCampaigns) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-400 text-lg mb-4">{error}</p>
-          <Button onClick={() => window.location.reload()} className="bg-purple-600 hover:bg-purple-700">
-            Retry
-          </Button>
+        <div className="text-center max-w-md mx-auto px-6">
+          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+          <h2 className="text-2xl text-white mb-4">Unable to Load Campaigns</h2>
+          <p className="text-red-400 text-lg mb-6">{error}</p>
+          {retryCount > 0 && (
+            <p className="text-gray-400 text-sm mb-4">
+              Attempted {retryCount} time{retryCount > 1 ? 's' : ''}
+            </p>
+          )}
+          {!NetworkMonitor.isOnline() && (
+            <div className="bg-yellow-900/20 border border-yellow-500/30 rounded-lg p-4 mb-4">
+              <p className="text-yellow-200 text-sm">
+                🌐 You appear to be offline. Check your internet connection and try again.
+              </p>
+            </div>
+          )}
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={loadCampaigns}
+              disabled={loadingCampaigns}
+              className="bg-purple-600 hover:bg-purple-700 flex items-center gap-2"
+            >
+              <AlertCircle className={`w-4 h-4`} />
+              {loadingCampaigns ? 'Retrying...' : 'Try Again'}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={onCreateCampaign}
+              className="border-purple-500/50 text-purple-200 hover:bg-purple-500/20"
+            >
+              Create New Campaign
+            </Button>
+          </div>
         </div>
       </div>
     )
@@ -123,15 +227,57 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
           <div>
             <h1 className="text-5xl text-white mb-2">Your Campaigns</h1>
             <p className="text-purple-200 text-lg">Choose your adventure or create a new one</p>
+            {campaigns.length > 0 && (
+              <p className="text-purple-300 text-sm mt-1">
+                {campaigns.length} campaign{campaigns.length > 1 ? 's' : ''} loaded
+                {!NetworkMonitor.isOnline() && (
+                  <span className="text-yellow-300 ml-2">• 🌐 Offline</span>
+                )}
+              </p>
+            )}
           </div>
-          <Button
-            size="lg"
-            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
-            onClick={onCreateCampaign}
-          >
-            <Plus className="w-5 h-5 mr-2" />
-            Create V2 Campaign
-          </Button>
+          <div className="flex gap-3">
+            <div className="relative">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-purple-500/30 text-purple-200 hover:bg-purple-500/20 px-4 py-3"
+                onClick={() => setShowSettingsMenu(!showSettingsMenu)}
+              >
+                <Settings className="w-5 h-5" />
+              </Button>
+              
+              {/* Settings Dropdown */}
+              {showSettingsMenu && (
+                <div className="absolute top-full right-0 mt-2 w-48 bg-black/90 backdrop-blur-md border border-purple-500/30 rounded-lg shadow-xl z-50">
+                  <div className="p-2">
+                    <div className="px-3 py-2 border-b border-purple-500/30">
+                      <p className="text-sm text-purple-200">Signed in as</p>
+                      <p className="text-sm text-white truncate">{user?.email || 'User'}</p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start text-purple-200 hover:text-white hover:bg-purple-500/20 mt-2"
+                      onClick={handleSignOut}
+                    >
+                      <LogOut className="w-4 h-4 mr-2" />
+                      Sign Out
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <Button
+              size="lg"
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-6 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 text-lg"
+              onClick={onCreateCampaign}
+            >
+              <Plus className="w-5 h-5 mr-2" />
+              Create Campaign
+            </Button>
+          </div>
         </div>
 
         {/* Campaign Grid */}
@@ -177,9 +323,7 @@ export function CampaignList({ onPlayCampaign, onCreateCampaign, isLoading }: Ca
                     </div>
                     <div className="flex items-center gap-2 text-base text-purple-200">
                       <DifficultyIcon className="w-4 h-4" />
-                      <span className="capitalize">{difficulty}</span>
-                      <span className="text-purple-300/50">•</span>
-                      <span className="capitalize">{theme.replace('-', ' ')}</span>
+                      <span>Adventure Ready</span>
                     </div>
                   </CardHeader>
 

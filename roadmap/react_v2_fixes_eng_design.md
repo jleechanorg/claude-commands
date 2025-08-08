@@ -1,5 +1,66 @@
 # React V2 Fixes Engineering Design
 
+## 🚨 ARCHITECTURAL PRINCIPLE: API Compatibility Constraint
+
+**CRITICAL REQUIREMENT**: All React V2 fixes must maintain **v1/v2 API compatibility**
+
+### API Compatibility Rules
+- **No Backend Changes**: Python Flask backend must remain unchanged
+- **Identical API Contracts**: Same endpoints, status codes, and response formats as v1
+- **Frontend-Only Scope**: All fixes must be implementable through React components and services
+- **Separate PR Strategy**: Backend improvements require separate PRs from frontend v2 work
+
+### Implementation Constraint Validation
+- ✅ **BEFORE implementation**: Verify fix requires no backend API changes
+- ✅ **DURING development**: Test against existing v1 API endpoints
+- ❌ **NEVER**: Include Python file modifications in v2 compatibility PRs
+- ✅ **TESTING**: Both v1 and v2 must work with identical backend
+
+## 🚨 CRITICAL: PR #1187 Scope Correction Required
+
+**Current Status**: This PR violates API compatibility constraints by including significant backend Python changes alongside frontend v2 integration work.
+
+### Architectural Violation Analysis
+**Problem**: The current PR includes:
+- Backend Python modifications (`main.py`, `game_state.py`, `gemini_request.py`, `world_logic.py`)
+- Import reorganization and port changes (5005→8081)
+- Core game logic alterations
+- AI request handling modifications
+
+**Impact**: These changes break the fundamental principle that "v1 and v2 APIs should be the same"
+
+### Immediate Correction Required
+
+#### Phase 1: Backend Change Reversion
+- **Revert `mvp_site/main.py`**: Restore original imports and port configuration
+- **Revert `mvp_site/game_state.py`**: Restore original game state management
+- **Revert `mvp_site/gemini_request.py`**: Restore original AI request handling
+- **Revert `mvp_site/world_logic.py`**: Restore original game world mechanics
+
+#### Phase 2: Frontend Preservation
+- **Preserve `mvp_site/frontend_v2/`**: All React component improvements remain
+- **Maintain compatibility**: Ensure v2 components work with reverted backend
+- **Validate API contracts**: Confirm identical endpoints work for both v1/v2
+
+#### Phase 3: Test Suite Correction
+- **Relocate backend tests**: Move tests expecting backend changes to separate category
+- **Update test expectations**: Remove dependencies on reverted backend changes
+- **Validate compatibility**: Ensure test suite passes with API-compatible approach
+
+### Engineering Decision Record
+
+**Decision**: Separate backend improvements from frontend v2 integration
+**Date**: 2025-01-06
+**Context**: PR #1187 mixed architectural concerns violating API compatibility principle
+**Rationale**: Frontend architectural improvements must not require backend modifications
+**Implementation**: Revert backend changes, preserve frontend improvements, create separate backend improvement PR
+**Success Criteria**: v1 and v2 frontends work identically with same backend APIs
+
+### Risk Mitigation
+- **Git History Preservation**: Use strategic reverts to maintain commit history
+- **Functionality Continuity**: Ensure no frontend features are lost in correction
+- **Test Coverage**: Maintain test suite integrity throughout correction process
+
 ## 🚀 COMPLETED: Google SSO Authentication System (PR #1163)
 
 **Status**: ✅ **PRODUCTION READY** - Implemented in [PR #1163](https://github.com/jleechanorg/worldarchitect.ai/pull/1163)

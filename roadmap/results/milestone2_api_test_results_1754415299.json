@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-08-05T10:34:59.336307",
+  "flask_url": "http://localhost:5005",
+  "test_user_id": "milestone2-test-user",
+  "total_tests": 7,
+  "passed_tests": 3,
+  "failed_tests": 4,
+  "success_rate": 42.857142857142854,
+  "results": [
+    {
+      "test": "campaigns_list_status",
+      "success": false,
+      "details": "Expected 200, got 401: {\n  \"message\": \"No token provided\"\n}\n",
+      "timestamp": "2025-08-05T10:34:59.324776"
+    },
+    {
+      "test": "campaign_creation_status",
+      "success": false,
+      "details": "Expected 200, got 401: {\n  \"message\": \"No token provided\"\n}\n",
+      "timestamp": "2025-08-05T10:34:59.326214"
+    },
+    {
+      "test": "validation_case_0",
+      "success": true,
+      "details": "Correctly rejected missing title",
+      "timestamp": "2025-08-05T10:34:59.327267"
+    },
+    {
+      "test": "validation_case_1",
+      "success": true,
+      "details": "Correctly rejected empty title",
+      "timestamp": "2025-08-05T10:34:59.328248"
+    },
+    {
+      "test": "validation_case_2",
+      "success": true,
+      "details": "Correctly rejected title too long",
+      "timestamp": "2025-08-05T10:34:59.329247"
+    },
+    {
+      "test": "validation_case_3",
+      "success": true,
+      "details": "Correctly rejected invalid selected_prompts type",
+      "timestamp": "2025-08-05T10:34:59.330219"
+    },
+    {
+      "test": "campaign_creation_validation",
+      "success": true,
+      "details": "Passed 4/4 validation tests",
+      "timestamp": "2025-08-05T10:34:59.330262"
+    },
+    {
+      "test": "authentication_handling",
+      "success": true,
+      "details": "Correctly enforced authentication requirements",
+      "timestamp": "2025-08-05T10:34:59.332152"
+    },
+    {
+      "test": "error_malformed_json",
+      "success": false,
+      "details": "Expected 400/422 for malformed JSON, got 401",
+      "timestamp": "2025-08-05T10:34:59.334159"
+    },
+    {
+      "test": "response_performance",
+      "success": false,
+      "details": "No performance data collected",
+      "timestamp": "2025-08-05T10:34:59.335092"
+    },
+    {
+      "test": "cors_headers",
+      "success": true,
+      "details": "CORS headers properly configured",
+      "timestamp": "2025-08-05T10:34:59.336244"
+    }
+  ]
+}

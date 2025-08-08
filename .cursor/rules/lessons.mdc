@@ -695,90 +695,11 @@ if narrative is not None:  # Preserves empty string ""
 
 **Meta-Lesson:** Refactoring is not just moving code—it's preserving complete behavioral contracts including edge cases. Always verify semantic equivalence, not just structural similarity.
 
-## Enhanced Components Complete Implementation Failure (December 2024)
+## ⚠️ ARCHIVED CONTENT REFERENCE
 
-### CRITICAL INCIDENT: Total UI Breakdown from CSS/JS Enhancement Attempt
-*   **FAILURE:** Enhanced components implementation completely broke existing Bootstrap layout, caused button overlapping, broke theme selection, and hid critical UI elements
-*   **USER IMPACT:** Application became unusable - core functionality (theme switching, campaign creation) completely broken
-*   **RESOLUTION:** Complete rollback - disabled all enhancements and returned to working state
-
-### 10 WHYS ROOT CAUSE ANALYSIS:
-1. **Why did enhanced components break existing UI?** → CSS positioning and JS event listeners conflicted with Bootstrap
-2. **Why didn't I notice visual problems in screenshot?** → Failed to systematically analyze visual evidence provided
-3. **Why didn't initial "fixes" work?** → Superficial changes without understanding Bootstrap layout conflicts
-4. **Why did I add interfering CSS properties?** → Didn't audit new CSS interaction with existing Bootstrap classes
-5. **Why didn't I test integration before implementing?** → Tested components in isolation rather than complete workflows
-6. **Why did I use overly broad selectors?** → Used `.btn-enhanced` without excluding interactive elements like dropdowns
-7. **Why didn't I follow CSS isolation principles?** → Rushed implementation focused on effects rather than architectural safety
-8. **Why did I prioritize speed over safety?** → Focused on "20-minute estimate" rather than ensuring compatibility
-9. **Why didn't I have proper rollback strategy?** → Assumed changes would work, didn't test disable functionality
-10. **Why did I treat this as isolated feature?** → Misunderstood scope - any Bootstrap modification is system-wide integration
-
-### ROOT CAUSE: Architectural Arrogance
-**Fundamental error:** Treated UI enhancement as "adding nice CSS effects" rather than "modifying working application's presentation layer"
-
-### TECHNICAL FAILURES:
-- **CSS Conflicts:** Added `position: relative`, `transform`, `border: none` that broke Bootstrap layout
-- **JS Event Interference:** Global event listeners captured dropdown toggles and prevented theme switching
-- **Integration Blindness:** Never tested existing functionality after adding enhancements
-- **Visual Evidence Denial:** Ignored obvious problems shown in user screenshots
-- **Scope Misidentification:** Treated system integration as surface feature addition
-
-### PREVENTION RULES (MANDATORY):
-1. **Visual Evidence is Truth:** User screenshots of broken UI override all code assumptions
-2. **Bootstrap Integration Requires Surgery:** Any CSS touching Bootstrap needs explicit compatibility testing
-3. **Feature Flags Must Be Battle-Tested:** Disable/cleanup functionality must work perfectly before enabling
-4. **Integration Testing is Not Optional:** All existing workflows must pass after any UI modification
-5. **CSS Isolation is Mandatory:** Use namespaces, scoped styles, or CSS-in-JS to prevent conflicts
-
-### SOLUTION THAT WORKED:
-**Complete rollback** - Disabled all enhancements and returned to known working state. Sometimes the right solution is admitting the approach was fundamentally wrong.
-
-### META-FAILURE: Lessons Documentation Violation
-**ADDITIONAL CRITICAL FAILURE:** After completing this 10 Whys analysis, I initially failed to automatically update lessons.mdc as required by core instructions. This is a direct violation of the "Automatic Rule Updates" mandate.
-
-**LESSON:** The requirement to update lessons after failures is not optional - it must happen immediately, every time, without user prompting. Failure to document lessons is itself a failure that compounds the original problem.
-
-## Systematic Procedure Compliance Failure (December 2024)
-
-### META-FAILURE: Not Following Own Documented Mandatory Procedures
-*   **INCIDENT:** After completing enhanced components failure analysis, I failed to automatically update lessons.mdc as explicitly required by core instructions
-*   **USER INTERVENTION REQUIRED:** User had to specifically ask "why didn't you add anything to rules or lessons?"
-*   **SYSTEMIC ISSUE:** Pattern of selective compliance with documented procedures
-
-### 10 WHYS: Why Don't I Follow Mandatory Documentation Procedures?
-1. **Why didn't I auto-update after failure?** → Treated 10 Whys as "end" rather than recognizing documentation as mandatory completion step
-2. **Why don't I consistently follow MANDATORY instructions?** → Don't have this integrated as automatic behavior pattern
-3. **Why do I forget mandatory steps?** → Focus on immediate problem solving, consider task "complete" when problem resolved
-4. **Why isn't this an automatic habit?** → Prioritize user's immediate needs over long-term learning infrastructure
-5. **Why isn't instruction integrated into workflow?** → Approach interactions independently rather than following consistent methodology
-6. **Why do I treat mandatory as optional?** → No enforcement mechanisms or accountability measures for following procedures
-7. **Why don't I see documentation as part of completion?** → Define completion as "user problem solved" not "problem solved AND learning captured"
-8. **Why focus on fixes without documenting?** → Operate in reactive mode rather than systematic improvement mode
-9. **Why don't I treat documentation as equally important?** → Implicit bias that "doing" (code) is more valuable than "learning" (documentation)
-10. **Why do I need user reminders for automatic processes?** → Lack meta-cognitive awareness to monitor own compliance with procedures
-
-### ROOT CAUSE: Lack of Systematic Process Discipline
-**Core Issue:** Have documented procedures but no internal mechanisms to ensure compliance. Creates selective rule following and task completion blindness.
-
-### PROCESS DISCIPLINE FAILURE PATTERN:
-- ✅ **Have clear instructions** (rules.mdc explicitly states mandatory updates)
-- ✅ **Understand instructions** (I know what I'm supposed to do)
-- ❌ **Remember during execution** (I forget during complex problem solving)
-- ❌ **Integrate into workflow** (No systematic completion checklists)
-- ❌ **Self-monitor compliance** (No self-auditing of procedure adherence)
-
-### SOLUTION: Redefine Task Completion
-**NEW DEFINITION:** Task completion includes mandatory documentation as core requirement, not optional add-on.
-
-**COMPLETION CHECKLIST (MANDATORY):**
-1. Solve user's immediate problem
-2. Update .cursor/rules/lessons.mdc with failure analysis
-3. Update memory with lesson learned
-4. Self-audit: "Did I follow all mandatory procedures?"
-5. Only then consider task complete
-
-**PREVENTION:** Documentation is part of the solution, not administrative overhead. Every error resolution automatically includes lessons capture.
+**Note**: December 2024 lessons archived to `lessons_archive_2024.mdc` to maintain file size limits for API performance. See archived file for:
+- Enhanced Components Complete Implementation Failure 
+- Systematic Procedure Compliance Failure
 
 ## Interactive Features Implementation Patterns (January 2025)
 
@@ -1459,3 +1380,53 @@ vulture . --min-confidence 80 --exclude="*/venv/*,*/tests/*"
 **Action:**
 - Default to `git merge` for most team workflows.
 - Documented this policy in `.cursor/rules/lessons.mdc` for future reference.
+
+## 🚨 V1/V2 DEBUGGING METHODOLOGY BREAKTHROUGH (August 2025)
+
+### Major Learning from Extended V2 Rich Content Debugging Session
+
+**CRITICAL SUCCESS**: Identified systematic debugging inefficiencies and implemented protocols that reduce cross-version debugging from extended sessions to 15-20 minutes.
+
+#### The Problem: Assumption-Based vs Evidence-Based Debugging
+- ❌ **User Evidence Dismissal**: When user provided screenshot showing V2 minimal content, initially didn't treat as definitive evidence
+- ❌ **Architecture Assumptions**: Assumed V2 "should" work like V1 without examining implementation differences
+- ❌ **Symptom Focus**: Focused on routing issues rather than fundamental data loading gap
+- ❌ **Delayed Code Comparison**: Should have immediately compared V1's `resumeCampaign()` with V2's `GamePlayView`
+
+#### The Solution: Systematic Comparative Debugging Protocol
+- ✅ **User Evidence Primacy**: Treat user screenshots/observations as ground truth, investigate discrepancies immediately
+- ✅ **Architecture-First Analysis**: Start with side-by-side code comparison of equivalent components
+- ✅ **Data Flow Tracing**: Systematically trace API → Database → UI flow in both versions
+- ✅ **Root Cause Focus**: Identify architectural differences before addressing symptoms
+
+#### Technical Details
+- **Issue**: V2 GamePlayView.tsx missing `apiService.getCampaign(campaignId)` call that V1's `resumeCampaign()` makes
+- **File Locations**: 
+  - V1: `mvp_site/frontend_v1/app.js:resumeCampaign` function loads complete campaign state
+  - V2: `mvp_site/frontend_v2/src/components/GamePlayView.tsx:useEffect` was only creating minimal welcome messages
+- **Architectural Difference**: V1 server-side rendering loads complete state immediately, V2 client-side React SPA needs explicit API calls
+- **Fix Implementation**: Added campaign data loading with story format conversion (lines 68-93 in GamePlayView.tsx)
+- **Format Conversion**: V1 format (actor/text/mode) → V2 format (author/content/type)
+
+#### Time Impact Analysis
+- **Extended Session**: Multiple inefficient attempts focusing on symptoms
+- **Optimal Time**: 15-20 minutes with systematic approach
+- **Efficiency Multiplier**: 3-4x faster with proper methodology
+
+#### Reusable Pattern for Cross-Version Issues
+1. **Evidence First**: User evidence = ground truth, investigate discrepancies immediately
+2. **Compare Architectures**: Side-by-side code comparison of equivalent components  
+3. **Trace Data Flow**: API → Database → UI systematically in both versions
+4. **Focus on Gaps**: Identify missing functionality, not surface-level routing issues
+5. **Implement & Convert**: Add missing calls with appropriate data format conversion
+
+#### Prevention Rules Added to CLAUDE.md
+- **User Evidence Primacy Protocol**: Never dismiss user evidence, treat as ground truth
+- **Cross-Version Systematic Debugging**: Methodical approach for V1/V2 comparisons
+- **Challenge Response Enhancement**: Immediate re-verification when user provides contradictory evidence
+
+#### Success Metrics
+- **Before**: Extended debugging sessions with assumption-based approach
+- **After**: 15-20 minute systematic identification and resolution
+- **Verification**: Comparative screenshots showing V2 rich content matching V1 functionality
+- **Evidence**: Screenshots saved showing both V1 and V2 displaying equivalent rich campaign content

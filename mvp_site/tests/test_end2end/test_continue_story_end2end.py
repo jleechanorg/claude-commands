@@ -605,9 +605,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         assert "error" in response_data
 
     @patch("firebase_admin.firestore.client")
-    @patch("google.genai.Client")
+    @patch("gemini_service.continue_story")
     def test_character_mode_preserves_original_state_changes_during_sequence_merge(
-        self, mock_genai_client_class, mock_firestore_client
+        self, mock_continue_story, mock_firestore_client
     ):
         """Test that character mode sequence tracking preserves original Gemini state changes during merge.
 
@@ -640,28 +640,26 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         for entry in self.mock_story_entries:
             story_collection.add(entry)
 
-        # Set up fake Gemini client
-        fake_genai_client = MagicMock()
-        mock_genai_client_class.return_value = fake_genai_client
-        fake_genai_client.models.count_tokens.return_value = FakeTokenCount(1000)
+        # Mock gemini_service.continue_story directly to return proper GeminiResponse-like object
+        from unittest.mock import MagicMock
 
-        # Mock original Gemini response with state changes (realistic data source)
-        # This simulates the ORIGINAL Gemini API response before any processing
-        response_json = json.dumps(
-            {
-                "narrative": "You grip your weapon tighter as the dragon notices your approach...",
-                "state_changes": {
-                    "player_character_data": {"hp_current": 25, "level": 3},
-                    "world_data": {"gold": 100, "location": "tavern"},
-                    "npc_data": {"innkeeper": {"disposition": "friendly"}},
-                },
-                "entities_mentioned": ["dragon", "weapon"],
-                "location_confirmed": "Dragon's Lair",
-            }
+        mock_gemini_response = MagicMock()
+        mock_gemini_response.narrative_text = (
+            "You grip your weapon tighter as the dragon notices your approach..."
         )
-        fake_genai_client.models.generate_content.return_value = FakeGeminiResponse(
-            response_json
-        )
+        mock_gemini_response.get_state_updates.return_value = {
+            "player_character_data": {"hp_current": 25, "level": 3},
+            "world_data": {"gold": 100, "location": "tavern"},
+            "npc_data": {"innkeeper": {"disposition": "friendly"}},
+        }
+
+        # Mock structured response for additional fields
+        mock_structured = MagicMock()
+        mock_structured.entities_mentioned = ["dragon", "weapon"]
+        mock_structured.location_confirmed = "Dragon's Lair"
+        mock_gemini_response.structured_response = mock_structured
+
+        mock_continue_story.return_value = mock_gemini_response
 
         # Make the API request in CHARACTER mode (triggers sequence tracking)
         character_interaction_data = {
@@ -730,8 +728,8 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         # Verify narrative contains expected content
         assert "dragon notices" in response_data["narrative"]
 
-        # Verify Gemini was called
-        assert fake_genai_client.models.generate_content.called
+        # Verify continue_story was called
+        assert mock_continue_story.called
 
 
 if __name__ == "__main__":

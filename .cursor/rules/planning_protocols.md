@@ -153,6 +153,26 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - ⬜ NOT STARTED
 - ❌ BLOCKED (with reason)
 
+## Critical System Modification Protocol
+
+**🚨 MANDATORY**: Before modifying authentication, deployment, or core infrastructure systems:
+
+- [ ] **Read existing code** - How does current system work?
+- [ ] **Test current functionality** - What actually works vs doesn't work?
+- [ ] **Check origin/main** - Does it work on main branch?
+- [ ] **Listen to user** - Do they say it was working before?
+- [ ] **Reconcile evidence** - Resolve conflicting signals (errors vs functionality)
+- [ ] **Identify root cause** - What specifically needs fixing?
+- [ ] **Propose minimal fix** - Address specific issue, don't rebuild architecture
+
+**Pattern**: AUDIT → TEST → UNDERSTAND → DIAGNOSE → MINIMAL FIX (never skip to BUILD REPLACEMENT)
+
+**Red Flags**: Working OAuth popups + API errors = investigate deeper, don't assume broken
+
+**Evidence Priority**: User statements > Working functionality > Console errors
+
+*Learning captured from: Firebase authentication replacement mistake (PR #1187, 2025-08-06)*
+
 ## Common Patterns
 
 ### Research/Analysis Tasks

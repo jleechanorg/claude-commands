@@ -19,7 +19,7 @@ import {
   Check,
   Skull
 } from 'lucide-react'
-import type { Theme } from '../App'
+import type { Theme } from '../types'
 
 interface ThemeSwitcherProps {
   currentTheme: Theme

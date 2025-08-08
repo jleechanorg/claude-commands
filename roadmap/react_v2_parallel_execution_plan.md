@@ -5,6 +5,24 @@ Using Claude Code CLI with parallel task agents and **TEST-DRIVEN DEVELOPMENT**,
 
 **CRITICAL**: All agents must write tests FIRST using /tdd methodology before implementing any fixes.
 
+## 🚨 ARCHITECTURAL CONSTRAINT: API Compatibility
+
+**MANDATORY ENFORCEMENT**: All parallel execution tasks must adhere to **v1/v2 API compatibility**
+
+### Parallel Agent Constraints
+- **NO PYTHON MODIFICATIONS**: Agents forbidden from changing backend Python files
+- **API CONTRACT ENFORCEMENT**: All fixes must work with existing v1 API endpoints
+- **SCOPE VERIFICATION**: Each agent task validates no backend changes required
+- **ARCHITECTURAL GATE**: Agents must confirm frontend-only implementation before proceeding
+
+### Task Assignment Rules
+- ✅ **Frontend React components**: Always acceptable for parallel agents
+- ✅ **CSS/styling fixes**: Frontend-only, proceed with agents
+- ❌ **Backend API changes**: NEVER assign to parallel agents
+- ⚠️ **Validation Required**: Any task touching data flow must verify API compatibility first
+
+This constraint ensures parallel execution speed while maintaining architectural integrity.
+
 ### 🚨 URGENT UPDATE: Comprehensive Audit Completed
 **Manual UI Testing Reveals Critical Implementation Gaps**: Direct testing of running React V2 site confirms multiple critical issues remain unresolved despite previous completion claims.
 

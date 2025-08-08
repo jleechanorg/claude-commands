@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Auth Test</title>
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getAuth, GoogleAuthProvider, signInWithPopup } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+
+        // Firebase configuration from .env
+        const firebaseConfig = {
+            apiKey: "AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8",
+            authDomain: "worldarchitecture-ai.firebaseapp.com",
+            projectId: "worldarchitecture-ai",
+            storageBucket: "worldarchitecture-ai.firebasestorage.app",
+            messagingSenderId: "754683067800",
+            appId: "1:754683067800:web:3b38787c69de301c147fed",
+            measurementId: "G-EFX5VFZ7CV"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const provider = new GoogleAuthProvider();
+
+        // Test authentication
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginBtn = document.getElementById('loginBtn');
+            const statusDiv = document.getElementById('status');
+
+            loginBtn.addEventListener('click', async () => {
+                try {
+                    statusDiv.innerHTML = '🔄 Testing Firebase authentication...';
+
+                    const result = await signInWithPopup(auth, provider);
+                    const user = result.user;
+
+                    statusDiv.innerHTML = `
+                        ✅ Authentication successful!<br>
+                        User: ${user.displayName}<br>
+                        Email: ${user.email}<br>
+                        UID: ${user.uid}
+                    `;
+
+                    console.log('Firebase auth success:', user);
+                } catch (error) {
+                    statusDiv.innerHTML = `❌ Authentication failed: ${error.message}`;
+                    console.error('Firebase auth error:', error);
+                }
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>Firebase Authentication Test</h1>
+    <p>Test Firebase Google authentication with WorldArchitect.AI project</p>
+
+    <button id="loginBtn" style="padding: 10px 20px; font-size: 16px;">
+        🔑 Test Google Sign-In
+    </button>
+
+    <div id="status" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <h2>Configuration Details:</h2>
+    <ul>
+        <li>Project ID: worldarchitecture-ai</li>
+        <li>Auth Domain: worldarchitecture-ai.firebaseapp.com</li>
+        <li>API Key: AIzaSyARs7IekRptvhZIwtV7lwJh3axWFsn_4c8</li>
+    </ul>
+</body>
+</html>

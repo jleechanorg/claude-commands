@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiService } from '../services/api.service'
+import { apiService } from '../services'
 import type { User } from '../services/api.types'
 
 export interface AuthState {

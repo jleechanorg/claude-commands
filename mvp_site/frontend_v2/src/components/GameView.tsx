@@ -2,21 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Button } from './ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Card, CardContent } from './ui/card'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
-import { Separator } from './ui/separator'
 import { ScrollArea } from './ui/scroll-area'
 import {
   ArrowLeft,
   Send,
   Dice6,
-  User,
   Crown,
-  Sword,
-  Shield,
-  Heart,
-  Zap,
   BookOpen,
   Settings,
   Download,
@@ -28,10 +22,12 @@ import {
   Move,
   Sparkles
 } from 'lucide-react'
-import type { User, Campaign, Theme } from '../App'
+import type { Campaign, Theme } from '../types'
+import { apiService } from '../services/api.service'
+import { handleAsyncError, showErrorToast, showSuccessToast, LoadingState } from '../utils/errorHandling'
+import type { InteractionRequest, InteractionResponse } from '../services/api.types'
 
 interface GameViewProps {
-  user: User
   campaign: Campaign
   theme: Theme
   onUpdateCampaign: (campaign: Campaign) => void
@@ -40,69 +36,61 @@ interface GameViewProps {
 
 interface StoryEntry {
   id: string
-  type: 'narration' | 'action' | 'dialogue' | 'system'
+  type: 'narration' | 'action' | 'dialogue' | 'system' | 'error'
   content: string
   timestamp: string
   author?: 'player' | 'ai' | 'system'
+  isError?: boolean
+  isRetryable?: boolean
+  originalInput?: string
 }
 
-interface Character {
-  name: string
-  level: number
-  hp: number
-  maxHp: number
-  ac: number
-  class: string
-  status: 'healthy' | 'injured' | 'critical'
-}
 
-export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: GameViewProps) {
-  const [story, setStory] = useState<StoryEntry[]>([
-    {
-      id: '1',
-      type: 'system',
-      content: `Welcome to ${campaign.title}! Your adventure begins now...`,
-      timestamp: new Date().toISOString(),
-      author: 'system'
-    },
-    {
-      id: '2',
-      type: 'narration',
-      content: `You find yourself standing at the edge of a misty forest. Ancient trees tower above you, their branches intertwining to form a natural canopy that blocks most of the sunlight. The air is thick with the scent of moss and wildflowers. A narrow path winds deeper into the woods, disappearing around a bend. You can hear the distant sound of running water and the occasional chirp of unseen birds.`,
-      timestamp: new Date().toISOString(),
-      author: 'ai'
-    }
-  ])
+export function GameView({ campaign, theme, onUpdateCampaign, onBack }: GameViewProps) {
+  const [story, setStory] = useState<StoryEntry[]>([])
 
   const [playerInput, setPlayerInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [character] = useState<Character>({
-    name: 'Adventurer',
-    level: 1,
-    hp: 12,
-    maxHp: 15,
-    ac: 14,
-    class: 'Fighter',
-    status: 'injured'
-  })
-  const [mode, setMode] = useState<'character' | 'god'>('character')
+  const [loadingState, setLoadingState] = useState<LoadingState>({ isLoading: false })
+  const [retryCount, setRetryCount] = useState(0)
+  const [aiError, setAiError] = useState<string | null>(null)
+  const [lastFailedInput, setLastFailedInput] = useState<string>('')
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+  
+  // Monitor network status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true)
+      if (aiError) {
+        showSuccessToast('Connection restored - AI is available again', { context: 'Network', duration: 3000 })
+        setAiError(null) // Clear AI error when back online
+      }
+    }
+    
+    const handleOffline = () => {
+      setIsOnline(false)
+      showErrorToast('You are offline - AI responses will be unavailable until connection is restored', { 
+        context: 'Network',
+        persistent: true
+      })
+    }
+    
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [aiError])
+  const [mode] = useState<'god'>('god')
   const [showSuggestions, setShowSuggestions] = useState(true)
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  const actionSuggestions = [
-    { icon: Eye, text: "Look around for clues", type: "observation" },
-    { icon: Move, text: "Follow the forest path", type: "movement" },
-    { icon: MessageSquare, text: "Call out to see if anyone responds", type: "social" },
-    { icon: Target, text: "Search for tracks or signs", type: "investigation" }
-  ]
+  const actionSuggestions: { icon: any; text: string; type: string }[] = []
 
-  const quickActions = [
-    { icon: Dice6, text: "Roll for perception", action: () => handleQuickAction("I roll to perceive my surroundings") },
-    { icon: Sword, text: "Draw weapon", action: () => handleQuickAction("I draw my weapon and prepare for danger") },
-    { icon: Lightbulb, text: "Use a skill", action: () => handleQuickAction("I use my skills to") },
-  ]
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -171,7 +159,16 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
   const colors = getAccentColors()
 
   const handleSubmit = async () => {
-    if (!playerInput.trim() || isLoading) return
+    if (!playerInput.trim() || isLoading || loadingState.isLoading) return
+    
+    // Check network connectivity
+    if (!isOnline) {
+      showErrorToast('Cannot send message - you are currently offline', { 
+        context: 'Offline',
+        persistent: false 
+      })
+      return
+    }
 
     const userAction: StoryEntry = {
       id: Date.now().toString(),
@@ -185,52 +182,254 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
     setPlayerInput('')
     setIsLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: StoryEntry = {
+    // Real AI response integration with comprehensive error handling
+    try {
+      setAiError(null)
+      setLoadingState({ isLoading: true, status: 'Connecting to AI...', progress: 10 })
+      
+      const interactionRequest: InteractionRequest = {
+        input: playerInput,
+        mode: mode === 'god' ? 'god' : 'character'
+      }
+      
+      setLoadingState({ isLoading: true, status: 'Processing your input...', progress: 30 })
+      
+      const aiResponse = await handleAsyncError(
+        () => apiService.sendInteraction(campaign.id, interactionRequest),
+        {
+          context: 'AI Game Response',
+          showToast: false,
+          retryOptions: {
+            maxRetries: 2,
+            retryDelay: 2000,
+            exponentialBackoff: true,
+            shouldRetry: (error, retryCount) => {
+              // Retry on network errors, timeouts, or server errors
+              const errorMessage = error?.message?.toLowerCase() || ''
+              const shouldRetry = errorMessage.includes('network') ||
+                                  errorMessage.includes('timeout') ||
+                                  errorMessage.includes('fetch') ||
+                                  error?.status >= 500 ||
+                                  error?.status === 429
+              
+              if (shouldRetry) {
+                setLoadingState({ 
+                  isLoading: true, 
+                  status: `Connection failed. Retrying in ${Math.ceil((2000 * Math.pow(2, retryCount))/1000)}s...`,
+                  progress: 50 + (retryCount * 20)
+                })
+              }
+              
+              return shouldRetry
+            }
+          },
+          onLoadingChange: (loading) => {
+            setLoadingState(loading)
+          },
+          onRetry: (currentRetry, maxRetries) => {
+            setRetryCount(currentRetry)
+            setLoadingState({ 
+              isLoading: true, 
+              status: `Retry ${currentRetry}/${maxRetries}...`,
+              progress: 40 + (currentRetry * 15)
+            })
+          }
+        }
+      )
+      
+      setLoadingState({ isLoading: true, status: 'Processing AI response...', progress: 80 })
+      
+      if (aiResponse && aiResponse.success) {
+        // Create AI response entry with enhanced content handling
+        const aiEntry: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: aiResponse.god_mode_response || aiResponse.narrative || aiResponse.response || 'The AI provided a response, but it was empty.',
+          timestamp: new Date().toISOString(),
+          author: 'ai'
+        }
+        
+        setStory(prev => [...prev, aiEntry])
+        setRetryCount(0)
+        setLastFailedInput('')
+        
+        // Add system message for additional info if available
+        if (aiResponse.dice_rolls && aiResponse.dice_rolls.length > 0) {
+          const diceEntry: StoryEntry = {
+            id: (Date.now() + 2).toString(),
+            type: 'system',
+            content: `🎲 Dice rolls: ${aiResponse.dice_rolls.map(roll => 
+              `${roll.type}: ${roll.result}${roll.modifier ? ` + ${roll.modifier}` : ''} = ${roll.total || roll.result}${roll.reason ? ` (${roll.reason})` : ''}`
+            ).join(', ')}`,
+            timestamp: new Date().toISOString(),
+            author: 'system'
+          }
+          setStory(prev => [...prev, diceEntry])
+        }
+        
+        setLoadingState({ isLoading: false, status: 'Success!', progress: 100 })
+        showSuccessToast('AI response received', { context: 'Game', duration: 2000 })
+      } else {
+        // Handle API success=false responses
+        const errorMessage = aiResponse?.error || 'AI failed to generate a response'
+        console.error('AI API returned success=false:', aiResponse)
+        throw new Error(errorMessage)
+      }
+      
+    } catch (error: any) {
+      const errorMessage = error?.message || 'An unexpected error occurred while getting AI response'
+      setAiError(errorMessage)
+      setLastFailedInput(playerInput)
+      
+      // Create error entry in story
+      const errorEntry: StoryEntry = {
         id: (Date.now() + 1).toString(),
-        type: 'narration',
-        content: generateAIResponse(playerInput),
+        type: 'error',
+        content: `❌ AI Error: ${errorMessage}. You can retry this action.`,
         timestamp: new Date().toISOString(),
-        author: 'ai'
+        author: 'system',
+        isError: true,
+        isRetryable: true,
+        originalInput: playerInput
       }
-
-      setStory(prev => [...prev, aiResponse])
+      
+      setStory(prev => [...prev, errorEntry])
+      
+      // Show error toast with actionable retry option
+      showErrorToast(
+        `AI response failed: ${errorMessage}`,
+        { 
+          actionable: true, 
+          context: 'Game AI',
+          persistent: false
+        }
+      )
+      
+      setLoadingState({ isLoading: false })
+    } finally {
       setIsLoading(false)
-
-      // Update campaign
-      const updatedCampaign = {
-        ...campaign,
-        lastPlayed: new Date().toISOString(),
-        storyLength: campaign.storyLength + 1
-      }
-      onUpdateCampaign(updatedCampaign)
-    }, 2000)
+    }
   }
 
   const handleQuickAction = (action: string) => {
     setPlayerInput(action)
   }
 
-  const generateAIResponse = (input: string): string => {
-    const responses = [
-      "As you venture forward, the forest seems to come alive around you. Leaves rustle mysteriously overhead, and you catch glimpses of small creatures darting between the trees. The path ahead splits into two directions - one leading uphill toward what appears to be ruins, the other descending toward the sound of water.",
-      "Your keen observation reveals fresh footprints in the soft earth - humanoid, but larger than normal. They seem to lead deeper into the forest. Suddenly, you hear a branch snap behind you, and you spin around to see a pair of glowing eyes watching you from the shadows.",
-      "The forest responds to your call with an eerie silence. Then, slowly, a melodic voice drifts through the trees: 'Lost traveler, the path you seek is not the one beneath your feet.' A figure emerges from behind an ancient oak - an ethereal being with bark-like skin and leaves for hair.",
-    ]
-    return responses[Math.floor(Math.random() * responses.length)]
+  const handleRetryAI = async (originalInput?: string) => {
+    const inputToRetry = originalInput || lastFailedInput || playerInput
+    if (!inputToRetry.trim()) return
+    
+    // Remove the last error entry from story
+    setStory(prev => prev.filter(entry => !(entry.isError && entry.originalInput === inputToRetry)))
+    
+    // Temporarily set input and trigger AI response
+    const currentInput = playerInput
+    setPlayerInput(inputToRetry)
+    
+    // Create user action entry for retry
+    const retryUserAction: StoryEntry = {
+      id: Date.now().toString(),
+      type: 'action',
+      content: `${inputToRetry} 🔄`,
+      timestamp: new Date().toISOString(),
+      author: 'player'
+    }
+    
+    setStory(prev => [...prev, retryUserAction])
+    setIsLoading(true)
+    
+    // Call the same AI logic with the retry input
+    try {
+      setAiError(null)
+      setLoadingState({ isLoading: true, status: 'Retrying AI request...', progress: 10 })
+      
+      const interactionRequest: InteractionRequest = {
+        input: inputToRetry,
+        mode: mode === 'god' ? 'god' : 'character'
+      }
+      
+      const aiResponse = await handleAsyncError(
+        () => apiService.sendInteraction(campaign.id, interactionRequest),
+        {
+          context: 'AI Game Response Retry',
+          showToast: false,
+          retryOptions: {
+            maxRetries: 1, // Fewer retries for manual retries
+            retryDelay: 1000,
+            exponentialBackoff: false
+          },
+          onLoadingChange: (loading) => {
+            setLoadingState(loading)
+          }
+        }
+      )
+      
+      if (aiResponse && aiResponse.success) {
+        const aiEntry: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: aiResponse.god_mode_response || aiResponse.narrative || aiResponse.response || 'The AI provided a response, but it was empty.',
+          timestamp: new Date().toISOString(),
+          author: 'ai'
+        }
+        
+        setStory(prev => [...prev, aiEntry])
+        setRetryCount(0)
+        setLastFailedInput('')
+        setAiError(null)
+        
+        showSuccessToast('AI response received on retry!', { context: 'Game Retry', duration: 3000 })
+      } else {
+        throw new Error(aiResponse?.error || 'AI failed to generate a response on retry')
+      }
+      
+    } catch (error: any) {
+      const errorMessage = error?.message || 'Retry failed'
+      
+      const errorEntry: StoryEntry = {
+        id: (Date.now() + 1).toString(),
+        type: 'error',
+        content: `❌ Retry failed: ${errorMessage}. The AI service may be temporarily unavailable.`,
+        timestamp: new Date().toISOString(),
+        author: 'system',
+        isError: true,
+        isRetryable: false
+      }
+      
+      setStory(prev => [...prev, errorEntry])
+      showErrorToast(`Retry failed: ${errorMessage}`, { context: 'Game Retry' })
+    } finally {
+      setIsLoading(false)
+      setLoadingState({ isLoading: false })
+      setPlayerInput(currentInput) // Restore original input
+    }
   }
+
+  // Listen for retry events from error toasts
+  useEffect(() => {
+    const handleRetryEvent = (event: any) => {
+      if (event.detail?.context === 'Game AI' && lastFailedInput) {
+        handleRetryAI(lastFailedInput)
+      }
+    }
+    
+    window.addEventListener('error-toast-retry', handleRetryEvent)
+    return () => window.removeEventListener('error-toast-retry', handleRetryEvent)
+  }, [lastFailedInput])
+
 
   const getEntryIcon = (entry: StoryEntry) => {
     switch (entry.type) {
       case 'action':
-        return <User className="w-4 h-4" />
+        return <MessageSquare className="w-4 h-4" />
       case 'narration':
         return <BookOpen className="w-4 h-4" />
       case 'dialogue':
         return <MessageSquare className="w-4 h-4" />
       case 'system':
         return <Settings className="w-4 h-4" />
+      case 'error':
+        return <Sparkles className="w-4 h-4 text-red-400" />
       default:
         return <BookOpen className="w-4 h-4" />
     }
@@ -246,23 +445,13 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
         return 'bg-accent/20 border-accent/30 text-accent-foreground'
       case 'system':
         return 'bg-muted/30 border-muted/40 text-muted-foreground'
+      case 'error':
+        return 'bg-red-500/10 border-red-500/20 text-red-400'
       default:
         return 'bg-card/50 border-border/50 text-card-foreground'
     }
   }
 
-  const getCharacterStatusColor = () => {
-    switch (character.status) {
-      case 'healthy':
-        return 'text-green-400'
-      case 'injured':
-        return 'text-yellow-400'
-      case 'critical':
-        return 'text-red-400'
-      default:
-        return 'text-gray-400'
-    }
-  }
 
   return (
     <div className={`min-h-screen ${getThemeGradient()} relative overflow-hidden`}>
@@ -297,17 +486,8 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 <Badge
-                  variant={mode === 'character' ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => setMode('character')}
-                >
-                  <User className="w-3 h-3 mr-1" />
-                  Character Mode
-                </Badge>
-                <Badge
-                  variant={mode === 'god' ? 'default' : 'outline'}
-                  className="cursor-pointer"
-                  onClick={() => setMode('god')}
+                  variant="default"
+                  className="cursor-default"
                 >
                   <Crown className="w-3 h-3 mr-1" />
                   God Mode
@@ -322,84 +502,6 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
         </header>
 
         <div className="flex-1 flex overflow-hidden">
-          {/* Sidebar - Character Info */}
-          <aside className="w-80 border-r border-border/20 bg-card/5 backdrop-blur-sm p-6 overflow-y-auto">
-            <Card className="bg-card/50 backdrop-blur-sm border-border/50 mb-6">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <div className={`w-8 h-8 bg-gradient-to-r ${colors.primary} rounded-lg flex items-center justify-center`}>
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                  <span>{character.name}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Level</span>
-                  <Badge variant="secondary">{character.level}</Badge>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Class</span>
-                  <span className="text-foreground">{character.class}</span>
-                </div>
-
-                <Separator className="bg-border/30" />
-
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Heart className={`w-4 h-4 ${getCharacterStatusColor()}`} />
-                      <span className="text-muted-foreground">HP</span>
-                    </div>
-                    <span className="text-foreground">{character.hp}/{character.maxHp}</span>
-                  </div>
-
-                  <div className="w-full bg-muted/30 rounded-full h-2">
-                    <div
-                      className={`h-2 rounded-full bg-gradient-to-r ${
-                        character.hp / character.maxHp > 0.6 ? 'from-green-500 to-green-400' :
-                        character.hp / character.maxHp > 0.3 ? 'from-yellow-500 to-yellow-400' :
-                        'from-red-500 to-red-400'
-                      }`}
-                      style={{ width: `${(character.hp / character.maxHp) * 100}%` }}
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Shield className="w-4 h-4 text-blue-400" />
-                      <span className="text-muted-foreground">AC</span>
-                    </div>
-                    <span className="text-foreground">{character.ac}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Actions */}
-            <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center space-x-2">
-                  <Zap className="w-4 h-4 text-accent" />
-                  <span>Quick Actions</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {quickActions.map((action, index) => (
-                  <Button
-                    key={index}
-                    variant="ghost"
-                    className="w-full justify-start text-left h-auto p-3 hover:bg-accent/10"
-                    onClick={action.action}
-                  >
-                    <action.icon className="w-4 h-4 mr-2 shrink-0" />
-                    <span className="text-sm">{action.text}</span>
-                  </Button>
-                ))}
-              </CardContent>
-            </Card>
-          </aside>
 
           {/* Main Content */}
           <main className="flex-1 flex flex-col">
@@ -423,6 +525,18 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                           </div>
                           <div className="flex-1">
                             <p className="leading-relaxed">{entry.content}</p>
+                            {entry.isError && entry.isRetryable && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRetryAI(entry.originalInput)}
+                                className="mt-2 text-xs border-red-300 hover:bg-red-50 text-red-600"
+                                disabled={isLoading}
+                              >
+                                <RefreshCw className={`w-3 h-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                                Retry AI Request
+                              </Button>
+                            )}
                             <p className="text-muted-foreground text-xs mt-2">
                               {new Date(entry.timestamp).toLocaleTimeString()}
                             </p>
@@ -432,17 +546,76 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                     </Card>
                   ))}
 
-                  {isLoading && (
+                  {(isLoading || loadingState.isLoading) && (
                     <Card className="bg-card/50 backdrop-blur-sm border-border/50">
                       <CardContent className="p-4">
                         <div className="flex items-center space-x-3">
                           <RefreshCw className="w-4 h-4 text-primary animate-spin" />
                           <div className="flex-1">
+                            <div className="flex items-center space-between">
+                              <div className="flex items-center space-x-2 flex-1">
+                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150"></div>
+                                <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-300"></div>
+                                <span className="text-muted-foreground ml-2">
+                                  {loadingState.status || 'The Game Master is thinking...'}
+                                </span>
+                              </div>
+                              {retryCount > 0 && (
+                                <Badge variant="outline" className="text-xs ml-2">
+                                  Retry {retryCount}
+                                </Badge>
+                              )}
+                            </div>
+                            {loadingState.progress !== undefined && loadingState.progress > 0 && (
+                              <div className="mt-3">
+                                <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                                  <div 
+                                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                                    style={{ width: `${Math.min(loadingState.progress, 100)}%` }}
+                                  ></div>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {Math.round(loadingState.progress)}% complete
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  
+                  {aiError && !isLoading && !loadingState.isLoading && (
+                    <Card className="bg-red-500/10 backdrop-blur-sm border-red-500/20">
+                      <CardContent className="p-4">
+                        <div className="flex items-center space-x-3">
+                          <Sparkles className="w-4 h-4 text-red-400" />
+                          <div className="flex-1">
+                            <p className="text-red-400 text-sm font-medium mb-2">
+                              AI Service Temporarily Unavailable
+                            </p>
+                            <p className="text-red-300 text-xs mb-3">
+                              {aiError}
+                            </p>
                             <div className="flex items-center space-x-2">
-                              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-150"></div>
-                              <div className="w-2 h-2 bg-primary rounded-full animate-pulse delay-300"></div>
-                              <span className="text-muted-foreground ml-2">The Game Master is thinking...</span>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRetryAI()}
+                                className="text-xs border-red-300 hover:bg-red-50 text-red-600"
+                              >
+                                <RefreshCw className="w-3 h-3 mr-1" />
+                                Retry Last Request
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAiError(null)}
+                                className="text-xs text-red-400 hover:text-red-300"
+                              >
+                                Dismiss
+                              </Button>
                             </div>
                           </div>
                         </div>
@@ -481,6 +654,41 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                 </div>
               )}
 
+              {/* Connection Status */}
+              {(aiError || !isOnline) && (
+                <div className={`mb-3 p-3 rounded-md ${
+                  !isOnline 
+                    ? 'bg-red-500/10 border border-red-500/20'
+                    : 'bg-yellow-500/10 border border-yellow-500/20'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-2">
+                      <Sparkles className={`w-4 h-4 ${
+                        !isOnline ? 'text-red-400' : 'text-yellow-400'
+                      }`} />
+                      <span className={`text-sm font-medium ${
+                        !isOnline ? 'text-red-400' : 'text-yellow-400'
+                      }`}>
+                        {!isOnline 
+                          ? 'No internet connection - AI responses unavailable'
+                          : 'AI connection issues detected - some features may be limited'
+                        }
+                      </span>
+                    </div>
+                    {isOnline && aiError && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setAiError(null)}
+                        className="text-xs text-yellow-400 hover:text-yellow-300"
+                      >
+                        Dismiss
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
+              
               {/* Input Form */}
               <div className="flex space-x-4">
                 <div className="flex-1 relative">
@@ -488,7 +696,7 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                     ref={textareaRef}
                     value={playerInput}
                     onChange={(e) => setPlayerInput(e.target.value)}
-                    placeholder={mode === 'character' ? "What do you do?" : "Describe what happens next..."}
+                    placeholder="Describe what happens next..."
                     className="min-h-[80px] resize-none bg-card/50 backdrop-blur-sm border-border/50 focus:border-primary/50"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
@@ -507,11 +715,25 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
                 <div className="flex flex-col space-y-2">
                   <Button
                     onClick={handleSubmit}
-                    disabled={!playerInput.trim() || isLoading}
-                    className={`bg-gradient-to-r ${colors.primary} hover:opacity-90 px-6`}
+                    disabled={!playerInput.trim() || isLoading || loadingState.isLoading || !isOnline}
+                    className={`bg-gradient-to-r ${colors.primary} hover:opacity-90 px-6 relative`}
                   >
-                    <Send className="w-4 h-4 mr-2" />
-                    {mode === 'character' ? 'Act' : 'Continue'}
+                    {(isLoading || loadingState.isLoading) ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                        {loadingState.status ? 'Processing...' : 'Sending...'}
+                      </>
+                    ) : !isOnline ? (
+                      <>
+                        <Sparkles className="w-4 h-4 mr-2 opacity-50" />
+                        Offline
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Continue
+                      </>
+                    )}
                   </Button>
 
                   <Button
@@ -527,17 +749,26 @@ export function GameView({ user, campaign, theme, onUpdateCampaign, onBack }: Ga
 
               {/* Mode Info */}
               <div className="flex items-center justify-between text-sm text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  {mode === 'character' ? (
-                    <>
-                      <User className="w-4 h-4" />
-                      <span>Playing as {character.name} • Press Enter to send • Shift+Enter for new line</span>
-                    </>
-                  ) : (
-                    <>
-                      <Crown className="w-4 h-4" />
-                      <span>God Mode • You control the narrative</span>
-                    </>
+                <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-2">
+                    <Crown className="w-4 h-4" />
+                    <span>God Mode • You control the narrative</span>
+                  </div>
+                  
+                  {/* Network Status Indicator */}
+                  <div className="flex items-center space-x-2">
+                    <div className={`w-2 h-2 rounded-full ${isOnline ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+                    <span className={`text-xs ${isOnline ? 'text-green-400' : 'text-red-400'}`}>
+                      {isOnline ? 'AI Online' : 'AI Offline'}
+                    </span>
+                  </div>
+                  
+                  {/* AI Status */}
+                  {aiError && (
+                    <div className="flex items-center space-x-1">
+                      <Sparkles className="w-3 h-3 text-yellow-400" />
+                      <span className="text-xs text-yellow-400">AI Issues</span>
+                    </div>
                   )}
                 </div>
 

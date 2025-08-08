@@ -4,12 +4,25 @@ Centralized Test Configuration for WorldArchitect.AI
 
 Single source of truth for all test server and testing configuration.
 Replaces scattered configuration across multiple test files.
+
+Uses shared server configuration from scripts/server-config.sh
 """
 
 import os
 import time
 from dataclasses import dataclass
 from enum import Enum
+
+# Import shared configuration constants
+def get_config_value(key: str, default: str) -> str:
+    """Get configuration value from environment (set by server-config.sh)"""
+    return os.environ.get(key, default)
+
+# Load shared configuration constants
+DEFAULT_FLASK_PORT = int(get_config_value("DEFAULT_FLASK_PORT", "8081"))
+DEFAULT_REACT_PORT = int(get_config_value("DEFAULT_REACT_PORT", "3002"))
+FLASK_PORT_RANGE_START = int(get_config_value("FLASK_PORT_RANGE_START", "8081"))
+FLASK_PORT_RANGE_END = int(get_config_value("FLASK_PORT_RANGE_END", "8090"))
 
 
 class TestMode(Enum):
@@ -63,10 +76,10 @@ class TestConfig:
 
     # Server configurations by test type
     SERVERS: dict[TestType, ServerConfig] = {
-        TestType.BROWSER: ServerConfig(base_port=8081, port_range=(8080, 8090)),
-        TestType.HTTP: ServerConfig(base_port=8086, port_range=(8085, 8095)),
-        TestType.INTEGRATION: ServerConfig(base_port=8088, port_range=(8087, 8097)),
-        TestType.DEVELOPMENT: ServerConfig(base_port=5005, port_range=(5000, 5010)),
+        TestType.BROWSER: ServerConfig(base_port=DEFAULT_FLASK_PORT, port_range=(FLASK_PORT_RANGE_START, FLASK_PORT_RANGE_END)),
+        TestType.HTTP: ServerConfig(base_port=DEFAULT_FLASK_PORT + 5, port_range=(FLASK_PORT_RANGE_START + 4, FLASK_PORT_RANGE_END + 4)),
+        TestType.INTEGRATION: ServerConfig(base_port=DEFAULT_FLASK_PORT + 7, port_range=(FLASK_PORT_RANGE_START + 6, FLASK_PORT_RANGE_END + 6)),
+        TestType.DEVELOPMENT: ServerConfig(base_port=DEFAULT_FLASK_PORT, port_range=(FLASK_PORT_RANGE_START, FLASK_PORT_RANGE_END)),
     }
 
     # Common test parameters

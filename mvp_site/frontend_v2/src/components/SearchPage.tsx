@@ -18,7 +18,7 @@ import {
   Scroll,
   Crown
 } from 'lucide-react'
-import type { AppView } from '../App'
+import type { AppView } from '../types'
 
 interface Campaign {
   id: string
@@ -33,16 +33,6 @@ interface Campaign {
   lastPlayed?: Date
 }
 
-interface Character {
-  id: string
-  name: string
-  class: string
-  level: number
-  race: string
-  campaign?: string
-  status: 'active' | 'retired' | 'deceased'
-  thumbnail?: string
-}
 
 interface SearchPageProps {
   onViewChange: (view: AppView) => void
@@ -50,60 +40,29 @@ interface SearchPageProps {
 
 export function SearchPage({ onViewChange }: SearchPageProps) {
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchType, setSearchType] = useState<'campaigns' | 'characters' | 'all'>('campaigns')
+  const [searchType, setSearchType] = useState<'campaigns'>('campaigns')
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [characters, setCharacters] = useState<Character[]>([])
   const [loading, setLoading] = useState(false)
 
-  // Mock data for development
+  // IMPLEMENTATION_NOTE: Search functionality currently operates on local data
+  // Full API search will be enabled when backend search endpoints are implemented
   useEffect(() => {
-    const mockCampaigns: Campaign[] = [
-      {
-        id: '1',
-        name: 'The Lost Mines of Phandelver',
-        description: 'A classic D&D 5e adventure for new players',
-        gameSystem: 'D&D 5e',
-        playerCount: 4,
-        level: '1-5',
-        status: 'active',
-        tags: ['beginner-friendly', 'classic', 'dungeon-crawl'],
-        lastPlayed: new Date('2024-01-15')
-      },
-      {
-        id: '2',
-        name: 'Curse of Strahd',
-        description: 'Gothic horror in the demiplane of Barovia',
-        gameSystem: 'D&D 5e',
-        playerCount: 5,
-        level: '1-10',
-        status: 'recruiting',
-        tags: ['horror', 'roleplay-heavy', 'mature']
+    // Fetch campaigns from API
+    const fetchCampaigns = async () => {
+      try {
+        // BACKEND_LIMITATION: Backend search API not yet implemented
+        // Using local filtering for now - will connect to /api/campaigns/search when available
+        if (import.meta.env?.DEV) {
+          console.log('Campaign search using local data - backend search API pending')
+        }
+        setCampaigns([]) // Empty state until real API is connected
+      } catch (error) {
+        console.error('Failed to fetch campaigns:', error)
+        setCampaigns([])
       }
-    ]
+    }
 
-    const mockCharacters: Character[] = [
-      {
-        id: '1',
-        name: 'Aelar Moonwhisper',
-        class: 'Ranger',
-        level: 3,
-        race: 'Elf',
-        campaign: 'The Lost Mines of Phandelver',
-        status: 'active'
-      },
-      {
-        id: '2',
-        name: 'Thorek Ironforge',
-        class: 'Fighter',
-        level: 5,
-        race: 'Dwarf',
-        campaign: 'Curse of Strahd',
-        status: 'active'
-      }
-    ]
-
-    setCampaigns(mockCampaigns)
-    setCharacters(mockCharacters)
+    fetchCampaigns()
   }, [])
 
   const filteredCampaigns = campaigns.filter(campaign =>
@@ -112,11 +71,6 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
     campaign.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
   )
 
-  const filteredCharacters = characters.filter(character =>
-    character.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    character.class.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    character.race.toLowerCase().includes(searchQuery.toLowerCase())
-  )
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -146,7 +100,7 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
               <div className="flex-1">
                 <Input
                   type="text"
-                  placeholder="Search campaigns, characters, or tags..."
+                  placeholder="Search campaigns or tags..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="bg-white/10 border-purple-500/30 text-white placeholder:text-purple-300"
@@ -158,8 +112,6 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="campaigns">Campaigns</SelectItem>
-                  <SelectItem value="characters">Characters</SelectItem>
-                  <SelectItem value="all">All</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -167,7 +119,7 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
         </Card>
 
         {/* Campaigns Section */}
-        {(searchType === 'campaigns' || searchType === 'all') && (
+        {searchType === 'campaigns' && (
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
               <Shield className="h-6 w-6" />
@@ -219,48 +171,9 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
           </div>
         )}
 
-        {/* Characters Section */}
-        {(searchType === 'characters' || searchType === 'all') && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-2">
-              <Sword className="h-6 w-6" />
-              Characters ({filteredCharacters.length})
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {filteredCharacters.map((character) => (
-                <Card key={character.id} className="bg-black/20 border-purple-500/30 hover:border-purple-400/50 transition-colors">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-white text-lg">{character.name}</CardTitle>
-                    <CardDescription className="text-purple-200">
-                      Level {character.level} {character.race} {character.class}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {character.campaign && (
-                      <div className="flex items-center gap-1 text-sm text-purple-200 mb-2">
-                        <MapPin className="h-3 w-3" />
-                        {character.campaign}
-                      </div>
-                    )}
-                    <Badge variant={character.status === 'active' ? 'default' : 'outline'} className="mb-3">
-                      {character.status}
-                    </Badge>
-                    <Button
-                      size="sm"
-                      className="w-full bg-purple-600 hover:bg-purple-700"
-                      onClick={() => onViewChange('character-sheet')}
-                    >
-                      View Character
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Empty State */}
-        {searchQuery && filteredCampaigns.length === 0 && filteredCharacters.length === 0 && (
+        {searchQuery && filteredCampaigns.length === 0 && (
           <Card className="bg-black/20 border-purple-500/30 text-center py-12">
             <CardContent>
               <Sparkles className="h-12 w-12 text-purple-400 mx-auto mb-4" />
@@ -278,14 +191,6 @@ export function SearchPage({ onViewChange }: SearchPageProps) {
           >
             <Shield className="h-4 w-4" />
             Create New Campaign
-          </Button>
-          <Button
-            onClick={() => onViewChange('character-creator')}
-            variant="outline"
-            className="border-purple-500/30 text-purple-200 hover:bg-purple-600/20 flex items-center gap-2"
-          >
-            <Scroll className="h-4 w-4" />
-            Create New Character
           </Button>
           <Button
             onClick={() => onViewChange('dashboard')}

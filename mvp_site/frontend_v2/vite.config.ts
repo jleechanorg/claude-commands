@@ -147,11 +147,12 @@ export default defineConfig({
   // Development server configuration
   server: {
     port: 3002,
-    host: true,
-    // Proxy API requests to backend
+    host: '0.0.0.0',
+    // Proxy API requests to backend - dynamic port matching V1 backend
+    // Uses same PORT environment variable as main.py: int(os.environ.get("PORT", "8081"))
     proxy: {
       '/api': {
-        target: 'http://localhost:5005',
+        target: `http://localhost:${process.env.PORT || '8081'}`,
         changeOrigin: true,
       },
     },

@@ -409,6 +409,15 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 **Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view`
 **Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
 
+🚨 **TEST FAILURE PRIORITY ANALYSIS**: → See "NO EXCUSES FOR TEST FAILURES" protocol above for canonical rule.
+
+🚨 **VISUAL CONTENT VALIDATION**: ⚠️ MANDATORY - RED/GREEN tests must verify end-to-end data flow
+- ❌ **INSUFFICIENT**: Only testing API calls and navigation
+- ✅ **REQUIRED**: Verify displayed content matches user input data
+- ✅ **Pattern**: Input data → API call → Database → Retrieval → UI display validation
+- ✅ **Example**: Create campaign with "Elara" → Verify game shows "Elara" not hardcoded "Shadowheart"
+- **Critical Learning**: API integration success ≠ content rendering success
+
 🚨 **TEST WITH REAL CONFLICTS**: ⚠️ MANDATORY
 - ✅ ALWAYS test merge conflict detection with PRs that actually have conflicts
 - ✅ Use `gh pr view [PR] --json mergeable` to verify real conflict state before testing
@@ -508,6 +517,17 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ **Immediate re-verification**: Treat user evidence as debugging signal, not personal attack
 - ✅ **Methodology review**: Re-check approach when user mentions details not in your analysis
 - ❌ **NEVER defend**: Wrong analysis - acknowledge error and re-verify immediately
+- ✅ **ALWAYS treat user evidence as ground truth** when screenshots/observations differ from Claude's
+- ✅ **IMMEDIATE investigation required**: Ask "Why am I seeing different results than the user?"
+- **Pattern**: User evidence → Immediate discrepancy investigation → Root cause analysis → Fix
+
+🚨 **CROSS-VERSION SYSTEMATIC DEBUGGING**: ⚠️ MANDATORY - For V1/V2 or version comparison issues
+- ✅ **ALWAYS start with side-by-side code comparison** of equivalent components
+- ✅ **Trace data flow systematically**: API → Database → UI in both versions  
+- ❌ **NEVER focus on surface symptoms** (routing, display) before architectural analysis
+- **Systematic Order**: Code comparison → Data flow analysis → Gap identification → Fix implementation
+- **Time Target**: 15-20 minutes for architectural gap identification vs extended symptom debugging
+- **Example**: V1 server-side vs V2 client-side data loading patterns require different approaches
 
 ## Environment, Tooling & Scripts
 
@@ -554,10 +574,8 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 **Pattern**: Search first → Create if new → Add observations to existing → Build relationships
 
 ### Task Agent Patterns
-**⚠️ Token Cost**: Each agent loads ~50k+ tokens. See `.claude/commands/parallel-vs-subagents.md` for alternatives.
-**When to Spawn**: Complex workflows | Different directories | Long operations (>5 min)
-**When NOT to Spawn**: Simple searches | Independent file ops | Data gathering (<30s each)
-**Pattern**: `Task(description="Research X", prompt="Detailed instructions...")`
+> **See:** `.claude/commands/parallel-vs-subagents.md` for the authoritative concurrency protocol
+(avoid duplicating the entire section here to prevent drift)
 
 ### TodoWrite Protocol
 **When Required**: Tasks with 3+ steps | Complex implementations | /execute commands

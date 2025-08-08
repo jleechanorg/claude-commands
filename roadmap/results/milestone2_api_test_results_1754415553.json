@@ -1,0 +1,77 @@
+{
+  "timestamp": "2025-08-05T10:39:13.822523",
+  "flask_url": "http://localhost:5005",
+  "test_user_id": "milestone2-test-user",
+  "total_tests": 7,
+  "passed_tests": 5,
+  "failed_tests": 2,
+  "success_rate": 71.42857142857143,
+  "results": [
+    {
+      "test": "campaigns_list_endpoint",
+      "success": true,
+      "details": "Retrieved 1 campaigns with valid structure",
+      "timestamp": "2025-08-05T10:38:12.501948"
+    },
+    {
+      "test": "campaign_creation_status",
+      "success": false,
+      "details": "Expected 200, got 201: {\n  \"campaign_id\": \"tSuJobcz4A6ohDWVKPO4\",\n  \"success\": true\n}\n",
+      "timestamp": "2025-08-05T10:38:45.740385"
+    },
+    {
+      "test": "validation_case_0",
+      "success": true,
+      "details": "Correctly rejected missing title",
+      "timestamp": "2025-08-05T10:38:45.742327"
+    },
+    {
+      "test": "validation_case_1",
+      "success": true,
+      "details": "Correctly rejected empty title",
+      "timestamp": "2025-08-05T10:38:45.743814"
+    },
+    {
+      "test": "validation_case_2",
+      "success": true,
+      "details": "Correctly rejected title too long",
+      "timestamp": "2025-08-05T10:39:13.481054"
+    },
+    {
+      "test": "validation_case_3",
+      "success": true,
+      "details": "Correctly rejected invalid selected_prompts type",
+      "timestamp": "2025-08-05T10:39:13.651213"
+    },
+    {
+      "test": "campaign_creation_validation",
+      "success": true,
+      "details": "Passed 4/4 validation tests",
+      "timestamp": "2025-08-05T10:39:13.651301"
+    },
+    {
+      "test": "authentication_handling",
+      "success": true,
+      "details": "Correctly enforced authentication requirements",
+      "timestamp": "2025-08-05T10:39:13.654052"
+    },
+    {
+      "test": "error_malformed_json",
+      "success": false,
+      "details": "Expected 400/422 for malformed JSON, got 500",
+      "timestamp": "2025-08-05T10:39:13.739764"
+    },
+    {
+      "test": "response_performance",
+      "success": true,
+      "details": "Average response time: 80.77ms",
+      "timestamp": "2025-08-05T10:39:13.820669"
+    },
+    {
+      "test": "cors_headers",
+      "success": true,
+      "details": "CORS headers properly configured",
+      "timestamp": "2025-08-05T10:39:13.822443"
+    }
+  ]
+}

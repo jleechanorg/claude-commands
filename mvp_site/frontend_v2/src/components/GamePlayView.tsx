@@ -3,6 +3,7 @@ import { Button } from './ui/button'
 import { Badge } from './ui/badge'
 import { Textarea } from './ui/textarea'
 import { ScrollArea } from './ui/scroll-area'
+import { apiService } from '../services/api.service'
 import {
   ArrowLeft,
   Send,
@@ -14,12 +15,17 @@ import {
   Share,
   Volume2,
   VolumeX,
-  Sparkles
+  Sparkles,
+  Heart,
+  Shield,
+  Swords
 } from 'lucide-react'
+
 
 interface GamePlayViewProps {
   onBack: () => void
   campaignTitle: string
+  campaignId?: string
 }
 
 interface StoryEntry {
@@ -31,49 +37,110 @@ interface StoryEntry {
   choices?: string[]
 }
 
-export function GamePlayView({ onBack, campaignTitle }: GamePlayViewProps) {
-  const [story, setStory] = useState<StoryEntry[]>([
-    {
-      id: '1',
-      type: 'system',
-      content: `Welcome to ${campaignTitle}! Your adventure begins now...`,
-      timestamp: new Date().toISOString(),
-      author: 'system'
-    },
-    {
-      id: '2',
-      type: 'narration',
-      content: `And above all, the "Manifest Shadow Servant" was a cold, precise eye. Its reconnaissance reports were chillingly accurate: a detailed map of the Bastion's internal layout, including patrol routes, key guard shifts, and the precise location of the "Sacred Sunstone," the relic radiating the Bastion's core light. It had even identified a series of little-used maintenance tunnels beneath the structure, offering a covert entry point.
-
-Shadowheart opened her eyes, a grim satisfaction settling over her. The data was clear. The multi-pronged assault was underway, each Justiciar a specialized tool, and her Shadow Servant the perfect scout. The Bastion of Eternal Radiance, so full of its arrogant light, was already beginning to feel the insidious touch of Shar's encroaching night.`,
-      timestamp: new Date().toISOString(),
-      author: 'ai'
-    },
-    {
-      id: '3',
-      type: 'choices',
-      content: `The initial intelligence and operational reports from the Justiciars and Manifest Shadow Servant are positive. The strategy is well underway, and immediate vulnerabilities have been identified. The Bastion is indeed complacent.
-
-The Bastion of Eternal Radiance is proving to be less fortified against insidious attacks than expected, its faith in Lathander blinding it to the shadows.`,
-      timestamp: new Date().toISOString(),
-      author: 'ai',
-      choices: [
-        'Evaluate New Recruits: Focus on the desperate individuals Roric\'s overt displays have attracted, consolidating their loyalty to Shar.',
-        'Exploit Supply Lines: Direct Thane and Kaelen to immediately exploit the identified vulnerabilities in the Bastion\'s supply lines.',
-        'Intensify Psychological Warfare: Instruct Seraphina to escalate her efforts to sow despair and doubt within the Bastion\'s ranks.',
-        'Plan Covert Entry: Utilize the Manifest Shadow Servant\'s detailed intel to prepare a covert entry for a personal strike or to send a smaller, elite force.',
-        'Custom Action'
-      ]
-    }
-  ])
+export function GamePlayView({ onBack, campaignTitle, campaignId }: GamePlayViewProps) {
+  console.log('🎯 GAMEPLAYVIEW received campaignTitle:', campaignTitle)
+  console.log('🎯 GAMEPLAYVIEW received campaignId:', campaignId)
+  
+  const [story, setStory] = useState<StoryEntry[]>([])
 
   const [playerInput, setPlayerInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isInitializing, setIsInitializing] = useState(true)
   const [isSoundEnabled, setIsSoundEnabled] = useState(true)
-  const [mode, setMode] = useState<'character' | 'god'>('character')
+  const [mode, setMode] = useState<'god'>('god')
 
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const initialStoryCreatedRef = useRef(false)
+
+  // Load existing campaign data when component mounts (like V1 does)
+  useEffect(() => {
+    if (!campaignId || initialStoryCreatedRef.current) {
+      return
+    }
+
+    initialStoryCreatedRef.current = true
+
+    const loadCampaignData = async () => {
+      try {
+        setIsInitializing(true)
+
+        // First, try to load existing campaign data (like V1 does)
+        console.log('🎯 GAMEPLAYVIEW loading existing campaign data for:', campaignId)
+        
+        try {
+          const campaignData = await apiService.getCampaign(campaignId)
+          console.log('🎯 GAMEPLAYVIEW loaded campaign data:', campaignData)
+
+          // Convert existing story entries to V2 format
+          if (campaignData.story && Array.isArray(campaignData.story) && campaignData.story.length > 0) {
+            console.log('🎯 GAMEPLAYVIEW found existing story entries:', campaignData.story.length)
+            
+            const convertedStory = campaignData.story.map((entry: any, index: number) => ({
+              id: `story-${index}`,
+              type: entry.mode === 'god' ? 'narration' : 'action' as 'narration' | 'action',
+              content: entry.text || entry.narrative || '',
+              timestamp: entry.timestamp || new Date().toISOString(),
+              author: entry.actor === 'user' ? 'player' : (entry.actor === 'gemini' ? 'ai' : 'system') as 'player' | 'ai' | 'system'
+            }))
+
+            setStory(convertedStory)
+            setIsInitializing(false)
+            return // Exit early if we successfully loaded existing story
+          }
+        } catch (error) {
+          console.warn('🎯 GAMEPLAYVIEW failed to load existing campaign data, creating new content:', error)
+        }
+
+        // Fallback: Create initial content if no existing story (new campaign or API error)
+        console.log('🎯 GAMEPLAYVIEW creating initial content for new campaign')
+        const welcomeMessage = `Welcome to ${campaignTitle}! Your adventure begins now...`
+        
+        const initialStory: StoryEntry = {
+          id: '1',
+          type: 'system',
+          content: welcomeMessage,
+          timestamp: new Date().toISOString(),
+          author: 'system'
+        }
+        setStory([initialStory])
+
+        // Send initial prompt to get story content
+        const response = await apiService.sendInteraction(campaignId, {
+          input: 'Begin the adventure',
+          mode: 'god' // Use god mode for content generation
+        })
+
+        if (response.success && (response.response || response.narrative)) {
+          const content = response.response || response.narrative || ''
+          const aiStory: StoryEntry = {
+            id: `init-${Date.now()}`,
+            type: 'narration',
+            content: content,
+            timestamp: new Date().toISOString(),
+            author: 'ai'
+          }
+
+          setStory(prev => [...prev, aiStory])
+        }
+      } catch (error) {
+        console.error('Failed to load campaign or generate initial content:', error)
+        // Fall back to a generic message without hardcoded character names
+        const fallbackStory: StoryEntry = {
+          id: `fallback-${Date.now()}`,
+          type: 'narration',
+          content: 'Your adventure is about to begin. The world awaits your first move...',
+          timestamp: new Date().toISOString(),
+          author: 'ai'
+        }
+        setStory(prev => [...prev, fallbackStory])
+      } finally {
+        setIsInitializing(false)
+      }
+    }
+
+    loadCampaignData()
+  }, [campaignId])
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -99,19 +166,51 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
     setPlayerInput('')
     setIsLoading(true)
 
-    // Simulate AI response
-    setTimeout(() => {
+    // Generate real AI response
+    try {
+      const response = await apiService.sendInteraction(campaignId || '', {
+        input: playerInput,
+        mode: mode
+      })
+
+      if (response.success && (response.response || response.narrative)) {
+        const content = response.response || response.narrative || 'The AI ponders your action...'
+        const aiResponse: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: content,
+          timestamp: new Date().toISOString(),
+          author: 'ai'
+        }
+
+        setStory(prev => [...prev, aiResponse])
+      } else {
+        // Fallback response
+        const aiResponse: StoryEntry = {
+          id: (Date.now() + 1).toString(),
+          type: 'narration',
+          content: 'Your action ripples through the world, creating new possibilities...',
+          timestamp: new Date().toISOString(),
+          author: 'ai'
+        }
+
+        setStory(prev => [...prev, aiResponse])
+      }
+    } catch (error) {
+      console.error('Failed to get AI response:', error)
+      // Error fallback response
       const aiResponse: StoryEntry = {
         id: (Date.now() + 1).toString(),
         type: 'narration',
-        content: generateAIResponse(playerInput),
+        content: 'The world seems to pause, waiting for the next moment to unfold...',
         timestamp: new Date().toISOString(),
         author: 'ai'
       }
 
       setStory(prev => [...prev, aiResponse])
+    } finally {
       setIsLoading(false)
-    }, 2000)
+    }
   }
 
   const handleChoiceClick = (choice: string) => {
@@ -121,16 +220,6 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
 
 
 
-  const generateAIResponse = (_input: string): string => {
-    const responses = [
-      "Your strategic decision proves effective. The shadows deepen around the Bastion as your operatives move into position. The faithful within grow increasingly uneasy, their prayers becoming more desperate as doubt creeps into their hearts.",
-      "The operation unfolds smoothly. Your agents report back with updates on their progress, each piece of intelligence revealing new opportunities to exploit. The Bastion's defenses, once thought impregnable, show clear vulnerabilities.",
-      "As your plan advances, unexpected complications arise. A patrol changes its route, forcing your operatives to adapt. However, this setback reveals an even more promising avenue of approach that had previously gone unnoticed.",
-      "The psychological warfare begins to take its toll. Reports reach you of increased anxiety among the Bastion's defenders, whispered conversations about strange shadows and unexplained sounds in the night. Your influence spreads like a creeping darkness.",
-      "Your tactical approach yields immediate results. The supply lines prove more vulnerable than anticipated, and your operatives successfully implement the first phase of disruption. The Bastion's resources begin to strain under the subtle assault."
-    ]
-    return responses[Math.floor(Math.random() * responses.length)]
-  }
 
   const renderStoryEntry = (entry: StoryEntry) => {
     if (entry.type === 'choices' && entry.choices) {
@@ -287,32 +376,49 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-6 py-6">
-          {/* Story Area */}
-          <div className="mb-6">
-            <ScrollArea ref={scrollAreaRef} className="h-[60vh] rounded-lg">
-              <div className="space-y-4 pr-4">
-                {story.map((entry) => renderStoryEntry(entry))}
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex gap-6">
+            {/* Main Game Area */}
+            <div className="flex-1">
+              {/* Story Area */}
+              <div className="mb-6">
+                <ScrollArea ref={scrollAreaRef} className="h-[60vh] rounded-lg">
+                  <div className="space-y-4 pr-4">
+                    {story.map((entry) => renderStoryEntry(entry))}
 
-                {isLoading && (
-                  <div className="bg-purple-100/50 border-l-4 border-purple-400 p-4 rounded-r-lg backdrop-blur-sm">
-                    <div className="flex items-center space-x-3">
-                      <RefreshCw className="w-4 h-4 text-purple-600 animate-spin" />
-                      <div className="flex items-center space-x-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-150"></div>
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-300"></div>
-                        <span className="text-purple-700 ml-2 text-sm">The Game Master is thinking...</span>
+                    {isInitializing && (
+                      <div className="bg-blue-100/50 border-l-4 border-blue-400 p-4 rounded-r-lg backdrop-blur-sm">
+                        <div className="flex items-center space-x-3">
+                          <RefreshCw className="w-4 h-4 text-blue-600 animate-spin" />
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-150"></div>
+                            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse delay-300"></div>
+                            <span className="text-blue-700 ml-2 text-sm">Crafting your personalized adventure...</span>
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </ScrollArea>
-          </div>
+                    )}
 
-          {/* Input Area */}
-          <div className="bg-white/80 backdrop-blur-md border border-purple-200 rounded-lg p-6 shadow-lg">
+                    {isLoading && (
+                      <div className="bg-purple-100/50 border-l-4 border-purple-400 p-4 rounded-r-lg backdrop-blur-sm">
+                        <div className="flex items-center space-x-3">
+                          <RefreshCw className="w-4 h-4 text-purple-600 animate-spin" />
+                          <div className="flex items-center space-x-2">
+                            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-150"></div>
+                            <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse delay-300"></div>
+                            <span className="text-purple-700 ml-2 text-sm">The Game Master is thinking...</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+
+              {/* Input Area */}
+              <div className="bg-white/80 backdrop-blur-md border border-purple-200 rounded-lg p-6 shadow-lg">
             <div className="mb-4">
               <Textarea
                 ref={textareaRef}
@@ -332,25 +438,12 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${mode === 'character' ? 'bg-purple-500' : 'bg-purple-300'}`}></div>
+                  <div className="w-3 h-3 rounded-full bg-purple-500"></div>
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => setMode('character')}
-                    className={`${mode === 'character' ? 'text-purple-700 bg-purple-100' : 'text-purple-600'} hover:bg-purple-100`}
-                  >
-                    <User className="w-4 h-4 mr-1" />
-                    Character Mode
-                  </Button>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <div className={`w-3 h-3 rounded-full ${mode === 'god' ? 'bg-purple-500' : 'bg-purple-300'}`}></div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMode('god')}
-                    className={`${mode === 'god' ? 'text-purple-700 bg-purple-100' : 'text-purple-600'} hover:bg-purple-100`}
+                    className="text-purple-700 bg-purple-100 hover:bg-purple-100"
+                    disabled
                   >
                     <Crown className="w-4 h-4 mr-1" />
                     God Mode
@@ -371,5 +464,7 @@ The Bastion of Eternal Radiance is proving to be less fortified against insidiou
         </div>
       </div>
     </div>
+  </div>
+</div>
   )
 }

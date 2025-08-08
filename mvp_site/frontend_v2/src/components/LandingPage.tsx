@@ -101,7 +101,7 @@ export function LandingPage({ onLogin }: LandingPageProps) {
               🚀 Continue with Google
             </button>
             <p className="text-sm text-purple-200 mt-2">
-              This is a demo - clicking will simulate Google Sign-In
+              Sign in with your Google account to continue
             </p>
           </div>
         </main>

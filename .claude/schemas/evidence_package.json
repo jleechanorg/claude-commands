@@ -1,0 +1,223 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://worldarchitect.ai/schemas/evidence_package.json",
+  "title": "Test Evidence Package",
+  "description": "Standardized evidence package for TestExecutor to TestValidator handoff",
+  "type": "object",
+  "required": [
+    "test_specification",
+    "execution_timestamp",
+    "execution_summary",
+    "requirements_evidence",
+    "artifacts_directory"
+  ],
+  "properties": {
+    "test_specification": {
+      "type": "string",
+      "description": "Relative path to original test specification file",
+      "pattern": "^[^/].*\\.md$"
+    },
+    "execution_timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp when test execution began"
+    },
+    "execution_summary": {
+      "type": "object",
+      "required": ["total_requirements", "executed_steps", "evidence_files_created"],
+      "properties": {
+        "total_requirements": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Total number of requirements identified in test specification"
+        },
+        "executed_steps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of test steps actually executed"
+        },
+        "evidence_files_created": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Total number of evidence files (screenshots, logs) created"
+        },
+        "console_errors_found": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of console errors detected during execution"
+        },
+        "api_calls_made": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of API calls made during testing"
+        },
+        "authentication_successful": {
+          "type": "boolean",
+          "description": "Whether real authentication was successfully completed"
+        }
+      }
+    },
+    "requirements_evidence": {
+      "type": "array",
+      "minItems": 1,
+      "description": "Evidence collected for each test requirement",
+      "items": {
+        "type": "object",
+        "required": [
+          "requirement_id",
+          "requirement_text",
+          "execution_steps",
+          "evidence_collected",
+          "observations"
+        ],
+        "properties": {
+          "requirement_id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$",
+            "description": "Unique identifier for this requirement"
+          },
+          "requirement_text": {
+            "type": "string",
+            "minLength": 10,
+            "description": "Exact text of the requirement from test specification"
+          },
+          "execution_steps": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "string",
+              "minLength": 5
+            },
+            "description": "Specific steps taken to test this requirement"
+          },
+          "evidence_collected": {
+            "type": "object",
+            "required": ["screenshots", "console_logs", "network_requests"],
+            "properties": {
+              "screenshots": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^/]+\\.(png|jpg|jpeg)$"
+                },
+                "description": "Screenshot filenames (relative to artifacts_directory)"
+              },
+              "console_logs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^/]+\\.txt$"
+                },
+                "description": "Console log filenames (relative to artifacts_directory)"
+              },
+              "network_requests": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "pattern": "^[^/]+\\.(txt|json)$"
+                },
+                "description": "Network request log filenames"
+              },
+              "additional_artifacts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["filename", "type", "description"],
+                  "properties": {
+                    "filename": {"type": "string"},
+                    "type": {"type": "string", "enum": ["log", "screenshot", "json", "text", "other"]},
+                    "description": {"type": "string"}
+                  }
+                },
+                "description": "Any additional evidence files created"
+              }
+            }
+          },
+          "observations": {
+            "type": "string",
+            "minLength": 20,
+            "description": "Neutral observations about what was seen/measured during execution"
+          },
+          "raw_data": {
+            "type": "string",
+            "description": "Detailed neutral description of all observations for this requirement"
+          },
+          "timing_info": {
+            "type": "object",
+            "properties": {
+              "start_time": {"type": "string", "format": "date-time"},
+              "end_time": {"type": "string", "format": "date-time"},
+              "duration_ms": {"type": "integer", "minimum": 0}
+            },
+            "description": "Timing information for requirement execution"
+          }
+        }
+      }
+    },
+    "artifacts_directory": {
+      "type": "string",
+      "pattern": "^docs/test_evidence_[0-9]{4}-[0-9]{2}-[0-9]{2}[^/]*/?$",
+      "description": "Relative path to directory containing all evidence files"
+    },
+    "execution_environment": {
+      "type": "object",
+      "properties": {
+        "frontend_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Frontend server URL used for testing"
+        },
+        "backend_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Backend API server URL used for testing"
+        },
+        "authentication_method": {
+          "type": "string",
+          "enum": ["google_oauth", "real_auth", "other"],
+          "description": "Authentication method used during testing"
+        },
+        "browser_type": {
+          "type": "string",
+          "enum": ["chromium", "firefox", "webkit", "chrome"],
+          "description": "Browser used for Playwright automation"
+        },
+        "test_mode": {
+          "type": "string",
+          "enum": ["real", "mock", "hybrid"],
+          "description": "Testing mode - real API calls vs mocked"
+        }
+      },
+      "description": "Details about test execution environment"
+    },
+    "execution_notes": {
+      "type": "string",
+      "description": "General neutral observations about execution environment, issues encountered, etc."
+    },
+    "quality_metadata": {
+      "type": "object",
+      "properties": {
+        "evidence_completeness_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Self-assessment of evidence completeness (0-1)"
+        },
+        "screenshot_quality_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Self-assessment of screenshot clarity and relevance (0-1)"
+        },
+        "requirements_coverage_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Percentage of requirements that have evidence collected (0-1)"
+        }
+      },
+      "description": "Metadata about evidence package quality for validator assessment"
+    }
+  },
+  "additionalProperties": false
+}

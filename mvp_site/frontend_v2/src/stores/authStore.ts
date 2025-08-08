@@ -33,7 +33,8 @@ export const useAuthStore = create<AuthState>()(
       login: async (email: string, _password: string) => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Replace with actual API call when backend is ready
+          // FRONTEND_LIMITATION: Using mock authentication until Firebase integration
+          // Real authentication will be implemented with Firebase Auth SDK
           // const response = await apiService.login(email, password);
 
           // Simulated login for now

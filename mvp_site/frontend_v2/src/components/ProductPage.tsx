@@ -18,7 +18,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react'
-import type { Jersey, AppView } from '../App'
+import type { Jersey, AppView } from '../types'
 
 interface ProductPageProps {
   jersey: Jersey

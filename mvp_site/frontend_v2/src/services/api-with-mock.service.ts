@@ -179,8 +179,16 @@ class ApiWithMockService {
 
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
     if (this.useMock) {
-      // Immediately call with mock user
-      mockApiService.getCurrentUser().then(callback).catch(() => callback(null));
+      // In mock mode, immediately call with mock user (synchronously)
+      setTimeout(async () => {
+        try {
+          const user = await mockApiService.getCurrentUser();
+          callback(user);
+        } catch (error) {
+          console.warn('Mock auth state change failed:', error);
+          callback(null);
+        }
+      }, 0); // Async but immediate
 
       // Return empty unsubscribe
       return () => {};

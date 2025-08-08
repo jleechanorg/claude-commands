@@ -43,6 +43,7 @@ import argparse
 import asyncio
 import atexit
 import concurrent.futures
+import datetime
 import json
 import logging
 import os
@@ -267,23 +268,37 @@ def create_app() -> Flask:
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
                 id_token = request.headers[HEADER_AUTH].split(" ").pop()
-                # Firebase token verification using Admin SDK
+                # Firebase token verification using Admin SDK with clock skew tolerance
                 # check_revoked=True ensures revoked tokens are rejected for security
-                decoded_token = auth.verify_id_token(id_token, check_revoked=True)
+                # clock_skew_seconds=10 allows for up to 10 seconds of clock difference
+                decoded_token = auth.verify_id_token(
+                    id_token, 
+                    check_revoked=True,
+                    clock_skew_seconds=10  # Allow 10 seconds of clock skew
+                )
                 kwargs["user_id"] = decoded_token["uid"]
             except Exception as e:
+                error_message = str(e)
                 logging_util.error(f"Auth failed: {e}")
                 logging_util.error(
                     f"Token received: {id_token[:50] if id_token else 'None'}..."
                 )
                 logging_util.error(f"Headers: {dict(request.headers)}")
                 logging_util.error(traceback.format_exc())
-                return jsonify(
-                    {
-                        KEY_SUCCESS: False,
-                        KEY_ERROR: f"Authentication failed: {str(e)}",
-                    }
-                ), 401
+                
+                # Enhanced error response with clock skew hints
+                response_data = {
+                    KEY_SUCCESS: False,
+                    KEY_ERROR: f"Authentication failed: {error_message}",
+                }
+                
+                # Add clock skew guidance for specific errors
+                if "Token used too early" in error_message or "clock" in error_message.lower():
+                    response_data["error_type"] = "clock_skew"
+                    response_data["server_time_ms"] = int(datetime.datetime.now(datetime.UTC).timestamp() * 1000)
+                    response_data["hint"] = "Clock synchronization issue detected. The client and server clocks may be out of sync."
+                
+                return jsonify(response_data), 401
             return f(*args, **kwargs)
 
         return wrap
@@ -389,6 +404,15 @@ def create_app() -> Flask:
                 KEY_STORY: result.get("story", []),
                 "game_state": result.get("game_state", {}),
             }
+
+            # Enhanced debug logging for campaign data
+            campaign_data = result.get("campaign", {})
+            logging_util.info(f"🎯 BACKEND RESPONSE for campaign {campaign_id}:")
+            logging_util.info(f"  Campaign Title: '{campaign_data.get('title', 'NO_TITLE')}'")
+            logging_util.info(f"  Campaign Keys: {list(campaign_data.keys()) if campaign_data else 'EMPTY'}")
+            logging_util.info(f"  Story entries: {len(result.get('story', []))}")
+            logging_util.info(f"  Response data keys: {list(response_data.keys())}")
+            logging_util.info(f"  Full campaign object: {campaign_data}")
 
             return jsonify(response_data)
         except MCPClientError as e:
@@ -638,6 +662,23 @@ def create_app() -> Flask:
                     KEY_DETAILS: str(e),
                 }
             ), 500
+
+    # --- Time Sync Route for Clock Skew Detection ---
+    @app.route("/api/time", methods=["GET"])
+    def get_server_time() -> Response:
+        """
+        Get current server time for client clock skew detection and compensation.
+        
+        This endpoint is used by the frontend to detect differences between client
+        and server clocks, enabling compensation for authentication timing issues.
+        """
+        current_time = datetime.datetime.now(datetime.UTC)
+        
+        return jsonify({
+            "server_time_utc": current_time.isoformat(),
+            "server_timestamp": int(current_time.timestamp()),
+            "server_timestamp_ms": int(current_time.timestamp() * 1000),
+        })
 
     # --- Settings Routes ---
     @app.route("/settings")

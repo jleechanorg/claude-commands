@@ -50,6 +50,98 @@ Based on software engineering research showing:
 
 **Summary Checkpoint:** Before proceeding, clearly restate the problem using the evidence above.
 
+### Phase 0.5: Context-Aware Mandatory Code Walkthrough
+
+🚨 **AUTOMATED CONTEXT DETECTION**: This phase automatically triggers for complex debugging scenarios requiring systematic code analysis.
+
+**🎯 Walkthrough Triggers** (If ANY detected, Phase 0.5 is MANDATORY):
+- **Version Comparison Issues**: Keywords like "V1 vs V2", "old vs new", "migration", "upgrade"
+- **API Integration Problems**: Multiple system involvement, external service interactions
+- **Architecture Debugging**: Component interaction issues, data flow problems
+- **User Evidence Contradictions**: User screenshots/reports differ from automated observations
+- **Complex System Issues**: Multiple files/modules involved, cross-component failures
+
+**⚠️ MANDATORY USER EVIDENCE PRIMACY CHECK**:
+- **Critical Rule**: If user provided screenshots, logs, or behavioral observations, treat as GROUND TRUTH
+- **Required Action**: Compare user evidence with automated observations FIRST
+- **Investigation**: If discrepancies exist, ask "Why am I seeing different results than the user?"
+- **No Assumptions**: Never dismiss user evidence as environmental or user error
+
+**📋 SYSTEMATIC CODE WALKTHROUGH PROTOCOL**:
+
+**Step 1: Component Mapping (5 minutes)**
+Using Serena MCP for semantic code analysis:
+```
+mcp__serena__find_symbol --name_path "[component_name]" --relative_path "[file_path]"
+mcp__serena__get_symbols_overview --relative_path "[directory]"
+```
+- Identify equivalent functions/components between systems (e.g., V1 resumeCampaign vs V2 GamePlayView)
+- Map corresponding API endpoints, data handlers, UI components
+- Document component relationships and dependencies
+
+**Step 2: Side-by-Side Code Analysis (10-15 minutes)**
+Using systematic comparison methodology:
+```
+mcp__serena__find_symbol --name_path "[function1]" --include_body true
+mcp__serena__find_symbol --name_path "[function2]" --include_body true
+```
+- Compare equivalent functions for missing logic, API calls, state management
+- Identify architectural differences (server-side vs client-side patterns)
+- Check for missing imports, configuration, or initialization code
+- Verify error handling and edge case coverage
+
+**Step 3: Execution Path Tracing**
+Systematic flow analysis:
+- **User Action → API Call**: Trace user interaction to backend request
+- **API → Business Logic**: Follow request through service layer
+- **Business Logic → Data Layer**: Track database/storage interactions
+- **Data Layer → Response**: Verify response formation and return path
+- **Response → UI Update**: Confirm UI state updates and rendering
+
+**Step 4: Data Flow Verification**
+Validate data transformations:
+- **Input Format Verification**: Check data format expectations
+- **Transformation Logic**: Verify data conversion between components
+- **State Management**: Confirm state updates at each step
+- **Output Format Validation**: Check final data format matches UI expectations
+
+**Step 5: Gap Analysis & Evidence Synthesis (5 minutes)**
+Systematic comparison results:
+- **Missing Components**: Functions, API calls, or logic present in working version but absent in broken version
+- **Different Implementations**: Variations in approach that could cause behavioral differences
+- **Data Format Mismatches**: Input/output format incompatibilities
+- **Architectural Differences**: Fundamental approach differences (e.g., server vs client rendering)
+
+**🎯 WALKTHROUGH SUCCESS CRITERIA**:
+- [ ] All equivalent components identified and compared
+- [ ] Complete execution path traced in both systems (if comparative debugging)
+- [ ] Data flow verified at each transformation point
+- [ ] Specific gaps or differences documented with file:line references
+- [ ] User evidence discrepancies explained or flagged for investigation
+
+**⏱️ TIME-BOXED APPROACH**:
+- **Quick Wins** (0-5 min): Check most obvious differences first
+- **Systematic Deep Dive** (5-20 min): Complete component comparison and flow tracing
+- **Escalation Criteria** (20+ min): If no clear gaps found, escalate complexity or broaden scope
+
+**📚 Memory MCP Integration**: Capture walkthrough patterns for future reuse:
+```
+mcp__memory-server__create_entities([{
+  "name": "debug_walkthrough_[system]_[timestamp]",
+  "entityType": "debug_walkthrough_pattern", 
+  "observations": [
+    "Context: [debugging situation requiring walkthrough]",
+    "Components Compared: [specific functions/modules analyzed]",
+    "Execution Path: [traced flow from user action to response]",
+    "Gap Identified: [specific missing or different functionality]",
+    "Evidence Reconciliation: [how user evidence guided analysis]",
+    "Resolution Time: [total time from walkthrough to fix]"
+  ]
+}])
+```
+
+**Summary Checkpoint**: Document specific gaps, differences, or missing components found during walkthrough. These findings directly inform Phase 1 hypothesis formation.
+
 ### Phase 1: Research & Root Cause Analysis
 
 **🔬 Research Phase (for complex/novel issues):**
@@ -76,22 +168,30 @@ For complex issues, unknown technologies, or patterns requiring broader investig
 /research "Race condition data corruption multi-user database transactions"
 ```
 
-**🧠 Root Cause Analysis:**
+**🧠 Root Cause Analysis (Enhanced by Walkthrough Evidence):**
 
-Leverage sequential thinking capabilities to rank potential causes by:
-(a) likelihood given the error message and research findings
-(b) evidence in the code snippets and similar documented cases
-(c) impact if true based on research patterns
+Leverage sequential thinking capabilities enhanced by Phase 0.5 walkthrough findings to rank potential causes by:
+(a) likelihood given the error message, research findings, AND walkthrough gap analysis
+(b) evidence in the code snippets, walkthrough comparisons, and similar documented cases
+(c) impact if true based on research patterns and systematic code analysis
 
-**Investigation Focus:** Start by investigating the top 2 most likely causes to maintain focus. If both are ruled out during validation, consider expanding to additional hypotheses as needed. Use research findings to inform additional hypothesis generation.
+**Evidence Integration**: Use walkthrough findings to inform hypothesis formation:
+- **Component Analysis**: Incorporate missing functions/API calls identified in Step 2
+- **Execution Path Gaps**: Consider flow interruptions found in Step 3 tracing
+- **Data Flow Issues**: Include format mismatches discovered in Step 4 verification
+- **User Evidence Reconciliation**: Integrate user observation explanations from walkthrough
 
-**Top Hypothesis:** [e.g., "Data Flow: The `user` object is undefined when the `isAdmin` check runs in the `/auth` endpoint"]
+**Investigation Focus:** Start by investigating the top 2 most likely causes enhanced by walkthrough evidence. If both are ruled out during validation, consider expanding to additional hypotheses informed by walkthrough patterns.
 
-**Reasoning:** [e.g., "The `TypeError` references a property of `undefined`, and the code shows `user.id` is used without a null check right after the admin check. Research shows this is a common Express.js middleware timing issue."]
+**Top Hypothesis (Walkthrough-Enhanced):** [e.g., "Data Flow Gap: V2 GamePlayView missing `apiService.getCampaign(campaignId)` call that V1 resumeCampaign() function makes, causing display of default content instead of loaded campaign data"]
 
-**Secondary Hypothesis:** [State your second most likely cause and reasoning, enhanced by research findings]
+**Reasoning (Evidence-Based):** [e.g., "Walkthrough comparison revealed V1 resumeCampaign() makes API call to load existing campaign data and populates UI, while V2 GamePlayView useEffect only creates new content. User screenshots showing minimal content vs rich content confirms this gap. Research shows this is common in server-side vs client-side migration patterns."]
 
-**Research-Enhanced Analysis:** [If research was conducted, summarize how findings influenced hypothesis ranking and validation approach]
+**Secondary Hypothesis (Walkthrough-Informed):** [State your second most likely cause based on walkthrough evidence and research findings]
+
+**Walkthrough Evidence Summary:** [Summarize specific gaps, missing components, or architectural differences found during systematic comparison that inform hypothesis ranking]
+
+**Research-Enhanced Analysis:** [If research was conducted, summarize how findings combined with walkthrough evidence influenced hypothesis ranking and validation approach]
 
 **Summary Checkpoint:** Summarize the primary and secondary hypotheses, including any research insights, before proposing a validation plan.
 
@@ -350,37 +450,54 @@ except Exception as e:
 /debugp "Authentication API returns 500 for admin users"  # alias
 ```
 
+### Walkthrough-Triggering Issues (Phase 0.5 Automatically Activated)
+```
+/debug-protocol "V2 shows minimal content while V1 shows rich campaign data"
+/debugp "API integration failing after migration from V1 to V2"  # Triggers systematic code comparison
+/debug-protocol "User reports different behavior than what automated tests show"  # Triggers user evidence analysis
+/debugp "Multi-component interaction causing data loss in new architecture"  # Triggers execution path tracing
+```
+
 ### With Implementation
 ```
 /debug-protocol /execute "Fix memory leak in background task processing"
 /debugp /execute "Fix memory leak in background task processing"  # alias
 ```
 
-### Research-Enhanced Debugging
+### Research-Enhanced Debugging with Walkthrough
 ```
-/debug-protocol /research "Intermittent race condition causing data corruption in multi-user scenarios"
-/debugp /research "Performance degradation in Redis cluster during high load"  # alias
-```
-
-### Learning-Integrated Debugging
-```
-/debug-protocol /learn "Memory optimization in Node.js streaming API"
-/debugp /learn "Database connection pool exhaustion debugging"  # alias
+/debug-protocol /research "V1 vs V2 data loading pattern differences causing UI inconsistencies"
+/debugp /research "Performance degradation after architectural migration"  # alias
 ```
 
-### Complex Issue Analysis
+### Learning-Integrated Debugging with Walkthrough Patterns
 ```
-/debug-protocol "Intermittent race condition causing data corruption in multi-user scenarios"
-/debugp "Intermittent race condition causing data corruption in multi-user scenarios"  # alias
+/debug-protocol /learn "Cross-version debugging methodology breakthrough"
+/debugp /learn "Systematic code comparison preventing 3-4x debugging inefficiency"  # alias
+```
+
+### Complex Issue Analysis with Full Walkthrough
+```
+/debug-protocol "V2 GamePlayView showing default content while V1 displays rich campaign data despite same API"
+/debugp "Cross-system integration failure with user evidence contradicting automated observations"  # alias
 ```
 
 ## Output Characteristics
 
-**Phase-based structure** with explicit checkpoints and summaries
-**Evidence-based analysis** with redacted sensitive data
-**Hypothesis ranking** focusing on top 2 most likely causes
+**Enhanced phase-based structure** with explicit checkpoints and summaries:
+- **Phase 0**: Context & Evidence Gathering
+- **Phase 0.5**: Context-Aware Mandatory Code Walkthrough (auto-triggered for complex issues)
+- **Phase 1**: Research & Root Cause Analysis (enhanced by walkthrough findings)
+- **Phase 2**: Validation Before Fixing
+- **Phase 3**: Surgical Fix
+- **Phase 4**: Final Verification & Cleanup
+
+**Evidence-based analysis** with redacted sensitive data and systematic code comparison
+**Walkthrough-enhanced hypothesis ranking** focusing on top 2 most likely causes informed by code analysis
+**User Evidence Primacy** ensuring user observations are treated as ground truth
 **Validation requirements** before any code changes
 **Behavioral constraints** preventing premature success declarations
+**Memory MCP integration** for capturing successful debugging patterns
 
 ## Research Foundation
 

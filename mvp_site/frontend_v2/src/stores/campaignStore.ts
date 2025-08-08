@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { apiService } from '../services/api.service';
+import { campaignService } from '../services/campaignService';
 import type {
   Campaign,
   CampaignCreateRequest,
@@ -42,7 +42,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   fetchCampaigns: async () => {
     set({ isLoading: true, error: null });
     try {
-      const campaigns = await apiService.getCampaigns();
+      const campaigns = await campaignService.getCampaignsForDisplay();
       set({
         campaigns,
         isLoading: false
@@ -60,7 +60,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   fetchCampaignById: async (id: string) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await apiService.getCampaign(id);
+      const response = await campaignService.getCampaign(id);
       const campaign = response.campaign;
 
       set({
@@ -81,7 +81,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   createCampaign: async (data: CampaignCreateRequest) => {
     set({ isCreating: true, error: null });
     try {
-      const campaignId = await apiService.createCampaign(data);
+      const campaignId = await campaignService.createCampaign(data);
 
       // Refresh campaigns list
       await get().fetchCampaigns();
@@ -101,7 +101,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   updateCampaign: async (id: string, data: CampaignUpdateRequest) => {
     set({ isUpdating: true, error: null });
     try {
-      await apiService.updateCampaign(id, data);
+      await campaignService.updateCampaign(id, data);
 
       // Refresh campaigns list
       await get().fetchCampaigns();
@@ -125,7 +125,7 @@ export const useCampaignStore = create<CampaignState>((set, get) => ({
   deleteCampaign: async (id: string) => {
     set({ isDeleting: true, error: null });
     try {
-      await apiService.deleteCampaign(id);
+      await campaignService.deleteCampaign(id);
 
       // Update local state
       set(state => ({

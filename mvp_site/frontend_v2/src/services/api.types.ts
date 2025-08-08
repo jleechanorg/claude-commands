@@ -149,6 +149,8 @@ export interface CampaignDetailResponse {
   campaign: Campaign;
   story: StoryEntry[];
   game_state: GameState;
+  planning_block?: string; // Character choice interface data
+  title: string; // Direct access to campaign title
 }
 
 export interface CampaignCreateResponse {

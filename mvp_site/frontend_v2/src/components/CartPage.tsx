@@ -18,7 +18,7 @@ import {
   CreditCard,
   Gift
 } from 'lucide-react'
-import type { CartItem, AppView } from '../App'
+import type { CartItem, AppView } from '../types'
 
 interface CartPageProps {
   cartItems: CartItem[]

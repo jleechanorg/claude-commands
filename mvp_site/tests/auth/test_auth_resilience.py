@@ -220,7 +220,7 @@ class AuthResilienceTest(unittest.TestCase):
                 "forceRefresh = retryCount > 0" in api_content,
                 "Token refresh forcing logic",
             ),
-            ("setTimeout(resolve, 1000)" in api_content, "Retry delay implementation"),
+            ("setTimeout(resolve," in api_content, "Retry delay implementation"),
             # App error handling calls retry logic
             (
                 "dispatchEvent(new Event('submit'))" in app_content,

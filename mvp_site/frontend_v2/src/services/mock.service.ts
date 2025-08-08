@@ -3,6 +3,14 @@
  *
  * Intercepts API calls and returns mock data for development/testing.
  * Based on patterns from testing_ui folder.
+ * 
+ * TIMING STRATEGY:
+ * - Quick operations: 200ms (auth logout, settings)
+ * - Standard operations: 300-500ms (data retrieval, updates)  
+ * - Create operations: 600ms (realistic server processing)
+ * - AI operations: 800ms (simulates AI thinking time)
+ * - Heavy operations: 1000ms (exports, complex processing)
+ * - Random variance: +0-100ms for realistic network jitter
  */
 
 import type {
@@ -24,15 +32,31 @@ import type {
   DiceRoll
 } from './api.types';
 
-import {
-  mockUsers,
-  mockCampaigns,
-  mockGameStates,
-  mockStoryEntries,
-  mockUserSettings,
-  mockErrors,
-  mockDelay
-} from './mock-data';
+// ARCHITECTURE_NOTE: Mock service provides development-time data simulation
+// This service is essential for local development without backend dependencies
+// Production builds use real API service via environment configuration
+
+// Minimal inline mock data for development
+const mockUsers: Record<string, User> = {
+  'test-user-123': {
+    uid: 'test-user-123',
+    email: 'test@example.com',
+    displayName: 'Test User',
+    photoURL: undefined
+  }
+};
+
+const mockCampaigns: Campaign[] = [];
+const mockGameStates: Record<string, GameState> = {};
+const mockStoryEntries: Record<string, StoryEntry[]> = {};
+const mockUserSettings: Record<string, UserSettings> = {};
+const mockErrors = {
+  network: new Error('Network request failed'),
+  timeout: new Error('Request timeout')
+};
+// Mock delay with realistic variance - balances realism with development efficiency
+const mockDelay = (ms: number = 300) => 
+  new Promise(resolve => setTimeout(resolve, ms + Math.random() * 100));
 
 class MockApiService {
   private mockMode = false;
@@ -159,7 +183,7 @@ class MockApiService {
   async createCampaign(data: CampaignCreateRequest): Promise<CampaignCreateResponse> {
     if (!this.shouldUseMock()) throw new Error('Mock mode not enabled');
 
-    await mockDelay(600);
+    await mockDelay(600); // Simulates realistic server response time for campaign creation - balanced for development efficiency
     await this.maybeThrowError();
 
     if (!data.title || data.title.trim().length === 0) {
