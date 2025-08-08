@@ -86,7 +86,7 @@
 - **Related Issues**: Connected problems this addresses
 
 **Quality Requirements**:
-- ✅ Specific file paths with line numbers (mvp_site/auth.py:45)
+- ✅ Specific file paths with line numbers ($PROJECT_ROOT/auth.py:45)
 - ✅ Exact error messages or code snippets
 - ✅ Actionable implementation steps
 - ✅ References to PRs, commits, or external resources

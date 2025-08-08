@@ -444,11 +444,11 @@ def get_current_branch_info():
 def detect_key_file_changes():
     """Detect changes to critical files that should trigger auto-review"""
     key_files = [
-        "mvp_site/gemini_service.py",
-        "mvp_site/firestore_service.py",
-        "mvp_site/main.py",
-        "mvp_site/auth.py",
-        "mvp_site/game_state.py",
+        "$PROJECT_ROOT/gemini_service.py",
+        "$PROJECT_ROOT/firestore_service.py",
+        "$PROJECT_ROOT/main.py",
+        "$PROJECT_ROOT/auth.py",
+        "$PROJECT_ROOT/game_state.py",
     ]
 
     try:
