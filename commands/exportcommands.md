@@ -428,15 +428,15 @@ if [[ ! -d ".claude/hooks" ]]; then
     echo "⚠️  Warning: .claude/hooks directory not found - skipping hooks export"
 else
     echo "📁 Found .claude/hooks directory - proceeding with export"
-    
+
     # Enable nullglob to handle cases where no files match patterns
     shopt -s nullglob
-    
+
     # Export hook scripts with filtering (including nested subdirectories)
     find .claude/hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
         hook_name=$(basename "$hook_file")
         relative_path="${hook_file#.claude/hooks/}"
-        
+
         # Skip test and example files
         case "$hook_name" in
             *test*|*example*|debug_hook.sh)
@@ -444,23 +444,23 @@ else
                 continue
                 ;;
         esac
-            
+
         echo "   📎 Copying: $relative_path"
-        
+
         # Create subdirectory structure if needed
         hook_dir=$(dirname "staging/hooks/$relative_path")
         mkdir -p "$hook_dir"
-        
+
         # Copy and transform hook files
         cp "$hook_file" "staging/hooks/$relative_path"
-            
+
         # Apply comprehensive content transformations
         sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/hooks/$relative_path"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/hooks/$relative_path"
         sed -i "s|$USER|${USER}|g" "staging/hooks/$relative_path"
         sed -i 's|TESTING=true python|TESTING=true python|g' "staging/hooks/$relative_path"
         sed -i 's|/home/$USER/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
-            
+
         # Make scripts executable and add adaptation headers
         case "$hook_name" in
             *.sh)
@@ -483,12 +483,12 @@ else
                 ;;
         esac
     done
-    
+
     # Restore nullglob setting
     shopt -u nullglob
-    
+
     # Note: Subdirectories are now handled by the find loop above
-    
+
     echo "✅ Hooks export completed successfully"
 fi
 ```
@@ -577,7 +577,7 @@ commands_dir = os.path.join(project_root, '.claude', 'commands')
 hooks_dir = os.path.join(project_root, '.claude', 'hooks')
 
 commands_count = len([f for f in os.listdir(commands_dir) if f.endswith(('.md', '.py'))])
-hooks_count = sum([len([f for f in files if f.endswith(('.sh', '.py', '.md'))]) 
+hooks_count = sum([len([f for f in files if f.endswith(('.sh', '.py', '.md'))])
                    for root, dirs, files in os.walk(hooks_dir)])
 
 print(f"📊 Analysis: {commands_count} commands, {hooks_count} hooks detected")
@@ -615,7 +615,7 @@ print("🧱 Building Blocks:", building_blocks)
 ```python
 # Analyze command interdependencies
 print("📊 Command Composition Patterns:")
-print("- /pr → /think → /execute → /pushl → /copilot → /review")  
+print("- /pr → /think → /execute → /pushl → /copilot → /review")
 print("- /copilot → /execute → /commentfetch → /fixpr → /commentreply")
 print("- /execute → /plan → /think → implementation → /test")
 ```
@@ -627,7 +627,7 @@ print("- /execute → /plan → /think → implementation → /test")
 python3 .claude/commands/exportcommands.py
 ```
 
-**🧠 LLM ENHANCEMENT CAPABILITIES**: 
+**🧠 LLM ENHANCEMENT CAPABILITIES**:
 - Generate contextual README sections based on current command inventory
 - Analyze command composition patterns for documentation
 - Provide intelligent adaptation guidance for different project types
@@ -642,7 +642,7 @@ import os
 import subprocess
 
 # Execute the Python implementation
-project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'], 
+project_root = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
                             capture_output=True, text=True).stdout.strip()
 python_script = os.path.join(project_root, '.claude', 'commands', 'exportcommands.py')
 
@@ -667,13 +667,13 @@ After the Python implementation completes, provide intelligent analysis:
 # Analyze export results for documentation enhancement
 print("\n📊 Export Analysis:")
 print("✅ Command composition system exported successfully")
-print("✅ Directory exclusions applied per requirements") 
+print("✅ Directory exclusions applied per requirements")
 print("✅ Content filtering applied for project portability")
 print("✅ One-click installation script generated")
 print("✅ Comprehensive README with adaptation guide created")
 ```
 
-**🎯 SUCCESS CRITERIA**: 
+**🎯 SUCCESS CRITERIA**:
 1. ✅ PR URL printed (handled by Python implementation)
 2. ✅ Repository safety maintained (no local changes)
 3. ✅ Complete workflow composition system exported

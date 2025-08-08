@@ -18,8 +18,8 @@ from pathlib import Path
 class ClaudeCommandsExporter:
     def __init__(self):
         self.project_root = self._get_project_root()
-        self.export_dir = f"/tmp/claude_commands_export_{int(time.time())}"
-        self.repo_dir = f"/tmp/claude_commands_repo_{int(time.time())}"
+        self.export_dir = os.path.join(tempfile.gettempdir(), f"claude_commands_export_{int(time.time())}")
+        self.repo_dir = os.path.join(tempfile.gettempdir(), f"claude_commands_repo_{int(time.time())}")
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
