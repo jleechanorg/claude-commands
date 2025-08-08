@@ -60,16 +60,14 @@ if [ ! -d "mvp_site" ]; then
     exit 1
 fi
 
-# Change to mvp_site directory
-cd mvp_site
-
+# Stay at project root for proper test discovery
 # Activate virtual environment
 print_status "Activating virtual environment..."
 source "$PROJECT_ROOT/venv/bin/activate"
 
-pip install -r requirements.txt
+pip install -r mvp_site/requirements.txt
 
-print_status "Running tests in mvp_site directory..."
+print_status "Running tests from project root for complete discovery..."
 print_status "Setting TESTING=true for faster AI model usage"
 print_status "TEST_MODE=${TEST_MODE:-mock} (Real-Mode Testing Framework)"
 
@@ -130,17 +128,30 @@ else
     print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
 fi
 
-# Find all test files in tests subdirectory, excluding venv, prototype, manual_tests, and test_integration
+# Find all test files across the project, excluding problematic directories
 test_files=()
+
+# Main mvp_site tests
 while IFS= read -r -d '' file; do
     test_files+=("$file")
-done < <(find ./tests -name "test_*.py" -type f \
+done < <(find ./mvp_site/tests -name "test_*.py" -type f \
     ! -path "./venv/*" \
     ! -path "./node_modules/*" \
     ! -path "./prototype/*" \
-    ! -path "./tests/manual_tests/*" \
-    ! -path "./tests/test_integration/*" \
-    -print0)
+    ! -path "./mvp_site/tests/manual_tests/*" \
+    ! -path "./mvp_site/tests/test_integration/*" \
+    -print0 2>/dev/null)
+
+# Project root tests directory
+if [ -d "./tests" ]; then
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find ./tests -name "test_*.py" -type f \
+        ! -path "./prototype/*" \
+        ! -path "./tests/manual_tests/*" \
+        ! -path "./tests/test_integration/*" \
+        -print0 2>/dev/null)
+fi
 
 # Always include test_integration_mock.py from mvp_site/test_integration directory (fast mock tests)
 if [ -f "./mvp_site/test_integration/test_integration_mock.py" ]; then
@@ -149,19 +160,33 @@ fi
 
 # Also include test_integration directories if not in GitHub export mode
 if [ "$include_integration" = true ]; then
-    # Check for test_integration in both root and tests/ directory
+    # Check for test_integration in mvp_site, project root, and tests/ directory
+    if [ -d "./mvp_site/test_integration" ]; then
+        print_status "Including integration tests from mvp_site/test_integration/"
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find ./mvp_site/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
+    
     if [ -d "./test_integration" ]; then
         print_status "Including integration tests from test_integration/"
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./test_integration -name "test_*.py" -type f -print0)
+        done < <(find ./test_integration -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 
     if [ -d "./tests/test_integration" ]; then
         print_status "Including integration tests from tests/test_integration/"
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0)
+        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
+
+    if [ -d "./mvp_site/tests/test_integration" ]; then
+        print_status "Including integration tests from mvp_site/tests/test_integration/"
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find ./mvp_site/tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 fi
 
@@ -194,7 +219,23 @@ if [ -d "claude-bot-commands/tests" ]; then
     print_status "Including claude-bot-commands tests..."
     while IFS= read -r -d '' file; do
         test_files+=("$file")
-    done < <(find claude-bot-commands/tests -name "test_*.py" -type f -print0)
+    done < <(find claude-bot-commands/tests -name "test_*.py" -type f -print0 2>/dev/null)
+fi
+
+# Include .claude/hooks tests if they exist
+if [ -d ".claude/hooks/tests" ]; then
+    print_status "Including .claude/hooks tests..."
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find .claude/hooks/tests -name "test_*.py" -type f -print0 2>/dev/null)
+fi
+
+# Include direct .claude/commands test files (not in tests subdirectory)
+if [ -d ".claude/commands" ]; then
+    print_status "Including .claude/commands direct test files..."
+    while IFS= read -r -d '' file; do
+        test_files+=("$file")
+    done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
 fi
 
 # Check if any test files exist
@@ -231,6 +272,9 @@ run_test() {
         local output_file="$temp_dir/${safe_filename}.output"
         local status_file="$temp_dir/${safe_filename}.status"
 
+        # Set PYTHONPATH to include project root, mvp_site, and .claude/commands for imports
+        export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site:$PROJECT_ROOT/.claude/commands:${PYTHONPATH:-}"
+        
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
@@ -328,7 +372,7 @@ if [ "$enable_coverage" = true ]; then
     coverage_start_time=$(date +%s)
 
     # Generate text coverage report
-    if source ../venv/bin/activate && coverage report > "$coverage_dir/coverage_report.txt"; then
+    if coverage report > "$coverage_dir/coverage_report.txt"; then
         print_success "Coverage report generated successfully"
 
         # Display key coverage metrics
@@ -352,7 +396,7 @@ if [ "$enable_coverage" = true ]; then
 
     # Generate HTML report
     print_status "🌐 Generating HTML coverage report..."
-    if source ../venv/bin/activate && coverage html --directory="$coverage_dir"; then
+    if coverage html --directory="$coverage_dir"; then
         print_success "HTML coverage report generated in $coverage_dir/"
         print_status "Open $coverage_dir/index.html in your browser to view detailed coverage"
     else

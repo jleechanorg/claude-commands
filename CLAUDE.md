@@ -54,6 +54,16 @@
 - 🔒 **CRITICAL**: Must implement merge approval protocol before any merge-triggering push
 - **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing, NOT merging
 
+🚨 **EXPORT SAFETY PROTOCOL**: ⚠️ MANDATORY - Data Loss Prevention
+- ❌ **NEVER use replacement export logic** - Always use ADDITIVE export strategy
+- ✅ **ALWAYS preserve existing data** in target repositories during export operations
+- ✅ **VALIDATE PR changes** before declaring export success - mass deletions are RED FLAGS
+- ⚠️ **PR with 90+ deletions** requires immediate investigation and validation
+- ✅ **Export Pattern**: Check target state → Preserve existing → Add new → Verify additive result
+- ❌ **Anti-Pattern**: Create fresh branch → Wipe target → Rebuild from source subset
+- 🔒 **VALIDATION REQUIRED**: Use `gh api` to verify export PRs show additions/modifications, not mass deletions
+- **Scope**: Applies to ALL data export tools - `/exportcommands`, migration scripts, repository operations
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
