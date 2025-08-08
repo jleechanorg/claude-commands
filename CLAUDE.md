@@ -693,6 +693,13 @@ mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
 - ✅ **Execution Phase**: Follow COMPLETE documented workflow → No partial execution allowed
 - ❌ NEVER treat slash commands as content suggestions - they are execution mandates
 
+🚨 **SLASH COMMAND VERIFICATION PROTOCOL**: ⚠️ MANDATORY - ALWAYS verify before claiming non-existence
+- ❌ **NEVER say "I don't recognize command X"** without checking `.claude/commands/` directory FIRST
+- ✅ **ALWAYS check for aliases**: Commands may exist as aliases in other .md files (e.g., /nb in newbranch.md)
+- ✅ **Filesystem is truth**: Check `.claude/commands/*.md` files, don't rely on memory
+- ✅ **Pattern**: User types /command → Check filesystem → Execute or explain actual non-existence
+- **Common aliases**: /nb→/newbranch, /e→/execute, /debugp→/debug-protocol
+
 🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
 - Context % | Complexity | Subagents? | Plan presented | Auto-approval applied
 
