@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git header generator script
+# Git header generator script (ENHANCED VERSION WITH GIT STATUS)
 # Usage: ./git-header.sh or git header (if aliased)
 # Works from any directory within a git repository or worktree
 
@@ -57,11 +57,35 @@ else
     local_status=" (no remote)"
 fi
 
-# Find PR for current branch only (no complex commit searching)
+# Get git status for PR inference
+git_status_short=$(git status --short 2>/dev/null)
+
+# Find PR for current branch first
 pr_info=$(gh pr list --head "$local_branch" --json number,url 2>/dev/null || echo "[]")
 
+# If no PR found for current branch, try to infer from git status and recent commits
 if [ "$pr_info" = "[]" ]; then
-    pr_text="none"
+    # Check if we have uncommitted changes that might be related to a PR
+    if [ -n "$git_status_short" ]; then
+        # Look for PRs that might be related to the current working directory state
+        # Check for recent PRs that might match the work being done
+        recent_prs=$(gh pr list --state open --limit 5 --json number,url 2>/dev/null || echo "[]")
+        
+        # If there are recent PRs, suggest the most recent open PR as context
+        if [ "$(echo "$recent_prs" | jq "length" 2>/dev/null)" -gt 0 ] 2>/dev/null || [ "$recent_prs" != "[]" ]; then
+            recent_pr_num=$(echo "$recent_prs" | jq -r ".[0].number // \"none\"" 2>/dev/null || echo "none")
+            recent_pr_url=$(echo "$recent_prs" | jq -r ".[0].url // \"\"" 2>/dev/null || echo "")
+            if [ "$recent_pr_num" != "none" ] && [ "$recent_pr_num" != "null" ]; then
+                pr_text="(related to #$recent_pr_num $recent_pr_url)"
+            else
+                pr_text="none"
+            fi
+        else
+            pr_text="none"
+        fi
+    else
+        pr_text="none"
+    fi
 else
     pr_num=$(echo "$pr_info" | jq -r ".[0].number // \"none\"" 2>/dev/null || echo "none")
     pr_url=$(echo "$pr_info" | jq -r ".[0].url // \"\"" 2>/dev/null || echo "")
@@ -123,6 +147,11 @@ check_bashrc_alias() {
 
 # Run bashrc check on every execution
 check_bashrc_alias
+
+# Always show git status first for complete context
+echo "=== Git Status ==="
+git status
+echo
 
 # Get Claude API rate limit info if requested
 if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
