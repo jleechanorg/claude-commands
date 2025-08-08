@@ -1,5 +1,7 @@
 # /exportcommands - Export Claude Commands to Reference Repository
 
+🚨 **CRITICAL SUCCESS REQUIREMENT**: This command MUST always print the export PR URL as the final output. The command is NOT complete without providing the PR URL to the user.
+
 **Purpose**: Export your complete command composition system to https://github.com/jleechanorg/claude-commands for reference and sharing
 
 **The Magic**: This simple export hook enables powerful workflow slash commands like `/pr`, `/copilot`, `/execute`, and complex multi-command compositions that turn Claude Code into an autonomous development powerhouse.
@@ -272,8 +274,8 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 **Content Filtering Setup**:
 - Initialize comprehensive export filter system with multiple filter types
-- Exclude project-specific directories and files (mvp_site/, run_tests.sh, testi.sh)
-- Filter out personal/project references (jleechan, worldarchitect.ai, Firebase specifics)
+- Exclude project-specific directories and files ($PROJECT_ROOT/, run_tests.sh, testi.sh)
+- Filter out personal/project references ($USER, your-project.com, Firebase specifics)
 - Transform project-specific paths to generic placeholders
 - Set up warning header templates for exported files
 
@@ -308,6 +310,11 @@ testing_http/
 testing_ui/
 testing_mcp/
 ci_replica/
+analysis/
+automation/
+claude-bot-commands/
+coding_prompts/
+prototype/
 EOF
 
 # Filter files before export from staging area
@@ -341,9 +348,9 @@ EOF
 # Filter and append original CLAUDE.md
 cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
-sed -i 's|mvp_site/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
+sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
 sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
-sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
+sed -i "s|$USER|${USER}|g" /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```
 
@@ -362,16 +369,14 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     # Copy and filter content
     cp "$file" "staging/commands/$(basename "$file")"
 
-    # Apply content transformations
-    sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
+    # Apply content transformations - completely remove project-specific references
+    sed -i 's|$PROJECT_ROOT/||g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
-    sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
-    sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
+    sed -i "s|$USER|${USER}|g" "staging/commands/$(basename "$file")"
+    sed -i 's|TESTING=true python|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
-    # Add project-specific warning to commands with mvp_site references
-    if grep -q "PROJECT_ROOT" "staging/commands/$(basename "$file")"; then
-        sed -i '1i\# ⚠️ PROJECT-SPECIFIC PATHS - Requires adaptation for your environment\n' "staging/commands/$(basename "$file")"
-    fi
+    # Remove any remaining project-specific path references
+    sed -i 's|/home/$USER/projects/worldarchitect\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
 done
 ```
 - Export filtered command definitions with proper categorization
@@ -397,11 +402,11 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         # Copy and transform
         cp "$script" "staging/scripts/$script_name"
 
-        # Apply transformations
-        sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
+        # Apply transformations - completely remove project-specific references
+        sed -i 's|$PROJECT_ROOT/||g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/jleechan/projects/worldarchitect.ai|$WORKSPACE_ROOT|g' "staging/scripts/$script_name"
-        sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
+        sed -i 's|/home/$USER/projects/worldarchitect\.ai/[^/]*||g' "staging/scripts/$script_name"
+        sed -i 's|TESTING=true python|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
         sed -i '1i\#!/bin/bash\n# ⚠️ REQUIRES PROJECT ADAPTATION\n# This script contains project-specific paths and may need modification\n' "staging/scripts/$script_name"
@@ -412,6 +417,93 @@ done
 - Transform mvp_site paths to generic PROJECT_ROOT placeholders
 - Add setup requirements documentation for each script
 - Include execution environment requirements
+
+**🚨 Hooks Export** (`.claude/hooks/` → `hooks/`) - **ESSENTIAL CLAUDE CODE FUNCTIONALITY**:
+```bash
+# Export Claude Code hooks with comprehensive filtering
+echo "📎 Exporting Claude Code hooks..."
+
+# Create hooks destination directory
+mkdir -p staging/hooks
+
+# Check if source hooks directory exists
+if [[ ! -d ".claude/hooks" ]]; then
+    echo "⚠️  Warning: .claude/hooks directory not found - skipping hooks export"
+else
+    echo "📁 Found .claude/hooks directory - proceeding with export"
+    
+    # Enable nullglob to handle cases where no files match patterns
+    shopt -s nullglob
+    
+    # Export hook scripts with filtering (including nested subdirectories)
+    find .claude/hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
+        hook_name=$(basename "$hook_file")
+        relative_path="${hook_file#.claude/hooks/}"
+        
+        # Skip test and example files
+        case "$hook_name" in
+            *test*|*example*|debug_hook.sh)
+                echo "   ⏭ Skipping $hook_name (test/debug file)"
+                continue
+                ;;
+        esac
+            
+        echo "   📎 Copying: $relative_path"
+        
+        # Create subdirectory structure if needed
+        hook_dir=$(dirname "staging/hooks/$relative_path")
+        mkdir -p "$hook_dir"
+        
+        # Copy and transform hook files
+        cp "$hook_file" "staging/hooks/$relative_path"
+            
+        # Apply comprehensive content transformations
+        sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/hooks/$relative_path"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/hooks/$relative_path"
+        sed -i "s|$USER|${USER}|g" "staging/hooks/$relative_path"
+        sed -i 's|TESTING=true python|TESTING=true python|g' "staging/hooks/$relative_path"
+        sed -i 's|/home/$USER/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
+            
+        # Make scripts executable and add adaptation headers
+        case "$hook_name" in
+            *.sh)
+                chmod +x "staging/hooks/$relative_path"
+                # Add adaptation header only if file doesn't start with shebang
+                if ! head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
+                    sed -i '1i\#!/bin/bash\n# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                else
+                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt paths and project references for your environment\n' "staging/hooks/$relative_path"
+                fi
+                ;;
+            *.py)
+                chmod +x "staging/hooks/$relative_path"
+                # Add adaptation note after any existing shebang
+                if head -1 "staging/hooks/$relative_path" | grep -q '^#!'; then
+                    sed -i '1a\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                else
+                    sed -i '1i\# 🚨 CLAUDE CODE HOOK - ESSENTIAL FUNCTIONALITY\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This hook provides core Claude Code workflow automation\n# Adapt imports and project references for your environment\n' "staging/hooks/$relative_path"
+                fi
+                ;;
+        esac
+    done
+    
+    # Restore nullglob setting
+    shopt -u nullglob
+    
+    # Note: Subdirectories are now handled by the find loop above
+    
+    echo "✅ Hooks export completed successfully"
+fi
+```
+- **🔧 Core Claude Code Functionality**: Essential hooks that enable automatic workflow management
+- **PreToolUse Hooks**: Code quality validation before file operations (anti_demo_check_claude.sh, check_root_files.sh)
+- **PostToolUse Hooks**: Automated sync after git operations (post_commit_sync.sh)
+- **PostResponse Hooks**: Response quality validation (detect_speculation.sh)
+- **Command Composition**: Hook utilities for advanced workflow orchestration (compose-commands.sh)
+- **Testing Framework**: Complete hook testing utilities for validation and debugging
+- **Project Adaptation**: Comprehensive filtering of project-specific paths and references
+- **Executable Permissions**: Automatic permission setting for shell scripts
+- **Documentation**: Clear adaptation requirements and functionality descriptions
 
 **🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
 ```bash
@@ -432,7 +524,7 @@ for script_name in "${ROOT_SCRIPTS[@]}"; do
         sed -i 's|/tmp/worldarchitect\.ai|/tmp/$PROJECT_NAME|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|worldarchitect-memory-backups|$PROJECT_NAME-memory-backups|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/infrastructure-scripts/$script_name"
-        sed -i 's|jleechan|$USER|g' "staging/infrastructure-scripts/$script_name"
+        sed -i 's|$USER|$USER|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|D&D campaign management|Content management|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|Game MCP Server|Content MCP Server|g' "staging/infrastructure-scripts/$script_name"
         sed -i 's|start_game_mcp\.sh|start_content_mcp.sh|g' "staging/infrastructure-scripts/$script_name"
@@ -459,39 +551,6 @@ done
 - Add scaling guidance for agent capacity and workload distribution
 - **Status**: Active development prototype - successful task completion verified with PR generation
 
-**🤖 Claude Bot Self-Hosting System Export** (`claude-bot-commands/` → `claude-bot-commands/`) - **PRODUCTION READY**:
-- Export complete GitHub-based Claude command processing system for self-hosted deployments
-- **Architecture**: GitHub Actions workflow with self-hosted runner executing Claude commands via repository issues
-- **Components**: Server (`claude-bot-server.py`), workflow processor, debugging tools, comprehensive test suite
-- **Features**: Repository-based command processing, automated PR creation, threaded comment responses
-- **Usage**: Post command as GitHub issue → Self-hosted runner processes → Claude executes → Results posted
-- **Requirements**: GitHub repository, self-hosted runner, Python environment, Claude Code CLI
-- **Installation**: Complete setup guide with runner configuration and repository integration
-- **Benefits**: Repository-native command processing, version-controlled command history, automated workflows
-
-**⚙️ Automated PR Fixer System Export** (`automation/` → `automation/`) - **PRODUCTION READY**:
-- Export intelligent cron-based PR automation system with comprehensive error handling
-- **Core Script**: `simple_pr_batch.sh` - Autonomous PR analysis and fixing via `/copilot` integration
-- **Cron Configuration**: `cron_entry.txt` - Every 10 minutes automated PR processing
-- **Features**: Timeout handling (20min), attempt tracking (max 3), cooldown periods (4hr), email notifications
-- **Workflow**: Detect failing PRs → Execute `/copilot` comprehensive analysis → Apply fixes → Track attempts
-- **Error Handling**: Timeout detection, max attempt limits, email alerts for manual intervention required
-- **Requirements**: Claude Code CLI, GitHub CLI, email configuration, cron access
-- **Installation**: Cron setup, email notification configuration, GitHub token setup
-
-
-**🔬 Development Infrastructure Export** - **SPECIALIZED DEVELOPMENT TOOLS**:
-- **Prototype Framework** (`prototype/` → `prototyping/`):
-  - Validation and benchmarking framework for experimental implementations
-  - Performance profiling, accuracy measurement, alternative approach testing
-  - Migration paths from prototype to production code
-- **AI Prompting Templates** (`coding_prompts/` → `ai-prompts/`):
-  - Multi-agent development system with SUPERVISOR-WORKER-REVIEWER architecture
-  - Specialized prompts for code research, debugging, principal engineer reviews
-  - Virtual agent coordination and context independence protocols
-- **Analysis Framework** (`analysis/` → `analytics/`):
-  - Campaign analytics, user activity reporting, Firebase collection analytics
-  - Test result analysis, performance benchmarking, data validation tools
 
 **Configuration Export**:
 - Export relevant config files (filtered for sensitive data)
@@ -557,6 +616,37 @@ else
     echo "⚠️  Warning: commands/ directory not found"
 fi
 
+# Create .claude/hooks directory if it doesn't exist
+if [ ! -d ".claude/hooks" ]; then
+    echo "📁 Creating .claude/hooks directory..."
+    mkdir -p .claude/hooks
+fi
+
+# Copy hooks from exported hooks/ to .claude/hooks/ (with subdirectory support)
+echo "📎 Installing Claude Code hooks..."
+if [ -d "hooks" ]; then
+    # Use find with NUL-delimited output to handle filenames with spaces safely
+    find hooks -type f \( -name "*.sh" -o -name "*.py" -o -name "*.md" \) -print0 | while IFS= read -r -d '' hook_file; do
+        relative_path="${hook_file#hooks/}"
+        target_path=".claude/hooks/$relative_path"
+        target_dir=$(dirname "$target_path")
+        
+        # Create target directory if needed
+        mkdir -p "$target_dir"
+        
+        echo "   📎 $relative_path"
+        cp "$hook_file" "$target_path"
+        
+        # Ensure executables keep their bit
+        case "$relative_path" in
+            *.sh|*.py) chmod +x "$target_path" ;;
+        esac
+    done
+    echo "✅ Hooks installed to .claude/hooks/"
+else
+    echo "⚠️  Warning: hooks/ directory not found"
+fi
+
 # Copy claude_start.sh from infrastructure-scripts to root
 echo "🚀 Installing startup script..."
 if [ -f "infrastructure-scripts/claude_start.sh" ]; then
@@ -595,6 +685,9 @@ fi
 if add_to_gitignore ".claude/commands/" "# Claude Commands - Auto-installed by install.sh"; then
     entries_added=true
 fi
+if add_to_gitignore ".claude/hooks/" "# Claude Code Hooks - Auto-installed by install.sh"; then
+    entries_added=true
+fi
 
 if add_to_gitignore "claude_start.sh" "# Claude startup script - Auto-installed"; then
     entries_added=true
@@ -623,25 +716,99 @@ echo "✅ Created install.sh script with command installation logic"
 
 **Install Script Features**:
 - **Safety Checks**: Verifies git repository context
-- **Directory Creation**: Creates `.claude/commands/` if needed
+- **Directory Creation**: Creates `.claude/commands/` and `.claude/hooks/` if needed
 - **Command Installation**: Copies commands from `commands/` to `.claude/commands/` (excludes README files)
+- **🚨 Hooks Installation**: Copies essential Claude Code hooks from `hooks/` to `.claude/hooks/` with proper permissions
+- **Executable Permissions**: Ensures all shell scripts (.sh files) are executable
 - **Startup Script**: Copies `claude_start.sh` to root directory with executable permissions
-- **GitIgnore Management**: Automatically adds installed files to .gitignore
+- **GitIgnore Management**: Automatically adds installed files (.claude/, hooks, startup script) to .gitignore
 - **User Guidance**: Provides clear next steps and adaptation requirements
 - **Error Handling**: Graceful handling of missing files with warnings
 
-### Phase 4: Documentation Generation
+### Phase 4: README Accuracy Validation & Documentation Generation
 
-**README Generation**:
-- **🚨 ALWAYS USE REFERENCE TEMPLATE**: Copy from `.claude/commands/README_EXPORT_TEMPLATE.md` as base
+**🚨 MANDATORY README ACCURACY VALIDATION**: Verify README reflects current repo state before export
+
 ```bash
-# Use the maintained reference template
+echo "🔍 Validating README accuracy against current repo state..."
+
+# 1. Check copilot architecture accuracy
+CURRENT_COPILOT_PHASES=$(grep -o "Phase [0-9]" .claude/commands/copilot.md | wc -l)
+TEMPLATE_COPILOT_LAYERS=$(grep -o "Layer [0-9]" .claude/commands/README_EXPORT_TEMPLATE.md | wc -l)
+echo "   Copilot phases in repo: $CURRENT_COPILOT_PHASES"
+echo "   Copilot layers in template: $TEMPLATE_COPILOT_LAYERS"
+
+if [ "$CURRENT_COPILOT_PHASES" != "$TEMPLATE_COPILOT_LAYERS" ]; then
+    echo "❌ WARNING: Copilot architecture mismatch detected!"
+    echo "   Current repo has $CURRENT_COPILOT_PHASES phases, template shows $TEMPLATE_COPILOT_LAYERS layers"
+fi
+
+# 2. Verify key directory structures exist
+MISSING_DIRS=""
+for dir in orchestration; do
+    if [ ! -d "$dir" ]; then
+        MISSING_DIRS="$MISSING_DIRS $dir"
+    fi
+done
+
+if [ -n "$MISSING_DIRS" ]; then
+    echo "❌ WARNING: Template references missing directories:$MISSING_DIRS"
+else
+    echo "✅ All referenced directories exist in repo"
+fi
+
+# 3. Count actual commands vs template claims
+ACTUAL_COMMANDS=$(find .claude/commands/ -name "*.md" -not -name "README*" | wc -l)
+TEMPLATE_CLAIM=$(grep -o "[0-9]\++" .claude/commands/README_EXPORT_TEMPLATE.md | head -1)
+echo "   Actual commands: $ACTUAL_COMMANDS"
+echo "   Template claims: $TEMPLATE_CLAIM"
+
+# 4. Verify export exclusions are still accurate
+echo "🔍 Checking export exclusions against current repo state..."
+while IFS= read -r pattern; do
+    if find . -path "*${pattern}" -type f 2>/dev/null | grep -q .; then
+        echo "   Found files matching exclusion pattern: $pattern"
+    fi
+done << 'EOF'
+tests/run_tests.sh
+testi.sh
+**/test_integration/**
+copilot_inline_reply_example.sh
+run_ci_replica.sh
+testing_http/
+testing_ui/
+testing_mcp/
+ci_replica/
+EOF
+
+echo "✅ README validation complete - proceeding with export"
+```
+
+**🚨 MANDATORY README GENERATION**: README.md is ALWAYS included in export
+```bash
+# CRITICAL: Always copy README from reference template to staging directory
+echo "📖 Generating README.md from reference template..."
+if [[ ! -f ".claude/commands/README_EXPORT_TEMPLATE.md" ]]; then
+    echo "❌ ERROR: README_EXPORT_TEMPLATE.md not found"
+    exit 1
+fi
+
+# Copy template to staging directory (NOT to repository directly)
 cp .claude/commands/README_EXPORT_TEMPLATE.md "$STAGING_DIR/README.md"
 
 # Apply project-agnostic transformations
 sed -i 's|your-project.com|your-project.com|g' "$STAGING_DIR/README.md"
-sed -i "s|jleechan|${USER}|g" "$STAGING_DIR/README.md"
+sed -i "s|$USER|${USER}|g" "$STAGING_DIR/README.md"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
+
+echo "✅ README.md generated successfully in staging directory"
+```
+
+**🚨 CRITICAL: README must be copied from STAGING_DIR to REPO_DIR**:
+```bash
+# Copy README from staging to repository (happens in Phase 5)
+cp "$STAGING_DIR/README.md" "$REPO_DIR/README.md"
+echo "✅ README.md copied to repository"
 ```
 - **🎯 COMPOSITION-FIRST DOCUMENTATION**: Template includes comprehensive technical details
   - Hook mechanism: How .md files become executable workflows
@@ -673,20 +840,6 @@ sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
   - Setup walkthrough: Redis → tmux → agent workspaces → task delegation
   - Success metrics: Cost-per-task, completion rates, PR generation verification
   - Monitoring workflows: agent status, task progress, resource utilization
-- **🤖 Claude Bot Self-Hosting System**: Complete repository-based command processing
-  - GitHub Actions integration with self-hosted runner architecture
-  - Installation guide: Repository setup → Runner configuration → Command processing
-  - Usage examples: Issue-based commands → Automated execution → PR creation
-  - Production deployment patterns and scaling considerations
-- **⚙️ Automated PR Fixer System**: Intelligent cron-based PR maintenance
-  - Autonomous `/copilot` integration for comprehensive PR analysis and fixing
-  - Error handling: Timeout detection, attempt limits, email notifications
-  - Installation: Cron setup → Email configuration → GitHub integration
-  - Real-world metrics: Processing frequency, success rates, manual intervention triggers
-- **🔬 Development Infrastructure**: Specialized development tools
-  - Prototype Framework: Validation, benchmarking, experimental implementations
-  - AI Prompting: Multi-agent SUPERVISOR-WORKER-REVIEWER architecture
-  - Analytics Framework: Campaign analytics, performance tracking, data validation
 - **🚨 Infrastructure Scripts**: Complete development environment management
   - **Environment Bootstrap**: `claude_start.sh` - Multi-service startup with health checks
   - **MCP Installation**: `claude_mcp.sh` - Comprehensive MCP server setup automation
@@ -711,8 +864,24 @@ sed -i 's|worldarchitect\.ai|your-project.com|g' "$STAGING_DIR/README.md"
 # Repository cleanup and fresh export already completed in Phase 2
 cd "$REPO_DIR"
 
-# Copy exported content from staging
-cp -r /tmp/claude_commands_export_*/. .
+# 🚨 CRITICAL: Copy exported content EXCLUDING unwanted directories
+echo "📂 Copying export content with exclusions..."
+
+# Get the export directory path
+EXPORT_DIR=$(ls -d /tmp/claude_commands_export_* | head -1)
+
+# Copy specific directories and files, EXCLUDING the unwanted ones
+rsync -av --exclude='analysis/' --exclude='automation/' --exclude='claude-bot-commands/' --exclude='coding_prompts/' --exclude='prototype/' "$EXPORT_DIR/" . --delete-excluded
+
+# Verify exclusions worked
+echo "✅ Export copied with exclusions applied"
+if [[ -d "analysis" || -d "automation" || -d "claude-bot-commands" || -d "coding_prompts" || -d "prototype" ]]; then
+    echo "❌ ERROR: Unwanted directories found in export! Cleaning up..."
+    rm -rf analysis automation claude-bot-commands coding_prompts prototype
+    echo "✅ Cleaned up unwanted directories"
+else
+    echo "✅ Confirmed: No unwanted directories in export"
+fi
 
 # Commit changes with cleanup notation
 git add .
@@ -730,62 +899,133 @@ git commit -m "Fresh export: Remove obsolete files, add current command system
 - Scripts with dependency documentation
 - Infrastructure Scripts: Complete development environment management ($(ls infrastructure-scripts/ | wc -l) scripts)
 - Orchestration system with setup guides ($(ls orchestration/ | wc -l) files)
-- Claude Bot Self-Hosting System ($(ls claude-bot-commands/ | wc -l) files)
-- Automated PR Fixer System ($(ls automation/ | wc -l) files)
-- Development Infrastructure: Prototyping, AI prompts, analytics ($(find prototype/ coding_prompts/ analysis/ -name "*.py" -o -name "*.md" | wc -l) files)
-- Content filtering: mvp_site → \$PROJECT_ROOT, worldarchitect.ai → your-project.com
+- **🚨 EXCLUDED**: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/ (project-specific systems)"
+- Content filtering: mvp_site → \$PROJECT_ROOT, your-project.com → your-project.com
 - Comprehensive README and documentation
 
 ⚠️ Reference export - requires adaptation for other projects"
 
-# Push and create PR
+# 🚨 MANDATORY: Push and create PR with URL capture
+echo "📤 Pushing branch and creating PR..."
 git push -u origin "$export_branch"
-gh pr create --title "Claude Commands Export $(date +%Y-%m-%d)" \
+
+# 🚨 CRITICAL: Capture PR URL and print it immediately
+echo "🔗 Creating PR and capturing URL..."
+PR_URL=$(gh pr create --title "Claude Commands Export $(date +%Y-%m-%d)" \
   --body "Automated export of Claude command system for reference.
 
 ## ⚠️ Reference Only
 This export contains project-specific configurations that require adaptation.
 
 ## Contents
-- **🚀 ONE-CLICK INSTALL**: `./install.sh` script auto-installs commands to `.claude/commands/` and copies `claude_start.sh`
-- Complete command system (70+ commands)
+- **🚀 ONE-CLICK INSTALL**: \`./install.sh\` script auto-installs commands to \`.claude/commands/\`, hooks to \`.claude/hooks/\`, and copies \`claude_start.sh\`
+- Complete command system with workflow orchestration
+- **🚨 Essential Claude Code Hooks**: Core workflow automation hooks
+  - Code quality validation before file operations
+  - Automated sync after git operations
+  - Response quality validation and branch header generation
 - **🚨 Orchestration Infrastructure (WIP Prototype)**: Multi-agent task delegation system
   - tmux-based agent architecture with Redis coordination
   - Autonomous task execution with PR generation verification
-  - Real-world cost metrics: $0.003-$0.050 per task
-  - Monitoring and scaling procedures
-- **🤖 Claude Bot Self-Hosting System (PRODUCTION READY)**: Repository-based command processing
-  - GitHub Actions workflow with self-hosted runner architecture
-  - Issue-based command processing with automated PR creation
-  - Complete setup guide and debugging tools
-- **⚙️ Automated PR Fixer System (PRODUCTION READY)**: Intelligent cron-based automation
-  - Autonomous `/copilot` integration for comprehensive PR analysis
-  - Error handling, timeout detection, and email notifications
-  - 10-minute processing cycles with attempt tracking
-- **🔬 Development Infrastructure**: Specialized development tools
-  - Prototype framework for validation and benchmarking
-  - Multi-agent AI prompting with SUPERVISOR-WORKER-REVIEWER architecture
-  - Analytics framework for performance tracking and data validation
+  - Real-world cost metrics: \$0.003-\$0.050 per task
 - **🚨 Infrastructure Scripts**: Complete development environment management
   - Environment bootstrap: claude_start.sh - Multi-service startup with health checks
   - MCP installation: claude_mcp.sh - Comprehensive MCP server setup automation
-  - GitHub integration: start-claude-bot.sh - Repository-based command processing
   - Git workflows: integrate.sh, resolve_conflicts.sh, sync_branch.sh - Branch management
-  - CI/CD setup: setup-github-runner.sh - Self-hosted runner automation
-  - Service management: test_server_manager.sh - Multi-service orchestration
 - Supporting scripts and utilities
 - Documentation and setup guides
 
 ## Usage
-**Quick Install**: Run `./install.sh` to auto-install commands and startup script
-See README.md for detailed installation and adaptation guidance."
+**Quick Install**: Run \`./install.sh\` to auto-install commands and startup script
+See README.md for detailed installation and adaptation guidance." 2>&1)
+
+# 🚨🚨 ABSOLUTELY MANDATORY: Print PR URL prominently
+if [[ "$PR_URL" == *"https://"* ]]; then
+    echo ""
+    echo "🚨🚨🚨 EXPORT PR CREATED 🚨🚨🚨"
+    echo "📋 PR URL: $PR_URL"
+    echo "🚨🚨🚨 EXPORT PR CREATED 🚨🚨🚨"
+    echo ""
+else
+    echo "❌ ERROR: Failed to create PR or capture URL"
+    echo "Output: $PR_URL"
+    exit 1
+fi
 ```
 
-**Verification**:
+**🚨 MANDATORY POST-EXPORT VALIDATION**:
+```bash
+echo "🔍 Post-export validation - checking exported content accuracy..."
+
+cd "$REPO_DIR"
+
+# 1. Validate README claims against exported content
+echo "📊 Validating README claims against actual export..."
+README_COMMAND_COUNT=$(grep -o "[0-9]\++" README.md | head -1)
+ACTUAL_EXPORTED_COMMANDS=$(find commands/ -name "*.md" -not -name "README*" | wc -l)
+echo "   README claims: ${README_COMMAND_COUNT} commands"
+echo "   Actually exported: $ACTUAL_EXPORTED_COMMANDS commands"
+
+if [ "${README_COMMAND_COUNT//+}" -gt "$ACTUAL_EXPORTED_COMMANDS" ]; then
+    echo "❌ WARNING: README overstates command count!"
+fi
+
+# 2. Verify copilot architecture consistency
+if grep -q "6-Layer" README.md && grep -q "7-Layer" README.md; then
+    echo "❌ ERROR: Mixed copilot layer references detected in export!"
+elif grep -q "6-Layer" README.md; then
+    echo "✅ Copilot architecture: 6-Layer system (current)"
+elif grep -q "7-Layer" README.md; then
+    echo "❌ WARNING: 7-Layer system in README may be outdated"
+fi
+
+# 3. Check for accidentally exported project-specific content
+echo "🔍 Scanning for project-specific content that should have been filtered..."
+PROJECT_SPECIFIC_FOUND=""
+if grep -r "$PROJECT_ROOT/" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND $PROJECT_ROOT/"
+fi
+if grep -r "$USER" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND $USER"
+fi
+if grep -r "worldarchitect\.ai" . --exclude-dir=.git >/dev/null 2>&1; then
+    PROJECT_SPECIFIC_FOUND="$PROJECT_SPECIFIC_FOUND your-project.com"
+fi
+
+if [ -n "$PROJECT_SPECIFIC_FOUND" ]; then
+    echo "❌ WARNING: Project-specific content found:$PROJECT_SPECIFIC_FOUND"
+    echo "   This content should have been filtered during export"
+else
+    echo "✅ No project-specific content detected"
+fi
+
+# 4. Verify install script exists and is executable
+if [ -f "install.sh" ] && [ -x "install.sh" ]; then
+    echo "✅ Install script present and executable"
+else
+    echo "❌ ERROR: Install script missing or not executable"
+fi
+
+# 5. Check that referenced directories exist in export
+echo "🔍 Verifying referenced directories exist in export..."
+for dir in orchestration; do
+    if [ -d "$dir" ]; then
+        FILE_COUNT=$(find "$dir" -type f | wc -l)
+        echo "   ✅ $dir/ ($FILE_COUNT files)"
+    else
+        echo "   ❌ Missing: $dir/ (referenced in README)"
+    fi
+done
+
+echo "✅ Post-export validation complete"
+```
+
+**Final Verification**:
 - Confirm PR creation and return link
-- Validate exported content structure
+- Validate exported content structure matches README claims
 - Test basic command loading in clean environment
 - Document any export-specific issues or requirements
+- Run accuracy validation against current vs. exported state
 
 ## 🚨 MANDATORY FILE EXCLUSIONS
 
@@ -798,7 +1038,7 @@ See README.md for detailed installation and adaptation guidance."
 - `run_local_server.sh` - Server launcher with hardcoded paths
 - `run_test_server.sh` - Test server with project structure
 - `tools/localserver.sh` - Local development server
-- Files with hardcoded `mvp_site/` dependencies
+- Files with hardcoded `$PROJECT_ROOT/` dependencies
 - Personal configuration files with sensitive paths
 - Project-specific Python scripts with database connections
 - Testing scripts that require specific project setup
@@ -809,8 +1049,13 @@ See README.md for detailed installation and adaptation guidance."
 **Directory Exclusions**:
 - Any directory containing project-specific database configurations
 - Scripts requiring specific virtual environment setup
-- `scripts/` - Firebase and database-specific utilities (but INCLUDE automation/ and orchestration/ core)
+- `scripts/` - Firebase and database-specific utilities
 - `orchestration/` workspaces with hardcoded paths (but INCLUDE orchestration system core)
+- `analysis/` - Project-specific analytics and reporting tools
+- `automation/` - Project-specific automation scripts
+- `claude-bot-commands/` - Project-specific command server implementation
+- `coding_prompts/` - Project-specific AI prompting templates
+- `prototype/` - Project-specific prototype and validation framework
 - Testing infrastructure directories (as defined in export exclusion list above):
   - `testing_http/` - HTTP testing with project-specific endpoints
   - `testing_ui/` - Browser testing with project-specific UI elements
@@ -820,13 +1065,6 @@ See README.md for detailed installation and adaptation guidance."
 - Task progress files (`TASK_*_PROGRESS_SUMMARY.md`)
 - Memory MCP activation guides with project paths
 
-**NEW SYSTEM INCLUSIONS** (⚠️ MUST EXPORT):
-- `claude-bot-commands/` - Complete self-hosting repository system (PRODUCTION READY)
-- `automation/` - Automated PR fixer system with cron integration (PRODUCTION READY)
-- `prototype/` - Validation and benchmarking framework (SPECIALIZED TOOLS)
-- `coding_prompts/` - Multi-agent AI prompting templates (SPECIALIZED TOOLS)
-- `analysis/` - Analytics and data analysis framework (SPECIALIZED TOOLS)
-- Include installation guides and setup documentation for all systems
 
 **🚨 ROOT-LEVEL INFRASTRUCTURE SCRIPTS** (⚠️ MUST EXPORT):
 - `claude_start.sh` - Complete Claude Code + MCP ecosystem startup script with multi-service management
@@ -843,16 +1081,16 @@ See README.md for detailed installation and adaptation guidance."
 **Automatic Text Replacements**:
 ```bash
 # File content transformations
-sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "$file"
+sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "$file"
 sed -i 's|worldarchitect\.ai|your-project.com|g' "$file"
-sed -i "s|jleechan|${USER}|g" "$file"
+sed -i "s|$USER|${USER}|g" "$file"
 sed -i 's|WorldArchitect\.AI|Your Project|g' "$file"
-sed -i 's|TESTING=true vpython|TESTING=true python|g' "$file"
+sed -i 's|TESTING=true python|TESTING=true python|g' "$file"
 sed -i 's|Flask/Gunicorn|Web Framework|g' "$file"
 sed -i 's|Firebase/Firestore|Database|g' "$file"
 sed -i 's|serviceAccountKey\.json|database_credentials.json|g' "$file"
 sed -i 's|worktree_worker[0-9]*|workspace|g' "$file"
-sed -i 's|github\.com/jleechan|github.com/$USER|g' "$file"
+sed -i 's|github\.com/$USER|github.com/$USER|g' "$file"
 sed -i 's|D&D 5e|Tabletop RPG|g' "$file"
 sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 ```
@@ -870,15 +1108,15 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 ## Content Transformation Rules
 
 **Path Generalization**:
-- `mvp_site/` → `$PROJECT_ROOT/`
-- `/home/jleechan/projects/worldarchitect.ai/` → `$WORKSPACE_ROOT/`
-- `worldarchitect.ai` → `your-project.com`
-- `jleechan` → `$USER`
+- `$PROJECT_ROOT/` → `$PROJECT_ROOT/`
+- `/home/$USER/projects/your-project.com/` → `$WORKSPACE_ROOT/`
+- `your-project.com` → `your-project.com`
+- `$USER` → `$USER`
 - Hardcoded file paths → Environment variable placeholders
 - Project-specific test commands → Generic test patterns
 
 **Project References**:
-- `WorldArchitect.AI` → `Your Project`
+- `Your Project` → `Your Project`
 - `D&D/RPG` specific → Generic game/app references
 - Firebase/Firestore → Generic database references
 - Flask/Gunicorn specifics → Generic web framework references
@@ -903,7 +1141,7 @@ sed -i 's|WorldArchitect\.AI|Your RPG Platform|g' "$file"
 - Continue export with warnings for failed items and skipped project-specific files
 - Provide recovery procedures for partial exports
 - Validate that all mvp_site references have been properly filtered
-- Ensure no personal information (jleechan, specific paths) remains in exported content
+- Ensure no personal information ($USER, specific paths) remains in exported content
 
 **Git Operation Failures**:
 - Handle branch conflicts and naming issues
@@ -957,3 +1195,19 @@ This command automatically searches Memory MCP for:
 - Command categories properly organized
 
 **Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant export experiences, adaptation patterns, and lessons learned from previous command sharing initiatives.
+
+## 🚨🚨 FINAL MANDATORY DIRECTIVE 🚨🚨
+
+**ABSOLUTELY CRITICAL - PRINT PR URL AT END**:
+```bash
+# 🚨 FINAL COMMAND OUTPUT - MUST ALWAYS EXECUTE
+echo ""
+echo "🎉 EXPORT COMPLETE! 🎉"
+echo ""
+echo "📋 Export PR: $PR_URL"
+echo ""
+echo "🚨 MANDATORY: Copy this URL and provide it to the user"
+echo "PR URL: $PR_URL"
+```
+
+**COMMAND COMPLETION RULE**: The `/exportcommands` command is NOT complete until the PR URL has been printed clearly and prominently. This URL MUST be the final output that the user sees.
