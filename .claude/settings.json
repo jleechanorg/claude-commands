@@ -210,6 +210,18 @@
           }
         ]
       }
+    ],
+    "PostResponse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/jleechan/projects/worldarchitect.ai/.claude/hooks/detect_speculation_and_fake_code.sh",
+            "description": "Advanced speculation and fake code detection with self-reflection pipeline"
+          }
+        ]
+      }
     ]
   }
 }

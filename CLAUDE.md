@@ -93,6 +93,24 @@
 - ✅ Agent tasks: Requires PR created + pushed + link verified
 - ✅ Direct tasks: Requires changes committed + pushed + tested
 
+🚨 **INTEGRATION VERIFICATION PROTOCOL**: ⚠️ MANDATORY - Prevent "Manual Testing Presented as Production Integration" Meta Fails
+- **The Meta Fail Pattern**: Presenting manual component testing as evidence of production system integration
+- **Three Evidence Rule** (MANDATORY for ANY integration claim):
+  1. **Configuration Evidence**: Show actual config file entries enabling the behavior
+  2. **Trigger Evidence**: Demonstrate automatic trigger mechanism (not manual execution)
+  3. **Log Evidence**: Timestamped logs from automatic behavior (not manual testing)
+- **Orchestration Verification**: Use `/orch` agents for independent verification of integration claims
+  - Agent 1: Config Auditor - verify settings enable claimed behavior
+  - Agent 2: Trigger Tester - test actual automation without manual intervention
+  - Agent 3: Evidence Validator - cross-reference all claims against timestamped evidence  
+  - Agent 4: Documentation Verifier - ensure claims don't exceed verified implementation
+- **Red Flags Requiring Verification**:
+  - ❌ Claims about "automatic" behavior without configuration verification
+  - ❌ Log files presented as evidence without timestamp correlation to automatic triggers
+  - ❌ "Working" declarations based purely on isolated component testing
+  - ❌ Integration stories without demonstrated end-to-end trigger flow
+- **Pattern**: Manual success ≠ Production integration | Always verify the trigger mechanism
+
 🚨 **NO EXCUSES FOR TEST FAILURES**: When asked to fix tests, FIX THEM ALL
 - ❌ NEVER say "pre-existing issues" or settle for partial fixes (97/99 NOT acceptable)
 - ✅ ALWAYS fix ALL failing tests to 100% pass rate
@@ -168,6 +186,27 @@
 - ✅ Show actual output before suggesting fixes | Reference specific line numbers
 - 🔍 All claims must trace to specific evidence
 
+🚨 **MANDATORY FILE ANALYSIS PROTOCOL**: ⚠️ CRITICAL - Never assume file contents
+- ❌ **NEVER use Bash commands** (cat, head, tail) for file content analysis
+- ✅ **ALWAYS use Read tool** for examining file contents, regardless of source
+- ❌ **NEVER assume** file contents from filenames, process names, or Bash output
+- ✅ **ALWAYS verify** actual file contents using Read tool before drawing conclusions
+- **Pattern**: Process name ≠ File contents | Filename ≠ File purpose | Bash output ≠ Complete analysis
+- **Critical Rule**: "Read the file with Read tool, don't assume from context"
+
+🚨 **INVESTIGATION TRUST HIERARCHY**: ⚠️ MANDATORY - When findings conflict, trust order matters
+- **Primary Evidence**: Configuration files, system state, direct file observation
+- **Logical Analysis**: What should happen based on system architecture and evidence
+- **User Direct Evidence**: Screenshots, specific observations, direct questioning
+- **Agent/Tool Findings**: Can be confused or incorrect, require validation against primary evidence
+- **Red Flags Requiring Agent Validation**:
+  - ❌ Agent findings contradict logical evidence or configuration analysis
+  - ❌ Agent claims functionality exists without configuration evidence
+  - ❌ Agent results seem unexpected or too good to be true
+  - ❌ Agent findings make you abandon correct initial assessment
+- **Pattern**: Configuration evidence > Logical analysis > User input > Agent claims
+- **Critical Rule**: "When agents contradict logic, validate the agents - don't abandon the logic"
+
 🚨 **TERMINAL SESSION PRESERVATION**: ⚠️ MANDATORY - Scripts must NOT exit terminal on errors
 - ❌ NEVER use `exit 1` that terminates user's terminal session
 - ✅ ALWAYS use graceful error handling: echo error + read prompt + fallback mode
@@ -230,7 +269,10 @@
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root | ✅ **USE ~ NOT /home/jleechan**: Always use `~` instead of `/home/jleechan` in paths for portability
-7. 🚨 **DATE INTERPRETATION**: Environment date format is YYYY-MM-DD where MM is the month number (01=Jan, 07=July)
+7. 🚨 **DATE INTERPRETATION**: Environment shows "Today's date: 2025-08-09" meaning August 9th, 2025
+   - Format is YYYY-MM-DD where MM is month number (01=Jan, 02=Feb, 07=July, 08=August, 09=September)
+   - **Current date**: August 9, 2025 - Use this for "latest", "recent", "current" research queries
+   - **Research context**: When searching for "2024-2025" info, we're in late 2025 looking at recent developments
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
    - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
@@ -353,6 +395,22 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
 🚨 **Testing Standards**: → See "Testing Protocol" section for complete rules
+
+🚨 **TESTING LEVEL CLASSIFICATION PROTOCOL**: ⚠️ MANDATORY - Match testing scope to claims
+- **Component Testing**: Individual functions, scripts, modules in isolation
+  - ✅ Valid Claims: "Script A vs Script B", "Function improvement", "Module capability"
+  - ❌ Invalid Claims: "System improvement", "Integration enhancement", "Automatic behavior"
+- **Integration Testing**: Components working together, configured systems
+  - ✅ Valid Claims: "System integration", "End-to-end flow", "Configuration validation"  
+  - ❌ Invalid Claims: "Production readiness" without deployment testing
+- **System Testing**: Complete automated workflows, production-like environments
+  - ✅ Valid Claims: "Automatic system improvement", "Production capability", "End-user experience"
+  - ❌ Invalid Claims: Cannot be claimed from component or integration testing alone
+- **Red/Green Methodology**: Must test same scope at both levels
+  - ✅ Valid: Component red → Component green, System red → System green
+  - ❌ Invalid: Component red → System green claims, Non-existent red → Functional green
+- **Critical Rule**: "Test what you claim to test - component testing ≠ system testing ≠ integration testing"
+- **Pattern**: Never present component success as system validation or integration proof
 
 ## Development Guidelines
 
@@ -540,6 +598,49 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - **Example**: V1 server-side vs V2 client-side data loading patterns require different approaches
 
 ## Environment, Tooling & Scripts
+
+🚨 **CLAUDE CODE HOOKS SYSTEM**: ⚠️ CRITICAL UNDERSTANDING - NEVER FORGET THIS
+**What Hooks Are**: Executable scripts that run automatically at specific points during Claude Code operation
+**Hook Categories**:
+- **PreToolUse**: Run before any tool execution
+- **PostToolUse**: Run after specific tool executions (e.g., git commit)
+- **Stop**: Run at the end of every Claude response
+- **PostResponse**: Run to analyze Claude's response content for quality/patterns
+
+**🚨 HOOK CONFIGURATION PROTOCOL**: ⚠️ MANDATORY
+- **Configuration File**: `.claude/settings.json` in project root
+- **Hook Scripts Location**: `.claude/hooks/` directory (must be executable with `chmod +x`)
+- **Hardcoded Paths**: Use `/home/jleechan/projects/worldarchitect.ai` for consistency with git header approach
+- **Hook Types**: `"type": "command"` for shell script execution
+- **Matcher Patterns**: Use `"*"` for all operations or specific patterns like `"Bash(git commit *)"`
+
+**🚨 MANDATORY HOOK EXAMPLES**: Reference these patterns when adding hooks
+```json
+"PostResponse": [
+  {
+    "matcher": "*",
+    "hooks": [
+      {
+        "type": "command", 
+        "command": "/home/jleechan/projects/worldarchitect.ai/.claude/hooks/detect_speculation_and_fake_code.sh",
+        "description": "Advanced speculation and fake code detection with self-reflection pipeline"
+      }
+    ]
+  }
+]
+```
+
+**🚨 CRITICAL HOOK FACTS**:
+- ❌ **NEVER FORGET**: Hooks exist and are automatically triggered
+- ✅ **ALWAYS REMEMBER**: Response analysis hooks run on EVERY Claude response 
+- ✅ **HOOK SCRIPTS**: Must be executable shell scripts that process input
+- ✅ **EXIT CODES**: Exit 0 = success/continue, Exit 1+ = error/warning
+- 🔒 **TESTING REQUIRED**: Test hooks with real responses before deployment
+
+**Current Active Hooks** (August 2025):
+- **Git Header**: Auto-generates branch status headers (PreToolUse + Stop)
+- **Post Commit Sync**: Auto-pushes commits after git operations (PostToolUse)  
+- **Speculation/Fake Code Detection**: Quality analysis of all responses (ResponseAnalysis)
 
 1. **Python venv**: Verify activated before running Python/tests | If missing/corrupted → `VENV_SETUP.md`
 2. **Robust Scripts**: Make idempotent, work from any subdirectory
