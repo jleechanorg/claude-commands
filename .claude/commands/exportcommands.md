@@ -56,6 +56,50 @@ Each command is designed to **compose** with others through a shared protocol:
 
 **The Hook Architecture**: Simple `.md` files that Claude Code reads as executable instructions, enabling complex behavior through composition rather than complexity.
 
+## ⚡ COMMAND COMBINATION SUPERPOWERS
+
+### Combine Multiple Commands in a Single Prompt
+
+**Revolutionary Feature**: Normally, Claude can only handle one command per sentence. This tool lets you string them together in a single prompt, creating sophisticated multi-step workflows.
+
+**Example**: Give this PR a thorough code review with `/archreview /thinkultra /fake`
+
+This runs:
+1. `/archreview` - Architectural analysis of the codebase
+2. `/thinkultra` - Deep strategic thinking about the changes  
+3. `/fake` - Detection of placeholder or incomplete code
+
+**The Foundation**: This command combination capability is the foundation for creating more complex, multi-step workflows that would normally require multiple separate interactions.
+
+### Automate Your PR Lifecycle
+
+**Complete Automation**: You can automate your entire pull request workflow with natural language commands.
+
+**Example**: `/pr fix the settings button`
+
+This automatically runs the whole sequence:
+- `/think` - Strategic analysis of the settings button issue
+- `/execute` - Implementation with auto-approval
+- `/push` - Create PR with comprehensive description
+- `/copilot` - Respond to GitHub comments and make fixes
+- `/review` - Claude's own comprehensive code review
+
+**The `/copilot` Advantage**: The `/copilot` command even responds to GitHub comments and makes fixes automatically, handling the entire feedback loop without manual intervention.
+
+### Detect Fake Code with AI Analysis
+
+**Quality Assurance**: Built-in detection for "fake" code that Claude sometimes generates when pushed too hard.
+
+**The Problem**: When overloaded, Claude sometimes writes placeholder code instead of implementing what you asked for - like just returning success without actual logic.
+
+**The Solution**: If something seems off, run the `/fake` command to systematically detect:
+- Placeholder implementations  
+- Mock responses without real logic
+- TODOs disguised as complete features
+- Demo code that doesn't actually work
+
+**Smart Detection**: This isn't just pattern matching - it's AI-powered analysis that understands the difference between legitimate code and fake implementations.
+
 ## 🔍 COMMAND DEEP DIVE - The Composition Powerhouses
 
 ### `/execute` - Auto-Approval Development Orchestrator
@@ -316,8 +360,16 @@ EOF
 
 # Filter files before export from staging area
 while IFS= read -r pattern; do
-    # Remove from staging area (covers both .claude/commands files and root directories)
-    find staging -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+    case "$pattern" in
+        **/*)
+            # Use regex for patterns with ** (recursive directory matching)
+            find staging -regextype posix-extended -regex ".*/${pattern#**/}" -exec rm -rf {} + 2>/dev/null || true
+            ;;
+        *)
+            # Use path for simple patterns
+            find staging -path "*${pattern}" -exec rm -rf {} + 2>/dev/null || true
+            ;;
+    esac
     # Also remove root directories that may be copied during main export
     rm -rf "staging/${pattern%/}" 2>/dev/null || true
 done < /tmp/export_exclusions.txt
@@ -347,7 +399,7 @@ cp CLAUDE.md /tmp/claude_filtered.md
 # Apply content filtering
 sed -i 's|mvp_site/|$PROJECT_ROOT/|g' /tmp/claude_filtered.md
 sed -i 's|worldarchitect\.ai|your-project.com|g' /tmp/claude_filtered.md
-sed -i "s|jleechan|${USER}|g" /tmp/claude_filtered.md
+sed -i 's|jleechan|${USER}|g' /tmp/claude_filtered.md
 cat /tmp/claude_filtered.md >> staging/CLAUDE.md
 ```
 
@@ -367,13 +419,13 @@ for file in .claude/commands/*.md .claude/commands/*.py; do
     cp "$file" "staging/commands/$(basename "$file")"
 
     # Apply content transformations - completely remove project-specific references
-    sed -i 's|mvp_site/||g' "staging/commands/$(basename "$file")"
+    sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/commands/$(basename "$file")"
     sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/commands/$(basename "$file")"
-    sed -i "s|jleechan|${USER}|g" "staging/commands/$(basename "$file")"
+    sed -i 's|jleechan|${USER}|g' "staging/commands/$(basename "$file")"
     sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/commands/$(basename "$file")"
 
     # Remove any remaining project-specific path references
-    sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
+    sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/commands/$(basename "$file")"
 done
 ```
 - Export filtered command definitions with proper categorization
@@ -400,9 +452,9 @@ for script in claude_command_scripts/*.sh claude_command_scripts/*.py; do
         cp "$script" "staging/scripts/$script_name"
 
         # Apply transformations - completely remove project-specific references
-        sed -i 's|mvp_site/||g' "staging/scripts/$script_name"
+        sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/scripts/$script_name"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/scripts/$script_name"
-        sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/scripts/$script_name"
+        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/scripts/$script_name"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/scripts/$script_name"
 
         # Add dependency header
@@ -457,9 +509,9 @@ else
         # Apply comprehensive content transformations
         sed -i 's|mvp_site/|$PROJECT_ROOT/|g' "staging/hooks/$relative_path"
         sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/hooks/$relative_path"
-        sed -i "s|jleechan|${USER}|g" "staging/hooks/$relative_path"
+        sed -i 's|jleechan|${USER}|g' "staging/hooks/$relative_path"
         sed -i 's|TESTING=true vpython|TESTING=true python|g' "staging/hooks/$relative_path"
-        sed -i 's|/home/jleechan/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
+        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/hooks/$relative_path"
 
         # Make scripts executable and add adaptation headers
         case "$hook_name" in
@@ -597,7 +649,17 @@ if result.returncode != 0:
 print(result.stdout)
 ```
 
-### Step 3: LLM-Enhanced README Generation (PRESERVED CAPABILITY)
+### Step 3: LLM-Enhanced README Generation with Command Combination Superpowers
+
+🚨 **CRITICAL ENHANCEMENT**: The export README must showcase the revolutionary command combination capabilities, not just be a basic file listing.
+
+**Enhanced README Requirements**:
+- **⚡ COMMAND COMBINATION SUPERPOWERS** section prominently featured
+- Multi-command workflow examples (`/archreview /thinkultra /fake`)
+- Complete PR lifecycle automation documentation (`/pr fix the settings button`)
+- AI-powered fake code detection capabilities
+- Quick start examples and advanced workflow patterns
+- Professional setup guide with practical value proposition
 
 While the Python implementation generates a comprehensive README, this LLM can provide additional intelligent analysis:
 
@@ -619,6 +681,70 @@ print("- /pr → /think → /execute → /pushl → /copilot → /review")
 print("- /copilot → /execute → /commentfetch → /fixpr → /commentreply")
 print("- /execute → /plan → /think → implementation → /test")
 ```
+
+### Step 4: Enhanced Main README.md Update
+
+🚨 **MANDATORY STEP**: Update the main README.md (not create variants) with command combination superpowers:
+
+```bash
+# Replace the basic export README with comprehensive command showcase
+cat > README.md << 'EOF'
+# Claude Commands - Command Composition System
+
+⚠️ **REFERENCE EXPORT** - This is a reference export from a working Claude Code project. These commands have been tested in production but may require adaptation for your specific environment. Claude Code excels at helping you customize them for your workflow.
+
+Transform Claude Code into an autonomous development powerhouse through simple command hooks that enable complex workflow orchestration.
+
+## ⚡ COMMAND COMBINATION SUPERPOWERS
+
+### 🎯 Revolutionary Multi-Command Workflows
+
+**Break the One-Command Limit**: Normally, Claude can only handle one command per sentence. This system lets you chain multiple commands in a single prompt, creating sophisticated multi-step workflows.
+
+**Examples**:
+- **Comprehensive PR Review**: `/archreview /thinkultra /fake`
+  - `/archreview` - Architectural analysis of the codebase
+  - `/thinkultra` - Deep strategic thinking about changes  
+  - `/fake` - AI-powered detection of placeholder code
+
+- **Complete PR Lifecycle**: `/pr fix the settings button`
+  - Automatically runs: `/think` → `/execute` → `/push` → `/copilot` → `/review`
+  - Full end-to-end automation with zero manual intervention
+
+### 🤖 AI-Powered Code Quality Detection
+
+**Smart Fake Code Detection**: Built-in `/fake` command uses AI analysis (not just pattern matching) to detect:
+- Placeholder implementations that look real but do nothing
+- Mock responses without actual logic
+- TODOs disguised as complete features  
+- Demo code that doesn't actually work
+
+### 🔄 Complete Workflow Automation
+
+**The `/copilot` Advantage**: Responds to GitHub comments and makes fixes automatically, handling the entire feedback loop without manual intervention.
+
+## 🚀 Quick Start Examples
+
+Get started immediately with these powerful command combinations:
+
+```bash
+# Comprehensive code analysis
+/arch /think /fake
+
+# Full PR workflow automation  
+/pr implement user authentication
+
+# Advanced testing with auto-fix
+/test all features and if any fail /fix then /copilot
+```
+
+[Include rest of enhanced README content with installation, setup, and advanced workflows...]
+EOF
+
+echo "✅ Enhanced main README.md with command combination superpowers"
+```
+
+🚨 **CRITICAL LEARNING**: Always update the actual target file (README.md), never create variants like README_UPDATED.md.
 
 ## EXECUTION
 
@@ -677,5 +803,6 @@ print("✅ Comprehensive README with adaptation guide created")
 1. ✅ PR URL printed (handled by Python implementation)
 2. ✅ Repository safety maintained (no local changes)
 3. ✅ Complete workflow composition system exported
-4. ✅ Installation automation provided
-5. ✅ LLM-enhanced documentation generated
+4. ✅ Main README.md updated with COMMAND COMBINATION SUPERPOWERS
+5. ✅ Installation automation provided
+6. ✅ LLM-enhanced documentation generated

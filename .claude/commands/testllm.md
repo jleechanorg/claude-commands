@@ -97,10 +97,11 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 ## Critical Rules
 
 ### Authentication Requirements
-- ❌ NEVER use mock mode, test mode, or Dev Tools
-- ❌ NEVER use test-user-basic or simulated users
-- ✅ ALWAYS use real Google OAuth authentication
-- ✅ ALWAYS require actual login credentials
+- ❌ AVOID mock mode, test mode for production testing (dev tools allowed for debugging with caution)
+- ❌ NEVER use test-user-basic or simulated users for real workflow validation
+- ✅ ALWAYS use real Google OAuth authentication for production testing
+- ✅ ALWAYS require actual login credentials for authentic user experience testing
+- ⚠️ **Dev Tools Exception**: Browser dev tools may be used for debugging issues, but with clear documentation of when/why used
 
 ### Browser Automation
 - ✅ USE Playwright MCP as primary browser automation

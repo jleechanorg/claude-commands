@@ -64,6 +64,18 @@
 - 🔒 **VALIDATION REQUIRED**: Use `gh api` to verify export PRs show additions/modifications, not mass deletions
 - **Scope**: Applies to ALL data export tools - `/exportcommands`, migration scripts, repository operations
 
+🚨 **PR COMMAND COMPLETE AUTOMATION PROTOCOL**: ⚠️ MANDATORY - Zero Tolerance for Manual Steps
+- ❌ **NEVER give manual steps** when `/pr` command is executed - automation is the core promise
+- ✅ **MUST create actual PR** with working GitHub URL before declaring Phase 3 complete
+- ✅ **PERSISTENCE REQUIRED**: If `gh` CLI fails → install it, If GitHub API fails → configure auth
+- ✅ **ALTERNATIVE METHODS**: Use GitHub MCP, direct API calls, or any working method to create PR
+- ❌ **FORBIDDEN RESPONSES**: "Click this URL to create PR" | "Visit GitHub to complete" | "Manual steps needed"
+- ✅ **SUCCESS CRITERIA**: `/pr` only complete when actual PR URL is returned and verified accessible
+- ⚠️ **CRITICAL FAILURE**: Giving manual steps instead of creating PR violates `/pr` core automation promise
+- **Pattern**: Tool fails → Try alternative method → Configure missing dependencies → NEVER give up
+- **Anti-Pattern**: Tool fails → Provide manual URL → Declare "complete" → User frustration
+- **Scope**: Applies to ALL `/pr`, `/push`, and PR creation workflows
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 

@@ -112,14 +112,14 @@ show_balloon() {
     local title="$1"
     local message="$2"
     powershell.exe -Command "
-Add-Type -AssemblyName System.Windows.Forms
-\$balloon = New-Object System.Windows.Forms.NotifyIcon
-\$balloon.Icon = [System.Drawing.SystemIcons]::Warning
-\$balloon.BalloonTipTitle = '$title'
-\$balloon.BalloonTipText = '$message'
-\$balloon.Visible = \$true
-\$balloon.ShowBalloonTip(5000)
-Start-Sleep -Seconds 1
+Add-Type -AssemblyName System.Windows.Forms;
+\$balloon = New-Object System.Windows.Forms.NotifyIcon;
+\$balloon.Icon = [System.Drawing.SystemIcons]::Warning;
+\$balloon.BalloonTipTitle = \$('$title');
+\$balloon.BalloonTipText = \$('$message');
+\$balloon.Visible = \$true;
+\$balloon.ShowBalloonTip(5000);
+Start-Sleep -Seconds 1;
 \$balloon.Dispose()
 " >/dev/null 2>&1 &
 }
@@ -127,7 +127,7 @@ Start-Sleep -Seconds 1
 # Function to show popup alert
 show_popup() {
     local message="$1"
-    powershell.exe -Command "[System.Windows.Forms.MessageBox]::Show('$message', 'Claude API Critical Alert', 'OK', 'Warning')" >/dev/null 2>&1 &
+    powershell.exe -Command "[System.Windows.Forms.MessageBox]::Show(\$('$message'), \$('Claude API Critical Alert'), \$('OK'), \$('Warning'))" >/dev/null 2>&1 &
 }
 
 # Check for bashrc alias setup

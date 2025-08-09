@@ -175,25 +175,14 @@
     "deny": []
   },
   "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$(git rev-parse --show-toplevel)/claude_command_scripts/git-header.sh",
-            "description": "Auto-generate branch header for CLAUDE.md compliance"
-          }
-        ]
-      }
-    ],
+    "PreToolUse": [],
     "PostToolUse": [
       {
         "matcher": "Bash(git commit *)",
         "hooks": [
           {
             "type": "command",
-            "command": "$(git rev-parse --show-toplevel)/.claude/hooks/post_commit_sync.sh",
+            "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && ./.claude/hooks/post_commit_sync.sh'",
             "description": "Auto-sync commits to remote after git commit operations"
           }
         ]
@@ -201,14 +190,9 @@
     ],
     "Stop": [
       {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "$(git rev-parse --show-toplevel)/claude_command_scripts/git-header.sh",
-            "description": "Generate git branch header for response footer"
-          }
-        ]
+        "type": "command",
+        "command": "bash -c 'cd \"$(git rev-parse --show-toplevel)\" && ./claude_command_scripts/git-header.sh'",
+        "description": "Display git status and branch information"
       }
     ],
     "PostResponse": [
