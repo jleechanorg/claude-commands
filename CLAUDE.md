@@ -710,6 +710,26 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 **Context Management**: Check remaining % before complex operations | Split large tasks
 **Tool Recovery**: After 2 failures → Try alternative tool → Fetch from main if corrupted
 
+### Context Management & Optimization (🚨 MANDATORY)
+
+🚨 **PROACTIVE CONTEXT MONITORING**: ⚠️ MANDATORY - Prevent context exhaustion
+- **Claude Sonnet 4 Limits**: 500K tokens (Enterprise) / 200K tokens (Paid Plans)
+- **Token Estimation**: ~4 characters per token, ~75 words per 100 tokens
+- **Context Health Monitoring**: Use `/context` command for real-time estimation
+- **Strategic Checkpoints**: Use `/checkpoint` before complex operations
+
+🚨 **CONTEXT CONSUMPTION PATTERNS**: High-impact operations to monitor
+- **Context Killers**: Large file reads without limits (1000+ tokens each)
+- **Medium Impact**: Standard operations with filtering (200-1000 tokens)
+- **Low Impact**: Serena MCP operations (50-200 tokens)
+- **Optimization Rule**: Serena MCP first, targeted operations always
+
+**Context Health Levels**:
+- **Green (0-30%)**: Continue with current approach
+- **Yellow (31-60%)**: Apply optimization strategies  
+- **Orange (61-80%)**: Implement efficiency measures
+- **Red (81%+)**: Strategic checkpoint required
+
 ### Context Optimization for Large PRs (🚨 MANDATORY)
 **When working on PRs with 50+ changed files**, follow these patterns to prevent context exhaustion:
 
@@ -731,7 +751,19 @@ Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Ana
 - ✅ Use `jq` or grep to filter API responses before processing
 - ❌ AVOID fetching full comment bodies when only IDs needed
 
-**4. PR Analysis Workflow**:
+**4. Strategic Context Checkpoints**:
+```bash
+# Before complex analysis
+/context --optimize    # Check current consumption and get recommendations
+
+# During large operations  
+/checkpoint            # Create strategic break point with optimization guidance
+
+# For complex workflows
+/context --detailed    # Comprehensive analysis with specific recommendations
+```
+
+**5. PR Analysis Workflow**:
 ```bash
 # Step 1: Get high-level PR structure
 gh pr view [PR] --json changedFiles --jq '.changedFiles | length'
@@ -753,10 +785,17 @@ done
 
 **Best Practice Example**:
 ```bash
-# ✅ Targeted semantic navigation
+# ✅ Targeted semantic navigation with context monitoring
+/context --optimize
 mcp__serena__search_for_pattern --pattern "console\\.error" --restrict_search_to_code_files true
 mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
 ```
+
+🚨 **SESSION COMPLEXITY MANAGEMENT**: ⚠️ MANDATORY monitoring protocols
+- **Tool Operation Counting**: Track file reads, web searches, API calls
+- **Context Estimation**: Monitor approximate token consumption in real-time
+- **Proactive Optimization**: Apply efficiency measures before reaching limits
+- **Strategic Breaks**: Use checkpoints to preserve insights and plan continuation
 
 ## Knowledge Management
 
