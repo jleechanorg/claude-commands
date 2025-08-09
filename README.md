@@ -69,4 +69,4 @@ This comprehensive export includes:
 2. **Test**: Try `/arch /think "review my project"`  
 3. **Automate**: Use `/pr implement your next feature`
 
-**The power of command composition awaits\!** 🚀
+**The power of command composition awaits!** 🚀
