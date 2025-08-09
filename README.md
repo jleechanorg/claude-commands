@@ -13,7 +13,9 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 **Examples**:
 - **Comprehensive PR Review**: `/archreview /thinkultra /fake`
   - `/archreview` - Architectural analysis of the codebase
-  - `/thinkultra` - Deep strategic thinking about changes  
+- **Comprehensive PR Review**: `/archreview /think /fake`
+  - `/archreview` - Architectural analysis of the codebase
+  - `/think` - Deep strategic thinking about changes  
   - `/fake` - AI-powered detection of placeholder code
 
 - **Complete PR Lifecycle**: `/pr fix the settings button`
