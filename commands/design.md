@@ -4,7 +4,7 @@
 
 **Usage**: `/design [feature-name] [--type=feature|bugfix|migration|refactor]` - Creates product spec and engineering design docs in `roadmap/`
 
-**Default Composition**: `/execute /arch /principalproductmanager /principalengineer /thinku /research [current_date_search]`
+**Default Composition**: `/requirements-start /execute /arch /principalproductmanager /principalengineer /thinku /research [current_date_search]`
 
 🚨 **MANDATORY CURRENT DATE RESEARCH**: Must include fresh internet searches using current date (**$(date +"%B %d, %Y")**) to validate against latest industry trends, frameworks, and best practices. Avoid using outdated research when evaluating modern solutions.
 **Parameters**:
@@ -31,13 +31,25 @@
 
 ## 🎯 Command Objectives
 
-1. **Prevent Issues Like React V2**: Enforce proper planning before implementation
-2. **Feature Completeness**: Ensure all requirements are captured upfront
-3. **Technical Clarity**: Define implementation approach before coding
-4. **Success Criteria**: Clear definition of "done" before starting
-5. **Methodology Enforcement**: Mandate /4layer, /tdd, /redgreen for quality
-6. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise
-7. **Current Industry Standards**: Validate approach against 2025 best practices and emerging technologies
+1. **Requirements First**: Start with `/requirements-start` to gather structured requirements through guided questions
+2. **Prevent Issues Like React V2**: Enforce proper planning before implementation
+3. **Feature Completeness**: Ensure all requirements are captured upfront
+4. **Technical Clarity**: Define implementation approach before coding
+5. **Success Criteria**: Clear definition of "done" before starting
+6. **Methodology Enforcement**: Mandate /4layer, /tdd, /redgreen for quality
+7. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise
+8. **Current Industry Standards**: Validate approach against 2025 best practices and emerging technologies
+
+## 📋 Requirements Gathering Integration
+
+The `/design` command now starts with `/requirements-start` to ensure comprehensive requirements are captured before creating design documents:
+
+1. **Discovery Phase**: 5 yes/no questions to understand the problem space
+2. **Context Analysis**: Autonomous codebase analysis to identify technical constraints
+3. **Expert Questions**: 5 detailed yes/no questions based on findings
+4. **Requirements Spec**: Generated requirements feed into design documents
+
+This ensures design documents are grounded in validated requirements gathered through systematic questioning.
 
 ## 🔄 Session Continuity
 

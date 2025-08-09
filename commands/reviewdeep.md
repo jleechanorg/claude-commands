@@ -14,9 +14,9 @@
 
 ## Command Composition
 
-**`/reviewdeep` = `/review` + `/arch` + `/thinku`**
+**`/reviewdeep` = `/review` + `/arch` + `/thinku` + Gemini MCP + Perplexity MCP**
 
-The command executes three specialized commands in sequence for comprehensive analysis:
+The command executes specialized commands with mandatory MCP integration for comprehensive analysis:
 
 ### 1. `/review` - Code Quality Analysis
 
@@ -39,6 +39,18 @@ The command executes three specialized commands in sequence for comprehensive an
 - Complex problem decomposition and solution synthesis
 - Considers second-order effects and edge cases
 
+### 4. **Gemini MCP Integration** - Multi-Role AI Analysis (ALWAYS REQUIRED)
+- **Developer Perspective**: Code quality, maintainability, performance, security vulnerabilities
+- **Architect Perspective**: System design, scalability, integration points, architectural debt
+- **Business Analyst Perspective**: Business value, user experience, cost-benefit, ROI analysis
+- **Enhanced Context**: Uses actual Gemini AI for deep technical analysis
+
+### 5. **Perplexity MCP Integration** - Research-Based Analysis (ALWAYS REQUIRED)
+- **Industry Best Practices**: Current standards and proven approaches
+- **Technical Challenges**: Common pitfalls and expert recommendations
+- **Security Considerations**: Latest security patterns and vulnerability research
+- **Performance Optimization**: Industry benchmarks and optimization techniques
+
 ## Analysis Flow
 
 ```
@@ -50,7 +62,11 @@ INPUT: PR/Code/Feature
     ↓
 3. /thinku → Deep reasoning synthesis & recommendations
     ↓
-OUTPUT: Comprehensive multi-perspective analysis
+4. Gemini MCP → Multi-role AI analysis (Developer/Architect/Business)
+    ↓
+5. Perplexity MCP → Research-based best practices & industry insights
+    ↓
+OUTPUT: Comprehensive multi-perspective analysis with AI-enhanced insights
 ```
 
 ## What You Get
@@ -64,6 +80,8 @@ OUTPUT: Comprehensive multi-perspective analysis
 - **Technical Perspective**: From `/review` - immediate code quality issues
 - **Design Perspective**: From `/arch` - structural and architectural concerns
 - **Strategic Perspective**: From `/thinku` - deep reasoning and synthesis
+- **AI-Enhanced Analysis**: From Gemini MCP - multi-role expert perspectives
+- **Research-Backed Insights**: From Perplexity MCP - industry best practices and standards
 
 ### Actionable Output
 **🚨 POSTS TO GITHUB PR**
@@ -111,3 +129,19 @@ OUTPUT: Comprehensive multi-perspective analysis
 - **Efficient**: Leverages existing specialized commands rather than duplicating functionality
 - **Flexible**: Individual commands can be used separately when full analysis isn't needed
 - **Maintainable**: Changes to individual commands automatically improve the composite
+- **AI-Enhanced**: Mandatory MCP integration provides expert-level analysis beyond traditional code review
+
+## MCP Integration Requirements
+
+### 🚨 MANDATORY MCP Usage
+- **Gemini MCP**: ALWAYS required for multi-role AI analysis
+- **Perplexity MCP**: ALWAYS required for research-based insights
+- **No Fallback Mode**: MCP integration is mandatory, not optional
+- **Error Handling**: Proper timeout and retry logic for MCP calls
+- **Multi-Role Analysis**: Gemini provides Developer, Architect, and Business Analyst perspectives
+
+### Implementation Notes
+- Uses `mcp__gemini-cli-mcp__gemini_chat_pro` for primary analysis
+- Uses `mcp__perplexity-ask__perplexity_ask` for research insights
+- Integrates MCP responses into comprehensive review output
+- Maintains existing command composition while adding AI enhancement layer
