@@ -39,7 +39,8 @@
 **Execution**: Implements the approved plan from Phase 1
 - Updates TodoWrite status as tasks complete
 - Uses systematic tool progression and the execution method determined in planning
-- Executes tasks as planned (parallel or sequential based on plan decision)
+- Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
+- 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents
 - Validates and commits when complete
 
 ## Example Flows
