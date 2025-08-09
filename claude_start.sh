@@ -209,7 +209,7 @@ fi
 
 echo ""
 
-# Claude Bot Server auto-start
+# Claude Bot Server auto-start (configurable via CLAUDE_BOT_AUTOSTART)
 echo -e "${BLUE}🤖 Checking Claude Bot Server status...${NC}"
 
 # Function to check if Claude bot server is running
@@ -245,34 +245,36 @@ start_claude_bot_background() {
     fi
 }
 
-# Check and start Claude bot server
-if is_claude_bot_running; then
-    echo -e "${GREEN}✅ Claude bot server already running on port 5001${NC}"
-else
-    echo -e "${YELLOW}⚠️  Claude bot server not running${NC}"
-
-    if start_claude_bot_background; then
-        # Give it a moment to start up
-        sleep 2
-
-        if is_claude_bot_running; then
-            echo -e "${GREEN}✅ Claude bot server started successfully${NC}"
-            echo -e "${BLUE}📋 Server info:${NC}"
-            echo -e "   • Health check: http://127.0.0.1:5001/health"
-            echo -e "   • Bot endpoint: http://127.0.0.1:5001/claude"
-            echo -e "   • Log file: $HOME/.claude-bot-server.log"
-            echo -e "   • PID file: $HOME/.claude-bot-server.pid"
-        else
-            echo -e "${RED}❌ Failed to start Claude bot server${NC}"
-            echo -e "${BLUE}💡 Check log: tail -f $HOME/.claude-bot-server.log${NC}"
-        fi
+# Check and start Claude bot server (disabled by default, set CLAUDE_BOT_AUTOSTART=1 to enable)
+if [ "${CLAUDE_BOT_AUTOSTART:-0}" = "1" ]; then
+    if is_claude_bot_running; then
+        echo -e "${GREEN}✅ Claude bot server already running on port 5001${NC}"
     else
-        echo -e "${YELLOW}⚠️  Could not start Claude bot server automatically${NC}"
-        echo -e "${BLUE}💡 To start manually: ./start-claude-bot.sh${NC}"
-    fi
-fi
+        echo -e "${YELLOW}⚠️  Claude bot server not running${NC}"
 
-echo ""
+        if start_claude_bot_background; then
+            # Give it a moment to start up
+            sleep 2
+
+            if is_claude_bot_running; then
+                echo -e "${GREEN}✅ Claude bot server started successfully${NC}"
+                echo -e "${BLUE}📋 Server info:${NC}"
+                echo -e "   • Health check: http://127.0.0.1:5001/health"
+                echo -e "   • Bot endpoint: http://127.0.0.1:5001/claude"
+                echo -e "   • Log file: $HOME/.claude-bot-server.log"
+                echo -e "   • PID file: $HOME/.claude-bot-server.pid"
+            else
+                echo -e "${RED}❌ Failed to start Claude bot server${NC}"
+                echo -e "${BLUE}💡 Check log: tail -f $HOME/.claude-bot-server.log${NC}"
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Could not start Claude bot server automatically${NC}"
+            echo -e "${BLUE}💡 To start manually: ./start-claude-bot.sh${NC}"
+        fi
+    fi
+else
+    echo -e "${BLUE}💡 Claude bot server auto-start disabled (set CLAUDE_BOT_AUTOSTART=1 to enable)${NC}"
+fi
 
 # Game MCP Server auto-start
 echo -e "${BLUE}🎮 Checking Game MCP Server status...${NC}"
@@ -1554,12 +1556,16 @@ restart_claude_bot() {
     echo -e "${BLUE}🔄 Restarting Claude bot server...${NC}"
     stop_claude_bot
     sleep 2
-    start_claude_bot_background
-    sleep 3
-    if is_claude_bot_running; then
-        echo -e "${GREEN}✅ Claude bot server restarted successfully${NC}"
+    
+    if start_claude_bot_background; then
+        sleep 3
+        if is_claude_bot_running; then
+            echo -e "${GREEN}✅ Claude bot server restarted successfully${NC}"
+        else
+            echo -e "${RED}❌ Failed to restart Claude bot server${NC}"
+        fi
     else
-        echo -e "${RED}❌ Failed to restart Claude bot server${NC}"
+        echo -e "${RED}❌ Failed to start Claude bot server during restart${NC}"
     fi
 }
 
