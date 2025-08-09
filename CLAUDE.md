@@ -693,7 +693,7 @@ mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
 **Full Documentation**: → `.claude/commands/` | Use `/list` for available commands
 
 ### Command Classification (Dual Architecture)
-**🧠 Cognitive Commands** (Semantic Composition): `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix`, `/perp`, `/research`
+**🧠 Cognitive Commands** (Semantic Composition): `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix`, `/perp`, `/research`, `/history`
 **⚙️ Operational Commands** (Protocol Enforcement): `/headless`, `/handoff`, `/orchestrate` - Modify execution environment
 **🔧 Tool Commands** (Direct Execution): `/execute`, `/test`, `/pr` - Direct task execution
 
@@ -718,7 +718,7 @@ mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
 - ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor tmux agents
 - ❌ NEVER use Task tool for orchestration - use tmux system only
 
-**Key Commands**: `/execute` (auto-approval built-in) | `/plan` (requires manual approval) | `/fake` (code quality audit)
+**Key Commands**: `/execute` (auto-approval built-in) | `/plan` (requires manual approval) | `/fake` (code quality audit) | `/history` (conversation search)
 
 #### `/fake`
 **Purpose**: Comprehensive fake code detection | **Composition**: `/arch /thinku /devilsadvocate /diligent`

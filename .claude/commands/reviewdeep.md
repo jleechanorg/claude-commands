@@ -14,18 +14,22 @@
 
 ## Command Composition
 
-**`/reviewdeep` = `/review` + `/arch` + `/thinku` + Gemini MCP + Perplexity MCP**
+**`/reviewdeep` = `/reviewe` (enhanced review) + `/arch` + `/thinku` + Context7 MCP + Gemini MCP + Perplexity MCP**
 
 The command executes specialized commands with mandatory MCP integration for comprehensive analysis:
 
-### 1. `/review` - Code Quality Analysis
+### 1. `/reviewe` - Enhanced Review with Official Integration
 
-**🚨 POSTS COMMENTS**
-- Virtual [AI reviewer] agent performs comprehensive code analysis
-- Identifies bugs, security issues, performance problems, best practice violations
-- **ALWAYS POSTS** categorized review comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
-- **ALWAYS POSTS** general review comment with comprehensive findings summary
-- Provides file-by-file analysis with specific line references
+**🚨 POSTS COMPREHENSIVE COMMENTS**
+- **Official Review**: Built-in Claude Code `/review` command provides baseline analysis
+- **Enhanced Analysis**: Multi-pass security analysis with code-review subagent
+- **Security Focus**: SQL injection, XSS, authentication flaws, data exposure
+- **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks  
+- **Performance Review**: N+1 queries, inefficient algorithms, memory leaks
+- **Context7 Integration**: Up-to-date API documentation and framework best practices
+- **ALWAYS POSTS** expert categorized comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
+- **ALWAYS POSTS** comprehensive security and quality assessment summary
+- Provides actionable feedback with specific line references and fix recommendations
 
 ### 2. `/arch` - Architectural Assessment
 - Dual-perspective architectural analysis
@@ -39,34 +43,39 @@ The command executes specialized commands with mandatory MCP integration for com
 - Complex problem decomposition and solution synthesis
 - Considers second-order effects and edge cases
 
-### 4. **Gemini MCP Integration** - Multi-Role AI Analysis (ALWAYS REQUIRED)
+### 4. **Context7 + GitHub + Gemini MCP Integration** - Expert Knowledge Analysis (ALWAYS REQUIRED)
+- **Context7 MCP**: Real-time API documentation and framework-specific expertise
+- **GitHub MCP**: Primary for PR, files, and review comment operations
 - **Developer Perspective**: Code quality, maintainability, performance, security vulnerabilities
-- **Architect Perspective**: System design, scalability, integration points, architectural debt
+- **Architect Perspective**: System design, scalability, integration points, architectural debt  
 - **Business Analyst Perspective**: Business value, user experience, cost-benefit, ROI analysis
-- **Enhanced Context**: Uses actual Gemini AI for deep technical analysis
+- **Framework Expertise**: Language-specific patterns and up-to-date best practices
 
 ### 5. **Perplexity MCP Integration** - Research-Based Analysis (ALWAYS REQUIRED)
+- **Security Standards**: OWASP guidelines and latest vulnerability research
 - **Industry Best Practices**: Current standards and proven approaches
 - **Technical Challenges**: Common pitfalls and expert recommendations
-- **Security Considerations**: Latest security patterns and vulnerability research
 - **Performance Optimization**: Industry benchmarks and optimization techniques
+- **Emerging Patterns**: Latest security vulnerabilities and prevention techniques
 
 ## Analysis Flow
 
 ```
 INPUT: PR/Code/Feature
     ↓
-1. /review → Code quality findings & review comments
+1. /reviewe → Enhanced review (Official /review + Advanced analysis)
+    ├─ Official /review → Native Claude Code review
+    └─ Enhanced analysis → Multi-pass security & quality review
     ↓
 2. /arch  → Architectural insights & design assessment
     ↓
 3. /thinku → Deep reasoning synthesis & recommendations
     ↓
-4. Gemini MCP → Multi-role AI analysis (Developer/Architect/Business)
+4. Context7 + Gemini MCP → Multi-role AI analysis with current best practices
     ↓
-5. Perplexity MCP → Research-based best practices & industry insights
+5. Perplexity MCP → Research-based security & industry insights
     ↓
-OUTPUT: Comprehensive multi-perspective analysis with AI-enhanced insights
+OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 ```
 
 ## What You Get
@@ -117,10 +126,11 @@ OUTPUT: Comprehensive multi-perspective analysis with AI-enhanced insights
 
 ## Comparison with Individual Commands
 
-- **`/review`**: Code quality analysis only
+- **`/review`**: Official built-in code review (basic)
+- **`/reviewe`**: Enhanced review (official + advanced analysis)
 - **`/arch`**: Architectural assessment only
 - **`/thinku`**: Deep reasoning only
-- **`/reviewdeep`**: All three perspectives combined for complete analysis
+- **`/reviewdeep`**: All perspectives combined for complete analysis
 
 ## Benefits of Composition
 
@@ -134,11 +144,12 @@ OUTPUT: Comprehensive multi-perspective analysis with AI-enhanced insights
 ## MCP Integration Requirements
 
 ### 🚨 MANDATORY MCP Usage
-- **Gemini MCP**: ALWAYS required for multi-role AI analysis
-- **Perplexity MCP**: ALWAYS required for research-based insights
-- **No Fallback Mode**: MCP integration is mandatory, not optional
+- **Context7 MCP**: ALWAYS required for up-to-date API documentation and framework expertise
+- **Gemini MCP**: ALWAYS required for multi-role AI analysis  
+- **Perplexity MCP**: ALWAYS required for research-based security and best practice insights
+- **No Fallback Mode**: All MCP integrations are mandatory, not optional
 - **Error Handling**: Proper timeout and retry logic for MCP calls
-- **Multi-Role Analysis**: Gemini provides Developer, Architect, and Business Analyst perspectives
+- **Expert Integration**: Context7 provides current API docs, Gemini provides analysis, Perplexity provides research
 
 ### Implementation Notes
 - Uses `mcp__gemini-cli-mcp__gemini_chat_pro` for primary analysis
