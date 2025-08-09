@@ -54,9 +54,10 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] Context check: ___% remaining
   *Guidance*: Estimate the percentage of the task or project that remains incomplete. For example, if 3 out of 10 subtasks are done, the remaining percentage is 70%.
 - [ ] Complexity assessment: Simple/Complex (memory-informed)
-- [ ] Execution method decision: Parallel Tasks/Sequential with reasoning
-  *Required*: Must state "Parallel Tasks - [reason]" or "Sequential - [reason]"
+- [ ] Execution method decision: Parallel Task Tool Agents/Sequential with reasoning
+  *Required*: Must state "Parallel Task Tool Agents - [reason]" or "Sequential - [reason]"
   *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
+  🚨 **CRITICAL**: Task tool supports up to 10 parallel subagents with auto-queue management
 - [ ] Tool requirements: Read, Write, Edit, Bash, Task
 - [ ] Memory-enhanced execution plan presented to user
 - [ ] User approval received
@@ -73,8 +74,9 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 **Execution Plan Presentation**:
 - **Task complexity**: Simple (direct execution) or Complex (coordination needed)
 - **Execution method decision** (memory-informed):
-  - **Parallel Tasks** (0 extra tokens): For simple, independent operations < 30s
-  - **Sequential Tasks**: For complex workflows or coordinated operations
+  - **Parallel Task Tool Agents** (up to 10 concurrent subagents): For independent operations that benefit from parallelization
+  - **Sequential Tasks**: For complex workflows requiring coordination between steps
+  - 🚨 **CRITICAL**: Task tool agents run in TRUE parallel (not sequential as previously documented)
   - See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full criteria
 - **Tool requirements**: Which tools will be used
 - **Implementation approach**: Step-by-step plan
