@@ -10,12 +10,12 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 ./install.sh
 ```
 
-Auto-installs **104 commands** + **12 hooks** + **infrastructure scripts** to your `.claude/` directory and copies `claude_start.sh` for immediate use.
+Auto-installs **112 commands** + **12 hooks** + **infrastructure scripts** to your `.claude/` directory and copies `claude_start.sh` for immediate use.
 
 ## 📊 **Export Contents**
 
 This comprehensive export includes:
-- **📋 104 Command Definitions** - Complete workflow orchestration system (.claude/commands/)
+- **📋 112 Command Definitions** - Complete workflow orchestration system (.claude/commands/)
 - **📎 12 Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
 - **🔧 5 Infrastructure Scripts** - Development environment management
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
@@ -87,6 +87,24 @@ TESTING=true python $PROJECT_ROOT/test_file.py
 ```bash
 npm test src/components/test_file.js
 ```
+
+## Version History
+
+### v1.2.0 - 2025-08-09
+- **Enhanced Versioning System**: Implemented proper two-phase versioning approach - Python handles version increment logic, LLM provides comprehensive change analysis as separate step
+- **Export Process Improvements**: Refined Windows compatibility and error handling in export system
+- **Documentation Updates**: Enhanced README with proper version history tracking and accurate command counts
+- **Export Contents**: 112 commands, 12 hooks, 5 infrastructure scripts (unchanged from v1.1.0)
+- **Branch**: export-20250809-070753
+- **Technical Enhancement**: Separated version determination (Python) from change analysis (LLM) for better maintainability
+
+### v1.1.0 - 2025-08-09
+- **Major Addition**: Complete Requirements Gathering System - 6 new commands (`requirements-start`, `requirements-current`, `requirements-status`, `requirements-list`, `requirements-remind`, `requirements-end`) providing systematic, phase-driven requirements analysis with context discovery, expert questioning, and comprehensive documentation
+- **Advanced Testing**: New LLM-driven test execution system (`testllm`) with dual-agent verification, real authentication, and evidence-based validation protocols for comprehensive browser and API testing
+- **Test Generation**: Added `generatetest` command for automated test creation with multiple formats and validation approaches
+- **Research Integration**: New slash command recognition research documentation (`SLASH_COMMAND_RECOGNITION_RESEARCH.md`) for enhanced command processing
+- **Export Contents**: 112 commands, 12 hooks, 5 infrastructure scripts
+- **Branch**: export-20250809-065347
 
 ## ⚠️ Important Notes
 
