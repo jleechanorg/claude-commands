@@ -35,7 +35,7 @@ fi
 cd "$script_dir" || cd "$git_root" || exit 1
 
 local_branch=$(git branch --show-current)
-remote=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null || echo "no upstream")
+remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
 
 # Get sync status between local and remote
 local_status=""

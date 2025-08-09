@@ -6,13 +6,23 @@ set -euo pipefail
 [[ -f ~/.bashrc ]] && source ~/.bashrc
 
 # Check for correct number of arguments
-if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
-  echo "Usage: $0 <time-HH:MM> [remote-branch-name]"
+if [ "$#" -lt 1 ] || [ "$#" -gt 3 ]; then
+  echo "Usage: $0 <time-HH:MM> [remote-branch-name] [--continue]"
   echo "If a branch name is not specified, the script uses the current git branch."
+  echo "Use --continue to resume the previous conversation instead of starting fresh."
   exit 1
 fi
 
 SCHEDULE_TIME="$1"
+USE_CONTINUE=true
+
+# Check if --continue flag is present (can be 2nd or 3rd argument)
+for arg in "$@"; do
+  if [[ "$arg" == "--continue" ]]; then
+    USE_CONTINUE=true
+    break
+  fi
+done
 
 # Ensure the time is in HH:MM 24-hour format
 if ! [[ "$SCHEDULE_TIME" =~ ^([01]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
@@ -20,67 +30,90 @@ if ! [[ "$SCHEDULE_TIME" =~ ^([01]?[0-9]|2[0-3]):[0-5][0-9]$ ]]; then
   exit 1
 fi
 
-# If a branch is provided as an argument, use it; otherwise, determine the current branch.
-if [ "$#" -eq 2 ]; then
-  REMOTE_BRANCH="$2"
-  BRANCH_MESSAGE="Continue work on the remote branch $REMOTE_BRANCH. If you see conversation history that aligns with the current branch work, please review and consider that context to guide your continuation approach."
-else
-  # Resolve current branch; fall back for detached-HEAD
-  REMOTE_BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git branch --show-current)
-  if [ -z "$REMOTE_BRANCH" ] || [ "$REMOTE_BRANCH" = "HEAD" ]; then
-    echo "Error: Could not determine current branch (detached HEAD?). Please specify a branch name or ensure you are in a valid Git repository."
-    exit 1
+# Parse arguments to get branch name based on position
+REMOTE_BRANCH=""
+# The branch name is the second argument if present and not --continue
+if [ "$#" -ge 2 ]; then
+  if [[ "$2" != "--continue" ]]; then
+    REMOTE_BRANCH="$2"
+  elif [ "$#" -ge 3 ] && [[ "$3" != "--continue" ]]; then
+    # If 2nd arg is --continue, check if 3rd arg exists and is not --continue
+    REMOTE_BRANCH="$3"
   fi
-
-  # Gather context about current work
-  echo "Gathering context for branch: $REMOTE_BRANCH"
-
-  # Check for an open PR on this branch using the 'gh' CLI tool
-  PR_INFO=""
-  if command -v gh >/dev/null 2>&1; then
-    PR_INFO=$(gh pr list --head "$REMOTE_BRANCH" --state open --json number,title,url 2>/dev/null | jq -r '.[] | "PR #\(.number): \(.title)"' 2>/dev/null || echo "")
-  fi
-
-  # Check for a scratchpad file for additional context
-  SCRATCHPAD_INFO=""
-  SCRATCHPAD_FILE="roadmap/scratchpad_${REMOTE_BRANCH}.md"
-  if [ -f "$SCRATCHPAD_FILE" ]; then
-    # Get the first few relevant lines of the scratchpad for context
-    SCRATCHPAD_INFO=$(head -n 10 "$SCRATCHPAD_FILE" 2>/dev/null | grep -E "(Goal:|Task:|Current:|Status:)" | head -n 3 | tr '\n' ' ' || echo "")
-  fi
-
-  # Get recent commit messages from the current branch
-  RECENT_COMMITS=$(git log --oneline -3 --first-parent 2>/dev/null | sed 's/^/  /' || echo "")
-
-  # Check for a TODO file that might provide context
-  TODO_INFO=""
-  TODO_FILE="TODO_${REMOTE_BRANCH}.md"
-  if [ -f "$TODO_FILE" ]; then
-    TODO_INFO=$(head -n 5 "$TODO_FILE" 2>/dev/null | tr '\n' ' ' || echo "")
-  fi
-
-  # Build a comprehensive context message to be sent to Claude
-  BRANCH_MESSAGE="Resume work on branch: $REMOTE_BRANCH"
-
-  if [ -n "$PR_INFO" ]; then
-    BRANCH_MESSAGE="$BRANCH_MESSAGE. Active $PR_INFO"
-  fi
-
-  if [ -n "$SCRATCHPAD_INFO" ]; then
-    BRANCH_MESSAGE="$BRANCH_MESSAGE. Context: $SCRATCHPAD_INFO"
-  fi
-
-  if [ -n "$TODO_INFO" ]; then
-    BRANCH_MESSAGE="$BRANCH_MESSAGE. TODO: $TODO_INFO"
-  fi
-
-  if [ -n "$RECENT_COMMITS" ]; then
-    BRANCH_MESSAGE="$BRANCH_MESSAGE. Recent commits:$'\n'$RECENT_COMMITS"
-  fi
-
-  # Add a final instruction to review all available context
-  BRANCH_MESSAGE="$BRANCH_MESSAGE$'\n\n'Please review conversation history and any existing context to continue the work appropriately."
 fi
+
+# Resolve branch if not provided (with detached-HEAD guard)
+if [ -z "$REMOTE_BRANCH" ]; then
+  REMOTE_BRANCH=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git branch --show-current || git rev-parse --abbrev-ref HEAD 2>/dev/null)
+fi
+if [ -z "$REMOTE_BRANCH" ] || [ "$REMOTE_BRANCH" = "HEAD" ]; then
+  echo "Error: Could not determine current branch (detached HEAD?). Please specify a branch name or ensure you are in a valid Git repository."
+  exit 1
+fi
+
+# Gather context uniformly for the resolved branch
+echo "Gathering context for branch: $REMOTE_BRANCH"
+
+# Check for an open PR on this branch using the 'gh' CLI tool
+PR_INFO=""
+if command -v gh >/dev/null 2>&1; then
+  PR_INFO=$(gh pr list --head "$REMOTE_BRANCH" --state open --json number,title,url 2>/dev/null | jq -r '.[] | "PR #\(.number): \(.title)"' 2>/dev/null || echo "")
+fi
+
+# Check for a scratchpad file for additional context
+SCRATCHPAD_INFO=""
+SCRATCHPAD_FILE="roadmap/scratchpad_${REMOTE_BRANCH}.md"
+if [ -f "$SCRATCHPAD_FILE" ]; then
+  # Get the first few relevant lines of the scratchpad for context
+  SCRATCHPAD_INFO=$(head -n 10 "$SCRATCHPAD_FILE" 2>/dev/null | grep -E "(Goal:|Task:|Current:|Status:)" | head -n 3 | tr '\n' ' ' || echo "")
+fi
+
+# Determine the default branch name (e.g., main, master, etc.)
+# Use command substitution that won't fail with set -euo pipefail
+DEFAULT_BRANCH=""
+if git symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null 2>&1; then
+  DEFAULT_BRANCH=$(git symbolic-ref --quiet refs/remotes/origin/HEAD 2>/dev/null | sed 's@^refs/remotes/origin/@@')
+fi
+if [ -z "$DEFAULT_BRANCH" ]; then
+  # Fallback to 'main' if we can't determine the default branch
+  DEFAULT_BRANCH="main"
+fi
+
+# Get recent commit messages from the current branch (not on default branch)
+BRANCH_FOR_LOG="$REMOTE_BRANCH"
+if [ -z "$BRANCH_FOR_LOG" ]; then
+  BRANCH_FOR_LOG=$(git symbolic-ref --quiet --short HEAD 2>/dev/null || git branch --show-current)
+fi
+RECENT_COMMITS=$(git log --oneline -3 origin/"$DEFAULT_BRANCH".."$BRANCH_FOR_LOG" 2>/dev/null | sed 's/^/  /' || echo "")
+
+# Check for a TODO file that might provide context
+TODO_INFO=""
+TODO_FILE="TODO_${REMOTE_BRANCH}.md"
+if [ -f "$TODO_FILE" ]; then
+  TODO_INFO=$(head -n 5 "$TODO_FILE" 2>/dev/null | tr '\n' ' ' || echo "")
+fi
+
+# Build a comprehensive context message to be sent to Claude
+BRANCH_MESSAGE="Resume work on branch: $REMOTE_BRANCH"
+
+if [ -n "$PR_INFO" ]; then
+  BRANCH_MESSAGE="$BRANCH_MESSAGE. Active $PR_INFO"
+fi
+
+if [ -n "$SCRATCHPAD_INFO" ]; then
+  BRANCH_MESSAGE="$BRANCH_MESSAGE. Context: $SCRATCHPAD_INFO"
+fi
+
+if [ -n "$TODO_INFO" ]; then
+  BRANCH_MESSAGE="$BRANCH_MESSAGE. TODO: $TODO_INFO"
+fi
+
+if [ -n "$RECENT_COMMITS" ]; then
+  BRANCH_MESSAGE="$BRANCH_MESSAGE. Recent commits:$'\n'$RECENT_COMMITS"
+fi
+
+# Add a final instruction to review all available context
+BRANCH_MESSAGE="$BRANCH_MESSAGE$'\n\n'Please review conversation history and any existing context to continue the work appropriately."
 
 # --- SCHEDULING LOGIC ---
 # Calculate the number of seconds to wait until the scheduled time.
@@ -143,4 +176,17 @@ echo "Time reached! Launching Claude..."
 # Run the claude command interactively, passing the gathered context as the initial prompt.
 # Note: --dangerously-skip-permissions bypasses Claude's file access confirmation prompts.
 # This is used here for automated scheduling but should be used carefully in interactive contexts.
-claude --dangerously-skip-permissions --model sonnet "$BRANCH_MESSAGE"
+
+# Ensure 'claude' CLI is available
+if ! command -v claude >/dev/null 2>&1; then
+  echo "Error: 'claude' CLI not found in PATH."
+  exit 127
+fi
+
+if [ "$USE_CONTINUE" = true ]; then
+  # Use --continue to resume the previous conversation
+  claude --dangerously-skip-permissions --model sonnet --continue "$BRANCH_MESSAGE"
+else
+  # Start a fresh conversation with context
+  claude --dangerously-skip-permissions --model sonnet "$BRANCH_MESSAGE"
+fi
