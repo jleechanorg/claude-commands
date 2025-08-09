@@ -1,0 +1,15 @@
+{
+  "id": "2025-08-08-1647-v2-planning-block-fix",
+  "status": "complete",
+  "phase": "requirements_documented",
+  "created": "2025-08-08T16:47:00Z",
+  "updated": "2025-08-08T16:58:00Z",
+  "progress": {
+    "discovery_questions": 5,
+    "discovery_answers": 5,
+    "detail_questions": 5,
+    "detail_answers": 5
+  },
+  "summary": "Fix V2 planning block feature to match V1 functionality"
+}
+EOF < /dev/null
