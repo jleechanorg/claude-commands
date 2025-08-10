@@ -4,13 +4,14 @@
 
 Transform Claude Code into an autonomous development powerhouse through simple command hooks that enable complex workflow orchestration.
 
-## 🚀 ONE-CLICK INSTALL
+## 🚀 CLAUDE CODE SELF-SETUP
 
 ```bash
-./install.sh
+# Point Claude Code to this repository and let it set up what you need
+"I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
-Auto-installs commands to `.claude/commands/` and sets up your environment with proper .gitignore management.
+Claude Code will intelligently analyze your project, recommend relevant commands, and configure everything automatically.
 
 ## Table of Contents
 
@@ -18,7 +19,7 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 2. [Command Deep Dive](#-command-deep-dive---the-composition-powerhouses)
 3. [Meta-AI Testing Framework](#-meta-ai-testing-framework)
 4. [WIP: Orchestration System](#-wip-orchestration-system)
-5. [Installation & Setup](#-installation--setup)
+5. [Claude Code Setup](#-claude-code-setup)
 6. [Adaptation Guide](#-adaptation-guide)
 7. [Command Categories](#-command-categories)
 8. [Important Notes](#️-important-notes)
@@ -526,34 +527,33 @@ This export contains **80+ commands** that transform Claude Code into:
 4. **Git Workflow Automation**: Branch management and PR creation
 5. **Memory-Enhanced Learning**: System learns from previous executions
 
-## 🔧 Installation & Setup
+## 🔧 Claude Code Setup
 
-### Quick Start
+### Intelligent Self-Setup (Recommended)
 ```bash
-# 1. Clone this repository to your project
-git clone https://github.com/jleechanorg/claude-commands.git
-
-# 2. Run one-click install
-cd claude-commands
-./install.sh
-
-# 3. Start using composition commands
-/execute "implement user authentication"
-/pr "fix performance issues"
-/copilot  # Fix any PR issues
+# Let Claude Code analyze and set up what you need
+"I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
-### Manual Installation
+Claude Code will:
+1. **Analyze** your project structure and needs
+2. **Recommend** relevant commands for your workflow  
+3. **Install** selected commands to `.claude/commands/`
+4. **Configure** hook automation in `.claude/settings.json`
+5. **Test** setup and provide usage examples
+
+### What Gets Set Up
+- **Command Definitions**: Workflow orchestration commands (`/execute`, `/pr`, `/copilot`)
+- **Hook Configuration**: Essential automation hooks for git workflow
+- **Project Integration**: Adapted paths and references for your specific project
+- **Usage Guidance**: Personalized examples based on your codebase
+
+### Start Using Commands
 ```bash
-# Create commands directory
-mkdir -p .claude/commands
-
-# Copy command definitions
-cp commands/* .claude/commands/
-
-# Update .gitignore
-echo ".claude/" >> .gitignore
-echo "# Claude Commands - Auto-installed" >> .gitignore
+# After setup, use powerful workflow commands
+/execute "implement user authentication"  # → Full implementation workflow
+/pr "fix performance issues"             # → Analysis → fix → PR creation  
+/copilot                                # → Fix PR conflicts and comments
 ```
 
 ## 🎯 Adaptation Guide
