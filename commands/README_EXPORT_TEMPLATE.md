@@ -22,6 +22,7 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 6. [Adaptation Guide](#-adaptation-guide)
 7. [Command Categories](#-command-categories)
 8. [Important Notes](#️-important-notes)
+9. [Version History](#-version-history)
 
 ## 🎯 The Magic: Simple Hooks → Powerful Workflows
 
