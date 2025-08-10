@@ -14,8 +14,44 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 
 ## Table of Contents
 
-1. [Command Composition Architecture](#-command-composition-architecture---how-it-actually-works)
-2. [Command Deep Dive](#-command-deep-dive---the-composition-powerhouses)
+1. [Command Composition Architecture](#-command-composition-architecture
+
+## Version History
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+- Features: Template-based README, obsolete file cleanup, additive export strategy
+
+**Changes**:
+- Comprehensive command system (116 commands) • Enhanced hook automation (13 hooks) • Infrastructure automation (5 scripts) • Template-based README generation with dynamic content • Obsolete file cleanup and maintenance • Additive export strategy preserving existing content • Enhanced content filtering and path normalization • Version tracking and change history management
+- Updated command counts and export statistics
+- Enhanced README generation with version tracking
+- Improved content filtering and path normalization
+
+---how-it-actually-works)
+2. [Command Deep Dive](#-command-deep-dive
+
+## Version History
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+- Features: Template-based README, obsolete file cleanup, additive export strategy
+
+**Changes**:
+- Comprehensive command system (116 commands) • Enhanced hook automation (13 hooks) • Infrastructure automation (5 scripts) • Template-based README generation with dynamic content • Obsolete file cleanup and maintenance • Additive export strategy preserving existing content • Enhanced content filtering and path normalization • Version tracking and change history management
+- Updated command counts and export statistics
+- Enhanced README generation with version tracking
+- Improved content filtering and path normalization
+
+---the-composition-powerhouses)
 3. [Meta-AI Testing Framework](#-meta-ai-testing-framework)
 4. [WIP: Orchestration System](#-wip-orchestration-system)
 5. [Installation & Setup](#-installation--setup)
@@ -517,13 +553,22 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **80+ commands** that transform Claude Code into:
+This export contains **116 commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
 3. **Quality Assurance Integration**: Automatic testing and validation
 4. **Git Workflow Automation**: Branch management and PR creation
 5. **Memory-Enhanced Learning**: System learns from previous executions
+
+
+
+## 📊 Current Export Statistics
+
+- **Commands**: 116 workflow orchestration commands
+- **Hooks**: 13 Claude Code automation hooks  
+- **Scripts**: 5 infrastructure management scripts
+- **Excluded**: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/
 
 ## 🔧 Installation & Setup
 
@@ -644,6 +689,24 @@ This is a reference export from a working Claude Code project. Commands may need
 Transform your development process from manual step-by-step work to autonomous workflow orchestration where single commands handle complex multi-phase processes.
 
 This isn't just command sharing - it's **workflow transformation** through the power of command composition.
+
+
+
+## Version History
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+- Features: Template-based README, obsolete file cleanup, additive export strategy
+
+**Changes**:
+- Comprehensive command system (116 commands) • Enhanced hook automation (13 hooks) • Infrastructure automation (5 scripts) • Template-based README generation with dynamic content • Obsolete file cleanup and maintenance • Additive export strategy preserving existing content • Enhanced content filtering and path normalization • Version tracking and change history management
+- Updated command counts and export statistics
+- Enhanced README generation with version tracking
+- Improved content filtering and path normalization
 
 ---
 
