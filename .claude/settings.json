@@ -190,9 +190,14 @@
     ],
     "Stop": [
       {
-        "type": "command",
-        "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./claude_command_scripts/git-header.sh ] && exec ./claude_command_scripts/git-header.sh; fi'",
-        "description": "Display git status and branch information"
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./claude_command_scripts/git-header.sh ] && exec ./claude_command_scripts/git-header.sh; fi'",
+            "description": "Display git status and branch information"
+          }
+        ]
       }
     ],
     "PostResponse": [
@@ -201,7 +206,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/jleechan/projects/worldarchitect.ai/.claude/hooks/detect_speculation_and_fake_code.sh",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./.claude/hooks/detect_speculation_and_fake_code.sh ] && exec ./.claude/hooks/detect_speculation_and_fake_code.sh; fi'",
             "description": "Advanced speculation and fake code detection with self-reflection pipeline"
           }
         ]
