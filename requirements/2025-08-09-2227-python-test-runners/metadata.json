@@ -1,0 +1,13 @@
+{
+  "id": "python-test-runners",
+  "started": "2025-08-09T22:27:00Z",
+  "lastUpdated": "2025-08-09T22:27:00Z", 
+  "status": "active",
+  "phase": "discovery",
+  "progress": {
+    "discovery": { "answered": 0, "total": 5 },
+    "detail": { "answered": 0, "total": 0 }
+  },
+  "contextFiles": [],
+  "relatedFeatures": ["test-infrastructure", "ci-cd-pipeline", "memory-optimization"]
+}
