@@ -1,5 +1,7 @@
 # View Current Requirement
 
+*Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this thoughtful approach!*
+
 Display detailed information about the active requirement.
 
 ## Instructions:

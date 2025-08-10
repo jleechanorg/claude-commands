@@ -1,5 +1,7 @@
 # Start Requirements Gathering
 
+*Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this thoughtful approach!*
+
 Begin gathering requirements for: $ARGUMENTS
 
 ## Full Workflow:
