@@ -22,6 +22,7 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 6. [Adaptation Guide](#-adaptation-guide)
 7. [Command Categories](#-command-categories)
 8. [Important Notes](#️-important-notes)
+9. [Version History](#-version-history)
 
 ## 🎯 The Magic: Simple Hooks → Powerful Workflows
 
@@ -517,7 +518,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **80+ commands** that transform Claude Code into:
+This export contains **116 commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
@@ -644,6 +645,26 @@ This is a reference export from a working Claude Code project. Commands may need
 Transform your development process from manual step-by-step work to autonomous workflow orchestration where single commands handle complex multi-phase processes.
 
 This isn't just command sharing - it's **workflow transformation** through the power of command composition.
+
+## 📚 Version History
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+
+**Changes**:
+- Comprehensive command system (116 commands) with enhanced automation
+- Enhanced hook automation (13 hooks) including speculation detection and root file management
+- Infrastructure automation (5 scripts) for development environment setup
+- Template-based README generation with dynamic content replacement
+- Obsolete file cleanup and maintenance for repository hygiene
+- Additive export strategy preserving existing content while adding new features
+- Enhanced content filtering and path normalization for cross-project compatibility
+- Version tracking and change history management for transparent updates
+- Single version history placement at bottom of README with table of contents integration
 
 ---
 
