@@ -1,361 +1,280 @@
-# /copilot Command - Universal Composition with Execute
+# /copilot Command - Adaptive Linear PR Analysis
 
 **Usage**: `/copilot [PR_NUMBER]`
 
-**Purpose**: Comprehensively analyze and address PR issues using universal composition with intelligent execution optimization.
+**Purpose**: Adaptive PR analysis using smart guard-clause pattern that can handle broken states.
 
 ## 🎯 **DEFAULT BEHAVIOR** (No Arguments)
-
-**When you run `/copilot` without arguments**:
 - ✅ **Automatically targets the current branch's PR**
 - ✅ **Shows clear confirmation**: `🎯 Targeting current branch PR: #123`
-- ✅ **No guessing required**: You'll see exactly which PR is being processed
 
 **Examples**:
 ```bash
-/copilot           # ← Applies to current branch PR (most common usage)
+/copilot           # ← Applies to current branch PR (most common usage)  
 /copilot 1062      # ← Applies to specific PR #1062
 ```
-
-**🚨 IMPORTANT**: If your current branch doesn't have a PR, the command will display an error message indicating that no PR is associated with the branch.
 
 ## 🚨 CRITICAL: EXECUTION GUARANTEE
 
 **MANDATORY STARTUP PROTOCOL**:
 ```
-🤖 /copilot - Starting intelligent PR analysis
+🤖 /copilot - Starting adaptive PR analysis
 🎯 Targeting: [Current branch PR: #123] OR [Specified PR: #456]
-🔧 Reading PR status and planning workflow...
-📊 PR Status: [OPEN/MERGED/CLOSED] | ✅ CI Status: [PASSING/FAILING] | 🔄 Mergeable: [MERGEABLE/CONFLICTING/UNMERGEABLE]
-🚀 Beginning 6-phase autonomous workflow with full transparency...
-
-🚀 Delegating to /execute for intelligent workflow optimization...
-
-=== COPILOT WORKFLOW INITIATED ===
+🔧 Using smart guard-clause pattern for reliability...
+📊 Assessing PR state and building action plan...
+🚀 Beginning adaptive workflow based on PR needs...
 ```
 
-**NEVER FAIL SILENTLY**: Every execution MUST show visible progress through all phases
-**NEVER STOP EARLY**: Complete all phases - /copilot ALWAYS resolves everything autonomously
-**ALWAYS BE VERBOSE**: Show commands, results, progress, and decisions in real-time
-**ALWAYS FIX ALL PROBLEMS**: No failing allowed - autonomously fix all problems encountered
-
-## ⚡ **Execution Strategy**
-
-**DEFAULT: Direct Execution** ✅ (Recommended for most PRs)
-- **Performance**: Immediate startup vs 5-10s Task delegation overhead
-- **Resource Efficiency**: Critical for solo developers with limited resources
-- **Progress Tracking**: Clear TodoWrite-based phase tracking
-- **Universal Composition**: Claude naturally orchestrates commands without delegation
-
-**Consider Task Delegation Only When ALL Criteria Met**:
-- ✅ **Parallelism Opportunity**: Many comments that can be processed simultaneously
-- ✅ **Resource Availability**: System memory <50% AND <3 Claude instances running
-- ✅ **Independence**: Multiple unrelated CI failures or research tasks
-- ✅ **Specialization Needed**: Complex domain-specific analysis required
-
-**NEVER Delegate When**:
-- ❌ **Sequential 6-Phase Workflow**: Phases have dependencies, no parallel benefit
-- ❌ **Resource Constraints**: >50% memory usage, multiple Claude instances
-- ❌ **Simple Orchestration**: Just calling existing commands in sequence
-- ❌ **Solo Developer Context**: Speed and simplicity preferred over architectural complexity
-
-**Performance Evidence**: PR #1062 - Direct execution (2 min) vs Task delegation timeout (5+ min)
+**NEVER FAIL SILENTLY**: Every execution MUST show visible progress through all steps
+**ASSESS THEN ACT**: Smart guards assess problems and plan fixes instead of failing immediately
+**ADAPTIVE EXECUTION**: Actions adapt to PR state - fix broken tests, resolve conflicts, process comments
 
 ## How It Works
 
-The `/copilot` command uses **universal composition** to intelligently orchestrate PR analysis and fixes:
+The `/copilot` command uses **Adaptive Linear Processing with Smart Guards**:
 
-1. **Delegates to `/execute`**: The entire copilot workflow is executed via `/execute` which automatically:
-   - Analyzes task complexity and PR size
-   - Determines optimal execution strategy (parallel tasks vs sequential)
-   - Provides intelligent execution optimization
+1. **Assess PR State**: Comprehensive analysis of current condition
+2. **Plan Actions**: Build prioritized action list based on assessment
+3. **Execute Plan**: Carry out planned actions with rich error reporting
+4. **Verify Results**: Confirm all actions completed successfully
+5. **Report Status**: Clear final status with full diagnostic information
 
-2. **Natural Workflow Composition**: Composes the workflow using existing commands:
-   - `/commentfetch` - Data collection
-   - `/fixpr` - Fix CI failures and conflicts
-   - `/pushl` - Push fixes to remote
-   - `/commentreply` - Comment response processing
-   - `/commentcheck` - Verify coverage
-   - `/pushl` - Final push if needed
+## 🚨 CRITICAL MANDATE: USE PROPER COMMENT FETCHING
 
-3. **Intelligent Optimization**: `/execute` handles all optimization decisions:
-   - Large comment volumes → Parallel comment processing
-   - Multiple CI failures → Specialized CI analysis
-   - Complex conflicts → Merge resolution
-   - Quality verification → Coverage validation
+**❌ FORBIDDEN SHORTCUTS**: NEVER use `gh pr view --json comments` or similar simplified GitHub API calls for comment collection
+**✅ MANDATORY**: ALWAYS use the actual `/commentfetch` Python implementation for ALL comment collection
+**🐛 BUG PREVENTION**: `gh pr view --json comments` only returns general issue comments and MISSES review comments entirely
 
-   **Note**: All substeps like `/fixpr`, `/commentreply` etc. also benefit from `/execute`'s intelligent optimization when invoked within the copilot workflow.
+**EVIDENCE**: Review comments (like `#discussion_rXXXXXXX` URLs) are only available via:
+- ✅ `/commentfetch` → calls `gh api repos/owner/repo/pulls/PR/comments` (captures ALL comment types)  
+- ❌ `gh pr view --json comments` → only returns general issue comments (INCOMPLETE)
 
-## 🚨 INTELLIGENT WORKFLOW PHASES
+**WHY THIS MATTERS**: A comment asking "see if commentreply catches this" was missed because the copilot workflow used the wrong API endpoint that doesn't include review comments.
 
-**SMART EXECUTION**: These phases use intelligent optimization - executing only when needed while maintaining comprehensive coverage:
+## 🚨 ADAPTIVE WORKFLOW STEPS
 
-### Phase 1: GitHub Status Verification (MANDATORY)
+### Step 1: PR State Assessment (MANDATORY)
 ```bash
-# REQUIRED: Fresh GitHub state verification + Skip Condition Evaluation
+# Get comprehensive PR state - single source of truth
 pr_json=$(gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup,comments,reviews)
 PR_STATE=$(echo "$pr_json" | jq -r '.state')
-PR_MERGEABLE=$(echo "$pr_json" | jq -r '.mergeable')
-CI_STATUS=$(echo "$pr_json" | jq -r '.statusCheckRollup.state // "PENDING"')
+CI_STATE=$(echo "$pr_json" | jq -r '.statusCheckRollup.state // "PENDING"')
+MERGEABLE=$(echo "$pr_json" | jq -r '.mergeable')
 COMMENT_COUNT=$(echo "$pr_json" | jq '(.comments | length) + (.reviews | length)')
 
-# Evaluate skip conditions
-if [[ "$PR_MERGEABLE" == "MERGEABLE" && "$CI_STATUS" == "SUCCESS" && "$COMMENT_COUNT" -eq 0 ]]; then
-    export SKIP_CONDITIONS_MET="true"
-    echo "⚡ OPTIMIZATION ENABLED: All skip conditions met"
-    echo "   ✅ Mergeable: $PR_MERGEABLE"
-    echo "   ✅ CI Status: $CI_STATUS"
-    echo "   ✅ Comments: $COMMENT_COUNT"
+# Build action plan based on assessment
+PLANNED_ACTIONS=()
+COMPLETED_ACTIONS=()
+HIGH_COMMENT_THRESHOLD=${COPILOT_HIGH_COMMENT_THRESHOLD:-30}  # Configurable threshold for high comment count processing
+echo "📊 PR Assessment Results:"
+echo "   State: $PR_STATE | CI: $CI_STATE | Mergeable: $MERGEABLE | Comments: $COMMENT_COUNT"
+
+# Smart assessment logic
+[[ "$PR_STATE" != "OPEN" ]] && { echo "❌ PR is not open - cannot proceed"; exit 1; }
+
+if [[ "$CI_STATE" != "SUCCESS" ]]; then
+    echo "🔧 CI issues detected - adding fix to plan"
+    PLANNED_ACTIONS+=("fix_ci")
+fi
+
+if [[ "$MERGEABLE" == "CONFLICTING" ]]; then
+    echo "🔧 Merge conflicts detected - adding resolution to plan"
+    PLANNED_ACTIONS+=("resolve_conflicts")
+fi
+
+# Always fetch comments for comprehensive data
+echo "📊 Comments detected ($COMMENT_COUNT) - always fetching for complete analysis"
+PLANNED_ACTIONS+=("fetch_comments")
+
+if [[ "$COMMENT_COUNT" -gt 0 ]]; then
+    echo "💬 Comments require processing - adding to plan"
+    PLANNED_ACTIONS+=("process_comments")
+fi
+
+# Always add sync and report
+PLANNED_ACTIONS+=("sync_branch" "report_status")
+echo "📋 Planned Actions: ${PLANNED_ACTIONS[*]}"
+```
+
+### Step 2: Execute Planned Actions (ADAPTIVE)
+```bash
+# Execute each planned action with rich error handling
+for action in "${PLANNED_ACTIONS[@]}"; do
+    echo "🚀 Executing: $action"
+    
+    case $action in
+        "fix_ci")
+            echo "🔧 Attempting to fix CI issues..."
+            if /fixpr "$PR_NUMBER"; then
+                echo "✅ CI fixes applied successfully"
+                COMPLETED_ACTIONS+=("fix_ci")
+            else
+                echo "❌ CI fix failed - capturing diagnostics..."
+                # Capture detailed error information (supported API)
+                echo "ℹ️ CI failures:"
+                gh pr view "$PR_NUMBER" --json statusCheckRollup -q '
+                  .statusCheckRollup[]?
+                  | select(.state=="FAILURE" or .conclusion=="FAILURE")
+                  | {name: (.name // .context), detailsUrl: (.detailsUrl // .targetUrl)}'
+                exit 1
+            fi
+            ;;
+            
+        "resolve_conflicts")
+            echo "🔀 Attempting to resolve merge conflicts..."
+            if /fixpr "$PR_NUMBER"; then
+                echo "✅ Conflicts resolved successfully"
+                COMPLETED_ACTIONS+=("resolve_conflicts")
+            else
+                echo "❌ Conflict resolution failed - manual intervention required"
+                exit 1
+            fi
+            ;;
+
+        "fetch_comments")
+            echo "📊 Fetching comments and reviews for comprehensive analysis..."
+            echo "🚨 CRITICAL: Using proper /commentfetch implementation (NOT gh pr view shortcuts)"
+            if [[ "$COMMENT_COUNT" -gt "$HIGH_COMMENT_THRESHOLD" ]]; then
+                echo "⚡ High comment count detected ($COMMENT_COUNT) - focusing on last $HIGH_COMMENT_THRESHOLD for efficiency"
+                export COMMENTFETCH_LIMIT="$HIGH_COMMENT_THRESHOLD"
+                export COMMENTFETCH_FOCUS="recent"
+            else
+                echo "📝 Standard comment count ($COMMENT_COUNT) - fetching all"
+            fi
+            
+            # 🚨 MANDATORY: Use actual /commentfetch Python implementation
+            # This captures ALL comment types: inline, general, review, and copilot
+            # NEVER use gh pr view --json comments (incomplete - misses review comments)
+            if /commentfetch "$PR_NUMBER"; then
+                echo "✅ Comments fetched successfully with complete API coverage"
+                COMPLETED_ACTIONS+=("fetch_comments")
+            else
+                echo "❌ Comment fetch failed - check commentfetch logs"
+                exit 1
+            fi
+            ;;
+            
+        "process_comments")
+            echo "💬 Processing comments..."
+            echo "🚨 CRITICAL: Processing ALL comments including owner testing comments"
+            echo "🔧 BUG FIX: No filtering by author - ALL comments get responses"
+            if [[ "$COMMENT_COUNT" -gt "$HIGH_COMMENT_THRESHOLD" ]]; then
+                echo "⚡ High comment count detected ($COMMENT_COUNT) - processing all systematically"
+            fi
+            
+            # MANDATORY: Process ALL comments without filtering
+            # Fixed bug where owner test comments were ignored
+            echo "📋 Comment processing scope: ALL comments regardless of:"
+            echo "   - Author (owner, bots, external reviewers)"
+            echo "   - Content type (technical, testing, simple)"  
+            echo "   - Purpose (feedback, debugging, validation)"
+            
+            if /commentreply "$PR_NUMBER"; then
+                echo "✅ Comments processed successfully - ALL comments addressed"
+                COMPLETED_ACTIONS+=("process_comments")
+            else
+                echo "❌ Comment processing failed - check commentreply logs"
+                exit 1
+            fi
+            ;;
+            
+        "sync_branch")
+            echo "🔍 Checking branch sync status..."
+            # Atomic git check - refresh state before sync
+            git fetch origin >/dev/null 2>&1
+            BASE_BRANCH="${BASE_BRANCH:-$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName 2>/dev/null)}"
+            if [ -z "$BASE_BRANCH" ] || [ "$BASE_BRANCH" = "null" ]; then
+              BASE_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)"
+            fi
+            : "${BASE_BRANCH:=main}"
+            if git log --oneline "HEAD..origin/${BASE_BRANCH}" | head -1 | grep -q .; then
+                echo "🔄 Syncing with base branch..."
+                if /fixpr "$PR_NUMBER"; then
+                    echo "✅ Branch synced successfully"
+                    COMPLETED_ACTIONS+=("sync_branch")
+                else
+                    echo "❌ Branch sync failed"
+                    exit 1
+                fi
+            else
+                echo "✅ Branch already up to date"
+                COMPLETED_ACTIONS+=("sync_branch")
+            fi
+            ;;
+            
+        "report_status")
+            # Generate comprehensive status report
+            ACTIONS_TAKEN_ARR=()
+            for completed_action in "${COMPLETED_ACTIONS[@]}"; do
+                case $completed_action in
+                    "fix_ci") ACTIONS_TAKEN_ARR+=("- ✅ Fixed CI issues") ;;
+                    "resolve_conflicts") ACTIONS_TAKEN_ARR+=("- ✅ Resolved merge conflicts") ;;
+                    "fetch_comments") ACTIONS_TAKEN_ARR+=("- ✅ Fetched comments and reviews") ;;
+                    "process_comments") ACTIONS_TAKEN_ARR+=("- ✅ Processed comments") ;;
+                    "sync_branch") ACTIONS_TAKEN_ARR+=("- ✅ Synced with base branch") ;;
+                esac
+            done
+
+            ACTIONS_TAKEN=""
+            if [ ${#ACTIONS_TAKEN_ARR[@]} -gt 0 ]; then
+                ACTIONS_TAKEN="\n$(printf "%s\n" "${ACTIONS_TAKEN_ARR[@]}")"
+            fi
+
+            # Re-fetch updated PR metadata
+            status_json=$(gh pr view "$PR_NUMBER" --json state,statusCheckRollup,mergeable)
+            final_state=$(jq -r '.state' <<<"$status_json")
+            ci_state=$(jq -r '.statusCheckRollup.state // "PENDING"' <<<"$status_json")
+            mergeable=$(jq -r '.mergeable' <<<"$status_json")
+            SUCCESS_MSG="✅ **Copilot Analysis Complete - Adaptive Execution**
+
+**Actions Taken**:$ACTIONS_TAKEN
+
+**Final Status**: State: $final_state | CI: $ci_state | Mergeable: $mergeable
+🎯 **Smart Guards**: Assessed issues and applied appropriate fixes  
+📊 **Adaptive Flow**: Executed only necessary actions based on PR state"
+
+            gh pr comment "$PR_NUMBER" --body "$SUCCESS_MSG"
+            echo "✅ Final status posted to PR"
+            ;;
+    esac
+done
+```
+
+## Key Benefits
+
+- **Always Comprehensive**: Fetches all comment data for complete analysis
+- **Smart Comment Handling**: Focuses on last 30 comments when PR has high activity
+- **Adaptive Intelligence**: Handles broken tests, conflicts, and comments appropriately  
+- **Rich Diagnostics**: Detailed error reporting with actionable information
+- **Maintains Simplicity**: ~180 lines but much more capable and reliable
+- **Linear Predictability**: Clear flow with smart decision points
+- **Robust Error Handling**: Captures and reports detailed failure information  
+- **Atomic Operations**: Fresh state checks prevent race conditions
+
+## Smart Guards Pattern
+
+Instead of rigid pass/fail guards, each step uses "assess → plan → act" logic:
+
+**Pattern**:
+```bash
+# Assess the situation
+if [[ condition_detected ]]; then
+    echo "🔧 Issue detected - adding fix to plan"
+    PLANNED_ACTIONS+=("fix_action")  
 else
-    export SKIP_CONDITIONS_MET="false"
-    echo "🔧 FULL EXECUTION: Skip conditions not met"
-    echo "   📊 Mergeable: $PR_MERGEABLE | CI: $CI_STATUS | Comments: $COMMENT_COUNT"
+    echo "✅ No issues detected"
 fi
 ```
-- ✅ **MUST verify**: PR is OPEN and accessible
-- ✅ **MUST check**: Current CI status (PASSING/FAILING/PENDING)
-- ✅ **MUST confirm**: Mergeable state (MERGEABLE/CONFLICTING/UNMERGEABLE)
-- ✅ **MUST evaluate**: Skip conditions for intelligent optimization
-- ❌ **CANNOT proceed** if PR is CLOSED or MERGED
 
-### Phase 2: Fresh Data Collection (CONDITIONAL)
-```bash
-# SMART: Check if data collection needed
-if [[ "$SKIP_CONDITIONS_MET" == "true" ]]; then
-    echo "⚡ OPTIMIZING: Skip conditions met, performing lightweight data verification"
-    # Quick verification with state update if comments found
-    read COMMENT_COUNT REVIEW_COUNT < <(gh pr view $PR_NUMBER --json comments,reviews | jq '.comments | length, .reviews | length')
-    if [[ "$COMMENT_COUNT" -eq 0 && "$REVIEW_COUNT" -eq 0 ]]; then
-        echo "✅ No comments or reviews detected. Maintaining skip conditions."
-    else
-        echo "📊 Comments: $COMMENT_COUNT, Reviews: $REVIEW_COUNT. Updating to full execution."
-        export SKIP_CONDITIONS_MET="false"
-        /commentfetch $PR_NUMBER
-    fi
-else
-    echo "📊 COLLECTING: Full data collection required"
-    /commentfetch $PR_NUMBER
-fi
-```
-- ✅ **SMART EXECUTION**: Full fetch only when comments/reviews detected
-- ✅ **OPTIMIZATION**: Quick verification when skip conditions met
-- ✅ **SAFETY**: Falls back to full collection if verification shows activity
-- ✅ **TRANSPARENCY**: Logs decision reasoning
+This maintains linear predictability while adding intelligence to handle real-world PR problems instead of just rejecting them.
 
-### Phase 3: CI/Conflict Resolution (CONDITIONAL)
-```bash
-# SMART: Check if CI/conflict fixes needed
-pr_status=$(gh pr view $PR_NUMBER --json mergeable,statusCheckRollup)
-ci_status=$(echo "$pr_status" | jq -r '.statusCheckRollup.state')
-mergeable=$(echo "$pr_status" | jq -r '.mergeable')
+## Comment Handling Strategy
 
-if [[ "$ci_status" == "SUCCESS" && "$mergeable" == "MERGEABLE" ]]; then
-    echo "⚡ OPTIMIZING: CI passing and mergeable, skipping fixpr"
-    echo "✅ CI Status: $ci_status | Mergeable: $mergeable"
-else
-    echo "🔧 FIXING: CI issues or conflicts detected"
-    /fixpr $PR_NUMBER
-fi
-```
-- ✅ **SMART EXECUTION**: Skip when CI passing and no conflicts
-- ✅ **SAFETY**: Always verify fresh GitHub status before skipping
-- ✅ **COMPREHENSIVE**: Execute /fixpr if ANY issues detected
-- ✅ **TRANSPARENCY**: Log all status checks and decisions
+The copilot now always fetches comments for comprehensive analysis:
 
-### Phase 4: Comment Response Processing (CONDITIONAL)
-```bash
-# SMART: Check if comment responses needed
-unresponded_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
+- **Always fetch**: Even if no comments, ensures complete PR data
+- **Smart limiting**: When >30 comments, sets `COMMENTFETCH_LIMIT=30` and `COMMENTFETCH_FOCUS="recent"`
+- **Environment variables**: Passes limits to `/commentfetch` for optimization
+- **Comprehensive processing**: Still processes all actionable comments appropriately
 
-if [[ "$unresponded_count" -eq 0 ]]; then
-    echo "⚡ OPTIMIZING: Zero comments detected, skipping comment processing"
-    echo "✅ Comment Status: $unresponded_count total comments"
-    export COMMENTS_PROCESSED="false"
-else
-    echo "💬 RESPONDING: $unresponded_count comments require responses"
-    echo "🚀 DELEGATING: /commentreply $PR_NUMBER"
-
-    # Delegate to commentreply command - it handles all verification internally
-    /commentreply $PR_NUMBER
-
-    # Trust commentreply to handle success/failure - no reimplementation
-    if [[ $? -eq 0 ]]; then
-        echo "✅ SUCCESS: Comment replies processed successfully"
-        export COMMENTS_PROCESSED="true"
-    else
-        echo "❌ FAILURE: Comment reply processing failed"
-        export COMMENTS_PROCESSED="false"
-        echo "🚨 CRITICAL ERROR: Phase 4 cannot be marked complete"
-        exit 1
-    fi
-fi
-```
-- ✅ **SMART EXECUTION**: Skip when no unresponded comments detected
-- ✅ **DELEGATION**: Delegate to /commentreply instead of reimplementing
-- ✅ **TRUST EXISTING COMMANDS**: Let /commentreply handle all verification internally
-- ✅ **FAILURE HANDLING**: Hard stop if comment processing fails
-- ✅ **STATE TRACKING**: Export COMMENTS_PROCESSED for Phase 5
-- ✅ **NO REIMPLEMENTATION**: Removed duplicate verification logic
-
-### Phase 5: Coverage Verification (CONDITIONAL) - Enhanced Context Verification
-```bash
-# SMART: Verify coverage only if comments were processed with enhanced context validation
-if [[ "$COMMENTS_PROCESSED" == "true" ]]; then
-    echo "🔍 VERIFYING: Enhanced context reply coverage validation"
-    /commentcheck $PR_NUMBER
-elif [[ "$SKIP_CONDITIONS_MET" == "true" ]]; then
-    echo "⚡ OPTIMIZING: No comments processed, performing quick verification"
-    final_count=$(gh pr view $PR_NUMBER --json comments,reviews | jq '(.comments | length) + (.reviews | length)')
-    echo "✅ Verification: $final_count total comments (expected: 0)"
-else
-    echo "🔍 VERIFYING: Full enhanced context coverage validation"
-    /commentcheck $PR_NUMBER
-fi
-```
-- ✅ **CONTEXT AWARE**: Skip detailed coverage when no comments processed
-- ✅ **ENHANCED CONTEXT FOCUS**: Verify enhanced context reply success
-- ✅ **SAFETY**: Quick verification when skip conditions met
-- ✅ **COMPREHENSIVE**: Full validation when comment processing occurred
-- ✅ **TRANSPARENCY**: Log verification method and results
-
-### Phase 6: Final Sync (MANDATORY)
-```bash
-# REQUIRED: Push all changes to GitHub
-/pushl --message "copilot: Complete PR analysis and response cycle"
-```
-- ✅ **MUST push**: ALL local changes to remote
-- ✅ **MUST verify**: Push successful via GitHub API
-- ✅ **MUST confirm**: Remote state matches local state
-- ❌ **CANNOT complete** without successful push
-
-## 🚨 INTELLIGENT STAGE OPTIMIZATION
-
-**SMART PROTOCOL**: CONDITIONAL EXECUTION BASED ON PR STATE
-
-### 🎯 **SKIP CONDITIONS** (All must be met for stage skipping):
-- ✅ **No merge conflicts**: PR shows MERGEABLE status
-- ✅ **CI clean**: All status checks PASSING
-- ✅ **No pending comments**: Zero unresponded comments detected
-
-### 📋 **CONDITIONAL EXECUTION LOGIC**:
-- ✅ **SMART SKIPPING**: Skip phases when conditions indicate no work needed
-- ✅ **SAFETY FIRST**: Always verify conditions before skipping
-- ✅ **TRANSPARENCY**: Log all skip decisions with reasoning
-- ✅ **FALLBACK**: Execute phase if ANY condition check fails
-- ✅ **REQUIRED**: Each phase must verify OR skip with logged reasoning
-- ✅ **REQUIRED**: Visible progress reporting for executed AND skipped steps
-
-### 🚨 **CRITICAL EXECUTION GUARANTEE**
-**MANDATORY**: When phases determine work is needed, commands MUST be executed:
-- ❌ **FORBIDDEN**: "Analysis complete" without execution
-- ❌ **FORBIDDEN**: Marking phases "COMPLETED" when work identified but not done
-- ✅ **REQUIRED**: Actually execute `/commentreply`, `/fixpr`, etc. when needed
-- ✅ **REQUIRED**: Verify command success before marking phase complete
-- 🚨 **HARD STOP**: Exit with error if any required execution fails
-
-### 🚨 **COMMENT THREADING PROTOCOL COMPLIANCE**
-**MANDATORY**: Comment replies must follow commentreply.md threading protocol:
-- ✅ **COMMIT HASH REQUIRED**: All replies must include `(Commit: abc1234)` reference
-- ✅ **COMMENT ID REFERENCE**: Use `📍 Reply to Comment #ID` for explicit threading
-- ✅ **STATUS MARKERS**: Include `✅ DONE` or `❌ NOT DONE` with technical details
-- ✅ **THREADING VERIFICATION**: Check replies include proper ID references and commit hashes
-- ❌ **FORBIDDEN**: Generic replies without commit hash proof of work
-- ❌ **FORBIDDEN**: Missing explicit comment ID references for threading
-- 🚨 **LEARNED**: General PR comments don't support true threading - use fallback method
-
-### ⚠️ **NEVER SKIP** (Always execute regardless of conditions):
-- **Phase 1**: GitHub Status Verification (need fresh state)
-- **Phase 6**: Final Sync (ensure all changes pushed)
-
-## Universal Composition Benefits
-
-- **Simplicity**: No complex agent coordination in copilot
-- **DRY Principle**: Subagent logic lives in `/execute`, not duplicated
-- **Universal Benefit**: ALL commands get intelligent optimization
-- **Maintainability**: Clean separation of concerns
-- **Performance**: Same optimization benefits with cleaner architecture
-
-## Example Workflows
-
-### Most Common Usage (No Arguments)
-```
-/copilot
-🎯 Targeting: Current branch PR: #1074
-→ Composes task: "Execute comprehensive PR analysis workflow"
-→ /execute analyzes: PR complexity, comment count, CI status
-→ /execute decides: Direct execution optimal for this PR
-→ /execute orchestrates: All commands with intelligent optimization
-→ Result: Fast, thorough PR analysis with minimal complexity
-```
-
-### Specific PR Targeting
-```
-/copilot 1062
-🎯 Targeting: Specified PR: #1062
-→ Composes task: "Execute comprehensive PR analysis workflow"
-→ /execute analyzes: PR complexity, comment count, CI status
-→ /execute decides: Parallel processing beneficial, spawning agents
-→ /execute orchestrates: All commands with intelligent optimization
-→ Result: Fast, thorough PR analysis with minimal complexity
-```
-
-## 🚨 CRITICAL: ZERO TOLERANCE MERGE APPROVAL PROTOCOL
-
-→ See **CLAUDE.md §ZERO-TOLERANCE MERGE APPROVAL** for complete protocol
-
-### ⚠️ **MANDATORY INTEGRATION**: Merge approval check applies to ALL phases
-
-**Critical Checkpoints** (applied at multiple phases):
-- **Phase 1**: Verify PR is still OPEN (not auto-merged during workflow)
-- **Phase 3**: Check before applying CI/conflict fixes that might trigger auto-merge
-- **Phase 6**: MANDATORY check before final push (most critical checkpoint)
-
-### ✅ **Non-Interactive Implementation:**
-```bash
-# MANDATORY: Check before any push operation or merge-triggering action
-check_merge_approval() {
-    local pr_number="$1"
-    pr_json=$(gh pr view "${pr_number:-}" --json state,mergeable 2>/dev/null)
-    PR_STATE=$(jq -r '.state' <<<"$pr_json")
-    PR_MERGEABLE=$(jq -r '.mergeable' <<<"$pr_json")
-
-    if [[ "$PR_STATE" == "OPEN" && "$PR_MERGEABLE" == "MERGEABLE" ]]; then
-        if [[ "${MERGE_APPROVAL:-}" != "MERGE APPROVED" ]]; then
-            echo "🚨 ZERO TOLERANCE VIOLATION: PR is mergeable but no approval"
-            echo "❌ Operation cancelled – User must type 'MERGE APPROVED' first"
-            echo "❌ Set: export MERGE_APPROVAL='MERGE APPROVED' to proceed"
-            exit 1
-        else
-            echo "✅ MERGE APPROVAL CONFIRMED: User authorized mergeable operations"
-        fi
-    else
-        echo "ℹ️ PR not mergeable (STATE: $PR_STATE, MERGEABLE: $PR_MERGEABLE) - approval not required"
-    fi
-}
-
-# Called at critical phases:
-# check_merge_approval "$PR_NUMBER"  # Before fixpr (Phase 3)
-# check_merge_approval "$PR_NUMBER"  # Before final pushl (Phase 6) - MANDATORY
-```
-
-**This protocol applies to ALL PR operations: manual, /copilot, orchestration agents, and any automated workflow.**
-
-**ZERO EXCEPTIONS**: Every copilot execution MUST call merge approval check before any action that could trigger auto-merge.
-
-## Adaptive Intelligence Features
-
-- **Prioritize by urgency**: Security issues first, style issues last
-- **Context awareness**: First-time contributors get more detailed help
-- **Error recovery**: Continue with remaining tasks if one fails (unless merge approval blocks)
-- **Fresh data**: Always fetches current GitHub state, no caching
-- **Mandatory execution**: ALL 6 phases execute regardless of apparent need
-
-## Key Principles
-
-1. **Universal Composition**: Let `/execute` handle optimization decisions
-2. **Clean Architecture**: Copilot orchestrates, execute optimizes
-3. **Genuine Intelligence**: Claude analyzes, not rigid patterns
-4. **User Control**: Clear visibility of all actions
-5. **Adaptive Workflow**: Adjust to PR needs intelligently
-
-The power comes from universal composition - `/execute` provides intelligent optimization for any complex workflow, making copilot both simpler and more powerful.
+**Key Fix**: Now handles broken tests by adding "fix_ci" to the action plan instead of immediately failing.

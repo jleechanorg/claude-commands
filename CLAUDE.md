@@ -338,6 +338,21 @@
 - ❌ **NEVER attempt**: `gh api repos/{owner}/{repo}/pulls/{pr_number}/reviews --method POST --field event=APPROVE` on own PRs
 - ✅ **ALWAYS use**: General issue comments `gh api repos/owner/repo/issues/{pr_number}/comments --method POST` instead
 
+🚨 **GITHUB THREADING API SPECIFICATION**: ⚠️ MANDATORY - Correct syntax for threaded replies
+**CRITICAL DISTINCTION**: Different APIs for different comment types
+1. **Review Comments (Line-specific)** ✅ Supports Threading:
+   - **API**: `gh api repos/owner/repo/pulls/PR/comments --method POST`
+   - **Field**: `--field in_reply_to=PARENT_ID` (NOT in_reply_to_id)
+   - **JSON**: `{body: "reply", in_reply_to: PARENT_ID_NUMBER}`
+   - **Result**: `#discussion_rXXX` URLs with proper nesting
+   - **Verification**: Response includes `"in_reply_to_id": PARENT_ID`
+2. **General PR Comments** ❌ No Threading Support:
+   - **API**: `gh api repos/owner/repo/issues/PR/comments --method POST` 
+   - **Limitation**: `in_reply_to_id` parameter ignored by GitHub
+   - **Result**: Always creates standalone comments
+   - **URLs**: `#issuecomment-XXX` format (no threading)
+**Memory Aid**: Review comments = Threading ✅ | Issue comments = No threading ❌
+
 ## Orchestration System
 
 **Full Documentation**: → `.claude/commands/orchestrate.md` for complete system details
