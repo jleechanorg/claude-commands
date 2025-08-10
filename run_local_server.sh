@@ -3,10 +3,13 @@
 # Starts both Flask backend and React v2 frontend servers simultaneously
 
 # Load shared utilities
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$SCRIPT_DIR"
-source "$SCRIPT_DIR/scripts/server-utils.sh"
-source "$SCRIPT_DIR/scripts/venv_utils.sh"
+MAIN_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$MAIN_SCRIPT_DIR"
+source "$MAIN_SCRIPT_DIR/scripts/server-utils.sh"
+source "$MAIN_SCRIPT_DIR/scripts/venv_utils.sh"
+
+# Ensure all relative paths below are resolved from the repo root
+cd "$PROJECT_ROOT"
 
 print_banner "WorldArchitect.AI Development Server Launcher" "Dual server setup: Flask backend + React v2 frontend"
 
@@ -15,6 +18,30 @@ kill_worldarchitect_servers true
 
 # Setup virtual environment using new venv_utils
 ensure_venv
+if [ $? -ne 0 ]; then
+    echo "${EMOJI_ERROR} Failed to setup virtual environment"
+    exit 1
+fi
+
+# Validate that virtual environment is properly activated
+if [ -z "$VIRTUAL_ENV" ]; then
+    echo "${EMOJI_ERROR} Virtual environment not activated properly"
+    echo "${EMOJI_INFO} Attempting manual activation..."
+    if [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
+        # Always activate using an absolute path to avoid CWD issues
+        # shellcheck disable=SC1091
+        source "$PROJECT_ROOT/venv/bin/activate"
+        if [ -z "$VIRTUAL_ENV" ]; then
+            echo "${EMOJI_ERROR} Manual activation also failed"
+            exit 1
+        fi
+    else
+        echo "${EMOJI_ERROR} Virtual environment activation file not found: $PROJECT_ROOT/venv/bin/activate"
+        exit 1
+    fi
+fi
+
+echo "${EMOJI_CHECK} Virtual environment active: $VIRTUAL_ENV"
 
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
@@ -39,13 +66,21 @@ echo ""
 echo "${EMOJI_ROCKET} Starting Flask backend on port $FLASK_PORT..."
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="Flask Backend" -- bash -c "source venv/bin/activate && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve; exec bash"
+    gnome-terminal --tab --title="Flask Backend" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "Flask Backend" -e "source venv/bin/activate && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve" &
+    xterm -title "Flask Backend" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve" &
 else
     # Fallback: run in background
     echo "${EMOJI_INFO} Running Flask in background (no terminal emulator found)"
-    (source venv/bin/activate && TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve) &
+    # Check if venv is still active in subshell, if not reactivate it
+    (
+        cd "$PROJECT_ROOT" || exit 1
+        if [ -z "$VIRTUAL_ENV" ] && [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
+            # shellcheck disable=SC1091
+            source "$PROJECT_ROOT/venv/bin/activate"
+        fi
+        TESTING=true PORT=$FLASK_PORT python mvp_site/main.py serve
+    ) &
     FLASK_PID=$!
     echo "${EMOJI_INFO} Flask backend started in background (PID: $FLASK_PID)"
 fi
