@@ -23,9 +23,9 @@ fi
 # Run the test suite that matches CI exactly
 echo -e "${GREEN}🧪 Running test suite that matches CI...${NC}"
 
-# Set CI environment variables
+# Set CI environment variables (CI=true but NOT GITHUB_ACTIONS=true)
+# This triggers CI replica mode with higher limits but still has memory monitoring
 export CI=true
-export GITHUB_ACTIONS=true
 export TESTING=true
 export TEST_MODE=mock
 

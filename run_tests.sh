@@ -121,13 +121,7 @@ memory_monitor() {
 }
 
 simple_memory_monitor() {
-    # Set memory limit based on environment
-    local memory_limit_gb
-    if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-        memory_limit_gb=6  # GitHub CI has ~7GB available
-    else
-        memory_limit_gb=20  # Local development limit
-    fi
+    local memory_limit_gb=${1:-5}  # Default to 5GB if no parameter provided
     
     while true; do
         sleep 10
@@ -424,15 +418,24 @@ temp_dir=$(mktemp -d)
 monitor_file="$temp_dir/memory_monitor"
 trap "rm -rf $temp_dir" EXIT
 
-# Start memory monitoring with environment-appropriate limits
-if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-    print_status "🛡️  Starting CI memory monitoring (limit: 6GB total)"
+# Start memory monitoring based on environment
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    # Real GitHub Actions - no memory monitoring (original behavior)
+    print_status "🛡️  GitHub Actions detected - no memory monitoring (original behavior)"
+    monitor_pid=""
+elif [ "${CI:-}" = "true" ]; then
+    # CI replica (run_ci_replica.sh) - higher limit for local CI testing
+    print_status "🛡️  CI replica mode - memory monitoring (limit: 10GB total)"
+    simple_memory_monitor 10 &
+    monitor_pid=$!
+    trap "kill $monitor_pid 2>/dev/null; rm -rf $temp_dir" EXIT
 else
-    print_status "🛡️  Starting local memory monitoring (limit: 20GB total)"
+    # Regular local development - conservative limit
+    print_status "🛡️  Local development - memory monitoring (limit: 5GB total)"
+    simple_memory_monitor 5 &
+    monitor_pid=$!
+    trap "kill $monitor_pid 2>/dev/null; rm -rf $temp_dir" EXIT
 fi
-simple_memory_monitor &
-monitor_pid=$!
-trap "kill $monitor_pid 2>/dev/null; rm -rf $temp_dir" EXIT
 
 # Choose execution mode based on coverage
 if [ "$enable_coverage" = true ]; then
@@ -458,15 +461,19 @@ if [ "$enable_coverage" = true ]; then
     test_duration=$((test_end_time - start_time))
     print_status "⏱️  Test execution completed in ${test_duration}s"
 else
-    # Parallel execution for normal mode with environment-appropriate concurrency limit
-    if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-        # GitHub CI environment - use original CPU-based limit
+    # Parallel execution with environment-appropriate concurrency limits
+    if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        # Real GitHub Actions - original behavior (full CPU)
         max_workers=$(nproc)
-        print_status "Running tests in parallel (CI mode: $max_workers workers based on CPU cores)..."
+        print_status "Running tests in parallel (GitHub Actions: $max_workers workers - full CPU)..."
+    elif [ "${CI:-}" = "true" ]; then
+        # CI replica - high parallelism for CI testing locally
+        max_workers=$(nproc)
+        print_status "Running tests in parallel (CI replica: $max_workers workers - full CPU with memory monitoring)..."
     else
-        # Local development - use conservative limit for memory safety
-        max_workers=6
-        print_status "Running tests in parallel (Local mode: $max_workers workers for memory safety)..."
+        # Regular local development - conservative limit
+        max_workers=4
+        print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
     fi
 
     # Count total tests for progress tracking
