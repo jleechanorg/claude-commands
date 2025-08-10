@@ -167,6 +167,26 @@ pushl handles git operations
 - **Transparency**: Clear separation of data vs intelligence
 - **Maintainability**: Python for stable plumbing, .md for evolving intelligence
 
+## 📚 Version History
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+
+**Changes**:
+- Comprehensive command system (116 commands) with enhanced automation
+- Enhanced hook automation (13 hooks) including speculation detection and root file management
+- Infrastructure automation (5 scripts) for development environment setup
+- Template-based README generation with dynamic content replacement
+- Obsolete file cleanup and maintenance for repository hygiene
+- Additive export strategy preserving existing content while adding new features
+- Enhanced content filtering and path normalization for cross-project compatibility
+- Version tracking and change history management for transparent updates
+- Single version history placement at bottom of README with table of contents integration
+
 ---
 
 **Remember**: If users can't see exactly what's running, it's probably the wrong approach.

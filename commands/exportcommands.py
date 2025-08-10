@@ -453,7 +453,7 @@ echo "Warning  Remember: These are reference commands that may need adaptation"
             "Version tracking and change history management"
         ])
         
-        self.change_summary = " • ".join(changes)
+        self.change_summary = " - ".join(changes)
         
         print(f"   Version: {self.current_version}")
         print(f"   Changes: {self.change_summary}")
@@ -474,52 +474,16 @@ echo "Warning  Remember: These are reference commands that may need adaptation"
             
         print("📖 Using README_EXPORT_TEMPLATE.md for enhanced export documentation")
         
-        with open(template_path, 'r') as f:
+        with open(template_path, 'r', encoding='utf-8') as f:
             readme_content = f.read()
         
         # Replace dynamic placeholders with actual counts
+        # FIXED: Order matters - general replacement first, then specific replacements
         readme_content = readme_content.replace('**80+ commands**', f'**{self.commands_count} commands**')
         readme_content = readme_content.replace('This export contains **80+ commands**', f'This export contains **{self.commands_count} commands**')
         
-        # Aggressively remove ALL existing version history sections to ensure single placement at bottom
-        # Remove all occurrences - both emoji and plain versions, including malformed ones
-        patterns_to_remove = [
-            r'## 📚 Version History.*?(?=\n## |\Z)',  # Emoji version
-            r'## Version History.*?(?=\n## |\Z)',     # Plain version
-            r'###\s+v\d+\.\d+\.\d+.*?(?=\n## |\Z)',  # Orphaned version entries
-        ]
-        
-        for pattern in patterns_to_remove:
-            readme_content = re.sub(pattern, '', readme_content, flags=re.DOTALL)
-        
-        # Clean up any extra blank lines left behind
-        readme_content = re.sub(r'\n\n\n+', '\n\n', readme_content)
-        readme_content = readme_content.strip() + '\n'
-        
-        # Create single version history section at the bottom
-        version_section = f'''
-
-## 📚 Version History
-
-### {self.current_version} ({time.strftime('%Y-%m-%d')})
-
-**Export Statistics**:
-- Commands: {self.commands_count} command definitions  
-- Hooks: {self.hooks_count} Claude Code automation hooks
-- Scripts: {self.scripts_count} infrastructure scripts
-
-**Changes**:
-- {self.change_summary}
-- Enhanced README generation with version tracking at bottom
-- Improved content filtering and path normalization
-
-'''
-        
-        # Insert version section at the bottom before the footer
-        if '---' in readme_content and '**Generated with [Claude Code]' in readme_content:
-            readme_content = readme_content.replace('---', version_section + '---')
-        else:
-            readme_content += version_section
+        # Version history is now manually maintained in README_EXPORT_TEMPLATE.md
+        # No dynamic version history generation to avoid deletion issues
         
         # Write the enhanced README
         readme_path = os.path.join(self.export_dir, 'README.md')
@@ -554,15 +518,6 @@ Auto-installs to `.claude/commands/` and `.claude/hooks/`
             f.write(readme_content)
 
         print("Success Generated fallback README.md")
-
-        # Ensure export directory exists
-        os.makedirs(self.export_dir, exist_ok=True)
-
-        readme_path = os.path.join(self.export_dir, 'README.md')
-        with open(readme_path, 'w') as f:
-            f.write(readme_content)
-
-        print("Success Generated README.md based on current export state")
 
     def _create_archive(self):
         """Create compressed archive of export"""
@@ -665,8 +620,7 @@ Auto-installs to `.claude/commands/` and `.claude/hooks/`
         
         obsolete_files = [
             # Obsolete hooks that have been renamed or removed
-            'hooks/detect_speculation.sh',  # Renamed to detect_speculation_and_fake_code.sh
-            'hooks/old_anti_demo.sh',       # Example of old file
+            'hooks/detect_speculation.sh',  # Old name, now uses detect_speculation_and_fake_code.sh
             # Add other obsolete files as needed
         ]
         
@@ -674,9 +628,12 @@ Auto-installs to `.claude/commands/` and `.claude/hooks/`
         for file_path in obsolete_files:
             full_path = os.path.join(self.repo_dir, file_path)
             if os.path.exists(full_path):
-                os.remove(full_path)
-                print(f"    🗑️ Removed obsolete: {file_path}")
-                removed_count += 1
+                try:
+                    os.remove(full_path)
+                    print(f"    🗑️ Removed obsolete: {file_path}")
+                    removed_count += 1
+                except (OSError, PermissionError) as e:
+                    print(f"    ⚠️ Failed to remove {file_path}: {e}")
                 
         if removed_count > 0:
             print(f"✅ Removed {removed_count} obsolete files")

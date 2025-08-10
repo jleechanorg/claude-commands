@@ -14,7 +14,7 @@ Auto-installs commands to `.claude/commands/` and sets up your environment with 
 
 ## Table of Contents
 
-1. [Command Composition Architecture](#-command-composition-architecture---how-it-actually-works)
+1. [Command Composition Architecture](#-the-composition-architecture---how-it-actually-works)
 2. [Command Deep Dive](#-command-deep-dive---the-composition-powerhouses)
 3. [Meta-AI Testing Framework](#-meta-ai-testing-framework)
 4. [WIP: Orchestration System](#-wip-orchestration-system)
