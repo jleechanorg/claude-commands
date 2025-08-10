@@ -10,6 +10,8 @@ __pycache__/
 # Ignore Python virtual environments
 venv
 venv/
+.venv
+.venv/
 mvp_site/venv/
 test_venv/
 
