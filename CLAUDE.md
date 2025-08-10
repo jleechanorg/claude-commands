@@ -914,6 +914,97 @@ mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
 - ✅ Document all new features, systems, and architectural changes
 - ❌ NEVER describe only latest commits or recent work
 
+### 🏷️ Enhanced PR Labeling Protocol (⚠️ MANDATORY)
+**Automatic labeling based on git diff analysis vs origin/main:**
+
+#### Label Categories (Based on File Changes):
+- **`type: bug`** - Fixes, error handling, critical issues
+- **`type: feature`** - New functionality, user-facing features
+- **`type: improvement`** - Performance, UX, code quality enhancements
+- **`type: infrastructure`** - CI/CD, deployment, tooling, build scripts
+- **`type: documentation`** - README, docs, comments (>70% doc files)
+- **`type: testing`** - Test files, test infrastructure (>70% test files)
+- **`size: small`** - <100 lines changed
+- **`size: medium`** - 100-500 lines changed  
+- **`size: large`** - 500-1000 lines changed
+- **`size: epic`** - >1000 lines changed
+- **`scope: frontend`** - Frontend-heavy changes (JS, HTML, CSS >50%)
+- **`scope: backend`** - Backend-heavy changes (Python, server code >50%)
+- **`scope: fullstack`** - Mixed frontend/backend changes
+- **`priority: critical`** - Security, data loss, production down
+- **`priority: high`** - Performance, user experience, major bugs
+- **`priority: normal`** - Standard features, minor improvements
+- **`priority: low`** - Cleanup, refactoring, nice-to-have
+
+#### Auto-Detection Rules:
+**Type Classification:**
+```bash
+# Bug indicators
+if git_diff contains: fix|error|bug|crash|fail|critical|urgent|hotfix|regression
+  → type: bug
+
+# Feature indicators  
+if git_diff contains: feat|feature|add|new|implement|create
+  → type: feature
+
+# Improvement indicators
+if git_diff contains: improve|enhance|optimize|performance|refactor|upgrade
+  → type: improvement
+
+# Infrastructure indicators
+if files match: *.yml|*.yaml|Dockerfile|**/ci/**|**/scripts/**|*.sh|deploy*
+  → type: infrastructure
+```
+
+**Size Classification:**
+```bash
+total_changes = lines_added + lines_deleted
+if total_changes < 100: size: small
+elif total_changes < 500: size: medium  
+elif total_changes < 1000: size: large
+else: size: epic
+```
+
+**Scope Classification:**
+```bash
+frontend_files = count(*.js, *.html, *.css, *.jsx, *.tsx, *.vue)
+backend_files = count(*.py, *.java, *.go, *.rb, *.php)
+
+if frontend_files > 50% of changed files: scope: frontend
+elif backend_files > 50% of changed files: scope: backend  
+else: scope: fullstack
+```
+
+#### PR Description Auto-Generation Template:
+```markdown
+## 🔄 Changes vs origin/main
+**Files Changed**: {file_count} files (+{lines_added} -{lines_deleted})
+**Type**: {auto_detected_type} | **Size**: {auto_detected_size} | **Scope**: {auto_detected_scope}
+
+### 📋 Change Summary
+{auto_generated_summary_from_git_diff}
+
+### 🎯 Key Files Modified
+{top_5_changed_files_with_line_counts}
+
+### 🏷️ Auto-Generated Labels  
+{comma_separated_labels}
+
+🤖 Generated with enhanced `/pushl` - PR description reflects complete diff vs origin/main
+```
+
+#### Outdated Description Detection:
+**Auto-detect when PR description doesn't match current changes:**
+- ✅ Compare PR body file list vs current `git diff --name-only origin/main...HEAD`
+- ✅ Check if PR line count estimates match actual `git diff --stat` 
+- ✅ Flag PRs with >20% file change deviation from description
+- ⚠️ Auto-update or warn when description is stale
+
+**Implementation Commands:**
+- `/pushl` - Auto-applies enhanced labeling and description generation
+- `/pushl --update-description` - Force refresh PR description vs origin/main
+- `/pushl --labels-only` - Update labels without changing description
+
 ## Project-Specific
 
 ### Flask: SPA route for index.html | Hard refresh for CSS/JS | Cache-bust in prod
