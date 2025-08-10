@@ -182,7 +182,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./.claude/hooks/post_commit_sync.sh ] && exec ./.claude/hooks/post_commit_sync.sh; fi'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; exit 0'",
             "description": "Auto-sync commits to remote after git commit operations"
           }
         ]
@@ -194,7 +194,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./claude_command_scripts/git-header.sh ] && exec ./claude_command_scripts/git-header.sh; fi'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && exec \"$ROOT/.claude/hooks/git-header.sh\"; fi; exit 0'",
             "description": "Display git status and branch information"
           }
         ]
@@ -206,7 +206,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); cd \"$ROOT\" && [ -x ./.claude/hooks/detect_speculation_and_fake_code.sh ] && exec ./.claude/hooks/detect_speculation_and_fake_code.sh; fi'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\"; fi; exit 0'",
             "description": "Advanced speculation and fake code detection with self-reflection pipeline"
           }
         ]

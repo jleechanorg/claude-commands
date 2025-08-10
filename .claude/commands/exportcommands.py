@@ -620,7 +620,7 @@ Auto-installs to `.claude/commands/` and `.claude/hooks/`
         
         obsolete_files = [
             # Obsolete hooks that have been renamed or removed
-            'hooks/detect_speculation.sh',  # Renamed to detect_speculation_and_fake_code.sh
+            'hooks/detect_speculation.sh',  # Old name, now uses detect_speculation_and_fake_code.sh
             # Add other obsolete files as needed
         ]
         

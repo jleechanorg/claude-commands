@@ -8,7 +8,7 @@
 
 ## Implementation
 
-**Single Command**: `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh --with-api`
+**Single Command**: `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api`
 
 This script automatically:
 1. Shows full `git status` output for complete repository context
@@ -43,7 +43,7 @@ Changes not staged for commit:
   (use "git add <file>..." to update what will be committed)
   (use "git checkout -- <file>..." to discard changes to working directory)
 
-	modified:   claude_command_scripts/git-header.sh
+	modified:   .claude/hooks/git-header.sh
 
 no changes added to commit (use "git add -a" to commit all changes, or "git add <file>..." to update what will be committed)
 
@@ -68,7 +68,7 @@ Examples:
 - Remove all friction in compliance
 
 **Automated Memory Aid**:
-- The single command `~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh` provides complete context
+- The single command `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh` provides complete context
 - Shows git status + intelligently finds relevant PRs
 - No need to remember multiple separate commands
 - Consistent, reliable output every time

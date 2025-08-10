@@ -547,7 +547,7 @@ fi
 - **🔧 Core Claude Code Functionality**: Essential hooks that enable automatic workflow management
 - **PreToolUse Hooks**: Code quality validation before file operations (anti_demo_check_claude.sh, check_root_files.sh)
 - **PostToolUse Hooks**: Automated sync after git operations (post_commit_sync.sh)
-- **PostResponse Hooks**: Response quality validation (detect_speculation.sh)
+- **PostResponse Hooks**: Response quality validation (detect_speculation_and_fake_code.sh)
 - **Command Composition**: Hook utilities for advanced workflow orchestration (compose-commands.sh)
 - **Testing Framework**: Complete hook testing utilities for validation and debugging
 - **Project Adaptation**: Comprehensive filtering of project-specific paths and references

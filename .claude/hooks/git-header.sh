@@ -7,32 +7,19 @@
 git_dir=$(git rev-parse --git-dir 2>/dev/null)
 if [ $? -ne 0 ]; then
     echo "[Not in a git repository]"
-    exit 1
+    exit 0
 fi
 
 # Get the root of the working tree
 git_root=$(git rev-parse --show-toplevel 2>/dev/null)
 if [ $? -ne 0 ]; then
     echo "[Unable to find git root]"
-    exit 1
+    exit 0
 fi
 
-# Find the script's actual location relative to git root
+# Find the git root and change to it
 script_dir="$git_root"
-if [ -d "$git_root/claude_command_scripts" ]; then
-    script_dir="$git_root"
-elif [ -d "$git_root/worktree_roadmap/claude_command_scripts" ]; then
-    script_dir="$git_root/worktree_roadmap"
-else
-    # Search for the script in any subdirectory
-    found_script=$(find "$git_root" -name "git-header.sh" -type f 2>/dev/null | head -1)
-    if [ -n "$found_script" ]; then
-        script_dir=$(dirname "$(dirname "$found_script")")
-    fi
-fi
-
-# Change to the directory containing claude_command_scripts
-cd "$script_dir" || cd "$git_root" || exit 1
+cd "$git_root" || { echo "[Unable to change to git root]"; exit 0; }
 
 local_branch=$(git branch --show-current)
 remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || echo "no upstream")
@@ -133,7 +120,7 @@ show_popup() {
 # Check for bashrc alias setup
 check_bashrc_alias() {
     local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
-    local script_path="$git_root/claude_command_scripts/git-header.sh"
+    local script_path="$git_root/.claude/hooks/git-header.sh"
 
     # Check if alias exists in bashrc
     if ! grep -q "alias.*git-header" ~/.bashrc 2>/dev/null; then
