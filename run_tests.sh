@@ -63,15 +63,19 @@ memory_monitor() {
     local log_counter=0
     local start_time=$(date +%s)
     
+    # Redirect output to avoid interfering with main script
+    exec 3>&1  # Save stdout
+    exec 1>/dev/null  # Redirect stdout to null during background monitoring
+    
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
         local total_memory=$(get_total_memory_usage_gb)
-        local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l)
+        local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l 2>/dev/null)
         
-        # Log detailed process info every LOG_INTERVAL seconds
-        if [ $((log_counter % (LOG_INTERVAL / MONITOR_INTERVAL))) -eq 0 ]; then
+        # Log detailed process info every 3 iterations (every 6 seconds)
+        if [ $((log_counter % 3)) -eq 0 ]; then
             local elapsed=$((current_time - start_time))
-            print_status "⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)"
+            echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
             
             # Show all Python test processes with memory usage
             local python_pids=$(pgrep -f "python.*test_" 2>/dev/null || true)
@@ -80,44 +84,29 @@ memory_monitor() {
                     if [ -n "$pid" ]; then
                         local proc_memory=$(get_memory_usage_gb "$pid")
                         local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null | cut -c1-80 || echo "unknown")
-                        print_status "  📊 PID $pid: ${proc_memory}GB - $cmd"
+                        echo -e "${BLUE}[INFO]${NC}   📊 PID $pid: ${proc_memory}GB - $cmd" >&3
                     fi
                 done
             else
-                print_status "  📊 No Python test processes running"
+                echo -e "${BLUE}[INFO]${NC}   📊 No Python test processes running" >&3
             fi
         fi
         
-        if [ "$comparison" -eq 1 ]; then
-            print_error "🚨 MEMORY LIMIT EXCEEDED: ${total_memory}GB > ${MEMORY_LIMIT_GB}GB"
-            print_error "Detailed process breakdown at time of kill:"
-            pgrep -f "python.*test_" | while read pid; do
-                if [ -n "$pid" ]; then
-                    local proc_memory=$(get_memory_usage_gb "$pid")
-                    local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
-                    print_error "  💀 PID $pid: ${proc_memory}GB - $cmd"
-                fi
-            done
-            
-            print_error "Killing all test processes to prevent system crash..."
+        if [ "$comparison" = "1" ]; then
+            echo -e "${RED}[FAIL]${NC} 🚨 MEMORY LIMIT EXCEEDED: ${total_memory}GB > ${MEMORY_LIMIT_GB}GB" >&3
             pkill -f "python.*test_" || true
-            
-            # Kill the main script
             echo "MEMORY_KILL" > "$monitor_file.kill"
             break
         fi
         
         # Check individual process limits
-        pgrep -f "python.*test_" | while read pid; do
+        pgrep -f "python.*test_" 2>/dev/null | while read pid; do
             if [ -n "$pid" ]; then
                 local proc_memory=$(get_memory_usage_gb "$pid")
-                local proc_comparison=$(echo "$proc_memory > $SINGLE_PROCESS_LIMIT_GB" | bc -l)
+                local proc_comparison=$(echo "$proc_memory > $SINGLE_PROCESS_LIMIT_GB" | bc -l 2>/dev/null)
                 
-                if [ "$proc_comparison" -eq 1 ]; then
-                    local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
-                    print_error "🚨 SINGLE PROCESS LIMIT EXCEEDED: PID $pid using ${proc_memory}GB > ${SINGLE_PROCESS_LIMIT_GB}GB"
-                    print_error "Command: $cmd"
-                    print_error "Killing runaway process..."
+                if [ "$proc_comparison" = "1" ]; then
+                    echo -e "${RED}[FAIL]${NC} 🚨 KILLING RUNAWAY PROCESS: PID $pid using ${proc_memory}GB > ${SINGLE_PROCESS_LIMIT_GB}GB" >&3
                     kill -9 "$pid" 2>/dev/null || true
                 fi
             fi
@@ -126,13 +115,38 @@ memory_monitor() {
         log_counter=$((log_counter + 1))
         sleep "$MONITOR_INTERVAL"
     done
+    
+    # Restore stdout
+    exec 1>&3
 }
 
-start_memory_monitor() {
-    local monitor_file="$1"
-    touch "$monitor_file"
-    memory_monitor "$monitor_file" &
-    echo $!
+simple_memory_monitor() {
+    # Set memory limit based on environment
+    local memory_limit_gb
+    if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        memory_limit_gb=6  # GitHub CI has ~7GB available
+    else
+        memory_limit_gb=20  # Local development limit
+    fi
+    
+    while true; do
+        sleep 10
+        
+        # Get total memory used by Python test processes in MB
+        local total_mb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+        local total_gb=$((total_mb / 1024))
+        
+        if [ $total_gb -gt $memory_limit_gb ]; then
+            print_error "🚨 MEMORY LIMIT EXCEEDED: ${total_gb}GB > ${memory_limit_gb}GB - killing Python test processes"
+            pkill -f "python.*test_"
+            break
+        fi
+        
+        # Log every 30 seconds (every 3 iterations)
+        if [ $(($(date +%s) % 30)) -lt 10 ]; then
+            print_status "📊 Memory usage: ${total_gb}GB (limit: ${memory_limit_gb}GB)"
+        fi
+    done
 }
 
 # Function to print colored output
@@ -410,9 +424,14 @@ temp_dir=$(mktemp -d)
 monitor_file="$temp_dir/memory_monitor"
 trap "rm -rf $temp_dir" EXIT
 
-# Start memory monitoring
-print_status "🛡️  Starting memory monitor (Limit: ${MEMORY_LIMIT_GB}GB total, ${SINGLE_PROCESS_LIMIT_GB}GB per process)"
-monitor_pid=$(start_memory_monitor "$monitor_file")
+# Start memory monitoring with environment-appropriate limits
+if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+    print_status "🛡️  Starting CI memory monitoring (limit: 6GB total)"
+else
+    print_status "🛡️  Starting local memory monitoring (limit: 20GB total)"
+fi
+simple_memory_monitor &
+monitor_pid=$!
 trap "kill $monitor_pid 2>/dev/null; rm -rf $temp_dir" EXIT
 
 # Choose execution mode based on coverage
@@ -439,9 +458,16 @@ if [ "$enable_coverage" = true ]; then
     test_duration=$((test_end_time - start_time))
     print_status "⏱️  Test execution completed in ${test_duration}s"
 else
-    # Parallel execution for normal mode with memory-safe concurrency limit
-    max_workers=$(nproc)  # Use CPU core count to limit memory usage
-    print_status "Running tests in parallel (limited to $max_workers workers for memory safety)..."
+    # Parallel execution for normal mode with environment-appropriate concurrency limit
+    if [ "${CI:-}" = "true" ] || [ "${GITHUB_ACTIONS:-}" = "true" ]; then
+        # GitHub CI environment - use original CPU-based limit
+        max_workers=$(nproc)
+        print_status "Running tests in parallel (CI mode: $max_workers workers based on CPU cores)..."
+    else
+        # Local development - use conservative limit for memory safety
+        max_workers=6
+        print_status "Running tests in parallel (Local mode: $max_workers workers for memory safety)..."
+    fi
 
     # Count total tests for progress tracking
     for test_file in "${test_files[@]}"; do
