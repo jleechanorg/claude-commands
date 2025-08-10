@@ -16,7 +16,7 @@ Shows current Claude API usage including:
 - Git branch and PR status for context
 
 ## Implementation
-**Single Command**: `~/projects/your-project.com/claude_command_scripts/git-header.sh --with-api`
+**Single Command**: `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --with-api`
 
 This provides the same output as `/header` - combining both git status and API usage in one convenient command.
 
@@ -32,4 +32,4 @@ This provides the same output as `/header` - combining both git status and API u
 - 🔴 **25-50%**: Warning balloon notification
 - ⚠️ **Below 25%**: Critical popup alert
 
-Use `~/projects/your-project.com/claude_command_scripts/git-header.sh --monitor` for proactive monitoring with alerts.
+Use `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh --monitor` for proactive monitoring with alerts.
