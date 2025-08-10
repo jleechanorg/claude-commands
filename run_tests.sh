@@ -30,6 +30,111 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Memory monitoring configuration
+MEMORY_LIMIT_GB=30  # Kill script if total memory usage exceeds this (out of 47GB available)
+SINGLE_PROCESS_LIMIT_GB=10  # Kill individual test if it exceeds this
+MONITOR_INTERVAL=2  # Check memory every N seconds
+LOG_INTERVAL=5     # Log detailed process info every N seconds
+
+# Memory monitoring functions
+get_memory_usage_gb() {
+    local pid="$1"
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+        # Get RSS memory in KB and convert to GB
+        local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
+        if [ -n "$rss" ]; then
+            echo "scale=2; $rss / 1024 / 1024" | bc -l
+        else
+            echo "0"
+        fi
+    else
+        echo "0"
+    fi
+}
+
+get_total_memory_usage_gb() {
+    # Get total memory usage for all our test processes
+    local total_kb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
+    echo "scale=2; $total_kb / 1024 / 1024" | bc -l
+}
+
+memory_monitor() {
+    local monitor_file="$1"
+    local log_counter=0
+    local start_time=$(date +%s)
+    
+    while [ -f "$monitor_file" ]; do
+        local current_time=$(date +%s)
+        local total_memory=$(get_total_memory_usage_gb)
+        local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l)
+        
+        # Log detailed process info every LOG_INTERVAL seconds
+        if [ $((log_counter % (LOG_INTERVAL / MONITOR_INTERVAL))) -eq 0 ]; then
+            local elapsed=$((current_time - start_time))
+            print_status "⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)"
+            
+            # Show all Python test processes with memory usage
+            local python_pids=$(pgrep -f "python.*test_" 2>/dev/null || true)
+            if [ -n "$python_pids" ]; then
+                echo "$python_pids" | while read pid; do
+                    if [ -n "$pid" ]; then
+                        local proc_memory=$(get_memory_usage_gb "$pid")
+                        local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null | cut -c1-80 || echo "unknown")
+                        print_status "  📊 PID $pid: ${proc_memory}GB - $cmd"
+                    fi
+                done
+            else
+                print_status "  📊 No Python test processes running"
+            fi
+        fi
+        
+        if [ "$comparison" -eq 1 ]; then
+            print_error "🚨 MEMORY LIMIT EXCEEDED: ${total_memory}GB > ${MEMORY_LIMIT_GB}GB"
+            print_error "Detailed process breakdown at time of kill:"
+            pgrep -f "python.*test_" | while read pid; do
+                if [ -n "$pid" ]; then
+                    local proc_memory=$(get_memory_usage_gb "$pid")
+                    local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
+                    print_error "  💀 PID $pid: ${proc_memory}GB - $cmd"
+                fi
+            done
+            
+            print_error "Killing all test processes to prevent system crash..."
+            pkill -f "python.*test_" || true
+            
+            # Kill the main script
+            echo "MEMORY_KILL" > "$monitor_file.kill"
+            break
+        fi
+        
+        # Check individual process limits
+        pgrep -f "python.*test_" | while read pid; do
+            if [ -n "$pid" ]; then
+                local proc_memory=$(get_memory_usage_gb "$pid")
+                local proc_comparison=$(echo "$proc_memory > $SINGLE_PROCESS_LIMIT_GB" | bc -l)
+                
+                if [ "$proc_comparison" -eq 1 ]; then
+                    local cmd=$(ps -p "$pid" -o cmd= 2>/dev/null || echo "unknown")
+                    print_error "🚨 SINGLE PROCESS LIMIT EXCEEDED: PID $pid using ${proc_memory}GB > ${SINGLE_PROCESS_LIMIT_GB}GB"
+                    print_error "Command: $cmd"
+                    print_error "Killing runaway process..."
+                    kill -9 "$pid" 2>/dev/null || true
+                fi
+            fi
+        done
+        
+        log_counter=$((log_counter + 1))
+        sleep "$MONITOR_INTERVAL"
+    done
+}
+
+start_memory_monitor() {
+    local monitor_file="$1"
+    touch "$monitor_file"
+    memory_monitor "$monitor_file" &
+    echo $!
+}
+
 # Function to print colored output
 print_status() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -302,7 +407,13 @@ run_test() {
 
 # Create temporary directory for parallel execution
 temp_dir=$(mktemp -d)
+monitor_file="$temp_dir/memory_monitor"
 trap "rm -rf $temp_dir" EXIT
+
+# Start memory monitoring
+print_status "🛡️  Starting memory monitor (Limit: ${MEMORY_LIMIT_GB}GB total, ${SINGLE_PROCESS_LIMIT_GB}GB per process)"
+monitor_pid=$(start_memory_monitor "$monitor_file")
+trap "kill $monitor_pid 2>/dev/null; rm -rf $temp_dir" EXIT
 
 # Choose execution mode based on coverage
 if [ "$enable_coverage" = true ]; then
@@ -311,6 +422,12 @@ if [ "$enable_coverage" = true ]; then
     start_time=$(date +%s)
 
     for test_file in "${test_files[@]}"; do
+        # Check for memory kill signal before each test
+        if [ -f "$monitor_file.kill" ]; then
+            print_error "🚨 SCRIPT TERMINATED: Memory limit exceeded during sequential execution"
+            exit 2
+        fi
+        
         if [ -f "$test_file" ]; then
             total_tests=$((total_tests + 1))
             echo -n "[$total_tests/${#test_files[@]}] "
@@ -333,12 +450,31 @@ else
         fi
     done
 
+    # Export variables and functions needed by xargs subshells
+    export PROJECT_ROOT enable_coverage TEST_MODE RED GREEN YELLOW BLUE NC
+    export -f run_test print_status print_success print_error
+    
     # Run tests with controlled concurrency using xargs
     printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c '
         if [ -f "$1" ]; then
             run_test "$1" "$2"
         fi
     ' _ {} "$temp_dir"
+fi
+
+# Check for memory kill signal
+if [ -f "$monitor_file.kill" ]; then
+    print_error "🚨 SCRIPT TERMINATED: Memory limit exceeded to prevent system crash"
+    print_error "One or more test processes consumed too much memory (>${MEMORY_LIMIT_GB}GB total)"
+    
+    # Stop the memory monitor
+    rm -f "$monitor_file" 2>/dev/null
+    
+    # Show memory usage at time of kill
+    total_memory=$(get_total_memory_usage_gb)
+    print_error "Memory usage at termination: ${total_memory}GB"
+    
+    exit 2  # Exit code 2 = memory kill
 fi
 
 # Collect results
@@ -429,6 +565,12 @@ if [ $failed_tests -gt 0 ]; then
             fi
         fi
     done
+fi
+
+# Stop memory monitor
+if [ -n "$monitor_pid" ]; then
+    print_status "🛡️  Stopping memory monitor..."
+    rm -f "$monitor_file" 2>/dev/null
 fi
 
 if [ $failed_tests -eq 0 ]; then
