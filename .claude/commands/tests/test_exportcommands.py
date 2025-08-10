@@ -14,12 +14,14 @@ import subprocess
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-# Add the commands directory to path for importing
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '.claude', 'commands'))
+# Add the commands directory to path for importing  
+commands_dir = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, commands_dir)
 
 try:
     from exportcommands import ClaudeCommandsExporter
-except ImportError:
+except ImportError as e:
+    print(f"Import error: {e}")
     # Create a mock for testing if import fails
     ClaudeCommandsExporter = None
 

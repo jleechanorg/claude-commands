@@ -435,143 +435,89 @@ echo "Warning  Remember: These are reference commands that may need adaptation"
         else:
             self.current_version = "v1.1.0"
             
-        # Set placeholder for change summary - LLM will analyze changes later
-        self.change_summary = "[LLM analysis required - changes will be analyzed after export]"
+        # Generate meaningful change summary based on current export
+        changes = []
+        if self.commands_count >= 100:
+            changes.append(f"Comprehensive command system ({self.commands_count} commands)")
+        if self.hooks_count >= 10:
+            changes.append(f"Enhanced hook automation ({self.hooks_count} hooks)")
+        if self.scripts_count >= 5:
+            changes.append(f"Infrastructure automation ({self.scripts_count} scripts)")
+        
+        # Add feature-specific changes
+        changes.extend([
+            "Template-based README generation with dynamic content",
+            "Obsolete file cleanup and maintenance",
+            "Additive export strategy preserving existing content",
+            "Enhanced content filtering and path normalization",
+            "Version tracking and change history management"
+        ])
+        
+        self.change_summary = " - ".join(changes)
         
         print(f"   Version: {self.current_version}")
         print(f"   Changes: {self.change_summary}")
         
 
     def _generate_readme(self):
-        """Generate comprehensive README based on commands repo state"""
-        # This README generation should analyze the COMMANDS REPO state, not worldarch project
-        # It will be called from within the cloned commands repo directory
-        
+        """Generate comprehensive README using README_EXPORT_TEMPLATE.md with dynamic counts"""
         # Determine version and changes before generating README
         self._determine_version_and_changes()
+        
+        # Read the README_EXPORT_TEMPLATE.md from source project
+        template_path = os.path.join(self.project_root, '.claude', 'commands', 'README_EXPORT_TEMPLATE.md')
+        if not os.path.exists(template_path):
+            print(f"Warning: README_EXPORT_TEMPLATE.md not found at {template_path}")
+            print("Falling back to basic README generation...")
+            self._generate_fallback_readme()
+            return
+            
+        print("📖 Using README_EXPORT_TEMPLATE.md for enhanced export documentation")
+        
+        with open(template_path, 'r', encoding='utf-8') as f:
+            readme_content = f.read()
+        
+        # Replace dynamic placeholders with actual counts
+        # FIXED: Order matters - general replacement first, then specific replacements
+        readme_content = readme_content.replace('**80+ commands**', f'**{self.commands_count} commands**')
+        readme_content = readme_content.replace('This export contains **80+ commands**', f'This export contains **{self.commands_count} commands**')
+        
+        # Version history is now manually maintained in README_EXPORT_TEMPLATE.md
+        # No dynamic version history generation to avoid deletion issues
+        
+        # Write the enhanced README
+        readme_path = os.path.join(self.export_dir, 'README.md')
+        with open(readme_path, 'w') as f:
+            f.write(readme_content)
+
+        print("Success Generated README.md using README_EXPORT_TEMPLATE.md")
+
+    def _generate_fallback_readme(self):
+        """Fallback README generation if template not found"""
         readme_content = f'''# Claude Commands - Command Composition System
 
-Warning **REFERENCE EXPORT** - This is a reference export from a working Claude Code project. These commands have been tested in production but may require adaptation for your specific environment. Claude Code excels at helping you customize them for your workflow.
+⚠️ **REFERENCE EXPORT** - This is a reference export from a working Claude Code project.
 
-Transform Claude Code into an autonomous development powerhouse through simple command hooks that enable complex workflow orchestration.
+## Export Contents
 
-## Starting ONE-CLICK INSTALL
+- **Commands**: {self.commands_count} workflow orchestration commands
+- **Hooks**: {self.hooks_count} Claude Code automation hooks  
+- **Scripts**: {self.scripts_count} infrastructure management scripts
+
+## Installation
 
 ```bash
 ./install.sh
 ```
 
-Auto-installs **{self.commands_count} commands** + **{self.hooks_count} hooks** + **infrastructure scripts** to your `.claude/` directory and copies `claude_start.sh` for immediate use.
-
-## Summary **Export Contents**
-
-This comprehensive export includes:
-- **Commands {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
-- **Hooks {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
-- **Debug {self.scripts_count} Infrastructure Scripts** - Development environment management
-- **Orchestration Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
-- **DOCS Complete Documentation** - Installation guide with adaptation examples
-
-WARNING **DIRECTORY EXCLUSIONS APPLIED**: This export excludes the following project-specific directories:
-- Error `analysis/` - Project-specific analytics
-- Error `automation/` - Project-specific automation
-- Error `claude-bot-commands/` - Project-specific bot implementation
-- Error `coding_prompts/` - Project-specific AI prompting templates
-- Error `prototype/` - Project-specific experimental code
-
-## Ready The Magic: Simple Hooks -> Powerful Workflows
-
-### Command Chaining Examples
-```bash
-# Multi-command composition
-"/arch /thinku /devilsadvocate /diligent"  # -> comprehensive code analysis
-
-# Sequential workflow chains
-"/think about auth then /execute the solution"  # -> analysis -> implementation
-
-# Conditional execution flows
-"/test login flow and if fails /fix then /pr"  # -> test -> fix -> create PR
-```
-
-## Hooks **Enhanced Hook System**
-
-This export includes **{self.hooks_count} Claude Code hooks** that provide essential workflow automation with nested directory support and NUL-delimited processing for whitespace-safe file handling.
-
-## Debug Installation & Setup
-
-### Quick Start
-```bash
-# 1. Clone this repository to your project
-git clone https://github.com/jleechanorg/claude-commands.git
-
-# 2. Run one-click install
-cd claude-commands
-./install.sh
-
-# 3. Start Claude Code with MCP servers
-./claude_start.sh
-
-# 4. Begin using composition commands
-/execute "implement user authentication"
-/pr "fix performance issues"
-/copilot  # Fix any PR issues
-```
-
-## Ready Adaptation Guide
-
-### Project-Specific Placeholders
-
-Commands contain placeholders that need adaptation:
-- `$PROJECT_ROOT/` -> Your project's main directory
-- `your-project.com` -> Your domain/project name
-- `$USER` -> Your username
-- `TESTING=true python` -> Your test execution pattern
-
-### Example Adaptations
-
-**Before** (exported):
-```bash
-TESTING=true python $PROJECT_ROOT/test_file.py
-```
-
-**After** (adapted):
-```bash
-npm test src/components/test_file.js
-```
-
-## Warning Important Notes
-
-### Reference Export
-This is a filtered reference export from a working Claude Code project. Commands may need adaptation for your specific environment, but Claude Code excels at helping you customize them.
-
-### Requirements
-- **Claude Code CLI** - Primary requirement for command execution
-- **Git Repository Context** - Commands operate within git repositories
-- **MCP Server Setup** - Some commands require MCP (Model Context Protocol) servers
-- **Project-Specific Adaptation** - Paths and commands need customization for your environment
-
-## Version History
-
-### {self.current_version} - {time.strftime('%Y-%m-%d')}
-- **Changes**: {self.change_summary}
-- **Export Contents**: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} infrastructure scripts
-- **Branch**: {self.export_branch}
-
----
-
-Starting **Generated with [Claude Code](https://claude.ai/code)**
-
-**Co-Authored-By: Claude <noreply@anthropic.com>**
+Auto-installs to `.claude/commands/` and `.claude/hooks/`
 '''
-
-        # Ensure export directory exists
-        os.makedirs(self.export_dir, exist_ok=True)
 
         readme_path = os.path.join(self.export_dir, 'README.md')
         with open(readme_path, 'w') as f:
             f.write(readme_content)
 
-        print("Success Generated README.md based on current export state")
+        print("Success Generated fallback README.md")
 
     def _create_archive(self):
         """Create compressed archive of export"""
@@ -668,9 +614,38 @@ Starting **Generated with [Claude Code](https://claude.ai/code)**
 
         print("Success Export branch created")
 
+    def _remove_obsolete_files(self):
+        """Remove obsolete files that no longer exist in source"""
+        print("🧹 Cleaning up obsolete files...")
+        
+        obsolete_files = [
+            # Obsolete hooks that have been renamed or removed
+            'hooks/detect_speculation.sh',  # Renamed to detect_speculation_and_fake_code.sh
+            # Add other obsolete files as needed
+        ]
+        
+        removed_count = 0
+        for file_path in obsolete_files:
+            full_path = os.path.join(self.repo_dir, file_path)
+            if os.path.exists(full_path):
+                try:
+                    os.remove(full_path)
+                    print(f"    🗑️ Removed obsolete: {file_path}")
+                    removed_count += 1
+                except (OSError, PermissionError) as e:
+                    print(f"    ⚠️ Failed to remove {file_path}: {e}")
+                
+        if removed_count > 0:
+            print(f"✅ Removed {removed_count} obsolete files")
+        else:
+            print("✅ No obsolete files found to remove")
+
     def _copy_to_repository(self):
         """Copy exported content to repository - ADDITIVE BEHAVIOR (preserves existing)"""
         print("Commands Copying exported content (preserving existing)...")
+
+        # Clean up obsolete files first
+        self._remove_obsolete_files()
 
         # WARNING FIXED: ADDITIVE BEHAVIOR - No clearing of existing content!
         # Create target directories if they don't exist
