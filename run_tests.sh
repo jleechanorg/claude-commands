@@ -322,24 +322,23 @@ if [ "$enable_coverage" = true ]; then
     test_duration=$((test_end_time - start_time))
     print_status "⏱️  Test execution completed in ${test_duration}s"
 else
-    # Parallel execution for normal mode
-    print_status "Running tests in parallel (one thread per file)..."
+    # Parallel execution for normal mode with memory-safe concurrency limit
+    max_workers=$(nproc)  # Use CPU core count to limit memory usage
+    print_status "Running tests in parallel (limited to $max_workers workers for memory safety)..."
 
-    # Run tests in parallel using background processes
-    pids=()
+    # Count total tests for progress tracking
     for test_file in "${test_files[@]}"; do
         if [ -f "$test_file" ]; then
             total_tests=$((total_tests + 1))
-            run_test "$test_file" "$temp_dir" &
-            pids+=($!)
         fi
     done
 
-    # Wait for all background processes to complete
-    print_status "Waiting for all tests to complete..."
-    for pid in "${pids[@]}"; do
-        wait "$pid"
-    done
+    # Run tests with controlled concurrency using xargs
+    printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c '
+        if [ -f "$1" ]; then
+            run_test "$1" "$2"
+        fi
+    ' _ {} "$temp_dir"
 fi
 
 # Collect results

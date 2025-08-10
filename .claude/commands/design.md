@@ -616,3 +616,92 @@ Final: Add safety buffer for unforeseen issues (+60-100%): 44 × 1.6–2.0 = 70�
 - **Security**: [Specific security requirements with validation]
 - **Accessibility**: [Specific WCAG standards with testing approach]
 - **Compatibility**: [Specific browser/device requirements with fallbacks]
+
+---
+
+## 🥊 Phase 4: Adversarial Analysis (Auto-Triggered)
+
+**MANDATORY FINAL STEP**: After completing design documentation, automatically trigger comprehensive adversarial analysis to challenge the proposed approach and identify simpler alternatives.
+
+### Auto-Composition Commands
+```
+/thinku /devilsadvocate /archreview [design-scope]
+```
+
+### External Validation MCPs
+**REQUIRED**: Consult external perspectives to challenge assumptions:
+
+**Gemini MCP Consultation**:
+```
+mcp__gemini-cli-mcp__gemini_chat_pro:
+"Challenge this architectural approach for a solo MVP developer. The proposed solution is [APPROACH_SUMMARY]. 
+
+Key concerns:
+- Custom infrastructure vs proven tools  
+- Implementation complexity vs problem scope
+- Solo maintainability vs team solutions
+- MVP speed vs perfect engineering
+
+What simpler alternatives exist? What are the long-term implications of building custom vs using standard solutions?"
+```
+
+**Perplexity MCP Research**:
+```  
+mcp__perplexity-ask__perplexity_ask:
+"I'm reviewing an architectural decision for a solo MVP developer project: [PROBLEM_STATEMENT]
+
+Proposed solution: [TECHNICAL_APPROACH]
+
+From a software architecture perspective for MVP development, what approach makes the most sense? What are the long-term implications of building custom infrastructure vs using proven tooling? Focus on 2025 industry standards and best practices."
+```
+
+### Adversarial Challenge Framework
+
+#### 🚨 **MVP Reality Check Questions**:
+1. **Complexity Challenge**: "Is this solving the right problem or over-engineering a simple fix?"
+2. **Standard Tools Challenge**: "What existing tools/frameworks solve this exact problem?"
+3. **Solo Developer Challenge**: "Can one person realistically build and maintain this?"
+4. **Speed Challenge**: "Does this help ship features faster or slower?"
+5. **Technical Debt Challenge**: "Will this create more problems than it solves?"
+
+#### 🎯 **Alternative Solutions Analysis**:
+For each major design decision, identify and compare:
+- **Simple Fix**: Minimal change that addresses core problem
+- **Standard Solution**: Industry-proven tools/frameworks
+- **Custom Solution**: Proposed approach (justify why needed)
+
+#### 📊 **Impact Assessment Matrix**:
+| Solution | Time to Implement | Maintenance Burden | Risk Level | MVP Suitability |
+|----------|------------------|-------------------|------------|-----------------|
+| Simple Fix | [X minutes] | [Low/Med/High] | [Low/Med/High] | [1-5 rating] |
+| Standard Tool | [X hours] | [Low/Med/High] | [Low/Med/High] | [1-5 rating] |
+| Custom Build | [X days] | [Low/Med/High] | [Low/Med/High] | [1-5 rating] |
+
+### Expected Outcomes
+
+**Challenge Results**: Document findings from adversarial analysis:
+- **Confirmed Decisions**: Approaches that survive scrutiny with rationale
+- **Alternative Recommendations**: Simpler/better solutions discovered  
+- **Risk Mitigations**: How to reduce complexity while maintaining functionality
+- **Implementation Priority**: What to build first vs defer vs eliminate
+
+**Success Criteria**: Design is approved for implementation only if:
+- [ ] External perspectives (Gemini + Perplexity) consulted
+- [ ] Simpler alternatives identified and compared
+- [ ] Custom infrastructure decisions justified vs standard tools
+- [ ] Solo developer maintainability confirmed
+- [ ] MVP speed priorities addressed
+
+### Integration with Memory MCP
+
+**Capture Architectural Learnings**:
+```
+mcp__memory-server__create_entities:
+- Architecture decisions and rationales
+- Design patterns that work/fail for solo MVP
+- Standard tool evaluations and outcomes  
+- Performance vs complexity trade-offs
+- Solo developer workflow optimizations
+```
+
+**Purpose**: Prevent repeated architectural mistakes and build institutional knowledge for future design decisions.
