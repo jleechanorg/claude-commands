@@ -517,13 +517,22 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **80+ commands** that transform Claude Code into:
+This export contains **116 commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
 3. **Quality Assurance Integration**: Automatic testing and validation
 4. **Git Workflow Automation**: Branch management and PR creation
 5. **Memory-Enhanced Learning**: System learns from previous executions
+
+
+
+## 📊 Current Export Statistics
+
+- **Commands**: 116 workflow orchestration commands
+- **Hooks**: 13 Claude Code automation hooks  
+- **Scripts**: 5 infrastructure management scripts
+- **Excluded**: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/
 
 ## 🔧 Installation & Setup
 
