@@ -356,7 +356,7 @@ echo ""
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
 
-echo -e "\n${BLUE}1/10 Setting up GitHub MCP Server (Official Remote)...${NC}"
+echo -e "\n${BLUE}1/11 Setting up GitHub MCP Server (Official Remote)...${NC}"
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
 echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
@@ -391,10 +391,10 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}2/10 Setting up Sequential Thinking MCP Server...${NC}"
+echo -e "\n${BLUE}2/11 Setting up Sequential Thinking MCP Server...${NC}"
 add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
 
-echo -e "\n${BLUE}3/10 Setting up Memory MCP Server...${NC}"
+echo -e "\n${BLUE}3/11 Setting up Memory MCP Server...${NC}"
 # Create memory data directory in user's home
 mkdir -p ~/.cache/mcp-memory
 echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
@@ -444,19 +444,19 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}4/10 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
+echo -e "\n${BLUE}4/11 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
 add_mcp_server "playwright-mcp" "@playwright/mcp"
 
-echo -e "\n${BLUE}5/10 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
+echo -e "\n${BLUE}5/11 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
 add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
 
-echo -e "\n${BLUE}6/10 Setting up Context7 MCP Server...${NC}"
+echo -e "\n${BLUE}6/11 Setting up Context7 MCP Server...${NC}"
 add_mcp_server "context7" "@upstash/context7-mcp"
 
-echo -e "\n${BLUE}7/10 Setting up Gemini CLI MCP Server...${NC}"
+echo -e "\n${BLUE}7/11 Setting up Gemini CLI MCP Server...${NC}"
 add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
 
-echo -e "\n${BLUE}8/10 Setting up Web Search MCP Servers...${NC}"
+echo -e "\n${BLUE}8/11 Setting up Web Search MCP Servers...${NC}"
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
@@ -500,7 +500,7 @@ else
 fi
 
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}9/10 Setting up Filesystem MCP Server...${NC}"
+echo -e "\n${BLUE}9/11 Setting up Filesystem MCP Server...${NC}"
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
 log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
@@ -542,48 +542,8 @@ else
     echo -e "${YELLOW}  ⚠️ Notion MCP server package not found, skipping...${NC}"
 fi
 
-echo -e "\n${BLUE}11/11 Setting up WorldArchitect Game MCP Server...${NC}"
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🎮 Configuring local game MCP server for D&D campaign management...${NC}"
-log_with_timestamp "Setting up MCP server: worldarchitect-game (HTTP: http://localhost:7000/rpc)"
 
-# Check if server already exists
-if server_already_exists "worldarchitect-game"; then
-    echo -e "${GREEN}  ✅ Server worldarchitect-game already exists, skipping installation${NC}"
-    log_with_timestamp "Server worldarchitect-game already exists, skipping"
-    INSTALL_RESULTS["worldarchitect-game"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Remove existing worldarchitect-game server to reconfigure
-    claude mcp remove "worldarchitect-game" >/dev/null 2>&1 || true
-
-    # Add HTTP-based game MCP server
-    echo -e "${BLUE}  🔗 Adding WorldArchitect Game MCP server via HTTP...${NC}"
-    log_with_timestamp "Attempting to add HTTP MCP server: worldarchitect-game"
-
-    # Use add-json for HTTP transport configuration
-    add_output=$(claude mcp add-json --scope user "worldarchitect-game" '{"type": "http", "url": "http://localhost:7000/rpc"}' 2>&1)
-    add_exit_code=$?
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured WorldArchitect Game MCP server${NC}"
-        echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Health check: http://localhost:7000/health"
-        echo -e "     • JSON-RPC endpoint: http://localhost:7000/rpc"
-        echo -e "     • Available tools: D&D campaign management, character creation, etc."
-        echo -e "     • Start server: ./start_game_mcp.sh start"
-        log_with_timestamp "Successfully added WorldArchitect Game MCP server via HTTP"
-        INSTALL_RESULTS["worldarchitect-game"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        echo -e "${RED}  ❌ Failed to add WorldArchitect Game MCP server${NC}"
-        log_error_details "claude mcp add-json worldarchitect-game" "worldarchitect-game" "$add_output"
-        INSTALL_RESULTS["worldarchitect-game"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-fi
-
-echo -e "\n${BLUE}12/12 Setting up Serena MCP Server...${NC}"
+echo -e "\n${BLUE}11/11 Setting up Serena MCP Server...${NC}"
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
 log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
