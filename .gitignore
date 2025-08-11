@@ -71,6 +71,9 @@ build/
 
 # Frontend v2 build artifacts
 mvp_site/static/v2/assets/
+*.js.map
+*.gz
+*.br
 
 # Temp files
 tmp/
