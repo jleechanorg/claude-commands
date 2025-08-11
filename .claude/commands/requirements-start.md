@@ -28,16 +28,15 @@ Begin gathering requirements for: $ARGUMENTS
    - Questions about external integrations or third-party services
    - Questions about performance or scale expectations
    - Write all questions to 01-discovery-questions.md with smart defaults
-   - Begin asking questions one at a time proposing the question with a smart default option
-   - Only after all questions are asked, record answers in 02-discovery-answers.md as received and update metadata.json. Not before.
+   - **ASK ALL QUESTIONS AT ONCE** in a single message with numbered list
+   - Record all answers immediately in 02-discovery-answers.md and update metadata.json
 
-### Phase 3: Targeted Context Gathering (Autonomous)
+### Phase 3: Targeted Context Gathering (Autonomous with Parallel Execution)
 7. After all discovery questions answered:
-   - Use mcp__RepoPrompt__search (if available) to find specific files based on discovery answers
-   - Use mcp__RepoPrompt__set_selection and read_selected_files (if available) to batch read relevant code
-   - Deep dive into similar features and patterns
-   - Analyze specific implementation details
-   - Use WebSearch and or context7 for best practices or library documentation
+   - **USE PARALLEL TASK AGENTS** via Task tool for deep investigation
+   - Launch agents for: file analysis, pattern matching, similar feature comparison
+   - Use WebSearch and Context7 MCP for best practices and library documentation
+   - Agents should investigate specific file paths and implementation details
    - Document findings in 03-context-findings.md including:
      - Specific files that need modification
      - Exact patterns to follow
@@ -51,8 +50,8 @@ Begin gathering requirements for: $ARGUMENTS
    - Questions should be as if you were speaking to the product manager who knows nothing of the code
    - These questions are meant to to clarify expected system behavior now that you have a deep understanding of the code
    - Include smart defaults based on codebase patterns
-   - Ask questions one at a time
-   - Only after all questions are asked, record answers in 05-detail-answers.md as received
+   - **ASK ALL EXPERT QUESTIONS AT ONCE** in a single message
+   - Record all answers immediately in 05-detail-answers.md as received
 
 ### Phase 5: Requirements Documentation
 9. Generate comprehensive requirements spec in 06-requirements-spec.md:
@@ -94,11 +93,12 @@ Begin gathering requirements for: $ARGUMENTS
 
 ## Important Rules:
 - ONLY yes/no questions with smart defaults
-- ONE question at a time
+- **ASK ALL QUESTIONS AT ONCE** for faster iteration
 - Write ALL questions to file BEFORE asking any
 - Stay focused on requirements (no implementation)
 - Use actual file paths and component names in detail phase
 - Document WHY each default makes sense
+- **USE PARALLEL TASK AGENTS** for investigation phases
 - Use tools available if recommended ones aren't installed or available
 
 ## Metadata Structure:
