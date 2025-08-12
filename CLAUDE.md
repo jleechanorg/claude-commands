@@ -111,11 +111,6 @@
   1. **Configuration Evidence**: Show actual config file entries enabling the behavior
   2. **Trigger Evidence**: Demonstrate automatic trigger mechanism (not manual execution)
   3. **Log Evidence**: Timestamped logs from automatic behavior (not manual testing)
-- **Orchestration Verification**: Use `/orch` agents for independent verification of integration claims
-  - Agent 1: Config Auditor - verify settings enable claimed behavior
-  - Agent 2: Trigger Tester - test actual automation without manual intervention
-  - Agent 3: Evidence Validator - cross-reference all claims against timestamped evidence  
-  - Agent 4: Documentation Verifier - ensure claims don't exceed verified implementation
 - **Red Flags Requiring Verification**:
   - ❌ Claims about "automatic" behavior without configuration verification
   - ❌ Log files presented as evidence without timestamp correlation to automatic triggers
@@ -233,7 +228,7 @@
 🚨 **QUICK QUALITY CHECK** (⚡): For debugging/complex tasks, verify:
 - 🔍 Evidence shown? | ✓ Claims match evidence? | ⚠️ Uncertainties marked? | ➡️ Next steps clear?
 
-## 🚨 MANDATORY QUALITY ASSURANCE PROTOCOL
+## 🚨 QUALITY ASSURANCE PROTOCOL
 
 **ZERO TOLERANCE**: Cannot declare "COMPLETE" without following ALL steps
 
@@ -273,7 +268,7 @@
 
 **/learn Command**: `/learn [optional: specific learning]` - The unified learning command with Memory MCP integration for persistent knowledge graph storage
 
-## Claude Code Specific Behavior
+## Claude Code Behavior
 
 1. **Directory Context**: Operates in worktree directory shown in environment
 2. **Tool Usage**: File ops, bash commands, web tools available
@@ -281,9 +276,9 @@
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root | ✅ **USE ~ NOT /home/jleechan**: Always use `~` instead of `/home/jleechan` in paths for portability
-7. 🚨 **DATE INTERPRETATION**: Environment shows "Today's date: 2025-08-09" meaning August 9th, 2025
+7. 🚨 **DATE INTERPRETATION**: Environment shows "Today's date: 2025-08-12" meaning August 12th, 2025
    - Format is YYYY-MM-DD where MM is month number (01=Jan, 02=Feb, 07=July, 08=August, 09=September)
-   - **Current date**: August 9, 2025 - Use this for "latest", "recent", "current" research queries
+   - **Current date**: August 12, 2025 - Use this for "latest", "recent", "current" research queries
    - **Research context**: When searching for "2024-2025" info, we're in late 2025 looking at recent developments
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
@@ -399,7 +394,7 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - Progress tracking → `roadmap/templates/progress_tracking_template.md`
 - Directory structure → `/directory_structure.md`
 
-## Core Principles & Interaction
+## Core Principles
 
 **Work Approach**:
 Clarify before acting | User instructions = law | ❌ delete without permission | Leave working code alone |
@@ -421,23 +416,7 @@ Focus on primary goal | Propose before implementing | Summarize key takeaways | 
 **Red-Green Protocol** (`/tdd` or `/rg`):
 1. Write failing tests FIRST → 2. Confirm fail (red) → 3. Minimal code to pass (green) → 4. Refactor
 
-🚨 **Testing Standards**: → See "Testing Protocol" section for complete rules
-
-🚨 **TESTING LEVEL CLASSIFICATION PROTOCOL**: ⚠️ MANDATORY - Match testing scope to claims
-- **Component Testing**: Individual functions, scripts, modules in isolation
-  - ✅ Valid Claims: "Script A vs Script B", "Function improvement", "Module capability"
-  - ❌ Invalid Claims: "System improvement", "Integration enhancement", "Automatic behavior"
-- **Integration Testing**: Components working together, configured systems
-  - ✅ Valid Claims: "System integration", "End-to-end flow", "Configuration validation"  
-  - ❌ Invalid Claims: "Production readiness" without deployment testing
-- **System Testing**: Complete automated workflows, production-like environments
-  - ✅ Valid Claims: "Automatic system improvement", "Production capability", "End-user experience"
-  - ❌ Invalid Claims: Cannot be claimed from component or integration testing alone
-- **Red/Green Methodology**: Must test same scope at both levels
-  - ✅ Valid: Component red → Component green, System red → System green
-  - ❌ Invalid: Component red → System green claims, Non-existent red → Functional green
-- **Critical Rule**: "Test what you claim to test - component testing ≠ system testing ≠ integration testing"
-- **Pattern**: Never present component success as system validation or integration proof
+🚨 **TESTING LEVELS**: Component (individual functions) ≠ Integration (systems together) ≠ System (complete workflows). Test what you claim. Component success ≠ system validation.
 
 ## Development Guidelines
 
@@ -490,560 +469,134 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - ❌ **IGNORE**: Bot comments about `--dangerously-skip-permissions` when user explicitly chose to keep it
 - ✅ **ACKNOWLEDGE**: Respond but indicate user decision to retain flag
 
-### Website Testing & Deployment Expectations (🚨 CRITICAL)
-🚨 **BRANCH ≠ WEBSITE**: ❌ NEVER assume branch changes are visible on websites without deployment
-- ✅ Check PR description first - many changes are tooling/CI/backend only
-- ✅ Feature branches need local server OR staging deployment for UI changes
+### Testing Protocol
 
-### Quality Standards
-**Files**: Descriptive names, <500 lines | **Tests**: Natural state, visual validation, dynamic discovery
-**Validation**: Verify PASS/FAIL detection | Parse output, don't trust exit codes | Stop on contradictions
+🚨 **ZERO TOLERANCE**: Run ALL tests, fix ALL failures. No "pre-existing issues" excuse. Commands: `./run_tests.sh` | `./run_ui_tests.sh mock`
 
-### 🚨 Testing Protocol
-**Zero Tolerance**: Run ALL tests before completion | Fix ALL failures | No "pre-existing issues" excuse
-**Commands**: `./run_tests.sh` | `./run_ui_tests.sh mock` | `gh pr view`
-**Protocol**: STOP → FIX → VERIFY → EVIDENCE → Complete
+🚨 **VISUAL VALIDATION**: Verify end-to-end data flow (input → API → DB → UI display), not just API calls.
 
-🚨 **TEST FAILURE PRIORITY ANALYSIS**: → See "NO EXCUSES FOR TEST FAILURES" protocol above for canonical rule.
+**Quality**: Files <500 lines, descriptive names. Verify PASS/FAIL detection. Use specific exceptions (ValidationError).
 
-🚨 **VISUAL CONTENT VALIDATION**: ⚠️ MANDATORY - RED/GREEN tests must verify end-to-end data flow
-- ❌ **INSUFFICIENT**: Only testing API calls and navigation
-- ✅ **REQUIRED**: Verify displayed content matches user input data
-- ✅ **Pattern**: Input data → API call → Database → Retrieval → UI display validation
-- ✅ **Example**: Create campaign with "Elara" → Verify game shows "Elara" not hardcoded "Shadowheart"
-- **Critical Learning**: API integration success ≠ content rendering success
+### File & Testing Rules
 
-🚨 **TEST WITH REAL CONFLICTS**: ⚠️ MANDATORY
-- ✅ ALWAYS test merge conflict detection with PRs that actually have conflicts
-- ✅ Use `gh pr view [PR] --json mergeable` to verify real conflict state before testing
+**File Placement**: No new files in `mvp_site/` without permission. Add tests to existing test files.
 
-**Test Assertions**: ⚠️ MANDATORY - Must match actual validation behavior exactly
+**Browser vs HTTP**: `/testui` = Playwright MCP + Mock | `/testuif` = Playwright + Real APIs | `/testhttp` = HTTP requests + Mock | `/testhttpf` = HTTP + Real APIs
 
-**Exception Specificity**: ✅ Use specific exception types in tests (ValidationError, not Exception)
+**Browser Tests**: Playwright MCP preferred (headless mode). Test URL: `http://localhost:8081?test_mode=true&test_user_id=test-user-123`
 
-**Rules**: ✅ Run before task completion | ❌ NEVER skip without permission | ✅ Only use ✅ after real results
-
-### Safety & Security
-❌ Global `document.addEventListener('click')` without approval | Test workflows after modifications
-Document blast radius | Backups → `tmp/` | ❌ commit if "DO NOT SUBMIT" | Analysis + execution required
-
-### File Placement Rules (🚨 HARD RULE)
-🚨 **NEVER add new files directly to mvp_site/** without explicit user permission
-- ❌ NEVER create test files, documentation, or scripts directly in mvp_site/
-- ✅ If unsure, add content to roadmap/scratchpad_[branch].md instead
-
-🚨 **Test File Policy**: Add to existing files, NEVER create new test files
-- ⚠️ MANDATORY: Always add tests to existing test files that match the functionality
-
-🚨 **Code Review**: Check README.md and CODE_REVIEW_SUMMARY.md before mvp_site/ changes
-
-### Browser vs HTTP Testing (🚨 HARD RULE)
-**CRITICAL DISTINCTION**: Never confuse browser automation with HTTP simulation
-- 🚨 **testing_ui/**: ONLY real browser automation using **Playwright MCP** (default) or Puppeteer MCP
-- 🚨 **testing_http/**: ONLY HTTP requests using `requests` library
-- ⚠️ **/testui and /testuif**: MUST use real browser automation (Playwright MCP preferred)
-- ⚠️ **/testhttp and /testhttpf**: MUST use HTTP requests | NO browser automation
-- **Red Flag**: If writing "browser tests" with `requests.get()`, STOP immediately
-
-**Command Structure** (Claude Code CLI defaults to Playwright MCP):
-- `/testui` = Browser (Playwright MCP) + Mock APIs
-- `/testuif` = Browser (Playwright MCP) + REAL APIs (costs $)
-- `/testhttp` = HTTP + Mock APIs
-- `/testhttpf` = HTTP + REAL APIs (costs $)
-- `/tester` = End-to-end tests with REAL APIs (user decides cost)
-
-### Real API Testing Protocol (🚨 MANDATORY)
-**NEVER push back or suggest alternatives when user requests real API testing**:
-- ✅ User decides if real API costs are acceptable - respect their choice
-- ✅ `/tester`, `/testuif`, `/testhttpf` commands are valid user requests
-- **User autonomy**: User controls their API usage and testing approach
-
-### Browser Test Execution Protocol (🚨 MANDATORY)
-🚨 **PREFERRED**: Playwright MCP in Claude Code CLI - Accessibility-tree based, AI-optimized, cross-browser
-🚨 **SECONDARY**: Puppeteer MCP for Chrome-specific or stealth testing scenarios
-🚨 **HEADLESS MODE**: ⚠️ ALWAYS use headless mode for browser automation - no visible browser windows
-**Commands**: `./run_ui_tests.sh mock --playwright` (default) | `./run_ui_tests.sh mock --puppeteer` (secondary)
-**Test Mode URL**: `http://localhost:8081?test_mode=true&test_user_id=test-user-123` - Required for auth bypass!
-
-### Coverage Analysis Protocol (⚠️)
-**MANDATORY**: When analyzing test coverage:
-1. **ALWAYS use**: `./run_tests.sh --coverage` or `./coverage.sh` (HTML default)
-2. **NEVER use**: Manual `coverage run` commands on individual test files
-3. **Verify full test suite**: Ensure all 94+ test files are included in coverage analysis
-4. **HTML location**: `/tmp/worldarchitectai/coverage/index.html`
+**Coverage**: Use `./run_tests.sh --coverage` or `./coverage.sh`. HTML at `/tmp/worldarchitectai/coverage/index.html`
 
 ## Git Workflow
 
-**Core Rules**: Main = Truth | All changes via PRs | Verify before push | Set upstream tracking
-**Commands**: `git push origin HEAD:branch-name` | `gh pr create` + test results | `./integrate.sh`
-**Progress**: Scratchpad + JSON (`roadmap/scratchpad_[branch].md` + `tmp/milestone_*.json`)
+**Core**: Main = Truth | All changes via PRs | `git push origin HEAD:branch-name` | Fresh branches from main
 
-🚨 **No Main Push**: ✅ `git push origin HEAD:feature` | ❌ `git push origin main`
-- **ALL changes require PR**: Including roadmap files, documentation, everything
-- **Fresh branches from main**: Always create new branch from latest main for new work
-- **Pattern**: `git checkout main && git pull && git checkout -b descriptive-name`
+🚨 **CRITICAL RULES**:
+- No main push: ❌ `git push origin main` | ✅ `git push origin HEAD:feature`
+- ALL changes require PR (including docs)
+- Never switch branches without request
+- Pattern: `git checkout main && git pull && git checkout -b name`
 
-🚨 **PR Context Management**: Verify before creating PRs - Check git status | Ask which PR if ambiguous
+**GitHub API**: Check pagination (30 item default), use `?per_page=100&page=N` for complete results
 
-🚨 **Branch Protection**: ❌ NEVER switch without explicit request | ❌ NEVER use dev[timestamp] for development
-✅ Create descriptive branches | Verify context before changes | Ask if ambiguous
+**Challenge Response**: User evidence = ground truth. Immediate re-verification when user provides specific evidence.
 
-🚨 **Conflict Resolution**: Analyze both versions | Assess critical files | Test resolution | Document decisions
-**Critical Files**: CSS, main.py, configs, schemas | **Process**: `./resolve_conflicts.sh`
+**Debugging**: Side-by-side code comparison → Data flow analysis → Gap ID → Fix
 
-🚨 **GIT ANALYSIS CONTEXT CHECKPOINT**: ⚠️ MANDATORY protocol before any git comparison
-- ✅ **Steps**: 1) Identify current branch 2) Determine branch type 3) Select appropriate remote comparison 4) Execute
-- **Mapping**: sync-main-* → `origin/main` | Feature branches → `origin/branch-name` | main → `origin/main`
+## Environment & Scripts
 
-🚨 **COMMAND FAILURE TRANSPARENCY** (⚠️ MANDATORY): When user commands fail unexpectedly:
-- ✅ Immediately explain what failed and why | Show system messages/errors received
-- ✅ Explain resolution approach | Ask preference for alternatives (merge vs rebase, etc.)
-- **Pattern**: Command fails > Explain > Show options > Get preference > Execute
+🚨 **CLAUDE CODE HOOKS**: Executable scripts auto-run at specific points. Config: `.claude/settings.json`, Scripts: `.claude/hooks/` (executable). Active hooks: Git Header, Post Commit Sync, Fake Code Detection.
 
-**Commit Format**: → `.cursor/rules/examples.md`
+**Python**: Verify venv activated. Run from project root with `TESTING=true vpython`. Use Python for restricted file ops.
 
-🚨 **GITHUB API PAGINATION PROTOCOL**: ⚠️ MANDATORY - Before ANY GitHub API analysis:
-- ✅ **Check total count first**: Use `gh pr view [PR] --json changed_files` to get file count before analysis
-- ✅ **Verify pagination**: GitHub API defaults to 30 items per page - always check if more pages exist
-- ✅ **Use pagination parameters**: Add `?per_page=100&page=N` for complete results when file count > 30
-- ❌ **NEVER assume**: API returns complete results without verifying pagination and total counts
+**Logs**: Located at `/tmp/worldarchitect.ai/[branch]/[service].log`. Use `tail -f` for monitoring.
 
-🚨 **CHALLENGE RESPONSE PROTOCOL**: ⚠️ MANDATORY - When user provides specific evidence:
-- ✅ **Immediate re-verification**: Treat user evidence as debugging signal, not personal attack
-- ✅ **Methodology review**: Re-check approach when user mentions details not in your analysis
-- ❌ **NEVER defend**: Wrong analysis - acknowledge error and re-verify immediately
-- ✅ **ALWAYS treat user evidence as ground truth** when screenshots/observations differ from Claude's
-- ✅ **IMMEDIATE investigation required**: Ask "Why am I seeing different results than the user?"
-- **Pattern**: User evidence → Immediate discrepancy investigation → Root cause analysis → Fix
-
-🚨 **CROSS-VERSION SYSTEMATIC DEBUGGING**: ⚠️ MANDATORY - For V1/V2 or version comparison issues
-- ✅ **ALWAYS start with side-by-side code comparison** of equivalent components
-- ✅ **Trace data flow systematically**: API → Database → UI in both versions  
-- ❌ **NEVER focus on surface symptoms** (routing, display) before architectural analysis
-- **Systematic Order**: Code comparison → Data flow analysis → Gap identification → Fix implementation
-- **Time Target**: 15-20 minutes for architectural gap identification vs extended symptom debugging
-- **Example**: V1 server-side vs V2 client-side data loading patterns require different approaches
-
-## Environment, Tooling & Scripts
-
-🚨 **CLAUDE CODE HOOKS SYSTEM**: ⚠️ CRITICAL UNDERSTANDING - NEVER FORGET THIS
-**What Hooks Are**: Executable scripts that run automatically at specific points during Claude Code operation
-**Hook Categories**:
-- **PreToolUse**: Run before any tool execution
-- **PostToolUse**: Run after specific tool executions (e.g., git commit)
-- **Stop**: Run at the end of every Claude response
-- **PostResponse**: Run to analyze Claude's response content for quality/patterns
-
-**🚨 HOOK CONFIGURATION PROTOCOL**: ⚠️ MANDATORY
-- **Configuration File**: `.claude/settings.json` in project root
-- **Hook Scripts Location**: `.claude/hooks/` directory (must be executable with `chmod +x`)
-- **Hardcoded Paths**: Use `/home/jleechan/projects/worldarchitect.ai` for consistency with git header approach
-- **Hook Types**: `"type": "command"` for shell script execution
-- **Matcher Patterns**: Use `"*"` for all operations or specific patterns like `"Bash(git commit *)"`
-
-**🚨 MANDATORY HOOK EXAMPLES**: Reference these patterns when adding hooks
-```json
-"PostResponse": [
-  {
-    "matcher": "*",
-    "hooks": [
-      {
-        "type": "command", 
-        "command": "/home/jleechan/projects/worldarchitect.ai/.claude/hooks/detect_speculation_and_fake_code.sh",
-        "description": "Advanced speculation and fake code detection with self-reflection pipeline"
-      }
-    ]
-  }
-]
-```
-
-**🚨 CRITICAL HOOK FACTS**:
-- ❌ **NEVER FORGET**: Hooks exist and are automatically triggered
-- ✅ **ALWAYS REMEMBER**: Response analysis hooks run on EVERY Claude response 
-- ✅ **HOOK SCRIPTS**: Must be executable shell scripts that process input
-- ✅ **EXIT CODES**: Exit 0 = success/continue, Exit 1+ = error/warning
-- 🔒 **TESTING REQUIRED**: Test hooks with real responses before deployment
-
-**Current Active Hooks** (August 2025):
-- **Git Header**: Auto-generates branch status headers (PreToolUse + Stop)
-- **Post Commit Sync**: Auto-pushes commits after git operations (PostToolUse)  
-- **Speculation/Fake Code Detection**: Quality analysis of all responses (ResponseAnalysis)
-
-1. **Python venv**: Verify activated before running Python/tests | If missing/corrupted → `VENV_SETUP.md`
-2. **Robust Scripts**: Make idempotent, work from any subdirectory
-3. **Python Execution**: ✅ Run from project root | ❌ cd into subdirs
-4. **vpython Tests**: ⚠️ "run all tests" → `./run_tests.sh` | ⚠️ Test fails → fix immediately or ask user
-   - ✅ `TESTING=true vpython mvp_site/test_file.py` (from root)
-5. 🚨 **Test Compliance**: → See "Testing Protocol" section
-6. **Tool Failure**: Try alternative after 2 fails | Fetch from main if corrupted
-7. **File Access Restrictions**: Use Python for file operations outside working directory
-   - ✅ Use Python to read/modify files when Bash/Read tools are blocked
-   - ✅ Example: Fixing global Claude settings with `python3 -c "..."`
-8. **Hook Path Management**: Use git-based relative paths for portability
-   - ✅ Pattern: `bash -c 'ROOT=$(git rev-parse --show-toplevel); [ -x "$ROOT/.claude/hooks/script.sh" ] && exec "$ROOT/.claude/hooks/script.sh"'`
-   - ❌ Avoid: Hardcoded paths like `~/projects/worldarchitect.ai/claude_command_scripts/`
-9. **Web Scraping**: Use full-content tools (curl) not search snippets
-10. **Log Files Location**:
-   - ✅ **Server logs are in `/tmp/worldarchitect.ai/`** with branch isolation and service-specific files
-   - ✅ **Branch-specific structure**: `/tmp/worldarchitect.ai/[branch-name]/`
-   - ✅ **Service logs**: `/tmp/worldarchitect.ai/[branch]/[service-name].log`
-   - ✅ **Log commands**: `tail -f /tmp/worldarchitect.ai/[branch]/[service].log` for real-time monitoring
-   - ✅ **Search logs**: `grep -i "pattern" /tmp/worldarchitect.ai/[branch]/[service].log`
-   - ✅ **Find current log**: `git branch --show-current` then check corresponding log file
-
-11. 🚨 **SMART SYNC CHECK PROTOCOL**: ⚠️ MANDATORY - Prevent local changes not pushed to remote
-   - **Purpose**: Automatically detect and push unpushed commits after tools create changes
-   - **Script Location**: `<project-root>/scripts/sync_check.sh` (e.g. `$(git rev-parse --show-toplevel)/scripts/sync_check.sh`)
-   - **Integration**: Tools that create commits MUST call sync check at completion
-   - **Usage**: `$(git rev-parse --show-toplevel)/scripts/sync_check.sh` or source common utilities
-   - **Tools Required**: `/fixpr`, `/commentreply`, `/integrate`, any commit-creating tools
-   - **Behavior**: Detects unpushed commits → Shows commits → Auto-pushes → Confirms success
-   - **Safety**: Only pushes when unpushed commits detected, handles edge cases gracefully
-   - **Error Handling**: Graceful fallback for no upstream, detached HEAD, push failures
-   - **Benefits**: Eliminates "forgot to push" syndrome while maintaining workflow transparency
-
-**Test Commands**: → `.cursor/rules/validation_commands.md`
-
-## Data Integrity & AI Management
-
-1. **Data Defense**: Assume incomplete/malformed | Use `dict.get()` | Validate structures
-2. **Critical Logic**: Implement safeguards in code, not just prompts
-3. **Single Truth**: One clear way per task | Remove conflicting rules
+**Sync Check**: `scripts/sync_check.sh` detects/pushes unpushed commits automatically.
 
 ## Operations Guide
 
-### Memory MCP Usage
-**Create**: `mcp__memory-server__create_entities([{name, entityType, observations}])`
-**Search**: `mcp__memory-server__search_nodes("query")` → Find existing before creating
-**Pattern**: Search first → Create if new → Add observations to existing → Build relationships
+**Data Defense**: Use `dict.get()`, validate structures, implement code safeguards.
 
-### Task Agent Patterns
-> **See:** `.claude/commands/parallel-vs-subagents.md` for the authoritative concurrency protocol
-(avoid duplicating the entire section here to prevent drift)
+**Memory MCP**: Search first → Create if new → Add observations → Build relationships
 
-### TodoWrite Protocol
-**When Required**: Tasks with 3+ steps | Complex implementations | /execute commands
-**Status Flow**: `pending` → `in_progress` → `completed`
-**Update Pattern**: Mark current task `in_progress`, complete it, then move to next
+**TodoWrite**: Required for 3+ steps. Flow: `pending` → `in_progress` → `completed`
 
-### Common Operations
-**Multi-file Edits**: Use MultiEdit with 3-4 edits max per call to avoid timeouts
-**Context Management**: Check remaining % before complex operations | Split large tasks
-**Tool Recovery**: After 2 failures → Try alternative tool → Fetch from main if corrupted
+**Operations**: MultiEdit max 3-4 edits. Check context % before complex ops. Try alternatives after 2 failures.
 
-### Context Management & Optimization (🚨 MANDATORY)
+### Context Management
 
-🚨 **PROACTIVE CONTEXT MONITORING**: ⚠️ MANDATORY - Prevent context exhaustion
-- **Claude Sonnet 4 Limits**: 500K tokens (Enterprise) / 200K tokens (Paid Plans)
-- **Token Estimation**: ~4 characters per token, ~75 words per 100 tokens
-- **Context Health Monitoring**: Use `/context` command for real-time estimation
-- **Strategic Checkpoints**: Use `/checkpoint` before complex operations
+🚨 **LIMITS**: 500K tokens (Enterprise) / 200K (Paid). ~4 chars/token. Use `/context` and `/checkpoint` commands.
 
-🚨 **CONTEXT CONSUMPTION PATTERNS**: High-impact operations to monitor
-- **Context Killers**: Large file reads without limits (1000+ tokens each)
-- **Medium Impact**: Standard operations with filtering (200-1000 tokens)
-- **Low Impact**: Serena MCP operations (50-200 tokens)
-- **Optimization Rule**: Serena MCP first, targeted operations always
+**Health Levels**: Green (0-30%) continue | Yellow (31-60%) optimize | Orange (61-80%) efficiency | Red (81%+) checkpoint
 
-**Context Health Levels**:
-- **Green (0-30%)**: Continue with current approach
-- **Yellow (31-60%)**: Apply optimization strategies  
-- **Orange (61-80%)**: Implement efficiency measures
-- **Red (81%+)**: Strategic checkpoint required
+**Large PRs**: Use Serena MCP semantic navigation first. `find_symbol` > reading full files. Use `limit`/`offset` parameters. Process API responses in batches with `--json` flags.
 
-### Context Optimization for Large PRs (🚨 MANDATORY)
-**When working on PRs with 50+ changed files**, follow these patterns to prevent context exhaustion:
+## Knowledge & Lessons
 
-**1. Use Serena MCP Semantic Navigation** (PRIMARY):
-- ✅ `find_symbol` for specific functions/classes instead of reading entire files
-- ✅ `get_symbols_overview` to understand file structure before diving in
-- ✅ `search_for_pattern` with targeted regex instead of broad file reads
-- ❌ NEVER read entire files when you only need specific sections
+**Scratchpad**: `roadmap/scratchpad_[branch].md` - Goal | Plan | State | Next
 
-**2. Smart File Reading Patterns**:
-- ✅ Use `limit` and `offset` parameters for large files
-- ✅ Target specific line ranges based on comment references
-- ✅ Use Grep with `-A`/`-B` context flags for targeted reads
-- ❌ AVOID reading files multiple times in same session
+**Files**: CLAUDE.md (primary), lessons.mdc (learnings), rules.mdc (cursor config)
 
-**3. API Response Management**:
-- ✅ Use `--json` flags with specific fields (e.g., `--json id,path,line`)
-- ✅ Process comments in batches with focused queries
-- ✅ Use `jq` or grep to filter API responses before processing
-- ❌ AVOID fetching full comment bodies when only IDs needed
+**Core Patterns**: Test before assuming. Docs ≠ code. Trace data flow. Critical instructions first.
 
-**4. Strategic Context Checkpoints**:
-```bash
-# Before complex analysis
-/context --optimize    # Check current consumption and get recommendations
+**Anti-Patterns**: Don't create new files when editing suffices. No branch confusion. No orchestration hardcoding.
 
-# During large operations  
-/checkpoint            # Create strategic break point with optimization guidance
+**Debugging**: Extract evidence → Analyze → Verify → Fix. Primary evidence > Secondary > Speculation.
 
-# For complex workflows
-/context --detailed    # Comprehensive analysis with specific recommendations
-```
-
-**5. PR Analysis Workflow**:
-```bash
-# Step 1: Get high-level PR structure
-gh pr view [PR] --json changedFiles --jq '.changedFiles | length'
-
-# Step 2: Use Serena for targeted symbol analysis
-mcp__serena__find_symbol --name_path "functionName" --relative_path "specific/file.py"
-
-# Step 3: Process comments in focused batches
-gh api repos/{owner}/{repo}/pulls/{pr}/comments --paginate --jq '.[].id'
-```
-
-**Anti-Pattern Example** (AVOID):
-```bash
-# ❌ Reading 50+ files completely
-for file in $(gh pr view --json files); do
-  Read --file_path "$file"  # Context killer!
-done
-```
-
-**Best Practice Example**:
-```bash
-# ✅ Targeted semantic navigation with context monitoring
-/context --optimize
-mcp__serena__search_for_pattern --pattern "console\\.error" --restrict_search_to_code_files true
-mcp__serena__find_symbol --name_path "ClassName/methodName" --include_body true
-```
-
-🚨 **SESSION COMPLEXITY MANAGEMENT**: ⚠️ MANDATORY monitoring protocols
-- **Tool Operation Counting**: Track file reads, web searches, API calls
-- **Context Estimation**: Monitor approximate token consumption in real-time
-- **Proactive Optimization**: Apply efficiency measures before reaching limits
-- **Strategic Breaks**: Use checkpoints to preserve insights and plan continuation
-
-## Knowledge Management
-
-### Scratchpad Protocol (⚠️)
-`roadmap/scratchpad_[branch].md`: Goal | Plan | State | Next | Context | Branch info
-
-### File Organization
-- **CLAUDE.md**: Primary protocol
-- **lessons.mdc**: Technical learnings from corrections
-- **project.md**: Repository-specific knowledge base
-- **rules.mdc**: Cursor configuration
-
-### Process Improvement
-- **5 Whys**: Root cause → lessons.mdc
-- **Sync Cursor**: Copy CLAUDE.md to Cursor settings after changes
-- **Proactive Docs**: Update rules/lessons after debugging without prompting
-
-## Critical Lessons (Compressed)
-
-### Core Patterns
-**Trust But Verify**: Test before assuming | Docs ≠ code | Trace data flow | Critical instructions first
-
-### 🚨 Anti-Patterns
-**Silent Breaking Changes**: Update all str() usage when changing objects | Test backward compatibility
-**Unnecessary File Creation**: ❌ NEVER create new files when editing existing ones suffices
-**Branch Confusion**: Verify context before changes | Check PR destination
-**Orchestration Hardcoding**: ❌ NEVER pattern-match tasks to agent types | ✅ Execute exact requested tasks
-
-### Debugging Protocol (🚨 MANDATORY)
-**Process**: Extract evidence → Analyze → Verify → Fix | Trace: Backend → API → Frontend
-**Evidence**: Primary (code/errors) > Secondary (docs) > General (patterns) > Speculation
-**Details**: → `.cursor/rules/debugging_guide.md`
-
-🚨 **NO PLATFORM BLAME WITHOUT FRESH INSTANCES**: ⚠️ MANDATORY - Before blaming external platforms
-- ❌ NEVER blame "platform instability" without systematic testing with fresh instances
-- ✅ ALWAYS test fresh instance creation with proper configuration before platform blame
-- ✅ REQUIRED: Fresh instance + proper onstart scripts + normal timing expectations
-- **Pattern**: Fresh instance test → Platform-specific requirements → Normal behavior expected
-
-### Critical Rules
-**Data Corruption**: Systemic issue - search all patterns | **Temp Fixes**: Flag + fix NOW
-**Task Complete**: Solve + Update docs + Memory + Audit | **No blind execution**
-**Details**: → `.cursor/rules/lessons.mdc`
+**No Platform Blame**: Test fresh instances with proper config before blaming external platforms.
 
 ## Slash Commands
 
-**Full Documentation**: → `.claude/commands/` | Use `/list` for available commands
+**Types**: Cognitive (`/think`, `/debug`, `/learn`) = semantic | Operational (`/orch`, `/handoff`) = protocol enforcement | Tool (`/execute`, `/test`, `/pr`) = direct execution
 
-### Command Classification (Dual Architecture)
-**🧠 Cognitive Commands** (Semantic Composition): `/think`, `/arch`, `/debug`, `/learn`, `/analyze`, `/fix`, `/perp`, `/research`, `/history`
-**⚙️ Operational Commands** (Protocol Enforcement): `/headless`, `/handoff`, `/orchestrate` - Modify execution environment
-**🔧 Tool Commands** (Direct Execution): `/execute`, `/test`, `/pr` - Direct task execution
+🚨 **CRITICAL RULES**:
+- Scan "/" → Check `.claude/commands/[command].md` → Execute complete workflow
+- Verify filesystem before claiming command doesn't exist  
+- `/orch` ALWAYS triggers tmux agents - NEVER execute directly
+- `/execute` requires TodoWrite checklist
 
-### Critical Enforcement
-🚨 **SLASH COMMAND PROTOCOL RECOGNITION**: ⚠️ MANDATORY - Before processing ANY slash command:
-- ✅ **Recognition Phase**: Scan "/" → Identify command type → Look up workflow in `.claude/commands/[command].md`
-- ✅ **Execution Phase**: Follow COMPLETE documented workflow → No partial execution allowed
-- ❌ NEVER treat slash commands as content suggestions - they are execution mandates
-
-🚨 **SLASH COMMAND VERIFICATION PROTOCOL**: ⚠️ MANDATORY - ALWAYS verify before claiming non-existence
-- ❌ **NEVER say "I don't recognize command X"** without checking `.claude/commands/` directory FIRST
-- ✅ **ALWAYS check for aliases**: Commands may exist as aliases in other .md files (e.g., /nb in newbranch.md)
-- ✅ **Filesystem is truth**: Check `.claude/commands/*.md` files, don't rely on memory
-- ✅ **Pattern**: User types /command → Check filesystem → Execute or explain actual non-existence
-- **Common aliases**: /nb→/newbranch, /e→/execute, /debugp→/debug-protocol
-
-🚨 **EXECUTE CIRCUIT BREAKER**: `/e` or `/execute` → TodoWrite checklist MANDATORY
-- Context % | Complexity | Subagents? | Plan presented | Auto-approval applied
-
-🚨 **OPERATIONAL COMMAND ENFORCEMENT**: `/headless`, `/handoff`, `/orchestrate`, `/orch`
-- ✅ ALWAYS trigger tmux orchestration protocol before task execution
-- ❌ NEVER execute /orch or /orchestrate tasks yourself - ONLY monitor tmux agents
-- ❌ NEVER use Task tool for orchestration - use tmux system only
-
-**Key Commands**: `/execute` (auto-approval built-in) | `/plan` (requires manual approval) | `/fake` (code quality audit) | `/history` (conversation search)
-
-#### `/fake`
-**Purpose**: Comprehensive fake code detection | **Composition**: `/arch /thinku /devilsadvocate /diligent`
-**Detection**: Identifies fake implementations, demo code, placeholder comments, duplicate protocols
+**Key Commands**: `/execute` (auto-approval), `/plan` (manual approval), `/fake` (detects fake implementations)
 
 ## Special Protocols
 
-### GitHub PR Comment Response Protocol (⚠️)
-**MANDATORY**: Systematically address ALL PR comments from all sources
-**Comment Sources**: Inline (`gh api`) | General (`gh pr view`) | Reviews | Copilot (include "suppressed")
-**Response Status**: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
+**PR Comments**: Address ALL sources (inline, general, reviews, copilot). Status: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
 
-🚨 **DATA LOSS WARNINGS**: Treat all data loss warnings from CodeRabbit/Copilot as CRITICAL
-- ❌ NEVER dismiss data integrity concerns as "intentional design"
-- ✅ ALWAYS implement proper validation before conflict resolution
+**Data Loss Warnings**: Treat CodeRabbit/Copilot warnings as CRITICAL. Implement validation before conflict resolution.
 
-### Import Protocol (🚨 CRITICAL)
-**Zero Tolerance**: Module-level only | No inline/try-except/conditionals | Use `as` for conflicts
+**Imports**: Module-level only. No inline/try-except. Use `as` for conflicts.
 
-### API Error Prevention (🚨)
-❌ Print code/file content | ✅ Use file_path:line_number | Keep responses concise
+**Browser vs HTTP**: `/testuif` = browser automation | `/testhttp` = HTTP requests. No HTTP simulation for browser tests.
 
-### Browser Testing vs HTTP Testing (🚨)
-**HARD RULE**: NO HTTP simulation for browser tests!
-- `/testuif` = Real browser automation (Puppeteer MCP/Playwright) | `/testi` = HTTP requests OK
-- Auth bypass: Use test mode URL params, NOT HTTP simulation
+**PR References**: Include full URL - "PR #123: https://github.com/user/repo/pull/123"
 
-### PR References (⚠️)
-**MANDATORY**: Include full GitHub URL - Format: "PR #123: https://github.com/jleechan2015/worldarchitect.ai/pull/123"
+**PR Descriptions**: Reflect complete delta vs origin/main using `git diff --stat origin/main...HEAD`. Document all changes, not just recent work.
 
-### PR Description Protocol (⚠️ MANDATORY)
-**PR descriptions must reflect complete delta vs origin/main, not just recent work**:
-- ✅ Use `git diff --stat origin/main...HEAD` to get comprehensive change summary
-- ✅ Analyze actual file changes, additions, deletions vs main branch
-- ✅ Document all new features, systems, and architectural changes
-- ❌ NEVER describe only latest commits or recent work
+### PR Labeling
 
-### 🏷️ Enhanced PR Labeling Protocol (⚠️ MANDATORY)
-**Automatic labeling based on git diff analysis vs origin/main:**
+**Auto-labeling** based on git diff vs origin/main:
+- **Type**: bug (fix/error keywords), feature (add/new), improvement (optimize/enhance), infrastructure (yml/scripts)
+- **Size**: small <100, medium 100-500, large 500-1000, epic >1000 lines
+- **Scope**: frontend (JS/HTML/CSS >50%), backend (Python/server >50%), fullstack (mixed)
+- **Priority**: critical (security/data loss), high (performance/UX), normal (standard), low (cleanup)
 
-#### Label Categories (Based on File Changes):
-- **`type: bug`** - Fixes, error handling, critical issues
-- **`type: feature`** - New functionality, user-facing features
-- **`type: improvement`** - Performance, UX, code quality enhancements
-- **`type: infrastructure`** - CI/CD, deployment, tooling, build scripts
-- **`type: documentation`** - README, docs, comments (>70% doc files)
-- **`type: testing`** - Test files, test infrastructure (>70% test files)
-- **`size: small`** - <100 lines changed
-- **`size: medium`** - 100-500 lines changed  
-- **`size: large`** - 500-1000 lines changed
-- **`size: epic`** - >1000 lines changed
-- **`scope: frontend`** - Frontend-heavy changes (JS, HTML, CSS >50%)
-- **`scope: backend`** - Backend-heavy changes (Python, server code >50%)
-- **`scope: fullstack`** - Mixed frontend/backend changes
-- **`priority: critical`** - Security, data loss, production down
-- **`priority: high`** - Performance, user experience, major bugs
-- **`priority: normal`** - Standard features, minor improvements
-- **`priority: low`** - Cleanup, refactoring, nice-to-have
-
-#### Auto-Detection Rules:
-**Type Classification:**
-```bash
-# Bug indicators
-if git_diff contains: fix|error|bug|crash|fail|critical|urgent|hotfix|regression
-  → type: bug
-
-# Feature indicators  
-if git_diff contains: feat|feature|add|new|implement|create
-  → type: feature
-
-# Improvement indicators
-if git_diff contains: improve|enhance|optimize|performance|refactor|upgrade
-  → type: improvement
-
-# Infrastructure indicators
-if files match: *.yml|*.yaml|Dockerfile|**/ci/**|**/scripts/**|*.sh|deploy*
-  → type: infrastructure
-```
-
-**Size Classification:**
-```bash
-total_changes = lines_added + lines_deleted
-if total_changes < 100: size: small
-elif total_changes < 500: size: medium  
-elif total_changes < 1000: size: large
-else: size: epic
-```
-
-**Scope Classification:**
-```bash
-frontend_files = count(*.js, *.html, *.css, *.jsx, *.tsx, *.vue)
-backend_files = count(*.py, *.java, *.go, *.rb, *.php)
-
-if frontend_files > 50% of changed files: scope: frontend
-elif backend_files > 50% of changed files: scope: backend  
-else: scope: fullstack
-```
-
-#### PR Description Auto-Generation Template:
-```markdown
-## 🔄 Changes vs origin/main
-**Files Changed**: {file_count} files (+{lines_added} -{lines_deleted})
-**Type**: {auto_detected_type} | **Size**: {auto_detected_size} | **Scope**: {auto_detected_scope}
-
-### 📋 Change Summary
-{auto_generated_summary_from_git_diff}
-
-### 🎯 Key Files Modified
-{top_5_changed_files_with_line_counts}
-
-### 🏷️ Auto-Generated Labels  
-{comma_separated_labels}
-
-🤖 Generated with enhanced `/pushl` - PR description reflects complete diff vs origin/main
-```
-
-#### Outdated Description Detection:
-**Auto-detect when PR description doesn't match current changes:**
-- ✅ Compare PR body file list vs current `git diff --name-only origin/main...HEAD`
-- ✅ Check if PR line count estimates match actual `git diff --stat` 
-- ✅ Flag PRs with >20% file change deviation from description
-- ⚠️ Auto-update or warn when description is stale
-
-**Implementation Commands:**
-- `/pushl` - Auto-applies enhanced labeling and description generation
-- `/pushl --update-description` - Force refresh PR description vs origin/main
-- `/pushl --labels-only` - Update labels without changing description
+**Commands**: `/pushl` (auto-label), `/pushl --update-description` (refresh), `/pushl --labels-only`
 
 ## Project-Specific
 
-### Flask: SPA route for index.html | Hard refresh for CSS/JS | Cache-bust in prod
-### Python: venv required | Source .bashrc after changes | May need python3-venv
-### AI/LLM: Detailed prompts crucial | Critical instructions first | Long prompts = fatigue
-### Workflow: Simple-first | Tool fail = try alternative | Main branch = recovery source
+**Flask**: SPA route for index.html, hard refresh for CSS/JS, cache-bust in prod
+**Python**: venv required, source .bashrc after changes
+**AI/LLM**: Detailed prompts crucial, critical instructions first
 
 ## Quick Reference
 
 - **Test**: `TESTING=true vpython mvp_site/test_file.py` (from root)
-- **Integration**: `TESTING=true python3 mvp_site/test_integration/test_integration.py`
+- **All Tests**: `./run_tests.sh` 
 - **New Branch**: `./integrate.sh`
-- **All Tests**: `./run_tests.sh`
 - **Deploy**: `./deploy.sh` or `./deploy.sh stable`
 
 ## Additional Documentation
 
-- **Technical Lessons**: → `.cursor/rules/lessons.mdc`
-- **Cursor Config**: → `.cursor/rules/rules.mdc`
-- **Examples**: → `.cursor/rules/examples.md`
-- **Commands**: → `.cursor/rules/validation_commands.md`
-
-### Archive Process
-Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical patterns | Reference archives
+**Files**: `.cursor/rules/lessons.mdc` (lessons), `.cursor/rules/rules.mdc` (cursor), `.cursor/rules/examples.md`, `.cursor/rules/validation_commands.md`
 
 ## API Timeout Prevention (🚨)
 
@@ -1107,3 +660,29 @@ Quarterly/2500 lines/new year → `lessons_archive_YYYY.mdc` | Keep critical pat
 - ❌ **Over-optimistic estimates** (under 1 hour for major features)
 - ❌ **Ignoring PR overhead** (5-12 min per PR adds up)
 - ❌ **Assuming perfect parallelism** (45% max benefit)
+
+## Context Management & Optimization (🚨 MANDATORY)
+
+🚨 **PROACTIVE CONTEXT MONITORING**: ⚠️ MANDATORY - Prevent context exhaustion
+- **Claude Sonnet 4 Limits**: 500K tokens (Enterprise) / 200K tokens (Paid Plans)
+- **Token Estimation**: ~4 characters per token, ~75 words per 100 tokens
+- **Context Health Monitoring**: Use `/context` command for real-time estimation
+- **Strategic Checkpoints**: Use `/checkpoint` before complex operations
+
+🚨 **CONTEXT CONSUMPTION PATTERNS**: High-impact operations to monitor
+- **Context Killers**: Large file reads without limits (1000+ tokens each)
+- **Medium Impact**: Standard operations with filtering (200-1000 tokens)
+- **Low Impact**: Serena MCP operations (50-200 tokens)
+- **Optimization Rule**: Serena MCP first, targeted operations always
+
+**Context Health Levels**:
+- **Green (0-30%)**: Continue with current approach
+- **Yellow (31-60%)**: Apply optimization strategies  
+- **Orange (61-80%)**: Implement efficiency measures
+- **Red (81%+)**: Strategic checkpoint required
+
+**Sprint Structure** (1 hour): Phase 1 core (15min), Phase 2 features (15min), Phase 3 polish (15min), Phase 4 integration (15min)
+
+**Success**: Micro-PR workflow, continuous integration, test-driven, architecture-first
+
+**Anti-Patterns**: Sequential chains, human-scale estimates, single large PRs, anchoring bias, over-optimism
