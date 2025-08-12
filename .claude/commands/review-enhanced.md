@@ -22,6 +22,11 @@
 2. **Enhanced Analysis**: Multi-pass security and quality analysis with code-review subagent
 3. **GitHub Integration**: Automated PR comment posting with categorized findings
 
+**Execution Method**: This command delegates to `/execute` for intelligent workflow orchestration:
+```
+/execute /reviewe workflow implementation with auto-approval
+```
+
 **Subagent Integration**: Uses specialized `code-review` subagent that provides expert multi-language code analysis with security focus and actionable feedback
 
 **Subagent Protocol**:
@@ -40,8 +45,16 @@
 
 **Enhanced Analysis Implementation**:
 
+**🚨 EXECUTION DELEGATION**: When `/reviewe` is invoked, it delegates to `/execute` for intelligent orchestration:
+```markdown
+/execute Perform enhanced code review with the following workflow:
+1. Run official /review command for baseline analysis
+2. Execute multi-pass security analysis with code-review subagent
+3. Post comprehensive GitHub PR comments with findings
+```
+
 ### Step 1: Official Review Integration
-**Execute built-in `/review` command first**:
+**Execute built-in `/review` command first** (via /execute orchestration):
 ```
 # Execute official Claude Code /review command
 # This provides baseline analysis before our enhanced review
@@ -73,6 +86,110 @@
    - **🔵 Suggestion**: Style improvements, refactoring opportunities, optimizations
    - **🟢 Nitpick**: Minor style issues, documentation improvements, conventions
 
+### Additional Security & Testing Checks:
+
+1. **Subprocess Safety Analysis** 🔴:
+   - Flag any `shell=True` usage as CRITICAL security risk
+   - Check for missing timeouts in subprocess calls
+   - Verify list args instead of string commands
+   - Detect command injection vulnerabilities
+   - Enforce `check=True` for error handling
+   - Pattern violations: `subprocess.run(f"git {cmd}", shell=True)` → Must use list args
+
+2. **Test Pattern Validation** 🔴:
+   - **CRITICAL**: Flag any `@unittest.skipIf`, `@pytest.skip()`, `pytest.skip()`
+   - Verify mocks replace environment checks
+   - Ensure deterministic test behavior (no `try/except ImportError` in tests)
+   - Detect environment-dependent execution paths
+   - Check for CI/local parity violations
+   - Pattern: Tests must behave identically everywhere
+
+3. **Resource Management** 🟡:
+   - Check for cleanup in `finally` blocks (Python)
+   - Verify temp file cleanup with `trap` (Bash)
+   - Flag missing context managers for file operations
+   - Detect resource leaks (unclosed files, connections)
+   - Verify proper cleanup on error paths
+
+4. **Git Operation Safety** 🟡:
+   - Verify PR ref fetching (not raw SHAs)
+   - Check for proper ref cleanup in finally blocks
+   - Flag dangerous `HEAD` fallback patterns
+   - Ensure worktree cleanup after operations
+   - Detect unsafe git command construction
+
+5. **Input Validation & Sanitization** 🔴:
+   - Whitelist validation patterns (regex) instead of quoting
+   - No blind string interpolation in commands
+   - Command injection prevention checks
+   - SQL injection vulnerability detection
+   - XSS and data exposure risks
+
+6. **CI-Specific Concerns** 🔵:
+   - Environment variable checks (`CI` detection)
+   - Non-interactive operation requirements
+   - Token injection patterns (`GH_TOKEN`, `GITHUB_TOKEN`)
+   - Timeout enforcement for all operations
+   - Feature flag usage for risky operations
+
+7. **Error Handling Specifics** 🟡:
+   - Fail fast, fail loud principle enforcement
+   - No silent fallbacks or swallowed exceptions
+   - Specific exception catching (not bare `except`)
+   - Proper error propagation and logging
+   - Structured error messages with context
+
+### Pattern Examples to Flag:
+
+**❌ BAD Patterns to Flag:**
+```python
+# Shell injection risk
+subprocess.run(f"git {cmd}", shell=True)  # 🔴 CRITICAL
+
+# Missing timeout
+subprocess.run(["git", "fetch"], check=True)  # 🟡 Important
+
+# Test skip pattern
+@unittest.skipIf(not redis_available, "Redis not available")  # 🔴 CRITICAL
+
+# Environment-dependent test
+try:
+    import redis
+    HAS_REDIS = True
+except ImportError:
+    HAS_REDIS = False  # 🔴 CRITICAL - Creates different test paths
+
+# Missing cleanup
+temp_file = tempfile.mktemp()
+# ... use temp_file
+# No cleanup!  # 🟡 Important
+
+# Silent fallback
+pr_head_sha = json.get("headRefOid", "HEAD")  # 🔴 CRITICAL
+```
+
+**✅ GOOD Patterns to Recommend:**
+```python
+# Safe subprocess
+subprocess.run(["git", "fetch"], shell=False, timeout=30, check=True)
+
+# Comprehensive mocking
+@patch('redis.Redis')
+def test_with_redis_mock(mock_redis):
+    # Test runs identically everywhere
+
+# Resource cleanup
+try:
+    temp_file = tempfile.mktemp()
+    # ... use temp_file
+finally:
+    os.unlink(temp_file)  # Always cleanup
+
+# Explicit error handling
+if not head_oid:
+    raise ValueError("Missing PR head SHA")
+```
+
 4. **Review Comment Generation**:
    - Create targeted inline comments for specific code locations
    - Generate comprehensive review summary with overall assessment
@@ -90,6 +207,16 @@
    - Generate comprehensive review report
    - Provide overall code quality assessment
    - Suggest next steps for addressing identified issues
+
+## Implementation Method
+
+**This command uses `/execute` for intelligent workflow orchestration**. When invoked, it automatically:
+1. Plans the review workflow based on target (PR, file, or feature)
+2. Auto-approves execution (built-in approval for review commands)
+3. Executes all review steps with progress tracking
+4. Posts results to GitHub PR when applicable
+
+The `/execute` delegation ensures optimal resource usage and parallel execution where possible.
 
 **Subagent Review Comment Protocol**:
 - `[Code Reviewer] 🔴 **CRITICAL - Security Vulnerability**`: Exploitable security flaws, data corruption risks

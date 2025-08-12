@@ -16,7 +16,26 @@
 
 **`/reviewdeep` = `/reviewe` (enhanced review) + `/arch` + `/thinku` + Context7 MCP + Gemini MCP + Perplexity MCP**
 
-The command executes specialized commands with mandatory MCP integration for comprehensive analysis:
+The command executes specialized commands with mandatory MCP integration for comprehensive analysis.
+
+## Execution Flow
+
+**The command delegates to `/execute` for intelligent orchestration of components:**
+
+```markdown
+/execute Perform comprehensive multi-perspective review:
+1. /reviewe [target]    # Enhanced code review with security analysis
+2. /arch [target]       # Architectural assessment
+3. /thinku [target]     # Ultra deep thinking analysis
+```
+
+The `/execute` delegation ensures optimal execution with:
+- Intelligent resource allocation
+- Progress tracking via TodoWrite
+- Auto-approval for review workflows
+- Parallel execution where possible
+
+Each command is executed with the same target parameter passed to `/reviewdeep`.
 
 ### 1. `/reviewe` - Enhanced Review with Official Integration
 
@@ -63,17 +82,26 @@ The command executes specialized commands with mandatory MCP integration for com
 ```
 INPUT: PR/Code/Feature
     ↓
-1. /reviewe → Enhanced review (Official /review + Advanced analysis)
-    ├─ Official /review → Native Claude Code review
-    └─ Enhanced analysis → Multi-pass security & quality review
+/EXECUTE ORCHESTRATION:
+    ├─ Plans optimal workflow
+    ├─ Auto-approves review tasks
+    └─ Tracks progress via TodoWrite
     ↓
-2. /arch  → Architectural insights & design assessment
+EXECUTE: /reviewe [target]
+    ├─ Runs official /review → Native Claude Code review
+    └─ Runs enhanced analysis → Multi-pass security & quality review
+    └─ Posts GitHub PR comments
     ↓
-3. /thinku → Deep reasoning synthesis & recommendations
+EXECUTE: /arch [target]
+    └─ Architectural insights & design assessment
     ↓
-4. Context7 + Gemini MCP → Multi-role AI analysis with current best practices
+EXECUTE: /thinku [target]
+    └─ Deep reasoning synthesis & recommendations
     ↓
-5. Perplexity MCP → Research-based security & industry insights
+MCP INTEGRATION (automatic within each command):
+    ├─ Context7 MCP → Up-to-date API documentation
+    ├─ Gemini MCP → Multi-role AI analysis
+    └─ Perplexity MCP → Research-based security insights
     ↓
 OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 ```
@@ -99,19 +127,49 @@ OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 - Architectural recommendations with design alternatives
 - Reasoned conclusions with prioritized action items
 
+## Implementation Protocol
+
+**When `/reviewdeep` is invoked, it delegates to `/execute` for orchestration:**
+
+```markdown
+/execute Perform deep review with comprehensive multi-perspective analysis:
+
+Step 1: Execute enhanced review
+/reviewe [target]
+
+Step 2: Execute architectural assessment  
+/arch [target]
+
+Step 3: Execute ultra deep thinking
+/thinku [target]
+
+Step 4: Synthesize all findings into comprehensive report
+```
+
+**The `/execute` delegation provides**:
+- Automatic workflow planning and optimization
+- Built-in progress tracking with TodoWrite
+- Intelligent parallelization where applicable
+- Resource-efficient execution
+
+**Important**: Each command must be executed with the same target parameter. If no target is provided, all commands operate on the current branch/PR.
+
 ## Examples
 
 ```bash
 # Review current branch/PR (most common usage)
 /reviewdeep
+# This executes: /reviewe → /arch → /thinku
 /reviewd
 
 # Review a specific PR
 /reviewdeep 592
+# This executes: /reviewe 592 → /arch 592 → /thinku 592
 /reviewd #592
 
 # Review a file or feature
 /reviewdeep ".claude/commands/pr.py"
+# This executes: /reviewe ".claude/commands/pr.py" → /arch ".claude/commands/pr.py" → /thinku ".claude/commands/pr.py"
 /reviewd "velocity doubling implementation"
 ```
 
@@ -140,6 +198,39 @@ OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 - **Flexible**: Individual commands can be used separately when full analysis isn't needed
 - **Maintainable**: Changes to individual commands automatically improve the composite
 - **AI-Enhanced**: Mandatory MCP integration provides expert-level analysis beyond traditional code review
+
+## Review Principles & Philosophy
+
+### Core Principles (Applied During Analysis)
+- **Verify Before Modify**: Ensure bugs are reproduced and root causes understood before suggesting fixes
+- **Incremental and Isolated Changes**: Recommend small, atomic modifications that can be tested independently
+- **Test-Driven Resolution**: Suggest writing tests for bug scenarios before implementing fixes
+- **Defensive Validation**: Recommend input checks, error handling, and assertions to guard against invalid states
+- **Fail Fast, Fail Loud**: No silent fallbacks - errors should be explicit and actionable
+
+### Development Tenets (Beliefs That Guide Reviews)
+- **Bugs Are Opportunities**: Each issue is a chance to enhance robustness, not just patch symptoms
+- **Prevention Over Cure**: Prioritize practices that avoid bugs (code reuse, proper abstractions)
+- **Simplicity Wins**: Simpler code is less error-prone - avoid over-engineering
+- **CI Parity Is Sacred**: All code must run deterministically in CI vs local environments
+- **Continuous Learning**: Document patterns from failures to prevent recurrence
+
+### Quality Goals (What Reviews Aim For)
+- **Zero Regressions**: Ensure changes don't introduce new bugs
+- **High Code Coverage**: Recommend 80-90% test coverage for critical paths
+- **Maintainable Codebase**: Fixes should improve readability and modularity
+- **Fast MTTR**: Issues should be resolvable within hours with proper documentation
+- **Reduced Bug Density**: Lower bugs per 1000 lines through preventive patterns
+
+### 6. **Testing & CI Safety Analysis** (Enhanced from /reviewe)
+Building on the code-level checks from `/reviewe`, this phase analyzes system-wide patterns:
+
+- **Subprocess Discipline at Scale**: System-wide timeout enforcement patterns
+- **Skip Pattern Elimination**: Zero tolerance policy enforcement across entire codebase
+- **CI Parity Validation**: Test infrastructure consistency analysis
+- **Resource Management Patterns**: System-level cleanup strategies
+- **Input Sanitization Architecture**: Security patterns across all entry points
+- **Error Handling Philosophy**: Consistent error propagation strategies
 
 ## MCP Integration Requirements
 
