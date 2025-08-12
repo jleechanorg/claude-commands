@@ -24,6 +24,12 @@
   - Stash uncommitted changes for later
 - Prevents the "forgot to commit/push" syndrome
 
+**🆕 Commit Hash URL Output**:
+- Automatically displays GitHub commit URL after successful push
+- Format: `https://github.com/owner/repo/commit/<hash>`
+- Works with any GitHub repository (public or private)
+- Includes commit URL in result JSON output for automation
+
 **Enhanced Options**:
 - `/pushl --verbose` - Enable detailed debugging output
 - `/pushl --dry-run` - Preview operations without executing
@@ -79,3 +85,5 @@
 Execute: `./claude_command_scripts/commands/pushlite.sh $ARGUMENTS`
 
 **Note**: This is an alias for pushlite - both commands provide identical functionality.
+
+**Recent Enhancement**: Added automatic GitHub commit hash URL output after successful push operations for easy navigation to the specific commit on GitHub.

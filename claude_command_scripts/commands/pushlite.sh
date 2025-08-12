@@ -213,11 +213,93 @@ log_info() {
     echo -e "${BLUE}ℹ️ $1${NC}"
 }
 
+# Git repository info extraction (supports GitHub, GHES, and other Git hosts)
+get_github_repo_info() {
+    # Get the origin remote URL
+    local remote_url
+    if ! remote_url=$(git remote get-url origin 2>/dev/null); then
+        log_verbose "Could not get origin remote URL"
+        return 1
+    fi
+    
+    # Parse repository info from SSH/HTTPS/git URLs
+    # Examples:
+    #   git@github.com:owner/repo.git
+    #   https://github.com/owner/repo.git
+    #   ssh://git@github.example.com/owner/repo.git
+    #   https://github.example.com/owner/repo
+    local host owner repo
+    
+    # Handle HTTPS URLs: https://host/owner/repo.git
+    if [[ "$remote_url" =~ ^https://([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        host="${BASH_REMATCH[1]}"
+        owner="${BASH_REMATCH[2]}"
+        repo="${BASH_REMATCH[3]}"
+        repo="${repo%.git}"  # Remove .git suffix if present
+    # Handle SSH URLs: git@host:owner/repo.git
+    elif [[ "$remote_url" =~ ^git@([^:]+):([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        host="${BASH_REMATCH[1]}"
+        owner="${BASH_REMATCH[2]}"
+        repo="${BASH_REMATCH[3]}"
+        repo="${repo%.git}"  # Remove .git suffix if present
+    # Handle SSH protocol URLs: ssh://git@host/owner/repo.git
+    elif [[ "$remote_url" =~ ^ssh://git@([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
+        host="${BASH_REMATCH[1]}"
+        owner="${BASH_REMATCH[2]}"
+        repo="${BASH_REMATCH[3]}"
+        repo="${repo%.git}"  # Remove .git suffix if present
+    else
+        log_verbose "Could not parse repository info from remote URL: $remote_url"
+        return 1
+    fi
+
+    export GITHUB_HOST="$host"
+    export GITHUB_OWNER="$owner"
+    export GITHUB_REPO="$repo"
+    log_verbose "Git repo: $host/$owner/$repo"
+    return 0
+}
+
+# Generate Git commit URL from commit hash (supports GitHub, GHES, and other Git hosts)
+get_commit_url() {
+    local commit_sha="$1"
+    
+    if [[ -z "$commit_sha" ]]; then
+        log_verbose "No commit SHA provided for URL generation"
+        return 1
+    fi
+    
+    # Get Git repository info
+    if ! get_github_repo_info; then
+        log_verbose "Could not get Git repository info"
+        return 1
+    fi
+    
+    # Construct the commit URL using parsed host
+    local host="${GITHUB_HOST:-github.com}"
+    local commit_url="https://${host}/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${commit_sha}"
+    echo "$commit_url"
+    return 0
+}
+
 # Result JSON creation functions
 create_success_result() {
     local message="$1"
     local commit_sha="${2:-}"
     local branch="${3:-$current_branch}"
+    local commit_url=""
+    # Generate commit URL if we have a commit SHA
+    if [[ -n "$commit_sha" ]]; then
+        # Avoid errexit on failure
+        commit_url=$(get_commit_url "$commit_sha" || true)
+    fi
+    # Normalize for JSON (null when empty)
+    local commit_url_json
+    if [[ -z "$commit_url" ]]; then
+        commit_url_json="null"
+    else
+        commit_url_json="\"$commit_url\""
+    fi
 
     cat > "$RESULT_JSON" << EOF
 {
@@ -225,6 +307,7 @@ create_success_result() {
   "branch": "$branch",
   "remote": "origin",
   "commit_sha": "$commit_sha",
+  "commit_url": $commit_url_json,
   "message": "$message",
   "success": true,
   "verbose": $VERBOSE,
@@ -1006,8 +1089,12 @@ perform_push() {
         local push_cmd="git push --force-with-lease origin '$current_branch'"
         if safe_execute "$push_cmd" "Force push to origin"; then
             local commit_sha=$(git rev-parse HEAD)
+            local commit_url=$(get_commit_url "$commit_sha" 2>/dev/null || echo "")
             create_success_result "Force push successful" "$commit_sha" "$current_branch"
             log_success "Force push completed successfully"
+            if [[ -n "$commit_url" ]]; then
+                log_info "Commit URL: $commit_url"
+            fi
         else
             create_error_result "Force push failed"
             return 1
@@ -1019,8 +1106,12 @@ perform_push() {
             local push_cmd="git push -u origin '$current_branch'"
             if safe_execute "$push_cmd" "Set upstream and push"; then
                 local commit_sha=$(git rev-parse HEAD)
+                local commit_url=$(get_commit_url "$commit_sha" 2>/dev/null || echo "")
                 create_success_result "Push with upstream set successful" "$commit_sha" "$current_branch"
                 log_success "Push with upstream completed successfully"
+                if [[ -n "$commit_url" ]]; then
+                    log_info "Commit URL: $commit_url"
+                fi
             else
                 create_error_result "Push with upstream failed"
                 return 1
@@ -1030,8 +1121,12 @@ perform_push() {
             local push_cmd="git push origin '$current_branch'"
             if safe_execute "$push_cmd" "Push to origin"; then
                 local commit_sha=$(git rev-parse HEAD)
+                local commit_url=$(get_commit_url "$commit_sha" 2>/dev/null || echo "")
                 create_success_result "Push successful" "$commit_sha" "$current_branch"
                 log_success "Push completed successfully"
+                if [[ -n "$commit_url" ]]; then
+                    log_info "Commit URL: $commit_url"
+                fi
             else
                 create_error_result "Push failed"
                 return 1
