@@ -193,7 +193,7 @@ if not head_oid:
 4. **Review Comment Generation**:
    - Create targeted inline comments for specific code locations
    - Generate comprehensive review summary with overall assessment
-   - Use `[Code Reviewer]` tag for all generated comments with expertise indicators
+   - Use `[AI reviewer]` tag for all generated comments with expertise indicators
    - Provide actionable feedback with suggested improvements
 
 5. **Post Review Comments**:
@@ -219,14 +219,14 @@ if not head_oid:
 The `/execute` delegation ensures optimal resource usage and parallel execution where possible.
 
 **Subagent Review Comment Protocol**:
-- `[Code Reviewer] 🔴 **CRITICAL - Security Vulnerability**`: Exploitable security flaws, data corruption risks
-- `[Code Reviewer] 🔴 **CRITICAL - Runtime Error**`: Code that will crash or fail in production  
-- `[Code Reviewer] 🟡 **IMPORTANT - Performance**`: Significant inefficiencies affecting user experience
-- `[Code Reviewer] 🟡 **IMPORTANT - Maintainability**`: Code that's hard to maintain or extend
-- `[Code Reviewer] 🔵 **SUGGESTION - Optimization**`: Performance improvements, refactoring opportunities
-- `[Code Reviewer] 🔵 **SUGGESTION - Best Practice**`: Industry standards alignment, documentation
-- `[Code Reviewer] 🟢 **NITPICK - Style**`: Minor formatting, naming conventions, code consistency
-- `[Code Reviewer] ✅ **APPROVED**`: Code meets security and quality standards
+- `[AI reviewer] 🔴 **CRITICAL - Security Vulnerability**`: Exploitable security flaws, data corruption risks
+- `[AI reviewer] 🔴 **CRITICAL - Runtime Error**`: Code that will crash or fail in production  
+- `[AI reviewer] 🟡 **IMPORTANT - Performance**`: Significant inefficiencies affecting user experience
+- `[AI reviewer] 🟡 **IMPORTANT - Maintainability**`: Code that's hard to maintain or extend
+- `[AI reviewer] 🔵 **SUGGESTION - Optimization**`: Performance improvements, refactoring opportunities
+- `[AI reviewer] 🔵 **SUGGESTION - Best Practice**`: Industry standards alignment, documentation
+- `[AI reviewer] 🟢 **NITPICK - Style**`: Minor formatting, naming conventions, code consistency
+- `[AI reviewer] ✅ **APPROVED**`: Code meets security and quality standards
 
 **Review Features**:
 - Generate comprehensive review report in `tmp/review_analysis_PR#.md`
