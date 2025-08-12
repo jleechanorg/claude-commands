@@ -21,7 +21,9 @@ import logging_util
 logger = logging_util.getLogger(__name__)
 
 # Configuration constants
-MAX_PAYLOAD_SIZE = 100 * 1024  # 100KB limit for API payloads
+# Increased payload size limit for Gemini 2.5 Flash to handle larger game states
+# Gemini 2.5 Flash supports up to 500MB input, using 10MB for very complex campaigns
+MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10MB limit for API payloads (supports very complex game states)
 MAX_STRING_LENGTH = 1000000
 
 
