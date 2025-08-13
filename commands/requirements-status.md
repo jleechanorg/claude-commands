@@ -1,5 +1,7 @@
 # Check Requirements Status
 
+*Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this thoughtful approach!*
+
 Show current requirement gathering progress and continue.
 
 ## Instructions:

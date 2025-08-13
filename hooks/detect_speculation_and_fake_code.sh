@@ -117,33 +117,39 @@ for pattern in "${!FAKE_CODE_PATTERNS[@]}"; do
     fi
 done
 
-# Report results
-if [ "$FOUND_SPECULATION" = true ] || [ "$FOUND_FAKE_CODE" = true ]; then
-    echo -e "\n${YELLOW}$(emoji "✅" "OK") DETECTION HOOK WORKING${NC}: Found issues in response"
-    
-    if [ "$FOUND_SPECULATION" = true ]; then
-        echo -e "${YELLOW}$(emoji "💡" "!") Speculation Advisory${NC}: Detected $SPECULATION_COUNT speculation pattern(s)"
-        echo -e "${YELLOW}Instead of speculating:${NC}"
-        echo "   1. Check actual command output/results"
-        echo "   2. Look for error messages or completion status"
-        echo "   3. Proceed based on observable facts"
-        echo "   4. Never assume execution state"
-    fi
-    
-    if [ "$FOUND_FAKE_CODE" = true ]; then
-        echo -e "${RED}$(emoji "🛑" "X") Code Quality Warning${NC}: Detected $FAKE_CODE_COUNT fake/placeholder code pattern(s)"
-        echo -e "${RED}Instead of fake code:${NC}"
-        echo "   1. Implement real, functional code"
-        echo "   2. Enhance existing systems vs creating parallel ones"
-        echo "   3. Remove placeholder comments and TODOs"
-        echo "   4. Ensure code actually performs its stated purpose"
-    fi
-    
-    echo -e "\n${YELLOW}$(emoji "ℹ️" "i") NOTE${NC}: This is an advisory system. The hook is functioning correctly."
+# Report results - handle speculation and fake code separately for clarity
+if [ "$FOUND_SPECULATION" = true ]; then
+    echo -e "\n${YELLOW}$(emoji "✅" "OK") SPECULATION DETECTION ACTIVE${NC}: Found speculation patterns in response"
+    echo -e "${YELLOW}$(emoji "💡" "!") Speculation Advisory${NC}: Detected $SPECULATION_COUNT speculation pattern(s)"
+    echo -e "${YELLOW}Instead of speculating:${NC}"
+    echo "   1. Check actual command output/results"
+    echo "   2. Look for error messages or completion status"
+    echo "   3. Proceed based on observable facts"
+    echo "   4. Never assume execution state"
+    echo ""
+fi
 
+if [ "$FOUND_FAKE_CODE" = true ]; then
+    echo -e "\n${RED}$(emoji "✅" "OK") FAKE CODE DETECTION ACTIVE${NC}: Found fake/placeholder code patterns in response"
+    echo -e "${RED}$(emoji "🛑" "X") Code Quality Warning${NC}: Detected $FAKE_CODE_COUNT fake/placeholder code pattern(s)"
+    echo -e "${RED}Instead of fake code:${NC}"
+    echo "   1. Implement real, functional code"
+    echo "   2. Enhance existing systems vs creating parallel ones"
+    echo "   3. Remove placeholder comments and TODOs"
+    echo "   4. Ensure code actually performs its stated purpose"
+    echo ""
+    echo -e "${GREEN}$(emoji "🔧" "T") RECOMMENDED ACTION${NC}: Run '/fake' command for comprehensive code quality audit"
+    echo -e "${GREEN}Usage${NC}: Type '/fake' to analyze and fix all fake/placeholder code patterns"
+    echo ""
+fi
+
+# Show final status if any issues were detected
+if [ "$FOUND_SPECULATION" = true ] || [ "$FOUND_FAKE_CODE" = true ]; then
+    echo -e "${YELLOW}$(emoji "ℹ️" "i") NOTE${NC}: This is an advisory system. The hook is functioning correctly."
+    
     # Log incidents
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Speculation: $SPECULATION_COUNT, Fake Code: $FAKE_CODE_COUNT patterns" >> "$LOG_FILE"
-
+    
     # Exit 0 - Advisory warnings, allow response to continue
     exit 0
 else
