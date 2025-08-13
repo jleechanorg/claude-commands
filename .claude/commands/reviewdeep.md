@@ -24,12 +24,17 @@ The command executes specialized commands with mandatory MCP integration for com
 
 ```markdown
 /execute Perform comprehensive multi-perspective review:
-1. /reviewe [target]    # Enhanced code review with security analysis
-2. /arch [target]       # Architectural assessment
-3. /thinku [target]     # Ultra deep thinking analysis
+1. /guidelines          # Centralized mistake prevention consultation
+2. /reviewe [target]    # Enhanced code review with security analysis
+3. /arch [target]       # Architectural assessment
+4. /thinku [target]     # Ultra deep thinking analysis
+5. Generate PR guidelines # Create docs/pr{PR_NUMBER}/guidelines.md with mistake prevention patterns
 ```
 
 The `/execute` delegation ensures optimal execution with:
+- **Guidelines Generation**: Automatically creates `docs/pr{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
+- **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
+- **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
 - Intelligent resource allocation
 - Progress tracking via TodoWrite
 - Auto-approval for review workflows
@@ -134,16 +139,22 @@ OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 ```markdown
 /execute Perform deep review with comprehensive multi-perspective analysis:
 
-Step 1: Execute enhanced review
+Step 1: Execute guidelines consultation
+/guidelines
+
+Step 2: Execute enhanced review
 /reviewe [target]
 
-Step 2: Execute architectural assessment  
+Step 3: Execute architectural assessment  
 /arch [target]
 
-Step 3: Execute ultra deep thinking
+Step 4: Execute ultra deep thinking
 /thinku [target]
 
-Step 4: Synthesize all findings into comprehensive report
+Step 5: Generate PR-specific guidelines from review findings
+Create docs/pr{PR_NUMBER}/guidelines.md with documented patterns and solutions
+
+Step 6: Synthesize all findings into comprehensive report
 ```
 
 **The `/execute` delegation provides**:
@@ -231,6 +242,73 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 - **Resource Management Patterns**: System-level cleanup strategies
 - **Input Sanitization Architecture**: Security patterns across all entry points
 - **Error Handling Philosophy**: Consistent error propagation strategies
+
+## 🚨 CRITICAL: PR Guidelines Generation Protocol
+
+### **Automatic Guidelines Creation**
+`/reviewdeep` automatically generates PR-specific guidelines based on review findings:
+
+**PR Context Detection**: 
+- **Primary**: Auto-detect PR number from current branch context via GitHub API
+- **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
+- **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-{BRANCH_NAME}/guidelines.md`
+- **Fallback 3**: If outside any PR/branch context (e.g., file/feature targets), skip guidelines generation and continue with analysis only
+- **Manual Override**: Accept explicit PR number via `/reviewdeep --pr 1286`
+- **Graceful Degradation**: Never fail /reviewdeep execution due to guidelines generation issues - log warning and proceed
+
+**File Location**: 
+- **With PR**: `docs/pr{PR_NUMBER}/guidelines.md` (e.g., `docs/pr1286/guidelines.md`)
+- **Without PR**: `docs/branch-{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-feature-auth/guidelines.md`)
+
+**Generation Process**:
+1. **Analyze Review Findings**: Extract patterns from `/reviewe`, `/arch`, and `/thinku` analysis
+2. **Identify Mistake Patterns**: Document specific issues found in the PR
+3. **Create Solutions**: Provide ❌ wrong vs ✅ correct examples with code snippets
+4. **Generate Anti-Patterns**: Structure findings as reusable anti-patterns for future prevention
+5. **Document Context**: Include PR-specific context and historical references
+
+### **Guidelines Content Structure**
+Generated guidelines file includes:
+
+```markdown
+# PR #{PR_NUMBER} Guidelines - {PR_TITLE}
+
+## 🎯 PR-Specific Principles
+- Core principles discovered from this PR's analysis
+
+## 🚫 PR-Specific Anti-Patterns
+### ❌ **{Pattern Name}**
+{Description of wrong pattern found}
+{Code example showing the problem}
+
+### ✅ **{Correct Pattern}**
+{Description of correct approach}
+{Code example showing the solution}
+
+## 📋 Implementation Patterns for This PR
+- Specific patterns and best practices discovered
+- Tool selection guidance based on what worked
+
+## 🔧 Specific Implementation Guidelines
+- Actionable guidance for similar future work
+- Quality gates and validation steps
+```
+
+### **Integration with Review Process**
+- **Step 4 of /reviewdeep**: Guidelines generation happens after analysis phases
+- **Evidence-Based**: Only document patterns with concrete evidence from review
+- **PR-Specific Focus**: Tailor guidelines to specific PR context and findings
+- **Historical Reference**: Include specific line numbers, file references, and commit SHAs
+- **Actionable Content**: Provide specific ❌/✅ examples that can prevent future mistakes
+
+### **File Format Requirements**
+- **Directory**: `docs/pr{PR_NUMBER}/` (no dashes, direct PR number)
+- **Filename**: `guidelines.md` (standardized name)
+- **PR Number Extraction**: Auto-detect from current branch context or GitHub API
+- **Example Paths**:
+  - `docs/pr1286/guidelines.md`
+  - `docs/pr592/guidelines.md`
+  - `docs/pr1500/guidelines.md`
 
 ## MCP Integration Requirements
 

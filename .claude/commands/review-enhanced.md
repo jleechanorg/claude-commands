@@ -48,10 +48,22 @@
 **🚨 EXECUTION DELEGATION**: When `/reviewe` is invoked, it delegates to `/execute` for intelligent orchestration:
 ```markdown
 /execute Perform enhanced code review with the following workflow:
-1. Run official /review command for baseline analysis
-2. Execute multi-pass security analysis with code-review subagent
-3. Post comprehensive GitHub PR comments with findings
+1. Call /guidelines for centralized mistake prevention consultation
+2. Run official /review command for baseline analysis
+3. Execute multi-pass security analysis with code-review subagent (informed by guidelines)
+4. Post comprehensive GitHub PR comments with findings
 ```
+
+### Guidelines Integration Protocol
+
+**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system through `/guidelines` command composition.
+
+**Execution Flow**:
+1. Call `/guidelines` for comprehensive consultation
+2. Apply guidelines output to inform review approach and security analysis
+3. Proceed with enhanced review workflow using guidelines context
+
+**Guidelines Integration**: The `/guidelines` command provides centralized consultation of CLAUDE.md, base guidelines, and PR-specific guidelines, enhancing the review process with documented patterns and anti-pattern prevention.
 
 ### Step 1: Official Review Integration
 **Execute built-in `/review` command first** (via /execute orchestration):

@@ -319,6 +319,14 @@
 - **Execution Steps**: 1) Extract technical terms 2) Search Memory MCP 3) Log results transparently 4) Natural integration 5) Capture high-quality learnings
 - **Transparency**: Show "🔍 Searching memory..." → Report "📚 Found X relevant memories" → Indicate "📚 Enhanced with memory context"
 
+🚨 **MISTAKE PREVENTION SYSTEM**: ⚠️ MANDATORY for `/plan` and `/execute` commands
+- **Guidelines Integration**: Automatically check `docs/pr{PR}/guidelines.md` (PR-specific) and `docs/pr-guidelines/base-guidelines.md` (general patterns) for comprehensive mistake prevention patterns
+- **Anti-Pattern Enforcement**: Reference historical mistakes and apply best practices from documented patterns
+- **Tool Selection Hierarchy**: Serena MCP → Read tool → Bash commands (per established guidelines)
+- **Quality Gates**: Apply evidence-based development, systematic change management, and resource-efficient operations
+- **Pattern Recognition**: Avoid creating unnecessary files, fake implementations, and subprocess security risks
+- **Learning Integration**: Capture new mistake patterns and solutions for continuous improvement
+
 17. 🚨 **FILE CREATION PREVENTION**: ⚠️ MANDATORY - Stop unnecessary file proliferation
 - ❌ **FORBIDDEN PATTERNS**: Creating `_v2`, `_new`, `_backup`, `_temp` files when existing file can be edited
 - ✅ **REQUIRED CHECK**: Before any Write tool usage: "Can I edit an existing file instead?"
