@@ -42,24 +42,42 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - **Context Integration**: Applies memory insights to planning decisions
 - **Execution Strategy**: Uses memory patterns to inform parallel vs sequential choices
 
+## 📋 GUIDELINES INTEGRATION
+
+**Mistake Prevention System**: `/plan` automatically checks for and applies guidelines from `docs/pr-guidelines/base-guidelines.md` to prevent recurring mistakes.
+
+### Pre-Planning Guidelines Check
+
+**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system through `/guidelines` command composition.
+
+**Execution Flow**:
+1. Call `/guidelines` for comprehensive consultation
+2. Apply guidelines output to inform planning approach
+3. Proceed with planning workflow using guidelines context
+
+**Guidelines Integration**: The `/guidelines` command provides centralized consultation of CLAUDE.md, base guidelines, and PR-specific guidelines with automatic creation of missing PR guidelines.
+
 ## 🚨 PLAN PROTOCOL
 
 ### Phase 1: TodoWrite Circuit Breaker (MANDATORY)
 
 **Required TodoWrite Checklist**:
 ```
-## PLANNING PROTOCOL CHECKLIST - ENHANCED WITH MEMORY
+## PLANNING PROTOCOL CHECKLIST - ENHANCED WITH MEMORY AND GUIDELINES
+- [ ] Guidelines consultation completed: ✅ `/guidelines` command executed successfully
+- [ ] Anti-patterns avoided: Reference historical mistakes and solutions
 - [ ] Memory consultation completed: ✅ YES
 - [ ] Memory insights applied: [Count] relevant patterns found
 - [ ] Context check: ___% remaining
   *Guidance*: Estimate the percentage of the task or project that remains incomplete. For example, if 3 out of 10 subtasks are done, the remaining percentage is 70%.
-- [ ] Complexity assessment: Simple/Complex (memory-informed)
+- [ ] Complexity assessment: Simple/Complex (memory and guidelines informed)
+- [ ] Tool selection validated: Serena MCP → Read tool → Bash (per guidelines)
 - [ ] Execution method decision: Parallel Task Tool Agents/Sequential with reasoning
   *Required*: Must state "Parallel Task Tool Agents - [reason]" or "Sequential - [reason]"
   *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
   🚨 **CRITICAL**: Task tool supports up to 10 parallel subagents with auto-queue management
 - [ ] Tool requirements: Read, Write, Edit, Bash, Task
-- [ ] Memory-enhanced execution plan presented to user
+- [ ] Guidelines-enhanced execution plan presented to user
 - [ ] User approval received
 ```
 

@@ -8,6 +8,34 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Synchronization for parallel processing
+STATS_LOCK_FILE="/tmp/claude_mcp_stats.lock"
+
+# Function to safely update stats counters with file locking
+update_stats() {
+    local stat_type="$1"
+    local name="$2"
+    local result="$3"
+    
+    # Use flock for atomic updates
+    (
+        flock -x 200
+        case "$stat_type" in
+            "TOTAL")
+                TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+                ;;
+            "SUCCESS")
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+                INSTALL_RESULTS["$name"]="$result"
+                ;;
+            "FAILURE")
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                INSTALL_RESULTS["$name"]="$result"
+                ;;
+        esac
+    ) 200>"$STATS_LOCK_FILE"
+}
+
 # Set up logging
 LOG_FILE="/tmp/claude_mcp_$(date +%Y%m%d_%H%M%S).log"
 echo "📝 Logging to: $LOG_FILE"
@@ -71,6 +99,15 @@ declare -A INSTALL_RESULTS
 TOTAL_SERVERS=0
 SUCCESSFUL_INSTALLS=0
 FAILED_INSTALLS=0
+CURRENT_STEP=0
+
+# Parallel processing configuration
+MAX_PARALLEL_JOBS=3
+declare -A PARALLEL_PIDS
+declare -A PARALLEL_RESULTS
+
+# Server installation queue for parallel processing
+declare -a SERVER_QUEUE
 
 # Function to check if npm package exists
 package_exists() {
@@ -138,6 +175,63 @@ cleanup_failed_server() {
     claude mcp remove "$name" >/dev/null 2>&1 || true
 }
 
+# Function to display current step with dynamic counting
+display_step() {
+    local title="$1"
+    CURRENT_STEP=$((CURRENT_STEP + 1))
+    echo -e "\n${BLUE}[$CURRENT_STEP] $title${NC}"
+}
+
+# Function to check MCP server in parallel
+check_server_parallel() {
+    local name="$1"
+    local check_file="/tmp/mcp_check_$name.status"
+    
+    {
+        if claude mcp list 2>/dev/null | grep -q "^$name:.*✓ Connected"; then
+            echo "CONNECTED" > "$check_file"
+        else
+            echo "DISCONNECTED" > "$check_file"
+        fi
+    } &
+    
+    PARALLEL_PIDS["$name"]=$!
+}
+
+# Function to wait for parallel checks and collect results
+collect_parallel_results() {
+    local timeout_seconds=10
+    
+    for name in "${!PARALLEL_PIDS[@]}"; do
+        local pid=${PARALLEL_PIDS["$name"]}
+        local check_file="/tmp/mcp_check_$name.status"
+        
+        # Each process gets individual timeout calculation
+        local process_start_time=$(date +%s)
+        local elapsed=0
+        while kill -0 "$pid" 2>/dev/null && [ $elapsed -lt $timeout_seconds ]; do
+            sleep 0.1
+            elapsed=$(( $(date +%s) - process_start_time ))
+        done
+        
+        # Kill if still running
+        kill "$pid" 2>/dev/null || true
+        wait "$pid" 2>/dev/null || true
+        
+        # Read result
+        if [ -f "$check_file" ]; then
+            PARALLEL_RESULTS["$name"]=$(cat "$check_file")
+            rm -f "$check_file"
+        else
+            PARALLEL_RESULTS["$name"]="TIMEOUT"
+        fi
+    done
+    
+    # Clear PID tracking (reinitialize associative array correctly)
+    unset PARALLEL_PIDS
+    declare -A PARALLEL_PIDS
+}
+
 # Enhanced function to add MCP server with full error checking
 add_mcp_server() {
     local name="$1"
@@ -145,16 +239,15 @@ add_mcp_server() {
     shift 2
     local args="$@"
 
-    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-    echo -e "${BLUE}🔧 Setting up $name...${NC}"
+    update_stats "TOTAL" "$name" ""
+    echo -e "${BLUE}  🔧 Setting up $name...${NC}"
     log_with_timestamp "Setting up MCP server: $name (package: $package)"
 
     # Check if server already exists
     if server_already_exists "$name"; then
         echo -e "${GREEN}  ✅ Server $name already exists, skipping installation${NC}"
         log_with_timestamp "Server $name already exists, skipping"
-        INSTALL_RESULTS["$name"]="ALREADY_EXISTS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        update_stats "SUCCESS" "$name" "ALREADY_EXISTS"
         return 0
     fi
 
@@ -321,9 +414,9 @@ check_github_requirements() {
     fi
 }
 
-# Check existing MCP installations first
-echo -e "${BLUE}🔍 Checking existing MCP installations...${NC}"
-log_with_timestamp "Checking existing MCP servers"
+# Enhanced MCP server checking with parallel health checks
+echo -e "${BLUE}🔍 Checking existing MCP installations and health status...${NC}"
+log_with_timestamp "Checking existing MCP servers with parallel health checks"
 
 EXISTING_SERVERS=""
 if EXISTING_SERVERS=$(claude mcp list 2>&1); then
@@ -332,8 +425,46 @@ if EXISTING_SERVERS=$(claude mcp list 2>&1); then
     log_with_timestamp "Found $EXISTING_COUNT existing MCP servers"
 
     if [ "$EXISTING_COUNT" -gt 0 ]; then
-        echo -e "${BLUE}📋 Currently installed servers:${NC}"
-        echo "$EXISTING_SERVERS" | head -10
+        echo -e "${BLUE}📋 Running parallel health checks on existing servers...${NC}"
+        
+        # Extract server names and start parallel health checks
+        SERVER_NAMES=($(echo "$EXISTING_SERVERS" | grep -E "^[a-zA-Z].*:" | cut -d':' -f1))
+        
+        # Start parallel health checks (limited to MAX_PARALLEL_JOBS)
+        check_count=0
+        for server_name in "${SERVER_NAMES[@]}"; do
+            if [ $check_count -ge $MAX_PARALLEL_JOBS ]; then
+                # Wait for some checks to complete before starting more
+                collect_parallel_results
+                check_count=0
+            fi
+            check_server_parallel "$server_name"
+            check_count=$((check_count + 1))
+        done
+        
+        # Wait for remaining checks to complete
+        collect_parallel_results
+        
+        # Display results
+        echo -e "${BLUE}📋 Server health status:${NC}"
+        for server_name in "${SERVER_NAMES[@]}"; do
+            status="${PARALLEL_RESULTS["$server_name"]:-"UNKNOWN"}"
+            case "$status" in
+                "CONNECTED")
+                    echo -e "  ${GREEN}✓${NC} $server_name"
+                    ;;
+                "DISCONNECTED")
+                    echo -e "  ${RED}✗${NC} $server_name"
+                    ;;
+                "TIMEOUT")
+                    echo -e "  ${YELLOW}⏱${NC} $server_name (timeout)"
+                    ;;
+                *)
+                    echo -e "  ${YELLOW}?${NC} $server_name (unknown)"
+                    ;;
+            esac
+        done
+        
         echo "$EXISTING_SERVERS" >> "$LOG_FILE"
     fi
 else
@@ -353,10 +484,86 @@ echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
 check_github_requirements
 echo ""
 
-# Core MCP Servers Installation
-echo -e "${BLUE}📊 Installing Core MCP Servers...${NC}"
+# Define server installation batches for parallel processing
+# Group servers that can be installed concurrently without conflicts
+declare -A BATCH_1=(
+    ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
+    ["playwright-mcp"]="@playwright/mcp"
+    ["context7"]="@upstash/context7-mcp"
+)
 
-echo -e "\n${BLUE}1/11 Setting up GitHub MCP Server (Official Remote)...${NC}"
+declare -A BATCH_2=(
+    ["puppeteer-server"]="@modelcontextprotocol/server-puppeteer"
+    ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
+    ["ddg-search"]="@oevortex/ddg_search"
+)
+
+# Function to install server batch in parallel
+install_batch_parallel() {
+    local -n batch_ref=$1
+    local batch_name="$2"
+    
+    echo -e "${BLUE}🚀 Installing $batch_name in parallel...${NC}"
+    log_with_timestamp "Starting parallel installation of $batch_name"
+    
+    # Start installations in parallel
+    for server_name in "${!batch_ref[@]}"; do
+        local package="${batch_ref[$server_name]}"
+        {
+            local result_file="/tmp/install_${server_name}.result"
+            if add_mcp_server "$server_name" "$package" > "/tmp/install_${server_name}.log" 2>&1; then
+                echo "SUCCESS" > "$result_file"
+            else
+                echo "FAILED" > "$result_file"
+            fi
+        } &
+        
+        PARALLEL_PIDS["$server_name"]=$!
+        log_with_timestamp "Started parallel installation of $server_name (PID: ${PARALLEL_PIDS[$server_name]})"
+    done
+    
+    # Wait for all installations to complete
+    echo -e "${BLUE}  ⏳ Waiting for $batch_name installations to complete...${NC}"
+    
+    for server_name in "${!batch_ref[@]}"; do
+        local pid="${PARALLEL_PIDS[$server_name]}"
+        local result_file="/tmp/install_${server_name}.result"
+        local log_file="/tmp/install_${server_name}.log"
+        
+        # Wait for this installation
+        if wait "$pid"; then
+            local result="$(cat "$result_file" 2>/dev/null || echo "UNKNOWN")"
+            if [ "$result" = "SUCCESS" ]; then
+                echo -e "${GREEN}  ✓ $server_name completed successfully${NC}"
+                log_with_timestamp "Parallel installation SUCCESS: $server_name"
+            else
+                echo -e "${RED}  ✗ $server_name failed${NC}"
+                log_with_timestamp "Parallel installation FAILED: $server_name"
+                # Show error details
+                if [ -f "$log_file" ]; then
+                    echo -e "${RED}    Error details: $(tail -1 "$log_file")${NC}"
+                fi
+            fi
+        else
+            echo -e "${RED}  ✗ $server_name process failed${NC}"
+            log_with_timestamp "Parallel installation PROCESS_FAILED: $server_name"
+        fi
+        
+        # Cleanup temp files
+        rm -f "$result_file" "$log_file"
+    done
+    
+    # Clear parallel tracking (reinitialize associative array correctly)
+    unset PARALLEL_PIDS
+    declare -A PARALLEL_PIDS
+    
+    echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
+}
+
+# Core MCP Servers Installation
+echo -e "${BLUE}📊 Installing Core MCP Servers with Parallel Processing...${NC}"
+
+display_step "Setting up GitHub MCP Server (Official Remote)..."
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
 echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
@@ -391,10 +598,10 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}2/11 Setting up Sequential Thinking MCP Server...${NC}"
-add_mcp_server "sequential-thinking" "@modelcontextprotocol/server-sequential-thinking"
+display_step "Installing Batch 1 Servers (Parallel)..."
+install_batch_parallel BATCH_1 "Batch 1"
 
-echo -e "\n${BLUE}3/11 Setting up Memory MCP Server...${NC}"
+display_step "Setting up Memory MCP Server..."
 # Create memory data directory in user's home
 mkdir -p ~/.cache/mcp-memory
 echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
@@ -444,19 +651,10 @@ EOF
     fi
 fi
 
-echo -e "\n${BLUE}4/11 Setting up Playwright MCP Server (Microsoft Official)...${NC}"
-add_mcp_server "playwright-mcp" "@playwright/mcp"
+display_step "Installing Batch 2 Servers (Parallel)..."
+install_batch_parallel BATCH_2 "Batch 2"
 
-echo -e "\n${BLUE}5/11 Setting up Puppeteer MCP Server (Legacy Support)...${NC}"
-add_mcp_server "puppeteer-server" "@modelcontextprotocol/server-puppeteer"
-
-echo -e "\n${BLUE}6/11 Setting up Context7 MCP Server...${NC}"
-add_mcp_server "context7" "@upstash/context7-mcp"
-
-echo -e "\n${BLUE}7/11 Setting up Gemini CLI MCP Server...${NC}"
-add_mcp_server "gemini-cli-mcp" "@yusukedev/gemini-cli-mcp"
-
-echo -e "\n${BLUE}8/11 Setting up Web Search MCP Servers...${NC}"
+display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
@@ -464,14 +662,13 @@ claude mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
 claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
-# Install DuckDuckGo search server (free, no API key)
-echo -e "\n${BLUE}  8a/10 DuckDuckGo Web Search (Free)...${NC}"
+# DuckDuckGo is now installed in Batch 2
+echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
 echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
 echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
-add_mcp_server "ddg-search" "@oevortex/ddg_search"
 
 # Install Perplexity search server (premium, requires API key)
-echo -e "\n${BLUE}  8b/10 Perplexity AI Search (Premium)...${NC}"
+echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
 if [ -n "$PERPLEXITY_API_KEY" ]; then
     echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
     echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
@@ -500,7 +697,7 @@ else
 fi
 
 # Optional: Notion Server (if available)
-echo -e "\n${BLUE}9/11 Setting up Filesystem MCP Server...${NC}"
+display_step "Setting up Filesystem MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
 log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
@@ -533,7 +730,7 @@ else
     fi
 fi
 
-echo -e "\n${BLUE}10/11 Checking for Notion MCP Server...${NC}"
+display_step "Checking for Notion MCP Server..."
 if package_exists "@notionhq/notion-mcp-server"; then
     add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
 elif package_exists "@makenotion/notion-mcp-server"; then
@@ -543,7 +740,88 @@ else
 fi
 
 
-echo -e "\n${BLUE}11/11 Setting up Serena MCP Server...${NC}"
+display_step "Setting up React MCP Server..."
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  ⚛️ Configuring React MCP server for React development...${NC}"
+log_with_timestamp "Setting up MCP server: react-mcp (local: react-mcp/index.js)"
+
+# Check if server already exists
+if server_already_exists "react-mcp"; then
+    echo -e "${GREEN}  ✅ Server react-mcp already exists, skipping installation${NC}"
+    log_with_timestamp "Server react-mcp already exists, skipping"
+    INSTALL_RESULTS["react-mcp"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Get the absolute path to the react-mcp directory
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REACT_MCP_PATH="$SCRIPT_DIR/react-mcp/index.js"
+    
+    # Check if react-mcp directory exists
+    if [ -f "$REACT_MCP_PATH" ]; then
+        echo -e "${GREEN}  ✅ Found React MCP server at: $REACT_MCP_PATH${NC}"
+        log_with_timestamp "Found React MCP server at: $REACT_MCP_PATH"
+        
+        # Ensure dependencies are installed without using 'cd'
+        if [ -f "${SCRIPT_DIR}/react-mcp/package.json" ]; then
+            if [ ! -d "${SCRIPT_DIR}/react-mcp/node_modules" ]; then
+                echo -e "${BLUE}  📦 Installing react-mcp dependencies...${NC}"
+                
+                # Check for package-lock.json before using npm ci
+                if [ -f "${SCRIPT_DIR}/react-mcp/package-lock.json" ]; then
+                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" ci 2>&1)
+                else
+                    echo -e "${YELLOW}  ⚠️ No package-lock.json found, using npm install instead${NC}"
+                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" install 2>&1)
+                fi
+                
+                dep_exit=$?
+                if [ $dep_exit -ne 0 ]; then
+                    echo -e "${RED}  ❌ Failed to install react-mcp dependencies${NC}"
+                    log_error_details "npm dependency installation (react-mcp)" "react-mcp" "$dep_output"
+                    update_stats "FAILURE" "react-mcp" "INSTALL_FAILED"
+                    # Don't attempt server addition - dependency failure is critical
+                    return 1
+                else
+                    echo -e "${GREEN}  ✅ Dependencies installed for react-mcp${NC}"
+                fi
+            fi
+        fi
+        
+        # Remove existing react-mcp server to reconfigure
+        claude mcp remove "react-mcp" >/dev/null 2>&1 || true
+
+        # Add React MCP server using discovered Node binary with absolute path
+        echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
+        log_with_timestamp "Attempting to add React MCP server"
+
+        add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
+        add_exit_code=$?
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
+            echo -e "${BLUE}  📋 Server info:${NC}"
+            echo -e "     • Path: $REACT_MCP_PATH"
+            echo -e "     • Available tools: Create React apps, run dev servers, file operations, package management"
+            echo -e "     • Features: React project management, terminal commands, process tracking"
+            log_with_timestamp "Successfully added React MCP server"
+            INSTALL_RESULTS["react-mcp"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add React MCP server${NC}"
+            log_error_details "claude mcp add react-mcp" "react-mcp" "$add_output"
+            INSTALL_RESULTS["react-mcp"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    else
+        echo -e "${RED}  ❌ React MCP server not found at expected path: $REACT_MCP_PATH${NC}"
+        echo -e "${YELLOW}  💡 Run 'git submodule update --init --recursive' to initialize submodules${NC}"
+        log_with_timestamp "ERROR: React MCP server not found at $REACT_MCP_PATH"
+        INSTALL_RESULTS["react-mcp"]="DEPENDENCY_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+fi
+
+display_step "Setting up Serena MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
 log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"

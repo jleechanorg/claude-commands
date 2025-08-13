@@ -16,7 +16,31 @@
 
 **`/reviewdeep` = `/reviewe` (enhanced review) + `/arch` + `/thinku` + Context7 MCP + Gemini MCP + Perplexity MCP**
 
-The command executes specialized commands with mandatory MCP integration for comprehensive analysis:
+The command executes specialized commands with mandatory MCP integration for comprehensive analysis.
+
+## Execution Flow
+
+**The command delegates to `/execute` for intelligent orchestration of components:**
+
+```markdown
+/execute Perform comprehensive multi-perspective review:
+1. /guidelines          # Centralized mistake prevention consultation
+2. /reviewe [target]    # Enhanced code review with security analysis
+3. /arch [target]       # Architectural assessment
+4. /thinku [target]     # Ultra deep thinking analysis
+5. Generate PR guidelines # Create docs/pr{PR_NUMBER}/guidelines.md with mistake prevention patterns
+```
+
+The `/execute` delegation ensures optimal execution with:
+- **Guidelines Generation**: Automatically creates `docs/pr{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
+- **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
+- **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
+- Intelligent resource allocation
+- Progress tracking via TodoWrite
+- Auto-approval for review workflows
+- Parallel execution where possible
+
+Each command is executed with the same target parameter passed to `/reviewdeep`.
 
 ### 1. `/reviewe` - Enhanced Review with Official Integration
 
@@ -63,17 +87,26 @@ The command executes specialized commands with mandatory MCP integration for com
 ```
 INPUT: PR/Code/Feature
     ↓
-1. /reviewe → Enhanced review (Official /review + Advanced analysis)
-    ├─ Official /review → Native Claude Code review
-    └─ Enhanced analysis → Multi-pass security & quality review
+/EXECUTE ORCHESTRATION:
+    ├─ Plans optimal workflow
+    ├─ Auto-approves review tasks
+    └─ Tracks progress via TodoWrite
     ↓
-2. /arch  → Architectural insights & design assessment
+EXECUTE: /reviewe [target]
+    ├─ Runs official /review → Native Claude Code review
+    └─ Runs enhanced analysis → Multi-pass security & quality review
+    └─ Posts GitHub PR comments
     ↓
-3. /thinku → Deep reasoning synthesis & recommendations
+EXECUTE: /arch [target]
+    └─ Architectural insights & design assessment
     ↓
-4. Context7 + Gemini MCP → Multi-role AI analysis with current best practices
+EXECUTE: /thinku [target]
+    └─ Deep reasoning synthesis & recommendations
     ↓
-5. Perplexity MCP → Research-based security & industry insights
+MCP INTEGRATION (automatic within each command):
+    ├─ Context7 MCP → Up-to-date API documentation
+    ├─ Gemini MCP → Multi-role AI analysis
+    └─ Perplexity MCP → Research-based security insights
     ↓
 OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 ```
@@ -99,19 +132,55 @@ OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 - Architectural recommendations with design alternatives
 - Reasoned conclusions with prioritized action items
 
+## Implementation Protocol
+
+**When `/reviewdeep` is invoked, it delegates to `/execute` for orchestration:**
+
+```markdown
+/execute Perform deep review with comprehensive multi-perspective analysis:
+
+Step 1: Execute guidelines consultation
+/guidelines
+
+Step 2: Execute enhanced review
+/reviewe [target]
+
+Step 3: Execute architectural assessment  
+/arch [target]
+
+Step 4: Execute ultra deep thinking
+/thinku [target]
+
+Step 5: Generate PR-specific guidelines from review findings
+Create docs/pr{PR_NUMBER}/guidelines.md with documented patterns and solutions
+
+Step 6: Synthesize all findings into comprehensive report
+```
+
+**The `/execute` delegation provides**:
+- Automatic workflow planning and optimization
+- Built-in progress tracking with TodoWrite
+- Intelligent parallelization where applicable
+- Resource-efficient execution
+
+**Important**: Each command must be executed with the same target parameter. If no target is provided, all commands operate on the current branch/PR.
+
 ## Examples
 
 ```bash
 # Review current branch/PR (most common usage)
 /reviewdeep
+# This executes: /reviewe → /arch → /thinku
 /reviewd
 
 # Review a specific PR
 /reviewdeep 592
+# This executes: /reviewe 592 → /arch 592 → /thinku 592
 /reviewd #592
 
 # Review a file or feature
 /reviewdeep ".claude/commands/pr.py"
+# This executes: /reviewe ".claude/commands/pr.py" → /arch ".claude/commands/pr.py" → /thinku ".claude/commands/pr.py"
 /reviewd "velocity doubling implementation"
 ```
 
@@ -140,6 +209,106 @@ OUTPUT: Comprehensive multi-perspective analysis with native + enhanced insights
 - **Flexible**: Individual commands can be used separately when full analysis isn't needed
 - **Maintainable**: Changes to individual commands automatically improve the composite
 - **AI-Enhanced**: Mandatory MCP integration provides expert-level analysis beyond traditional code review
+
+## Review Principles & Philosophy
+
+### Core Principles (Applied During Analysis)
+- **Verify Before Modify**: Ensure bugs are reproduced and root causes understood before suggesting fixes
+- **Incremental and Isolated Changes**: Recommend small, atomic modifications that can be tested independently
+- **Test-Driven Resolution**: Suggest writing tests for bug scenarios before implementing fixes
+- **Defensive Validation**: Recommend input checks, error handling, and assertions to guard against invalid states
+- **Fail Fast, Fail Loud**: No silent fallbacks - errors should be explicit and actionable
+
+### Development Tenets (Beliefs That Guide Reviews)
+- **Bugs Are Opportunities**: Each issue is a chance to enhance robustness, not just patch symptoms
+- **Prevention Over Cure**: Prioritize practices that avoid bugs (code reuse, proper abstractions)
+- **Simplicity Wins**: Simpler code is less error-prone - avoid over-engineering
+- **CI Parity Is Sacred**: All code must run deterministically in CI vs local environments
+- **Continuous Learning**: Document patterns from failures to prevent recurrence
+
+### Quality Goals (What Reviews Aim For)
+- **Zero Regressions**: Ensure changes don't introduce new bugs
+- **High Code Coverage**: Recommend 80-90% test coverage for critical paths
+- **Maintainable Codebase**: Fixes should improve readability and modularity
+- **Fast MTTR**: Issues should be resolvable within hours with proper documentation
+- **Reduced Bug Density**: Lower bugs per 1000 lines through preventive patterns
+
+### 6. **Testing & CI Safety Analysis** (Enhanced from /reviewe)
+Building on the code-level checks from `/reviewe`, this phase analyzes system-wide patterns:
+
+- **Subprocess Discipline at Scale**: System-wide timeout enforcement patterns
+- **Skip Pattern Elimination**: Zero tolerance policy enforcement across entire codebase
+- **CI Parity Validation**: Test infrastructure consistency analysis
+- **Resource Management Patterns**: System-level cleanup strategies
+- **Input Sanitization Architecture**: Security patterns across all entry points
+- **Error Handling Philosophy**: Consistent error propagation strategies
+
+## 🚨 CRITICAL: PR Guidelines Generation Protocol
+
+### **Automatic Guidelines Creation**
+`/reviewdeep` automatically generates PR-specific guidelines based on review findings:
+
+**PR Context Detection**: 
+- **Primary**: Auto-detect PR number from current branch context via GitHub API
+- **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
+- **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-{BRANCH_NAME}/guidelines.md`
+- **Fallback 3**: If outside any PR/branch context (e.g., file/feature targets), skip guidelines generation and continue with analysis only
+- **Manual Override**: Accept explicit PR number via `/reviewdeep --pr 1286`
+- **Graceful Degradation**: Never fail /reviewdeep execution due to guidelines generation issues - log warning and proceed
+
+**File Location**: 
+- **With PR**: `docs/pr{PR_NUMBER}/guidelines.md` (e.g., `docs/pr1286/guidelines.md`)
+- **Without PR**: `docs/branch-{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-feature-auth/guidelines.md`)
+
+**Generation Process**:
+1. **Analyze Review Findings**: Extract patterns from `/reviewe`, `/arch`, and `/thinku` analysis
+2. **Identify Mistake Patterns**: Document specific issues found in the PR
+3. **Create Solutions**: Provide ❌ wrong vs ✅ correct examples with code snippets
+4. **Generate Anti-Patterns**: Structure findings as reusable anti-patterns for future prevention
+5. **Document Context**: Include PR-specific context and historical references
+
+### **Guidelines Content Structure**
+Generated guidelines file includes:
+
+```markdown
+# PR #{PR_NUMBER} Guidelines - {PR_TITLE}
+
+## 🎯 PR-Specific Principles
+- Core principles discovered from this PR's analysis
+
+## 🚫 PR-Specific Anti-Patterns
+### ❌ **{Pattern Name}**
+{Description of wrong pattern found}
+{Code example showing the problem}
+
+### ✅ **{Correct Pattern}**
+{Description of correct approach}
+{Code example showing the solution}
+
+## 📋 Implementation Patterns for This PR
+- Specific patterns and best practices discovered
+- Tool selection guidance based on what worked
+
+## 🔧 Specific Implementation Guidelines
+- Actionable guidance for similar future work
+- Quality gates and validation steps
+```
+
+### **Integration with Review Process**
+- **Step 4 of /reviewdeep**: Guidelines generation happens after analysis phases
+- **Evidence-Based**: Only document patterns with concrete evidence from review
+- **PR-Specific Focus**: Tailor guidelines to specific PR context and findings
+- **Historical Reference**: Include specific line numbers, file references, and commit SHAs
+- **Actionable Content**: Provide specific ❌/✅ examples that can prevent future mistakes
+
+### **File Format Requirements**
+- **Directory**: `docs/pr{PR_NUMBER}/` (no dashes, direct PR number)
+- **Filename**: `guidelines.md` (standardized name)
+- **PR Number Extraction**: Auto-detect from current branch context or GitHub API
+- **Example Paths**:
+  - `docs/pr1286/guidelines.md`
+  - `docs/pr592/guidelines.md`
+  - `docs/pr1500/guidelines.md`
 
 ## MCP Integration Requirements
 

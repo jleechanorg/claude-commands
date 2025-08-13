@@ -24,10 +24,112 @@ YELLOW='\033[0;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Function to detect if commits were squash-merged into origin/main
+detect_squash_merged_commits() {
+    local commit_count=$1
+    local squash_merged_count=0
+    
+    echo "   🔍 Checking if commits were squash-merged..."
+    
+    # Get list of commits not in origin/main
+    local commits_list=$(git rev-list origin/main..HEAD 2>/dev/null)
+    
+    for commit_hash in $commits_list; do
+        # Get commit subject (first line of commit message)
+        local commit_subject=$(git log --format="%s" -n 1 "$commit_hash" 2>/dev/null)
+        if [ -n "$commit_subject" ]; then
+            # Remove PR number suffix to match squash-merged commits (e.g., "Fix bug (#123)" -> "Fix bug")
+            # Use POSIX-compatible regex instead of GNU sed extension
+            local base_subject=$(echo "$commit_subject" | sed 's/ (#[0-9][0-9]*)$//')
+            
+            # Skip if base_subject is empty (prevents matching all commits)
+            if [ -z "$base_subject" ]; then
+                echo -e "   ${YELLOW}?${NC} $commit_hash → empty subject after stripping PR number"
+                continue
+            fi
+            
+            # Search for similar commit message in recent origin/main commits (configurable depth)
+            local search_depth="${DETECT_SQUASH_SEARCH_DEPTH:-200}"
+            local similar_commit
+            similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1)
+            
+            if [ -n "$similar_commit" ]; then
+                local main_commit_hash=$(echo "$similar_commit" | cut -d' ' -f1)
+                local local_files=$(git diff-tree --no-commit-id --name-only -r "$commit_hash" | sort)
+                local main_files=$(git diff-tree --no-commit-id --name-only -r "$main_commit_hash" | sort)
+                
+                # If same files changed, likely squash-merged
+                if [ "$local_files" = "$main_files" ] && [ -n "$local_files" ]; then
+                    squash_merged_count=$((squash_merged_count + 1))
+                    echo -e "   ${GREEN}✓${NC} $commit_hash → squash-merged as $main_commit_hash"
+                else
+                    echo -e "   ${YELLOW}?${NC} $commit_hash → similar message but different files"
+                fi
+            else
+                echo -e "   ${RED}✗${NC} $commit_hash → no similar commit found in origin/main"
+            fi
+        fi
+    done
+    
+    # Return success if all commits appear squash-merged
+    if [ $commit_count -eq $squash_merged_count ] && [ $squash_merged_count -gt 0 ]; then
+        echo -e "   ${GREEN}🎉 All $commit_count commit(s) were squash-merged into origin/main${NC}"
+        return 0
+    else
+        echo -e "   ${YELLOW}⚠️  Only $squash_merged_count of $commit_count commits appear squash-merged${NC}"
+        return 1
+    fi
+}
+
 # Source ~/.bashrc to ensure environment is properly set up
 if [ -f ~/.bashrc ]; then
     source ~/.bashrc
 fi
+
+# Ensure PATH includes common local binary locations
+export PATH="$HOME/.local/bin:$PATH"
+
+# Check for required tools and provide helpful messages
+check_dependencies() {
+    local missing_tools=()
+    
+    if ! command -v gh >/dev/null 2>&1; then
+        missing_tools+=("gh (GitHub CLI)")
+    fi
+    
+    if ! command -v jq >/dev/null 2>&1; then
+        missing_tools+=("jq")
+    fi
+    
+    if [ ${#missing_tools[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠️  Some optional tools are missing:${NC}"
+        for tool in "${missing_tools[@]}"; do
+            echo "   - $tool"
+        done
+        echo "   Integration will continue but some features may be limited."
+        echo ""
+    fi
+}
+
+# Check dependencies early
+check_dependencies
+
+# Utility function for safe command execution with fallback
+safe_gh_command() {
+    local cmd="$*"
+    if command -v gh >/dev/null 2>&1; then
+        # Suppress auth credential errors that don't affect functionality
+        if eval "$cmd" 2>/dev/null; then
+            return 0
+        else
+            # Command failed, but this might be expected (e.g., no PRs found)
+            return 1
+        fi
+    else
+        # gh not available
+        return 1
+    fi
+}
 
 # Show help if requested
 show_help() {
@@ -153,7 +255,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
 
     # Check if current branch has unmerged commits - HARD STOP
     # First check: Compare local branch to its remote tracking branch (preferred)
-    if git_upstream=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null); then
+    if git_upstream=$(git rev-parse --abbrev-ref @{upstream} 2>/dev/null) && [ -n "$git_upstream" ]; then
         echo "   Checking sync status with remote tracking branch: $git_upstream"
         if [[ "$(git rev-parse HEAD)" == "$(git rev-parse "$git_upstream" 2>/dev/null)" ]]; then
             # Local branch has same commit hash as remote tracking branch - safe to delete
@@ -205,7 +307,12 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo "   📊 FILES CHANGED:"
             git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
             echo ""
-            if [ "$FORCE_MODE" = true ]; then
+            
+            # Check if commits were squash-merged before requiring --force
+            if detect_squash_merged_commits $commit_count; then
+                echo -e "${GREEN}✅ Proceeding automatically - all commits were squash-merged into origin/main${NC}"
+                should_delete_branch=true
+            elif [ "$FORCE_MODE" = true ]; then
                 echo -e "${RED}🚨 FORCE MODE: Proceeding anyway (commits not in origin/main will be abandoned)${NC}"
                 # Initialize should_delete_branch in FORCE_MODE to prevent uninitialized variable
                 should_delete_branch=false
@@ -229,9 +336,16 @@ echo -e "\n${GREEN}1. Switching to main branch...${NC}"
 git checkout main
 
 echo -e "\n${GREEN}2. Smart sync with origin/main...${NC}"
-if ! git fetch origin main; then
+# Suppress credential helper errors that don't affect core functionality
+if ! git fetch origin main 2>/dev/null; then
     echo "❌ Error: Failed to fetch updates from origin/main."
     echo "   Possible causes: network issues, authentication problems, or repository unavailability."
+    
+    # Try to provide more specific error information
+    if ! git ls-remote --exit-code origin >/dev/null 2>&1; then
+        echo "   Remote 'origin' appears to be unreachable."
+    fi
+    
     echo "   Please check your connection and credentials, and try again."
     exit 1
 fi
@@ -245,7 +359,12 @@ get_github_repo_url() {
 check_existing_sync_pr() {
     if command -v gh >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
         # Check for sync PRs created by this script (exact title match) - collect into proper JSON array
-        existing_sync_prs=$(gh pr list --author "@me" --state open --json number,url,title 2>/dev/null | jq -c '[ .[] | select(.title == "Sync main branch commits (integrate.sh)") ]' || echo '[]')
+        # Robust PR fetching with comprehensive error handling
+        if pr_data=$(gh pr list --author "@me" --state open --json number,url,title 2>/dev/null); then
+            existing_sync_prs=$(echo "$pr_data" | jq -c '[ .[] | select(.title == "Sync main branch commits (integrate.sh)") ]' 2>/dev/null || echo '[]')
+        else
+            existing_sync_prs='[]'
+        fi
         sync_count=$(echo "$existing_sync_prs" | jq 'length')
 
         if [ "$sync_count" -gt 0 ]; then
@@ -279,7 +398,12 @@ check_existing_sync_pr() {
         fi
 
         # Check for any open PRs that modify integrate.sh or integration workflows (informational only)
-        integration_prs=$(gh pr list --state open --limit 50 --json number,url,title,files 2>/dev/null | jq -c '[ .[] | select(.files[]?.filename | test("integrate\\.sh|integration")) ]' || echo '[]')
+        # Robust integration PR checking with error handling
+        if pr_files_data=$(gh pr list --state open --limit 50 --json number,url,title,files 2>/dev/null); then
+            integration_prs=$(echo "$pr_files_data" | jq -c '[ .[] | select(.files[]?.filename | test("integrate\\.sh|integration")) ]' 2>/dev/null || echo '[]')
+        else
+            integration_prs='[]'
+        fi
         pr_count=$(echo "$integration_prs" | jq 'length')
 
         if [ "$pr_count" -gt 0 ]; then
@@ -293,10 +417,12 @@ check_existing_sync_pr() {
     elif command -v gh >/dev/null 2>&1; then
         # Fallback when jq is not available - only check for exact sync PRs
         echo "ℹ️  Checking for integration conflicts (jq not available, using basic check)..."
-        sync_prs=$(gh pr list --author "@me" --state open --search "Sync main branch commits" 2>/dev/null || true)
-        if [ -n "$sync_prs" ]; then
-            echo "⚠️  Found potential sync PR(s). If integration fails, try:"
-            echo "   ./integrate.sh --force"
+        # Simplified fallback check for sync PRs
+        if sync_prs=$(gh pr list --author "@me" --state open 2>/dev/null | grep -i "sync.*main" || true); then
+            if [ -n "$sync_prs" ]; then
+                echo "⚠️  Found potential sync PR(s). If integration fails, try:"
+                echo "   ./integrate.sh --force"
+            fi
         fi
     fi
 }
@@ -445,7 +571,10 @@ fi
 
 # Check if there are any local branches that haven't been pushed
 echo -e "\n${GREEN}3. Checking for unmerged local branches...${NC}"
-unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads | grep -vE '^main$' | grep '\\[ahead' || true)
+# Fix regex escaping for ahead branch detection and proper main branch filtering
+unpushed_branches=$(git for-each-ref --format='%(refname:short) %(upstream:track)' refs/heads \
+  | awk '$1!="main"' \
+  | grep -F '[ahead' || true)
 if [ -n "$unpushed_branches" ]; then
     echo "⚠️  WARNING: Found branches with unpushed commits:"
     echo "$unpushed_branches"
@@ -482,10 +611,12 @@ if [ "$should_delete_branch" = true ] && [ "$current_branch" != "main" ] && [ "$
         branch_can_be_deleted=true
         deletion_reason="merged into remote main"
     # Check 3: Does it have a merged PR?
-    elif command -v gh >/dev/null 2>&1 && \
-         gh pr list --state merged --head "$current_branch" --json number -q '.[0].number' >/dev/null 2>&1; then
-        branch_can_be_deleted=true
-        deletion_reason="has merged PR"
+    elif command -v gh >/dev/null 2>&1; then
+        # Check for merged PRs with better error handling
+        if merged_pr=$(gh pr list --state merged --head "$current_branch" --json number --jq '.[0].number // empty' 2>/dev/null) && [ -n "$merged_pr" ]; then
+            branch_can_be_deleted=true
+            deletion_reason="has merged PR #$merged_pr"
+        fi
     fi
 
     if [ "$branch_can_be_deleted" = true ]; then

@@ -21,9 +21,12 @@
 ### Phase 1: Planning (/plan)
 
 **Executes `/plan` command**: Follows the complete planning protocol documented in [`plan.md`](./plan.md)
-- Creates TodoWrite checklist with specific steps
+- **Guidelines Consultation**: Calls `/guidelines` command for centralized mistake prevention consultation
+- **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR-specific guidelines via command composition
+- Creates TodoWrite checklist with specific steps including guidelines validation
 - Presents execution plan using the [Standard Plan Display Format](./plan.md#📋-standard-plan-display-format)
 - Shows complexity, execution method, tools, timeline, and parallelization strategy
+- **Tool Selection**: Follows guidelines hierarchy (Serena MCP → Read tool → Bash commands)
 - Provides full visibility into the execution approach before auto-approval
 
 ### Phase 2: Approval Chain
@@ -50,6 +53,9 @@
 User: /execute fix the login button styling
 Assistant:
 Phase 1 - Planning (/plan):
+✅ CLAUDE.md read: Current rules, constraints, and protocols understood
+✅ Guidelines consultation: `/guidelines` command completed - mistake prevention patterns applied
+✅ Anti-patterns avoided: Using Edit tool for existing files, no _v2 or _backup files
 Creating implementation plan with TodoWrite...
 [Creates checklist: Check styles, Update CSS, Test changes, Commit]
 
@@ -57,7 +63,7 @@ Creating implementation plan with TodoWrite...
 Execution Plan:
 - Task complexity: Simple (direct execution)
 - **Execution method: Direct execution** - Simple file edits, no parallelization needed
-- Tool requirements: Read, Edit, Bash
+- Tool requirements: Read, Edit, Bash (guidelines-validated tool selection)
 - Implementation approach: Check current styling → Update CSS → Test → Commit
 - Expected timeline: ~10 minutes
 
@@ -75,6 +81,9 @@ Phase 3 - Implementation:
 User: /execute implement user authentication system
 Assistant:
 Phase 1 - Planning (/plan):
+✅ CLAUDE.md read: Current rules, constraints, and security protocols understood
+✅ Guidelines consultation: Applied security patterns from docs/pr{current}/guidelines.md + docs/pr-guidelines/base-guidelines.md
+✅ Anti-patterns avoided: No subprocess shell=True, proper timeout enforcement, explicit error handling
 Creating comprehensive implementation plan...
 [Creates detailed TodoWrite with multiple subtasks]
 
@@ -82,13 +91,14 @@ Creating comprehensive implementation plan...
 Execution Plan:
 - Task complexity: Complex (coordination needed)
 - **Execution method: Sequential Tasks** - Security implementation requiring coordination
-- Tool requirements: Read, Write, Edit, Bash, Task
+- Tool requirements: Read, Write, Edit, Bash, Task (guidelines-validated)
 - Implementation approach: Research patterns → Core auth → Session management → Testing
+- Guidelines applied: Subprocess safety, explicit error handling, 100% test coverage
 - Expected timeline: ~45 minutes
 
 Sequential Task Plan:
 - Main task: Implement core authentication system
-- Task 1: Research existing auth patterns in codebase
+- Task 1: Research existing auth patterns in codebase (using Serena MCP first)
 - Task 2: Create security tests and documentation
 - Integration: Apply patterns to implementation with test validation
 
@@ -98,7 +108,7 @@ Phase 2 - Approval Chain:
 User already approves - proceeding with execution
 
 Phase 3 - Implementation:
-[Research: Auth patterns across codebase]
+[Research: Auth patterns across codebase using Serena MCP]
 [Implement: Core authentication system systematically]
 [Updates TodoWrite progress throughout]
 [Integrates findings with implementation]
