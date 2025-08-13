@@ -463,16 +463,16 @@ if [ "$enable_coverage" = true ]; then
 else
     # Parallel execution with environment-appropriate concurrency limits
     if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-        # Real GitHub Actions - conservative limit matching local development
-        max_workers=4
-        print_status "Running tests in parallel (GitHub Actions: $max_workers workers - conservative limit)..."
+        # Real GitHub Actions - match runner CPU cores (2 cores)
+        max_workers=2
+        print_status "Running tests in parallel (GitHub Actions: $max_workers workers - matching runner cores)..."
     elif [ "${CI:-}" = "true" ]; then
         # CI replica - high parallelism for CI testing locally
         max_workers=$(nproc)
         print_status "Running tests in parallel (CI replica: $max_workers workers - full CPU with memory monitoring)..."
     else
-        # Regular local development - conservative limit
-        max_workers=4
+        # Regular local development - conservative limit  
+        max_workers=2
         print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
     fi
 

@@ -562,6 +562,26 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 **Debugging**: Side-by-side code comparison → Data flow analysis → Gap ID → Fix
 
+## GitHub Actions Security
+
+🚨 **SHA-PINNING REQUIREMENT**: ⚠️ MANDATORY - All GitHub Actions MUST use SHA-pinned versions for security
+- ❌ **FORBIDDEN**: Using mutable tags like `@v4`, `@main`, `@latest` - these can be changed by attackers
+- ✅ **REQUIRED**: Use full commit SHA like `@b4ffde65f46336ab88eb53be808477a3936bae11`
+- **WHY**: Prevents supply chain attacks where compromised action maintainers inject malicious code
+- **EXAMPLE**:
+  ```yaml
+  # ❌ INSECURE - Tag can be moved to malicious commit
+  uses: actions/checkout@v4
+  
+  # ✅ SECURE - Immutable SHA reference  
+  uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+  ```
+- **FINDING SHAs**: Check action's releases page, look for commit SHA in release notes
+- **COMMENT PATTERN**: Always add `# vX.Y.Z` comment after SHA for human readability
+- **VERIFICATION**: Run `gh api repos/{owner}/{action}/commits/{sha}` to verify SHA validity
+- **CI FAILURE**: GitHub will reject workflows with deprecated action versions - update to latest SHA
+- **Scope**: Applies to ALL workflow files in `.github/workflows/`
+
 ## Environment & Scripts
 
 🚨 **CLAUDE CODE HOOKS**: Executable scripts auto-run at specific points. Config: `.claude/settings.json`, Scripts: `.claude/hooks/` (executable). Active hooks: Git Header, Post Commit Sync, Fake Code Detection.
