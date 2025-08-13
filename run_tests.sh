@@ -344,6 +344,18 @@ if [ -d ".claude/commands" ]; then
     done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
 fi
 
+# Run Claude Code hooks tests if they exist
+if [ -x ".claude/hooks/tests/run_all_hook_tests.sh" ]; then
+    print_status "🪝 Running Claude Code hooks tests..."
+    if .claude/hooks/tests/run_all_hook_tests.sh; then
+        print_success "Hook tests passed"
+    else
+        print_error "Hook tests failed"
+        failed_tests=$((failed_tests + 1))
+    fi
+    echo
+fi
+
 # Check if any test files exist
 if [ ${#test_files[@]} -eq 0 ]; then
     if [ "$include_integration" = false ]; then
