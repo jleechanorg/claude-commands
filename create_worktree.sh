@@ -12,7 +12,7 @@
 # Function to display error messages and exit the script
 error_exit() {
     echo "Error: $1" >&2
-    exit 1
+    return 1 2>/dev/null || exit 1
 }
 
 # Function to display informational messages
@@ -45,7 +45,36 @@ info_message "Attempting to create a new worktree named '$WORKTREE_NAME'..."
 
 # Check 1: Does a directory with this name already exist in the current location?
 if [ -d "$WORKTREE_NAME" ]; then
-    error_exit "A directory named '$WORKTREE_NAME' already exists in the current working directory. Please choose a different base name or remove the existing directory."
+    info_message "Directory '$WORKTREE_NAME' already exists. Navigating into it instead of creating a new worktree."
+    
+    if ! cd "$WORKTREE_NAME"; then
+        echo "Error: Failed to navigate into existing directory '$WORKTREE_NAME'." >&2
+        return 1 2>/dev/null || exit 1
+    fi
+    
+    # Verify it's a Git repository/worktree
+    if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        echo "Error: Directory '$WORKTREE_NAME' exists but is not a Git repository/worktree." >&2
+        return 1 2>/dev/null || exit 1
+    fi
+    
+    current_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '')"
+    if [ "$current_branch" != "$WORKTREE_NAME" ]; then
+        info_message "Warning: current branch '$current_branch' does not match expected '$WORKTREE_NAME'."
+    fi
+    
+    echo "=============================================="
+    echo "✅ Navigated to existing worktree directory!"
+    echo "=============================================="
+    info_message "You are now in: $(pwd)"
+    
+    echo ""
+    echo "Useful commands:"
+    echo "  git worktree list        # List all worktrees"
+    echo "  git worktree remove      # Remove a worktree"
+    echo "  git branch -d            # Delete the branch when done"
+    
+    return 0 2>/dev/null || exit 0  # Works whether sourced or executed
 fi
 
 # Check 2: Does a local branch with this name already exist?
