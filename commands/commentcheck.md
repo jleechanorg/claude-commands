@@ -4,6 +4,8 @@
 
 🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. Explicitly count and warn about any unresponded comments found.
 
+🔒 **Security**: Uses safe jq --arg parameter passing to prevent command injection vulnerabilities and explicit variable validation.
+
 ## Universal Composition Integration
 
 **Enhanced with /execute**: `/commentcheck` benefits from universal composition when called through `/execute`, which automatically provides intelligent optimization for large-scale comment verification while preserving systematic coverage analysis.
@@ -94,7 +96,7 @@ gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
   jq -r '.[] | select(.in_reply_to_id == null) | .id' | \
   while read -r original_id; do
     REPLIES_TO_THIS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | \
-      jq "[.[] | select(.in_reply_to_id == $original_id)] | length")
+      jq --arg id "$original_id" '[.[] | select(.in_reply_to_id == ($id | tonumber))] | length')
     if [ "$REPLIES_TO_THIS" -eq 0 ]; then
       ORPHANED_COUNT=$((ORPHANED_COUNT + 1))
       echo "⚠️ UNRESPONDED: Comment #$original_id has NO replies"
@@ -158,12 +160,12 @@ echo "$COMMENTS_DATA" | \
   jq -r '.[] | select(.in_reply_to_id == null) | .id' | \
   while read -r original_id; do
     # Check if any comment replies to this original
-    REPLIES_TO_THIS=$(echo "$COMMENTS_DATA" | jq "[.[] | select(.in_reply_to_id == $original_id)] | length")
+    REPLIES_TO_THIS=$(echo "$COMMENTS_DATA" | jq --arg id "$original_id" '[.[] | select(.in_reply_to_id == ($id | tonumber))] | length')
     if [ "$REPLIES_TO_THIS" -eq 0 ]; then
-      COMMENT_INFO=$(echo "$COMMENTS_DATA" | jq -r ".[] | select(.id == $original_id) | \"Comment #\(.id) (\(.user.login)): NO THREADED REPLIES\"")
+      COMMENT_INFO=$(echo "$COMMENTS_DATA" | jq --arg id "$original_id" -r '.[] | select(.id == ($id | tonumber)) | "Comment #\(.id) (\(.user.login)): NO THREADED REPLIES"')
       echo "❌ ORPHANED: $COMMENT_INFO"
     else
-      COMMENT_INFO=$(echo "$COMMENTS_DATA" | jq -r ".[] | select(.id == $original_id) | \"Comment #\(.id) (\(.user.login)): $REPLIES_TO_THIS threaded replies\"")
+      COMMENT_INFO=$(echo "$COMMENTS_DATA" | jq --arg id "$original_id" --arg replies "$REPLIES_TO_THIS" -r '.[] | select(.id == ($id | tonumber)) | "Comment #\(.id) (\(.user.login)): " + $replies + " threaded replies"')
       echo "✅ REPLIED: $COMMENT_INFO"
     fi
   done
@@ -532,7 +534,7 @@ jq -r '.[] | "Comment ID: \(.id) | Author: \(.user.login) | Has Threaded Replies
 # Check for replies to each original comment
 for comment_id in $(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq -r '.[] | select(.in_reply_to_id == null) | .id'); do
   echo "Checking original comment $comment_id for replies..."
-  replies_count=$(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq "[.[] | select(.in_reply_to_id == $comment_id)] | length")
+  replies_count=$(gh api "/repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq --arg id "$comment_id" '[.[] | select(.in_reply_to_id == ($id | tonumber))] | length')
   echo "Comment $comment_id → replies: $replies_count"
 done
 
