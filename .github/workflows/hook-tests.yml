@@ -1,0 +1,63 @@
+name: Hook Tests
+
+on:
+  push:
+    branches: [ main, dev ]
+    paths:
+      - '.claude/hooks/**'
+      - '.github/workflows/hook-tests.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.claude/hooks/**'
+      - '.github/workflows/hook-tests.yml'
+
+jobs:
+  test-hooks:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+    
+    - name: Set up Python 3.11
+      uses: actions/setup-python@0a5c61591373683505ea898e09a3ea4f39ef2b9c  # v5.0.0
+      with:
+        python-version: '3.11'
+    
+    - name: Install jq (for hook tests)
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+    
+    - name: Run hook tests
+      run: |
+        cd .claude/hooks/tests
+        echo "🧪 Running Claude Code Hook Tests..."
+        echo "========================================"
+        
+        # Make all test scripts executable
+        chmod +x *.sh
+        chmod +x ../*.sh
+        
+        # Run the main test suite
+        if bash run_all_hook_tests.sh; then
+          echo ""
+          echo "✅ All hook tests passed!"
+          exit 0
+        else
+          echo ""
+          echo "❌ Some hook tests failed!"
+          exit 1
+        fi
+    
+    - name: Upload test results
+      uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+      if: always()
+      with:
+        name: hook-test-results
+        path: |
+          .claude/hooks/tests/*.log
+          /tmp/compose-commands-*.log
+        retention-days: 7
+        if-no-files-found: ignore

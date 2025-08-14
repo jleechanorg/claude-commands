@@ -165,6 +165,49 @@ def classify_task(task):
     return response.classification
 ```
 
+### **Import Mistakes**
+
+#### ❌ **Inline and Try-Catch Imports**
+```python
+# WRONG - Inline imports inside functions
+def process_data():
+    import pandas as pd  # WRONG - Should be at module level
+    return pd.DataFrame()
+
+# WRONG - Try-catch imports for optional dependencies
+try:
+    import numpy as np
+    HAS_NUMPY = True
+except ImportError:
+    HAS_NUMPY = False  # WRONG - Hides dependency issues
+
+# WRONG - Conditional imports in function scope  
+def analyze():
+    if USE_ADVANCED:
+        import scipy  # WRONG - Import at function level
+        return scipy.optimize()
+```
+
+#### ✅ **Correct Approach**
+```python
+# RIGHT - All imports at module level
+import pandas as pd
+import numpy as np  # Fail fast if missing
+from typing import Optional
+
+# RIGHT - Use proper dependency management
+# If numpy is optional, handle in requirements.txt or setup.py
+# Not with try-catch imports
+
+# RIGHT - Imports always at top, use feature flags for logic
+import scipy.optimize
+
+def analyze():
+    if USE_ADVANCED:
+        return scipy.optimize.minimize(...)
+    return basic_analysis()
+```
+
 ### **Tool Usage Mistakes**
 
 #### ❌ **Wrong Tool Selection**

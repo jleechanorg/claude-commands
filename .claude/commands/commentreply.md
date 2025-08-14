@@ -49,6 +49,60 @@ gh api repos/owner/repo/issues/PR/comments --method POST --field body="✅ **Com
 **CORRECT API**: `gh api repos/owner/repo/pulls/PR/comments --method POST --field in_reply_to=PARENT_ID`
 **WRONG API**: `gh pr comment PR --body "🧵 Reply to Comment #ID"` (creates fake threading)
 
+## 🔍 Debug Mode & Coverage Verification
+
+### Enable Debug Mode
+Use `/commentreply --debug` or `/commentreply debug` to enable comprehensive debugging output:
+
+**Debug Features**:
+- **Complete Comment Inventory**: Lists ALL comments with IDs, authors, and snippets
+- **Author Bias Detection**: Identifies if owner/test comments are being filtered
+- **Coverage Verification**: Ensures EVERY comment ID is processed
+- **Anti-Filter Protocol**: Processes ALL comments regardless of author/content
+
+### Coverage Verification Protocol
+
+**MANDATORY BEFORE claiming complete coverage**:
+
+1. **List ALL Comments with IDs**:
+```bash
+# Get complete comment inventory with IDs and authors
+gh api repos/owner/repo/pulls/PR/comments --paginate | jq '.[] | {id, author: .user.login, body: .body[0:50], created_at}'
+```
+
+2. **Verify EVERY Comment ID Processed**:
+```bash
+# Cross-reference each comment ID against replies
+for comment_id in $(gh api repos/owner/repo/pulls/PR/comments --paginate | jq -r '.[] | .id'); do
+  echo "Checking coverage for comment #$comment_id..."
+  # Verify this ID was processed/replied to
+done
+```
+
+3. **Check for Author Bias**:
+```bash
+# Identify all unique comment authors
+gh api repos/owner/repo/pulls/PR/comments --paginate | jq -r '.[] | .user.login' | sort | uniq -c
+# EVERY author must have their comments processed
+```
+
+### Bug Pattern Prevention
+
+**CRITICAL BUG PATTERN**: Owner test comments systematically ignored
+
+**Anti-Filter Requirements**:
+- ✅ **Author**: PR owner, external reviewers, bots - ALL treated equally
+- ✅ **Content**: Technical, testing, debugging, simple - ALL get responses
+- ✅ **Purpose**: Feedback, validation, debugging - ALL are valid
+- ✅ **Length**: Long detailed reviews AND short test comments
+
+**Examples of Previously MISSED Comments**:
+- "see if commentreply catches this" - Must be processed
+- "reply to this" - Must be processed
+- Owner debugging comments - Must be processed
+
+**ZERO TOLERANCE**: ANY missed comment = FAILED coverage
+
 ## 🎯 INDIVIDUAL COMMENT REQUIREMENT
 
 **MANDATORY**: This command MUST reply to every single individual comment with REAL threading, including:

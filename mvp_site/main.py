@@ -243,8 +243,10 @@ def create_app() -> Flask:
     if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
         app.config["TESTING"] = True
 
-    # Initialize Firebase only if not using mock
-    if not firebase_admin._apps:
+    # Initialize Firebase only if not using mock or in testing mode
+    from firebase_utils import should_skip_firebase_init
+    
+    if not firebase_admin._apps and not should_skip_firebase_init():
         firebase_admin.initialize_app()
 
     def check_token(f):

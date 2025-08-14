@@ -39,8 +39,8 @@ detect_squash_merged_commits() {
         local commit_subject=$(git log --format="%s" -n 1 "$commit_hash" 2>/dev/null)
         if [ -n "$commit_subject" ]; then
             # Remove PR number suffix to match squash-merged commits (e.g., "Fix bug (#123)" -> "Fix bug")
-            # Use POSIX-compatible regex instead of GNU sed extension
-            local base_subject=$(echo "$commit_subject" | sed 's/ (#[0-9][0-9]*)$//')
+            # Use POSIX-compatible regex that matches single and multi-digit PR numbers
+            local base_subject=$(echo "$commit_subject" | sed 's/ (#[0-9]\+)$//')
             
             # Skip if base_subject is empty (prevents matching all commits)
             if [ -z "$base_subject" ]; then

@@ -40,11 +40,9 @@ from game_state import GameState
 
 # Initialize Firebase if not already initialized
 if not firebase_admin._apps:
-    # Check if we're in testing mode
-    if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
-        # Skip initialization in testing mode
-        logging_util.info("Skipping Firebase initialization in testing mode")
-    else:
+    from firebase_utils import should_skip_firebase_init
+    
+    if not should_skip_firebase_init():
         try:
             firebase_admin.initialize_app()
             logging_util.info("Firebase initialized successfully in world_logic.py")

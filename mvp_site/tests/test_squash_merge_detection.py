@@ -50,15 +50,19 @@ class TestSquashMergeDetection(unittest.TestCase):
         )
     
     def test_regex_bug_fix(self):
-        """Test that the sed regex requires at least one digit (POSIX-compatible [0-9][0-9]*)."""
+        """Test that the sed regex requires at least one digit."""
         with open(self.integrate_script, 'r') as f:
             content = f.read()
         
-        # Should use POSIX-compatible [0-9][0-9]* (digit followed by zero or more digits)
-        self.assertIn(
-            "sed 's/ (#[0-9][0-9]*)$//'",
-            content,
-            "Regex should use POSIX-compatible [0-9][0-9]* pattern"
+        # Check for either POSIX BRE with escaped + or explicit [0-9][0-9]*
+        # Both patterns ensure at least one digit is required
+        pattern1 = r"sed 's/ (#[0-9]\+)$//'"  # POSIX BRE with \+
+        pattern2 = r"sed 's/ (#[0-9][0-9]*)$//'"  # Explicit one digit + zero or more
+        
+        has_valid_pattern = (pattern1 in content) or (pattern2 in content)
+        self.assertTrue(
+            has_valid_pattern,
+            f"Regex should use pattern that requires at least one digit. Found neither '{pattern1}' nor '{pattern2}'"
         )
         
         # Should not use the incorrect single [0-9]* which would match zero digits

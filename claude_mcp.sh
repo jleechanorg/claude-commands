@@ -17,8 +17,8 @@ update_stats() {
     local name="$2"
     local result="$3"
     
-    # Use flock for atomic updates
-    (
+    # Use flock for atomic updates without creating a subshell
+    {
         flock -x 200
         case "$stat_type" in
             "TOTAL")
@@ -33,7 +33,7 @@ update_stats() {
                 INSTALL_RESULTS["$name"]="$result"
                 ;;
         esac
-    ) 200>"$STATS_LOCK_FILE"
+    } 200>"$STATS_LOCK_FILE"
 }
 
 # Set up logging
@@ -779,25 +779,33 @@ else
                     echo -e "${RED}  ❌ Failed to install react-mcp dependencies${NC}"
                     log_error_details "npm dependency installation (react-mcp)" "react-mcp" "$dep_output"
                     update_stats "FAILURE" "react-mcp" "INSTALL_FAILED"
-                    # Don't attempt server addition - dependency failure is critical
-                    return 1
+                    # Skip server addition - dependency failure is critical
+                    echo -e "${YELLOW}  ⚠️ Skipping react-mcp server addition due to dependency failure${NC}"
+                    REACT_MCP_SKIP=true
                 else
                     echo -e "${GREEN}  ✅ Dependencies installed for react-mcp${NC}"
+                    REACT_MCP_SKIP=false
                 fi
+            else
+                REACT_MCP_SKIP=false
             fi
+        else
+            REACT_MCP_SKIP=false
         fi
         
-        # Remove existing react-mcp server to reconfigure
-        claude mcp remove "react-mcp" >/dev/null 2>&1 || true
+        # Only add server if dependencies were successful
+        if [ "$REACT_MCP_SKIP" != "true" ]; then
+            # Remove existing react-mcp server to reconfigure
+            claude mcp remove "react-mcp" >/dev/null 2>&1 || true
 
-        # Add React MCP server using discovered Node binary with absolute path
-        echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
-        log_with_timestamp "Attempting to add React MCP server"
+            # Add React MCP server using discovered Node binary with absolute path
+            echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
+            log_with_timestamp "Attempting to add React MCP server"
 
-        add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
-        add_exit_code=$?
+            add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
+            add_exit_code=$?
 
-        if [ $add_exit_code -eq 0 ]; then
+            if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             echo -e "${BLUE}  📋 Server info:${NC}"
             echo -e "     • Path: $REACT_MCP_PATH"
@@ -812,6 +820,7 @@ else
             INSTALL_RESULTS["react-mcp"]="ADD_FAILED"
             FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         fi
+        fi  # Close the REACT_MCP_SKIP check
     else
         echo -e "${RED}  ❌ React MCP server not found at expected path: $REACT_MCP_PATH${NC}"
         echo -e "${YELLOW}  💡 Run 'git submodule update --init --recursive' to initialize submodules${NC}"

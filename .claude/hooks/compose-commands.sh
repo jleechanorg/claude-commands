@@ -2,20 +2,30 @@
 # Universal Command Composition Hook for Claude Code
 # Leverages Claude's natural language processing for true universality
 
-# Read JSON from stdin
-json_input=$(cat)
+# Read input from stdin (can be JSON or plain text)
+raw_input=$(cat)
 
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; include PID for uniqueness
   log_file="${COMPOSE_LOG_FILE:-/tmp/compose-commands-$$.log}"
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  printf '[%s] INPUT: %s\n' "$timestamp" "$json_input" >> "$log_file"
+  printf '[%s] INPUT: %s\n' "$timestamp" "$raw_input" >> "$log_file"
 fi
 
-# Extract the prompt field from JSON using Python (always available in Claude Code)
-# Python handles all edge cases including escaped quotes, Unicode, etc.
-input=$(printf '%s' "$json_input" | python3 -c 'import sys, json; print(json.load(sys.stdin).get("prompt", ""))' 2>/dev/null || echo "")
+# Try to parse as JSON first, fall back to plain text if that fails
+# This maintains backward compatibility with plain text input
+input=$(printf '%s' "$raw_input" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    # If it is valid JSON, extract the prompt field
+    print(data.get("prompt", ""))
+except (json.JSONDecodeError, ValueError):
+    # Not JSON, treat as plain text
+    sys.stdin.seek(0)
+    print(sys.stdin.read())
+' 2>/dev/null || echo "$raw_input")
 
 # Detect if this is likely pasted content (like a GitHub PR page)
 # Heuristics: GitHub UI patterns, PR formatting, commit stats
@@ -32,8 +42,8 @@ raw_commands=$(echo "$input" | grep -oE '/[a-zA-Z][a-zA-Z0-9_-]*' | tr '\n' ' ')
 # Count total valid commands first to inform filtering decision
 cmd_count_in_input=0
 for cmd in $raw_commands; do
-    # Escape command for safe regex usage
-    escaped_cmd=$(printf '%s' "$cmd" | sed 's/[]\[\(\)\{\}\*\+\?\^\$\|\\]/\\&/g')
+    # Escape command for safe regex usage (properly escape all regex special chars)
+    escaped_cmd=$(printf '%s' "$cmd" | sed 's/[][().^$*+?{}|\\]/\\&/g')
     if echo "$input" | grep -qE "(^|[[:space:]])$escaped_cmd([[:space:]]|[[:punct:]]|$)" && \
        ! echo "$input" | grep -qE "$escaped_cmd/"; then
         cmd_count_in_input=$((cmd_count_in_input + 1))
@@ -44,8 +54,8 @@ done
 commands=""
 actual_cmd_count=0
 for cmd in $raw_commands; do
-    # Escape command for safe regex usage
-    escaped_cmd=$(printf '%s' "$cmd" | sed 's/[]\[\(\)\{\}\*\+\?\^\$\|\\]/\\&/g')
+    # Escape command for safe regex usage (properly escape all regex special chars)
+    escaped_cmd=$(printf '%s' "$cmd" | sed 's/[][().^$*+?{}|\\]/\\&/g')
     # Check if this appears to be a standalone command (not part of a path)
     if echo "$input" | grep -qE "(^|[[:space:]])$escaped_cmd([[:space:]]|[[:punct:]]|$)" && \
        ! echo "$input" | grep -qE "$escaped_cmd/"; then
@@ -82,11 +92,22 @@ fi
 # Remove only the commands that were actually detected using safer approach
 text="$input"
 for cmd in $commands; do
-    # Use literal string replacement with awk to avoid sed escaping issues
-    text=$(echo "$text" | awk -v pattern="$cmd" '{gsub(pattern,""); print}')
+    # Use Python for safer word-boundary aware replacement
+    text=$(echo "$text" | python3 -c "
+import sys
+import re
+text = sys.stdin.read()
+cmd = '$cmd'
+# Escape regex special characters
+escaped_cmd = re.escape(cmd)
+# Remove command with word boundaries
+pattern = r'(^|\s)' + escaped_cmd + r'(\s|$)'
+text = re.sub(pattern, r'\1\2', text)
+print(text, end='')
+")
 done
 # Clean up extra whitespace
-text=$(echo "$text" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+text=$(echo "$text" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/[[:space:]][[:space:]]*/ /g')
 
 # Use actual command count from filtering loop
 command_count=$actual_cmd_count

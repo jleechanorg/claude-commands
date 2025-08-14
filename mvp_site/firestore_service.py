@@ -429,7 +429,11 @@ def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
 
 
 def get_db() -> firestore.Client:
-    """Returns the Firestore client."""
+    """Return a Firestore client.
+    
+    In test environments, this function should be mocked using unittest.mock.patch
+    or similar mocking frameworks to provide test doubles.
+    """
     return firestore.client()
 
 
