@@ -89,12 +89,14 @@ if [[ -z "$commands" ]]; then
     echo "$input"
     exit 0
 fi
+
 # Remove only the commands that were actually detected using safer approach
 text="$input"
 for cmd in $commands; do
     # Use literal string replacement with awk to avoid sed escaping issues
     text=$(echo "$text" | awk -v pattern="$cmd" '{gsub(pattern,""); print}')
 done
+
 # Clean up extra whitespace
 text=$(echo "$text" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
 
