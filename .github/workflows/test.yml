@@ -108,6 +108,53 @@ jobs:
           exit 1
         fi
         echo "========================================"
+
+    # Step 5b: Run command utility tests
+    - name: Run command utility tests
+      run: |
+        # Activate the virtual environment
+        source venv/bin/activate
+        
+        # Run tests for .claude/commands utilities
+        echo "Running command utility tests..."
+        
+        # Navigate to project root
+        cd ${{ github.workspace }}
+        
+        # Set test environment variables
+        export TESTING=true
+        export PYTHONPATH="${PYTHONPATH}:${PWD}/.claude/commands"
+        
+        # Find and run all test files in commands/tests
+        test_count=0
+        failed_count=0
+        
+        if [ -d ".claude/commands/tests" ]; then
+          for test_file in $(find .claude/commands/tests -name "test_*.py" -type f | sort); do
+            test_count=$((test_count + 1))
+            echo "Running: $test_file"
+            
+            if TESTING=true python3 "$test_file"; then
+              echo "✅ PASS: $test_file"
+            else
+              echo "❌ FAIL: $test_file"
+              failed_count=$((failed_count + 1))
+            fi
+            echo "----------------------------------------"
+          done
+          
+          echo ""
+          echo "========================================"
+          if [ $failed_count -eq 0 ]; then
+            echo "✅ ALL $test_count COMMAND TESTS PASSED"
+          else
+            echo "❌ $failed_count/$test_count COMMAND TESTS FAILED"
+            exit 1
+          fi
+          echo "========================================"
+        else
+          echo "No command tests found in .claude/commands/tests"
+        fi
       env:
         TESTING: true
         MOCK_SERVICES_MODE: true

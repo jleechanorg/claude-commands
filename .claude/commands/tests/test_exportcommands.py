@@ -281,40 +281,30 @@ export USER="jleechan"
                     self.assertIn(f"**{case['hooks']} hooks**", content)
                     
                     # Should contain proper structure
-                    self.assertIn("ONE-CLICK INSTALL", content)
+                    self.assertIn("MANUAL INSTALLATION", content)
                     self.assertIn("REFERENCE EXPORT", content)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
-    def test_install_script_generation_matrix(self):
-        """Test install script generation with different configurations."""
-        test_cases = [
-            {'create_commands_dir': True, 'create_hooks_dir': True, 'expect_both': True},
-            {'create_commands_dir': True, 'create_hooks_dir': False, 'expect_both': False},
-            {'create_commands_dir': False, 'create_hooks_dir': False, 'expect_both': False}
-        ]
+    def test_export_workflow_without_install_script(self):
+        """Test export workflow without deprecated install script generation."""
+        # Test that export works without install script
+        self.exporter.phase1_local_export()
         
-        for case in test_cases:
-            with self.subTest(case=case):
-                # Generate install script
-                self.exporter._generate_install_script()
-                
-                # Check generated script
-                install_path = os.path.join(self.export_dir, 'install.sh')
-                self.assertTrue(os.path.exists(install_path))
-                self.assertTrue(os.access(install_path, os.X_OK))
-                
-                with open(install_path, 'r') as f:
-                    content = f.read()
-                    
-                    # Should contain safety checks
-                    self.assertIn("git rev-parse --show-toplevel", content)
-                    
-                    # Should handle directory creation (using brace expansion)
-                    self.assertIn("mkdir -p .claude/{commands,hooks}", content)
-                    
-                    # Should use NUL-delimited processing for hooks
-                    self.assertIn("-print0", content)
-                    self.assertIn("read -r -d ''", content)
+        # Verify export structure created successfully
+        staging_dir = os.path.join(self.export_dir, 'staging')
+        self.assertTrue(os.path.exists(staging_dir))
+        
+        # Check that README was generated (fallback mode)
+        readme_path = os.path.join(self.export_dir, 'README.md')
+        self.assertTrue(os.path.exists(readme_path))
+        
+        with open(readme_path, 'r') as f:
+            content = f.read()
+            # Should contain export contents information
+            self.assertIn('Export Contents', content)
+            # Should use manual installation instead of install script
+            self.assertIn('MANUAL INSTALLATION', content)
+            self.assertNotIn('install.sh', content)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available") 
     def test_github_operations_matrix(self):
@@ -511,8 +501,10 @@ export DOMAIN="worldarchitect.ai"
             
             # Verify local export results
             self.assertTrue(os.path.exists(os.path.join(exporter.export_dir, 'staging')))
-            self.assertTrue(os.path.exists(os.path.join(exporter.export_dir, 'install.sh')))
             self.assertTrue(os.path.exists(os.path.join(exporter.export_dir, 'README.md')))
+            
+            # Verify install script is not generated (deprecated functionality)
+            self.assertFalse(os.path.exists(os.path.join(exporter.export_dir, 'install.sh')))
             
             # Check counts are reasonable
             self.assertGreater(exporter.commands_count, 0)

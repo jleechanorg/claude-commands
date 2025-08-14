@@ -3,9 +3,9 @@
 Unit tests for orchestrate.py command.
 
 Tests:
-- Dynamic agent status detection
-- Agent cleanup functionality
-- Status display improvements
+- Configuration constants validation
+- Main function redirect functionality 
+- Module imports
 """
 
 import os
@@ -16,228 +16,126 @@ from unittest.mock import Mock, patch
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from orchestrate import OrchestrationCLI
+import orchestrate
 
 
-class TestOrchestrateCLI(unittest.TestCase):
-    """Test orchestration CLI improvements."""
+class TestOrchestrateModule(unittest.TestCase):
+    """Test orchestration module functionality."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.cli = OrchestrationCLI()
+        pass
 
-    @patch("subprocess.run")
-    def test_dynamic_agent_detection(self, mock_run):
-        """Test that status detection works with dynamic agent names."""
-        # Mock Redis ping success
-        redis_result = Mock()
-        redis_result.returncode = 0
-        redis_result.stdout = "PONG"
+    @patch("os.path.exists", return_value=True)
+    @patch("orchestrate.subprocess.run")
+    def test_main_function_redirect(self, mock_run, mock_exists):
+        """Test that main() function redirects to unified orchestration."""
+        # Mock successful orchestration script execution
+        mock_run.return_value.returncode = 0
+        
+        # Test with no arguments (should show usage)
+        with patch('sys.argv', ['orchestrate.py']):
+            result = orchestrate.main()
+            self.assertEqual(result, 1)  # Returns 1 for usage error
+            
+        # Test with task arguments
+        with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
+            result = orchestrate.main()
+            self.assertEqual(result, 0)  # Returns 0 for success
+            
+        # Verify subprocess was called for the task
+        self.assertTrue(mock_run.called)
 
-        # Mock tmux sessions with intelligent agents
-        tmux_result = Mock()
-        tmux_result.returncode = 0
-        tmux_result.stdout = """github-api-agent: 1 windows (created Thu Jul 17 13:23:38 2025)
-processing-agent: 1 windows (created Thu Jul 17 13:23:40 2025)
-genai-docs-agent: 1 windows (created Thu Jul 17 14:02:05 2025)
-frontend-agent: 1 windows (created Thu Jul 17 13:49:48 2025)"""
+    def test_unified_script_path_detection(self):
+        """Test that main() can find the unified orchestration script."""
+        # Test script directory calculation
+        script_dir = os.path.dirname(os.path.abspath(orchestrate.__file__))
+        project_root = os.path.dirname(os.path.dirname(script_dir))
+        orchestration_dir = os.path.join(project_root, "orchestration")
+        unified_script = os.path.join(orchestration_dir, "orchestrate_unified.py")
+        
+        # Verify path construction logic
+        self.assertTrue(orchestration_dir.endswith("orchestration"))
+        self.assertTrue(unified_script.endswith("orchestrate_unified.py"))
 
-        mock_run.side_effect = [redis_result, tmux_result]
+    @patch('os.path.exists')
+    def test_missing_unified_script_handling(self, mock_exists):
+        """Test behavior when unified orchestration script is missing."""
+        mock_exists.return_value = False
+        
+        with patch('orchestrate.subprocess.run') as mock_run:
+            with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
+                result = orchestrate.main()
+                self.assertEqual(result, 1)  # Returns 1 for missing script error
+            mock_run.assert_not_called()
 
-        # Test that orchestration is detected as running
-        self.assertTrue(self.cli.is_orchestration_running())
+    def test_module_imports_successfully(self):
+        """Test that the orchestrate module imports without errors."""
+        # Test that the main redirect function is available
+        self.assertTrue(callable(orchestrate.main))
+        # As a pure redirect module, orchestrate.py no longer contains configuration constants
 
-        # Verify correct command calls
-        mock_run.assert_any_call(
-            ["redis-cli", "ping"], capture_output=True, text=True, timeout=5
-        )
-        mock_run.assert_any_call(
-            ["tmux", "list-sessions"], capture_output=True, text=True, timeout=5
-        )
+    def test_usage_message_format(self):
+        """Test that usage message is properly formatted."""
+        with patch('sys.argv', ['orchestrate.py']):
+            with patch('builtins.print') as mock_print:
+                result = orchestrate.main()
+                self.assertEqual(result, 1)
+                # Verify both usage and example messages were printed
+                mock_print.assert_any_call("Usage: /orchestrate [task description]")
+                mock_print.assert_any_call("Example: /orchestrate Find security vulnerabilities and create coverage report")
+                self.assertEqual(mock_print.call_count, 2)
 
-    @patch("subprocess.run")
-    def test_agent_cleanup_stuck_detection(self, mock_run):
-        """Test agent cleanup detects stuck agents correctly."""
-        # Mock tmux list-sessions
-        list_result = Mock()
-        list_result.returncode = 0
-        list_result.stdout = "github-api-agent: 1 windows\nprocessing-agent: 1 windows"
+    @patch('orchestrate.subprocess.run')
+    def test_error_handling_on_script_failure(self, mock_run):
+        """Test error handling when unified script fails."""
+        mock_run.side_effect = Exception("Script execution failed")
+        
+        with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
+            with patch('os.path.exists', return_value=True):
+                result = orchestrate.main()
+                self.assertEqual(result, 1)  # Returns 1 for execution error
 
-        # Mock capture-pane with stuck output
-        capture_result1 = Mock()
-        capture_result1.returncode = 0
-        capture_result1.stdout = "Do you want to proceed?\n❯ 1. Yes"
+    def test_argument_forwarding(self):
+        """Test that command line arguments are properly forwarded."""
+        test_args = ['orchestrate.py', 'analyze', 'codebase', 'for', 'issues']
+        
+        with patch('sys.argv', test_args):
+            with patch('subprocess.run') as mock_run:
+                with patch('os.path.exists', return_value=True):
+                    mock_run.return_value.returncode = 0
+                    result = orchestrate.main()
+                    
+                    # Verify subprocess was called with forwarded arguments
+                    self.assertTrue(mock_run.called)
+                    # Arguments should be forwarded (excluding script name)
+                    call_args = mock_run.call_args[0][0]
+                    self.assertIn('analyze', ' '.join(call_args))
+                    self.assertIn('codebase', ' '.join(call_args))
 
-        capture_result2 = Mock()
-        capture_result2.returncode = 0
-        capture_result2.stdout = "Context low (NaN% remaining)"
-
-        # Mock send-keys (no output expected)
-        send_result = Mock()
-        send_result.returncode = 0
-
-        mock_run.side_effect = [
-            list_result,
-            capture_result1,
-            send_result,
-            capture_result2,
-            send_result,
-        ]
-
-        result = self.cli._cleanup_agents()
-
-        # Verify cleanup report contains expected content
-        self.assertIn("Agent Cleanup Report", result)
-        self.assertIn("github-api-agent", result)
-        self.assertIn("processing-agent", result)
-        self.assertIn("Unstuck", result)
-
-        # Verify send-keys was called to unstick agents
-        self.assertEqual(mock_run.call_count, 5)
-
-    @patch("subprocess.run")
-    def test_agent_cleanup_inactive_detection(self, mock_run):
-        """Test cleanup detects inactive agents."""
-        # Mock tmux list-sessions
-        list_result = Mock()
-        list_result.returncode = 0
-        list_result.stdout = "inactive-agent: 1 windows"
-
-        # Mock capture-pane with empty output (inactive)
-        capture_result = Mock()
-        capture_result.returncode = 0
-        capture_result.stdout = ""  # Empty output indicates inactive
-
-        mock_run.side_effect = [list_result, capture_result]
-
-        result = self.cli._cleanup_agents()
-
-        # Verify inactive agent detected
-        self.assertIn("Inactive", result)
-        self.assertIn("inactive-agent", result)
-        self.assertIn("< 10 chars output", result)  # Uses INACTIVITY_THRESHOLD
-
-    @patch("subprocess.run")
-    def test_agent_cleanup_active_detection(self, mock_run):
-        """Test cleanup correctly identifies active working agents."""
-        # Mock tmux list-sessions
-        list_result = Mock()
-        list_result.returncode = 0
-        list_result.stdout = "active-agent: 1 windows"
-
-        # Mock capture-pane with active output
-        capture_result = Mock()
-        capture_result.returncode = 0
-        capture_result.stdout = (
-            "Processing task: Implementing user authentication...\n"
-            + "✅ Created auth module\n"
-            + "🔄 Writing tests..."
-        )
-
-        mock_run.side_effect = [list_result, capture_result]
-
-        result = self.cli._cleanup_agents()
-
-        # Verify active agent detected correctly
-        self.assertIn("Active and working", result)
-        self.assertIn("active-agent", result)
-
-    @patch("subprocess.run")
-    def test_cleanup_handles_tmux_errors(self, mock_run):
-        """Test cleanup handles tmux errors gracefully."""
-        # Mock tmux list-sessions failure
-        list_result = Mock()
-        list_result.returncode = 1
-        list_result.stdout = ""
-
-        mock_run.side_effect = [list_result]
-
-        result = self.cli._cleanup_agents()
-
-        # Should return error message, not crash
-        self.assertIn("No tmux sessions found", result)
-
-    @patch("subprocess.run")
-    def test_cleanup_handles_capture_errors(self, mock_run):
-        """Test cleanup handles individual agent capture errors."""
-        # Mock successful list
-        list_result = Mock()
-        list_result.returncode = 0
-        list_result.stdout = "error-agent: 1 windows"
-
-        # Mock capture failure
-        mock_run.side_effect = [list_result, Exception("tmux error")]
-
-        result = self.cli._cleanup_agents()
-
-        # Should report error for specific agent
-        self.assertIn("Error checking", result)
-        self.assertIn("error-agent", result)
-
-    @patch("subprocess.run")
-    @patch.object(OrchestrationCLI, "connect_to_broker")
-    def test_status_display_improvements(self, mock_connect, mock_run):
-        """Test status display shows both legacy and intelligent agents."""
-        # Mock broker connection
-        mock_connect.return_value = True
-        self.cli.broker = Mock()
-        self.cli.broker.redis_client.ping.return_value = True
-
-        # Mock tmux list-sessions for agent detection
-        tmux_status = Mock()
-        tmux_status.returncode = 0
-        tmux_status.stdout = """github-api-agent: 1 windows (created Thu Jul 17 13:23:38 2025)
-frontend-agent: 1 windows (created Thu Jul 17 13:49:48 2025)"""
-
-        mock_run.side_effect = [tmux_status]
-
-        # Mock file operations for task counting
-        with patch("builtins.open", create=True) as mock_open:
-            mock_open.return_value.__enter__.return_value.readlines.return_value = [
-                "task1\n",
-                "task2\n",
-            ]
-
-            status = self.cli._check_status()
-
-            # Verify key status elements
-            self.assertIn("Real Claude Agent Orchestration Status", status)
-            self.assertIn("Redis: ✅ Connected", status)
-            self.assertIn("Active Claude Agents:", status)
-            self.assertIn("Task Queue Status", status)
-
-    def test_configuration_constants(self):
-        """Test that configuration constants are properly defined."""
-        # Import the module to check constants
+    def test_redirect_module_purpose(self):
+        """Test that orchestrate module serves as pure redirect."""
+        # Import the module to verify it's a redirect
         import orchestrate
 
-        # Verify all constants exist
-        self.assertTrue(hasattr(orchestrate, "DEFAULT_UNSTICK_OPTION"))
-        self.assertTrue(hasattr(orchestrate, "INACTIVITY_THRESHOLD"))
-        self.assertTrue(hasattr(orchestrate, "STUCK_PATTERNS"))
-        self.assertTrue(hasattr(orchestrate, "TMUX_TIMEOUT"))
+        # Verify main function exists (core redirect functionality)
+        self.assertTrue(hasattr(orchestrate, "main"))
+        self.assertTrue(callable(orchestrate.main))
+        
+        # Verify this is a pure redirect module - no orchestration constants
+        # (Constants moved to unified orchestration system)
 
-        # Verify types and values
-        self.assertEqual(orchestrate.DEFAULT_UNSTICK_OPTION, "1")
-        self.assertEqual(orchestrate.INACTIVITY_THRESHOLD, 10)
-        self.assertIsInstance(orchestrate.STUCK_PATTERNS, list)
-        self.assertGreater(len(orchestrate.STUCK_PATTERNS), 0)
-
-    def test_unstick_patterns_comprehensive(self):
-        """Test all patterns that indicate a stuck agent."""
-        import orchestrate
-
-        stuck_outputs = [
-            "Do you want to proceed?",
-            "Context low (NaN% remaining)",
-            "❯ 1. Yes",
-            "❯ 2. Yes, and don't ask again",
-            "Do you want to proceed?\n❯ 1. Yes\n  2. No",
-        ]
-
-        for output in stuck_outputs:
-            is_stuck = any(pattern in output for pattern in orchestrate.STUCK_PATTERNS)
-            self.assertTrue(is_stuck, f"Failed to detect stuck pattern in: {output}")
+    def test_redirect_functionality(self):
+        """Test that redirect functionality works as expected."""
+        # Test that the module correctly redirects to unified orchestration
+        # This replaces pattern testing since patterns are now in unified system
+        with patch('sys.argv', ['orchestrate.py', 'test_redirect']):
+            with patch('os.path.exists', return_value=True):
+                with patch('subprocess.run') as mock_run:
+                    mock_run.return_value.returncode = 0
+                    result = orchestrate.main()
+                    self.assertEqual(result, 0)
+                    self.assertTrue(mock_run.called)
 
 
 if __name__ == "__main__":

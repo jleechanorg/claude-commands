@@ -84,6 +84,8 @@ class ClaudeCommandsExporter:
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
+        
+        # Generate README
         self._generate_readme()
 
         # Create archive
@@ -415,9 +417,35 @@ class ClaudeCommandsExporter:
             readme_content = f.read()
         
         # Replace dynamic placeholders with actual counts
-        # FIXED: Order matters - general replacement first, then specific replacements
-        readme_content = readme_content.replace('**80+ commands**', f'**{self.commands_count} commands**')
-        readme_content = readme_content.replace('This export contains **80+ commands**', f'This export contains **{self.commands_count} commands**')
+        # FIXED: Use regex to handle any numeric count with optional +
+        readme_content = re.sub(r'\*\*\d+\+?\s+commands\*\*',
+                                f'**{self.commands_count} commands**',
+                                readme_content)
+        readme_content = re.sub(r'This export contains \*\*\d+\+?\s+commands\*\*',
+                                f'This export contains **{self.commands_count} commands**',
+                                readme_content)
+        
+        # Replace version history statistics (robust to template format changes)
+        readme_content = re.sub(r'(?m)^([-*]\s+Commands:\s+)\d+\+?(\s+command definitions)\s*$',
+                                rf'\g<1>{self.commands_count}\g<2>',
+                                readme_content)
+        readme_content = re.sub(r'(?m)^([-*]\s+Hooks:\s+)\d+\+?(\s+Claude Code automation hooks)\s*$',
+                                rf'\g<1>{self.hooks_count}\g<2>',
+                                readme_content)
+        readme_content = re.sub(r'(?m)^([-*]\s+Scripts:\s+)\d+\+?(\s+infrastructure scripts)\s*$',
+                                rf'\g<1>{self.scripts_count}\g<2>',
+                                readme_content)
+        
+        # Replace version change descriptions with dynamic counts (robust)
+        readme_content = re.sub(r'(Comprehensive command system \()\d+\+?(\s+commands\))',
+                                rf'\1{self.commands_count}\2',
+                                readme_content)
+        readme_content = re.sub(r'(Enhanced hook automation \()\d+\+?(\s+hooks\))',
+                                rf'\1{self.hooks_count}\2',
+                                readme_content)
+        readme_content = re.sub(r'(Infrastructure automation \()\d+\+?(\s+scripts\))',
+                                rf'\1{self.scripts_count}\2',
+                                readme_content)
         
         # Version history is now manually maintained in README_EXPORT_TEMPLATE.md
         # No dynamic version history generation to avoid deletion issues
@@ -437,24 +465,36 @@ class ClaudeCommandsExporter:
 
 ## Export Contents
 
-- **Commands**: {self.commands_count} workflow orchestration commands
-- **Hooks**: {self.hooks_count} Claude Code automation hooks  
-- **Scripts**: {self.scripts_count} infrastructure management scripts
+- **{self.commands_count} commands** workflow orchestration commands
+- **{self.hooks_count} hooks** Claude Code automation hooks  
+- **{self.scripts_count} scripts** infrastructure management scripts
 
-## Installation
+## MANUAL INSTALLATION
+
+Run these from the export directory (the one containing the `staging/` folder), targeting your project repository as the current working directory:
 
 ```bash
-./install.sh
+mkdir -p ".claude/commands" ".claude/hooks"
+cp -R "staging/commands/." ".claude/commands/"
+cp -R "staging/hooks/." ".claude/hooks/"
+# Optional infrastructure scripts
+cp -n "staging/infrastructure-scripts/"* "."
 ```
 
-Auto-installs to `.claude/commands/` and `.claude/hooks/`
+## REFERENCE EXPORT
+
+This export includes dynamic content based on actual export counts.
 '''
 
+        # Ensure export directory exists
+        os.makedirs(self.export_dir, exist_ok=True)
+        
         readme_path = os.path.join(self.export_dir, 'README.md')
         with open(readme_path, 'w') as f:
             f.write(readme_content)
 
         print("Success Generated fallback README.md")
+
 
     def _create_archive(self):
         """Create compressed archive of export"""
@@ -691,7 +731,7 @@ UPDATE CONTENT TRANSFORMATIONS:
 - jleechan -> $USER (generic username)
 - TESTING=true vpython -> TESTING=true python (generic test commands)
 
-Starting ONE-CLICK INSTALL: ./install.sh script auto-installs to .claude/commands/ and .claude/hooks/
+Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .claude/hooks/
 
 Warning Reference export - requires adaptation for other projects
 Orchestration Generated with Claude Code CLI"""
@@ -725,11 +765,15 @@ This export **excludes** the following project-specific directories:
 - **Orchestration Orchestration System**: Core multi-agent task delegation (WIP prototype)
 - **DOCS Complete Documentation**: Installation guide with adaptation examples
 
-## Starting One-Click Installation
+## Manual Installation
+From your project root:
 ```bash
-./install.sh
+mkdir -p .claude/{{commands,hooks}}
+cp -R commands/. .claude/commands/
+cp -R hooks/. .claude/hooks/
+# Optional infrastructure scripts
+cp -n infrastructure-scripts/* .
 ```
-Auto-installs commands to `.claude/commands/`, hooks to `.claude/hooks/`, and copies `claude_start.sh`
 
 ## UPDATE Content Filtering Applied
 - **Generic Paths**: mvp_site/ -> \\$PROJECT_ROOT/

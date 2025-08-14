@@ -534,6 +534,18 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 🚨 **VISUAL VALIDATION**: Verify end-to-end data flow (input → API → DB → UI display), not just API calls.
 
+🚨 **COMPREHENSIVE MOCKING OVER SKIPPING**: ⚠️ RECOMMENDED - Use robust mocking instead of test skips
+- ✅ **PREFERRED**: Comprehensive mocking with `autospec=True` for consistent test environments
+- ✅ **PATTERN**: Mock dependencies to ensure tests validate functionality regardless of environment
+- ✅ **IMPLEMENTATION**: Use pytest fixtures or unittest.mock.patch decorators for proper isolation
+- ⚠️ **AVOID**: Skip tests based on dependency availability - prefer making all tests runnable
+
+🚨 **DETERMINISTIC TESTING GUIDANCE**: ⚠️ RECOMMENDED - Ensure consistent test behavior
+- ✅ **RECOMMENDED**: Force deterministic behavior at module level before conditional logic
+- ✅ **PATTERN**: Create mock classes/objects that simulate missing dependencies
+- ✅ **IMPLEMENTATION**: Use `*args, **kwargs` in mock method signatures for compatibility
+- ⚠️ **AVOID**: Conditional imports that create different execution paths in local vs CI environments
+
 **Quality**: Files <500 lines, descriptive names. Verify PASS/FAIL detection. Use specific exceptions (ValidationError).
 
 ### File & Testing Rules
