@@ -1,30 +1,32 @@
-# /arch Command (Alias)
+# /arch - Architecture Analysis
 
-**Alias for**: `/archreview`
+**Purpose**: Comprehensive architecture analysis and documentation
 
-**Purpose**: MVP-focused architecture review for solo developers - prioritizes shipping speed over perfection.
+## Implementation
 
-## Solo MVP Context
+### Phase 1: System Overview
+- Analyze directory structure
+- Identify key components and patterns
+- Map service boundaries and dependencies
 
-**Target**: Solo developer working on MVP project
-- **No team concerns** (velocity, skills, coordination)
-- **No backward compatibility** (breaking changes allowed)
-- **Speed over polish** (ship fast, iterate)
-- **Pragmatic decisions** ("good enough" that works)
+### Phase 2: Technical Architecture
+- Document technology stack
+- Analyze design patterns
+- Identify architectural decisions
+
+### Phase 3: Recommendations
+- Suggest improvements
+- Identify technical debt
+- Propose refactoring opportunities
 
 ## Usage
 ```
-/arch [scope]
+/arch
+/arch "analyze authentication system"
+/arch "review database architecture"
 ```
 
-**Identical behavior to `/archreview`** - see [archreview.md](./archreview.md) for full documentation.
-
-## MVP-Focused Examples
-```bash
-/arch                    # Review current changes for shipping readiness
-/arch codebase          # Solo maintainability health check
-/arch api               # Simple, shippable API design
-/arch security          # MVP security basics (not enterprise)
-```
-
-Executes dual-perspective review optimized for MVP shipping priorities and solo developer constraints.
+## Integration
+- Combines with `/think` for strategic analysis
+- Feeds into `/plan` for implementation
+- Used by `/pr` for architectural context
