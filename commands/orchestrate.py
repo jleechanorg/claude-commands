@@ -10,6 +10,19 @@ import os
 import subprocess
 import sys
 
+# Configuration constants for test compatibility
+DEFAULT_UNSTICK_OPTION = "1"
+INACTIVITY_THRESHOLD = 10
+STUCK_PATTERNS = [
+    "Do you want to proceed?",
+    "Context low (NaN% remaining)",
+    "❯ 1. Yes",
+    "❯ 2. Yes, and don't ask again"
+]
+TMUX_TIMEOUT = 5
+
+
+
 
 def main():
     """Redirect to unified orchestration system."""
