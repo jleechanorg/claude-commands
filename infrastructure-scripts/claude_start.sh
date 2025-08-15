@@ -92,12 +92,8 @@ trap cleanup_ssh_tunnel EXIT
 
 # Function to check if orchestration is running
 is_orchestration_running() {
-    # Check if Redis is accessible
-    if ! command -v redis-cli >/dev/null 2>&1 || ! redis-cli ping &> /dev/null; then
-        return 1
-    fi
-
-    # Check if agent monitor process is running (more reliable indicator)
+    # File-based A2A system - Redis no longer required
+    # Check if agent monitor process is running (primary indicator)
     if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
         return 0
     fi
@@ -125,23 +121,55 @@ start_orchestration_background() {
     fi
 
     # Start orchestration silently in background
+    # NOTE: start_system.sh starts long-running services, so we don't use timeout on it
     (
         cd "$SCRIPT_DIR/orchestration"
 
-        # Start Redis if not running
-        if ! redis-cli ping &> /dev/null; then
-            redis-server --daemonize yes --bind 127.0.0.1 --protected-mode yes &> /dev/null || true
-            sleep 1
-        fi
-
+        # File-based A2A system - Redis no longer required
         # Start orchestration agents in quiet mode
-        ./start_system.sh --quiet start &> /dev/null &
-    )
+        ./start_system.sh --quiet start &> /dev/null
+    ) &
+    
+    # Store the background process PID for monitoring
+    local START_PID=$!
 
-    # Wait a moment for startup
-    sleep 2
+    # Wait for startup with timeout (maximum 10 seconds)
+    local max_wait=10
+    local wait_time=0
+    local startup_success=false
+    
+    while [ $wait_time -lt $max_wait ]; do
+        # Check if the orchestration monitor is running
+        if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
+            # Wait a bit more to ensure it's stable
+            sleep 2
+            if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
+                startup_success=true
+                break
+            fi
+        fi
+        
+        # Also check if the start script is still running
+        if ! kill -0 $START_PID 2>/dev/null; then
+            # Start script exited, check if it was successful
+            wait $START_PID
+            local exit_code=$?
+            if [ $exit_code -ne 0 ]; then
+                # Start script failed
+                return 1
+            fi
+        fi
+        
+        sleep 1
+        wait_time=$((wait_time + 1))
+    done
 
-    return 0
+    if [ "$startup_success" = true ]; then
+        return 0
+    else
+        # Timeout reached or startup failed
+        return 1
+    fi
 }
 
 # Function to check and start orchestration for non-worker modes
@@ -150,14 +178,12 @@ check_orchestration() {
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
     else
+        echo -e "${BLUE}🚀 Starting orchestration system...${NC}"
         if start_orchestration_background; then
-            if is_orchestration_running; then
-                echo -e "${GREEN}✅ Orchestration system started${NC}"
-            else
-                echo -e "${YELLOW}⚠️  Orchestration optional - continuing without it${NC}"
-            fi
+            echo -e "${GREEN}✅ Orchestration system started successfully${NC}"
         else
-            echo -e "${YELLOW}ℹ️  Orchestration not available${NC}"
+            echo -e "${YELLOW}⚠️  Orchestration startup timed out or failed - continuing without it${NC}"
+            echo -e "${YELLOW}💡 You can manually start it later with: ./orchestration/start_system.sh start${NC}"
         fi
     fi
 }
