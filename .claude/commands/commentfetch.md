@@ -2,11 +2,43 @@
 
 **Usage**: `/commentfetch <PR_NUMBER>`
 
-**Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Always fetches fresh data from GitHub API - no caching.
+**Purpose**: Fetch fresh comments (all sources) from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. ALWAYS fetches fresh data from GitHub API - NEVER reads from existing cached /tmp files. Filtering/triage is performed downstream.
+
+## 🚨 CRITICAL: Comprehensive Comment Detection Function
+
+**MANDATORY**: Fixed copilot skip detection bug that was ignoring inline review comments:
+```bash
+# 🚨 COMPREHENSIVE COMMENT DETECTION FUNCTION 
+# CRITICAL FIX: Include ALL comment sources (inline review comments were missing)
+get_comprehensive_comment_count() {
+    local pr_number=$1
+    local owner_repo=$(gh repo view --json owner,name | jq -r '.owner.login + "/" + .name')
+    
+    # Get all three comment sources
+    local general_comments=$(gh pr view $pr_number --json comments | jq '.comments | length')
+    local review_comments=$(gh pr view $pr_number --json reviews | jq '.reviews | length')
+    # Robust pagination-safe counting for inline comments
+    local inline_comments=$(gh api "repos/$owner_repo/pulls/$pr_number/comments" --paginate --jq '.[].id' 2>/dev/null | wc -l | tr -d ' ')
+    inline_comments=${inline_comments:-0}
+    
+    local total=$((general_comments + review_comments + inline_comments))
+    
+    # Debug output for transparency
+    echo "🔍 COMPREHENSIVE COMMENT DETECTION:" >&2
+    echo "  📝 General comments: $general_comments" >&2
+    echo "  📋 Review comments: $review_comments" >&2  
+    echo "  💬 Inline review comments: $inline_comments" >&2
+    echo "  📊 Total: $total" >&2
+    
+    echo "$total"
+}
+```
+
+**Usage**: Call `get_comprehensive_comment_count <PR_NUMBER>` from any command that needs accurate comment counting for skip conditions or processing decisions.
 
 ## Description
 
-Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
+Pure Python implementation that collects comments from all GitHub PR sources. ALWAYS fetches fresh data from GitHub API on each execution (NEVER reads from existing files) and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`. The payload includes fields (e.g., `in_reply_to_id`) enabling downstream filtering of already-replied threads.
 
 ## Output Format
 
@@ -93,4 +125,4 @@ python3 .claude/commands/_copilot_modules/commentfetch.py <PR_NUMBER>
 
 ## Integration
 
-This command is typically the first step in the `/copilot` workflow, providing fresh comment data to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. Always fetches current data and overwrites the comments file.
+This command is typically the first step in the `/copilot` workflow, providing fresh comment data to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. ALWAYS fetches current data from GitHub API (NEVER reads from cache) and overwrites the comments file completely.

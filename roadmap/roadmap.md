@@ -4,11 +4,15 @@
 
 ### 🚨 HANDOFF-COPILOT-SKIP-FIX (Priority: CRITICAL)
 **Status**: Ready for Implementation
-**PR**: #1301
 **Handoff Document**: `roadmap/scratchpad_handoff_copilot_skip_fix.md`
 **Branch**: `handoff-copilot-skip-fix`
+**PR Reference**: #1301, #1302
 
-**Critical Bug**: Copilot command incorrectly reports "zero comments" when 30+ review comments exist
+**Critical Bug**: Copilot incorrectly reports "zero comments" when 30+ inline review comments exist, causing complete skipping of comment processing workflow.
+
+**Root Cause**: Skip detection logic only checks general PR comments (`gh pr view --json comments`) and reviews (`gh pr view --json reviews`) but completely ignores inline review comments (`gh api repos/owner/repo/pulls/PR/comments`).
+
+**Impact**: Major workflow failures where copilot claims "no work needed" despite significant review feedback requiring responses.
 
 **Evidence**:
 - PR #1294: Copilot skipped processing despite 30 review comments
@@ -20,8 +24,6 @@
 - Remove optimization that skips steps
 - Add mandatory gates with visual feedback
 - Timeline: 50 minutes
-
----
 
 ### 🔧 CommentReply Threading Enhancement (Priority: HIGH)
 **Status**: Ready for Implementation

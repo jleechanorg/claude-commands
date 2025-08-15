@@ -214,7 +214,9 @@ class CommentFetch(CopilotCommandBase):
 
     def execute(self) -> Dict[str, Any]:
         """Execute comment fetching from all sources."""
-        self.log(f"Fetching all comments for PR #{self.pr_number}")
+        self.log(f"🔄 FETCHING FRESH COMMENTS for PR #{self.pr_number} from GitHub API")
+        self.log(f"⚠️ NEVER reading from cache - always fresh API calls")
+        self.log(f"📁 Will save to: {self.output_file}")
 
         # Fetch comments in parallel for speed
         with ThreadPoolExecutor(max_workers=4) as executor:
