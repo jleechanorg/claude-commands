@@ -519,7 +519,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **120 commands** that transform Claude Code into:
+This export contains **80+ commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
@@ -647,6 +647,33 @@ Transform your development process from manual step-by-step work to autonomous w
 This isn't just command sharing - it's **workflow transformation** through the power of command composition.
 
 ## 📚 Version History
+
+### v1.2.0 (2025-08-14)
+
+**Export Statistics**:
+- Commands: 119 command definitions
+- Hooks: 21 Claude Code automation hooks  
+- Scripts: 5 infrastructure scripts
+
+**Major Changes**:
+- **LLM-Powered Version Generation**: Transitioned from mechanical Python incrementing to intelligent LLM-based version generation
+- **pushl.md Consolidation**: Converted to simple alias pointing to pushlite.md, eliminating duplication
+- **Enhanced Command Composition**: Improved command chaining with boundary-aware removal and whitespace normalization
+- **Subprocess Security**: Added credential redaction, timeout handling, and safe subprocess execution
+- **Windows Compatibility**: Cross-platform improvements for hooks handling and file operations
+- **Bot Management**: New start, stop, restart, and status commands for development automation
+
+**Documentation Improvements**:
+- Added LLM version placeholders for intelligent README generation
+- Enhanced export workflow documentation with CI log analysis
+- Improved command aliasing documentation
+- Debug and coverage verification guides
+
+**Bug Fixes**:
+- Fixed compose-commands.sh backward compatibility for JSON and plain text
+- Resolved word-boundary issues in slash command removal
+- Fixed malformed JSON input handling with proper passthrough
+- Corrected test expectations for whitespace and JSON behavior
 
 ### v1.1.0 (2025-08-09)
 

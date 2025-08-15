@@ -107,7 +107,7 @@ run_test "Text before commands detected" \
 # Test 10: Mixed text and commands preserved
 run_test "Mixed text preserved correctly" \
     '{"prompt": "I need to /analyze /optimize performance in production"}' \
-    "Apply this to: I need to   performance in production"
+    "Apply this to: I need to performance in production"
 
 # Test 11: Escaped quotes in prompt
 run_test "Handles escaped quotes" \
@@ -124,10 +124,10 @@ run_test "Handles Unicode" \
     '{"prompt": "Unicode test /debug 你好 /analyze 🚀"}' \
     "🔍 Detected slash commands:/debug /analyze"
 
-# Test 14: Malformed JSON fallback
+# Test 14: Malformed JSON fallback (should pass through as plain text)
 run_test "Handles malformed JSON gracefully" \
     'not valid json' \
-    ""
+    "not valid json"
 
 # Test 15: GitHub PR page text with many slashes (real-world edge case)
 pr_page_text='Skip to content
