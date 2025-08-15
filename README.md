@@ -519,7 +519,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **120 commands** that transform Claude Code into:
+This export contains **80+ commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
@@ -648,23 +648,34 @@ This isn't just command sharing - it's **workflow transformation** through the p
 
 ## 📚 Version History
 
-### v1.1.0 (2025-08-09)
+### v5.8.118 (2025-08-14)
 
 **Export Statistics**:
-- Commands: 116 command definitions  
-- Hooks: 13 Claude Code automation hooks
+- Commands: 118 command definitions
+- Hooks: 21 Claude Code automation hooks  
 - Scripts: 5 infrastructure scripts
 
-**Changes**:
-- Comprehensive command system (116 commands) with enhanced automation
-- Enhanced hook automation (13 hooks) including speculation detection and root file management
-- Infrastructure automation (5 scripts) for development environment setup
-- Template-based README generation with dynamic content replacement
-- Obsolete file cleanup and maintenance for repository hygiene
-- Additive export strategy preserving existing content while adding new features
-- Enhanced content filtering and path normalization for cross-project compatibility
-- Version tracking and change history management for transparent updates
-- Single version history placement at bottom of README with table of contents integration
+**Major Changes**:
+- **Enhanced Export System**: Fixed LLM placeholder replacement for proper version generation
+- **Improved README Processing**: Intelligent version information generation based on export statistics
+- **Complete Workflow Integration**: Full integration of export command fixes with copilot workflow
+- **Template Processing**: Proper template-to-final-README conversion with dynamic content
+
+**Technical Improvements**:
+- Fixed LLM_VERSION placeholder replacement in README generation
+- Enhanced export statistics tracking and display
+- Improved error handling in template processing
+- Added comprehensive version history documentation
+
+**Bug Fixes**:
+- Resolved README template placeholder not being replaced with actual content
+- Fixed export command to properly process templates instead of just copying
+- Corrected version information display in exported repositories
+
+**Documentation**:
+- Updated export workflow documentation
+- Enhanced template system documentation
+- Improved troubleshooting guides for export issues
 
 ---
 
