@@ -648,25 +648,50 @@ This isn't just command sharing - it's **workflow transformation** through the p
 
 ## 📚 Version History
 
-<!-- LLM_VERSION_START -->
-<!-- LLM will intelligently generate version information here based on:
-     - Previous version in target repository README
-     - Git history and commit analysis
-     - Actual changes being exported
-     - Semantic versioning best practices (major.minor.patch)
-     Example format:
-     ### vX.Y.Z (YYYY-MM-DD)
-     
-     **Export Statistics**:
-     - Commands: N command definitions
-     - Hooks: N Claude Code automation hooks  
-     - Scripts: N infrastructure scripts
-     
-     **Changes**:
-     - Key change summaries based on actual modifications
-     - Intelligent analysis of what's new/improved/fixed
-     -->
-<!-- LLM_VERSION_END -->
+### v1.2.0 (2025-08-14)
+
+**Export Statistics**:
+- Commands: 119 command definitions
+- Hooks: 21 Claude Code automation hooks  
+- Scripts: 5 infrastructure scripts
+
+**Major Changes**:
+- **LLM-Powered Version Generation**: Transitioned from mechanical Python incrementing to intelligent LLM-based version generation
+- **pushl.md Consolidation**: Converted to simple alias pointing to pushlite.md, eliminating duplication
+- **Enhanced Command Composition**: Improved command chaining with boundary-aware removal and whitespace normalization
+- **Subprocess Security**: Added credential redaction, timeout handling, and safe subprocess execution
+- **Windows Compatibility**: Cross-platform improvements for hooks handling and file operations
+- **Bot Management**: New start, stop, restart, and status commands for development automation
+
+**Documentation Improvements**:
+- Added LLM version placeholders for intelligent README generation
+- Enhanced export workflow documentation with CI log analysis
+- Improved command aliasing documentation
+- Debug and coverage verification guides
+
+**Bug Fixes**:
+- Fixed compose-commands.sh backward compatibility for JSON and plain text
+- Resolved word-boundary issues in slash command removal
+- Fixed malformed JSON input handling with proper passthrough
+- Corrected test expectations for whitespace and JSON behavior
+
+### v1.1.0 (2025-08-09)
+
+**Export Statistics**:
+- Commands: 116 command definitions  
+- Hooks: 13 Claude Code automation hooks
+- Scripts: 5 infrastructure scripts
+
+**Changes**:
+- Comprehensive command system (116 commands) with enhanced automation
+- Enhanced hook automation (13 hooks) including speculation detection and root file management
+- Infrastructure automation (5 scripts) for development environment setup
+- Template-based README generation with dynamic content replacement
+- Obsolete file cleanup and maintenance for repository hygiene
+- Additive export strategy preserving existing content while adding new features
+- Enhanced content filtering and path normalization for cross-project compatibility
+- Version tracking and change history management for transparent updates
+- Single version history placement at bottom of README with table of contents integration
 
 ---
 

@@ -46,6 +46,10 @@ def run_cmd_safe(
         subprocess.CalledProcessError: If check=True and command fails
         ValueError: If command fails security validation
     """
+    # Security check: Prevent shell=True via kwargs
+    if kwargs.get('shell', False):
+        raise ValueError("shell=True is not allowed for security reasons. Use list form for commands instead.")
+    
     # Validate and prepare command
     if isinstance(cmd, str):
         # Basic validation for string commands
