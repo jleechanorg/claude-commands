@@ -193,7 +193,7 @@
           {
             "type": "command",
             "command": "bash -c 'if [ -n \"$CLAUDE_HOOK_NESTED\" ]; then exit 0; fi; export CLAUDE_HOOK_NESTED=1; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\"; fi; exit 0'",
-            "description": "Advanced speculation and fake code detection with self-reflection pipeline"
+            "description": "AGGRESSIVE fake code detection with strong warnings"
           }
         ]
       }
