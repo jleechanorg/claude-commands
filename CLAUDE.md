@@ -53,6 +53,18 @@ Genesis Coder, Prime Mover,
 - Enhance existing systems rather than creating parallel solutions
 - Consider testing, deployment, and maintenance from the first line of code
 
+## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL
+
+**🚨 ZERO TOLERANCE**: All new file requests must be submitted in NEW_FILE_REQUESTS.md with description of all places searched for duplicate functionality
+
+**MANDATORY REQUIREMENTS**:
+- ❌ **NO file creation** without NEW_FILE_REQUESTS.md entry
+- 🔍 **SEARCH FIRST**: Document checking `/utils/`, `/helpers/`, `/lib/`, modules, configs  
+- ✅ **JUSTIFY**: Why editing existing files won't suffice
+- 📝 **INTEGRATE**: How file connects to existing codebase
+
+**Exception**: Emergency fixes with immediate post-creation documentation.
+
 ## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
 
 **EVERY SINGLE RESPONSE MUST END WITH THIS HEADER - NO EXCEPTIONS:**
