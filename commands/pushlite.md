@@ -1,13 +1,14 @@
-# Push Lite Command - Enhanced Reliability Version
+# Push Lite Command - Enhanced Reliability with LLM Intelligence
 
-**Purpose**: Enhanced reliable push to GitHub with selective staging, error handling, and debugging capabilities
+**Purpose**: Enhanced reliable push to GitHub with LLM-powered PR intelligence, selective staging, error handling, and debugging capabilities
 
-**Action**: Push current branch to origin with comprehensive reliability improvements and optional PR creation
+**Action**: Push current branch to origin with comprehensive reliability improvements and optional smart PR creation
 
 **Basic Usage**:
 - `/pushlite` or `/pushl` - Push current branch to origin
-- `/pushlite pr` or `/pushl pr` - Push and create PR
+- `/pushlite pr` or `/pushl pr` - Push and create PR with LLM-generated content
 - `/pushlite force` or `/pushl force` - Force push to origin
+- `/pushlite smart` or `/pushl smart` - Use LLM-first approach for intelligent PR creation
 
 **Enhanced Options**:
 - `/pushlite --verbose` - Enable detailed debugging output
@@ -15,6 +16,7 @@
 - `/pushlite --include "*.py"` - Include only files matching pattern
 - `/pushlite --exclude "test_*"` - Exclude files matching pattern
 - `/pushlite -m "message"` - Custom commit message
+- `/pushlite --smart` - Enable LLM analysis for PR content generation
 
 **Examples**:
 - `/pushl` - Pushes current branch to origin/branch-name
@@ -48,6 +50,36 @@ Execute: `./claude_command_scripts/commands/pushlite.sh [arguments]`
 
 **Safety Features**:
 - Force push confirmation required
+
+## LLM-First Smart PR Creation
+
+**Workflow**: When using `smart` mode or `--smart` flag:
+
+1. **Analyze Current Changes**: Claude analyzes git diff vs origin/main to understand what changed
+2. **Generate Smart Content**: Creates intelligent PR title, description, and labels based on:
+   - Git history and commit messages
+   - File types and patterns changed
+   - Scope and impact of changes
+   - Conventional commit standards
+3. **Execute Streamlined Push**: Calls pushlite with pre-generated content
+
+**Benefits of LLM-First Approach**:
+- **Intelligence**: Claude analyzes context, git history, and patterns for better PR content
+- **Adaptability**: Content generation adapts to different types of changes
+- **Consistency**: Ensures consistent PR quality and formatting
+- **Maintainability**: Keeps shell script focused on operations, not intelligence
+
+**Smart Mode Examples**:
+- `/pushl smart` - Push with LLM-generated PR content
+- `/pushl pr --smart` - Create PR with intelligent analysis
+- `/pushl --smart --verbose` - See LLM analysis process
+
+**Architecture**:
+```
+User Request → Claude Analysis → Smart Content → Pushlite Script → GitHub PR
+```
+
+**Migration Note**: The smart functionality from `/pushlite_smart` has been integrated directly into `/pushlite` for a unified experience
 - Shows file counts and status
 - Validates remote access
 - Reports success/failure clearly

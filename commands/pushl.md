@@ -15,6 +15,17 @@
 - Runs `./run_lint.sh fix` before committing and re-stages any fixed files
 - Skips lint fixes if no Python files are staged or if `SKIP_LINT=true`
 
+**🆕 Intelligent Change Detection**:
+- Automatically detects and stages uncommitted changes before push
+- Handles both modified and untracked files intelligently
+- In automation mode (Claude Code):
+  - Detection: `--automation` flag or env var `AUTOMATION_MODE=true`
+  - Safety: respects `.gitignore` by default; ignored files are never staged
+  - Uses secure subprocess execution with credential redaction for all operations
+  - Guardrail: require `--confirm-stage-all` if >50 untracked files or any file >1 MB (planned)
+- In interactive mode: prompts user for staging decisions
+- Prevents "No changes to commit" failures
+
 **🆕 Post-Push Verification**:
 - Checks for uncommitted changes after push completion
 - Interactive options to handle unclean repository state:
