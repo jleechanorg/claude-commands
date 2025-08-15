@@ -4,7 +4,7 @@
 
 **Usage**: `/design [feature-name] [--type=feature|bugfix|migration|refactor]` - Creates product spec and engineering design docs in `roadmap/`
 
-**Default Composition**: `/requirements-start /execute /arch /principalproductmanager /principalengineer /thinku /research [current_date_search]`
+**Default Composition**: `/requirements-start /execute /arch /principalproductmanager /principalengineer /tdd /thinku /research [current_date_search]`
 
 🚨 **MANDATORY CURRENT DATE RESEARCH**: Must include fresh internet searches using current date (**$(date +"%B %d, %Y")**) to validate against latest industry trends, frameworks, and best practices. Avoid using outdated research when evaluating modern solutions.
 **Parameters**:
@@ -37,8 +37,10 @@
 4. **Technical Clarity**: Define implementation approach before coding
 5. **Success Criteria**: Clear definition of "done" before starting
 6. **Methodology Enforcement**: Mandate /4layer, /tdd, /redgreen for quality
-7. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise
+7. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise  
 8. **Current Industry Standards**: Validate approach against 2025 best practices and emerging technologies
+9. **TDD Implementation Planning**: Generate detailed sub-milestone breakdown with test-driven development integration
+10. **Granular Progress Tracking**: Break features into ~100 line commits for better tracking and rollback safety
 
 ## 📋 Requirements Gathering Integration
 
@@ -58,6 +60,8 @@ This ensures design documents are grounded in validated requirements gathered th
 **Team Integration**: All documents are git-friendly and can be shared across team members for collaborative development.
 
 ## 📋 Generated Documents
+
+The `/design` command now generates **3 comprehensive documents** with TDD integration:
 
 ### 1. Product Specification (`roadmap/[feature]_product_spec.md`)
 
@@ -148,6 +152,235 @@ graph TD
 
 ### 2. Engineering Design Document (`roadmap/[feature]_eng_design.md`)
 
+### 3. TDD Implementation Plan (`roadmap/[feature]_implementation_plan.md`) 🆕
+
+**Structure**:
+```markdown
+# [Feature] TDD Implementation Plan
+
+## Table of Contents
+1. [Implementation Overview](#implementation-overview)
+2. [Scope & Delta Analysis](#scope--delta-analysis)
+3. [Phase Breakdown](#phase-breakdown)
+4. [Sub-Milestone Planning](#sub-milestone-planning)
+5. [TDD Test Strategy](#tdd-test-strategy)
+6. [Git Commit Strategy](#git-commit-strategy)
+7. [Progress Tracking](#progress-tracking)
+8. [Success Validation](#success-validation)
+
+## Implementation Overview
+### Feature Scope
+- [Specific feature being implemented]
+- [Core functionality requirements]
+- [Integration points with existing system]
+
+### Success Criteria
+- [ ] All acceptance criteria met
+- [ ] Test coverage ≥95%
+- [ ] All commits follow TDD pattern
+- [ ] Performance benchmarks achieved
+- [ ] Documentation complete
+
+## Scope & Delta Analysis
+### Lines of Code Estimation
+- **New Code**: ~X lines
+- **Modified Code**: ~Y lines  
+- **Deleted Code**: ~Z lines
+- **Total Delta**: ~(X+Y-Z) lines
+- **Confidence**: High/Medium/Low
+
+### File Impact Analysis
+- **New Files**: [List with estimated lines]
+- **Modified Files**: [List with estimated changes]
+- **Dependencies**: [External dependencies or constraints]
+
+## Phase Breakdown
+### Phase 1: [Phase Name] (~X lines)
+**Duration**: [Time estimate]
+**Files**: [List of files to be changed]
+**Dependencies**: [What must be complete first]
+
+### Phase 2: [Phase Name] (~Y lines)  
+**Duration**: [Time estimate]
+**Files**: [List of files to be changed]
+**Dependencies**: [Phase dependencies]
+
+### Phase 3: [Phase Name] (~Z lines)
+**Duration**: [Time estimate]
+**Files**: [List of files to be changed]  
+**Dependencies**: [Phase dependencies]
+
+## Sub-Milestone Planning
+*Each sub-milestone targets ~100 delta lines for granular tracking*
+
+### Phase 1 Sub-Milestones
+#### SM1.1: [Milestone Name] (~100 lines)
+**Files**: [Specific files and line counts]
+**Commit**: `[type](scope): [description]`
+**TDD Approach**:
+- **Red**: Write failing test for [specific functionality]
+- **Green**: Implement minimal code to pass test
+- **Refactor**: Clean up implementation
+- **Test**: Verify [specific validation criteria]
+
+#### SM1.2: [Milestone Name] (~100 lines)
+**Files**: [Specific files and line counts]
+**Commit**: `[type](scope): [description]`
+**TDD Approach**:
+- **Red**: Write failing test for [specific functionality]
+- **Green**: Implement minimal code to pass test
+- **Refactor**: Clean up implementation  
+- **Test**: Verify [specific validation criteria]
+
+### Phase 2 Sub-Milestones
+#### SM2.1: [Milestone Name] (~100 lines)
+[Similar structure repeated for each sub-milestone]
+
+### Phase 3 Sub-Milestones  
+#### SM3.1: [Milestone Name] (~100 lines)
+[Similar structure repeated for each sub-milestone]
+
+## TDD Test Strategy
+### Red-Green-Refactor Cycle
+For each sub-milestone:
+1. **Red Phase**: Write failing test that defines expected behavior
+2. **Green Phase**: Write minimal code to make test pass  
+3. **Refactor Phase**: Improve code quality while keeping tests green
+4. **Validation Phase**: Ensure acceptance criteria met
+
+### Test Categories by Sub-Milestone
+#### Unit Tests (~X tests per milestone)
+- Component rendering tests
+- Function logic tests
+- Edge case handling
+- Error condition tests
+
+#### Integration Tests (~Y tests per milestone)
+- API integration tests
+- Component interaction tests
+- Data flow tests
+- State management tests
+
+#### End-to-End Tests (~Z tests per milestone)
+- User journey tests
+- Feature workflow tests
+- Cross-browser tests  
+- Performance tests
+
+## Git Commit Strategy
+### Commit Message Format
+```
+[type](scope): [description]
+
+[optional body explaining the change]
+
+TDD: [Red/Green/Refactor phase completed]
+Test: [Test validation summary]
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+### Commit Types by Phase
+- `feat`: New feature implementation
+- `test`: Test addition/modification
+- `refactor`: Code refactoring without behavior change
+- `fix`: Bug fixes
+- `docs`: Documentation updates
+- `chore`: Maintenance tasks
+
+### Branch Strategy
+- **Main Branch**: `main` - production ready code
+- **Feature Branch**: `[descriptive-name]` or `dev[timestamp]` - development work (no strict format required)
+- **Sub-Milestone Commits**: Each ~100 line change is one commit
+- **PR Strategy**: One PR per phase (multiple sub-milestones)
+
+## Progress Tracking
+### Milestone Checklist
+- [ ] SM1.1: [Milestone name] - [Status: Pending/In Progress/Complete]
+- [ ] SM1.2: [Milestone name] - [Status: Pending/In Progress/Complete]
+- [ ] SM2.1: [Milestone name] - [Status: Pending/In Progress/Complete]
+- [ ] [Continue for all sub-milestones]
+
+### Success Metrics per Sub-Milestone
+#### Code Quality Metrics
+- [ ] All tests pass (Red-Green cycle complete)
+- [ ] Code coverage ≥95% for new code
+- [ ] No linting errors
+- [ ] TypeScript compilation successful
+
+#### Functionality Metrics  
+- [ ] Feature works as specified
+- [ ] No regressions in existing functionality
+- [ ] Performance benchmarks met
+- [ ] User acceptance criteria satisfied
+
+#### Process Metrics
+- [ ] TDD cycle followed (Red-Green-Refactor)
+- [ ] Commit message follows format
+- [ ] Documentation updated
+- [ ] Tests validate expected behavior
+
+## Success Validation
+### Per Sub-Milestone Validation
+Each sub-milestone must pass all criteria:
+1. **Functionality**: Feature works as designed
+2. **Testing**: All tests pass, coverage maintained
+3. **Quality**: Code quality standards met
+4. **Integration**: No breaking changes to existing code
+5. **Documentation**: Changes documented appropriately
+
+### Phase Completion Criteria
+Each phase is complete when:
+- [ ] All sub-milestones validated
+- [ ] Integration tests pass
+- [ ] Feature demo/review completed
+- [ ] Performance regression tests pass
+- [ ] Security review (if applicable) completed
+
+### Overall Feature Completion
+Feature is complete when:
+- [ ] All phases completed successfully
+- [ ] End-to-end user journeys tested
+- [ ] Performance benchmarks achieved
+- [ ] Documentation complete and accurate
+- [ ] Stakeholder acceptance obtained
+- [ ] Production deployment successful
+
+## Risk Mitigation
+### Sub-Milestone Risks
+- **Risk**: Sub-milestone exceeds 100 lines significantly
+- **Mitigation**: Split into smaller commits, maintain granularity
+
+- **Risk**: TDD cycle not followed properly
+- **Mitigation**: Mandatory test-first approach, code review validation
+
+- **Risk**: Integration breaks existing functionality  
+- **Mitigation**: Comprehensive regression testing, feature flags
+
+### Phase-Level Risks
+- **Risk**: Phase dependencies cause blocking
+- **Mitigation**: Parallel development where possible, clear interfaces
+
+- **Risk**: Scope creep during implementation
+- **Mitigation**: Strict adherence to acceptance criteria, change control
+
+## Tools & Automation
+### TDD Support Tools
+- **Test Runner**: [Specific test framework]
+- **Coverage Tools**: [Coverage measurement tools]
+- **Linting**: [Code quality tools]
+- **CI/CD**: [Automated testing pipeline]
+
+### Progress Tracking Tools
+- **Git Hooks**: Automated validation on commit
+- **PR Templates**: Standard review checklist
+- **Status Dashboard**: Real-time progress tracking
+- **Metrics Collection**: Automated quality metrics
+
+```
+
+### 4. Engineering Design Document (`roadmap/[feature]_eng_design.md`)
+
 **Structure**:
 ```markdown
 # [Feature] Engineering Design
@@ -157,14 +390,13 @@ graph TD
 2. [Engineering Tenets](#engineering-tenets)
 3. [Technical Overview](#technical-overview)
 4. [System Design](#system-design)
-5. [Implementation Plan](#implementation-plan)
-6. [Quality Assurance](#quality-assurance)
-7. [Testing Strategy](#testing-strategy)
-8. [Risk Assessment](#risk-assessment)
-9. [Decision Records](#decision-records)
-10. [Rollout Plan](#rollout-plan)
-11. [Monitoring & Success Metrics](#monitoring--success-metrics)
-12. [Automation Hooks](#automation-hooks)
+5. [Quality Assurance](#quality-assurance)
+6. [Testing Strategy](#testing-strategy)
+7. [Risk Assessment](#risk-assessment)
+8. [Decision Records](#decision-records)
+9. [Rollout Plan](#rollout-plan)
+10. [Monitoring & Success Metrics](#monitoring--success-metrics)
+11. [Automation Hooks](#automation-hooks)
 
 ## Engineering Goals
 ### Primary Engineering Goals
@@ -398,6 +630,7 @@ graph TD
 Generates:
 - `roadmap/react-v3-migration_product_spec.md`
 - `roadmap/react-v3-migration_eng_design.md`
+- `roadmap/react-v3-migration_implementation_plan.md` 🆕
 
 ### Example 2: New Feature
 ```
@@ -406,22 +639,29 @@ Generates:
 Generates:
 - `roadmap/multiplayer-campaigns_product_spec.md`
 - `roadmap/multiplayer-campaigns_eng_design.md`
+- `roadmap/multiplayer-campaigns_implementation_plan.md` 🆕
 
 ## ✅ Command Success Criteria
 
 The `/design` command succeeds when:
-1. Both documents are generated with no "TBD" sections
+1. All three documents are generated with no "TBD" sections
 2. User journeys are completely mapped
 3. Technical approach addresses all requirements
 4. Testing strategy covers all scenarios
-5. Implementation plan has clear phases
+5. Implementation plan has clear phases with TDD integration
+6. Sub-milestones are defined with ~100 line targets
+7. Each milestone has specific TDD test criteria
+8. Git commit strategy is documented
 
 ## 🚦 Pre-Implementation Checklist
 
 Before coding begins, verify:
 - [ ] Product spec reviewed and approved
 - [ ] Engineering design addresses all requirements
+- [ ] Implementation plan created with TDD integration
+- [ ] Sub-milestones defined (~100 lines each)
 - [ ] Test cases defined for all user stories
+- [ ] Git commit strategy documented
 - [ ] Success metrics clearly defined
 - [ ] No unanswered questions remain
 
