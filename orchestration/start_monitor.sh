@@ -39,12 +39,38 @@ if [ ! -f "agent_monitor.py" ]; then
 fi
 
 # Start monitor in background and redirect output to log file
+# NOTE: agent_monitor.py is a long-running service, so we don't use timeout on it
 python3 agent_monitor.py > "$LOG_DIR/agent_monitor.log" 2>&1 &
 MONITOR_PID=$!
 
-# Wait a moment and check if it started successfully
-sleep 2
-if kill -0 $MONITOR_PID 2>/dev/null; then
+# Wait for startup with timeout and verify process stays running
+max_wait=5
+wait_time=0
+startup_verified=false
+
+while [ $wait_time -lt $max_wait ]; do
+    if kill -0 $MONITOR_PID 2>/dev/null; then
+        # Process is running, wait a bit more to ensure it's stable
+        if [ $wait_time -ge 2 ]; then
+            # Check again after 2 seconds to ensure process didn't crash after startup
+            sleep 1
+            if kill -0 $MONITOR_PID 2>/dev/null; then
+                startup_verified=true
+                break
+            else
+                echo -e "${RED}❌ Agent monitor crashed after startup${NC}"
+                exit 1
+            fi
+        fi
+    else
+        echo -e "${RED}❌ Agent monitor failed to start or crashed immediately${NC}"
+        exit 1
+    fi
+    sleep 1
+    wait_time=$((wait_time + 1))
+done
+
+if [ "$startup_verified" = true ]; then
     echo -e "${GREEN}✅ Agent monitor started successfully (PID: $MONITOR_PID)${NC}"
     echo
     echo "Monitor commands:"
@@ -53,7 +79,8 @@ if kill -0 $MONITOR_PID 2>/dev/null; then
     echo "  🛑 Stop monitor: pkill -f agent_monitor.py"
     echo "  📋 Check status: pgrep -f agent_monitor.py"
     echo
+    exit 0
 else
-    echo -e "${RED}❌ Failed to start agent monitor${NC}"
+    echo -e "${RED}❌ Failed to start agent monitor (timeout or startup failure)${NC}"
     exit 1
 fi
