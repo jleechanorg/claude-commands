@@ -2,6 +2,27 @@
 
 ## Active Development Tasks
 
+### 🚨 HANDOFF-COPILOT-SKIP-FIX (Priority: CRITICAL)
+**Status**: Ready for Implementation
+**PR**: #1301
+**Handoff Document**: `roadmap/scratchpad_handoff_copilot_skip_fix.md`
+**Branch**: `handoff-copilot-skip-fix`
+
+**Critical Bug**: Copilot command incorrectly reports "zero comments" when 30+ review comments exist
+
+**Evidence**:
+- PR #1294: Copilot skipped processing despite 30 review comments
+- Root cause: Only checks general comments, misses inline review comments
+- Impact: Critical code review feedback ignored
+
+**Implementation**:
+- Fix comment detection to check all three sources
+- Remove optimization that skips steps
+- Add mandatory gates with visual feedback
+- Timeline: 50 minutes
+
+---
+
 ### 🔧 CommentReply Threading Enhancement (Priority: HIGH)
 **Status**: Ready for Implementation
 **Handoff Document**: `roadmap/handoff_commentreply_threading_v2.md`
