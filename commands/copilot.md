@@ -1,280 +1,342 @@
-# /copilot Command - Adaptive Linear PR Analysis
+# /copilot - Fast Direct Orchestrated PR Processing
 
-**Usage**: `/copilot [PR_NUMBER]`
-
-**Purpose**: Adaptive PR analysis using smart guard-clause pattern that can handle broken states.
-
-## 🎯 **DEFAULT BEHAVIOR** (No Arguments)
-- ✅ **Automatically targets the current branch's PR**
-- ✅ **Shows clear confirmation**: `🎯 Targeting current branch PR: #123`
-
-**Examples**:
+## 🚨 Mandatory Comment Coverage Tracking
+This command automatically tracks comment coverage and warns about missing responses:
 ```bash
-/copilot           # ← Applies to current branch PR (most common usage)  
-/copilot 1062      # ← Applies to specific PR #1062
+# COVERAGE TRACKING: Monitor comment response completion
+echo "🔍 TRACKING: Comment coverage monitoring enabled"
+echo "⚠️ WARNING: Will alert if any comments remain unresponded"
+echo "📊 METRIC: Tracks original comments vs threaded replies ratio"
 ```
 
-## 🚨 CRITICAL: EXECUTION GUARANTEE
-
-**MANDATORY STARTUP PROTOCOL**:
-```
-🤖 /copilot - Starting adaptive PR analysis
-🎯 Targeting: [Current branch PR: #123] OR [Specified PR: #456]
-🔧 Using smart guard-clause pattern for reliability...
-📊 Assessing PR state and building action plan...
-🚀 Beginning adaptive workflow based on PR needs...
-```
-
-**NEVER FAIL SILENTLY**: Every execution MUST show visible progress through all steps
-**ASSESS THEN ACT**: Smart guards assess problems and plan fixes instead of failing immediately
-**ADAPTIVE EXECUTION**: Actions adapt to PR state - fix broken tests, resolve conflicts, process comments
-
-## How It Works
-
-The `/copilot` command uses **Adaptive Linear Processing with Smart Guards**:
-
-1. **Assess PR State**: Comprehensive analysis of current condition
-2. **Plan Actions**: Build prioritized action list based on assessment
-3. **Execute Plan**: Carry out planned actions with rich error reporting
-4. **Verify Results**: Confirm all actions completed successfully
-5. **Report Status**: Clear final status with full diagnostic information
-
-## 🚨 CRITICAL MANDATE: USE PROPER COMMENT FETCHING
-
-**❌ FORBIDDEN SHORTCUTS**: NEVER use `gh pr view --json comments` or similar simplified GitHub API calls for comment collection
-**✅ MANDATORY**: ALWAYS use the actual `/commentfetch` Python implementation for ALL comment collection
-**🐛 BUG PREVENTION**: `gh pr view --json comments` only returns general issue comments and MISSES review comments entirely
-
-**EVIDENCE**: Review comments (like `#discussion_rXXXXXXX` URLs) are only available via:
-- ✅ `/commentfetch` → calls `gh api repos/owner/repo/pulls/PR/comments` (captures ALL comment types)  
-- ❌ `gh pr view --json comments` → only returns general issue comments (INCOMPLETE)
-
-**WHY THIS MATTERS**: A comment asking "see if commentreply catches this" was missed because the copilot workflow used the wrong API endpoint that doesn't include review comments.
-
-## 🚨 ADAPTIVE WORKFLOW STEPS
-
-### Step 1: PR State Assessment (MANDATORY)
+## ⏱️ Automatic Timing Protocol
+This command automatically tracks and reports execution time:
 ```bash
-# Get comprehensive PR state - single source of truth
-pr_json=$(gh pr view $PR_NUMBER --json state,mergeable,statusCheckRollup,comments,reviews)
-PR_STATE=$(echo "$pr_json" | jq -r '.state')
-CI_STATE=$(echo "$pr_json" | jq -r '.statusCheckRollup.state // "PENDING"')
-MERGEABLE=$(echo "$pr_json" | jq -r '.mergeable')
-COMMENT_COUNT=$(echo "$pr_json" | jq '(.comments | length) + (.reviews | length)')
+# START: Record start time
+COPILOT_START_TIME=$(date +%s)
 
-# Build action plan based on assessment
-PLANNED_ACTIONS=()
-COMPLETED_ACTIONS=()
-HIGH_COMMENT_THRESHOLD=${COPILOT_HIGH_COMMENT_THRESHOLD:-30}  # Configurable threshold for high comment count processing
-echo "📊 PR Assessment Results:"
-echo "   State: $PR_STATE | CI: $CI_STATE | Mergeable: $MERGEABLE | Comments: $COMMENT_COUNT"
+# [Command execution phases happen here]
 
-# Smart assessment logic
-[[ "$PR_STATE" != "OPEN" ]] && { echo "❌ PR is not open - cannot proceed"; exit 1; }
+# END: Calculate and display timing
+COPILOT_END_TIME=$(date +%s)
+COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
+COPILOT_MINUTES=$((COPILOT_DURATION / 60))
+COPILOT_SECONDS=$((COPILOT_DURATION % 60))
 
-if [[ "$CI_STATE" != "SUCCESS" ]]; then
-    echo "🔧 CI issues detected - adding fix to plan"
-    PLANNED_ACTIONS+=("fix_ci")
-fi
-
-if [[ "$MERGEABLE" == "CONFLICTING" ]]; then
-    echo "🔧 Merge conflicts detected - adding resolution to plan"
-    PLANNED_ACTIONS+=("resolve_conflicts")
-fi
-
-# Always fetch comments for comprehensive data
-echo "📊 Comments detected ($COMMENT_COUNT) - always fetching for complete analysis"
-PLANNED_ACTIONS+=("fetch_comments")
-
-if [[ "$COMMENT_COUNT" -gt 0 ]]; then
-    echo "💬 Comments require processing - adding to plan"
-    PLANNED_ACTIONS+=("process_comments")
-fi
-
-# Always add sync and report
-PLANNED_ACTIONS+=("sync_branch" "report_status")
-echo "📋 Planned Actions: ${PLANNED_ACTIONS[*]}"
-```
-
-### Step 2: Execute Planned Actions (ADAPTIVE)
-```bash
-# Execute each planned action with rich error handling
-for action in "${PLANNED_ACTIONS[@]}"; do
-    echo "🚀 Executing: $action"
-    
-    case $action in
-        "fix_ci")
-            echo "🔧 Attempting to fix CI issues..."
-            if /fixpr "$PR_NUMBER"; then
-                echo "✅ CI fixes applied successfully"
-                COMPLETED_ACTIONS+=("fix_ci")
-            else
-                echo "❌ CI fix failed - capturing diagnostics..."
-                # Capture detailed error information (supported API)
-                echo "ℹ️ CI failures:"
-                gh pr view "$PR_NUMBER" --json statusCheckRollup -q '
-                  .statusCheckRollup[]?
-                  | select(.state=="FAILURE" or .conclusion=="FAILURE")
-                  | {name: (.name // .context), detailsUrl: (.detailsUrl // .targetUrl)}'
-                exit 1
-            fi
-            ;;
-            
-        "resolve_conflicts")
-            echo "🔀 Attempting to resolve merge conflicts..."
-            if /fixpr "$PR_NUMBER"; then
-                echo "✅ Conflicts resolved successfully"
-                COMPLETED_ACTIONS+=("resolve_conflicts")
-            else
-                echo "❌ Conflict resolution failed - manual intervention required"
-                exit 1
-            fi
-            ;;
-
-        "fetch_comments")
-            echo "📊 Fetching comments and reviews for comprehensive analysis..."
-            echo "🚨 CRITICAL: Using proper /commentfetch implementation (NOT gh pr view shortcuts)"
-            if [[ "$COMMENT_COUNT" -gt "$HIGH_COMMENT_THRESHOLD" ]]; then
-                echo "⚡ High comment count detected ($COMMENT_COUNT) - focusing on last $HIGH_COMMENT_THRESHOLD for efficiency"
-                export COMMENTFETCH_LIMIT="$HIGH_COMMENT_THRESHOLD"
-                export COMMENTFETCH_FOCUS="recent"
-            else
-                echo "📝 Standard comment count ($COMMENT_COUNT) - fetching all"
-            fi
-            
-            # 🚨 MANDATORY: Use actual /commentfetch Python implementation
-            # This captures ALL comment types: inline, general, review, and copilot
-            # NEVER use gh pr view --json comments (incomplete - misses review comments)
-            if /commentfetch "$PR_NUMBER"; then
-                echo "✅ Comments fetched successfully with complete API coverage"
-                COMPLETED_ACTIONS+=("fetch_comments")
-            else
-                echo "❌ Comment fetch failed - check commentfetch logs"
-                exit 1
-            fi
-            ;;
-            
-        "process_comments")
-            echo "💬 Processing comments..."
-            echo "🚨 CRITICAL: Processing ALL comments including owner testing comments"
-            echo "🔧 BUG FIX: No filtering by author - ALL comments get responses"
-            if [[ "$COMMENT_COUNT" -gt "$HIGH_COMMENT_THRESHOLD" ]]; then
-                echo "⚡ High comment count detected ($COMMENT_COUNT) - processing all systematically"
-            fi
-            
-            # MANDATORY: Process ALL comments without filtering
-            # Fixed bug where owner test comments were ignored
-            echo "📋 Comment processing scope: ALL comments regardless of:"
-            echo "   - Author (owner, bots, external reviewers)"
-            echo "   - Content type (technical, testing, simple)"  
-            echo "   - Purpose (feedback, debugging, validation)"
-            
-            if /commentreply "$PR_NUMBER"; then
-                echo "✅ Comments processed successfully - ALL comments addressed"
-                COMPLETED_ACTIONS+=("process_comments")
-            else
-                echo "❌ Comment processing failed - check commentreply logs"
-                exit 1
-            fi
-            ;;
-            
-        "sync_branch")
-            echo "🔍 Checking branch sync status..."
-            # Atomic git check - refresh state before sync
-            git fetch origin >/dev/null 2>&1
-            BASE_BRANCH="${BASE_BRANCH:-$(gh pr view "$PR_NUMBER" --json baseRefName -q .baseRefName 2>/dev/null)}"
-            if [ -z "$BASE_BRANCH" ] || [ "$BASE_BRANCH" = "null" ]; then
-              BASE_BRANCH="$(gh repo view --json defaultBranchRef -q .defaultBranchRef.name 2>/dev/null || echo main)"
-            fi
-            : "${BASE_BRANCH:=main}"
-            if git log --oneline "HEAD..origin/${BASE_BRANCH}" | head -1 | grep -q .; then
-                echo "🔄 Syncing with base branch..."
-                if /fixpr "$PR_NUMBER"; then
-                    echo "✅ Branch synced successfully"
-                    COMPLETED_ACTIONS+=("sync_branch")
-                else
-                    echo "❌ Branch sync failed"
-                    exit 1
-                fi
-            else
-                echo "✅ Branch already up to date"
-                COMPLETED_ACTIONS+=("sync_branch")
-            fi
-            ;;
-            
-        "report_status")
-            # Generate comprehensive status report
-            ACTIONS_TAKEN_ARR=()
-            for completed_action in "${COMPLETED_ACTIONS[@]}"; do
-                case $completed_action in
-                    "fix_ci") ACTIONS_TAKEN_ARR+=("- ✅ Fixed CI issues") ;;
-                    "resolve_conflicts") ACTIONS_TAKEN_ARR+=("- ✅ Resolved merge conflicts") ;;
-                    "fetch_comments") ACTIONS_TAKEN_ARR+=("- ✅ Fetched comments and reviews") ;;
-                    "process_comments") ACTIONS_TAKEN_ARR+=("- ✅ Processed comments") ;;
-                    "sync_branch") ACTIONS_TAKEN_ARR+=("- ✅ Synced with base branch") ;;
-                esac
-            done
-
-            ACTIONS_TAKEN=""
-            if [ ${#ACTIONS_TAKEN_ARR[@]} -gt 0 ]; then
-                ACTIONS_TAKEN="\n$(printf "%s\n" "${ACTIONS_TAKEN_ARR[@]}")"
-            fi
-
-            # Re-fetch updated PR metadata
-            status_json=$(gh pr view "$PR_NUMBER" --json state,statusCheckRollup,mergeable)
-            final_state=$(jq -r '.state' <<<"$status_json")
-            ci_state=$(jq -r '.statusCheckRollup.state // "PENDING"' <<<"$status_json")
-            mergeable=$(jq -r '.mergeable' <<<"$status_json")
-            SUCCESS_MSG="✅ **Copilot Analysis Complete - Adaptive Execution**
-
-**Actions Taken**:$ACTIONS_TAKEN
-
-**Final Status**: State: $final_state | CI: $ci_state | Mergeable: $mergeable
-🎯 **Smart Guards**: Assessed issues and applied appropriate fixes  
-📊 **Adaptive Flow**: Executed only necessary actions based on PR state"
-
-            gh pr comment "$PR_NUMBER" --body "$SUCCESS_MSG"
-            echo "✅ Final status posted to PR"
-            ;;
-    esac
-done
-```
-
-## Key Benefits
-
-- **Always Comprehensive**: Fetches all comment data for complete analysis
-- **Smart Comment Handling**: Focuses on last 30 comments when PR has high activity
-- **Adaptive Intelligence**: Handles broken tests, conflicts, and comments appropriately  
-- **Rich Diagnostics**: Detailed error reporting with actionable information
-- **Maintains Simplicity**: ~180 lines but much more capable and reliable
-- **Linear Predictability**: Clear flow with smart decision points
-- **Robust Error Handling**: Captures and reports detailed failure information  
-- **Atomic Operations**: Fresh state checks prevent race conditions
-
-## Smart Guards Pattern
-
-Instead of rigid pass/fail guards, each step uses "assess → plan → act" logic:
-
-**Pattern**:
-```bash
-# Assess the situation
-if [[ condition_detected ]]; then
-    echo "🔧 Issue detected - adding fix to plan"
-    PLANNED_ACTIONS+=("fix_action")  
+echo ""
+echo "⏱️ COPILOT EXECUTION TIMING"
+echo "=========================="
+echo "🚀 Start time: $(date -d @$COPILOT_START_TIME '+%H:%M:%S')"
+echo "🏁 End time: $(date -d @$COPILOT_END_TIME '+%H:%M:%S')"
+echo "⏱️ Total duration: ${COPILOT_MINUTES}m ${COPILOT_SECONDS}s"
+echo "🎯 Performance target: 2-3 minutes"
+if [ $COPILOT_DURATION -le 180 ]; then
+    echo "✅ PERFORMANCE: Target achieved (≤3 minutes)"
 else
-    echo "✅ No issues detected"
+    echo "⚠️ PERFORMANCE: Exceeded target (>3 minutes)"
 fi
+echo ""
 ```
 
-This maintains linear predictability while adding intelligence to handle real-world PR problems instead of just rejecting them.
+## 🎯 Purpose
+Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegation. Optimized for 2-3 minute execution vs 20+ minute agent overhead.
 
-## Comment Handling Strategy
+## ⚡ **PERFORMANCE ARCHITECTURE: Direct Orchestration**
+- **No Task delegation** - Orchestrate all workflow phases directly within the copilot context (no external agents)
+- **Direct GitHub MCP tools** - Use GitHub MCP tools directly in each phase
+- **30 recent comments focus** - Process only actionable recent feedback
+- **Expected time**: **2-3 minutes** (vs 20+ minutes with Task overhead)
 
-The copilot now always fetches comments for comprehensive analysis:
+## 🚀 Core Workflow - Subcommand Orchestration
 
-- **Always fetch**: Even if no comments, ensures complete PR data
-- **Smart limiting**: When >30 comments, sets `COMMENTFETCH_LIMIT=30` and `COMMENTFETCH_FOCUS="recent"`
-- **Environment variables**: Passes limits to `/commentfetch` for optimization
-- **Comprehensive processing**: Still processes all actionable comments appropriately
+**IMPLEMENTATION**: Use existing subcommands systematically until GitHub is completely clean
 
-**Key Fix**: Now handles broken tests by adding "fix_ci" to the action plan instead of immediately failing.
+**TIMING SETUP**: Initialize timing at start of execution
+```bash
+# Record start time for performance tracking
+COPILOT_START_TIME=$(date +%s)
+echo "⏱️ COPILOT STARTED: $(date '+%H:%M:%S')"
+```
+
+### Phase 1: Assessment & Planning
+**Command**: `/execute` - Plan the PR processing work with TodoWrite tracking
+- Analyze current PR state and comment volume
+- Create systematic processing plan with TodoWrite
+- Set up progress tracking for all phases
+- Evaluate skip conditions based on PR state
+
+### Phase 2: Comment Collection
+**Command**: `/commentfetch` - Get all PR comments and issues
+- Fetches recent comments requiring responses
+- Identifies critical issues, security problems, merge conflicts
+- Creates clean JSON dataset for systematic processing
+
+### Phase 3: Issue Resolution  
+**Command**: `/fixpr` - Fix all identified problems systematically
+- **Priority Order**: Security → Runtime Errors → Test Failures → Style
+- Apply code fixes for review comments and bot suggestions
+- Resolve merge conflicts and dependency issues
+- Fix failing tests and CI pipeline problems
+- **Continue until**: All technical issues resolved
+
+### Phase 4: Response Generation
+**Command**: `/commentreply` - Reply to all review comments
+- Post technical responses to reviewer feedback
+- Address bot suggestions with implementation details
+- Use proper GitHub threading for line-specific comments
+- **Continue until**: All comments have appropriate responses
+
+### Phase 5: Coverage Verification (MANDATORY WARNINGS)
+**Command**: `/commentcheck` - Verify 100% comment coverage and quality with warnings
+- Confirms all comments received appropriate responses
+- Validates response quality (not generic templates)
+- Detects any missed or unaddressed feedback
+- **🚨 CRITICAL**: Issues explicit warnings for unresponded comments
+- **Must pass**: Zero unresponded comments before proceeding
+- **AUTO-FIX**: If coverage < 100%, automatically runs `/commentreply` again
+
+### Phase 6: Verification & Iteration  
+**Iterative Cycle**: Repeat `/commentfetch` → `/fixpr` → `/commentreply` → `/commentcheck` cycle until completion
+- **Keep going until**: No new comments, all tests pass, CI green, 100% coverage
+- **GitHub State**: Clean PR with no unresolved feedback
+- **Merge Ready**: No conflicts, no failing tests, all discussions resolved
+- **Note**: This is an iterative loop, not a single linear execution
+
+### Phase 7: Final Push
+**Command**: `/pushl` - Push all changes with labels and description
+- Commit all fixes and responses
+- Update PR description with complete change summary
+- Apply appropriate labels based on changes made
+
+### Phase 8: Coverage & Timing Report
+**MANDATORY COVERAGE + TIMING COMPLETION**: Calculate and display execution performance with coverage warnings
+```bash
+# COVERAGE VERIFICATION FIRST - MANDATORY
+echo ""
+echo "📊 COMMENT COVERAGE VERIFICATION"
+echo "================================="
+
+# Get current comment statistics
+TOTAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq length)
+THREADED_REPLIES=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
+ORIGINAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+
+echo "📝 Total comments: $TOTAL_COMMENTS"
+echo "💬 Threaded replies: $THREADED_REPLIES"
+echo "📋 Original comments: $ORIGINAL_COMMENTS"
+
+# Calculate coverage percentage
+if [ "$ORIGINAL_COMMENTS" -gt 0 ]; then
+    COVERAGE_PERCENT=$(( (THREADED_REPLIES * 100) / ORIGINAL_COMMENTS ))
+    echo "📊 Coverage: $COVERAGE_PERCENT% ($THREADED_REPLIES/$ORIGINAL_COMMENTS)"
+    
+    # MANDATORY WARNING SYSTEM
+    if [ "$COVERAGE_PERCENT" -lt 100 ]; then
+        MISSING_REPLIES=$((ORIGINAL_COMMENTS - THREADED_REPLIES))
+        echo ""
+        echo "🚨 WARNING: INCOMPLETE COMMENT COVERAGE DETECTED!"
+        echo "❌ Missing replies: $MISSING_REPLIES comments"
+        echo "⚠️ Coverage below 100% - some comments unresponded"
+        echo "🔧 REQUIRED ACTION: Run /commentreply to address missing responses"
+        echo ""
+    else
+        echo "✅ COVERAGE: 100% - All comments responded to"
+    fi
+else
+    echo "✅ No comments found requiring responses"
+fi
+
+# Calculate execution time and display results
+COPILOT_END_TIME=$(date +%s)
+COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
+COPILOT_MINUTES=$((COPILOT_DURATION / 60))
+COPILOT_SECONDS=$((COPILOT_DURATION % 60))
+
+echo ""
+echo "⏱️ COPILOT EXECUTION TIMING"
+echo "=========================="
+echo "🚀 Start time: $(date -d @$COPILOT_START_TIME '+%H:%M:%S')"
+echo "🏁 End time: $(date -d @$COPILOT_END_TIME '+%H:%M:%S')"
+echo "⏱️ Total duration: ${COPILOT_MINUTES}m ${COPILOT_SECONDS}s"
+echo "🎯 Performance target: 2-3 minutes"
+if [ $COPILOT_DURATION -le 180 ]; then
+    echo "✅ PERFORMANCE: Target achieved (≤3 minutes)"
+elif [ $COPILOT_DURATION -le 300 ]; then
+    echo "⚠️ PERFORMANCE: Slightly over target (3-5 minutes)"
+else
+    echo "❌ PERFORMANCE: Significantly exceeded target (>5 minutes)"
+fi
+echo ""
+```
+
+## 🧠 Decision Logic
+
+### When to Use /copilot
+- **High comment volume** (10+ comments requiring technical responses)
+- **Complex PR reviews** with multiple reviewers and feedback types
+- **Critical security issues** requiring systematic resolution
+- **CI failures** combined with code review feedback
+- **Time-sensitive PRs** needing rapid but thorough processing
+
+### Autonomous Operation Mode
+- **Continues through conflicts** - doesn't stop for user approval on fixes
+- **Applies systematic resolution** - follows security → runtime → style priority
+- **Maintains full transparency** - all actions visible in command execution
+- **Preserves user control** - merge operations still require explicit approval
+
+## ⚡ Performance Optimization
+
+### Recent Comments Focus (Default Behavior)
+- **Default Processing**: Last 30 comments chronologically (90%+ faster)
+- **Rationale**: Recent comments contain 80% of actionable feedback
+- **Performance Impact**: ~20-30 minutes → ~3-5 minutes processing time
+- **Context Efficiency**: 90%+ reduction in token usage
+
+### When to Use Full Processing
+- **Security Reviews**: Process all comments for comprehensive security analysis
+- **Major PRs**: Full processing for critical architectural changes  
+- **Compliance**: Complete audit trail requirements
+- **Implementation**: Use full comment processing instead of recent 30 focus
+
+### Performance Comparison
+| Scenario | Comments | Processing Time | Context Usage |
+|----------|----------|-----------------|---------------|
+| **Default (Recent 30)** | 30 | ~3-5 minutes | Low |
+| **Full Processing** | 300+ | ~20-30 minutes | Very High |
+| **Performance Gain** | 90% fewer | 80%+ faster | 90%+ efficient |
+
+## 🔧 Error Handling & Recovery
+
+### Common Scenarios
+**Merge Conflicts:**
+- Automatic conflict detection and resolution
+- Backup creation before conflict fixes
+- Validation of resolution correctness
+
+**CI Failures:**
+- Test failure analysis and systematic fixes
+- Dependency issues and import errors
+- Build configuration problems
+
+**Comment Threading Issues:**
+- Fallback to general comments if threading fails
+- Retry mechanism for API rate limits
+- Error logging for debugging
+
+### Recovery Patterns
+```bash
+# If /commentfetch fails
+- Check GitHub API connectivity
+- Verify repository access permissions
+- Retry with exponential backoff
+
+# If /fixpr gets stuck
+- Review error logs for specific issues
+- Apply manual fixes for complex conflicts
+- Continue with remaining automated fixes
+
+# If /commentreply fails
+- Check comment posting permissions
+- Verify threading API parameters
+- Fall back to non-threaded comments
+```
+
+## 📊 Success Criteria
+
+### 🚨 CRITICAL: Comment Coverage Requirements (ZERO TOLERANCE)
+- ✅ **100% Comment Coverage**: Every original comment MUST have a threaded reply
+- 🚨 **Coverage Warnings**: Automatic alerts when coverage < 100%
+- ⚠️ **Missing Response Detection**: Explicit identification of unresponded comments
+- 🔧 **Auto-Fix Trigger**: Automatically runs `/commentreply` if gaps detected
+- 📊 **Coverage Metrics**: Real-time tracking of responses vs originals ratio
+- ❌ **FAILURE STATE**: < 100% coverage triggers warnings and corrective action
+
+### Completion Indicators
+- ✅ All critical comments addressed with technical responses
+- ✅ All security vulnerabilities resolved
+- ✅ All test failures fixed 
+- ✅ All merge conflicts resolved
+- ✅ CI passing (green checkmarks)
+- ✅ No unaddressed reviewer feedback
+- ✅ **GitHub State**: Clean PR ready for merge
+- ✅ **Iteration Complete**: `/commentfetch` shows no new actionable issues
+- ✅ **Comment Coverage**: 100% response rate verified with warnings system
+
+### Quality Gates
+- **Technical Accuracy**: Responses demonstrate actual understanding
+- **Complete Coverage**: No comments left without appropriate response
+- **Real Implementation**: All fixes are functional, not placeholder
+- **Proper Threading**: Comments use GitHub's threading API correctly
+- **Coverage Tracking**: Continuous monitoring with explicit warnings
+
+## 💡 Usage Examples
+
+### Standard PR Review Processing
+```bash
+/copilot
+# Handles typical PR with 5-15 comments
+# Estimated time: 2-3 minutes
+# Expected outcome: All comments resolved, CI passing
+```
+
+### High-Volume Comment Processing  
+```bash
+/copilot
+# For PRs with 20+ comments from multiple reviewers
+# Estimated time: 2-3 minutes (with recent comments focus)
+# Expected outcome: Systematic resolution with full documentation
+```
+
+### Security-Critical PR Processing
+```bash
+/copilot
+# Prioritizes security issues, applies fixes systematically
+# Estimated time: 2-3 minutes  
+# Expected outcome: All vulnerabilities patched, tests passing
+```
+
+## 🔗 Integration Points
+
+### Related Commands
+- **`/commentfetch`** - Can be used standalone for comment analysis
+- **`/fixpr`** - Can be used independently for issue resolution
+- **`/commentreply`** - Handles response generation and posting
+- **`/pushl`** - Handles git operations and branch management
+
+### Workflow Combinations
+```bash
+# Standard /copilot execution pattern
+/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl
+
+# Continue until clean (repeat cycle)
+/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl
+# Keep iterating until GitHub shows: no failing tests, no merge conflicts, no unaddressed comments
+
+# /commentcheck MUST pass (100% coverage) before /pushl
+# If /commentcheck fails → re-run /commentreply → /commentcheck → /pushl
+```
+
+## 🚨 Important Notes
+
+### Autonomous Operation Protocol
+- **NEVER requires user approval** for comment processing and fixes
+- **NEVER requires user approval** for merge operations - operates fully autonomously
+- **Continues through standard conflicts** and applies systematic resolution
+- **Maintains full transparency** in all operations
+
+### Priority Handling
+1. **Critical Security Issues** (undefined variables, injection risks)
+2. **Runtime Errors** (missing imports, syntax errors)  
+3. **Test Failures** (failing assertions, integration issues)
+4. **Style & Performance** (optimization suggestions, formatting)
+5. **Documentation** (comment clarifications, README updates)
+
+### Resource Management
+- **Context Monitoring**: Automatically manages token usage
+- **API Rate Limiting**: Handles GitHub API limits gracefully
+- **Parallel Processing**: Optimizes comment handling for efficiency
+- **Strategic Checkpointing**: Saves progress for large PR processing
+
+---
+
+**Purpose**: Complete autonomous PR comment processing with systematic issue resolution and real GitHub integration.

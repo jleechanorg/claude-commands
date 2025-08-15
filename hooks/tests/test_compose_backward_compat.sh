@@ -23,7 +23,7 @@ run_test() {
     echo -n "Testing $test_name... "
     
     # Run the hook with the input
-    result=$(echo "$input" | bash .claude/hooks/compose-commands.sh 2>/dev/null)
+    result=$(echo "$input" | bash ../compose-commands.sh 2>/dev/null)
     
     if echo "$result" | grep -q "$expected_contains"; then
         echo -e "${GREEN}PASS${NC}"
