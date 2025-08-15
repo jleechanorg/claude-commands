@@ -99,7 +99,12 @@ else:
    - **DEFENSIVE**: statusCheckRollup is often a LIST of checks, not a single object
    - **SAFE ACCESS**: Use list iteration, never .get() on the rollup array
    - **DISPLAY INLINE**: Print exact GitHub CI status: `❌ FAILING: test-unit (exit code 1)`
-   - **FETCH LOGS**: For failing checks, get specific error messages from GitHub
+   - **FETCH LOGS (Primary)**: Use statusCheckRollup descriptions for failing checks (authoritative and fast):
+     ```bash
+     gh pr view "$PR_NUMBER" --json statusCheckRollup --jq \
+       '.statusCheckRollup[] | select(.state == "FAILURE") | "\(.context): \(.description)"'
+     ```
+   - **Roadmap (non-executable)**: Future enhancements will include workflow/job log retrieval via the Actions API for deeper analysis (job logs, step-level errors, artifact links).
    - **VERIFY AUTHORITY**: Cross-check GitHub vs local - local is NEVER authoritative
    - **SAFE PROCESSING PATTERN**:
      ```
@@ -183,6 +188,34 @@ Examine the collected data to understand what needs fixing:
 
 **CI Status Analysis**:
 - **SAFE APPROACH**: Remember statusCheckRollup is a list - iterate through checks
+- **DETAILED LOG ANALYSIS**: Parse GitHub Actions logs to extract specific failures:
+  ```bash
+  set -o pipefail
+  # Extract specific failing tests and error messages (pytest + Python errors)
+  gh api "repos/$OWNER/$REPO/actions/jobs/$job_id/logs" | \
+    grep -Ei \
+      -e '^FAILURES?' \
+      -e '^=+ FAILURES =+' \
+      -e 'collected [0-9]+ items' \
+      -e '===+ [0-9]+ (failed|errors?|x?failed|x?passed)' \
+      -e 'E\s+AssertionError' \
+      -e 'Traceback \(most recent call last\):' \
+      -e 'ModuleNotFoundError:' \
+      -e 'ImportError:' \
+      -e 'NameError:' \
+      -e 'TypeError:' \
+      -e '\.py[:,]?\d+(:\d+)?' \
+    -A 3 -B 3
+  
+  # Common patterns to identify:
+  # - ModuleNotFoundError: Missing imports or dependencies
+  # - AssertionError: Test logic failures with specific expectations  
+  # - NameError: Undefined variables or missing imports
+  # - ImportError: Module loading issues
+  # - TypeError: Type mismatches in function calls
+  # - Orchestration failures: Redis/tmux dependency issues
+  # - File permission or path issues in CI environment
+  ```
 - Distinguish between flaky tests (timeouts, network issues) and real failures
 - Identify patterns in failures (missing imports, assertion errors, environment issues)
 - Compare GitHub CI results with local test runs to spot environment-specific problems

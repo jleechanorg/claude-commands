@@ -519,7 +519,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **120 commands** that transform Claude Code into:
+This export contains **118 commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
@@ -648,23 +648,62 @@ This isn't just command sharing - it's **workflow transformation** through the p
 
 ## 📚 Version History
 
-### v1.1.0 (2025-08-09)
+### v1.1.0 (2025-08-15)
 
 **Export Statistics**:
-- Commands: 116 command definitions  
-- Hooks: 13 Claude Code automation hooks
-- Scripts: 5 infrastructure scripts
+- **118 Commands**: Complete workflow orchestration system
+- **21 Hooks**: Claude Code automation and workflow hooks  
+- **5 Scripts**: Infrastructure and development environment scripts
 
-**Changes**:
-- Comprehensive command system (116 commands) with enhanced automation
-- Enhanced hook automation (13 hooks) including speculation detection and root file management
-- Infrastructure automation (5 scripts) for development environment setup
-- Template-based README generation with dynamic content replacement
-- Obsolete file cleanup and maintenance for repository hygiene
-- Additive export strategy preserving existing content while adding new features
-- Enhanced content filtering and path normalization for cross-project compatibility
-- Version tracking and change history management for transparent updates
-- Single version history placement at bottom of README with table of contents integration
+**Major Changes**:
+- **Command Count Consistency**: Fixed discrepancy between template (80+) and actual count (118)
+- **Documentation Accuracy**: Updated all references to show correct command statistics
+- **Version Incrementing**: Proper semantic versioning with additive version history
+
+**Technical Improvements**:
+- Enhanced version detection to check target repository and increment properly
+- Improved LLM placeholder replacement with additive version history
+- Consistent command counting throughout export process and documentation
+
+**Bug Fixes**:
+- Resolved command count inconsistency in README template vs export output
+- Fixed version replacement to be additive rather than replacement-based
+- Corrected export statistics display to match actual command count
+
+**Documentation**:
+- Updated README template with accurate 118 command count
+- Enhanced version history to preserve previous releases
+- Improved export documentation consistency
+
+### v1.0.0 (2025-08-14)
+
+**Export Statistics**:
+- **118 Commands**: Complete workflow orchestration system
+- **21 Hooks**: Claude Code automation and workflow hooks  
+- **5 Scripts**: Infrastructure and development environment scripts
+
+**Major Changes**:
+- **Enhanced Export System**: Fixed LLM placeholder replacement for proper version generation
+- **Improved README Processing**: Intelligent version information generation with consistent counting
+- **Template Processing**: Proper template-to-final-README conversion with dynamic content
+- **Version Format**: Maintained v1.x versioning as requested for consistency
+
+**Technical Improvements**:
+- Fixed LLM_VERSION placeholder replacement in README generation
+- Enhanced export statistics tracking with accurate command counting
+- Improved error handling in template processing
+- Consistent version numbering in v1.x format
+
+**Bug Fixes**:
+- Resolved README template placeholder not being replaced with actual content
+- Fixed export command to properly process templates instead of just copying
+- Corrected version information display with consistent command counts
+- Addressed version format concerns (keeping v1.x instead of date-based)
+
+**Documentation**:
+- Updated export workflow documentation with accurate statistics
+- Enhanced template system documentation
+- Improved troubleshooting guides for export issues
 
 ---
 
