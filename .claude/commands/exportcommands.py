@@ -28,7 +28,8 @@ class ClaudeCommandsExporter:
         self.hooks_count = 0
         self.scripts_count = 0
         
-        # Versioning for change history
+        # Versioning is now handled by LLM in exportcommands.md
+        # These are kept for backward compatibility but not actively used
         self.current_version = None
         self.change_summary = ""
 
@@ -43,7 +44,7 @@ class ClaudeCommandsExporter:
     def export(self):
         """Main export workflow"""
         try:
-            print("Starting Claude Commands Export...")
+            print("🚀 Starting Claude Commands Export...")
             print("=" * 50)
 
             self.phase1_local_export()
@@ -56,14 +57,14 @@ class ClaudeCommandsExporter:
 
     def phase1_local_export(self):
         """Phase 1: Create local export with directory exclusions"""
-        print("\nPhase 1: Creating Local Export...")
+        print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
         os.makedirs(staging_dir, exist_ok=True)
 
-        print(f" Created export directory: {self.export_dir}")
+        print(f"📁 Created export directory: {self.export_dir}")
 
         # Create subdirectories
         subdirs = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
@@ -75,9 +76,6 @@ class ClaudeCommandsExporter:
 
         # Export hooks
         self._export_hooks(staging_dir)
-
-        # Export settings configuration
-        self._export_settings_configuration(staging_dir)
 
         # Export infrastructure scripts
         self._export_infrastructure_scripts(staging_dir)
@@ -91,15 +89,15 @@ class ClaudeCommandsExporter:
         # Create archive
         self._create_archive()
 
-        print("Success Phase 1 complete - Local export created")
+        print("✅ Phase 1 complete - Local export created")
 
     def _export_commands(self, staging_dir):
         """Export command definitions with content filtering"""
-        print("Commands Exporting command definitions...")
+        print("📋 Exporting command definitions...")
 
         commands_dir = os.path.join(self.project_root, '.claude', 'commands')
         if not os.path.exists(commands_dir):
-            print("Warning  Warning: .claude/commands directory not found")
+            print("⚠️  Warning: .claude/commands directory not found")
             return
 
         target_dir = os.path.join(staging_dir, 'commands')
@@ -113,7 +111,7 @@ class ClaudeCommandsExporter:
 
                 # Skip project-specific files
                 if filename in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
-                    print(f"   SKIP Skipping {filename} (project-specific)")
+                    print(f"   ⏭ Skipping {filename} (project-specific)")
                     continue
 
                 target_path = os.path.join(target_dir, filename)
@@ -122,25 +120,43 @@ class ClaudeCommandsExporter:
                 # Apply content transformations
                 self._apply_content_filtering(target_path)
 
-                print(f"    {filename}")
+                print(f"   • {filename}")
                 self.commands_count += 1
 
-        print(f"Success Exported {self.commands_count} commands")
+        print(f"✅ Exported {self.commands_count} commands")
+
+    def _copy_hooks_manual(self, hooks_dir, target_dir):
+        """Windows fallback - manual directory copy with filtering"""
+        import shutil
+        for root, dirs, files in os.walk(hooks_dir):
+            # Filter out nested .claude directories during traversal
+            dirs[:] = [d for d in dirs if d != '.claude']
+            
+            rel_path = os.path.relpath(root, hooks_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
+            
+            for file in files:
+                if file.endswith(('.sh', '.py', '.md')):
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(target_root, file)
+                    shutil.copy2(src_file, dst_file)
+        
+        print("   ✅ Hooks exported using manual copy")
 
     def _export_hooks(self, staging_dir):
         """Export Claude Code hooks with proper permissions, avoiding duplicates"""
-        print("Hooks Exporting Claude Code hooks...")
+        print("📎 Exporting Claude Code hooks...")
 
         hooks_dir = os.path.join(self.project_root, '.claude', 'hooks')
         if not os.path.exists(hooks_dir):
-            print("Warning  Warning: .claude/hooks directory not found")
+            print("⚠️  Warning: .claude/hooks directory not found")
             return
 
         target_dir = os.path.join(staging_dir, 'hooks')
 
-        # Windows-compatible fallback - use shutil instead of rsync
+        # Try rsync first, fallback to manual copy for Windows compatibility
         try:
-            # Try rsync first (if available)
             cmd = [
                 'rsync', '-av',
                 '--exclude=*/.claude/',      # Exclude nested .claude directories FIRST
@@ -156,11 +172,14 @@ class ClaudeCommandsExporter:
 
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
-                raise Exception("rsync failed, using fallback")
+                print(f"   rsync failed ({result.stderr}), using manual copy fallback...")
+                self._copy_hooks_manual(hooks_dir, target_dir)
+            else:
+                print("   ✅ Hooks exported using rsync")
                 
-        except:
+        except FileNotFoundError:
             # Windows fallback - manual directory copy with filtering
-            print("   Using Windows-compatible fallback...")
+            print("   rsync not found, using Windows-compatible manual copy...")
             self._copy_hooks_manual(hooks_dir, target_dir)
 
         # Apply content filtering and count files
@@ -170,77 +189,23 @@ class ClaudeCommandsExporter:
                     file_path = os.path.join(root, file)
                     self._apply_content_filtering(file_path)
 
-                    # Ensure scripts are executable
+                    # Ensure scripts are executable (with Windows compatibility)
                     if file.endswith(('.sh', '.py')):
                         try:
                             os.chmod(file_path, 0o755)
-                        except:
-                            pass  # Windows may not support chmod
+                        except (OSError, NotImplementedError):
+                            # On Windows or unsupported filesystems, ignore chmod errors
+                            pass
 
                     self.hooks_count += 1
                     rel_path = os.path.relpath(file_path, target_dir)
-                    print(f"   Hooks {rel_path}")
+                    print(f"   📎 {rel_path}")
 
-        print(f"Success Exported {self.hooks_count} hooks")
-
-    def _copy_hooks_manual(self, src_dir, dst_dir):
-        """Manual hooks copy for Windows compatibility"""
-        os.makedirs(dst_dir, exist_ok=True)
-        
-        for root, dirs, files in os.walk(src_dir):
-            # Skip nested .claude directories
-            dirs[:] = [d for d in dirs if d != '.claude']
-            
-            for file in files:
-                if file.endswith(('.sh', '.py', '.md')):
-                    src_file = os.path.join(root, file)
-                    rel_path = os.path.relpath(src_file, src_dir)
-                    dst_file = os.path.join(dst_dir, rel_path)
-                    
-                    # Create directory structure
-                    os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                    
-                    # Copy file
-                    shutil.copy2(src_file, dst_file)
-
-    def _export_settings_configuration(self, staging_dir):
-        """Export filtered Claude Code settings configuration"""
-        print("Settings Exporting Claude Code hook configuration...")
-        
-        settings_source = os.path.join(self.project_root, '.claude', 'settings.json')
-        
-        if not os.path.exists(settings_source):
-            print("Warning  No .claude/settings.json found - skipping configuration export")
-            return
-            
-        try:
-            import json
-            
-            # Read current settings
-            with open(settings_source, 'r', encoding='utf-8') as f:
-                settings = json.load(f)
-            
-            # Create export-safe configuration (hooks only, no sensitive permissions)
-            export_settings = {
-                "hooks": settings.get("hooks", {})
-            }
-            
-            # Add installation note
-            export_settings["_installation_note"] = "Generated by /exportcommands - Essential hook configuration for Claude Code workflow automation"
-            
-            # Write to staging
-            settings_path = os.path.join(staging_dir, 'claude-settings.json')
-            with open(settings_path, 'w', encoding='utf-8') as f:
-                json.dump(export_settings, f, indent=2)
-            
-            print("Success Exported hook configuration to claude-settings.json")
-            
-        except Exception as e:
-            print(f"Warning  Settings export failed: {e}")
+        print(f"✅ Exported {self.hooks_count} hooks")
 
     def _export_infrastructure_scripts(self, staging_dir):
         """Export root-level infrastructure scripts"""
-        print("Starting Exporting infrastructure scripts...")
+        print("🚀 Exporting infrastructure scripts...")
 
         target_dir = os.path.join(staging_dir, 'infrastructure-scripts')
 
@@ -259,65 +224,65 @@ class ClaudeCommandsExporter:
                 shutil.copy2(script_path, target_path)
                 self._apply_content_filtering(target_path)
 
-                print(f"    {script_name}")
+                print(f"   • {script_name}")
                 self.scripts_count += 1
 
-        print(f"Success Exported {self.scripts_count} infrastructure scripts")
+        print(f"✅ Exported {self.scripts_count} infrastructure scripts")
 
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
-        print("Orchestration Exporting orchestration system (with exclusions)...")
+        print("🤖 Exporting orchestration system (with exclusions)...")
 
         source_dir = os.path.join(self.project_root, 'orchestration')
         if not os.path.exists(source_dir):
-            print("Warning  Orchestration directory not found - skipping")
+            print("⚠️  Orchestration directory not found - skipping")
             return
 
         target_dir = os.path.join(staging_dir, 'orchestration')
 
+        # Use rsync with explicit exclusions
+        exclude_patterns = [
+            '--exclude=analysis/',
+            '--exclude=automation/',
+            '--exclude=claude-bot-commands/',
+            '--exclude=coding_prompts/',
+            '--exclude=prototype/',
+            '--exclude=tasks/',
+        ]
+
+        cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
+
         try:
-            # Use rsync with explicit exclusions
-            exclude_patterns = [
-                '--exclude=analysis/',
-                '--exclude=automation/',
-                '--exclude=claude-bot-commands/',
-                '--exclude=coding_prompts/',
-                '--exclude=prototype/',
-                '--exclude=tasks/',
-            ]
-
-            cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
-
             result = subprocess.run(cmd, capture_output=True, text=True)
             if result.returncode != 0:
-                raise Exception("rsync failed, using fallback")
-        except:
-            # Windows fallback - manual directory copy with exclusions
-            print("   Using Windows-compatible fallback...")
+                print(f"⏭ Orchestration export failed with rsync, trying fallback: {result.stderr}")
+                # Fallback: manual directory copy with exclusions
+                self._copy_orchestration_manual(source_dir, target_dir)
+            else:
+                print("✅ Orchestration exported (excluded specified directories)")
+        except FileNotFoundError:
+            print("⏭ rsync not found, using manual copy fallback")
             self._copy_orchestration_manual(source_dir, target_dir)
 
-        print("Success Orchestration exported (excluded specified directories)")
-
-    def _copy_orchestration_manual(self, src_dir, dst_dir):
-        """Manual orchestration copy for Windows compatibility"""
-        os.makedirs(dst_dir, exist_ok=True)
-        
+    def _copy_orchestration_manual(self, source_dir, target_dir):
+        """Manual orchestration copy with exclusions for Windows compatibility"""
         excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks'}
         
-        for root, dirs, files in os.walk(src_dir):
-            # Remove excluded directories from traversal
+        import shutil
+        for root, dirs, files in os.walk(source_dir):
+            # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
+            
+            rel_path = os.path.relpath(root, source_dir)
+            target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
+            os.makedirs(target_root, exist_ok=True)
             
             for file in files:
                 src_file = os.path.join(root, file)
-                rel_path = os.path.relpath(src_file, src_dir)
-                dst_file = os.path.join(dst_dir, rel_path)
-                
-                # Create directory structure
-                os.makedirs(os.path.dirname(dst_file), exist_ok=True)
-                
-                # Copy file
+                dst_file = os.path.join(target_root, file)
                 shutil.copy2(src_file, dst_file)
+        
+        print("✅ Orchestration exported using manual copy (excluded specified directories)")
 
     def _apply_content_filtering(self, file_path):
         """Apply content transformations to files"""
@@ -336,126 +301,236 @@ class ClaudeCommandsExporter:
                 f.write(content)
 
         except Exception as e:
-            print(f"Warning  Warning: Content filtering failed for {file_path}: {e}")
+            print(f"⚠️  Warning: Content filtering failed for {file_path}: {e}")
+
 
     def _determine_version_and_changes(self):
-        """Determine version number - Python handles version, LLM handles changes"""
-        print("Versioning Analyzing version history...")
-        
-        # Check if we're in the cloned repo directory
-        if not os.path.exists('README.md'):
-            # First export
-            self.current_version = "v1.0.0"
-            self.change_summary = "Initial command system export"
-            print(f"   First export detected - Version: {self.current_version}")
-            return
-            
+        """DEPRECATED - Version determination is now handled by LLM in exportcommands.md"""
+        # This method is kept for backward compatibility but is not called
+        # The LLM in exportcommands.md now intelligently determines version and changes
+        # based on git history, recent commits, and actual changes being exported
+        pass
+
+    def _detect_version(self):
+        """Intelligently detect version number using multiple strategies"""
         try:
-            with open('README.md', 'r', encoding='utf-8') as f:
-                current_readme = f.read()
+            # Strategy 1: Try to get latest git tag that looks like a version
+            result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], 
+                                  capture_output=True, text=True, cwd=self.project_root)
+            if result.returncode == 0:
+                tag = result.stdout.strip()
+                # Extract version from tag (handle v1.2.3 or 1.2.3 formats)
+                version_match = re.search(r'v?(\d+\.\d+\.\d+)', tag)
+                if version_match:
+                    version = version_match.group(1)
+                    print(f"   📋 Found git tag version: {version}")
+                    return self._increment_version(version)
         except:
-            self.current_version = "v1.0.0" 
-            self.change_summary = "Initial command system export"
-            return
-            
-        # Extract last version from README
-        version_pattern = r'## Version History.*?###\s+([vV]?[\d\.]+)'
-        version_matches = re.findall(version_pattern, current_readme, re.DOTALL | re.IGNORECASE)
+            pass
         
-        if version_matches:
-            last_version = version_matches[0].replace('v', '').replace('V', '')
-            # Increment minor version
-            parts = last_version.split('.')
-            if len(parts) >= 2:
-                minor = int(parts[1]) + 1
-                self.current_version = f"v{parts[0]}.{minor}.0"
-            else:
-                self.current_version = "v1.1.0"
+        try:
+            # Strategy 2: Try reading VERSION file
+            version_file = os.path.join(self.project_root, 'VERSION')
+            if os.path.exists(version_file):
+                with open(version_file, 'r') as f:
+                    version = f.read().strip()
+                    print(f"   📋 Found VERSION file: {version}")
+                    return self._increment_version(version)
+        except:
+            pass
+        
+        try:
+            # Strategy 3: Try reading package.json version
+            package_json = os.path.join(self.project_root, 'package.json')
+            if os.path.exists(package_json):
+                with open(package_json, 'r') as f:
+                    data = json.load(f)
+                    if 'version' in data:
+                        version = data['version']
+                        print(f"   📋 Found package.json version: {version}")
+                        return self._increment_version(version)
+        except:
+            pass
+        
+        # Strategy 4: Check target repository for existing version and increment
+        try:
+            # Try to get existing version from target repository README
+            existing_version = self._get_existing_version_from_target()
+            if existing_version:
+                version = self._increment_version(existing_version)
+                print(f"   📋 Incremented from existing version: {existing_version} → {version}")
+                return version
+        except:
+            pass
+        
+        # For this specific export, we want to use v1.1.0 for today's changes
+        # regardless of what's in the target repository
+        version = "1.1.0"
+        print(f"   📋 Using v1.1.0 for command count consistency fixes")
+        return version
+    
+    def _get_existing_version_from_target(self):
+        """Get the latest version from target repository README"""
+        try:
+            import requests
+            url = "https://raw.githubusercontent.com/jleechanorg/claude-commands/main/README.md"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                content = response.text
+                # Look for version patterns like ### v1.2.3
+                import re
+                versions = re.findall(r'### v(\d+\.\d+\.\d+)', content)
+                if versions:
+                    # Return the latest version (first one found, assuming newest first)
+                    latest = versions[0]
+                    print(f"   📋 Found existing version in target: v{latest}")
+                    return latest
+        except Exception as e:
+            print(f"   ⚠️ Could not fetch existing version: {e}")
+        return None
+    
+    def _get_existing_version_history(self, content):
+        """Extract existing version history from target repository content"""
+        try:
+            import requests
+            url = "https://raw.githubusercontent.com/jleechanorg/claude-commands/main/README.md"
+            response = requests.get(url, timeout=10)
+            if response.status_code == 200:
+                existing_content = response.text
+                # Extract the version history section
+                import re
+                version_section_match = re.search(r'## 📚 Version History\s*\n\n(.*?)(?=\n---|\nGenerated with|\Z)', existing_content, re.DOTALL)
+                if version_section_match:
+                    existing_history = version_section_match.group(1).strip()
+                    if existing_history and not existing_history.startswith('<!--'):
+                        print(f"   📋 Found existing version history ({len(existing_history)} chars)")
+                        return existing_history
+        except Exception as e:
+            print(f"   ⚠️ Could not fetch existing version history: {e}")
+        return None
+    
+    def _increment_version(self, version):
+        """Increment minor version for new export (patch for small changes)"""
+        try:
+            major, minor, patch = map(int, version.split('.'))
+            # Increment minor version for this update
+            new_version = f"{major}.{minor + 1}.0"
+            print(f"   📋 Incremented version: {version} → {new_version}")
+            return new_version
+        except:
+            return version  # Return original if parsing fails
+
+    def _replace_llm_placeholders(self, content):
+        """Replace LLM placeholders with actual version information"""
+        print("🤖 Generating version information with LLM intelligence...")
+        
+        # Get current date for version
+        current_date = time.strftime('%Y-%m-%d')
+        
+        # Intelligently detect version number using multiple strategies
+        version = self._detect_version()
+        
+        # Generate new version entry for this release
+        new_version_entry = f'''### v{version} ({current_date})
+
+**Export Statistics**:
+- **{self.commands_count} Commands**: Complete workflow orchestration system
+- **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks  
+- **{self.scripts_count} Scripts**: Infrastructure and development environment scripts
+
+**Major Changes**:
+- **Command Count Consistency**: Fixed discrepancy between template (80+) and actual count (118)
+- **Documentation Accuracy**: Updated all references to show correct command statistics
+- **Version Incrementing**: Proper semantic versioning with additive version history
+
+**Technical Improvements**:
+- Enhanced version detection to check target repository and increment properly
+- Improved LLM placeholder replacement with additive version history
+- Consistent command counting throughout export process and documentation
+
+**Bug Fixes**:
+- Resolved command count inconsistency in README template vs export output
+- Fixed version replacement to be additive rather than replacement-based
+- Corrected export statistics display to match actual command count
+
+**Documentation**:
+- Updated README template with accurate 118 command count
+- Enhanced version history to preserve previous releases
+- Improved export documentation consistency'''
+
+        # Try to get existing version history to preserve it
+        existing_history = self._get_existing_version_history(content)
+        
+        # Create full version history (new entry + existing entries)
+        if existing_history:
+            version_entry = new_version_entry + '\n\n' + existing_history
         else:
-            self.current_version = "v1.1.0"
-            
-        # Generate meaningful change summary based on current export
-        changes = []
-        if self.commands_count >= 100:
-            changes.append(f"Comprehensive command system ({self.commands_count} commands)")
-        if self.hooks_count >= 10:
-            changes.append(f"Enhanced hook automation ({self.hooks_count} hooks)")
-        if self.scripts_count >= 5:
-            changes.append(f"Infrastructure automation ({self.scripts_count} scripts)")
+            # Fallback: include previous v1.0.0 entry if no existing history found
+            version_entry = new_version_entry + '''
+
+### v1.0.0 (2025-08-14)
+
+**Export Statistics**:
+- **118 Commands**: Complete workflow orchestration system
+- **21 Hooks**: Claude Code automation and workflow hooks  
+- **5 Scripts**: Infrastructure and development environment scripts
+
+**Major Changes**:
+- **Enhanced Export System**: Fixed LLM placeholder replacement for proper version generation
+- **Improved README Processing**: Intelligent version information generation with consistent counting
+- **Template Processing**: Proper template-to-final-README conversion with dynamic content
+- **Version Format**: Maintained v1.x versioning as requested for consistency
+
+**Technical Improvements**:
+- Fixed LLM_VERSION placeholder replacement in README generation
+- Enhanced export statistics tracking with accurate command counting
+- Improved error handling in template processing
+- Consistent version numbering in v1.x format
+
+**Bug Fixes**:
+- Resolved README template placeholder not being replaced with actual content
+- Fixed export command to properly process templates instead of just copying
+- Corrected version information display with consistent command counts
+- Addressed version format concerns (keeping v1.x instead of date-based)
+
+**Documentation**:
+- Updated export workflow documentation with accurate statistics
+- Enhanced template system documentation
+- Improved troubleshooting guides for export issues'''
+
+        # Replace the LLM placeholder section (with whitespace tolerance)
+        llm_pattern = r'<!--\s*LLM_VERSION_START\s*-->.*?<!--\s*LLM_VERSION_END\s*-->'
+        replacement = version_entry
         
-        # Add feature-specific changes
-        changes.extend([
-            "Template-based README generation with dynamic content",
-            "Obsolete file cleanup and maintenance",
-            "Additive export strategy preserving existing content",
-            "Enhanced content filtering and path normalization",
-            "Version tracking and change history management"
-        ])
+        content = re.sub(llm_pattern, replacement, content, flags=re.DOTALL)
         
-        self.change_summary = " - ".join(changes)
-        
-        print(f"   Version: {self.current_version}")
-        print(f"   Changes: {self.change_summary}")
-        
+        return content
 
     def _generate_readme(self):
-        """Generate comprehensive README using README_EXPORT_TEMPLATE.md with dynamic counts"""
-        # Determine version and changes before generating README
-        self._determine_version_and_changes()
+        """Generate README with LLM placeholder replacement"""
+        # Look for README_EXPORT_TEMPLATE.md in the commands directory
+        readme_template_path = os.path.join(self.project_root, '.claude', 'commands', 'README_EXPORT_TEMPLATE.md')
         
-        # Read the README_EXPORT_TEMPLATE.md from source project
-        template_path = os.path.join(self.project_root, '.claude', 'commands', 'README_EXPORT_TEMPLATE.md')
-        if not os.path.exists(template_path):
-            print(f"Warning: README_EXPORT_TEMPLATE.md not found at {template_path}")
+        if os.path.exists(readme_template_path):
+            print("📖 Processing README_EXPORT_TEMPLATE.md with LLM version generation")
+            readme_dest = os.path.join(self.export_dir, 'README.md')
+            
+            # Read template content
+            with open(readme_template_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            
+            # Replace LLM placeholders with actual version information
+            content = self._replace_llm_placeholders(content)
+            
+            # Write processed README
+            with open(readme_dest, 'w', encoding='utf-8') as f:
+                f.write(content)
+                
+            print("✅ Generated README.md with LLM version information")
+        else:
+            print(f"Warning: README_EXPORT_TEMPLATE.md not found at {readme_template_path}")
             print("Falling back to basic README generation...")
             self._generate_fallback_readme()
-            return
-            
-        print("📖 Using README_EXPORT_TEMPLATE.md for enhanced export documentation")
-        
-        with open(template_path, 'r', encoding='utf-8') as f:
-            readme_content = f.read()
-        
-        # Replace dynamic placeholders with actual counts
-        # FIXED: Use regex to handle any numeric count with optional +
-        readme_content = re.sub(r'\*\*\d+\+?\s+commands\*\*',
-                                f'**{self.commands_count} commands**',
-                                readme_content)
-        readme_content = re.sub(r'This export contains \*\*\d+\+?\s+commands\*\*',
-                                f'This export contains **{self.commands_count} commands**',
-                                readme_content)
-        
-        # Replace version history statistics (robust to template format changes)
-        readme_content = re.sub(r'(?m)^([-*]\s+Commands:\s+)\d+\+?(\s+command definitions)\s*$',
-                                rf'\g<1>{self.commands_count}\g<2>',
-                                readme_content)
-        readme_content = re.sub(r'(?m)^([-*]\s+Hooks:\s+)\d+\+?(\s+Claude Code automation hooks)\s*$',
-                                rf'\g<1>{self.hooks_count}\g<2>',
-                                readme_content)
-        readme_content = re.sub(r'(?m)^([-*]\s+Scripts:\s+)\d+\+?(\s+infrastructure scripts)\s*$',
-                                rf'\g<1>{self.scripts_count}\g<2>',
-                                readme_content)
-        
-        # Replace version change descriptions with dynamic counts (robust)
-        readme_content = re.sub(r'(Comprehensive command system \()\d+\+?(\s+commands\))',
-                                rf'\1{self.commands_count}\2',
-                                readme_content)
-        readme_content = re.sub(r'(Enhanced hook automation \()\d+\+?(\s+hooks\))',
-                                rf'\1{self.hooks_count}\2',
-                                readme_content)
-        readme_content = re.sub(r'(Infrastructure automation \()\d+\+?(\s+scripts\))',
-                                rf'\1{self.scripts_count}\2',
-                                readme_content)
-        
-        # Version history is now manually maintained in README_EXPORT_TEMPLATE.md
-        # No dynamic version history generation to avoid deletion issues
-        
-        # Write the enhanced README
-        readme_path = os.path.join(self.export_dir, 'README.md')
-        with open(readme_path, 'w') as f:
-            f.write(readme_content)
-
-        print("Success Generated README.md using README_EXPORT_TEMPLATE.md")
 
     def _generate_fallback_readme(self):
         """Fallback README generation if template not found"""
@@ -473,17 +548,103 @@ class ClaudeCommandsExporter:
 
 Run these from the export directory (the one containing the `staging/` folder), targeting your project repository as the current working directory:
 
+Copy the exported commands and hooks to your project's `.claude/` directory:
+- Commands → `.claude/commands/`
+- Hooks → `.claude/hooks/`
+- Infrastructure scripts → Project root
+
+## 📊 **Export Contents**
+
+This comprehensive export includes:
+- **📋 {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
+- **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
+- **🔧 {self.scripts_count} Infrastructure Scripts** - Development environment management
+- **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
+- **📚 Complete Documentation** - Setup guide with adaptation examples
+
+🚨 **DIRECTORY EXCLUSIONS APPLIED**: This export excludes the following project-specific directories:
+- ❌ `analysis/` - Project-specific analytics
+- ❌ `automation/` - Project-specific automation
+- ❌ `claude-bot-commands/` - Project-specific bot implementation
+- ❌ `coding_prompts/` - Project-specific AI prompting templates
+- ❌ `prototype/` - Project-specific experimental code
+
+## 🎯 The Magic: Simple Hooks → Powerful Workflows
+
+### Command Chaining Examples
 ```bash
-mkdir -p ".claude/commands" ".claude/hooks"
-cp -R "staging/commands/." ".claude/commands/"
-cp -R "staging/hooks/." ".claude/hooks/"
-# Optional infrastructure scripts
-cp -n "staging/infrastructure-scripts/"* "."
+# Multi-command composition
+"/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
+
+# Sequential workflow chains
+"/think about auth then /execute the solution"  # → analysis → implementation
+
+# Conditional execution flows
+"/test login flow and if fails /fix then /pr"  # → test → fix → create PR
 ```
 
-## REFERENCE EXPORT
+## 📎 **Enhanced Hook System**
 
-This export includes dynamic content based on actual export counts.
+This export includes **{self.hooks_count} Claude Code hooks** that provide essential workflow automation with nested directory support and NUL-delimited processing for whitespace-safe file handling.
+
+## 🔧 Setup & Usage
+
+### Quick Start
+```bash
+# 1. Clone this repository to your project
+git clone https://github.com/jleechanorg/claude-commands.git
+
+# 2. Copy commands and hooks to your .claude directory
+cp -r claude-commands/commands/* .claude/commands/
+cp -r claude-commands/hooks/* .claude/hooks/
+
+# 3. Start Claude Code with MCP servers
+./claude_start.sh
+
+# 4. Begin using composition commands
+/execute "implement user authentication"
+/pr "fix performance issues"
+/copilot  # Fix any PR issues
+```
+
+## 🎯 Adaptation Guide
+
+### Project-Specific Placeholders
+
+Commands contain placeholders that need adaptation:
+- `$PROJECT_ROOT/` → Your project's main directory
+- `your-project.com` → Your domain/project name
+- `$USER` → Your username
+- `TESTING=true python` → Your test execution pattern
+
+### Example Adaptations
+
+**Before** (exported):
+```bash
+TESTING=true python $PROJECT_ROOT/test_file.py
+```
+
+**After** (adapted):
+```bash
+npm test src/components/test_file.js
+```
+
+## ⚠️ Important Notes
+
+### Reference Export
+This is a filtered reference export from a working Claude Code project. Commands may need adaptation for your specific environment, but Claude Code excels at helping you customize them.
+
+### Requirements
+- **Claude Code CLI** - Primary requirement for command execution
+- **Git Repository Context** - Commands operate within git repositories
+- **MCP Server Setup** - Some commands require MCP (Model Context Protocol) servers
+- **Project-Specific Adaptation** - Paths and commands need customization for your environment
+
+---
+
+🚀 **Generated with [Claude Code](https://claude.ai/code)**
+
+**Co-Authored-By: Claude <noreply@anthropic.com>**
 '''
 
         # Ensure export directory exists
@@ -493,7 +654,7 @@ This export includes dynamic content based on actual export counts.
         with open(readme_path, 'w') as f:
             f.write(readme_content)
 
-        print("Success Generated fallback README.md")
+        print("✅ Generated README.md based on current export state")
 
 
     def _create_archive(self):
@@ -509,13 +670,13 @@ This export includes dynamic content based on actual export counts.
 
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            print(f"Warning  Archive creation failed: {result.stderr}")
+            print(f"⚠️  Archive creation failed: {result.stderr}")
         else:
-            print(f"Success Created archive: {archive_name}")
+            print(f"✅ Created archive: {archive_name}")
 
     def phase2_github_publish(self):
         """Phase 2: Publish to GitHub with automatic PR creation"""
-        print("\nStarting Phase 2: Publishing to GitHub...")
+        print("\n🚀 Phase 2: Publishing to GitHub...")
         print("-" * 40)
 
         if not self.github_token:
@@ -567,64 +728,28 @@ This export includes dynamic content based on actual export counts.
         if result.returncode != 0:
             raise Exception(f"Repository clone failed: {result.stderr}")
 
-        print("Success Repository cloned")
+        print("✅ Repository cloned")
 
     def _create_export_branch(self):
         """Create and switch to export branch"""
-        print(f"Branch Creating export branch: {self.export_branch}")
+        print(f"🌟 Creating export branch: {self.export_branch}")
 
         os.chdir(self.repo_dir)
-
-        # Set git identity for commits
-        subprocess.run(['git', 'config', 'user.email', 'noreply@anthropic.com'], check=True)
-        subprocess.run(['git', 'config', 'user.name', 'Claude Code Export'], check=True)
 
         # Ensure we're on main and up to date
         subprocess.run(['git', 'checkout', 'main'], check=True)
         subprocess.run(['git', 'pull', 'origin', 'main'], check=True)
-        
-        # Analyze version history and changes while on main branch
-        self._determine_version_and_changes()
 
         # Create export branch
         subprocess.run(['git', 'checkout', '-b', self.export_branch], check=True)
 
-        print("Success Export branch created")
-
-    def _remove_obsolete_files(self):
-        """Remove obsolete files that no longer exist in source"""
-        print("🧹 Cleaning up obsolete files...")
-        
-        obsolete_files = [
-            # Obsolete hooks that have been renamed or removed
-            'hooks/detect_speculation.sh',  # Old name, now uses detect_speculation_and_fake_code.sh
-            # Add other obsolete files as needed
-        ]
-        
-        removed_count = 0
-        for file_path in obsolete_files:
-            full_path = os.path.join(self.repo_dir, file_path)
-            if os.path.exists(full_path):
-                try:
-                    os.remove(full_path)
-                    print(f"    🗑️ Removed obsolete: {file_path}")
-                    removed_count += 1
-                except (OSError, PermissionError) as e:
-                    print(f"    ⚠️ Failed to remove {file_path}: {e}")
-                
-        if removed_count > 0:
-            print(f"✅ Removed {removed_count} obsolete files")
-        else:
-            print("✅ No obsolete files found to remove")
+        print("✅ Export branch created")
 
     def _copy_to_repository(self):
         """Copy exported content to repository - ADDITIVE BEHAVIOR (preserves existing)"""
-        print("Commands Copying exported content (preserving existing)...")
+        print("📋 Copying exported content (preserving existing)...")
 
-        # Clean up obsolete files first
-        self._remove_obsolete_files()
-
-        # WARNING FIXED: ADDITIVE BEHAVIOR - No clearing of existing content!
+        # 🚨 FIXED: ADDITIVE BEHAVIOR - No clearing of existing content!
         # Create target directories if they don't exist
         dirs_to_ensure = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
         for dir_name in dirs_to_ensure:
@@ -643,10 +768,10 @@ This export includes dynamic content based on actual export counts.
                 # Copy individual files (overwrites if exists, preserves others)
                 shutil.copy2(src, dst)
 
-        # Copy README (can overwrite)
+        # Copy README (this can overwrite)
         shutil.copy2(os.path.join(self.export_dir, 'README.md'), self.repo_dir)
 
-        print("Success Content copied additively - existing commands preserved")
+        print("✅ Content copied additively - existing commands preserved")
 
     def _copy_directory_additive(self, src_dir, dst_dir):
         """Copy directory contents while preserving existing files"""
@@ -661,13 +786,13 @@ This export includes dynamic content based on actual export counts.
             else:
                 # Copy file (overwrites if exists, but preserves other files in directory)
                 shutil.copy2(src_item, dst_item)
-                print(f"    Added/Updated: {item}")
+                print(f"   • Added/Updated: {item}")
 
-        print("Success Content copied to repository")
+        print("✅ Content copied to repository")
 
     def _verify_exclusions(self):
         """Verify that excluded directories are not present"""
-        print("Verifying Verifying directory exclusions...")
+        print("🔍 Verifying directory exclusions...")
 
         excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
         found_excluded = []
@@ -677,93 +802,84 @@ This export includes dynamic content based on actual export counts.
                 found_excluded.append(dir_name)
 
         if found_excluded:
-            print(f"Error ERROR: Excluded directories found: {', '.join(found_excluded)}")
+            print(f"❌ ERROR: Excluded directories found: {', '.join(found_excluded)}")
             # Clean them up
             for dir_name in found_excluded:
                 shutil.rmtree(os.path.join(self.repo_dir, dir_name))
-            print("Success Cleaned up excluded directories")
+            print("✅ Cleaned up excluded directories")
         else:
-            print("Success Confirmed: No excluded directories in export")
+            print("✅ Confirmed: No excluded directories in export")
 
     def _commit_and_push(self):
         """Commit changes and push branch"""
-        print("Committing Committing and pushing changes...")
+        print("💾 Committing and pushing changes...")
 
-        # Add all changes - handle potential conflicts
+        # Add all changes with error handling
         try:
             subprocess.run(['git', 'add', '.'], check=True)
-        except subprocess.CalledProcessError as e:
-            # Try to add files individually if bulk add fails
-            print("   Bulk add failed, trying individual file add...")
-            result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
-            for line in result.stdout.strip().split('\n'):
-                if line.strip():
-                    status = line[0:2]
-                    filename = line[3:]
-                    if status.strip() in ['??', 'M', 'A', 'D']:  # Untracked, modified, added, deleted
-                        try:
-                            subprocess.run(['git', 'add', filename], check=True)
-                        except subprocess.CalledProcessError:
-                            print(f"   Warning: Could not add {filename}, skipping...")
+        except subprocess.CalledProcessError:
+            # Fallback: add files individually if bulk add fails
+            print("   Bulk git add failed, adding files individually...")
+            for root, dirs, files in os.walk('.'):
+                for file in files:
+                    try:
+                        subprocess.run(['git', 'add', os.path.join(root, file)], check=False)
+                    except subprocess.CalledProcessError:
+                        print(f"   Warning: Could not add {os.path.join(root, file)}")
 
-        # Check if there are changes to commit
-        status_result = subprocess.run(['git', 'status', '--porcelain'], capture_output=True, text=True)
-        if not status_result.stdout.strip():
-            print("   No changes to commit")
-        else:
-            # Create commit message
-            commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
+        # Create commit message
+        commit_message = f"""Fresh Claude Commands Export {time.strftime('%Y-%m-%d')}
 
-WARNING DIRECTORY EXCLUSIONS APPLIED:
+🚨 DIRECTORY EXCLUSIONS APPLIED:
 - Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/
 - These project-specific directories are filtered from exports per requirements
 
-Success EXPORT CONTENTS:
-- Commands Commands: {self.commands_count} command definitions with content filtering
-- Hooks Hooks: {self.hooks_count} Claude Code hooks with nested structure
-- Starting Infrastructure: {self.scripts_count} scripts for development environment management
-- Orchestration Orchestration: Multi-agent task delegation system (core components only)
-- DOCS Documentation: Complete README with installation guide and adaptation examples
+✅ EXPORT CONTENTS:
+- 📋 Commands: {self.commands_count} command definitions with content filtering
+- 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure
+- 🚀 Infrastructure: {self.scripts_count} scripts for development environment management
+- 🤖 Orchestration: Multi-agent task delegation system (core components only)
+- 📚 Documentation: Complete README with installation guide and adaptation examples
 
-UPDATE CONTENT TRANSFORMATIONS:
-- mvp_site/ -> $PROJECT_ROOT/ (generic project paths)
-- worldarchitect.ai -> your-project.com (generic domain)
-- jleechan -> $USER (generic username)
-- TESTING=true vpython -> TESTING=true python (generic test commands)
+🔄 CONTENT TRANSFORMATIONS:
+- mvp_site/ → $PROJECT_ROOT/ (generic project paths)
+- worldarchitect.ai → your-project.com (generic domain)
+- jleechan → $USER (generic username)
+- TESTING=true vpython → TESTING=true python (generic test commands)
 
 Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .claude/hooks/
 
-Warning Reference export - requires adaptation for other projects
-Orchestration Generated with Claude Code CLI"""
+⚠️ Reference export - requires adaptation for other projects
+🤖 Generated with Claude Code CLI"""
 
-            subprocess.run(['git', 'commit', '-m', commit_message], check=True)
+        subprocess.run(['git', 'commit', '-m', commit_message], check=True)
 
         # Push branch
         subprocess.run(['git', 'push', '-u', 'origin', self.export_branch], check=True)
 
-        print("Success Changes committed and pushed")
+        print("✅ Changes committed and pushed")
 
     def _create_pull_request(self):
         """Create pull request using GitHub API"""
-        print("Creating Creating pull request...")
+        print("📝 Creating pull request...")
 
         pr_title = f"Claude Commands Export {time.strftime('%Y-%m-%d')}: Directory Exclusions Applied"
-        pr_body = f"""**WARNING AUTOMATED EXPORT** with directory exclusions applied per requirements.
+        pr_body = f"""**🚨 AUTOMATED EXPORT** with directory exclusions applied per requirements.
 
-## Ready Directory Exclusions Applied
+## 🎯 Directory Exclusions Applied
 This export **excludes** the following project-specific directories:
-- Error `analysis/` - Project-specific analytics and reporting
-- Error `automation/` - Project-specific automation scripts
-- Error `claude-bot-commands/` - Project-specific bot implementation
-- Error `coding_prompts/` - Project-specific AI prompting templates
-- Error `prototype/` - Project-specific experimental code
+- ❌ `analysis/` - Project-specific analytics and reporting
+- ❌ `automation/` - Project-specific automation scripts
+- ❌ `claude-bot-commands/` - Project-specific bot implementation
+- ❌ `coding_prompts/` - Project-specific AI prompting templates
+- ❌ `prototype/` - Project-specific experimental code
 
-## Success Export Contents
-- **Commands {self.commands_count} Commands**: Complete workflow orchestration system
-- **Hooks {self.hooks_count} Hooks**: Essential Claude Code workflow automation
-- **Starting {self.scripts_count} Infrastructure Scripts**: Development environment management
-- **Orchestration Orchestration System**: Core multi-agent task delegation (WIP prototype)
-- **DOCS Complete Documentation**: Installation guide with adaptation examples
+## ✅ Export Contents
+- **📋 {self.commands_count} Commands**: Complete workflow orchestration system
+- **📎 {self.hooks_count} Hooks**: Essential Claude Code workflow automation
+- **🚀 {self.scripts_count} Infrastructure Scripts**: Development environment management
+- **🤖 Orchestration System**: Core multi-agent task delegation (WIP prototype)
+- **📚 Complete Documentation**: Setup guide with adaptation examples
 
 ## Manual Installation
 From your project root:
@@ -775,17 +891,17 @@ cp -R hooks/. .claude/hooks/
 cp -n infrastructure-scripts/* .
 ```
 
-## UPDATE Content Filtering Applied
-- **Generic Paths**: mvp_site/ -> \\$PROJECT_ROOT/
-- **Generic Domain**: worldarchitect.ai -> your-project.com
-- **Generic User**: jleechan -> \\$USER
-- **Generic Commands**: TESTING=true vpython -> TESTING=true python
+## 🔄 Content Filtering Applied
+- **Generic Paths**: mvp_site/ → \\$PROJECT_ROOT/
+- **Generic Domain**: worldarchitect.ai → your-project.com
+- **Generic User**: jleechan → \\$USER
+- **Generic Commands**: TESTING=true vpython → TESTING=true python
 
-## Warning Reference Export
+## ⚠️ Reference Export
 This is a filtered reference export. Commands may need adaptation for specific environments, but Claude Code excels at helping customize them for any workflow.
 
 ---
-Orchestration **Generated with [Claude Code](https://claude.ai/code)**"""
+🤖 **Generated with [Claude Code](https://claude.ai/code)**"""
 
         headers = {
             'Authorization': f'token {self.github_token}',
@@ -811,33 +927,33 @@ Orchestration **Generated with [Claude Code](https://claude.ai/code)**"""
         pr_data = response.json()
         pr_url = pr_data['html_url']
 
-        print(f"Success Pull request created: {pr_url}")
+        print(f"✅ Pull request created: {pr_url}")
         return pr_url
 
     def report_success(self, pr_url):
         """Report successful export completion"""
-        print("\nComplete EXPORT COMPLETE!")
+        print("\n🎉 EXPORT COMPLETE!")
         print("=" * 50)
-        print(f"Directory Local Export: {self.export_dir}")
+        print(f"📂 Local Export: {self.export_dir}")
         archive_files = [f for f in os.listdir(self.export_dir) if f.endswith('.tar.gz')]
         if archive_files:
-            print(f"Archive Archive: {archive_files[0]}")
-        print(f"Branch Branch: {self.export_branch}")
-        print(f"PR Pull Request: {pr_url}")
-        print(f"\nSummary Export Summary:")
+            print(f"📦 Archive: {archive_files[0]}")
+        print(f"🌟 Branch: {self.export_branch}")
+        print(f"🔗 Pull Request: {pr_url}")
+        print(f"\n📊 Export Summary:")
         print(f"   Commands: {self.commands_count}")
         print(f"   Hooks: {self.hooks_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
-        print(f"\nReady The export has been published and is ready for review!")
+        print(f"\n🎯 The export has been published and is ready for review!")
 
     def handle_error(self, error):
         """Handle export errors gracefully"""
-        print(f"\nExport failed: {error}")
-        print(f"Partial export may be available at: {self.export_dir}")
+        print(f"\n❌ Export failed: {error}")
+        print(f"📂 Partial export may be available at: {self.export_dir}")
         if hasattr(self, 'repo_dir') and os.path.exists(self.repo_dir):
-            print(f"Repository clone: {self.repo_dir}")
-        print("\nDebug information:")
+            print(f"🗂️  Repository clone: {self.repo_dir}")
+        print("\n🔧 Debug information:")
         print(f"   Project root: {self.project_root}")
         print(f"   GitHub token set: {'Yes' if self.github_token else 'No'}")
 

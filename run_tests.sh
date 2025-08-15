@@ -390,8 +390,15 @@ run_test() {
         local output_file="$temp_dir/${safe_filename}.output"
         local status_file="$temp_dir/${safe_filename}.status"
 
-        # Set PYTHONPATH to include project root, mvp_site, and .claude/commands for imports
-        export PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site:$PROJECT_ROOT/.claude/commands:${PYTHONPATH:-}"
+        # Set PYTHONPATH to include project root, mvp_site, and .claude/commands for imports (only if they exist)
+        PYTHONPATH_TO_EXPORT="$PROJECT_ROOT"
+        if [ -d "$PROJECT_ROOT/mvp_site" ]; then
+            PYTHONPATH_TO_EXPORT="$PYTHONPATH_TO_EXPORT:$PROJECT_ROOT/mvp_site"
+        fi
+        if [ -d "$PROJECT_ROOT/.claude/commands" ]; then
+            PYTHONPATH_TO_EXPORT="$PYTHONPATH_TO_EXPORT:$PROJECT_ROOT/.claude/commands"
+        fi
+        export PYTHONPATH="$PYTHONPATH_TO_EXPORT:${PYTHONPATH:-}"
         
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then

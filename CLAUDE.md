@@ -138,7 +138,6 @@ Genesis Coder, Prime Mover,
 - **Pattern**: Tool fails → Try alternative method → Configure missing dependencies → NEVER give up
 - **Anti-Pattern**: Tool fails → Provide manual URL → Declare "complete" → User frustration
 - **Scope**: Applies to ALL `/pr`, `/push`, and PR creation workflows
-
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
