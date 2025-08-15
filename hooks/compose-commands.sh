@@ -89,16 +89,25 @@ if [[ -z "$commands" ]]; then
     echo "$input"
     exit 0
 fi
-
 # Remove only the commands that were actually detected using safer approach
 text="$input"
 for cmd in $commands; do
-    # Use literal string replacement with awk to avoid sed escaping issues
-    text=$(echo "$text" | awk -v pattern="$cmd" '{gsub(pattern,""); print}')
+    # Use Python for safer word-boundary aware replacement
+    text=$(echo "$text" | python3 -c "
+import sys
+import re
+text = sys.stdin.read()
+cmd = '$cmd'
+# Escape regex special characters
+escaped_cmd = re.escape(cmd)
+# Remove command with word boundaries
+pattern = r'(^|\s)' + escaped_cmd + r'(\s|$)'
+text = re.sub(pattern, r'\1\2', text)
+print(text, end='')
+")
 done
-
 # Clean up extra whitespace
-text=$(echo "$text" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+text=$(echo "$text" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//' | sed 's/[[:space:]][[:space:]]*/ /g')
 
 # Use actual command count from filtering loop
 command_count=$actual_cmd_count

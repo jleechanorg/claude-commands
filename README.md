@@ -519,7 +519,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting
 
-This export contains **120 commands** that transform Claude Code into:
+This export contains **118 commands** that transform Claude Code into:
 
 1. **Autonomous Development Environment**: Single commands handle complete workflows
 2. **Multi-Agent System**: Parallel task execution with specialized agents
@@ -647,6 +647,33 @@ Transform your development process from manual step-by-step work to autonomous w
 This isn't just command sharing - it's **workflow transformation** through the power of command composition.
 
 ## 📚 Version History
+
+### v1.2.0 (2025-08-14)
+
+**Export Statistics**:
+- **118 Commands**: Complete workflow orchestration system
+- **21 Hooks**: Claude Code automation and workflow hooks  
+- **5 Scripts**: Infrastructure and development environment scripts
+
+**Major Changes**:
+- **Command Count Consistency**: Fixed discrepancy between template (80+) and actual count (118)
+- **Documentation Accuracy**: Updated all references to show correct command statistics
+- **Version Incrementing**: Proper semantic versioning with additive version history
+
+**Technical Improvements**:
+- Enhanced version detection to check target repository and increment properly
+- Improved LLM placeholder replacement with additive version history
+- Consistent command counting throughout export process and documentation
+
+**Bug Fixes**:
+- Resolved command count inconsistency in README template vs export output
+- Fixed version replacement to be additive rather than replacement-based
+- Corrected export statistics display to match actual command count
+
+**Documentation**:
+- Updated README template with accurate 118 command count
+- Enhanced version history to preserve previous releases
+- Improved export documentation consistency
 
 ### v1.1.0 (2025-08-09)
 
