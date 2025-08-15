@@ -48,14 +48,22 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ### Pre-Planning Guidelines Check
 
-**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system through `/guidelines` command composition.
+**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system by calling `/guidelines` directly.
 
-**Execution Flow**:
-1. Call `/guidelines` for comprehensive consultation
-2. Apply guidelines output to inform planning approach
-3. Proceed with planning workflow using guidelines context
+**Direct Command Composition**:
+1. **Execute `/guidelines`**: Call the guidelines command for comprehensive consultation
+2. **Guidelines automatically handles**:
+   - Read CLAUDE.md for current rules, constraints, and protocols (MANDATORY)
+   - Read base guidelines from `docs/pr-guidelines/base-guidelines.md`
+   - Detect PR/branch context using GitHub API, branch name patterns, and fallbacks
+   - Create/read specific guidelines:
+     * PR-specific: `docs/pr-guidelines/{PR_NUMBER}/guidelines.md`
+     * Branch-specific: `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`  
+     * Base-only: `docs/pr-guidelines/base-guidelines.md`
+   - Apply guidelines context to inform planning approach
+3. **Proceed with planning workflow** using guidelines context from `/guidelines` output
 
-**Guidelines Integration**: The `/guidelines` command provides centralized consultation of CLAUDE.md, base guidelines, and PR-specific guidelines with automatic creation of missing PR guidelines.
+**Guidelines Integration**: Direct command composition - `/plan` calls `/guidelines` directly for clean separation of concerns and reliable guidelines consultation.
 
 ## 🚨 PLAN PROTOCOL
 

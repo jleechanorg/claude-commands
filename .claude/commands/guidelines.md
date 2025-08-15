@@ -25,12 +25,12 @@
 **3. PR Context Detection**:
 - **Primary**: Auto-detect PR number from current branch context via GitHub API
 - **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
-- **Fallback 2**: If no PR context, use branch-specific guidelines in `docs/branch-{BRANCH_NAME}/guidelines.md`
+- **Fallback 2**: If no PR context, use branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
 - **Fallback 3**: If outside any PR/branch context, proceed with base guidelines only
 - **Manual Override**: Accept explicit PR number via `/guidelines --pr 1286`
 
 **4. PR-Specific Guidelines Management**:
-- Check for existing `docs/pr{PR_NUMBER}/guidelines.md`
+- Check for existing `docs/pr-guidelines/{PR_NUMBER}/guidelines.md`
 - If missing, create basic PR-specific guidelines template
 - If exists, read and apply PR-specific patterns and learnings
 - Auto-update with new patterns discovered during command execution
@@ -114,7 +114,7 @@
 ✅ **CLAUDE.md**: Read and applied - Current rules, constraints, and protocols understood
 ✅ **Base Guidelines**: Consulted docs/pr-guidelines/base-guidelines.md
 ✅ **PR Context**: Detected PR #{PR_NUMBER} / Branch: {branch_name}
-✅ **PR Guidelines**: Found/Created docs/pr{PR_NUMBER}/guidelines.md
+✅ **PR Guidelines**: Found/Created docs/pr-guidelines/{PR_NUMBER}/guidelines.md
 ✅ **Anti-Patterns**: {count} relevant patterns identified for prevention
 ✅ **Tool Selection**: Hierarchy validated (Serena MCP → Read tool → Bash commands)
 

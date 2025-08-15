@@ -56,14 +56,19 @@
 
 ### Guidelines Integration Protocol
 
-**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system through `/guidelines` command composition.
+**Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system by calling `/guidelines` directly.
 
-**Execution Flow**:
-1. Call `/guidelines` for comprehensive consultation
-2. Apply guidelines output to inform review approach and security analysis
-3. Proceed with enhanced review workflow using guidelines context
+**Direct Command Composition**:
+1. **Execute `/guidelines`**: Call the guidelines command for comprehensive consultation
+2. **Guidelines automatically handles**:
+   - Read CLAUDE.md for current rules, constraints, and protocols (MANDATORY)
+   - Read base guidelines from `docs/pr-guidelines/base-guidelines.md`
+   - Detect PR/branch context using GitHub API, branch name patterns, and fallbacks
+   - Create/read specific guidelines (PR-specific, branch-specific, or base-only)
+   - Apply guidelines context to inform review approach and security analysis
+3. **Proceed with enhanced review workflow** using guidelines context from `/guidelines` output
 
-**Guidelines Integration**: The `/guidelines` command provides centralized consultation of CLAUDE.md, base guidelines, and PR-specific guidelines, enhancing the review process with documented patterns and anti-pattern prevention.
+**Guidelines Integration**: Direct command composition - `/review-enhanced` calls `/guidelines` directly for clean separation of concerns and reliable guidelines consultation.
 
 ### Step 1: Official Review Integration
 **Execute built-in `/review` command first** (via /execute orchestration):

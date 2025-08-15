@@ -382,8 +382,18 @@ Genesis Coder, Prime Mover,
 - **Execution Steps**: 1) Extract technical terms 2) Search Memory MCP 3) Log results transparently 4) Natural integration 5) Capture high-quality learnings
 - **Transparency**: Show "🔍 Searching memory..." → Report "📚 Found X relevant memories" → Indicate "📚 Enhanced with memory context"
 
+🚨 **SLASH COMMAND EXECUTION UNDERSTANDING**: ⚠️ MANDATORY - How slash commands actually work
+- **Command Types**: Two distinct execution patterns exist in the slash command system
+  1. **Universal Composition Commands** (e.g., `/copilot`, `/execute`): Actually call other commands through Claude's natural workflow orchestration
+  2. **Embedded Implementation Commands** (e.g., `/commentcheck`, `/plan`): Embed functionality directly rather than calling other commands
+- **Universal Composition Pattern**: Commands like `/copilot` delegate to `/execute` which then orchestrates other commands intelligently
+- **Documentation vs Execution**: Cross-command references can be either documentation OR actual execution - check implementation context
+- **Working Example**: `/copilot` → calls `/execute` → Claude naturally orchestrates `/commentfetch`, `/fixpr`, `/commentreply`, `/commentcheck`, `/pushl`
+- **Anti-Pattern**: Assuming all cross-command references are documentation-only (like previous `/guidelines` issue)
+- **Verification Method**: Test actual command execution to confirm if composition works or needs embedded implementation
+
 🚨 **MISTAKE PREVENTION SYSTEM**: ⚠️ MANDATORY for `/plan` and `/execute` commands
-- **Guidelines Integration**: Automatically check `docs/pr{PR}/guidelines.md` (PR-specific) and `docs/pr-guidelines/base-guidelines.md` (general patterns) for comprehensive mistake prevention patterns
+- **Guidelines Integration**: Automatically check `docs/pr-guidelines/{PR}/guidelines.md` (PR-specific) and `docs/pr-guidelines/base-guidelines.md` (general patterns) for comprehensive mistake prevention patterns
 - **Anti-Pattern Enforcement**: Reference historical mistakes and apply best practices from documented patterns
 - **Tool Selection Hierarchy**: Serena MCP → Read tool → Bash commands (per established guidelines)
 - **Quality Gates**: Apply evidence-based development, systematic change management, and resource-efficient operations

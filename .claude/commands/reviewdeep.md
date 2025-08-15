@@ -28,11 +28,11 @@ The command executes specialized commands with mandatory MCP integration for com
 2. /reviewe [target]    # Enhanced code review with security analysis
 3. /arch [target]       # Architectural assessment
 4. /thinku [target]     # Ultra deep thinking analysis
-5. Generate PR guidelines # Create docs/pr{PR_NUMBER}/guidelines.md with mistake prevention patterns
+5. Generate PR guidelines # Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with mistake prevention patterns
 ```
 
 The `/execute` delegation ensures optimal execution with:
-- **Guidelines Generation**: Automatically creates `docs/pr{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
+- **Guidelines Generation**: Automatically creates `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
 - **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
 - **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
 - Intelligent resource allocation
@@ -152,7 +152,7 @@ Step 4: Execute ultra deep thinking
 /thinku [target]
 
 Step 5: Generate PR-specific guidelines from review findings
-Create docs/pr{PR_NUMBER}/guidelines.md with documented patterns and solutions
+Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and solutions
 
 Step 6: Synthesize all findings into comprehensive report
 ```
@@ -251,14 +251,14 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 **PR Context Detection**: 
 - **Primary**: Auto-detect PR number from current branch context via GitHub API
 - **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
-- **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-{BRANCH_NAME}/guidelines.md`
+- **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
 - **Fallback 3**: If outside any PR/branch context (e.g., file/feature targets), skip guidelines generation and continue with analysis only
 - **Manual Override**: Accept explicit PR number via `/reviewdeep --pr 1286`
 - **Graceful Degradation**: Never fail /reviewdeep execution due to guidelines generation issues - log warning and proceed
 
 **File Location**: 
-- **With PR**: `docs/pr{PR_NUMBER}/guidelines.md` (e.g., `docs/pr1286/guidelines.md`)
-- **Without PR**: `docs/branch-{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-feature-auth/guidelines.md`)
+- **With PR**: `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` (e.g., `docs/pr-guidelines/1286/guidelines.md`)
+- **Without PR**: `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-guidelines/feature-auth/guidelines.md`)
 
 **Generation Process**:
 1. **Analyze Review Findings**: Extract patterns from `/reviewe`, `/arch`, and `/thinku` analysis
@@ -302,7 +302,7 @@ Generated guidelines file includes:
 - **Actionable Content**: Provide specific ❌/✅ examples that can prevent future mistakes
 
 ### **File Format Requirements**
-- **Directory**: `docs/pr{PR_NUMBER}/` (no dashes, direct PR number)
+- **Directory**: `docs/pr-guidelines/{PR_NUMBER}/` (consistent with base guidelines organization)
 - **Filename**: `guidelines.md` (standardized name)
 - **PR Number Extraction**: Auto-detect from current branch context or GitHub API
 - **Example Paths**:

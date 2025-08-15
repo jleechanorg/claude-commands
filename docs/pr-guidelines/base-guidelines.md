@@ -95,6 +95,35 @@
 
 ## 🚫 Anti-Patterns & Common Mistakes
 
+### **Slash Command Understanding Mistakes**
+
+#### ❌ **Incorrect Assumptions About Command Execution**
+```bash
+# WRONG - Assuming all cross-command references are documentation
+/plan "says it calls /guidelines but it's just documentation"
+
+# WRONG - Assuming no commands actually call other commands
+/copilot "only documents workflow, doesn't execute"
+```
+
+#### ✅ **Correct Understanding**
+```bash
+# CORRECT - Two distinct patterns exist:
+1. Universal Composition: /copilot → /execute → orchestrates other commands
+2. Embedded Implementation: /commentcheck embeds GitHub API calls directly
+
+# CORRECT - Test actual execution to verify pattern
+- /copilot DOES call other commands through /execute delegation
+- /commentcheck embeds functionality instead of calling /commentfetch
+- /plan was fixed to embed /guidelines functionality directly
+```
+
+#### 🔍 **Verification Method**
+- **Always test**: Execute commands to observe actual behavior
+- **Don't assume**: Cross-command references could be documentation OR execution
+- **Pattern recognition**: Universal composition vs embedded implementation
+- **Evidence-based**: Use actual execution results to determine pattern
+
 ### **File Operation Mistakes**
 
 #### ❌ **Creating Unnecessary Files**

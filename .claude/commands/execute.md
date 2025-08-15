@@ -21,8 +21,8 @@
 ### Phase 1: Planning (/plan)
 
 **Executes `/plan` command**: Follows the complete planning protocol documented in [`plan.md`](./plan.md)
-- **Guidelines Consultation**: Calls `/guidelines` command for centralized mistake prevention consultation
-- **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR-specific guidelines via command composition
+- **Guidelines Consultation**: `/plan` calls `/guidelines` directly for comprehensive consultation
+- **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
 - Creates TodoWrite checklist with specific steps including guidelines validation
 - Presents execution plan using the [Standard Plan Display Format](./plan.md#📋-standard-plan-display-format)
 - Shows complexity, execution method, tools, timeline, and parallelization strategy
@@ -82,7 +82,7 @@ User: /execute implement user authentication system
 Assistant:
 Phase 1 - Planning (/plan):
 ✅ CLAUDE.md read: Current rules, constraints, and security protocols understood
-✅ Guidelines consultation: Applied security patterns from docs/pr{current}/guidelines.md + docs/pr-guidelines/base-guidelines.md
+✅ Guidelines consultation: Applied security patterns from docs/pr-guidelines/{current}/guidelines.md + docs/pr-guidelines/base-guidelines.md
 ✅ Anti-patterns avoided: No subprocess shell=True, proper timeout enforcement, explicit error handling
 Creating comprehensive implementation plan...
 [Creates detailed TodoWrite with multiple subtasks]
