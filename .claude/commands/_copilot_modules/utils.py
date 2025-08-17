@@ -181,17 +181,17 @@ class GitCommands:
                 else "main"
             )
 
-            # Run merge-tree
-            cmd = [
-                "git",
-                "merge-tree",
-                f"$(git merge-base {default_branch} HEAD)",
-                default_branch,
-                "HEAD",
-            ]
-            result = subprocess.run(
-                " ".join(cmd), shell=True, capture_output=True, text=True
+            # Run merge-tree - first get merge base using remote tracking ref
+            remote_default = f"origin/{default_branch}"
+            merge_base_cmd = ["git", "merge-base", remote_default, "HEAD"]
+            merge_base_result = subprocess.run(
+                merge_base_cmd, capture_output=True, text=True, check=True
             )
+            merge_base = merge_base_result.stdout.strip()
+            
+            # Run merge-tree with actual merge base using remote tracking ref
+            cmd = ["git", "merge-tree", merge_base, remote_default, "HEAD"]
+            result = subprocess.run(cmd, capture_output=True, text=True)
 
             # Check for conflict markers
             has_conflicts = "<<<<<<< " in result.stdout
