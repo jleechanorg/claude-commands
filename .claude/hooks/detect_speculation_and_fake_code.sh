@@ -137,6 +137,14 @@ declare -A FAKE_CODE_PATTERNS=(
     ["For now.*return.*None"]="Fake null return"
     ["add.*performance.*marker"]="Fake performance tracking"
     ["theoretical.*performance"]="Theoretical simulation"
+    
+    # Data Fabrication Patterns (August 2025 benchmark lesson)
+    ["~[0-9]+.*lines"]="Estimated line count"
+    ["approximately.*[0-9]+"]="Numeric approximation"
+    ["around.*[0-9]+.*lines"]="Line count estimation"
+    ["roughly.*[0-9]+"]="Rough numeric estimate"
+    ["\\|.*~.*\\|"]="Table estimation marker"
+    ["estimated.*[0-9]+.*lines"]="Line count estimation"
 )
 
 FOUND_SPECULATION=false

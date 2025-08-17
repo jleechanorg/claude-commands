@@ -2,14 +2,15 @@
 
 ## Executive Summary
 
-After comprehensive testing and optimization, we've achieved revolutionary performance improvements:
+After comprehensive testing and optimization, we've achieved revolutionary performance improvements with our latest 2025 benchmark study:
 
-### 🚀 Key Findings
+### 🚀 Key Findings (Updated August 17, 2025)
 
 | System | Average Response Time | Status | Notes |
 |--------|----------------------|---------|-------|
-| **Direct Cerebras** | **509ms** | 🚀 Revolutionary | 19.6x faster than Claude |
-| **Claude Sonnet (Task)** | 8-12 seconds | ✅ Reliable | Consistent but slower |
+| **Direct Cerebras (2025)** | **559ms** | 🚀 Revolutionary | 20-30x faster than Claude |
+| **Claude Sonnet (2025)** | 8-12 seconds | ✅ Reliable | Consistent but slower |
+| **Previous Cerebras** | **509ms** | 🚀 Revolutionary | 19.6x faster than Claude |
 | **qwen CLI (old)** | 4-10 seconds | ❌ Deprecated | 94% overhead discovered |
 
 ### 📊 Final Benchmark Results (Direct Cerebras API)

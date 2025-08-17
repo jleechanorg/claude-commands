@@ -6,6 +6,8 @@ This file contains examples of fake/simulated code that should be detected
 
 import datetime
 import logging
+import os
+import subprocess
 import traceback
 import unittest
 from unittest.mock import Mock, patch
@@ -229,6 +231,167 @@ class TestMockPatterns(unittest.TestCase):
         assert fake_service_process("data") == "processed"
 
 
+class TestDataFabricationHook(unittest.TestCase):
+    """Test the fake detection hook's data fabrication patterns (August 2025 enhancement)"""
+
+    def setUp(self):
+        """Set up hook path for testing"""
+        # Find project root by looking for CLAUDE.md
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        project_root = current_dir
+        while project_root != "/" and not os.path.exists(os.path.join(project_root, "CLAUDE.md")):
+            project_root = os.path.dirname(project_root)
+        
+        self.project_root = project_root
+        self.hook_path = os.path.join(project_root, ".claude/hooks/detect_speculation_and_fake_code.sh")
+        self.assertTrue(os.path.exists(self.hook_path), f"Hook not found at {self.hook_path}")
+        
+        # Clean up any existing warning files
+        self.warning_file = os.path.join(project_root, "docs/CRITICAL_FAKE_CODE_WARNING.md")
+        if os.path.exists(self.warning_file):
+            os.remove(self.warning_file)
+
+    def tearDown(self):
+        """Clean up after each test"""
+        if os.path.exists(self.warning_file):
+            os.remove(self.warning_file)
+
+    def _run_hook(self, test_text: str) -> tuple[int, str, str]:
+        """Run the hook with test text and return (exit_code, stdout, stderr)"""
+        try:
+            # Combine stderr and stdout to get full output
+            result = subprocess.run(
+                [self.hook_path],
+                input=test_text,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,  # Combine stderr into stdout
+                timeout=10
+            )
+            # Return combined output as stderr for easier testing
+            return result.returncode, "", result.stdout
+        except subprocess.TimeoutExpired:
+            self.fail("Hook execution timed out")
+        except Exception as e:
+            self.fail(f"Failed to run hook: {e}")
+
+    def test_data_fabrication_detection_tilde_patterns(self):
+        """Test detection of tilde (~) estimation patterns"""
+        # Should detect: ~N lines patterns
+        test_cases = [
+            "The React component has ~45 lines of code",
+            "This function is ~30 lines long",
+            "Approximately ~100 lines in the file",
+        ]
+        
+        for test_text in test_cases:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 2, f"Should detect pattern in: {test_text}")
+                self.assertIn("FAKE CODE DETECTED", stderr)
+                self.assertIn("Estimated line count", stderr)
+
+    def test_data_fabrication_detection_approximation_patterns(self):
+        """Test detection of approximation language patterns"""
+        test_cases = [
+            "The system has approximately 60 lines",
+            "This contains roughly 200 lines of code", 
+            "Around 150 lines were generated",
+            "The file has estimated 75 lines total",
+        ]
+        
+        for test_text in test_cases:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 2, f"Should detect pattern in: {test_text}")
+                self.assertIn("FAKE CODE DETECTED", stderr)
+                # Should match one of: Numeric approximation, Rough numeric estimate, Line count estimation
+                detected_patterns = ["Numeric approximation", "Rough numeric estimate", "Line count estimation"]
+                self.assertTrue(any(pattern in stderr for pattern in detected_patterns))
+
+    def test_data_fabrication_detection_table_patterns(self):
+        """Test detection of table estimation markers"""
+        test_cases = [
+            "| React Component | 326ms | ~45 | 320 tokens |",
+            "| API Handler | 250ms | ~30 | 180 tokens |",
+            "| Data Processor | ~50 lines | 400 tokens |",
+        ]
+        
+        for test_text in test_cases:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 2, f"Should detect table pattern in: {test_text}")
+                self.assertIn("FAKE CODE DETECTED", stderr)
+                self.assertIn("Table estimation marker", stderr)
+
+    def test_original_benchmark_error_pattern(self):
+        """Test that the exact pattern from the original benchmark error is caught"""
+        # This is the exact pattern that caused the 8x fabrication error
+        benchmark_row = "| React Product Card | 326 | 8000-12000 | 25-37x faster | 42 | ~45 | 292 | ~320 |"
+        
+        exit_code, stdout, stderr = self._run_hook(benchmark_row)
+        self.assertEqual(exit_code, 2, "Should catch original benchmark error pattern")
+        self.assertIn("FAKE CODE DETECTED", stderr)
+        self.assertIn("Table estimation marker", stderr)
+
+    def test_no_false_positives_real_measurements(self):
+        """Test that real measurement language doesn't trigger false positives"""
+        legitimate_cases = [
+            "Based on wc -l output: file.txt contains 366 lines",
+            "Measured with wc -l: 1,234 lines total",
+            "Git diff shows 15 lines changed",
+            "Line count from actual measurement: 456 lines",
+            "The file is 200 lines (measured)",
+            "Verified line count: 89 lines",
+        ]
+        
+        for test_text in legitimate_cases:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 0, f"Should NOT detect pattern in legitimate: {test_text}")
+                self.assertIn("No fake code detected", stderr)
+
+    def test_multiple_patterns_in_single_text(self):
+        """Test detection when multiple fabrication patterns exist in one text"""
+        multi_pattern_text = "The React component has ~45 lines of code and approximately 60 lines in the API."
+        
+        exit_code, stdout, stderr = self._run_hook(multi_pattern_text)
+        self.assertEqual(exit_code, 2, "Should detect multiple patterns")
+        self.assertIn("FAKE CODE DETECTED", stderr)
+        # Should detect both patterns
+        self.assertIn("Estimated line count", stderr)
+        self.assertIn("Numeric approximation", stderr)
+
+    def test_hook_error_handling(self):
+        """Test hook handles edge cases gracefully"""
+        edge_cases = [
+            "",  # Empty input
+            "Normal text with no patterns",  # No patterns
+            "The file has 100 lines exactly",  # Exact numbers (no estimation markers)
+        ]
+        
+        for test_text in edge_cases:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 0, f"Should pass through: '{test_text}'")
+                if test_text:  # Non-empty should show "no fake code detected"
+                    self.assertIn("No fake code detected", stderr)
+
+    def test_pattern_case_insensitivity(self):
+        """Test that patterns work regardless of case"""
+        case_variants = [
+            "The file has APPROXIMATELY 50 lines",
+            "This contains Roughly 100 Lines",
+            "Around 25 LINES were added",
+        ]
+        
+        for test_text in case_variants:
+            with self.subTest(text=test_text):
+                exit_code, stdout, stderr = self._run_hook(test_text)
+                self.assertEqual(exit_code, 2, f"Should detect case-insensitive pattern: {test_text}")
+                self.assertIn("FAKE CODE DETECTED", stderr)
+
+
 if __name__ == "__main__":
     # Run tests
     unittest.main(verbosity=2)
@@ -245,16 +408,30 @@ if __name__ == "__main__":
     4. fake_api_client: Hardcoded responses without network calls
     5. fake_complexity_analyzer: Trivial line counting as "analysis"
 
+    PLUS NEW DATA FABRICATION PATTERNS (August 2025 enhancement):
+    6. Estimation markers: ~45 lines, approximately 60, roughly 200
+    7. Table estimation: | Component | ~45 | (markdown table estimates)
+    8. Approximation language: around X lines, estimated Y lines
+
     Key indicators of fake code:
     - Keyword matching with hardcoded responses
     - Unrealistic confidence scores
     - Mock data in production code
     - Overly simplistic logic claiming sophistication
     - Generic responses that don't reflect actual processing
+    - DATA FABRICATION: Estimation markers instead of measurements
 
     The REAL code examples show proper implementation with:
     - Actual validation logic
     - Real data transformation
     - Proper error handling
     - Genuine processing based on input
+    - REAL DATA: Measured values with measurement commands (wc -l, etc.)
+
+    Hook tests validate:
+    - Detection of all 6 new data fabrication patterns
+    - Zero false positives on real measurement language
+    - Prevention of original benchmark error (8x fabrication)
+    - Case-insensitive pattern matching
+    - Multiple pattern detection in single text
     """)

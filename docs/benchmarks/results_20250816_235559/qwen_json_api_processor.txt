@@ -1,0 +1,67 @@
+
+🚀🚀🚀 QWEN GENERATED IN 335ms 🚀🚀🚀
+
+```python
+import json
+from typing import Dict, Any, List, Optional
+
+def process_api_response(response_text: str, fields: List[str]) -> List[Dict[str, Any]]:
+ """
+ Process JSON API response and extract specific fields into structured format.
+ 
+ Args:
+ response_text: Raw JSON response string from API
+ fields: List of field names to extract
+ 
+ Returns:
+ List of dictionaries containing only the specified fields
+ """
+ try:
+ data = json.loads(response_text)
+ results = data.get('results', [])
+ 
+ if not isinstance(results, list):
+ results = [results]
+ 
+ processed_data = []
+ for item in results:
+ if isinstance(item, dict):
+ processed_item = {}
+ for field in fields:
+ processed_item[field] = item.get(field)
+ processed_data.append(processed_item)
+ 
+ return processed_data
+ except (json.JSONDecodeError, KeyError, TypeError):
+ return []
+
+def extract_field_value(response_text: str, field_path: str) -> Optional[Any]:
+ """
+ Extract a specific field value from JSON API response using dot notation.
+ 
+ Args:
+ response_text: Raw JSON response string from API
+ field_path: Dot-separated path to the field (e.g., 'user.profile.name')
+ 
+ Returns:
+ Field value or None if not found
+ """
+ try:
+ data = json.loads(response_text)
+ keys = field_path.split('.')
+ value = data
+ 
+ for key in keys:
+ if isinstance(value, dict):
+ value = value.get(key)
+ else:
+ return None
+ 
+ return value
+ except (json.JSONDecodeError, KeyError, TypeError):
+ return None
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 335ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
