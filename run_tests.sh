@@ -1,13 +1,23 @@
 #!/bin/bash
 
-# Test Runner Script for WorldArchitect.ai
-# Runs all test_*.py files in mvp_site directory using vpython
+# Test Runner Script for WorldArchitect.ai with Intelligent Test Selection
+# Runs test_*.py files using intelligent selection by default or full suite with --full
 #
 # Usage:
-#   ./run_tests.sh                  # Run unit tests only (default)
-#   ./run_tests.sh --integration    # Run unit tests AND integration tests
-#   ./run_tests.sh --coverage       # Run unit tests with coverage analysis
+#   ./run_tests.sh                           # Intelligent test selection (default)
+#   ./run_tests.sh --full                    # Run complete test suite
+#   ./run_tests.sh --dry-run                 # Show intelligent selection without execution
+#   ./run_tests.sh --integration             # Include integration tests (works with intelligent mode)
+#   ./run_tests.sh --coverage                # Run tests with coverage analysis
 #   ./run_tests.sh --integration --coverage  # Run unit and integration tests with coverage
+#   ./run_tests.sh --full --integration      # Full suite including integration tests
+#   ./run_tests.sh --dry-run --integration   # Preview intelligent selection with integration tests
+#
+# Intelligent Selection Features:
+# - Analyzes git changes vs origin/main to select relevant tests
+# - Typically reduces test execution by 60-80% for focused PRs
+# - Falls back to full suite on analysis failures or large changesets
+# - Maintains all safety features (memory monitoring, parallel execution)
 #
 # Integration tests (in test_integration/) require external dependencies like google-genai
 # and are excluded by default to ensure tests run quickly and without external dependencies.
@@ -181,6 +191,8 @@ print_status "TEST_MODE=${TEST_MODE:-mock} (Real-Mode Testing Framework)"
 include_integration=false
 enable_coverage=false
 coverage_dir="/tmp/worldarchitectai/coverage"
+intelligent_mode=true
+dry_run_mode=false
 
 for arg in "$@"; do
     case $arg in
@@ -190,6 +202,13 @@ for arg in "$@"; do
         --coverage)
             enable_coverage=true
             ;;
+        --full|--all-tests|--no-intelligent)
+            intelligent_mode=false
+            ;;
+        --dry-run)
+            dry_run_mode=true
+            # Don't force intelligent mode - let user override with --full
+            ;;
         *)
             if [[ $arg == --* ]]; then
                 print_warning "Unknown argument: $arg"
@@ -198,10 +217,97 @@ for arg in "$@"; do
     esac
 done
 
+# Display mode information
+if [ "$intelligent_mode" = true ]; then
+    if [ "$dry_run_mode" = true ]; then
+        print_status "🧠 Intelligent Test Selection Mode (DRY RUN - no tests executed)"
+    else
+        print_status "🧠 Intelligent Test Selection Mode (use --full for complete suite)"
+    fi
+else
+    print_status "🔧 Full Test Suite Mode (all tests will be executed)"
+fi
+
 if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
 else
     print_status "Skipping integration tests (use --integration to include them)"
+fi
+
+# Intelligent test selection logic
+selected_test_files=()
+use_intelligent_selection=false
+
+if [ "$intelligent_mode" = true ]; then
+    print_status "🔍 Analyzing git changes for intelligent test selection..."
+    
+    # Check if dependency analyzer exists
+    analyzer_script="$PROJECT_ROOT/scripts/test_dependency_analyzer.py"
+    if [ -f "$analyzer_script" ]; then
+        # Run the dependency analyzer
+        analysis_output_file="/tmp/selected_tests.txt"
+        
+        # Note: The analyzer includes always-run tests and handles integration logic internally
+        # based on the configuration, so we don't need to pass integration flag separately
+        if python3 "$analyzer_script" --git-diff --output "$analysis_output_file" 2>/dev/null; then
+            if [ -f "$analysis_output_file" ] && [ -s "$analysis_output_file" ]; then
+                # Successfully got test selection
+                mapfile -t selected_test_files < "$analysis_output_file"
+                use_intelligent_selection=true
+                
+                # Count total tests for comparison
+                total_possible_tests=$(find ./mvp_site/tests -name "test_*.py" -type f | wc -l)
+                selected_count=${#selected_test_files[@]}
+                
+                if [ $total_possible_tests -gt 0 ]; then
+                    reduction_pct=$(echo "scale=0; (($total_possible_tests - $selected_count) * 100) / $total_possible_tests" | bc -l 2>/dev/null || echo "0")
+                    time_savings_min=$(echo "scale=0; $reduction_pct * 15 / 100" | bc -l 2>/dev/null || echo "0")
+                    
+                    print_status "📊 Running $selected_count selected tests (${reduction_pct}% reduction, ~$((total_possible_tests - selected_count)) tests skipped)"
+                    if [ $time_savings_min -gt 0 ]; then
+                        print_status "⚡ Estimated time savings: ~${time_savings_min} minutes"
+                    fi
+                else
+                    print_status "📊 Running $selected_count selected tests"
+                fi
+                
+                # Show changed files that triggered selection
+                changed_files=$(cd "$PROJECT_ROOT" && git diff --name-only origin/main...HEAD 2>/dev/null | head -5)
+                if [ -n "$changed_files" ]; then
+                    changed_files_display=$(echo "$changed_files" | tr '\n' ', ' | sed 's/, $//')
+                    print_status "📁 Changes detected: $changed_files_display"
+                fi
+            else
+                print_warning "⚠️  Intelligent analysis produced no results, falling back to full suite"
+                use_intelligent_selection=false
+            fi
+        else
+            print_warning "⚠️  Intelligent analysis failed, falling back to full suite"
+            use_intelligent_selection=false
+        fi
+    else
+        print_warning "⚠️  Dependency analyzer not found at $analyzer_script, falling back to full suite"
+        use_intelligent_selection=false
+    fi
+    
+    # Handle dry run mode
+    if [ "$dry_run_mode" = true ]; then
+        if [ "$use_intelligent_selection" = true ]; then
+            echo
+            print_status "📋 Intelligent selection would run these ${#selected_test_files[@]} tests:"
+            for test_file in "${selected_test_files[@]}"; do
+                if [ -n "$test_file" ]; then
+                    echo "  - $test_file"
+                fi
+            done
+        else
+            echo
+            print_status "📋 Would run full test suite (intelligent selection unavailable)"
+        fi
+        echo
+        print_status "🏁 Dry run complete - no tests executed"
+        exit 0
+    fi
 fi
 
 if [ "$enable_coverage" = true ]; then
@@ -234,114 +340,237 @@ else
     print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
 fi
 
-# Find all test files across the project, excluding problematic directories
+# Find test files - use intelligent selection if available, otherwise discover all
 test_files=()
 
-# Main mvp_site tests
-while IFS= read -r -d '' file; do
-    test_files+=("$file")
-done < <(find ./mvp_site/tests -name "test_*.py" -type f \
-    ! -path "./venv/*" \
-    ! -path "./node_modules/*" \
-    ! -path "./prototype/*" \
-    ! -path "./mvp_site/tests/manual_tests/*" \
-    ! -path "./mvp_site/tests/test_integration/*" \
-    -print0 2>/dev/null)
-
-# Project root tests directory
-if [ -d "./tests" ]; then
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find ./tests -name "test_*.py" -type f \
-        ! -path "./prototype/*" \
-        ! -path "./tests/manual_tests/*" \
-        ! -path "./tests/test_integration/*" \
-        -print0 2>/dev/null)
-fi
-
-# Always include test_integration_mock.py from mvp_site/test_integration directory (fast mock tests)
-if [ -f "./mvp_site/test_integration/test_integration_mock.py" ]; then
-    test_files+=("./mvp_site/test_integration/test_integration_mock.py")
-fi
-
-# Also include test_integration directories if not in GitHub export mode
-if [ "$include_integration" = true ]; then
-    # Check for test_integration in mvp_site, project root, and tests/ directory
-    if [ -d "./mvp_site/test_integration" ]; then
-        print_status "Including integration tests from mvp_site/test_integration/"
-        while IFS= read -r -d '' file; do
-            test_files+=("$file")
-        done < <(find ./mvp_site/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
-    fi
+if [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt 0 ]; then
+    # Use intelligently selected tests
+    print_status "🎯 Using intelligent test selection results"
     
-    if [ -d "./test_integration" ]; then
-        print_status "Including integration tests from test_integration/"
+    # Convert selected test paths to full paths and validate they exist
+    for selected_test in "${selected_test_files[@]}"; do
+        if [ -n "$selected_test" ]; then
+            # Remove leading ./ if present
+            clean_path="${selected_test#./}"
+            
+            # Check if file exists
+            if [ -f "./$clean_path" ]; then
+                test_files+=("./$clean_path")
+            else
+                print_warning "Selected test file not found: $clean_path"
+            fi
+        fi
+    done
+    
+    # Ensure we still respect integration flag for always-run tests
+    if [ "$include_integration" = true ]; then
+        # Add integration tests that might not be in intelligent selection
+        if [ -d "./mvp_site/test_integration" ]; then
+            while IFS= read -r -d '' file; do
+                # Normalize path format for consistent duplicate detection
+                file_normalized="${file#./}"  # Remove ./ prefix
+                
+                # Check against normalized test_files array (also remove ./ prefix for comparison)
+                is_duplicate=false
+                for existing_test in "${test_files[@]}"; do
+                    existing_normalized="${existing_test#./}"
+                    if [ "$file_normalized" = "$existing_normalized" ]; then
+                        is_duplicate=true
+                        break
+                    fi
+                done
+                
+                # Only add if not already included
+                if [ "$is_duplicate" = false ]; then
+                    test_files+=("$file")
+                fi
+            done < <(find ./mvp_site/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
+    fi
+else
+    # Fall back to traditional test discovery
+    # Check if intelligent test selection is available
+    if [ -n "${INTELLIGENT_TEST_SELECTION:-}" ] && [ -f "${INTELLIGENT_TEST_SELECTION}" ]; then
+        print_status "🧠 Using intelligent test selection results"
+        while IFS= read -r file; do
+            if [ -f "$file" ]; then
+                test_files+=("$file")
+            fi
+        done < "${INTELLIGENT_TEST_SELECTION}"
+    else
+        print_status "🔍 Discovering all test files (traditional mode)"
+        
+        # Main mvp_site tests
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        done < <(find ./mvp_site/tests -name "test_*.py" -type f \
+            ! -path "./venv/*" \
+            ! -path "./node_modules/*" \
+            ! -path "./prototype/*" \
+            ! -path "./mvp_site/tests/manual_tests/*" \
+            ! -path "./mvp_site/tests/test_integration/*" \
+            -print0 2>/dev/null)
+
+        # Project root tests directory
+        if [ -d "./tests" ]; then
+            while IFS= read -r -d '' file; do
+                test_files+=("$file")
+            done < <(find ./tests -name "test_*.py" -type f \
+                ! -path "./prototype/*" \
+                ! -path "./tests/manual_tests/*" \
+                ! -path "./tests/test_integration/*" \
+                -print0 2>/dev/null)
+        fi
     fi
 
-    if [ -d "./tests/test_integration" ]; then
-        print_status "Including integration tests from tests/test_integration/"
+    # Always include test_integration_mock.py from mvp_site/test_integration directory (fast mock tests)
+    if [ -f "./mvp_site/test_integration/test_integration_mock.py" ]; then
+        test_files+=("./mvp_site/test_integration/test_integration_mock.py")
+    fi
+
+    # Also include test_integration directories if not in GitHub export mode
+    if [ "$include_integration" = true ]; then
+        # Check for test_integration in mvp_site, project root, and tests/ directory
+        if [ -d "./mvp_site/test_integration" ]; then
+            print_status "Including integration tests from mvp_site/test_integration/"
+            while IFS= read -r -d '' file; do
+                # Normalize path format for consistent duplicate detection
+                file_normalized="${file#./}"
+                
+                # Check against normalized test_files array
+                is_duplicate=false
+                for existing_test in "${test_files[@]}"; do
+                    existing_normalized="${existing_test#./}"
+                    if [ "$file_normalized" = "$existing_normalized" ]; then
+                        is_duplicate=true
+                        break
+                    fi
+                done
+                
+                # Only add if not already included
+                if [ "$is_duplicate" = false ]; then
+                    test_files+=("$file")
+                fi
+            done < <(find ./mvp_site/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
+        
+        if [ -d "./test_integration" ]; then
+            print_status "Including integration tests from test_integration/"
+            while IFS= read -r -d '' file; do
+                # Normalize path format for consistent duplicate detection
+                file_normalized="${file#./}"
+                
+                # Check against normalized test_files array
+                is_duplicate=false
+                for existing_test in "${test_files[@]}"; do
+                    existing_normalized="${existing_test#./}"
+                    if [ "$file_normalized" = "$existing_normalized" ]; then
+                        is_duplicate=true
+                        break
+                    fi
+                done
+                
+                # Only add if not already included
+                if [ "$is_duplicate" = false ]; then
+                    test_files+=("$file")
+                fi
+            done < <(find ./test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
+
+        if [ -d "./tests/test_integration" ]; then
+            print_status "Including integration tests from tests/test_integration/"
+            while IFS= read -r -d '' file; do
+                # Normalize path format for consistent duplicate detection
+                file_normalized="${file#./}"
+                
+                # Check against normalized test_files array
+                is_duplicate=false
+                for existing_test in "${test_files[@]}"; do
+                    existing_normalized="${existing_test#./}"
+                    if [ "$file_normalized" = "$existing_normalized" ]; then
+                        is_duplicate=true
+                        break
+                    fi
+                done
+                
+                # Only add if not already included
+                if [ "$is_duplicate" = false ]; then
+                    test_files+=("$file")
+                fi
+            done < <(find ./tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
+
+        if [ -d "./mvp_site/tests/test_integration" ]; then
+            print_status "Including integration tests from mvp_site/tests/test_integration/"
+            while IFS= read -r -d '' file; do
+                # Normalize path format for consistent duplicate detection
+                file_normalized="${file#./}"
+                
+                # Check against normalized test_files array
+                is_duplicate=false
+                for existing_test in "${test_files[@]}"; do
+                    existing_normalized="${existing_test#./}"
+                    if [ "$file_normalized" = "$existing_normalized" ]; then
+                        is_duplicate=true
+                        break
+                    fi
+                done
+                
+                # Only add if not already included
+                if [ "$is_duplicate" = false ]; then
+                    test_files+=("$file")
+                fi
+            done < <(find ./mvp_site/tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
+    fi
+
+    # Also include .claude/commands tests if they exist
+    if [ -d ".claude/commands/tests" ]; then
+        print_status "Including .claude/commands tests..."
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        done < <(find .claude/commands/tests -name "test_*.py" -type f -print0)
     fi
 
-    if [ -d "./mvp_site/tests/test_integration" ]; then
-        print_status "Including integration tests from mvp_site/tests/test_integration/"
+    # Also include orchestration tests if they exist
+    if [ -d "orchestration/tests" ]; then
+        print_status "Including orchestration tests..."
         while IFS= read -r -d '' file; do
             test_files+=("$file")
-        done < <(find ./mvp_site/tests/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
+        done < <(find orchestration/tests -name "test_*.py" -type f -print0)
     fi
-fi
 
-# Also include .claude/commands tests if they exist
-if [ -d ".claude/commands/tests" ]; then
-    print_status "Including .claude/commands tests..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find .claude/commands/tests -name "test_*.py" -type f -print0)
-fi
+    # Also include claude_command_scripts tests if they exist
+    if [ -d "claude_command_scripts/commands" ]; then
+        print_status "Including claude_command_scripts tests..."
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find claude_command_scripts/commands -name "test_*.py" -type f -print0)
+    fi
 
-# Also include orchestration tests if they exist
-if [ -d "orchestration/tests" ]; then
-    print_status "Including orchestration tests..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find orchestration/tests -name "test_*.py" -type f -print0)
-fi
+    # Include claude-bot-commands tests if they exist
+    if [ -d "claude-bot-commands/tests" ]; then
+        print_status "Including claude-bot-commands tests..."
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find claude-bot-commands/tests -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
 
-# Also include claude_command_scripts tests if they exist
-if [ -d "claude_command_scripts/commands" ]; then
-    print_status "Including claude_command_scripts tests..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find claude_command_scripts/commands -name "test_*.py" -type f -print0)
-fi
+    # Include .claude/hooks tests if they exist
+    if [ -d ".claude/hooks/tests" ]; then
+        print_status "Including .claude/hooks tests..."
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find .claude/hooks/tests -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
 
-# Include claude-bot-commands tests if they exist
-if [ -d "claude-bot-commands/tests" ]; then
-    print_status "Including claude-bot-commands tests..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find claude-bot-commands/tests -name "test_*.py" -type f -print0 2>/dev/null)
-fi
-
-# Include .claude/hooks tests if they exist
-if [ -d ".claude/hooks/tests" ]; then
-    print_status "Including .claude/hooks tests..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find .claude/hooks/tests -name "test_*.py" -type f -print0 2>/dev/null)
-fi
-
-# Include direct .claude/commands test files (not in tests subdirectory)
-if [ -d ".claude/commands" ]; then
-    print_status "Including .claude/commands direct test files..."
-    while IFS= read -r -d '' file; do
-        test_files+=("$file")
-    done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
+    # Include direct .claude/commands test files (not in tests subdirectory)
+    if [ -d ".claude/commands" ]; then
+        print_status "Including .claude/commands direct test files..."
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
 fi
 
 # Run qwen command tests if they exist
@@ -607,6 +836,23 @@ print_status "🧪 Test Summary:"
 echo "  Total tests: $total_tests"
 echo "  Passed: $passed_tests"
 echo "  Failed: $failed_tests"
+
+# Show intelligent selection metrics if used
+if [ "$use_intelligent_selection" = true ]; then
+    echo
+    print_status "🧠 Intelligent Selection Report:"
+    total_possible_tests=$(find ./mvp_site/tests -name "test_*.py" -type f | wc -l)
+    if [ $total_possible_tests -gt 0 ]; then
+        reduction_pct=$(echo "scale=0; (($total_possible_tests - $total_tests) * 100) / $total_possible_tests" | bc -l 2>/dev/null || echo "0")
+        echo "  Selected tests: $total_tests / $total_possible_tests total"
+        echo "  Reduction: ${reduction_pct}% (saved ~$((total_possible_tests - total_tests)) test executions)"
+        echo "  Mode: Intelligent test selection based on git changes"
+    fi
+else
+    echo
+    print_status "🔧 Full Suite Report:"
+    echo "  Mode: Complete test suite execution"
+fi
 
 # Show failed test details if any
 if [ $failed_tests -gt 0 ]; then

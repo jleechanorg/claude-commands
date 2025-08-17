@@ -1,0 +1,23 @@
+{
+  "id": "intelligent-test-selection",
+  "started": "2025-08-14T23:54:00Z",
+  "lastUpdated": "2025-08-15T00:03:00Z",
+  "status": "complete",
+  "phase": "complete",
+  "progress": {
+    "discovery": { "answered": 5, "total": 5 },
+    "detail": { "answered": 5, "total": 5 }
+  },
+  "contextFiles": [
+    "run_tests.sh",
+    "mvp_site/tests/",
+    ".github/workflows/",
+    "scripts/"
+  ],
+  "relatedFeatures": [
+    "memory_monitoring_system",
+    "parallel_test_execution",
+    "coverage_integration",
+    "github_actions_workflows"
+  ]
+}
