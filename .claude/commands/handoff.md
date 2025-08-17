@@ -9,7 +9,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
 
 ## What it does
 
-1. **Creates Analysis Branch**: `handoff-[task_name]` from current state
+1. **Creates Clean Branch**: Uses `/newbranch handoff-[task_name]` to create fresh branch from latest main
 2. **Generates Scratchpad**: `roadmap/scratchpad_handoff_[task_name].md` with:
    - Problem statement
    - Analysis completed
@@ -19,7 +19,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
 3. **Creates PR**: With detailed description and ready-to-implement status
 4. **Auto-Updates Roadmap**: Automatically uses `/r` command logic to add entry to `roadmap/roadmap.md`
 5. **Generates Worker Prompt**: Copy-paste prompt for next worker
-6. **Creates Clean Branch**: `roadmap[timestamp]` for continued work
+6. **Creates Clean Branch**: Uses `/newbranch` to ensure clean main-based branch for continued work
 
 ## Example
 ```
