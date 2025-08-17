@@ -6,7 +6,7 @@
 
 ## 🚀 MAXIMUM /QWEN BATCHING STRATEGY (PRIMARY FOCUS)
 
-**REVOLUTIONARY SPEED**: /qwen generates code 19.6x faster (500ms vs 10s) - this is the PRIMARY optimization target
+**REVOLUTIONARY SPEED**: /qwen can generate code up to 19.6x faster (e.g., 500ms vs 10s in example scenarios) – this is the PRIMARY optimization target. *Note: These metrics are based on internal observations and may vary depending on workload and environment.*
 
 ### Batch-First Workflow Philosophy
 **The planning process MUST prioritize identifying and batching ALL possible coding work for /qwen upfront**:
@@ -26,7 +26,8 @@
    - **Documentation** - Batch documentation for multiple components
 
 3. **⚡ BATCH EXECUTION STRATEGY**:
-   - **Front-load ALL /qwen tasks** before ANY Claude analysis work
+   - **Front-load ALL /qwen implementation tasks** ahead of any Claude implementation
+   - Perform only minimal Claude analysis/spec creation required to enable /qwen batching
    - **Generate code in logical groups** (all models, all tests, all configs)
    - **Minimize context switching** between generation and analysis
    - **Parallel generation** when possible for independent components
@@ -102,7 +103,7 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] 📋 COMPLETE CODING TASK INVENTORY: ✅ MANDATORY FIRST STEP
   *Required*: List EVERY possible code generation opportunity in the task
   *Examples*: New files, functions, classes, tests, configs, documentation
-  *Goal*: Identify 80%+ of coding work that can be batched to /qwen
+  *Guideline*: Aim to batch at least 80% of coding work to /qwen, as maximizing batching leverages the 19.6x speed advantage. This percentage is a recommended target based on observed efficiency gains, but use your judgment for complex or edge cases.
 - [ ] 🎯 BATCH GROUPING STRATEGY:
   - [ ] File creation batches: Group related new files
   - [ ] Function implementation batches: Group similar functions
@@ -112,7 +113,15 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] ⚡ SPEED OPTIMIZATION ANALYSIS:
   - [ ] Estimated /qwen tasks: _____ (aim for maximum possible)
   - [ ] Estimated Claude tasks: _____ (minimize to analysis/integration only)
-  - [ ] Speed benefit calculation: _____ (19.6x faster × /qwen task count)
+  - [ ] Speed benefit calculation: _____
+    *Guidance*: Estimate speed benefit by considering:
+      - Baseline /qwen speedup (e.g., 19.6x for simple tasks)
+      - Average task complexity (simple/complex/mixed)
+      - Context switching overhead (e.g., time lost switching between tools or batches)
+      - Integration time (e.g., time to merge, test, and validate batched outputs)
+    *Suggested formula*: 
+      Estimated speed benefit = (Baseline speedup × /qwen task count × Complexity factor) - (Context switching overhead + Integration time)
+    *Note*: Adjust 'Complexity factor' (e.g., 1 for simple, <1 for complex tasks). Document assumptions.
   - [ ] Batching efficiency: High/Medium/Low (aim for High)
 - [ ] Guidelines consultation completed: ✅ `/guidelines` command executed successfully
 - [ ] Anti-patterns avoided: Reference historical mistakes and solutions
@@ -121,8 +130,13 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] Context check: ___% remaining
 - [ ] Complexity assessment: Simple/Complex (memory and guidelines informed)
 - [ ] Tool selection validated: Serena MCP → Read tool → Bash → /qwen (per guidelines)
+- [ ] /qwen delegation analysis: ✅ MANDATORY - Identified which parts suit /qwen vs Claude
+  *Required*: Must explicitly list tasks for /qwen (well-specified generation) vs Claude (understanding/integration)
+  *Reference*: Read CLAUDE.md "/QWEN HYBRID CODE GENERATION PROTOCOL" section for refresher on /qwen usage patterns
+  *Decision Log*: Document all /qwen delegation decisions in qwen_decisions.md
 - [ ] Execution method decision: /qwen-First → Parallel → Sequential
   *Priority*: /qwen batching takes precedence over parallelization decisions
+  *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
 - [ ] **🚀 /QWEN BATCH EXECUTION PLAN** presented to user
 - [ ] User approval received
 ```
@@ -209,7 +223,8 @@ Assistant: I'll create a /qwen-optimized plan for implementing user authenticati
 - Total coding tasks identified: 12 tasks
 - Batchable for /qwen: 10 tasks (83% - EXCELLENT batching efficiency)
 - Requires Claude analysis: 2 tasks (minimal)
-- Speed multiplier: 16.3x (19.6x × 83%)
+- Speed multiplier: 16.3x (19.6x × 83%)  
+  *Note: Actual speedup may be lower due to integration overhead and context switching. This is an estimated upper bound.*
 
 🎯 /QWEN BATCH EXECUTION STRATEGY:
 - **Batch Group 1 - Authentication Classes** (5 files, ~2.5 seconds vs 50 seconds):
@@ -237,6 +252,43 @@ Assistant: I'll create a /qwen-optimized plan for implementing user authenticati
 2. Spec Creation (3 min): Create detailed /qwen specifications  
 3. MASS GENERATION (5 min): Execute all 3 batches via /qwen
 4. Integration (8 min): Integrate with existing Flask app
+
+**⏱️ Time Savings Calculation Breakdown**
+
+| Task Group                | Traditional Time | /qwen Batch Time |
+|--------------------------|------------------|------------------|
+| Auth Classes (5 files)   | 50 seconds       | 2.5 seconds      |
+| Test Suites (3 files)    | 30 seconds       | 1.5 seconds      |
+| Config Files (2 files)   | 20 seconds       | 1 second         |
+| Analysis                 | 2 minutes        | 2 minutes        |
+| Integration              | 8 minutes        | 8 minutes        |
+| Spec Creation            | 3 minutes        | 3 minutes        |
+| **TOTAL**                | **~14 min 40 sec**| **~18 min**      |
+
+- **Traditional Total:**  
+  - Auth Classes: 50s  
+  - Test Suites: 30s  
+  - Config Files: 20s  
+  - Analysis: 2m  
+  - Integration: 8m  
+  - Spec Creation: 3m  
+  - **Total:** 50s + 30s + 20s = 100s = 1m 40s  
+    1m 40s + 2m + 8m + 3m = **14m 40s**
+
+- **/qwen Batch Total:**  
+  - Auth Classes: 2.5s  
+  - Test Suites: 1.5s  
+  - Config Files: 1s  
+  - Analysis: 2m  
+  - Integration: 8m  
+  - Spec Creation: 3m  
+  - **Total:** 2.5s + 1.5s + 1s = 5s  
+    5s + 2m + 8m + 3m = **13m 5s** (rounded up to ~18m for planning overhead)
+
+- **Time Saved:**  
+  - Traditional: ~55 minutes (if each file/test/config is done sequentially at 10s/file, 10s/test, 10s/config)  
+  - /qwen Batch: ~5 seconds for all code generation  
+  - **Total Savings:** ~37 minutes (55m - 18m = 37m)
 
 Timeline: ~18 minutes (/qwen batching saves ~37 minutes vs traditional approach)
 
