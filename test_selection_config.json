@@ -42,13 +42,13 @@
         "mvp_site/test_integration/test_*.py",
         "mvp_site/tests/test_end2end/*.py"
       ],
-      "mvp_site/gemini_service.py": [
+      "gemini_service.py": [
         "mvp_site/tests/test_gemini*.py",
         "mvp_site/tests/test_json*.py",
         "mvp_site/tests/test_mock*.py",
         "mvp_site/tests/test_end2end/*.py"
       ],
-      "mvp_site/firestore_service.py": [
+      "firestore_service.py": [
         "mvp_site/tests/test_firestore*.py",
         "mvp_site/tests/auth/test_*.py",
         "mvp_site/tests/test_end2end/*.py"
@@ -57,36 +57,31 @@
     "patterns": {
       "frontend_v2/**/*.tsx": [
         "mvp_site/tests/test_v2_*.py",
-        "mvp_site/testing_ui/test_v2_*.py",
-        "mvp_site/testing_ui/test_ui_*.py"
+        "mvp_site/testing_ui/test_*.py"
       ],
       "frontend_v2/**/*.ts": [
         "mvp_site/tests/test_v2_*.py",
-        "mvp_site/testing_ui/test_v2_*.py",
-        "mvp_site/testing_ui/test_ui_*.py"
+        "mvp_site/testing_ui/test_*.py"
       ],
       "frontend_v2/**/*.js": [
         "mvp_site/tests/test_v2_*.py",
-        "mvp_site/testing_ui/test_v2_*.py",
-        "mvp_site/testing_ui/test_ui_*.py"
+        "mvp_site/testing_ui/test_*.py"
       ],
       "frontend_v2/**/*.jsx": [
         "mvp_site/tests/test_v2_*.py",
-        "mvp_site/testing_ui/test_v2_*.py",
-        "mvp_site/testing_ui/test_ui_*.py"
+        "mvp_site/testing_ui/test_*.py"
       ],
       "mvp_site/static/**/*.js": [
         "mvp_site/testing_ui/test_*.py",
         "mvp_site/tests/test_end2end/*.py"
       ],
       "mvp_site/static/**/*.css": [
-        "mvp_site/testing_ui/test_ui_*.py",
+        "mvp_site/testing_ui/test_*.py",
         "mvp_site/tests/test_end2end/*.py"
       ],
       "mvp_site/templates/**/*.html": [
         "mvp_site/testing_ui/test_*.py",
-        "mvp_site/tests/test_end2end/*.py",
-        "mvp_site/testing_ui/test_ui_*.py"
+        "mvp_site/tests/test_end2end/*.py"
       ],
       "mvp_site/mocks/**/*": [
         "mvp_site/tests/test_mock*.py",
