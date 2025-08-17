@@ -128,10 +128,7 @@ fi
 export CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=1
 export CLAUDE_CODE_MAX_OUTPUT_TOKENS=20000
 
-# Point Aider to the Cerebras API endpoint
-export OPENAI_API_BASE="https://api.cerebras.ai/v1"
-# Use your personal API key from the Cerebras website
-# qwen3-coder:free or qwen3-coder-free 
+# Removed old Cerebras exports - now using consolidated config below 
 
 # Add keys if they are not already added (optional, if you use passphrases and want to add them once per login)
 # Check if specific keys are added, for example id_ed25519
@@ -139,6 +136,7 @@ export OPENAI_API_BASE="https://api.cerebras.ai/v1"
 #   ssh-add ~/.ssh/id_ed25519
 # fi
 
+alias claudedanger='claude --dangerously-skip-permissions --model sonnet'
 alias claudep='source ./claude_start.sh'
 alias claudepw='source ./claude_start.sh --worker'
 alias claudeps='source ./claude_start.sh --supervisor'
@@ -154,8 +152,17 @@ if [ \"\$PWD\" = \"\$HOME\" ]; then
 fi
 alias wa='cd ~/projects/worldarchitect.ai'
 
-alias push="git add . ; git commit -a -m \"a\" ; git push"
 export GOOGLE_CLOUD_PROJECT="worldarchitecture-ai"
+# Firebase Configuration (WorldArchitect.AI)
+# Client-side Firebase configuration for web app authentication
+export FIREBASE_AUTH_DOMAIN="worldarchitecture-ai.firebaseapp.com"
+export FIREBASE_PROJECT_ID="worldarchitecture-ai"
+export FIREBASE_STORAGE_BUCKET="worldarchitecture-ai.firebasestorage.app"
+export FIREBASE_MESSAGING_SENDER_ID="754683067800"
+export FIREBASE_APP_ID="1:754683067800:web:3b38787c69de301c147fed"
+export FIREBASE_MEASUREMENT_ID="G-EFX5VFZ7CV"
+
+alias push="git add . ; git commit -a -m \"a\" ; git push"
 alias deploy='~/projects/worldarchitect.ai/deploy.sh "$@"'
 alias commit='git commit -a -m "a" && git push'
 alias status='git status'
@@ -200,14 +207,22 @@ eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
 export PATH="$HOME/.cargo/bin:$HOME/.claude/local:$PATH"
 alias git-header='bash /home/jleechan/projects/worldarchitect.ai/worktree_roadmap/claude_command_scripts/git-header.sh'
 # Removed invalid NODE_OPTIONS - max-listeners is not a valid Node.js option
-alias claude="~/.claude/local/claude"
 
-# OpenRouter API configuration
-export OPENAI_BASE_URL="https://openrouter.ai/api/v1"
-export OPENAI_MODEL="qwen/qwen3-coder:free"
-export OPENAI_MAX_TOKENS=200144
+export PATH="$PATH:/mnt/c/Users/jnlc3/AppData/Local/Programs/cursor/resources/app/bin"
+
+# Cerebras API configuration (Qwen3-Coder)
+export OPENAI_BASE_URL="https://api.cerebras.ai/v1"
+export OPENAI_MODEL="qwen-3-coder-480b"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
+
+
+
+alias code="cursor"
+export PATH="$HOME/bin:$PATH"
+
+alias claude="/home/jleechan/.claude/local/claude"
+alias qwend='qwen --yolo'
