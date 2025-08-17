@@ -1,0 +1,206 @@
+from datetime import datetime
+from typing import List, Dict, Optional
+from decimal import Decimal, ROUND_HALF_UP
+import uuid
+
+
+class InsufficientFundsError(Exception):
+    """Raised when attempting to withdraw more than available balance."""
+    pass
+
+
+class InvalidAmountError(Exception):
+    """Raised when attempting to use invalid amounts (negative or zero)."""
+    pass
+
+
+class BankAccount:
+    """
+    A bank account class with deposit, withdraw, and transaction tracking capabilities.
+    
+    Attributes:
+        account_number (str): Unique account identifier
+        account_holder (str): Name of the account holder
+        balance (Decimal): Current account balance
+        transaction_history (List[Dict]): List of all transactions
+    """
+    
+    def __init__(self, account_holder: str, initial_balance: float = 0.0):
+        """
+        Initialize a new bank account.
+        
+        Args:
+            account_holder (str): Name of the account holder
+            initial_balance (float): Starting balance (default: 0.0)
+            
+        Raises:
+            ValueError: If account holder name is empty or initial balance is negative
+        """
+        if not account_holder or not account_holder.strip():
+            raise ValueError("Account holder name cannot be empty")
+        
+        if initial_balance < 0:
+            raise ValueError("Initial balance cannot be negative")
+        
+        self.account_number = str(uuid.uuid4())[:8].upper()
+        self.account_holder = account_holder.strip()
+        self.balance = Decimal(str(initial_balance)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        self.transaction_history: List[Dict] = []
+        
+        # Record initial deposit if any
+        if initial_balance > 0:
+            self._record_transaction("INITIAL_DEPOSIT", initial_balance, self.balance)
+    
+    def deposit(self, amount: float) -> Dict:
+        """
+        Deposit money into the account.
+        
+        Args:
+            amount (float): Amount to deposit
+            
+        Returns:
+            Dict: Transaction record
+            
+        Raises:
+            InvalidAmountError: If amount is not positive
+        """
+        if amount <= 0:
+            raise InvalidAmountError("Deposit amount must be positive")
+        
+        decimal_amount = Decimal(str(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        old_balance = self.balance
+        self.balance += decimal_amount
+        
+        transaction = self._record_transaction("DEPOSIT", float(decimal_amount), float(self.balance))
+        return transaction
+    
+    def withdraw(self, amount: float) -> Dict:
+        """
+        Withdraw money from the account.
+        
+        Args:
+            amount (float): Amount to withdraw
+            
+        Returns:
+            Dict: Transaction record
+            
+        Raises:
+            InvalidAmountError: If amount is not positive
+            InsufficientFundsError: If amount exceeds available balance
+        """
+        if amount <= 0:
+            raise InvalidAmountError("Withdrawal amount must be positive")
+        
+        decimal_amount = Decimal(str(amount)).quantize(Decimal('0.01'), rounding=ROUND_HALF_UP)
+        
+        if decimal_amount > self.balance:
+            raise InsufficientFundsError(
+                f"Insufficient funds. Available: ${self.balance}, Requested: ${decimal_amount}"
+            )
+        
+        old_balance = self.balance
+        self.balance -= decimal_amount
+        
+        transaction = self._record_transaction("WITHDRAWAL", float(decimal_amount), float(self.balance))
+        return transaction
+    
+    def check_balance(self) -> float:
+        """
+        Get the current account balance.
+        
+        Returns:
+            float: Current balance
+        """
+        return float(self.balance)
+    
+    def get_transaction_history(self, limit: Optional[int] = None) -> List[Dict]:
+        """
+        Get transaction history.
+        
+        Args:
+            limit (Optional[int]): Maximum number of transactions to return
+            
+        Returns:
+            List[Dict]: List of transaction records
+        """
+        if limit is None:
+            return self.transaction_history.copy()
+        return self.transaction_history[-limit:] if limit > 0 else []
+    
+    def get_account_summary(self) -> Dict:
+        """
+        Get a comprehensive account summary.
+        
+        Returns:
+            Dict: Account summary with balance, transaction count, etc.
+        """
+        total_deposits = sum(
+            t['amount'] for t in self.transaction_history 
+            if t['type'] in ['DEPOSIT', 'INITIAL_DEPOSIT']
+        )
+        total_withdrawals = sum(
+            t['amount'] for t in self.transaction_history 
+            if t['type'] == 'WITHDRAWAL'
+        )
+        
+        return {
+            'account_number': self.account_number,
+            'account_holder': self.account_holder,
+            'current_balance': float(self.balance),
+            'total_transactions': len(self.transaction_history),
+            'total_deposits': total_deposits,
+            'total_withdrawals': total_withdrawals,
+            'created_at': self.transaction_history[0]['timestamp'] if self.transaction_history else None
+        }
+    
+    def _record_transaction(self, transaction_type: str, amount: float, new_balance: float) -> Dict:
+        """
+        Record a transaction in the history.
+        
+        Args:
+            transaction_type (str): Type of transaction
+            amount (float): Transaction amount
+            new_balance (float): Balance after transaction
+            
+        Returns:
+            Dict: Transaction record
+        """
+        transaction = {
+            'transaction_id': str(uuid.uuid4()),
+            'timestamp': datetime.now().isoformat(),
+            'type': transaction_type,
+            'amount': amount,
+            'balance_after': new_balance,
+            'description': f"{transaction_type.replace('_', ' ').title()}: ${amount:.2f}"
+        }
+        
+        self.transaction_history.append(transaction)
+        return transaction
+    
+    def __str__(self) -> str:
+        """String representation of the account."""
+        return f"BankAccount({self.account_holder}, Balance: ${self.balance:.2f})"
+    
+    def __repr__(self) -> str:
+        """Detailed string representation of the account."""
+        return (f"BankAccount(account_number='{self.account_number}', "
+                f"account_holder='{self.account_holder}', balance={self.balance})")
+
+
+# Example usage
+if __name__ == "__main__":
+    # Create account
+    account = BankAccount("John Doe", 1000.00)
+    print(f"Created: {account}")
+    
+    # Make transactions
+    account.deposit(500.50)
+    account.withdraw(200.25)
+    
+    # Check balance and history
+    print(f"Current balance: ${account.check_balance():.2f}")
+    print(f"Transaction history: {len(account.get_transaction_history())} transactions")
+    
+    # Get summary
+    summary = account.get_account_summary()
+    print(f"Account summary: {summary}")

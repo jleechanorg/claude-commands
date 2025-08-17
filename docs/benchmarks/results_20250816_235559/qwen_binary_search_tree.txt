@@ -1,0 +1,120 @@
+
+🚀🚀🚀 QWEN GENERATED IN 433ms 🚀🚀🚀
+
+```python
+class TreeNode:
+ def __init__(self, val=0, left=None, right=None):
+ self.val = val
+ self.left = left
+ self.right = right
+
+class BinarySearchTree:
+ def __init__(self):
+ self.root = None
+
+ def insert(self, val):
+ if not self.root:
+ self.root = TreeNode(val)
+ else:
+ self._insert_recursive(self.root, val)
+
+ def _insert_recursive(self, node, val):
+ if val < node.val:
+ if node.left is None:
+ node.left = TreeNode(val)
+ else:
+ self._insert_recursive(node.left, val)
+ elif val > node.val:
+ if node.right is None:
+ node.right = TreeNode(val)
+ else:
+ self._insert_recursive(node.right, val)
+
+ def search(self, val):
+ return self._search_recursive(self.root, val)
+
+ def _search_recursive(self, node, val):
+ if not node or node.val == val:
+ return node
+ if val < node.val:
+ return self._search_recursive(node.left, val)
+ return self._search_recursive(node.right, val)
+
+ def delete(self, val):
+ self.root = self._delete_recursive(self.root, val)
+
+ def _delete_recursive(self, node, val):
+ if not node:
+ return node
+
+ if val < node.val:
+ node.left = self._delete_recursive(node.left, val)
+ elif val > node.val:
+ node.right = self._delete_recursive(node.right, val)
+ else:
+ # Node with only one child or no child
+ if not node.left:
+ return node.right
+ elif not node.right:
+ return node.left
+
+ # Node with two children
+ successor = self._find_min(node.right)
+ node.val = successor.val
+ node.right = self._delete_recursive(node.right, successor.val)
+
+ return node
+
+ def _find_min(self, node):
+ while node.left:
+ node = node.left
+ return node
+
+ def inorder_traversal(self):
+ result = []
+ self._inorder_recursive(self.root, result)
+ return result
+
+ def _inorder_recursive(self, node, result):
+ if node:
+ self._inorder_recursive(node.left, result)
+ result.append(node.val)
+ self._inorder_recursive(node.right, result)
+
+ def preorder_traversal(self):
+ result = []
+ self._preorder_recursive(self.root, result)
+ return result
+
+ def _preorder_recursive(self, node, result):
+ if node:
+ result.append(node.val)
+ self._preorder_recursive(node.left, result)
+ self._preorder_recursive(node.right, result)
+
+ def postorder_traversal(self):
+ result = []
+ self._postorder_recursive(self.root, result)
+ return result
+
+ def _postorder_recursive(self, node, result):
+ if node:
+ self._postorder_recursive(node.left, result)
+ self._postorder_recursive(node.right, result)
+ result.append(node.val)
+
+ def validate_bst(self):
+ return self._validate_recursive(self.root, float('-inf'), float('inf'))
+
+ def _validate_recursive(self, node, min_val, max_val):
+ if not node:
+ return True
+ if node.val <= min_val or node.val >= max_val:
+ return False
+ return (self._validate_recursive(node.left, min_val, node.val) and
+ self._validate_recursive(node.right, node.val, max_val))
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 433ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀

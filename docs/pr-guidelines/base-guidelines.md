@@ -32,6 +32,12 @@
 - Monitor context consumption and checkpoint strategically
 - Batch tool calls for parallel execution when appropriate
 
+### 4. **Hybrid Code Generation with /qwen**
+- **ARCHITECT-BUILDER Pattern**: Claude designs specifications, /qwen builds at 19.6x speed
+- **Decision Documentation**: Log all /qwen vs Claude decisions in `docs/{branch}/qwen_decisions.md`
+- **Smart Delegation**: Use /qwen for well-specified generation, Claude for understanding/integration
+- **Learning Loop**: Review qwen_decisions.md regularly to optimize task delegation patterns
+
 ---
 
 ## 🏛️ Development Tenets

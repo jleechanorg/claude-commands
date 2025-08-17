@@ -1,0 +1,49 @@
+
+🚀🚀🚀 QWEN GENERATED IN 320ms 🚀🚀🚀
+
+src/components/ProductCard.js
+```javascript
+import React, { useState } from 'react';
+import { useCart } from '../context/CartContext';
+
+const ProductCard = ({ product }) => {
+ const { addToCart } = useCart();
+ const [isAdding, setIsAdding] = useState(false);
+
+ const handleAddToCart = async () => {
+ setIsAdding(true);
+ try {
+ await addToCart(product);
+ } finally {
+ setIsAdding(false);
+ }
+ };
+
+ return (
+ <div className="product-card">
+ <img 
+ src={product.image} 
+ alt={product.title}
+ className="product-image"
+ />
+ <div className="product-info">
+ <h3 className="product-title">{product.title}</h3>
+ <p className="product-price">${product.price.toFixed(2)}</p>
+ <button
+ onClick={handleAddToCart}
+ disabled={isAdding}
+ className="add-to-cart-btn"
+ >
+ {isAdding ? 'Adding...' : 'Add to Cart'}
+ </button>
+ </div>
+ </div>
+ );
+};
+
+export default ProductCard;
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 320ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀

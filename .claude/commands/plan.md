@@ -71,7 +71,7 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 **Required TodoWrite Checklist**:
 ```
-## PLANNING PROTOCOL CHECKLIST - ENHANCED WITH MEMORY AND GUIDELINES
+## PLANNING PROTOCOL CHECKLIST - ENHANCED WITH MEMORY, GUIDELINES, AND /QWEN
 - [ ] Guidelines consultation completed: ✅ `/guidelines` command executed successfully
 - [ ] Anti-patterns avoided: Reference historical mistakes and solutions
 - [ ] Memory consultation completed: ✅ YES
@@ -79,13 +79,17 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] Context check: ___% remaining
   *Guidance*: Estimate the percentage of the task or project that remains incomplete. For example, if 3 out of 10 subtasks are done, the remaining percentage is 70%.
 - [ ] Complexity assessment: Simple/Complex (memory and guidelines informed)
-- [ ] Tool selection validated: Serena MCP → Read tool → Bash (per guidelines)
-- [ ] Execution method decision: Parallel Task Tool Agents/Sequential with reasoning
-  *Required*: Must state "Parallel Task Tool Agents - [reason]" or "Sequential - [reason]"
+- [ ] /qwen delegation analysis: ✅ MANDATORY - Identified which parts suit /qwen vs Claude
+  *Required*: Must explicitly list tasks for /qwen (well-specified generation) vs Claude (understanding/integration)
+  *Reference*: Read CLAUDE.md "/QWEN HYBRID CODE GENERATION PROTOCOL" section for refresher on /qwen usage patterns
+  *Decision Log*: Document all /qwen delegation decisions in qwen_decisions.md
+- [ ] Tool selection validated: Serena MCP → Read tool → Bash → /qwen (per guidelines)
+- [ ] Execution method decision: Parallel Task Tool Agents/Sequential/Hybrid with /qwen
+  *Required*: Must state execution strategy including /qwen delegation points
   *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
   🚨 **CRITICAL**: Task tool supports up to 10 parallel subagents with auto-queue management
-- [ ] Tool requirements: Read, Write, Edit, Bash, Task
-- [ ] Guidelines-enhanced execution plan presented to user
+- [ ] Tool requirements: Read, Write, Edit, Bash, Task, /qwen
+- [ ] Guidelines-enhanced execution plan with /qwen delegation presented to user
 - [ ] User approval received
 ```
 
@@ -93,20 +97,29 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ### Phase 2: Present Execution Plan
 
-## 📋 Standard Plan Display Format
+## 📋 Standard Plan Display Format with /qwen Delegation
 
 *This format is used by both `/plan` and `/execute` commands for consistent presentation.*
 
 **Execution Plan Presentation**:
 - **Task complexity**: Simple (direct execution) or Complex (coordination needed)
+- **🚀 /qwen Delegation Strategy** (MANDATORY):
+  - **Tasks for /qwen** (19.6x faster generation):
+    * List specific code generation tasks with clear specs
+    * Example: "Generate User authentication class", "Create unit tests for Calculator"
+  - **Tasks for Claude** (understanding & integration):
+    * List analysis, debugging, and integration tasks
+    * Example: "Analyze existing auth system", "Integrate new code with database"
+  - **Hybrid Workflow**: Claude creates specs → /qwen generates → Claude integrates
 - **Execution method decision** (memory-informed):
   - **Parallel Task Tool Agents** (up to 10 concurrent subagents): For independent operations that benefit from parallelization
   - **Sequential Tasks**: For complex workflows requiring coordination between steps
+  - **Hybrid with /qwen**: Claude analyzes → /qwen generates in parallel → Claude integrates
   - 🚨 **CRITICAL**: Task tool agents run in TRUE parallel (not sequential as previously documented)
   - See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full criteria
-- **Tool requirements**: Which tools will be used
-- **Implementation approach**: Step-by-step plan
-- **Expected timeline**: Realistic estimate
+- **Tool requirements**: Which tools will be used (including /qwen)
+- **Implementation approach**: Step-by-step plan with /qwen delegation points marked
+- **Expected timeline**: Realistic estimate (considering /qwen's 500ms response time)
 
 **Parallel Tasks Plan (if applicable)**:
 - **Method**: Background processes (&), GNU parallel, xargs, or batched calls
