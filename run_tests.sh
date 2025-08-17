@@ -344,6 +344,15 @@ if [ -d ".claude/commands" ]; then
     done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
 fi
 
+# Run qwen command tests if they exist
+if [ -d ".claude/commands/qwen" ]; then
+    print_status "🚀 Discovering qwen command tests..."
+    while IFS= read -r -d $'\0' test_file; do
+        test_files+=("$test_file")
+        echo "  - Found: $test_file"
+    done < <(find .claude/commands/qwen -name "test_*.py" -type f -print0 2>/dev/null)
+fi
+
 # Run Claude Code hooks tests if they exist
 if [ -x ".claude/hooks/tests/run_all_hook_tests.sh" ]; then
     print_status "🪝 Running Claude Code hooks tests..."

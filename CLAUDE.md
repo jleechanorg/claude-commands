@@ -53,6 +53,44 @@ Genesis Coder, Prime Mover,
 - Enhance existing systems rather than creating parallel solutions
 - Consider testing, deployment, and maintenance from the first line of code
 
+## 🚨 CRITICAL: /QWEN HYBRID CODE GENERATION PROTOCOL
+
+**🚀 REVOLUTIONARY SPEED**: /qwen generates code 19.6x faster (500ms vs 10s) using Cerebras infrastructure
+
+**HYBRID WORKFLOW - Claude as ARCHITECT, Qwen as BUILDER**:
+1. **Claude analyzes** requirements and creates detailed specifications
+2. **Claude generates** precise, structured prompts with full context
+3. **/qwen executes** the code generation at high speed
+4. **Claude verifies** and integrates the generated code
+5. **Document decision** in `docs/{branch_name}/qwen_decisions.md` or `docs/{PR#}/qwen_decisions.md`
+
+**USE /QWEN FOR**:
+- ✅ Well-defined code generation from detailed specs
+- ✅ Boilerplate, templates, data structures
+- ✅ Unit tests for known interfaces
+- ✅ Implementing algorithms from specifications
+- ✅ Documentation generation
+- ✅ Repetitive pattern generation
+- ✅ Any task where Claude can write a clear prompt
+
+**USE CLAUDE DIRECTLY FOR**:
+- ❌ Understanding existing code relationships
+- ❌ Debugging with context
+- ❌ Refactoring decisions
+- ❌ Security-critical implementations
+- ❌ Architectural decisions
+- ❌ Integration with complex systems
+
+**DECISION LOGGING**: Record in `qwen_decisions.md`:
+```markdown
+## [Timestamp] Task: [Description]
+**Decision**: Used /qwen | Used Claude
+**Reasoning**: [Why this choice]
+**Prompt**: [If using /qwen, the prompt sent]
+**Result**: Success | Needed Claude intervention
+**Learning**: [What we learned for next time]
+```
+
 ## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL
 
 **🚨 ZERO TOLERANCE**: All new file requests must be submitted in NEW_FILE_REQUESTS.md with description of all places searched for duplicate functionality
