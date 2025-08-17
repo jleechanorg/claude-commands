@@ -1,8 +1,35 @@
 # Plan Command - Execute with Approval
 
-**Purpose**: Same as `/execute` but requires user approval before implementation
+**Purpose**: Same as `/execute` but requires user approval before implementation. **OPTIMIZED FOR MAXIMUM /QWEN CODE GENERATION BATCHING** to leverage 19.6x speed advantage.
 
-**Usage**: `/plan` - Present execution plan and wait for approval
+**Usage**: `/plan` - Present execution plan with maximum coding work batched for /qwen
+
+## 🚀 MAXIMUM /QWEN BATCHING STRATEGY (PRIMARY FOCUS)
+
+**REVOLUTIONARY SPEED**: /qwen generates code 19.6x faster (500ms vs 10s) - this is the PRIMARY optimization target
+
+### Batch-First Workflow Philosophy
+**The planning process MUST prioritize identifying and batching ALL possible coding work for /qwen upfront**:
+
+1. **📋 CODING TASK INVENTORY** (First Step - MANDATORY):
+   - **Scan the entire task** for ANY code generation opportunities
+   - **Group similar coding tasks** that can be generated together
+   - **Identify boilerplate patterns** that /qwen excels at
+   - **List ALL files/functions/classes** that need creation or major modification
+
+2. **🎯 MAXIMUM BATCH IDENTIFICATION**:
+   - **New file creation** - Perfect for /qwen with detailed specs
+   - **Function implementations** - Batch multiple functions with clear interfaces
+   - **Test generation** - Batch ALL tests for multiple modules
+   - **Data structures** - Create multiple related classes/interfaces
+   - **Configuration files** - Generate multiple config variations
+   - **Documentation** - Batch documentation for multiple components
+
+3. **⚡ BATCH EXECUTION STRATEGY**:
+   - **Front-load ALL /qwen tasks** before ANY Claude analysis work
+   - **Generate code in logical groups** (all models, all tests, all configs)
+   - **Minimize context switching** between generation and analysis
+   - **Parallel generation** when possible for independent components
 
 ## 🚨 CRITICAL: SERENA MCP USAGE FOR PR WORK
 
@@ -67,29 +94,36 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ## 🚨 PLAN PROTOCOL
 
-### Phase 1: TodoWrite Circuit Breaker (MANDATORY)
+### Phase 1: /QWEN BATCH INVENTORY (PRIMARY STEP - MANDATORY)
 
-**Required TodoWrite Checklist**:
+**🚀 MAXIMUM CODE GENERATION BATCHING CHECKLIST**:
 ```
-## PLANNING PROTOCOL CHECKLIST - ENHANCED WITH MEMORY, GUIDELINES, AND /QWEN
+## /QWEN BATCHING PROTOCOL - SPEED-OPTIMIZED PLANNING
+- [ ] 📋 COMPLETE CODING TASK INVENTORY: ✅ MANDATORY FIRST STEP
+  *Required*: List EVERY possible code generation opportunity in the task
+  *Examples*: New files, functions, classes, tests, configs, documentation
+  *Goal*: Identify 80%+ of coding work that can be batched to /qwen
+- [ ] 🎯 BATCH GROUPING STRATEGY:
+  - [ ] File creation batches: Group related new files
+  - [ ] Function implementation batches: Group similar functions
+  - [ ] Test generation batches: Group tests by module/feature
+  - [ ] Configuration batches: Group related config files
+  - [ ] Documentation batches: Group docs by component
+- [ ] ⚡ SPEED OPTIMIZATION ANALYSIS:
+  - [ ] Estimated /qwen tasks: _____ (aim for maximum possible)
+  - [ ] Estimated Claude tasks: _____ (minimize to analysis/integration only)
+  - [ ] Speed benefit calculation: _____ (19.6x faster × /qwen task count)
+  - [ ] Batching efficiency: High/Medium/Low (aim for High)
 - [ ] Guidelines consultation completed: ✅ `/guidelines` command executed successfully
 - [ ] Anti-patterns avoided: Reference historical mistakes and solutions
 - [ ] Memory consultation completed: ✅ YES
 - [ ] Memory insights applied: [Count] relevant patterns found
 - [ ] Context check: ___% remaining
-  *Guidance*: Estimate the percentage of the task or project that remains incomplete. For example, if 3 out of 10 subtasks are done, the remaining percentage is 70%.
 - [ ] Complexity assessment: Simple/Complex (memory and guidelines informed)
-- [ ] /qwen delegation analysis: ✅ MANDATORY - Identified which parts suit /qwen vs Claude
-  *Required*: Must explicitly list tasks for /qwen (well-specified generation) vs Claude (understanding/integration)
-  *Reference*: Read CLAUDE.md "/QWEN HYBRID CODE GENERATION PROTOCOL" section for refresher on /qwen usage patterns
-  *Decision Log*: Document all /qwen delegation decisions in qwen_decisions.md
 - [ ] Tool selection validated: Serena MCP → Read tool → Bash → /qwen (per guidelines)
-- [ ] Execution method decision: Parallel Task Tool Agents/Sequential/Hybrid with /qwen
-  *Required*: Must state execution strategy including /qwen delegation points
-  *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
-  🚨 **CRITICAL**: Task tool supports up to 10 parallel subagents with auto-queue management
-- [ ] Tool requirements: Read, Write, Edit, Bash, Task, /qwen
-- [ ] Guidelines-enhanced execution plan with /qwen delegation presented to user
+- [ ] Execution method decision: /qwen-First → Parallel → Sequential
+  *Priority*: /qwen batching takes precedence over parallelization decisions
+- [ ] **🚀 /QWEN BATCH EXECUTION PLAN** presented to user
 - [ ] User approval received
 ```
 
@@ -97,29 +131,45 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ### Phase 2: Present Execution Plan
 
-## 📋 Standard Plan Display Format with /qwen Delegation
+## 📋 /QWEN-OPTIMIZED Plan Display Format
 
-*This format is used by both `/plan` and `/execute` commands for consistent presentation.*
+*This format prioritizes maximum code generation batching for 19.6x speed advantage.*
 
-**Execution Plan Presentation**:
+**🚀 /QWEN-FIRST EXECUTION PLAN**:
 - **Task complexity**: Simple (direct execution) or Complex (coordination needed)
-- **🚀 /qwen Delegation Strategy** (MANDATORY):
-  - **Tasks for /qwen** (19.6x faster generation):
-    * List specific code generation tasks with clear specs
-    * Example: "Generate User authentication class", "Create unit tests for Calculator"
-  - **Tasks for Claude** (understanding & integration):
-    * List analysis, debugging, and integration tasks
-    * Example: "Analyze existing auth system", "Integrate new code with database"
-  - **Hybrid Workflow**: Claude creates specs → /qwen generates → Claude integrates
-- **Execution method decision** (memory-informed):
-  - **Parallel Task Tool Agents** (up to 10 concurrent subagents): For independent operations that benefit from parallelization
-  - **Sequential Tasks**: For complex workflows requiring coordination between steps
-  - **Hybrid with /qwen**: Claude analyzes → /qwen generates in parallel → Claude integrates
-  - 🚨 **CRITICAL**: Task tool agents run in TRUE parallel (not sequential as previously documented)
-  - See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full criteria
-- **Tool requirements**: Which tools will be used (including /qwen)
-- **Implementation approach**: Step-by-step plan with /qwen delegation points marked
-- **Expected timeline**: Realistic estimate (considering /qwen's 500ms response time)
+- **📋 CODING TASK INVENTORY** (PRIMARY SECTION):
+  - **Total coding tasks identified**: _____ tasks
+  - **Batchable for /qwen**: _____ tasks (aim for 80%+)
+  - **Requires Claude analysis**: _____ tasks (minimize)
+  - **Speed multiplier**: _____ (19.6x × /qwen task percentage)
+
+- **🎯 /QWEN BATCH EXECUTION STRATEGY** (MANDATORY):
+  - **Batch Group 1 - File Creation** (500ms each vs 10s):
+    * List all new files to generate with detailed specs
+    * Example: "User.py class with auth methods", "UserTest.py with 15 test cases"
+  - **Batch Group 2 - Function Implementation** (500ms each vs 10s):
+    * List functions to implement with clear interfaces
+    * Example: "calculate_damage(), validate_input(), format_response()"
+  - **Batch Group 3 - Test Generation** (500ms each vs 10s):
+    * List test suites to generate
+    * Example: "Integration tests for auth module", "Unit tests for utilities"
+  - **Batch Group 4 - Configuration/Documentation** (500ms each vs 10s):
+    * List configs and docs to generate
+    * Example: "API documentation", "Docker configs", "Environment setup"
+
+- **⚡ CLAUDE INTEGRATION TASKS** (Minimal - for analysis/integration only):
+  - **Pre-generation analysis**: Understand existing codebase structure
+  - **Spec creation**: Create detailed specifications for /qwen
+  - **Post-generation integration**: Integrate generated code into existing system
+  - **Quality validation**: Review and test integrated solution
+
+- **🚀 EXECUTION SEQUENCE** (/qwen-optimized):
+  1. **Quick Analysis Phase** (Claude): Minimal codebase understanding
+  2. **Spec Creation Phase** (Claude): Detailed /qwen specifications
+  3. **MASS GENERATION Phase** (/qwen): Execute ALL batches in parallel
+  4. **Integration Phase** (Claude): Integrate and validate results
+
+- **Expected timeline**: _____ (/qwen batching saves _____ minutes vs traditional approach)
 
 **Parallel Tasks Plan (if applicable)**:
 - **Method**: Background processes (&), GNU parallel, xargs, or batched calls
@@ -146,34 +196,89 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ## Example Flow
 
-**`/plan` Flow**:
+**`/plan` Flow** (/qwen-optimized):
 ```
 User: /plan implement user authentication system
-Assistant: I'll create a plan for implementing user authentication system.
+Assistant: I'll create a /qwen-optimized plan for implementing user authentication system.
 
-[Uses TodoWrite circuit breaker]
+[Uses /QWEN BATCH INVENTORY protocol]
 
-Memory-Enhanced Execution Plan:
-- Complexity: Complex (memory-informed)
-- **Execution method: Sequential Tasks** (applying learned patterns)
-  - Sequential workflow for: Security implementation requiring coordination
-  - Memory insight: Authentication systems need careful step-by-step validation
-- Applied memory corrections: POST methods, session-based auth, rate limiting
-- Tools: Read, Write, Edit, Bash (using `/e` based on memory patterns)
-- Timeline: ~45 minutes (includes security pattern application)
+🚀 /QWEN-FIRST EXECUTION PLAN:
+
+📋 CODING TASK INVENTORY:
+- Total coding tasks identified: 12 tasks
+- Batchable for /qwen: 10 tasks (83% - EXCELLENT batching efficiency)
+- Requires Claude analysis: 2 tasks (minimal)
+- Speed multiplier: 16.3x (19.6x × 83%)
+
+🎯 /QWEN BATCH EXECUTION STRATEGY:
+- **Batch Group 1 - Authentication Classes** (5 files, ~2.5 seconds vs 50 seconds):
+  * User.py with login/logout methods
+  * Session.py with session management
+  * AuthValidator.py with input validation
+  * PasswordUtils.py with hashing utilities
+  * AuthExceptions.py with custom exceptions
+
+- **Batch Group 2 - Test Suites** (3 test files, ~1.5 seconds vs 30 seconds):
+  * test_user_auth.py with 15 test cases
+  * test_session_management.py with 10 test cases  
+  * test_auth_validators.py with 8 test cases
+
+- **Batch Group 3 - Configuration** (2 files, ~1 second vs 20 seconds):
+  * auth_config.py with security settings
+  * auth_routes.py with Flask routes
+
+⚡ CLAUDE INTEGRATION TASKS:
+- Analyze existing Flask app structure (2 minutes)
+- Integrate auth system with existing database (8 minutes)
+
+🚀 EXECUTION SEQUENCE:
+1. Quick Analysis (2 min): Understand current Flask structure
+2. Spec Creation (3 min): Create detailed /qwen specifications  
+3. MASS GENERATION (5 min): Execute all 3 batches via /qwen
+4. Integration (8 min): Integrate with existing Flask app
+
+Timeline: ~18 minutes (/qwen batching saves ~37 minutes vs traditional approach)
 
 [Waits for user approval]
 
-User: Approved
-Assistant: [Executes same protocol as /execute command]
+User: Approved  
+Assistant: [Executes /qwen-first protocol]
 ```
 
 ## Key Characteristics
 
-- ✅ **TodoWrite circuit breaker required**
+- ✅ **🚀 /qwen batch inventory required** (PRIMARY)
+- ✅ **Maximum code generation batching** for 19.6x speed advantage
 - ✅ **User approval required** before execution
-- ✅ **Plan presentation** with realistic assessment
+- ✅ **/qwen-optimized plan presentation** with speed analysis
 - ✅ **Same execution protocol** as `/execute` after approval
-- ✅ **Execution-method decision recorded** – "Parallel Tasks – [reason]" or "Sequential Tasks – [reason]" with clear rationale
+- ✅ **Speed-first execution method** – "/qwen batching → [rationale]" prioritized over parallelization
+- ✅ **Batch efficiency metrics** – percentage of work delegated to /qwen with time savings calculation
+
+## 🚀 /QWEN BATCHING DECISION CRITERIA
+
+**PERFECT for /qwen** (Always batch these):
+- ✅ **New file creation** with clear specifications
+- ✅ **Function implementations** with defined interfaces
+- ✅ **Test generation** for known code structures
+- ✅ **Data structures** (classes, interfaces, schemas)
+- ✅ **Configuration files** with specified parameters
+- ✅ **Documentation** with clear scope and format
+- ✅ **Boilerplate code** (templates, repetitive patterns)
+- ✅ **Code generation from specifications** (API clients, etc.)
+
+**REQUIRES Claude** (Cannot batch):
+- ❌ **Understanding existing complex codebases**
+- ❌ **Debugging with context analysis**
+- ❌ **Refactoring decisions** based on existing code
+- ❌ **Security-critical implementation decisions**
+- ❌ **Integration with complex existing systems**
+- ❌ **Performance optimization** requiring profiling
+
+**HYBRID APPROACH** (Claude specs → /qwen generates):
+- 🔄 **Complex algorithms** (Claude designs, /qwen implements)
+- 🔄 **Database schemas** (Claude analyzes needs, /qwen creates)
+- 🔄 **API implementations** (Claude designs interface, /qwen codes)
 
 **Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past planning approaches, execution patterns, and lessons learned to enhance plan quality and accuracy. See CLAUDE.md Memory Enhancement Protocol for details.
