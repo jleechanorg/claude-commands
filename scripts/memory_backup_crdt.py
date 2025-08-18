@@ -302,46 +302,56 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
     Returns:
         Merged list of entries with conflicts resolved
     """
-    # Flatten and group entries by ID
-    entries_by_id: Dict[str, List[Dict[str, Any]]] = {}
-    
+    # First pass: collect all unique entries by unique_id
+    all_entries: Dict[str, Dict[str, Any]] = {}
     for memory_list in memory_lists:
         for entry in memory_list:
             if not isinstance(entry, dict):
                 continue
-                
-            entry_id = entry.get('id', 'unknown')
             
-            if entry_id not in entries_by_id:
-                entries_by_id[entry_id] = []
-            entries_by_id[entry_id].append(entry)
+            if '_crdt_metadata' in entry:
+                uid = entry['_crdt_metadata'].get('unique_id')
+                if uid:
+                    # Only keep if not seen or has different content
+                    if uid not in all_entries:
+                        all_entries[uid] = entry
+                    else:
+                        # If same unique_id, use deterministic selection
+                        existing_content = str(all_entries[uid].get('content', ''))
+                        new_content = str(entry.get('content', ''))
+                        if new_content > existing_content:
+                            all_entries[uid] = entry
     
-    # Resolve conflicts using LWW
-    merged_entries = []
+    # Second pass: group by entry ID for LWW merge
+    entries_by_id: Dict[str, Dict[str, Any]] = {}
     
-    for entry_id, entries in entries_by_id.items():
-        if len(entries) == 1:
-            merged_entries.append(entries[0])
+    for entry in all_entries.values():
+        entry_id = entry.get('id', 'unknown')
+        
+        # LWW: Keep entry with newest timestamp  
+        if entry_id not in entries_by_id:
+            entries_by_id[entry_id] = entry
         else:
-            # Find entry with newest timestamp
-            winner = entries[0]
+            existing = entries_by_id[entry_id]
             
-            # Get timestamp from metadata if present
-            if '_crdt_metadata' in winner:
-                winner_time = _parse_timestamp(winner['_crdt_metadata']['timestamp'])
-            else:
-                winner_time = datetime.min
-            
-            for entry in entries[1:]:
-                if '_crdt_metadata' in entry:
-                    entry_time = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
-                    if entry_time > winner_time:
-                        winner = entry
-                        winner_time = entry_time
-            
-            merged_entries.append(winner)
+            # Compare timestamps if metadata exists
+            if '_crdt_metadata' in entry and '_crdt_metadata' in existing:
+                existing_time = _parse_timestamp(existing['_crdt_metadata']['timestamp'])
+                new_time = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
+                
+                if new_time > existing_time:
+                    entries_by_id[entry_id] = entry
+                elif new_time == existing_time:
+                    # Tiebreaker: use unique_id for deterministic ordering
+                    existing_uid = existing['_crdt_metadata'].get('unique_id', '')
+                    new_uid = entry['_crdt_metadata'].get('unique_id', '')
+                    if new_uid > existing_uid:
+                        entries_by_id[entry_id] = entry
     
-    # Sort by timestamp if metadata present
+    # Convert to list and sort by timestamp
+    merged_entries = list(entries_by_id.values())
+    
+    # Sort by timestamp for consistent ordering
     def get_timestamp(entry):
         if '_crdt_metadata' in entry:
             return _parse_timestamp(entry['_crdt_metadata']['timestamp'])
