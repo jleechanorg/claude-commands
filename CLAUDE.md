@@ -190,6 +190,16 @@ Genesis Coder, Prime Mover,
 
 🚨 **PRE-ACTION CHECKPOINT**: Before ANY action, ask: "Does this violate CLAUDE.md rules?" | "Check constraints first?"
 
+🚨 **PRE-WRITE CHECKPOINT**: Before ANY Write tool usage, ask:
+1. "Does this violate NEW FILE CREATION PROTOCOL?"
+2. "Have I searched existing tools first?"
+3. "Do I need NEW_FILE_REQUESTS.md entry?"
+
+**🎯 Memory Aid:** The Write tool checkpoint prevents emergency-driven file creation, making protocol compliance automatic like greeting/header habits.
+
+**Pattern**: Write usage → Check protocol → Search existing → Document necessity → Then create
+**Anti-Pattern**: Problem urgency → Create file immediately → Skip all protocols
+
 🚨 **DUAL COMPOSITION ARCHITECTURE**: Two command processing mechanisms
 - **Cognitive** (/think, /arch, /debug): Universal Composition (natural semantic understanding)
 - **Operational** (/headless, /handoff, /orchestrate): Protocol Enforcement (mandatory workflow execution)

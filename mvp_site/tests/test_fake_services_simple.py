@@ -8,8 +8,10 @@ import os
 import sys
 import unittest
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# Add tests directory to path for imports when run as standalone script
+tests_dir = os.path.dirname(os.path.abspath(__file__))
+if tests_dir not in sys.path:
+    sys.path.insert(0, tests_dir)
 
 from fake_auth import FakeFirebaseAuth
 from fake_firestore import FakeFirestoreClient

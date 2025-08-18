@@ -233,5 +233,512 @@
     "args": {
       "filePath": "/home/jleechan/projects/worldarchitect.ai/worktree_mcp/mvp_site/frontend_v2/package.json"
     }
+  },
+  {
+    "timestamp": "2025-08-15T03-49-59-991Z",
+    "event": "list_tools",
+    "response": {
+      "tools": [
+        {
+          "name": "create-react-app",
+          "description": "Create a new React application",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the React app"
+              },
+              "template": {
+                "type": "string",
+                "description": "Template to use (e.g., typescript, cra-template-pwa)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Base directory to create the app in (defaults to home directory)"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        },
+        {
+          "name": "run-react-app",
+          "description": "Run a React application in development mode",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectPath": {
+                "type": "string",
+                "description": "Path to the React project folder"
+              }
+            },
+            "required": [
+              "projectPath"
+            ]
+          }
+        },
+        {
+          "name": "run-command",
+          "description": "Run a terminal command",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "Command to execute"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory to run the command in (defaults to current directory)"
+              }
+            },
+            "required": [
+              "command"
+            ]
+          }
+        },
+        {
+          "name": "get-process-output",
+          "description": "Get the output from a running or completed process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to get output from"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "stop-process",
+          "description": "Stop a running process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to stop"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "list-processes",
+          "description": "List all running processes",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "edit-file",
+          "description": "Create or edit a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to edit"
+              },
+              "content": {
+                "type": "string",
+                "description": "Content to write to the file"
+              }
+            },
+            "required": [
+              "filePath",
+              "content"
+            ]
+          }
+        },
+        {
+          "name": "read-file",
+          "description": "Read the contents of a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to read"
+              }
+            },
+            "required": [
+              "filePath"
+            ]
+          }
+        },
+        {
+          "name": "install-package",
+          "description": "Install a npm package in a project",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "packageName": {
+                "type": "string",
+                "description": "Name of the package to install (can include version)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory of the project (defaults to current directory)"
+              },
+              "dev": {
+                "type": "boolean",
+                "description": "Whether to install as a dev dependency"
+              }
+            },
+            "required": [
+              "packageName"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-08-15T06-57-57-502Z",
+    "event": "list_tools",
+    "response": {
+      "tools": [
+        {
+          "name": "create-react-app",
+          "description": "Create a new React application",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the React app"
+              },
+              "template": {
+                "type": "string",
+                "description": "Template to use (e.g., typescript, cra-template-pwa)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Base directory to create the app in (defaults to home directory)"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        },
+        {
+          "name": "run-react-app",
+          "description": "Run a React application in development mode",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectPath": {
+                "type": "string",
+                "description": "Path to the React project folder"
+              }
+            },
+            "required": [
+              "projectPath"
+            ]
+          }
+        },
+        {
+          "name": "run-command",
+          "description": "Run a terminal command",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "Command to execute"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory to run the command in (defaults to current directory)"
+              }
+            },
+            "required": [
+              "command"
+            ]
+          }
+        },
+        {
+          "name": "get-process-output",
+          "description": "Get the output from a running or completed process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to get output from"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "stop-process",
+          "description": "Stop a running process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to stop"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "list-processes",
+          "description": "List all running processes",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "edit-file",
+          "description": "Create or edit a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to edit"
+              },
+              "content": {
+                "type": "string",
+                "description": "Content to write to the file"
+              }
+            },
+            "required": [
+              "filePath",
+              "content"
+            ]
+          }
+        },
+        {
+          "name": "read-file",
+          "description": "Read the contents of a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to read"
+              }
+            },
+            "required": [
+              "filePath"
+            ]
+          }
+        },
+        {
+          "name": "install-package",
+          "description": "Install a npm package in a project",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "packageName": {
+                "type": "string",
+                "description": "Name of the package to install (can include version)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory of the project (defaults to current directory)"
+              },
+              "dev": {
+                "type": "boolean",
+                "description": "Whether to install as a dev dependency"
+              }
+            },
+            "required": [
+              "packageName"
+            ]
+          }
+        }
+      ]
+    }
+  },
+  {
+    "timestamp": "2025-08-15T16-19-22-091Z",
+    "event": "list_tools",
+    "response": {
+      "tools": [
+        {
+          "name": "create-react-app",
+          "description": "Create a new React application",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Name of the React app"
+              },
+              "template": {
+                "type": "string",
+                "description": "Template to use (e.g., typescript, cra-template-pwa)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Base directory to create the app in (defaults to home directory)"
+              }
+            },
+            "required": [
+              "name"
+            ]
+          }
+        },
+        {
+          "name": "run-react-app",
+          "description": "Run a React application in development mode",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "projectPath": {
+                "type": "string",
+                "description": "Path to the React project folder"
+              }
+            },
+            "required": [
+              "projectPath"
+            ]
+          }
+        },
+        {
+          "name": "run-command",
+          "description": "Run a terminal command",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "command": {
+                "type": "string",
+                "description": "Command to execute"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory to run the command in (defaults to current directory)"
+              }
+            },
+            "required": [
+              "command"
+            ]
+          }
+        },
+        {
+          "name": "get-process-output",
+          "description": "Get the output from a running or completed process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to get output from"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "stop-process",
+          "description": "Stop a running process",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "processId": {
+                "type": "string",
+                "description": "ID of the process to stop"
+              }
+            },
+            "required": [
+              "processId"
+            ]
+          }
+        },
+        {
+          "name": "list-processes",
+          "description": "List all running processes",
+          "inputSchema": {
+            "type": "object",
+            "properties": {}
+          }
+        },
+        {
+          "name": "edit-file",
+          "description": "Create or edit a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to edit"
+              },
+              "content": {
+                "type": "string",
+                "description": "Content to write to the file"
+              }
+            },
+            "required": [
+              "filePath",
+              "content"
+            ]
+          }
+        },
+        {
+          "name": "read-file",
+          "description": "Read the contents of a file",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "filePath": {
+                "type": "string",
+                "description": "Path to the file to read"
+              }
+            },
+            "required": [
+              "filePath"
+            ]
+          }
+        },
+        {
+          "name": "install-package",
+          "description": "Install a npm package in a project",
+          "inputSchema": {
+            "type": "object",
+            "properties": {
+              "packageName": {
+                "type": "string",
+                "description": "Name of the package to install (can include version)"
+              },
+              "directory": {
+                "type": "string",
+                "description": "Directory of the project (defaults to current directory)"
+              },
+              "dev": {
+                "type": "boolean",
+                "description": "Whether to install as a dev dependency"
+              }
+            },
+            "required": [
+              "packageName"
+            ]
+          }
+        }
+      ]
+    }
   }
 ]

@@ -107,10 +107,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         }
         story_collection.add(story_entry)
 
-    @patch("firebase_admin.firestore.client")
-    def test_turn_on_debug_mode(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_turn_on_debug_mode(self, mock_get_db):
         """Test Case 1: Turn on debug mode via settings API."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # Initially no user settings (defaults to False)
         response = self.client.get("/api/settings", headers=self.test_headers)
@@ -138,10 +139,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         settings_data = json.loads(response.data)
         assert settings_data["debug_mode"]
 
-    @patch("firebase_admin.firestore.client")
-    def test_turn_off_debug_mode(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_turn_off_debug_mode(self, mock_get_db):
         """Test Case 2: Turn off debug mode via settings API."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # First turn ON debug mode
         debug_settings = {"debug_mode": True}
@@ -173,10 +175,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         settings_data = json.loads(response.data)
         assert not settings_data["debug_mode"]
 
-    @patch("firebase_admin.firestore.client")
-    def test_ui_state_debug_mode_on(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_ui_state_debug_mode_on(self, mock_get_db):
         """Test Case 3: UI receives correct state when debug mode is ON."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # Turn ON debug mode in settings
         debug_settings = {"debug_mode": True}
@@ -219,10 +222,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         assert "debug_info" in gemini_entry
         assert "planning_block" in gemini_entry
 
-    @patch("firebase_admin.firestore.client")
-    def test_ui_state_debug_mode_off(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_ui_state_debug_mode_off(self, mock_get_db):
         """Test Case 4: UI receives correct state when debug mode is OFF."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # Turn OFF debug mode in settings
         debug_settings = {"debug_mode": False}
@@ -265,13 +269,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
         assert "debug_info" not in gemini_entry
         assert "planning_block" in gemini_entry
 
-    @patch("firebase_admin.firestore.client")
+    @patch("firestore_service.get_db")
     @patch("google.genai.Client")
     def test_interaction_respects_debug_mode_setting(
-        self, mock_genai_client_class, mock_firestore_client
+        self, mock_genai_client_class, mock_get_db
     ):
         """Test that game interactions respect the user's debug mode setting."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
         mock_genai_client_class.return_value = self.fake_genai_client
 
         # Mock Gemini responses
@@ -324,10 +329,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
             narrative = response_data.get("narrative", "")
             assert "GM-only information" not in narrative
 
-    @patch("firebase_admin.firestore.client")
-    def test_debug_mode_persistence_across_requests(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_debug_mode_persistence_across_requests(self, mock_get_db):
         """Test that debug mode setting persists across multiple requests."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # Set debug mode to True
         debug_settings = {"debug_mode": True}
@@ -438,12 +444,13 @@ class TestDebugModeEnd2End(unittest.TestCase):
         self.assertTrue(debug_on_valid, "Debug mode ON should be valid with GeminiRequest")
         self.assertTrue(debug_off_valid, "Debug mode OFF should be valid with GeminiRequest")
 
-    @patch("firebase_admin.firestore.client")
+    @patch("firestore_service.get_db")
     def test_backend_strips_game_state_fields_when_debug_off(
-        self, mock_firestore_client
+        self, mock_get_db
     ):
         """Test that backend strips game state fields (entities, state_updates, debug_info) when debug mode is OFF."""
-        mock_firestore_client.return_value = self.fake_firestore
+        # Use the same fake Firestore instance from setUp
+        mock_get_db.return_value = self.fake_firestore
 
         # Create a story entry with all possible fields including game state fields
         campaign_doc = (

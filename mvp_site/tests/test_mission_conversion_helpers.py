@@ -14,7 +14,7 @@ sys.path.insert(
 import unittest
 
 # Mock Firebase before importing modules that depend on it
-with patch("firebase_admin.firestore.client"):
+with patch("firestore_service.get_db"):
     import logging_util
     from firestore_service import update_state_with_changes
 

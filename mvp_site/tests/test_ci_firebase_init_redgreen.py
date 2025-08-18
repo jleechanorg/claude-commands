@@ -70,7 +70,7 @@ class TestCIFirebaseInitialization(unittest.TestCase):
         os.environ["MOCK_SERVICES_MODE"] = "true"
         
         # Add mvp_site to path
-        mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_ci_firebase_init_redgreen.py')))
         if mvp_site_path not in sys.path:
             sys.path.insert(0, mvp_site_path)
         

@@ -174,7 +174,7 @@ else:
 
 🎯 **THE GOAL**: Gather everything that GitHub shows as preventing the green "Merge" button from being available - NEVER assume, ALWAYS verify with fresh GitHub data.
 
-### Step 3: Analyze Issues with Intelligence
+### Step 3: Analyze Issues with Intelligence & Pattern Detection
 
 🚨 **CRITICAL BUG PREVENTION**: Before analyzing any GitHub API data, ALWAYS verify data structure to prevent "'list' object has no attribute 'get'" errors.
 
@@ -183,6 +183,42 @@ else:
 - ✅ **Use isinstance(data, dict)** before accessing dict methods
 - ✅ **Iterate through lists** rather than treating them as single objects
 - ❌ **NEVER assume API response structure**
+
+🚀 **NEW: PATTERN DETECTION ENGINE** - Automatically scan for similar issues across the codebase
+
+**FIRESTORE MOCKING PATTERN DETECTION** (High Priority):
+```bash
+# Detect mismatched Firestore mocking patterns that cause MagicMock JSON serialization errors
+# Pattern: Tests patching firebase_admin.firestore.client but code calling firestore_service.get_db()
+
+# 1. Scan for problematic mocking patterns
+grep -r "@patch.*firebase_admin\.firestore\.client" . --include="*.py" || echo "No firebase_admin.firestore.client patterns found"
+
+# 2. Cross-reference with actual service calls
+grep -r "firestore_service\.get_db" . --include="*.py" || echo "No firestore_service.get_db calls found"
+
+# 3. Report mismatch pattern for bulk fixing
+echo "🔍 PATTERN DETECTION: Firestore mocking mismatch"
+echo "❌ Problem: Tests patch 'firebase_admin.firestore.client'"  
+echo "✅ Solution: Should patch 'firestore_service.get_db'"
+echo "📊 Impact: Prevents MagicMock JSON serialization errors"
+```
+
+**MAGICMOCK SERIALIZATION PATTERN DETECTION**:
+```bash
+# Detect other patterns that cause "Object of type MagicMock is not JSON serializable" errors
+
+# 1. Scan for MagicMock usage in tests that interact with JSON APIs
+grep -r "MagicMock" . --include="test_*.py" -A 5 -B 5 | grep -E "(json\.|\.json|JSON)" || echo "No MagicMock+JSON patterns found"
+
+# 2. Look for patch decorators that don't return proper fake objects
+grep -r "@patch" . --include="test_*.py" -A 10 | grep -E "(return_value.*MagicMock|side_effect.*MagicMock)" || echo "No problematic MagicMock return patterns found"
+```
+
+**SCOPE FLAGS FOR PATTERN DETECTION**:
+- **Default Behavior**: Fix only immediate blockers (existing behavior preserved)
+- **`--scope=pattern`**: Fix detected issues + apply same fix to similar patterns across codebase
+- **`--scope=comprehensive`**: Fix all related test infrastructure issues
 
 Examine the collected data to understand what needs fixing:
 
@@ -261,6 +297,8 @@ gh pr view <PR> --json statusCheckRollup
 ```
 
 ### Step 5: Apply Fixes Intelligently
+
+🎯 **FOCUSED APPROACH**: Apply fixes to the immediate issues identified in the current PR
 
 Based on the analysis, apply appropriate fixes:
 
@@ -468,11 +506,21 @@ For every fix applied:
 ## Example Usage
 
 ```bash
-# Analyze and show what would be fixed
+# Analyze and show what would be fixed (default: critical scope)
 /fixpr 1234
 
 # Analyze and automatically apply safe fixes
 /fixpr 1234 --auto-apply
+
+# 🚀 NEW: Pattern detection mode - Fix similar issues across codebase
+/fixpr 1234 --scope=pattern
+# → Fixes immediate blockers
+# → Scans for similar patterns (e.g., firestore mocking mismatches)
+# → Applies same fix to all instances
+# → Prevents future similar failures
+
+# Comprehensive mode - Fix all related test infrastructure
+/fixpr 1234 --scope=comprehensive --auto-apply
 
 # Example with GitHub CI vs Local discrepancy (auto-triggers /redgreen workflow):
 # Local: ./run_tests.sh → ✅ All tests pass
@@ -483,6 +531,15 @@ For every fix applied:
 # → Creates failing test locally
 # → Fixes code to work in both environments
 # → Verifies GitHub CI passes
+
+# Example with MagicMock JSON serialization pattern:
+# GitHub: ❌ "Object of type MagicMock is not JSON serializable"
+/fixpr 1234 --scope=pattern
+# → Identifies @patch("firebase_admin.firestore.client") mismatch
+# → Fixes immediate test to @patch("firestore_service.get_db")
+# → Scans codebase for similar patterns
+# → Fixes 4+ additional test files with same issue
+# → Prevents regression of MagicMock serialization errors
 ```
 
 ## Integrated CI Verification Workflow

@@ -36,8 +36,8 @@ def get_project_root():
     return None
 
 
-def test_file_size(filepath):
-    """Test if a file is within acceptable size limits."""
+def check_file_size(filepath):
+    """Check if a file is within acceptable size limits."""
     try:
         with open(filepath, encoding="utf-8") as f:
             lines = f.readlines()
@@ -69,8 +69,26 @@ def test_file_size(filepath):
         }
 
 
-def test_read_performance(filepath):
-    """Test how long it takes to read a file."""
+def test_file_sizes():
+    """Test that all documentation files are within acceptable size limits."""
+    project_root = get_project_root()
+    if not project_root:
+        import pytest
+        pytest.skip("Project root not found")
+    
+    for doc_file in DOCUMENTATION_FILES:
+        filepath = os.path.join(project_root, doc_file)
+        result = check_file_size(filepath)
+        
+        # Assert that files don't exceed maximum size
+        assert not result["needs_reduction"], (
+            f"File {doc_file} is too large: {result['lines']} lines "
+            f"(max: {MAX_FILE_SIZE_LINES}). Status: {result['status']}"
+        )
+
+
+def check_read_performance(filepath):
+    """Check how long it takes to read a file."""
     if not os.path.exists(filepath):
         return None
 
@@ -82,6 +100,24 @@ def test_read_performance(filepath):
         return None
 
     return time.time() - start_time
+
+
+def test_read_performance():
+    """Test that all documentation files can be read within acceptable time."""
+    project_root = get_project_root()
+    if not project_root:
+        import pytest
+        pytest.skip("Project root not found")
+    
+    for doc_file in DOCUMENTATION_FILES:
+        filepath = os.path.join(project_root, doc_file)
+        if os.path.exists(filepath):
+            read_time = check_read_performance(filepath)
+            if read_time is not None:
+                assert read_time <= MAX_READ_TIME_SECONDS, (
+                    f"File {doc_file} takes too long to read: {read_time:.2f}s "
+                    f"(max: {MAX_READ_TIME_SECONDS}s)"
+                )
 
 
 def simulate_api_read(filepath, chunk_lines=2000):
@@ -145,7 +181,7 @@ def main():
 
     for doc_file in DOCUMENTATION_FILES:
         filepath = os.path.join(project_root, doc_file)
-        result = test_file_size(filepath)
+        result = check_file_size(filepath)
         results.append(result)
 
         if result["lines"] > 0:
@@ -170,7 +206,7 @@ def main():
     for doc_file in DOCUMENTATION_FILES:
         filepath = os.path.join(project_root, doc_file)
         if os.path.exists(filepath):
-            read_time = test_read_performance(filepath)
+            read_time = check_read_performance(filepath)
             if read_time is not None:
                 status = "✅ Fast" if read_time < MAX_READ_TIME_SECONDS else "⚠️  Slow"
                 print(f"{doc_file:<50} {read_time:>6.3f}s {status}")

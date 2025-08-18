@@ -30,8 +30,11 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         self.structured_response = MagicMock(spec=NarrativeResponse)
         self.structured_response.planning_block = None
 
-    @patch("gemini_service.logging_util")
-    def test_character_creation_detection_case_insensitive(self, mock_logging):
+    @patch("gemini_service.logging_util", autospec=True)
+    @patch("gemini_service._call_gemini_api", autospec=True)
+    @patch("gemini_service._get_text_from_response", autospec=True)
+    @patch("gemini_service._parse_gemini_response", autospec=True)
+    def test_character_creation_detection_case_insensitive(self, mock_parse, mock_get_text, mock_call_api, mock_logging):
         """Test character creation detection with case insensitivity."""
         # Test various case combinations
         test_cases = [
@@ -41,9 +44,18 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             "[CHARACTER creation] and character SHEET and WOULD you like to PLAY as this character?",
         ]
 
+        # Setup mocks for API calls that might be triggered
+        mock_call_api.return_value = "mock_api_response"
+        mock_get_text.return_value = "Generated planning block content"  
+        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+
         for response_text in test_cases:
             with self.subTest(response_text=response_text):
-                # This should trigger character creation detection
+                # Ensure per-case isolation of call history
+                mock_call_api.reset_mock()
+                mock_get_text.reset_mock()
+                mock_parse.reset_mock()
+                # This should trigger character creation detection and planning block generation
                 try:
                     _validate_and_enforce_planning_block(
                         response_text,
@@ -53,8 +65,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
                         "test instruction",
                         self.structured_response,
                     )
-                    # Should not crash and should detect character creation
-                    assert True  # If we get here, it didn't crash
+                    # Character creation detection now triggers API calls for planning block generation
+                    # This is expected behavior - character creation requires planning blocks
+                    self.assertTrue(True)  # Test passes if no exception is raised
                 except Exception as e:
                     self.fail(
                         f"Character creation detection crashed with case variation: {e}"
@@ -101,8 +114,8 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
             for call in mock_logging.info.call_args_list
         )
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
+    @patch("gemini_service.logging_util", autospec=True)
+    @patch("gemini_service._call_gemini_api", autospec=True)
     def test_planning_block_early_return_when_already_set(
         self, mock_call_api, mock_logging
     ):
@@ -133,10 +146,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         # Verify response_text is returned unchanged
         assert result == response_text
 
-    @patch("gemini_service.logging_util")
-    @patch("gemini_service._call_gemini_api")
-    @patch("gemini_service._get_text_from_response")
-    @patch("gemini_service._parse_gemini_response")
+    @patch("gemini_service.logging_util", autospec=True)
+    @patch("gemini_service._call_gemini_api", autospec=True)
+    @patch("gemini_service._get_text_from_response", autospec=True)
+    @patch("gemini_service._parse_gemini_response", autospec=True)
     def test_planning_block_validation_success_logging(
         self, mock_parse, mock_get_text, mock_call_api, mock_logging
     ):
@@ -348,8 +361,16 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         # Should return original response without modification
         assert result == response_text
 
-    def test_crash_safety_with_malformed_inputs(self):
+    @patch("gemini_service._call_gemini_api")
+    @patch("gemini_service._get_text_from_response")
+    @patch("gemini_service._parse_gemini_response")
+    def test_crash_safety_with_malformed_inputs(self, mock_parse, mock_get_text, mock_call_api):
         """Test that the function doesn't crash with malformed inputs."""
+        # Setup mocks for any potential API calls
+        mock_call_api.return_value = "mock_api_response"
+        mock_get_text.return_value = "Generated planning block content"  
+        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+        
         # Test with None inputs
         try:
             result = _validate_and_enforce_planning_block(
@@ -384,8 +405,16 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         except Exception as e:
             self.fail(f"Function crashed with malformed game state: {e}")
 
-    def test_unicode_handling_in_logging(self):
+    @patch("gemini_service._call_gemini_api")
+    @patch("gemini_service._get_text_from_response")
+    @patch("gemini_service._parse_gemini_response")
+    def test_unicode_handling_in_logging(self, mock_parse, mock_get_text, mock_call_api):
         """Test that logging handles unicode characters safely."""
+        # Setup mocks for any potential API calls
+        mock_call_api.return_value = "mock_api_response"
+        mock_get_text.return_value = "Generated planning block content"  
+        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+        
         # Test with unicode in response text
         unicode_response = "Story with unicode: 🔍 📊 ✅ ❌ 🚨"
 

@@ -19,7 +19,7 @@ sys.path.insert(
 )
 
 # Mock Firebase before importing firestore_service
-with patch("firebase_admin.firestore.client"):
+with patch("firestore_service.get_db"):
     from firestore_service import (
         DELETE_TOKEN,
         _handle_append_syntax,

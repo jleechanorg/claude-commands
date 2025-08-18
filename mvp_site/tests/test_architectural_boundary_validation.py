@@ -27,7 +27,7 @@ os.environ["TESTING"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__ if '__file__' in globals() else 'tests/test_architectural_boundary_validation.py'), "..")))
 
 # Module-level imports (moved from inline locations per coding guidelines)
 from main import (

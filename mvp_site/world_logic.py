@@ -175,14 +175,14 @@ def _prepare_game_state(
     )
 
     if was_cleaned:
+        # Ensure user_id is preserved in cleaned state
+        cleaned_state_dict["user_id"] = user_id
         current_game_state = GameState.from_dict(cleaned_state_dict)
         if current_game_state is None:
             logging_util.error(
-                "PREPARE_GAME_STATE: GameState.from_dict returned None after cleanup, using original state"
+                "PREPARE_GAME_STATE: GameState.from_dict returned None after cleanup, using default state"
             )
-            current_game_state = GameState.from_dict(
-                current_game_state.to_dict()
-            ) or GameState(user_id=user_id)
+            current_game_state = GameState(user_id=user_id)
         firestore_service.update_campaign_game_state(
             user_id, campaign_id, current_game_state.to_dict()
         )

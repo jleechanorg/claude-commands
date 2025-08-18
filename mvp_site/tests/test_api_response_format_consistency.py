@@ -51,13 +51,13 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
         """Set up test client."""
         
         # Mock Firebase to prevent initialization errors
-        self.firebase_patcher = patch("firebase_admin.firestore.client")
-        self.mock_firestore = self.firebase_patcher.start()
+        self.firebase_patcher = patch("firestore_service.get_db")
+        self.mock_get_db = self.firebase_patcher.start()
         
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
         fake_firestore = FakeFirestoreClient()
-        self.mock_firestore.return_value = fake_firestore
+        self.mock_get_db.return_value = fake_firestore
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()

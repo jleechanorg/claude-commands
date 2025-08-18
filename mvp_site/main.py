@@ -282,10 +282,7 @@ def create_app() -> Flask:
             except Exception as e:
                 error_message = str(e)
                 logging_util.error(f"Auth failed: {e}")
-                logging_util.error(
-                    f"Token received: {id_token[:50] if id_token else 'None'}..."
-                )
-                logging_util.error(f"Headers: {dict(request.headers)}")
+                # Do not log tokens or Authorization headers
                 logging_util.error(traceback.format_exc())
                 
                 # Enhanced error response with clock skew hints
@@ -343,7 +340,8 @@ def create_app() -> Flask:
                 return jsonify(result["campaigns"])
 
             # Fallback if format is unexpected
-            return safe_jsonify(result), result.get("status_code", 200)
+            status_code = result.get("status_code", 200) if isinstance(result, dict) else 200
+            return safe_jsonify(result), status_code
         except MCPClientError as e:
             return handle_mcp_errors(e)
         except Exception as e:
@@ -437,12 +435,12 @@ def create_app() -> Flask:
             data = request.get_json()
 
             # Debug logging
-            app.logger.info("Received campaign creation request:")
-            app.logger.info(f"  Character: {data.get('character', '')}")
-            app.logger.info(f"  Setting: {data.get('setting', '')}")
-            app.logger.info(f"  Description: {data.get('description', '')}")
-            app.logger.info(f"  Custom options: {data.get('custom_options', [])}")
-            app.logger.info(f"  Selected prompts: {data.get('selected_prompts', [])}")
+            logging_util.info("Received campaign creation request:")
+            logging_util.info(f"  Character: {data.get('character', '')}")
+            logging_util.info(f"  Setting: {data.get('setting', '')}")
+            logging_util.info(f"  Description: {data.get('description', '')}")
+            logging_util.info(f"  Custom options: {data.get('custom_options', [])}")
+            logging_util.info(f"  Selected prompts: {data.get('selected_prompts', [])}")
 
             # Add user_id to request data
             data["user_id"] = user_id
@@ -462,7 +460,7 @@ def create_app() -> Flask:
         except MCPClientError as e:
             return handle_mcp_errors(e)
         except Exception as e:
-            app.logger.error(f"Failed to create campaign: {e}")
+            logging_util.error(f"Failed to create campaign: {e}")
             return jsonify({KEY_ERROR: f"Failed to create campaign: {str(e)}"}), 500
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
@@ -473,13 +471,15 @@ def create_app() -> Flask:
     ) -> Response | tuple[Response, int]:
         try:
             data = request.get_json()
+            if data is None or not isinstance(data, dict):
+                return jsonify({KEY_ERROR: "Invalid JSON payload"}), 400
 
             # Handle legacy title-only updates
             if constants.KEY_TITLE in data and len(data) == 1:
                 new_title = data.get(constants.KEY_TITLE)
-                if not new_title:
+                if not isinstance(new_title, str) or new_title.strip() == "":
                     return jsonify({KEY_ERROR: "New title is required"}), 400
-                updates = {constants.KEY_TITLE: new_title}
+                updates = {constants.KEY_TITLE: new_title.strip()}
             else:
                 # General updates
                 updates = data
@@ -505,7 +505,7 @@ def create_app() -> Flask:
         except MCPClientError as e:
             return handle_mcp_errors(e)
         except Exception as e:
-            traceback.print_exc()
+            logging_util.error(traceback.format_exc())
             return jsonify(
                 {KEY_ERROR: "Failed to update campaign", KEY_DETAILS: str(e)}
             ), 500
@@ -630,28 +630,29 @@ def create_app() -> Flask:
             campaign_title = result.get("campaign_title", "Untitled Campaign")
             desired_download_name = f"{campaign_title}.{export_format}"
 
-            if os.path.exists(export_path):
-                logging_util.info(
-                    f"Exporting file '{export_path}' with download_name='{desired_download_name}'"
-                )
+            if not export_path or not os.path.exists(export_path):
+                return jsonify({KEY_ERROR: "Failed to create export file."}), 500
 
-                # Use the standard send_file call for file serving
-                response = send_file(
-                    export_path,
-                    download_name=desired_download_name,
-                    as_attachment=True,
-                )
+            logging_util.info(
+                f"Exporting file '{export_path}' with download_name='{desired_download_name}'"
+            )
 
-                @response.call_on_close
-                def cleanup() -> None:
-                    try:
-                        os.remove(export_path)
-                        logging_util.info(f"Cleaned up temporary file: {export_path}")
-                    except Exception as e:
-                        logging_util.error(f"Error cleaning up file {export_path}: {e}")
+            # Use the standard send_file call for file serving
+            response = send_file(
+                export_path,
+                download_name=desired_download_name,
+                as_attachment=True,
+            )
 
-                return response
-            return jsonify({KEY_ERROR: "Failed to create export file."}), 500
+            @response.call_on_close
+            def cleanup() -> None:
+                try:
+                    os.remove(export_path)
+                    logging_util.info(f"Cleaned up temporary file: {export_path}")
+                except Exception as e:
+                    logging_util.error(f"Error cleaning up file {export_path}: {e}")
+
+            return response
 
         except MCPClientError as e:
             return handle_mcp_errors(e)

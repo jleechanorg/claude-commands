@@ -40,14 +40,14 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             main.HEADER_TEST_USER_ID: "test-user-123"
         }
 
-    @patch("firebase_admin.firestore.client")
+    @patch("firestore_service.get_db")
     @patch("gemini_service._call_gemini_api_with_gemini_request")
-    def test_continue_story_success(self, mock_gemini_request, mock_firestore_client):
+    def test_continue_story_success(self, mock_gemini_request, mock_get_db):
         """Test successful story continuation using fake services."""
         
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
         
         # Create test campaign data
         campaign_id = "test_campaign_123"
@@ -95,13 +95,13 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         found_narrative = any('The story continues with new adventures...' in entry.get('text', '') for entry in data['story'])
         self.assertTrue(found_narrative, "Expected narrative not found in response")
 
-    @patch("firebase_admin.firestore.client")
-    def test_continue_story_campaign_not_found(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_continue_story_campaign_not_found(self, mock_get_db):
         """Test continuing story with non-existent campaign."""
         
         # Set up empty fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
         
         response = self.client.post('/api/campaigns/nonexistent_campaign/interaction',
                                   data=json.dumps({

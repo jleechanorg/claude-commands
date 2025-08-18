@@ -19,8 +19,8 @@ sys.path.insert(
 )
 
 # Import proper fakes library 
-from fake_services import FakeServiceManager
-from fake_firestore import FakeFirestoreClient
+from tests.fake_services import FakeServiceManager
+from tests.fake_firestore import FakeFirestoreClient
 
 # Use proper fakes library instead of manual MagicMock setup
 with FakeServiceManager() as fake_services:

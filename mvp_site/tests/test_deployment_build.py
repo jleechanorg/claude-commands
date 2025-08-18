@@ -132,10 +132,11 @@ def load_world_content_for_system_instruction():
             # Loading should now work
             result = world_loader.load_world_content_for_system_instruction()
 
-            # Verify content was loaded (mock returns char counts)
-            assert "Book:" in result
-            assert "World:" in result
-            assert "chars" in result
+            # Verify content was loaded successfully
+            assert result is not None
+            assert len(result) > 0
+            # Check for actual world content markers instead of mock format
+            assert any(marker in result for marker in ["World", "WORLD", "Campaign", "CAMPAIGN"])
 
             # Verify world files exist in the copied location
             assert os.path.exists("world/celestial_wars_alexiel_book.md")

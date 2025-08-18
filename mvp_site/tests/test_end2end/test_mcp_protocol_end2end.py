@@ -17,6 +17,13 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 # Add the parent directory to the path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+# Check if google-genai is available (for local vs CI environments)
+try:
+    from google import genai
+    HAS_GENAI = True
+except ImportError:
+    HAS_GENAI = False
+
 
 from datetime import UTC, datetime
 
@@ -58,12 +65,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             "use_default_world": False,
         }
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_get_campaigns_list_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_get_campaigns_list_protocol(self, mock_get_db):
         """Test MCP protocol for get_campaigns_list_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -85,12 +92,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             assert campaign["title"] == "MCP Protocol Test Campaign"
             assert campaign["id"] == self.test_campaign_id
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_create_campaign_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_create_campaign_protocol(self, mock_get_db):
         """Test MCP protocol for create_campaign_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Create campaign data for testing
         campaign_data = {
@@ -125,15 +132,16 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
                 "campaign_id" in response_data or "success" in response_data
             ), f"Expected campaign_id or success in response: {response_data}"
 
-    @patch("firebase_admin.firestore.client")
-    @patch("google.genai.Client")
+    @unittest.skipUnless(HAS_GENAI, "google-genai package not available")
+    @patch("firestore_service.get_db")
+    @patch("gemini_service.genai.Client")
     def test_mcp_process_action_protocol(
-        self, mock_genai_client_class, mock_firestore_client
+        self, mock_genai_client_class, mock_get_db
     ):
         """Test MCP protocol for process_action_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign and game state
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -195,12 +203,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             if "entities_mentioned" in response_data:
                 assert response_data["entities_mentioned"] == ["Test Hero"]
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_get_campaign_state_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_get_campaign_state_protocol(self, mock_get_db):
         """Test MCP protocol for get_campaign_state_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -226,12 +234,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             campaign = response_data["campaign"]
             assert campaign["title"] == "MCP Protocol Test Campaign"
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_update_campaign_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_update_campaign_protocol(self, mock_get_db):
         """Test MCP protocol for update_campaign_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -256,12 +264,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         # Should have consistent JSON structure
         assert isinstance(response_data, dict)
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_export_campaign_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_export_campaign_protocol(self, mock_get_db):
         """Test MCP protocol for export_campaign_unified tool."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -284,12 +292,12 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
             # Empty campaigns result in empty export files
             assert response.data is not None
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_user_settings_protocol(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_user_settings_protocol(self, mock_get_db):
         """Test MCP protocol for user settings get/update tools."""
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Test GET settings through MCP protocol
         response = self.client.get("/api/settings", headers=self.test_headers)

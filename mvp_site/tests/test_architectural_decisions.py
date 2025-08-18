@@ -19,11 +19,11 @@ except ImportError:
     pytest = None  # Make pytest optional for CI environments
 
 # Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_architectural_decisions.py'))))
 
 # Add .claude/commands to path for arch module import
 claude_commands_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_architectural_decisions.py')))),
     ".claude",
     "commands",
 )

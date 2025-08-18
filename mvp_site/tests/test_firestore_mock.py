@@ -12,10 +12,18 @@ mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if mvp_site_path not in sys.path:
     sys.path.insert(0, mvp_site_path)
 
+# Check if firebase_admin is available
+try:
+    import firebase_admin
+    HAS_FIREBASE = True
+except ImportError:
+    HAS_FIREBASE = False
+
 
 class TestFirestoreMocking(unittest.TestCase):
     """Demonstrate proper mocking of Firestore operations."""
 
+    @unittest.skipUnless(HAS_FIREBASE, "firebase_admin not available")
     @patch('firestore_service.get_db')
     def test_firestore_operations_with_mock(self, mock_get_db):
         """Test that Firestore operations can be properly mocked."""
@@ -54,22 +62,27 @@ class TestFirestoreMocking(unittest.TestCase):
         mock_client.collection.assert_called_with('campaigns')
         mock_collection.document.assert_called_with('test_id')
 
-    @patch('firestore_service.firestore.client')
-    def test_mock_at_firestore_client_level(self, mock_firestore_client):
-        """Test mocking at the firestore.client() level."""
-        # Create a mock client
-        mock_client = MagicMock()
-        mock_firestore_client.return_value = mock_client
-        
-        # Import and use the service
-        import firestore_service
-        
-        db = firestore_service.get_db()
-        self.assertEqual(db, mock_client)
-        
-        # Verify firestore.client() was called
-        mock_firestore_client.assert_called_once()
+    @unittest.skipUnless(HAS_FIREBASE, "firebase_admin not available")
+    def test_mock_at_firestore_client_level(self):
+        """Test that get_db() returns a mockable client in testing mode."""
+        # Set TESTING environment to ensure mock mode
+        with patch.dict(os.environ, {"TESTING": "true"}):
+            import firestore_service
+            
+            db = firestore_service.get_db()
+            
+            # In testing mode, get_db() should return a MagicMock
+            self.assertIsInstance(db, MagicMock)
+            
+            # Verify the mock has the expected Firestore interface
+            self.assertTrue(hasattr(db, 'collection'))
+            self.assertTrue(hasattr(db, 'batch'))
+            
+            # Test that the mock works as expected for common operations
+            collection_ref = db.collection('test')
+            self.assertIsInstance(collection_ref, MagicMock)
 
+    @unittest.skipUnless(HAS_FIREBASE, "firebase_admin not available")
     def test_mock_with_context_manager(self):
         """Test using mock as a context manager for isolated tests."""
         with patch('firestore_service.get_db') as mock_get_db:

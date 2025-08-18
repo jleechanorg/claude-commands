@@ -148,3 +148,14 @@ headless_*/
 [workspace]
 venv
 ci_logs.zip
+
+# Temporary JSON files
+*.json.tmp
+fresh_*.json
+temp_*.json
+
+# MCP and React logs
+logs/
+logs/*.json
+logs/*.txt
+logs/*.log

@@ -32,7 +32,7 @@ class EntityContext:
     location: str | None = None
     last_action: str | None = None
     emotional_state: str | None = None
-    physical_markers: list[str] = None  # e.g., "bandaged ear", "trembling"
+    physical_markers: list[str] | None = None  # e.g., "bandaged ear", "trembling"
 
     def __post_init__(self):
         if self.physical_markers is None:
@@ -43,13 +43,13 @@ class EntityContext:
 class ValidationResult:
     """Result of narrative validation"""
 
-    entities_found: list[str] = None
-    entities_missing: list[str] = None
+    entities_found: list[str] | None = None
+    entities_missing: list[str] | None = None
     all_entities_present: bool = False
     confidence: float = 0.0
-    warnings: list[str] = None
-    metadata: dict[str, Any] = None
-    validation_details: dict[str, Any] = None
+    warnings: list[str] | None = None
+    metadata: dict[str, Any] | None = None
+    validation_details: dict[str, Any] | None = None
 
     def __post_init__(self):
         if self.entities_found is None:

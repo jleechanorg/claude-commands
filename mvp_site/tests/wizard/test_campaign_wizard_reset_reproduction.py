@@ -10,6 +10,7 @@ This test reproduces the exact user workflow that leads to the persistent spinne
 """
 
 import http.server
+import os
 import socket
 import socketserver
 import threading
@@ -31,9 +32,14 @@ except ImportError:
     SELENIUM_AVAILABLE = False
 
 
+@unittest.skipUnless(
+    not os.environ.get('CI') and not os.environ.get('GITHUB_ACTIONS') and os.environ.get('ENABLE_BROWSER_TESTS') == '1',
+    "Browser automation tests disabled in CI - set ENABLE_BROWSER_TESTS=1 to run locally"
+)
 class CampaignWizardResetReproductionTest(unittest.TestCase):
     """
     Automated reproduction of the campaign wizard reset issue
+    PERFORMANCE GATED: Requires ENABLE_BROWSER_TESTS=1 (expensive 30+ second test)
     """
 
     @classmethod

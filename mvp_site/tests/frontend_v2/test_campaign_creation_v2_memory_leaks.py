@@ -30,8 +30,8 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         self.base_url = "http://localhost:8081"
         self.test_mode_url = f"{self.base_url}?test_mode=true&test_user_id=test-user-123"
         
-        # Detect CI environment
-        self.is_ci = bool(os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS'))
+        # Detect CI environment or testing mode
+        self.is_ci = bool(os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS') or os.environ.get('TESTING'))
         
         # Check if server is running (skip in CI)
         if self.is_ci:

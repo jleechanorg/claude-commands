@@ -31,8 +31,8 @@ class NumericFieldConverter:
 
     @classmethod
     def convert_dict_with_fields(
-        cls, data: dict[str, Any], numeric_fields: set[str]
-    ) -> dict[str, Any]:
+        cls, data: Any, numeric_fields: set[str]
+    ) -> Any:
         """
         Recursively convert specified numeric fields in a dictionary.
 
@@ -46,21 +46,22 @@ class NumericFieldConverter:
         if not isinstance(data, dict):
             return data
 
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, dict):
                 # Recursively process nested dictionaries
                 result[key] = cls.convert_dict_with_fields(value, numeric_fields)
             elif isinstance(value, list):
                 # Process lists (in case they contain dicts)
-                result[key] = [
-                    cls.convert_dict_with_fields(item, numeric_fields)
-                    if isinstance(item, dict)
-                    else cls.try_convert_to_int(item)
-                    if key in numeric_fields
-                    else item
-                    for item in value
-                ]
+                converted_list = []
+                for item in value:
+                    if isinstance(item, dict):
+                        converted_list.append(cls.convert_dict_with_fields(item, numeric_fields))
+                    elif key in numeric_fields:
+                        converted_list.append(cls.try_convert_to_int(item))
+                    else:
+                        converted_list.append(item)
+                result[key] = converted_list
             # Convert the value if it's in the numeric fields set
             elif key in numeric_fields:
                 result[key] = cls.try_convert_to_int(value)
@@ -70,7 +71,7 @@ class NumericFieldConverter:
         return result
 
     @classmethod
-    def convert_all_possible_ints(cls, data: dict[str, Any]) -> dict[str, Any]:
+    def convert_all_possible_ints(cls, data: Any) -> Any:
         """
         Try to convert all string values that look like integers.
         This is useful for general-purpose conversion where you don't know field names.
@@ -84,19 +85,20 @@ class NumericFieldConverter:
         if not isinstance(data, dict):
             return data
 
-        result = {}
+        result: dict[str, Any] = {}
         for key, value in data.items():
             if isinstance(value, dict):
                 # Recursively process nested dictionaries
                 result[key] = cls.convert_all_possible_ints(value)
             elif isinstance(value, list):
                 # Process lists
-                result[key] = [
-                    cls.convert_all_possible_ints(item)
-                    if isinstance(item, dict)
-                    else cls.try_convert_to_int(item)
-                    for item in value
-                ]
+                converted_list = []
+                for item in value:
+                    if isinstance(item, dict):
+                        converted_list.append(cls.convert_all_possible_ints(item))
+                    else:
+                        converted_list.append(cls.try_convert_to_int(item))
+                result[key] = converted_list
             else:
                 # Try to convert any value
                 result[key] = cls.try_convert_to_int(value)

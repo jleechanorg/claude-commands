@@ -16,7 +16,7 @@ import os
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -212,41 +212,163 @@ class CommentFetch(CopilotCommandBase):
         # No pattern matching, no keyword detection
         return True
 
+    def _get_ci_status(self) -> Dict[str, Any]:
+        """Fetch GitHub CI status using /fixpr methodology.
+        
+        Uses GitHub as authoritative source for CI status.
+        Implements defensive programming patterns from /fixpr.
+        
+        Returns:
+            Dict with CI status information
+        """
+        try:
+            # Use /fixpr methodology: GitHub is authoritative source
+            cmd = [
+                'gh', 'pr', 'view', self.pr_number, 
+                '--json', 'statusCheckRollup,mergeable,mergeStateStatus'
+            ]
+            
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            pr_data = json.loads(result.stdout)
+            
+            # Defensive programming: statusCheckRollup is often a LIST
+            status_checks = pr_data.get('statusCheckRollup', [])
+            if not isinstance(status_checks, list):
+                status_checks = [status_checks] if status_checks else []
+            
+            # Process checks with safe access patterns from /fixpr
+            checks = []
+            failing_checks = []
+            pending_checks = []
+            passing_checks = []
+            
+            for check in status_checks:
+                if not isinstance(check, dict):
+                    continue
+                    
+                # Prefer conclusion (for completed check runs). Fall back to state (contexts), then UNKNOWN.
+                status_value = (check.get('conclusion') or check.get('state') or 'UNKNOWN')
+                check_info = {
+                    'name': check.get('name', check.get('context', 'unknown')),
+                    'status': status_value,
+                    'description': check.get('description', ''),
+                    'url': check.get('detailsUrl', ''),
+                    'started_at': check.get('startedAt', ''),
+                    'completed_at': check.get('completedAt', '')
+                }
+                checks.append(check_info)
+                
+                # Categorize for quick analysis with safe status normalization
+                status_upper = (status_value or 'UNKNOWN').upper()
+                # Treat failure-like outcomes as failing
+                if status_upper in ['FAILURE', 'FAILED', 'CANCELLED', 'TIMED_OUT', 'ACTION_REQUIRED', 'ERROR', 'STALE']:
+                    failing_checks.append(check_info)
+                # Queue/progress states are pending
+                elif status_upper in ['PENDING', 'IN_PROGRESS', 'QUEUED', 'REQUESTED', 'WAITING']:
+                    pending_checks.append(check_info)
+                # Only SUCCESS (and optionally NEUTRAL/SKIPPED) should count as passing
+                elif status_upper in ['SUCCESS', 'NEUTRAL', 'SKIPPED']:
+                    passing_checks.append(check_info)
+            
+            # Overall CI state assessment
+            overall_state = 'UNKNOWN'
+            if failing_checks:
+                overall_state = 'FAILING'
+            elif pending_checks:
+                overall_state = 'PENDING'
+            elif passing_checks and not failing_checks and not pending_checks:
+                overall_state = 'PASSING'
+            
+            return {
+                'overall_state': overall_state,
+                'mergeable': pr_data.get('mergeable', None),
+                'merge_state_status': pr_data.get('mergeStateStatus', 'unknown'),
+                'checks': checks,
+                'summary': {
+                    'total': len(checks),
+                    'passing': len(passing_checks),
+                    'failing': len(failing_checks),
+                    'pending': len(pending_checks)
+                },
+                'failing_checks': failing_checks,
+                'pending_checks': pending_checks,
+                'fetched_at': datetime.now().isoformat()
+            }
+            
+        except subprocess.CalledProcessError as e:
+            self.log(f"Error fetching CI status: {e}")
+            return {
+                'overall_state': 'ERROR',
+                'error': f"Failed to fetch CI status: {e}",
+                'checks': [],
+                'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
+            }
+        except json.JSONDecodeError as e:
+            self.log(f"Error parsing CI status JSON: {e}")
+            return {
+                'overall_state': 'ERROR', 
+                'error': f"Failed to parse CI status: {e}",
+                'checks': [],
+                'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
+            }
+        except Exception as e:
+            self.log(f"Unexpected error fetching CI status: {e}")
+            return {
+                'overall_state': 'ERROR',
+                'error': f"Unexpected error: {e}", 
+                'checks': [],
+                'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
+            }
+
     def execute(self) -> Dict[str, Any]:
         """Execute comment fetching from all sources."""
         self.log(f"🔄 FETCHING FRESH COMMENTS for PR #{self.pr_number} from GitHub API")
         self.log(f"⚠️ NEVER reading from cache - always fresh API calls")
         self.log(f"📁 Will save to: {self.output_file}")
 
-        # Fetch comments in parallel for speed
-        with ThreadPoolExecutor(max_workers=4) as executor:
+        # Fetch comments and CI status in parallel for speed
+        with ThreadPoolExecutor(max_workers=5) as executor:
             futures = {
                 executor.submit(self._get_inline_comments): "inline",
                 executor.submit(self._get_general_comments): "general",
                 executor.submit(self._get_review_comments): "review",
                 executor.submit(self._get_copilot_comments): "copilot",
+                executor.submit(self._get_ci_status): "ci_status",
             }
+            
+            ci_status = None
 
             for future in as_completed(futures):
-                comment_type = futures[future]
+                data_type = futures[future]
                 try:
-                    comments = future.result()
-                    self.comments.extend(comments)
-                    self.log(f"  Found {len(comments)} {comment_type} comments")
+                    result = future.result()
+                    if data_type == "ci_status":
+                        ci_status = result
+                        self.log(f"  Fetched CI status: {result.get('overall_state', 'unknown')}")
+                    else:
+                        # This is comment data
+                        self.comments.extend(result)
+                        self.log(f"  Found {len(result)} {data_type} comments")
                 except Exception as e:
-                    self.log_error(f"Failed to fetch {comment_type} comments: {e}")
+                    if data_type == "ci_status":
+                        self.log_error(f"Failed to fetch CI status: {e}")
+                        ci_status = {'overall_state': 'ERROR', 'error': str(e)}
+                    else:
+                        self.log_error(f"Failed to fetch {data_type} comments: {e}")
 
         # Sort by created_at (most recent first)
         self.comments.sort(key=lambda c: c.get("created_at", ""), reverse=True)
 
         # Count comments needing responses
-        needs_response = sum(1 for c in self.comments if c.get("requires_response"))
+        # After filtering, all remaining comments are unresponded
+        unresponded_count = len(self.comments)
 
         # Prepare data to save
         data = {
             "pr": self.pr_number,
-            "fetched_at": datetime.now().isoformat(),
+            "fetched_at": datetime.now(timezone.utc).isoformat(),
             "comments": self.comments,
+            "ci_status": ci_status or {'overall_state': 'UNKNOWN', 'error': 'CI status not fetched'},
             "metadata": {
                 "total": len(self.comments),
                 "by_type": {
@@ -263,7 +385,7 @@ class CommentFetch(CopilotCommandBase):
                         [c for c in self.comments if c["type"] == "copilot"]
                     ),
                 },
-                "needs_response": needs_response,
+                "unresponded_count": unresponded_count,
                 "repo": self.repo,
             },
         }
@@ -277,10 +399,22 @@ class CommentFetch(CopilotCommandBase):
 
         self.log(f"Comments saved to {self.output_file}")
 
-        # Prepare result
+        # Prepare result with CI status summary
+        ci_summary = ""
+        if ci_status:
+            state = ci_status.get('overall_state', 'UNKNOWN')
+            failing = len(ci_status.get('failing_checks', []))
+            pending = len(ci_status.get('pending_checks', []))
+            if failing > 0:
+                ci_summary = f", CI: {failing} failing"
+            elif pending > 0:
+                ci_summary = f", CI: {pending} pending"
+            else:
+                ci_summary = f", CI: {state.lower()}"
+        
         result = {
             "success": True,
-            "message": f"Fetched {len(self.comments)} comments ({needs_response} need responses) - saved to {self.output_file}",
+            "message": f"Fetched {len(self.comments)} comments ({unresponded_count} unresponded){ci_summary} - saved to {self.output_file}",
             "data": data,
         }
 

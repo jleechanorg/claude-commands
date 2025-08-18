@@ -20,11 +20,11 @@ from main import create_app
 
 # Import JsonInputBuilder and JsonInputValidator from fake_services for test availability
 try:
-    from fake_services import FakeServiceManager, JsonInputBuilder, JsonInputValidator
+    from tests.fake_services import FakeServiceManager, JsonInputBuilder, JsonInputValidator
 except ImportError:
     JsonInputBuilder = None
     JsonInputValidator = None
-    from fake_services import FakeServiceManager
+    from tests.fake_services import FakeServiceManager
 
 class TestMockServices(unittest.TestCase):
     def setUp(self):

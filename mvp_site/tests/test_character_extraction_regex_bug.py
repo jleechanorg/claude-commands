@@ -13,7 +13,7 @@ import unittest
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_character_extraction_regex_bug.py'))))
 )
 
 import gemini_service

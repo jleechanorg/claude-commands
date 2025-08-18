@@ -300,6 +300,310 @@ class TestFirestoreStateHelpers(unittest.TestCase):
         assert "to_delete" not in result
         assert result["new_key"] == "new_value"
 
+    # =============================================================================
+    # MATRIX-DRIVEN TDD TESTS - Phase 1: RED (Failing Tests)
+    # =============================================================================
+    
+    def test_matrix_delete_token_comprehensive(self):
+        """Matrix 1: DELETE_TOKEN handling - All combinations [1,1-3]"""
+        # Test cases based on comprehensive matrix planning
+        test_cases = [
+            # [1,1] DELETE_TOKEN with existing key - should delete
+            {
+                "name": "delete_existing_key", 
+                "state": {"key": "value", "other": "data"},
+                "key": "key",
+                "value": DELETE_TOKEN,
+                "expected_handled": True,
+                "expected_state": {"other": "data"}
+            },
+            # [1,2] DELETE_TOKEN with non-existing key - should log attempt  
+            {
+                "name": "delete_missing_key",
+                "state": {"other": "data"},
+                "key": "missing_key", 
+                "value": DELETE_TOKEN,
+                "expected_handled": True,
+                "expected_state": {"other": "data"}
+            },
+            # [1,3] Non-DELETE_TOKEN value - should return False
+            {
+                "name": "non_delete_token",
+                "state": {"key": "value"},
+                "key": "key",
+                "value": "not_delete_token",
+                "expected_handled": False,
+                "expected_state": {"key": "value"}
+            }
+        ]
+        
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                result = _handle_delete_token(case["state"], case["key"], case["value"])
+                self.assertEqual(result, case["expected_handled"], 
+                               f"Handler return mismatch for {case['name']}")
+                self.assertEqual(case["state"], case["expected_state"],
+                               f"State mismatch for {case['name']}")
+
+    @patch("firestore_service._perform_append")  
+    @patch("logging_util.info")
+    def test_matrix_append_syntax_comprehensive(self, mock_log, mock_append):
+        """Matrix 2: Append syntax handling - All combinations [2,1-3]"""
+        test_cases = [
+            # [2,1] Valid append to existing list
+            {
+                "name": "append_to_existing_list",
+                "state": {"items": ["existing"]},
+                "key": "items", 
+                "value": {"append": ["new1", "new2"]},
+                "expected_handled": True,
+                "expect_append_call": True
+            },
+            # [2,2] Valid append creates new list
+            {
+                "name": "append_creates_new_list", 
+                "state": {},
+                "key": "new_items",
+                "value": {"append": ["item1"]},
+                "expected_handled": True,
+                "expect_append_call": True
+            },
+            # [2,3] Non-append dict should return False
+            {
+                "name": "non_append_dict",
+                "state": {"key": []},
+                "key": "key",
+                "value": {"other": "value"},
+                "expected_handled": False,
+                "expect_append_call": False
+            }
+        ]
+        
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                mock_append.reset_mock()
+                mock_log.reset_mock()
+                
+                result = _handle_append_syntax(case["state"], case["key"], case["value"])
+                self.assertEqual(result, case["expected_handled"],
+                               f"Handler return mismatch for {case['name']}")
+                
+                if case["expect_append_call"]:
+                    mock_append.assert_called_once()
+                    mock_log.assert_called_once()
+                else:
+                    mock_append.assert_not_called()
+
+    @patch("firestore_service._perform_append")
+    @patch("logging_util.warning") 
+    def test_matrix_core_memories_safeguard_comprehensive(self, mock_log, mock_append):
+        """Matrix 3: Core memories safeguard - All combinations [3,1-3]"""
+        test_cases = [
+            # [3,1] Core memories with existing list - safe append with dedup
+            {
+                "name": "core_memories_existing_list",
+                "state": {"core_memories": ["old_memory"]},
+                "key": "core_memories",
+                "value": ["new_memory"],
+                "expected_handled": True,
+                "expect_warning": True
+            },
+            # [3,2] Core memories with empty state - creates new list
+            {
+                "name": "core_memories_empty_state",
+                "state": {},
+                "key": "core_memories", 
+                "value": ["first_memory"],
+                "expected_handled": True,
+                "expect_warning": True
+            },
+            # [3,3] Non-core-memories key - should return False
+            {
+                "name": "non_core_memories_key",
+                "state": {},
+                "key": "other_key",
+                "value": ["some_value"],
+                "expected_handled": False,
+                "expect_warning": False
+            }
+        ]
+        
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                mock_append.reset_mock()
+                mock_log.reset_mock()
+                
+                result = _handle_core_memories_safeguard(case["state"], case["key"], case["value"])
+                self.assertEqual(result, case["expected_handled"],
+                               f"Handler return mismatch for {case['name']}")
+                
+                if case["expect_warning"]:
+                    mock_log.assert_called_once()
+                    mock_append.assert_called_once_with(
+                        case["state"]["core_memories"], case["value"], "core_memories", deduplicate=True
+                    )
+                else:
+                    mock_log.assert_not_called()
+                    mock_append.assert_not_called()
+
+    def test_matrix_integration_state_updates_red_phase(self):
+        """Matrix 5: Integration testing - RED phase with expected failures [5,1-4]"""
+        # These tests are designed to FAIL initially to follow TDD RED phase
+        test_cases = [
+            # [5,1] Empty dict with simple values
+            {
+                "name": "empty_to_simple",
+                "initial_state": {},
+                "changes": {"name": "test", "level": 1, "active": True},
+                "expected_keys": ["name", "level", "active"]
+            },
+            # [5,2] List field with append operation
+            {
+                "name": "list_append_operation", 
+                "initial_state": {"inventory": ["sword"]},
+                "changes": {"inventory": {"append": ["potion", "shield"]}},
+                "should_contain_original": True,
+                "should_contain_new": ["potion", "shield"]
+            }
+        ]
+        
+        for case in test_cases:
+            with self.subTest(case=case["name"]):
+                result = update_state_with_changes(case["initial_state"], case["changes"])
+                
+                # Basic assertions that should work
+                self.assertIsInstance(result, dict)
+                
+                # More specific assertions for different test types
+                if "expected_keys" in case:
+                    for key in case["expected_keys"]:
+                        self.assertIn(key, result, f"Missing key {key} in result")
+
+    def test_matrix_value_type_validation_red_phase(self):
+        """Matrix 6: Value type validation - RED phase [6,1-7]"""
+        test_cases = [
+            # Test various types to ensure they're handled correctly
+            {"input": None, "expected_type": type(None), "description": "none_value"},
+            {"input": "test_string", "expected_type": str, "description": "string_value"},
+            {"input": 42, "expected_type": int, "description": "integer_value"},
+            {"input": 3.14, "expected_type": float, "description": "float_value"},
+            {"input": True, "expected_type": bool, "description": "boolean_value"},
+            {"input": [1, 2, 3], "expected_type": list, "description": "list_value"},
+            {"input": {"key": "value"}, "expected_type": dict, "description": "dict_value"}
+        ]
+        
+        for case in test_cases:
+            with self.subTest(case=case["description"]):
+                state = {}
+                changes = {"test_field": case["input"]}
+                
+                result = update_state_with_changes(state, changes)
+                
+                # Basic validation - the function should not crash
+                self.assertIsInstance(result, dict)
+                
+                # Type preservation tests
+                if case["input"] is not None:
+                    self.assertIn("test_field", result)
+                    self.assertIsInstance(result["test_field"], case["expected_type"])
+
+    def test_matrix_edge_cases_refactor(self):
+        """Matrix 7: Edge cases and refactoring validation [7,1-5]"""
+        edge_cases = [
+            # [7,1] Empty key handling
+            {
+                "name": "empty_key_handling",
+                "state": {},
+                "changes": {"": "empty_key_value"},
+                "expect_success": True
+            },
+            # [7,2] Large data handling
+            {
+                "name": "large_data_handling", 
+                "state": {},
+                "changes": {"large_field": "x" * 1000},
+                "expect_success": True
+            },
+            # [7,3] Nested DELETE_TOKEN
+            {
+                "name": "nested_delete_token",
+                "state": {"parent": {"child": "value", "keep": "data"}},
+                "changes": {"parent": {"child": DELETE_TOKEN}},
+                "expect_success": True,
+                "expected_result": {"parent": {"keep": "data"}}
+            },
+            # [7,4] Multiple append operations
+            {
+                "name": "multiple_append_operations",
+                "state": {"list1": ["a"], "list2": ["x"]},
+                "changes": {"list1": {"append": ["b"]}, "list2": {"append": ["y"]}},
+                "expect_success": True
+            },
+            # [7,5] Complex nested merge
+            {
+                "name": "complex_nested_merge",
+                "state": {"config": {"ui": {"theme": "dark"}, "sound": True}},
+                "changes": {"config": {"ui": {"language": "en"}, "notifications": False}},
+                "expect_success": True
+            }
+        ]
+        
+        for case in edge_cases:
+            with self.subTest(case=case["name"]):
+                with patch("logging_util.info"), patch("logging_util.warning"):
+                    result = update_state_with_changes(case["state"], case["changes"])
+                    
+                    # Should not crash
+                    self.assertIsInstance(result, dict)
+                    
+                    # Check specific expected results if provided
+                    if "expected_result" in case:
+                        self.assertEqual(result, case["expected_result"])
+
+    def test_matrix_performance_characteristics(self):
+        """Matrix 8: Performance and scalability testing [8,1-4]"""
+        import time
+        
+        performance_cases = [
+            # [8,1] Large dictionary merge
+            {
+                "name": "large_dict_merge",
+                "state": {f"key_{i}": f"value_{i}" for i in range(100)},
+                "changes": {f"key_{i}": f"new_value_{i}" for i in range(50, 150)},
+                "max_time": 0.1  # Should complete within 100ms
+            },
+            # [8,2] Deep nesting performance  
+            {
+                "name": "deep_nesting",
+                "state": {"level1": {"level2": {"level3": {"data": "original"}}}},
+                "changes": {"level1": {"level2": {"level3": {"new_data": "added"}}}},
+                "max_time": 0.05  # Should be very fast for reasonable nesting
+            },
+            # [8,3] Large list append
+            {
+                "name": "large_list_append",
+                "state": {"items": list(range(1000))},
+                "changes": {"items": {"append": list(range(1000, 1100))}},
+                "max_time": 0.1  # Should handle large lists efficiently
+            }
+        ]
+        
+        for case in performance_cases:
+            with self.subTest(case=case["name"]):
+                start_time = time.time()
+                
+                with patch("logging_util.info"), patch("logging_util.warning"):
+                    result = update_state_with_changes(case["state"], case["changes"])
+                
+                elapsed_time = time.time() - start_time
+                
+                # Performance assertion
+                self.assertLess(elapsed_time, case["max_time"], 
+                               f"Performance test {case['name']} took {elapsed_time:.3f}s, expected < {case['max_time']}s")
+                
+                # Correctness assertion
+                self.assertIsInstance(result, dict)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

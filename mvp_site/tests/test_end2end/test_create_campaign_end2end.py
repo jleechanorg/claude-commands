@@ -40,14 +40,14 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
             HEADER_TEST_USER_ID: "test-user-123"
         }
 
-    @patch("firebase_admin.firestore.client")
+    @patch("firestore_service.get_db")
     @patch("gemini_service._call_gemini_api_with_gemini_request")
-    def test_create_campaign_success(self, mock_gemini_request, mock_firestore_client):
+    def test_create_campaign_success(self, mock_gemini_request, mock_get_db):
         """Test successful campaign creation using fake services."""
         
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
         
         # Mock Gemini response
         gemini_response_data = {
@@ -88,15 +88,15 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         self.assertTrue(data.get('success'))
         self.assertIn('campaign_id', data)
 
-    @patch("firebase_admin.firestore.client")
+    @patch("firestore_service.get_db")
     @patch("gemini_service._call_gemini_api_with_gemini_request")
     @patch("mcp_client.MCPClient.call_tool")
-    def test_create_campaign_gemini_error(self, mock_mcp_call, mock_gemini_request, mock_firestore_client):
+    def test_create_campaign_gemini_error(self, mock_mcp_call, mock_gemini_request, mock_get_db):
         """Test campaign creation with Gemini service error."""
         
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
         
         # Mock Gemini error
         gemini_error = Exception('Gemini service error')

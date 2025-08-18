@@ -51,12 +51,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
             HEADER_TEST_USER_ID: self.test_user_id,
         }
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_campaign_not_found_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_campaign_not_found_error(self, mock_get_db):
         """Test MCP error handling for non-existent campaign."""
         # Set up empty fake Firestore (no campaigns exist)
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Try to get non-existent campaign through MCP
         response = self.client.get(
@@ -106,12 +106,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert "error" in response_data
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_interaction_missing_campaign_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_interaction_missing_campaign_error(self, mock_get_db):
         """Test MCP error handling for interaction with non-existent campaign."""
         # Set up empty fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Try to interact with non-existent campaign
         interaction_data = {
@@ -131,12 +131,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert "error" in response_data
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_interaction_invalid_mode_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_interaction_invalid_mode_error(self, mock_get_db):
         """Test MCP error handling for invalid interaction mode."""
         # Set up fake Firestore with campaign
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Create a campaign
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -167,12 +167,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert isinstance(response_data, dict)
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_update_campaign_not_found_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_update_campaign_not_found_error(self, mock_get_db):
         """Test MCP error handling for updating non-existent campaign."""
         # Set up empty fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Try to update non-existent campaign
         update_data = {"title": "Updated Title"}
@@ -188,12 +188,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert "error" in response_data
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_export_campaign_not_found_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_export_campaign_not_found_error(self, mock_get_db):
         """Test MCP error handling for exporting non-existent campaign."""
         # Set up empty fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Try to export non-existent campaign
         response = self.client.get(
@@ -206,12 +206,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert "error" in response_data
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_export_invalid_format_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_export_invalid_format_error(self, mock_get_db):
         """Test MCP error handling for invalid export format."""
         # Set up fake Firestore with campaign
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
         campaign_doc = user_doc.collection("campaigns").document(self.test_campaign_id)
@@ -254,11 +254,11 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return method not allowed
         assert response.status_code == 405
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_firestore_connection_error_simulation(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_firestore_connection_error_simulation(self, mock_get_db):
         """Test MCP error handling when Firestore connection fails."""
         # Simulate Firestore connection error
-        mock_firestore_client.side_effect = Exception("Firestore connection failed")
+        mock_get_db.side_effect = Exception("Firestore connection failed")
 
         # Try to get campaigns (should fail gracefully)
         response = self.client.get("/api/campaigns", headers=self.test_headers)
@@ -284,12 +284,12 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should handle gracefully (Flask might auto-detect or return 400)
         assert response.status_code in [200, 201, 400, 415, 500]
 
-    @patch("firebase_admin.firestore.client")
-    def test_mcp_unauthorized_campaign_access_error(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_mcp_unauthorized_campaign_access_error(self, mock_get_db):
         """Test MCP error handling for accessing another user's campaign."""
         # Set up fake Firestore with campaign belonging to different user
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Create campaign under different user
         different_user_doc = fake_firestore.collection("users").document(

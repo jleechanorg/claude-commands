@@ -17,11 +17,16 @@ from contextlib import suppress
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from fake_auth import FakeFirebaseAuth, FakeUserRecord
-
-# Import our fake implementations
-from fake_firestore import FakeFirestoreClient
-from fake_gemini import create_fake_gemini_client
+# Handle both relative and absolute imports for flexibility
+try:
+    from .fake_auth import FakeFirebaseAuth, FakeUserRecord
+    from .fake_firestore import FakeFirestoreClient
+    from .fake_gemini import create_fake_gemini_client
+except ImportError:
+    # Fallback to direct imports when not run as package
+    from fake_auth import FakeFirebaseAuth, FakeUserRecord
+    from fake_firestore import FakeFirestoreClient
+    from fake_gemini import create_fake_gemini_client
 # Import constants and functions from main at module level to avoid inline imports
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
@@ -82,7 +87,7 @@ class FakeServiceManager:
 
             # Patch Firebase Admin - handle missing modules gracefully
             firebase_patch = patch(
-                "firebase_admin.firestore.client", return_value=self.firestore
+                "firestore_service.get_db", return_value=self.firestore
             )
 
             # Create auth mock that matches the interface

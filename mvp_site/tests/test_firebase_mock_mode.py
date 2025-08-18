@@ -10,6 +10,11 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+# Add tests directory to path for imports when run as standalone script
+tests_dir = os.path.dirname(os.path.abspath(__file__))
+if tests_dir not in sys.path:
+    sys.path.insert(0, tests_dir)
+
 # Import proper fakes library 
 from fake_services import FakeServiceManager
 from fake_firestore import FakeFirestoreClient

@@ -608,7 +608,7 @@ class ApiService {
       }
 
       // Validate each campaign object with comprehensive checks
-      const validatedCampaigns = response.filter((campaign: any, index: number) => {
+      const validatedCampaigns = response.filter((campaign, index): campaign is Campaign => {
         if (!campaign || typeof campaign !== 'object') {
           console.warn(`Campaign at index ${index} is not an object:`, campaign);
           return false;
@@ -731,7 +731,7 @@ class ApiService {
       }
 
       if (!response.success) {
-        const errorMsg = response.error || 'Unknown server error occurred';
+        const errorMsg = (response as ApiResponse).error || 'Unknown server error occurred';
         throw new Error(`Server error: ${errorMsg}`);
       }
 

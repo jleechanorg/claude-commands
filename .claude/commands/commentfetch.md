@@ -2,7 +2,7 @@
 
 **Usage**: `/commentfetch <PR_NUMBER>`
 
-**Purpose**: Fetch fresh comments (all sources) from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. ALWAYS fetches fresh data from GitHub API - NEVER reads from existing cached /tmp files. Filtering/triage is performed downstream.
+**Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Also fetches GitHub CI status using /fixpr methodology. Always fetches fresh data from GitHub API - no caching.
 
 ## 🚨 CRITICAL: Comprehensive Comment Detection Function
 
@@ -38,7 +38,7 @@ get_comprehensive_comment_count() {
 
 ## Description
 
-Pure Python implementation that collects comments from all GitHub PR sources. ALWAYS fetches fresh data from GitHub API on each execution (NEVER reads from existing files) and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`. The payload includes fields (e.g., `in_reply_to_id`) enabling downstream filtering of already-replied threads.
+Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources AND GitHub CI status. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
 
 ## Output Format
 
@@ -61,6 +61,23 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
       "requires_response": true
     }
   ],
+  "ci_status": {
+    "overall_state": "FAILING|PASSING|PENDING|ERROR",
+    "mergeable": true,
+    "merge_state_status": "clean",
+    "checks": [
+      {
+        "name": "test",
+        "status": "FAILURE",
+        "description": "Process completed with exit code 1",
+        "url": "https://github.com/owner/repo/actions/runs/123"
+      }
+    ],
+    "summary": {"total": 4, "passing": 2, "failing": 1, "pending": 1},
+    "failing_checks": [...],
+    "pending_checks": [...],
+    "fetched_at": "2025-01-21T12:00:00Z"
+  },
   "metadata": {
     "total": 17,
     "by_type": {
@@ -125,4 +142,14 @@ python3 .claude/commands/_copilot_modules/commentfetch.py <PR_NUMBER>
 
 ## Integration
 
-This command is typically the first step in the `/copilot` workflow, providing fresh comment data to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. ALWAYS fetches current data from GitHub API (NEVER reads from cache) and overwrites the comments file completely.
+This command is typically the first step in the `/copilot` workflow, providing fresh comment data AND CI status to `/tmp/{branch_name}/comments.json` for other commands like `/fixpr` and `/commentreply`. Uses /fixpr methodology for authoritative GitHub CI status with defensive programming patterns. Always fetches current data and overwrites the comments file.
+
+## CI Status Integration
+
+**Enhanced with /fixpr methodology**: 
+- Uses `gh pr view --json statusCheckRollup,mergeable,mergeStateStatus` for authoritative GitHub CI data
+- Implements defensive programming patterns (statusCheckRollup is a LIST, safe access)
+- Provides overall state assessment (FAILING/PASSING/PENDING/ERROR)
+- Categorizes checks for quick analysis (failing_checks, pending_checks)
+- Includes merge status and detailed check information
+- Fetched in parallel with comments for optimal performance

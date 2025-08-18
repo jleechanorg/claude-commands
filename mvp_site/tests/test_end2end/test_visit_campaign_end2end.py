@@ -147,13 +147,13 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
             },
         ]
 
-    @patch("firebase_admin.firestore.client")
-    def test_visit_campaign_success(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_visit_campaign_success(self, mock_get_db):
         """Test successfully visiting an existing campaign."""
 
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data in the correct location
         user_doc = fake_firestore.collection("users").document(self.test_user_id)
@@ -222,13 +222,13 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         story = response_data["story"]
         assert isinstance(story, list)
 
-    @patch("firebase_admin.firestore.client")
-    def test_visit_campaign_not_found(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_visit_campaign_not_found(self, mock_get_db):
         """Test visiting a non-existent campaign."""
 
         # Set up fake Firestore with no campaign
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Don't populate any data - campaign doesn't exist
 
@@ -242,13 +242,13 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         assert "error" in response_data
 
-    @patch("firebase_admin.firestore.client")
-    def test_visit_campaign_unauthorized(self, mock_firestore_client):
+    @patch("firestore_service.get_db")
+    def test_visit_campaign_unauthorized(self, mock_get_db):
         """Test visiting a campaign owned by another user."""
 
         # Set up fake Firestore
         fake_firestore = FakeFirestoreClient()
-        mock_firestore_client.return_value = fake_firestore
+        mock_get_db.return_value = fake_firestore
 
         # Pre-populate campaign data with different user
         unauthorized_campaign = self.mock_campaign_data.copy()

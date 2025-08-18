@@ -100,9 +100,9 @@ mvp_site_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if mvp_site_path not in sys.path:
     sys.path.append(mvp_site_path)
 
-# Import proper fakes library 
-from fake_services import FakeServiceManager
-from fake_firestore import FakeFirestoreClient
+# Import proper fakes library from tests directory
+from tests.fake_services import FakeServiceManager
+from tests.fake_firestore import FakeFirestoreClient
 
 # Check for required dependencies early - BEFORE any mocking
 # This test requires real dependencies to work with the complex entity schema system
