@@ -625,13 +625,13 @@ else
     fi
 fi
 
-# Run qwen command tests if they exist
-if [ -d ".claude/commands/qwen" ]; then
-    print_status "🚀 Discovering qwen command tests..."
+# Run cerebras command tests if they exist
+if [ -d ".claude/commands/cerebras" ]; then
+    print_status "🚀 Discovering cerebras command tests..."
     while IFS= read -r -d $'\0' test_file; do
         test_files+=("$test_file")
         echo "  - Found: $test_file"
-    done < <(find .claude/commands/qwen -name "test_*.py" -type f -print0 2>/dev/null)
+    done < <(find .claude/commands/cerebras -name "test_*.py" -type f -print0 2>/dev/null)
 fi
 
 # Run Claude Code hooks tests if they exist

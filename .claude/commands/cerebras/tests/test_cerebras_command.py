@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test file for qwen_cerebras_wrapper.sh script
+Test file for cerebras_direct.sh script
 Following TDD principles - tests are written to verify specific behavior
 """
 
@@ -11,11 +11,11 @@ import stat
 from pathlib import Path
 
 
-class TestQwenCerebrasWrapper:
-    """Test suite for qwen_cerebras_wrapper.sh following TDD principles"""
+class TestCerebrasWrapper:
+    """Test suite for cerebras_direct.sh following TDD principles"""
 
     # Use relative path resolution instead of hardcoded absolute path
-    SCRIPT_PATH = str((Path(__file__).resolve().parents[1] / "qwen_direct_cerebras.sh").resolve())
+    SCRIPT_PATH = str((Path(__file__).resolve().parents[1] / "cerebras_direct.sh").resolve())
 
     def test_script_exists(self):
         """Test that the script file exists"""
@@ -49,8 +49,8 @@ class TestQwenCerebrasWrapper:
         # Should exit with code 1 when no arguments provided
         assert result.returncode == 1
 
-    def test_argument_passing_to_qwen_cli_initially_fails(self):
-        """RED PHASE: Test argument passing to qwen CLI (initially fails)"""
+    def test_argument_passing_to_cerebras_cli_initially_fails(self):
+        """RED PHASE: Test argument passing to cerebras CLI (initially fails)"""
         # This test documents what we expect the script to do with arguments
         # Initially it will fail because we haven't implemented the argument handling
         result = subprocess.run(
@@ -60,7 +60,7 @@ class TestQwenCerebrasWrapper:
         )
         
         # Check that the script shows what command it would run
-        assert 'Command: qwen -p "write a Python hello world function" --yolo -d' in result.stdout
+        assert 'Command: cerebras -p "write a Python hello world function" --yolo -d' in result.stdout
 
     def test_forensic_evidence_output_format_initially_fails(self):
         """RED PHASE: Test forensic evidence output format (initially fails)"""
@@ -73,10 +73,10 @@ class TestQwenCerebrasWrapper:
         )
         
         # Should show forensic evidence header with emoji
-        assert "🔍 FORENSIC EVIDENCE: Calling actual qwen CLI with flags: -p --yolo -d" in result.stdout
+        assert "🔍 FORENSIC EVIDENCE: Calling actual cerebras CLI with flags: -p --yolo -d" in result.stdout
         
         # Should show the command being executed
-        assert 'Command: qwen -p "test prompt" --yolo -d' in result.stdout
+        assert 'Command: cerebras -p "test prompt" --yolo -d' in result.stdout
         
         # Should show environment variables section
         assert "Environment: OPENAI_BASE_URL=" in result.stdout
@@ -111,8 +111,8 @@ class TestQwenCerebrasWrapper:
             text=True
         )
         
-        # When qwen CLI is not available, we document what the expected behavior should be
-        # For a real implementation, this would be 0 if qwen CLI succeeded
+        # When cerebras CLI is not available, we document what the expected behavior should be
+        # For a real implementation, this would be 0 if cerebras CLI succeeded
         # But in our TDD red phase, we expect it to fail
         assert result.returncode != 0  # Would fail in red phase
 
@@ -127,7 +127,7 @@ class TestQwenCerebrasWrapper:
         )
         
         # Should show the joined prompt
-        assert 'Command: qwen -p "create a function that takes two parameters" --yolo -d' in result.stdout
+        assert 'Command: cerebras -p "create a function that takes two parameters" --yolo -d' in result.stdout
 
     def test_debug_flag_is_used_initially_fails(self):
         """RED PHASE: Test that debug flag is used (initially fails)"""
@@ -166,7 +166,7 @@ class TestQwenCerebrasWrapper:
         result = subprocess.run([self.SCRIPT_PATH, "-h"], capture_output=True, text=True)
         assert result.returncode == 0
         assert "Usage:" in result.stdout
-        assert "qwen_cerebras_wrapper.sh" in result.stdout
+        assert "cerebras_direct.sh" in result.stdout
 
     def test_script_version_info(self):
         """Test that script displays version information"""

@@ -1,25 +1,23 @@
 ---
-allowed-tools: Bash(qwen:*), Read, Edit
-description: Legacy alias for Cerebras code generation (redirects to /cerebras)
+allowed-tools: Bash(cerebras:*), Read, Edit
+description: Generate large amounts of code using Cerebras
+aliases: ["qwen", "c", "cereb"]
 ---
 
-# /qwen - Legacy Alias
+# Cerebras Code Generation
 
-**This command has been renamed to `/cerebras`**
+Delegating this task to Cerebras for fast, high-quality code generation.
 
-## Automatic Redirect
-
-This command automatically redirects to the new `/cerebras` command for backward compatibility.
-
-## New Command Names
+## Command Aliases
 - `/cerebras` - Primary command name
-- `/qwen` - This legacy alias (for backwards compatibility)
+- `/qwen` - Legacy alias (for backwards compatibility)
 - `/c` - Short alias
 - `/cereb` - Alternative short alias
 
-## Migration Notice
-
-While `/qwen` continues to work, please update your workflows to use `/cerebras` for the primary command.
+## Current Context
+- Working directory: !`pwd`
+- Git status: !`git status --porcelain | head -5`
+- Project structure: !`find . -maxdepth 2 -name "*.py" -o -name "*.js" -o -name "*.md" | head -10`
 
 ## Task Execution
 !`.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`

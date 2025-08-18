@@ -24,8 +24,8 @@ done
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: qwen_direct_cerebras.sh [--sonnet] <prompt>"
-    echo "  --sonnet    Use Anthropic Claude Sonnet instead of Qwen"
+    echo "Usage: cerebras_direct.sh [--sonnet] <prompt>"
+    echo "  --sonnet    Use Anthropic Claude Sonnet instead of Cerebras"
     exit 1
 fi
 
@@ -182,7 +182,7 @@ else
     
     # Show timing at the beginning
     echo ""
-    echo "🚀🚀🚀 QWEN GENERATED IN ${ELAPSED_MS}ms 🚀🚀🚀"
+    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms 🚀🚀🚀"
     echo ""
     
     # Extract and display the response (OpenAI format)
@@ -198,6 +198,6 @@ else
     # Show prominent timing display at the end
     echo ""
     echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-    echo "⚡ QWEN BLAZING FAST: ${ELAPSED_MS}ms (vs Sonnet comparison)"
+    echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms (vs Sonnet comparison)"
     echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 fi

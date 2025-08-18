@@ -53,18 +53,18 @@ Genesis Coder, Prime Mover,
 - Enhance existing systems rather than creating parallel solutions
 - Consider testing, deployment, and maintenance from the first line of code
 
-## 🚨 CRITICAL: /QWEN HYBRID CODE GENERATION PROTOCOL
+## 🚨 CRITICAL: /CEREBRAS HYBRID CODE GENERATION PROTOCOL
 
-**🚀 REVOLUTIONARY SPEED**: /qwen generates code 19.6x faster (500ms vs 10s) using Cerebras infrastructure
+**🚀 REVOLUTIONARY SPEED**: /cerebras generates code 19.6x faster (500ms vs 10s) using Cerebras infrastructure
 
-**HYBRID WORKFLOW - Claude as ARCHITECT, Qwen as BUILDER**:
+**HYBRID WORKFLOW - Claude as ARCHITECT, Cerebras as BUILDER**:
 1. **Claude analyzes** requirements and creates detailed specifications
 2. **Claude generates** precise, structured prompts with full context
-3. **/qwen executes** the code generation at high speed
+3. **/cerebras executes** the code generation at high speed
 4. **Claude verifies** and integrates the generated code
-5. **Document decision** in `docs/{branch_name}/qwen_decisions.md` or `docs/{PR#}/qwen_decisions.md`
+5. **Document decision** in `docs/{branch_name}/cerebras_decisions.md` or `docs/{PR#}/cerebras_decisions.md`
 
-**USE /QWEN FOR**:
+**USE /CEREBRAS FOR**:
 - ✅ Well-defined code generation from detailed specs
 - ✅ Boilerplate, templates, data structures
 - ✅ Unit tests for known interfaces
@@ -81,12 +81,12 @@ Genesis Coder, Prime Mover,
 - ❌ Architectural decisions
 - ❌ Integration with complex systems
 
-**DECISION LOGGING**: Record in `qwen_decisions.md`:
+**DECISION LOGGING**: Record in `cerebras_decisions.md`:
 ```markdown
 ## [Timestamp] Task: [Description]
-**Decision**: Used /qwen | Used Claude
+**Decision**: Used /cerebras | Used Claude
 **Reasoning**: [Why this choice]
-**Prompt**: [If using /qwen, the prompt sent]
+**Prompt**: [If using /cerebras, the prompt sent]
 **Result**: Success | Needed Claude intervention
 **Learning**: [What we learned for next time]
 ```
@@ -716,7 +716,7 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - `/orch` ALWAYS triggers tmux agents - NEVER execute directly
 - `/execute` requires TodoWrite checklist
 
-**Key Commands**: `/execute` (auto-approval), `/plan` (manual approval), `/fake` (detects fake implementations)
+**Key Commands**: `/execute` (auto-approval), `/plan` (manual approval), `/cerebras` (fast code generation), `/fake` (detects fake implementations)
 
 ## Special Protocols
 

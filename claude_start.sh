@@ -73,7 +73,7 @@ fi
 # See: https://github.com/jleechanorg/claude_llm_proxy
 
 # SSH tunnel PID file
-SSH_TUNNEL_PID_FILE="/tmp/qwen_ssh_tunnel.pid"
+SSH_TUNNEL_PID_FILE="/tmp/cerebras_ssh_tunnel.pid"
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -759,7 +759,7 @@ if [ -n "$MODE" ]; then
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1035,7 +1035,7 @@ else
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"

@@ -14,7 +14,7 @@
 
 ## Command Composition
 
-**`/reviewdeep` = Parallel execution of Technical Track (`/qwen` analysis) + Strategic Track (`/arch` + Claude synthesis) + `/reviewe` + MCP integrations**
+**`/reviewdeep` = Parallel execution of Technical Track (`/cerebras` analysis) + Strategic Track (`/arch` + Claude synthesis) + `/reviewe` + MCP integrations**
 
 The command executes dual parallel review tracks by default with mandatory MCP integration for comprehensive analysis with significant speed improvement (2.4x overall). Speed is always prioritized.
 
@@ -26,7 +26,7 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 /execute Perform enhanced parallel multi-perspective review:
 1. /guidelines                    # Centralized mistake prevention consultation
 2. PARALLEL EXECUTION:
-   Track A (Technical - Fast):    /qwen comprehensive technical analysis [target]
+   Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target]
                                   - Security vulnerability scanning
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
@@ -39,7 +39,7 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 ```
 
 The `/execute` delegation ensures optimal execution with:
-- **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/qwen) and independent code-review analysis for significant speed improvement
+- **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/cerebras) and independent code-review analysis for significant speed improvement
 - **Guidelines Generation**: Automatically creates `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
 - **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
 - **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
@@ -69,7 +69,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - Integration points and long-term maintainability
 - Structural soundness and design quality evaluation
 
-### 3. **Technical Track (Parallel)** - `/qwen` Fast Analysis 
+### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis 
 - **Security Analysis**: Vulnerability scanning, threat modeling, input validation
 - **Architecture Analysis**: Design patterns, scalability concerns, structural integrity
 - **Performance Analysis**: Bottleneck identification, optimization opportunities, resource usage
@@ -111,7 +111,7 @@ EXECUTE: /guidelines
     └─ Centralized mistake prevention consultation
     ↓
 PARALLEL EXECUTION (Speed Optimized):
-    ├─ Track A (Technical - Fast): /qwen analysis
+    ├─ Track A (Technical - Fast): /cerebras analysis
     │   ├─ Security vulnerability scanning
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
@@ -141,12 +141,12 @@ OUTPUT: Comprehensive multi-perspective analysis with significant speed improvem
 ## What You Get
 
 ### Comprehensive Coverage (Speed Optimized)
-- **Technical Fast Track**: Security analysis, architecture patterns, performance optimization (/qwen speed)
+- **Technical Fast Track**: Security analysis, architecture patterns, performance optimization (/cerebras speed)
 - **Technical Deep Track**: System design, scalability analysis, code quality assessment (Claude synthesis)
 - **Combined Analysis**: Merged technical findings with prioritized technical recommendations
 
 ### Multi-Perspective Analysis (Parallel Execution)
-- **Technical Perspective**: From `/review` + `/qwen` - code quality, security, performance analysis
+- **Technical Perspective**: From `/review` + `/cerebras` - code quality, security, performance analysis
 - **Design Perspective**: From `/arch` - structural and architectural concerns
 - **Technical Synthesis**: From independent code-review subagent - scalability, maintainability, and technical integration
 - **AI-Enhanced Analysis**: From Gemini MCP - multi-role expert perspectives
@@ -171,7 +171,7 @@ Step 1: Execute guidelines consultation
 /guidelines
 
 Step 2: PARALLEL EXECUTION (Speed Optimized):
-Track A (Technical - Fast): /qwen comprehensive technical analysis [target]
+Track A (Technical - Fast): /cerebras comprehensive technical analysis [target]
   - Security vulnerability assessment
   - Architecture pattern evaluation
   - Performance bottleneck analysis
@@ -203,17 +203,17 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 ```bash
 # Review current branch/PR (most common usage) - speed optimized
 /reviewdeep
-# This executes: /guidelines → PARALLEL(/qwen technical + /arch deep) → /reviewe → synthesis
+# This executes: /guidelines → PARALLEL(/cerebras technical + /arch deep) → /reviewe → synthesis
 /reviewd
 
 # Review a specific PR with parallel analysis
 /reviewdeep 592
-# This executes: /guidelines → PARALLEL(/qwen technical 592 + /arch deep 592) → /reviewe 592 → synthesis
+# This executes: /guidelines → PARALLEL(/cerebras technical 592 + /arch deep 592) → /reviewe 592 → synthesis
 /reviewd #592
 
 # Review a file or feature with dual tracks
 /reviewdeep ".claude/commands/pr.py"
-# This executes: /guidelines → PARALLEL(/qwen technical + /arch deep) ".claude/commands/pr.py" → /reviewe → synthesis
+# This executes: /guidelines → PARALLEL(/cerebras technical + /arch deep) ".claude/commands/pr.py" → /reviewe → synthesis
 /reviewd "velocity doubling implementation"
 ```
 
@@ -231,7 +231,7 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 - **`/review`**: Official built-in code review (basic)
 - **`/reviewe`**: Enhanced review (official + advanced analysis)
 - **`/arch`**: Architectural assessment only
-- **`/qwen`**: Fast technical analysis (security, architecture, performance)
+- **`/cerebras`**: Fast technical analysis (security, architecture, performance)
 - **`/reviewdeep`**: Parallel execution of technical + strategic tracks for comprehensive analysis with significant speed improvement
 
 ## Benefits of Always-Parallel Execution
@@ -239,7 +239,7 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 - **Performance Improvement**: Technical analysis track achieves 4.4x speedup (33s vs 146s); full review execution reduced from 12+ minutes to 5-8 minutes
 - **Speed-First**: Prioritizes fast execution while maintaining comprehensive coverage
 - **Comprehensive**: No blind spots - covers technical precision and deep technical analysis simultaneously
-- **Efficient**: Always leverages /qwen's speed for technical analysis while maintaining independent code-review subagent's objective insights
+- **Efficient**: Always leverages /cerebras's speed for technical analysis while maintaining independent code-review subagent's objective insights
 - **Flexible**: Individual commands can still be used separately when full analysis isn't needed
 - **Maintainable**: Parallel execution improves performance without breaking existing functionality
 - **AI-Enhanced**: Mandatory MCP integration provides expert-level analysis beyond traditional code review
@@ -370,7 +370,7 @@ Generated guidelines file includes:
 
 **Technical Analysis Component**:
 - **Previous Sequential Technical**: 146 seconds (iterative technical analysis)
-- **New Parallel Technical**: 33 seconds (/qwen fast technical analysis)  
+- **New Parallel Technical**: 33 seconds (/cerebras fast technical analysis)  
 - **Technical Track Speedup**: 4.4x faster for technical analysis component
 
 **Full Review Execution**:
@@ -381,7 +381,7 @@ Generated guidelines file includes:
 
 ### **Optimization Strategy**
 **Technical Track (Fast)**: 
-- Uses `/qwen` for rapid technical analysis
+- Uses `/cerebras` for rapid technical analysis
 - Security vulnerability scanning
 - Architecture pattern evaluation  
 - Performance bottleneck identification
@@ -397,7 +397,7 @@ Generated guidelines file includes:
 **Total Execution**: 5-8 minutes vs previous 12+ minutes (2.4x overall improvement)
 
 ### **Fallback Mechanism**
-If `/qwen` is unavailable, the command gracefully falls back to parallel execution using independent code-review subagent for Track A while maintaining Track B. Sequential execution is only used as final fallback.
+If `/cerebras` is unavailable, the command gracefully falls back to parallel execution using independent code-review subagent for Track A while maintaining Track B. Sequential execution is only used as final fallback.
 
 ### **Implementation Notes**
 - Leverages `/execute`'s existing parallel execution capabilities

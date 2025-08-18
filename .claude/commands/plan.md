@@ -1,24 +1,24 @@
 # Plan Command - Execute with Approval
 
-**Purpose**: Same as `/execute` but requires user approval before implementation. **OPTIMIZED FOR MAXIMUM /QWEN CODE GENERATION BATCHING** to leverage 19.6x speed advantage.
+**Purpose**: Same as `/execute` but requires user approval before implementation. **OPTIMIZED FOR MAXIMUM /CEREBRAS CODE GENERATION BATCHING** to leverage 19.6x speed advantage.
 
-**Usage**: `/plan` - Present execution plan with maximum coding work batched for /qwen
+**Usage**: `/plan` - Present execution plan with maximum coding work batched for /cerebras
 
-## 🚀 MAXIMUM /QWEN BATCHING STRATEGY (PRIMARY FOCUS)
+## 🚀 MAXIMUM /CEREBRAS BATCHING STRATEGY (PRIMARY FOCUS)
 
-**REVOLUTIONARY SPEED**: /qwen can generate code up to 19.6x faster (e.g., 500ms vs 10s in example scenarios) – this is the PRIMARY optimization target. *Note: These metrics are based on internal observations and may vary depending on workload and environment.*
+**REVOLUTIONARY SPEED**: /cerebras can generate code up to 19.6x faster (e.g., 500ms vs 10s in example scenarios) – this is the PRIMARY optimization target. *Note: These metrics are based on internal observations and may vary depending on workload and environment.*
 
 ### Batch-First Workflow Philosophy
-**The planning process MUST prioritize identifying and batching ALL possible coding work for /qwen upfront**:
+**The planning process MUST prioritize identifying and batching ALL possible coding work for /cerebras upfront**:
 
 1. **📋 CODING TASK INVENTORY** (First Step - MANDATORY):
    - **Scan the entire task** for ANY code generation opportunities
    - **Group similar coding tasks** that can be generated together
-   - **Identify boilerplate patterns** that /qwen excels at
+   - **Identify boilerplate patterns** that /cerebras excels at
    - **List ALL files/functions/classes** that need creation or major modification
 
 2. **🎯 MAXIMUM BATCH IDENTIFICATION**:
-   - **New file creation** - Perfect for /qwen with detailed specs
+   - **New file creation** - Perfect for /cerebras with detailed specs
    - **Function implementations** - Batch multiple functions with clear interfaces
    - **Test generation** - Batch ALL tests for multiple modules
    - **Data structures** - Create multiple related classes/interfaces
@@ -26,8 +26,8 @@
    - **Documentation** - Batch documentation for multiple components
 
 3. **⚡ BATCH EXECUTION STRATEGY**:
-   - **Front-load ALL /qwen implementation tasks** ahead of any Claude implementation
-   - Perform only minimal Claude analysis/spec creation required to enable /qwen batching
+   - **Front-load ALL /cerebras implementation tasks** ahead of any Claude implementation
+   - Perform only minimal Claude analysis/spec creation required to enable /cerebras batching
    - **Generate code in logical groups** (all models, all tests, all configs)
    - **Minimize context switching** between generation and analysis
    - **Parallel generation** when possible for independent components
@@ -95,15 +95,15 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ## 🚨 PLAN PROTOCOL
 
-### Phase 1: /QWEN BATCH INVENTORY (PRIMARY STEP - MANDATORY)
+### Phase 1: /CEREBRAS BATCH INVENTORY (PRIMARY STEP - MANDATORY)
 
 **🚀 MAXIMUM CODE GENERATION BATCHING CHECKLIST**:
 ```
-## /QWEN BATCHING PROTOCOL - SPEED-OPTIMIZED PLANNING
+## /CEREBRAS BATCHING PROTOCOL - SPEED-OPTIMIZED PLANNING
 - [ ] 📋 COMPLETE CODING TASK INVENTORY: ✅ MANDATORY FIRST STEP
   *Required*: List EVERY possible code generation opportunity in the task
   *Examples*: New files, functions, classes, tests, configs, documentation
-  *Guideline*: Aim to batch at least 80% of coding work to /qwen, as maximizing batching leverages the 19.6x speed advantage. This percentage is a recommended target based on observed efficiency gains, but use your judgment for complex or edge cases.
+  *Guideline*: Aim to batch at least 80% of coding work to /cerebras, as maximizing batching leverages the 19.6x speed advantage. This percentage is a recommended target based on observed efficiency gains, but use your judgment for complex or edge cases.
 - [ ] 🎯 BATCH GROUPING STRATEGY:
   - [ ] File creation batches: Group related new files
   - [ ] Function implementation batches: Group similar functions
@@ -111,16 +111,16 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
   - [ ] Configuration batches: Group related config files
   - [ ] Documentation batches: Group docs by component
 - [ ] ⚡ SPEED OPTIMIZATION ANALYSIS:
-  - [ ] Estimated /qwen tasks: _____ (aim for maximum possible)
+  - [ ] Estimated /cerebras tasks: _____ (aim for maximum possible)
   - [ ] Estimated Claude tasks: _____ (minimize to analysis/integration only)
   - [ ] Speed benefit calculation: _____
     *Guidance*: Estimate speed benefit by considering:
-      - Baseline /qwen speedup (e.g., 19.6x for simple tasks)
+      - Baseline /cerebras speedup (e.g., 19.6x for simple tasks)
       - Average task complexity (simple/complex/mixed)
       - Context switching overhead (e.g., time lost switching between tools or batches)
       - Integration time (e.g., time to merge, test, and validate batched outputs)
     *Suggested formula*: 
-      Estimated speed benefit = (Baseline speedup × /qwen task count × Complexity factor) - (Context switching overhead + Integration time)
+      Estimated speed benefit = (Baseline speedup × /cerebras task count × Complexity factor) - (Context switching overhead + Integration time)
     *Note*: Adjust 'Complexity factor' (e.g., 1 for simple, <1 for complex tasks). Document assumptions.
   - [ ] Batching efficiency: High/Medium/Low (aim for High)
 - [ ] Guidelines consultation completed: ✅ `/guidelines` command executed successfully
@@ -129,15 +129,15 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] Memory insights applied: [Count] relevant patterns found
 - [ ] Context check: ___% remaining
 - [ ] Complexity assessment: Simple/Complex (memory and guidelines informed)
-- [ ] Tool selection validated: Serena MCP → Read tool → Bash → /qwen (per guidelines)
-- [ ] /qwen delegation analysis: ✅ MANDATORY - Identified which parts suit /qwen vs Claude
-  *Required*: Must explicitly list tasks for /qwen (well-specified generation) vs Claude (understanding/integration)
-  *Reference*: Read CLAUDE.md "/QWEN HYBRID CODE GENERATION PROTOCOL" section for refresher on /qwen usage patterns
-  *Decision Log*: Document all /qwen delegation decisions in qwen_decisions.md
-- [ ] Execution method decision: /qwen-First → Parallel → Sequential
-  *Priority*: /qwen batching takes precedence over parallelization decisions
+- [ ] Tool selection validated: Serena MCP → Read tool → Bash → /cerebras (per guidelines)
+- [ ] /cerebras delegation analysis: ✅ MANDATORY - Identified which parts suit /cerebras vs Claude
+  *Required*: Must explicitly list tasks for /cerebras (well-specified generation) vs Claude (understanding/integration)
+  *Reference*: Read CLAUDE.md "/CEREBRAS HYBRID CODE GENERATION PROTOCOL" section for refresher on /cerebras usage patterns
+  *Decision Log*: Document all /cerebras delegation decisions in cerebras_decisions.md
+- [ ] Execution method decision: /cerebras-First → Parallel → Sequential
+  *Priority*: /cerebras batching takes precedence over parallelization decisions
   *Reference*: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for decision criteria
-- [ ] **🚀 /QWEN BATCH EXECUTION PLAN** presented to user
+- [ ] **🚀 /CEREBRAS BATCH EXECUTION PLAN** presented to user
 - [ ] User approval received
 ```
 
@@ -145,19 +145,19 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ### Phase 2: Present Execution Plan
 
-## 📋 /QWEN-OPTIMIZED Plan Display Format
+## 📋 /CEREBRAS-OPTIMIZED Plan Display Format
 
 *This format prioritizes maximum code generation batching for 19.6x speed advantage.*
 
-**🚀 /QWEN-FIRST EXECUTION PLAN**:
+**🚀 /CEREBRAS-FIRST EXECUTION PLAN**:
 - **Task complexity**: Simple (direct execution) or Complex (coordination needed)
 - **📋 CODING TASK INVENTORY** (PRIMARY SECTION):
   - **Total coding tasks identified**: _____ tasks
-  - **Batchable for /qwen**: _____ tasks (aim for 80%+)
+  - **Batchable for /cerebras**: _____ tasks (aim for 80%+)
   - **Requires Claude analysis**: _____ tasks (minimize)
-  - **Speed multiplier**: _____ (19.6x × /qwen task percentage)
+  - **Speed multiplier**: _____ (19.6x × /cerebras task percentage)
 
-- **🎯 /QWEN BATCH EXECUTION STRATEGY** (MANDATORY):
+- **🎯 /CEREBRAS BATCH EXECUTION STRATEGY** (MANDATORY):
   - **Batch Group 1 - File Creation** (500ms each vs 10s):
     * List all new files to generate with detailed specs
     * Example: "User.py class with auth methods", "UserTest.py with 15 test cases"
@@ -173,17 +173,17 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 - **⚡ CLAUDE INTEGRATION TASKS** (Minimal - for analysis/integration only):
   - **Pre-generation analysis**: Understand existing codebase structure
-  - **Spec creation**: Create detailed specifications for /qwen
+  - **Spec creation**: Create detailed specifications for /cerebras
   - **Post-generation integration**: Integrate generated code into existing system
   - **Quality validation**: Review and test integrated solution
 
-- **🚀 EXECUTION SEQUENCE** (/qwen-optimized):
+- **🚀 EXECUTION SEQUENCE** (/cerebras-optimized):
   1. **Quick Analysis Phase** (Claude): Minimal codebase understanding
-  2. **Spec Creation Phase** (Claude): Detailed /qwen specifications
-  3. **MASS GENERATION Phase** (/qwen): Execute ALL batches in parallel
+  2. **Spec Creation Phase** (Claude): Detailed /cerebras specifications
+  3. **MASS GENERATION Phase** (/cerebras): Execute ALL batches in parallel
   4. **Integration Phase** (Claude): Integrate and validate results
 
-- **Expected timeline**: _____ (/qwen batching saves _____ minutes vs traditional approach)
+- **Expected timeline**: _____ (/cerebras batching saves _____ minutes vs traditional approach)
 
 **Parallel Tasks Plan (if applicable)**:
 - **Method**: Background processes (&), GNU parallel, xargs, or batched calls
@@ -210,23 +210,23 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 
 ## Example Flow
 
-**`/plan` Flow** (/qwen-optimized):
+**`/plan` Flow** (/cerebras-optimized):
 ```
 User: /plan implement user authentication system
-Assistant: I'll create a /qwen-optimized plan for implementing user authentication system.
+Assistant: I'll create a /cerebras-optimized plan for implementing user authentication system.
 
-[Uses /QWEN BATCH INVENTORY protocol]
+[Uses /CEREBRAS BATCH INVENTORY protocol]
 
-🚀 /QWEN-FIRST EXECUTION PLAN:
+🚀 /CEREBRAS-FIRST EXECUTION PLAN:
 
 📋 CODING TASK INVENTORY:
 - Total coding tasks identified: 12 tasks
-- Batchable for /qwen: 10 tasks (83% - EXCELLENT batching efficiency)
+- Batchable for /cerebras: 10 tasks (83% - EXCELLENT batching efficiency)
 - Requires Claude analysis: 2 tasks (minimal)
 - Speed multiplier: 16.3x (19.6x × 83%)  
   *Note: Actual speedup may be lower due to integration overhead and context switching. This is an estimated upper bound.*
 
-🎯 /QWEN BATCH EXECUTION STRATEGY:
+🎯 /CEREBRAS BATCH EXECUTION STRATEGY:
 - **Batch Group 1 - Authentication Classes** (5 files, ~2.5 seconds vs 50 seconds):
   * User.py with login/logout methods
   * Session.py with session management
@@ -249,13 +249,13 @@ Assistant: I'll create a /qwen-optimized plan for implementing user authenticati
 
 🚀 EXECUTION SEQUENCE:
 1. Quick Analysis (2 min): Understand current Flask structure
-2. Spec Creation (3 min): Create detailed /qwen specifications  
-3. MASS GENERATION (5 min): Execute all 3 batches via /qwen
+2. Spec Creation (3 min): Create detailed /cerebras specifications  
+3. MASS GENERATION (5 min): Execute all 3 batches via /cerebras
 4. Integration (8 min): Integrate with existing Flask app
 
 **⏱️ Time Savings Calculation Breakdown**
 
-| Task Group                | Traditional Time | /qwen Batch Time |
+| Task Group                | Traditional Time | /cerebras Batch Time |
 |--------------------------|------------------|------------------|
 | Auth Classes (5 files)   | 50 seconds       | 2.5 seconds      |
 | Test Suites (3 files)    | 30 seconds       | 1.5 seconds      |
@@ -275,7 +275,7 @@ Assistant: I'll create a /qwen-optimized plan for implementing user authenticati
   - **Total:** 50s + 30s + 20s = 100s = 1m 40s  
     1m 40s + 2m + 8m + 3m = **14m 40s**
 
-- **/qwen Batch Total:**  
+- **/cerebras Batch Total:**  
   - Auth Classes: 2.5s  
   - Test Suites: 1.5s  
   - Config Files: 1s  
@@ -287,30 +287,30 @@ Assistant: I'll create a /qwen-optimized plan for implementing user authenticati
 
 - **Time Saved:**  
   - Traditional: ~55 minutes (if each file/test/config is done sequentially at 10s/file, 10s/test, 10s/config)  
-  - /qwen Batch: ~5 seconds for all code generation  
+  - /cerebras Batch: ~5 seconds for all code generation  
   - **Total Savings:** ~37 minutes (55m - 18m = 37m)
 
-Timeline: ~18 minutes (/qwen batching saves ~37 minutes vs traditional approach)
+Timeline: ~18 minutes (/cerebras batching saves ~37 minutes vs traditional approach)
 
 [Waits for user approval]
 
 User: Approved  
-Assistant: [Executes /qwen-first protocol]
+Assistant: [Executes /cerebras-first protocol]
 ```
 
 ## Key Characteristics
 
-- ✅ **🚀 /qwen batch inventory required** (PRIMARY)
+- ✅ **🚀 /cerebras batch inventory required** (PRIMARY)
 - ✅ **Maximum code generation batching** for 19.6x speed advantage
 - ✅ **User approval required** before execution
-- ✅ **/qwen-optimized plan presentation** with speed analysis
+- ✅ **/cerebras-optimized plan presentation** with speed analysis
 - ✅ **Same execution protocol** as `/execute` after approval
-- ✅ **Speed-first execution method** – "/qwen batching → [rationale]" prioritized over parallelization
-- ✅ **Batch efficiency metrics** – percentage of work delegated to /qwen with time savings calculation
+- ✅ **Speed-first execution method** – "/cerebras batching → [rationale]" prioritized over parallelization
+- ✅ **Batch efficiency metrics** – percentage of work delegated to /cerebras with time savings calculation
 
 ## 🚀 /QWEN BATCHING DECISION CRITERIA
 
-**PERFECT for /qwen** (Always batch these):
+**PERFECT for /cerebras** (Always batch these):
 - ✅ **New file creation** with clear specifications
 - ✅ **Function implementations** with defined interfaces
 - ✅ **Test generation** for known code structures
@@ -328,9 +328,9 @@ Assistant: [Executes /qwen-first protocol]
 - ❌ **Integration with complex existing systems**
 - ❌ **Performance optimization** requiring profiling
 
-**HYBRID APPROACH** (Claude specs → /qwen generates):
-- 🔄 **Complex algorithms** (Claude designs, /qwen implements)
-- 🔄 **Database schemas** (Claude analyzes needs, /qwen creates)
-- 🔄 **API implementations** (Claude designs interface, /qwen codes)
+**HYBRID APPROACH** (Claude specs → /cerebras generates):
+- 🔄 **Complex algorithms** (Claude designs, /cerebras implements)
+- 🔄 **Database schemas** (Claude analyzes needs, /cerebras creates)
+- 🔄 **API implementations** (Claude designs interface, /cerebras codes)
 
 **Memory Enhancement**: This command automatically searches memory context using Memory MCP for relevant past planning approaches, execution patterns, and lessons learned to enhance plan quality and accuracy. See CLAUDE.md Memory Enhancement Protocol for details.
