@@ -221,8 +221,9 @@ export NVM_DIR="$HOME/.nvm"
 
 
 
-alias code="cursor"
 export PATH="$HOME/bin:$PATH"
 
 alias claude="/home/jleechan/.claude/local/claude"
-alias qwend='qwen --yolo'
+alias qwend="qwen --yolo"
+alias code="cursor"
+
