@@ -23,9 +23,13 @@ class ClaudeCommandsExporter:
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
+        # Export configuration
+        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'infrastructure-scripts', 'orchestration']
+        
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
+        self.agents_count = 0
         self.scripts_count = 0
         
         # Versioning is now handled by LLM in exportcommands.md
@@ -67,8 +71,7 @@ class ClaudeCommandsExporter:
         print(f"📁 Created export directory: {self.export_dir}")
 
         # Create subdirectories
-        subdirs = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
-        for subdir in subdirs:
+        for subdir in self.EXPORT_SUBDIRS:
             os.makedirs(os.path.join(staging_dir, subdir), exist_ok=True)
 
         # Export commands
@@ -76,6 +79,9 @@ class ClaudeCommandsExporter:
 
         # Export hooks
         self._export_hooks(staging_dir)
+
+        # Export agents
+        self._export_agents(staging_dir)
 
         # Export infrastructure scripts
         self._export_infrastructure_scripts(staging_dir)
@@ -202,6 +208,29 @@ class ClaudeCommandsExporter:
                     print(f"   📎 {rel_path}")
 
         print(f"✅ Exported {self.hooks_count} hooks")
+
+    def _export_agents(self, staging_dir):
+        """Export Claude Code agent definitions"""
+        print("🤖 Exporting Claude Code agents...")
+        
+        agents_dir = os.path.join(self.project_root, '.claude', 'agents')
+        if not os.path.exists(agents_dir):
+            print("⚠️  Warning: .claude/agents directory not found")
+            return
+            
+        target_dir = os.path.join(staging_dir, 'agents')
+        for file_path in Path(agents_dir).glob('*'):
+            if file_path.is_file() and file_path.suffix == '.md':
+                # Copy file
+                shutil.copy2(file_path, target_dir)
+                self.agents_count += 1
+                print(f"   🤖 {file_path.name}")
+                
+                # Apply content filtering if needed
+                target_file = os.path.join(target_dir, file_path.name)
+                self._apply_content_filtering(target_file)
+        
+        print(f"✅ Exported {self.agents_count} agents")
 
     def _export_infrastructure_scripts(self, staging_dir):
         """Export root-level infrastructure scripts"""
@@ -551,6 +580,7 @@ Run these from the export directory (the one containing the `staging/` folder), 
 Copy the exported commands and hooks to your project's `.claude/` directory:
 - Commands → `.claude/commands/`
 - Hooks → `.claude/hooks/`
+- Agents → `.claude/agents/`
 - Infrastructure scripts → Project root
 
 ## 📊 **Export Contents**
@@ -558,6 +588,7 @@ Copy the exported commands and hooks to your project's `.claude/` directory:
 This comprehensive export includes:
 - **📋 {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
 - **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
+- **🤖 {self.agents_count} Agent Definitions** - Specialized task agents for autonomous workflows (.claude/agents/)
 - **🔧 {self.scripts_count} Infrastructure Scripts** - Development environment management
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
 - **📚 Complete Documentation** - Setup guide with adaptation examples
@@ -597,6 +628,7 @@ git clone https://github.com/jleechanorg/claude-commands.git
 # 2. Copy commands and hooks to your .claude directory
 cp -r claude-commands/commands/* .claude/commands/
 cp -r claude-commands/hooks/* .claude/hooks/
+cp -r claude-commands/agents/* .claude/agents/
 
 # 3. Start Claude Code with MCP servers
 ./claude_start.sh
@@ -884,9 +916,10 @@ This export **excludes** the following project-specific directories:
 ## Manual Installation
 From your project root:
 ```bash
-mkdir -p .claude/{{commands,hooks}}
+mkdir -p .claude/{commands,hooks,agents}
 cp -R commands/. .claude/commands/
 cp -R hooks/. .claude/hooks/
+cp -R agents/. .claude/agents/
 # Optional infrastructure scripts
 cp -n infrastructure-scripts/* .
 ```
@@ -943,6 +976,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print(f"\n📊 Export Summary:")
         print(f"   Commands: {self.commands_count}")
         print(f"   Hooks: {self.hooks_count}")
+        print(f"   Agents: {self.agents_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
         print(f"\n🎯 The export has been published and is ready for review!")
