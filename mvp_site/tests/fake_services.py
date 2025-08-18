@@ -7,6 +7,11 @@ Includes JSON input schema validation support.
 import os
 import sys
 
+# Add mvp_site to path so 'import main' can find mvp_site/main.py
+mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if mvp_site_path not in sys.path:
+    sys.path.insert(0, mvp_site_path)
+
 # Import JSON input schema components
 from contextlib import suppress
 from typing import Any
@@ -17,6 +22,7 @@ from fake_auth import FakeFirebaseAuth, FakeUserRecord
 # Import our fake implementations
 from fake_firestore import FakeFirestoreClient
 from fake_gemini import create_fake_gemini_client
+# Import constants and functions from main at module level to avoid inline imports
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
 with suppress(ImportError):
@@ -66,6 +72,14 @@ class FakeServiceManager:
     def start_patches(self):
         """Start all service patches."""
         try:
+            # Ensure firebase_admin.auth module is imported before patching
+            try:
+                import firebase_admin.auth
+            except ImportError:
+                # If firebase_admin.auth can't be imported, fall back to mock modules
+                self._setup_mock_modules()
+                return self
+
             # Patch Firebase Admin - handle missing modules gracefully
             firebase_patch = patch(
                 "firebase_admin.firestore.client", return_value=self.firestore
@@ -91,12 +105,10 @@ class FakeServiceManager:
                 "google.genai.Client", return_value=self.gemini_client
             )
 
-            # Start patches
-            self._patches = [
-                firebase_patch.start(),
-                auth_patch.start(),
-                genai_client_patch.start(),
-            ]
+            # Start patches and keep patchers for cleanup
+            self._patches = [firebase_patch, auth_patch, genai_client_patch]
+            for patcher in self._patches:
+                patcher.start()
         except ImportError:
             # Modules not available - create mock modules
             self._setup_mock_modules()
@@ -147,8 +159,7 @@ class FakeServiceManager:
         """Stop all service patches."""
         for patcher in self._patches:
             try:
-                if hasattr(patcher, "stop"):
-                    patcher.stop()
+                patcher.stop()
             except (RuntimeError, AttributeError):
                 pass  # Already stopped or not a patcher
         self._patches.clear()
@@ -359,7 +370,6 @@ def with_fake_services():
 
 def create_test_app():
     """Create a test Flask app with fake services configured."""
-
     # Set up fake services
     services = FakeServiceManager()
     services.setup_environment()
@@ -377,7 +387,6 @@ def create_test_app():
 
 def get_test_headers(user_id: str = "test-user-123") -> dict[str, str]:
     """Get test headers for bypassing authentication."""
-
     return {HEADER_TEST_BYPASS: "true", HEADER_TEST_USER_ID: user_id}
 
 

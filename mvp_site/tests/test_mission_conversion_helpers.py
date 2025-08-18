@@ -1,5 +1,10 @@
 import os
 import sys
+from unittest.mock import patch
+
+# Set test environment before any imports
+os.environ["TESTING"] = "true"
+os.environ["USE_MOCKS"] = "true"
 
 # Add parent directory to path for imports
 sys.path.insert(
@@ -8,9 +13,10 @@ sys.path.insert(
 
 import unittest
 
-import logging_util
-
-from firestore_service import update_state_with_changes
+# Mock Firebase before importing modules that depend on it
+with patch("firebase_admin.firestore.client"):
+    import logging_util
+    from firestore_service import update_state_with_changes
 
 
 class TestMissionConversionHelpers(unittest.TestCase):

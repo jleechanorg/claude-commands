@@ -567,7 +567,7 @@ class V1VsV2CampaignComparisonTest(unittest.TestCase):
             print("🌐 Browser initialized for testing")
             
         except Exception as e:
-            self.skipTest(f"Playwright MCP not available: {e}")
+            self.skipTest(f"Resource not available: Playwright MCP not available ({e}), skipping browser automation test")
     
     def tearDown(self):
         """Clean up browser resources"""

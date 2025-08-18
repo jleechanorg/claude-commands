@@ -16,26 +16,18 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Mock firebase modules before imports
-mock_firebase_admin = MagicMock()
-mock_firestore = MagicMock()
-mock_auth = MagicMock()
-mock_firebase_auth = MagicMock()
-mock_firebase_admin.firestore = mock_firestore
-mock_firebase_admin.auth = mock_auth
-
-# Firebase DELETE_FIELD sentinel
-DELETE_FIELD = object()
-mock_firestore.DELETE_FIELD = DELETE_FIELD
-
-# Setup module mocks
+# Setup module path
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-sys.modules["firebase_admin"] = mock_firebase_admin
-sys.modules["firebase_admin.firestore"] = mock_firestore
-sys.modules["firebase_admin.auth"] = mock_auth
-sys.modules["firebase_auth"] = mock_firebase_auth
+
+# Import proper fakes library 
+from fake_services import FakeServiceManager
+from fake_firestore import FakeFirestoreClient
+
+# Use proper fakes library instead of manual MagicMock setup
+with FakeServiceManager() as fake_services:
+    pass  # Fakes library handles firebase_admin setup
 
 os.environ["TESTING"] = "true"
 
@@ -276,7 +268,7 @@ class TestRequestSizeLimits(unittest.TestCase):
         assert len(oversized_token) > MAX_HEADER_SIZE
 
         # Mock that the web server would reject this before reaching the app
-        with patch("firebase_auth.verify_id_token") as mock_verify:
+        with patch("firebase_admin.auth.verify_id_token") as mock_verify:
             # Simulate header size rejection
             mock_verify.side_effect = ValueError("Header too large")
 

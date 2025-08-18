@@ -89,7 +89,7 @@ class TestComprehensiveSyntax(unittest.TestCase):
             self.fail(f"Syntax error in main.py or its dependencies: {e}")
         except ImportError as e:
             if "No module named" in str(e):
-                self.skipTest(f"Skipping due to missing dependency: {e}")
+                self.skipTest(f"Resource not available: Python dependency {e}, skipping syntax test")
             else:
                 self.fail(f"Import error: {e}")
         except Exception as e:

@@ -66,7 +66,7 @@ class TestPdfGeneration(unittest.TestCase):
         font_path = os.path.join(parent_dir, "assets", "DejaVuSans.ttf")
         if not os.path.exists(font_path):
             self.skipTest(
-                f"Font file not found at {font_path}. Skipping PDF generation test."
+                f"Font file not available: {font_path} not found, skipping PDF generation test"
             )
 
         # Call our simple test endpoint

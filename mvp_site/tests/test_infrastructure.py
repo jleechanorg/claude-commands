@@ -158,7 +158,7 @@ class TestServerInfrastructure(unittest.TestCase):
             except Exception as e:
                 self.fail(f"Failed to load port-utils.sh: {e}")
         else:
-            self.skipTest("port-utils.sh not found - skipping port allocation test")
+            self.skipTest("Resource not available: Port utility port-utils.sh not found, skipping port allocation test")
 
     def test_branch_specific_logging(self):
         """Test that branch-specific logging directory structure works."""
@@ -170,7 +170,7 @@ class TestServerInfrastructure(unittest.TestCase):
                 os.makedirs(logs_dir, exist_ok=True)
             except PermissionError:
                 self.skipTest(
-                    f"Cannot create logs directory {logs_dir} - permission denied"
+                    f"Cannot create logs directory {logs_dir} - permission denied (Environmental limitation)"
                 )
 
         # Test log file naming pattern
@@ -188,7 +188,7 @@ class TestServerInfrastructure(unittest.TestCase):
 
         except PermissionError:
             self.skipTest(
-                f"Cannot write to log file {test_branch_log} - permission denied"
+                f"Cannot write to log file {test_branch_log} - permission denied (Environmental limitation)"
             )
         except Exception as e:
             self.fail(f"Failed to test branch-specific logging: {e}")
@@ -207,7 +207,7 @@ class TestServerInfrastructure(unittest.TestCase):
             )
 
             if branch_result.returncode != 0:
-                self.skipTest("Not in a git repository - skipping git branch test")
+                self.skipTest("Resource not available: Git repository not in git directory, skipping git branch test")
 
             current_branch = branch_result.stdout.strip()
 

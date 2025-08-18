@@ -20,20 +20,13 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 # Check for Firebase credentials - same pattern as other tests
 def has_firebase_credentials():
-    """Check if Firebase credentials are available."""
-    # Check for various credential sources
-    if os.environ.get("GOOGLE_APPLICATION_CREDENTIALS"):
-        return True
-    if os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY"):
-        return True
-    # Check for application default credentials
-    try:
-        import google.auth
-
-        google.auth.default()
-        return True
-    except Exception:
-        return False
+    """Check if Firebase credentials are available.
+    
+    Note: End2end tests use complete mocking and don't require real credentials.
+    This function returns False to ensure tests use mocked services.
+    """
+    # End2end tests should always use mocked services, not real credentials
+    return False
 
 
 from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
@@ -41,10 +34,6 @@ from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 from tests.fake_firestore import FakeFirestoreClient
 
 
-@unittest.skipUnless(
-    has_firebase_credentials(),
-    "Skipping MCP error handling end2end tests - Firebase credentials not available (expected in CI)",
-)
 class TestMCPErrorHandlingEnd2End(unittest.TestCase):
     """Test MCP error handling and translation through the full application stack."""
 

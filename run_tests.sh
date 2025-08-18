@@ -2,16 +2,25 @@
 
 # Test Runner Script for WorldArchitect.ai with Intelligent Test Selection
 # Runs test_*.py files using intelligent selection by default or full suite with --full
+# Always runs in CI simulation mode to catch environment-specific issues
 #
 # Usage:
-#   ./run_tests.sh                           # Intelligent test selection (default)
-#   ./run_tests.sh --full                    # Run complete test suite
+#   ./run_tests.sh                           # Intelligent test selection (default, CI simulation)
+#   ./run_tests.sh --full                    # Run complete test suite (CI simulation)
+#   ./run_tests.sh test_file.py              # Run single specific test file
+#   ./run_tests.sh test1.py test2.py         # Run multiple specific test files (serial execution)
 #   ./run_tests.sh --dry-run                 # Show intelligent selection without execution
 #   ./run_tests.sh --integration             # Include integration tests (works with intelligent mode)
 #   ./run_tests.sh --coverage                # Run tests with coverage analysis
 #   ./run_tests.sh --integration --coverage  # Run unit and integration tests with coverage
 #   ./run_tests.sh --full --integration      # Full suite including integration tests
 #   ./run_tests.sh --dry-run --integration   # Preview intelligent selection with integration tests
+#
+# CI Simulation Features:
+# - Always simulates GitHub Actions environment to catch deployment issues early
+# - Sets CI environment variables (CI=true, GITHUB_ACTIONS=true, MOCK_SERVICES_MODE=true)
+# - Uses same environment setup as actual GitHub Actions workflow
+# - Tests run with same dependencies as CI environment
 #
 # Intelligent Selection Features:
 # - Analyzes git changes vs origin/main to select relevant tests
@@ -187,12 +196,29 @@ print_status "Running tests from project root for complete discovery..."
 print_status "Setting TESTING=true for faster AI model usage"
 print_status "TEST_MODE=${TEST_MODE:-mock} (Real-Mode Testing Framework)"
 
+# CI Simulation Logic - Always enabled to catch environment-specific issues
+print_status "🔧 CI Simulation Mode: Simulating GitHub Actions environment"
+
+# Set CI environment variables to match GitHub Actions exactly
+export CI=true
+# NOTE: GITHUB_ACTIONS export removed to prevent CI simulation issues
+# export GITHUB_ACTIONS=true
+export TESTING=true
+export MOCK_SERVICES_MODE=true
+
+# Simulate GitHub Actions runner environment
+export RUNNER_OS="Linux"
+export RUNNER_ARCH="X64"
+
+print_status "✅ CI simulation environment configured (matches GitHub Actions)"
+
 # Parse command line arguments
 include_integration=false
 enable_coverage=false
 coverage_dir="/tmp/worldarchitectai/coverage"
 intelligent_mode=true
 dry_run_mode=false
+specific_test_files=()
 
 for arg in "$@"; do
     case $arg in
@@ -212,13 +238,22 @@ for arg in "$@"; do
         *)
             if [[ $arg == --* ]]; then
                 print_warning "Unknown argument: $arg"
+            elif [[ $arg == *.py ]]; then
+                # Handle specific test files (individual or multiple)
+                specific_test_files+=("$arg")
+                intelligent_mode=false  # Disable intelligent mode when running specific files
             fi
             ;;
     esac
 done
 
 # Display mode information
-if [ "$intelligent_mode" = true ]; then
+if [ ${#specific_test_files[@]} -gt 0 ]; then
+    print_status "🎯 Specific Test Mode: Running ${#specific_test_files[@]} specified test file(s)"
+    for test_file in "${specific_test_files[@]}"; do
+        print_status "  - $test_file"
+    done
+elif [ "$intelligent_mode" = true ]; then
     if [ "$dry_run_mode" = true ]; then
         print_status "🧠 Intelligent Test Selection Mode (DRY RUN - no tests executed)"
     else
@@ -234,11 +269,16 @@ else
     print_status "Skipping integration tests (use --integration to include them)"
 fi
 
-# Intelligent test selection logic
+# Test selection logic
 selected_test_files=()
 use_intelligent_selection=false
 
-if [ "$intelligent_mode" = true ]; then
+# Handle specific test files first
+if [ ${#specific_test_files[@]} -gt 0 ]; then
+    # Use specific test files provided by user
+    selected_test_files=("${specific_test_files[@]}")
+    print_status "✅ Using ${#selected_test_files[@]} specified test file(s)"
+elif [ "$intelligent_mode" = true ]; then
     print_status "🔍 Analyzing git changes for intelligent test selection..."
     
     # Check if dependency analyzer exists
@@ -340,10 +380,22 @@ else
     print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
 fi
 
-# Find test files - use intelligent selection if available, otherwise discover all
+# Find test files - handle individual test file, intelligent selection, or discovery
 test_files=()
 
-if [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt 0 ]; then
+# Check if specific test files were specified
+if [ ${#specific_test_files[@]} -gt 0 ]; then
+    # Validate and add specific test files
+    for test_file in "${specific_test_files[@]}"; do
+        if [ -f "$test_file" ]; then
+            test_files+=("$test_file")
+        else
+            print_error "Test file not found: $test_file"
+            exit 1
+        fi
+    done
+    print_status "🎯 Running ${#test_files[@]} specified test file(s) in serial mode"
+elif [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt 0 ]; then
     # Use intelligently selected tests
     print_status "🎯 Using intelligent test selection results"
     

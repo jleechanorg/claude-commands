@@ -591,19 +591,30 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 🚨 **ZERO TOLERANCE**: Run ALL tests, fix ALL failures. No "pre-existing issues" excuse. Commands: `./run_tests.sh` | `./run_ui_tests.sh mock`
 
+🚨 **CI SIMULATION BY DEFAULT**: Tests now simulate CI environment by default to catch issues early
+- **Default**: `./run_tests.sh` removes google packages temporarily (CI simulation)
+- **Local Mode**: `./run_tests.sh --no-ci-sim` for full local environment
+- **Purpose**: Prevent "works locally, fails in CI" issues like google.auth import failures
+- **Benefits**: Catches environment-specific dependency issues before CI
+
 🚨 **VISUAL VALIDATION**: Verify end-to-end data flow (input → API → DB → UI display), not just API calls.
 
-🚨 **COMPREHENSIVE MOCKING OVER SKIPPING**: ⚠️ RECOMMENDED - Use robust mocking instead of test skips
-- ✅ **PREFERRED**: Comprehensive mocking with `autospec=True` for consistent test environments
-- ✅ **PATTERN**: Mock dependencies to ensure tests validate functionality regardless of environment
-- ✅ **IMPLEMENTATION**: Use pytest fixtures or unittest.mock.patch decorators for proper isolation
-- ⚠️ **AVOID**: Skip tests based on dependency availability - prefer making all tests runnable
+🚨 **NUANCED TEST SKIP POLICY**: ⚠️ MANDATORY - Distinguished between legitimate environmental skips vs inappropriate lazy skips
+- **Full Policy**: → `docs/test-skip-policy.md` for complete guidelines and enforcement rules
+- ✅ **LEGITIMATE Environmental Skips**: Missing external dependencies (fonts, git, credentials), CI limitations
+  - **Pattern**: `self.skipTest("Resource not available: specific reason, skipping test purpose")`
+  - **Use Cases**: Optional dependencies, system utilities, credentials, CI environment limitations
+- ❌ **FORBIDDEN Lazy Skips**: Implementation avoidance, mockable dependencies, internal failures
+  - **Never**: Skip tests that could be fixed with mocking, proper setup, or implementation fixes
+- 🔧 **CRITICAL FIXES REQUIRED**: Replace `self.fail("...skipping...")` with `self.skipTest()` patterns
+  - **Files**: test_generator_isolated.py:69, test_infrastructure.py:161,210
+  - **Issue**: Tests currently FAIL instead of SKIP under legitimate environmental conditions
 
-🚨 **DETERMINISTIC TESTING GUIDANCE**: ⚠️ RECOMMENDED - Ensure consistent test behavior
-- ✅ **RECOMMENDED**: Force deterministic behavior at module level before conditional logic
-- ✅ **PATTERN**: Create mock classes/objects that simulate missing dependencies
-- ✅ **IMPLEMENTATION**: Use `*args, **kwargs` in mock method signatures for compatibility
-- ⚠️ **AVOID**: Conditional imports that create different execution paths in local vs CI environments
+🚨 **COMPREHENSIVE MOCKING FIRST PRINCIPLE**: ⚠️ MANDATORY - Mock before skip, skip only when mocking impossible
+- ✅ **PREFERRED**: Comprehensive mocking with `autospec=True` for internal dependencies  
+- ✅ **PATTERN**: Mock all mockable dependencies (Firebase, APIs, databases) before considering skips
+- ✅ **IMPLEMENTATION**: Use pytest fixtures or unittest.mock.patch decorators for proper isolation
+- ⚠️ **SKIP ONLY**: When external resource legitimately unavailable AND cannot be reasonably mocked
 
 **Quality**: Files <500 lines, descriptive names. Verify PASS/FAIL detection. Use specific exceptions (ValidationError).
 
@@ -740,7 +751,11 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 ## Quick Reference
 
 - **Test**: `TESTING=true vpython mvp_site/test_file.py` (from root)
-- **All Tests**: `./run_tests.sh` 
+- **All Tests**: `./run_tests.sh` (CI simulation by default)
+- **CI Simulation**: `./run_tests.sh` (default) or `./run_tests.sh --ci-sim`
+- **Local Mode**: `./run_tests.sh --no-ci-sim` (full environment)
+- **Specific Test**: `./run_tests.sh path/to/test_file.py`
+- **Test Pattern**: `./run_tests.sh test_pattern_name`
 - **New Branch**: `./integrate.sh`
 - **Deploy**: `./deploy.sh` or `./deploy.sh stable`
 

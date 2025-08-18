@@ -26,10 +26,6 @@ from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse, FakeTo
 from tests.test_common import has_firebase_credentials
 
 
-@unittest.skipUnless(
-    has_firebase_credentials(),
-    "Skipping MCP protocol end2end tests - Firebase credentials not available (expected in CI)",
-)
 class TestMCPProtocolEnd2End(unittest.TestCase):
     """Test MCP JSON-RPC protocol communication through the full application stack."""
 

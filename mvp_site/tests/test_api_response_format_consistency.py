@@ -39,18 +39,25 @@ def has_firebase_credentials():
         return False
 
 
+from unittest.mock import patch
+
 from main import create_app  # noqa: E402
 
 
-@unittest.skipUnless(
-    has_firebase_credentials(),
-    "Skipping API response format consistency tests - Firebase credentials not available (expected in CI)",
-)
 class TestAPIResponseFormatConsistency(unittest.TestCase):
     """Test that all API responses maintain consistent formats."""
 
     def setUp(self):
         """Set up test client."""
+        
+        # Mock Firebase to prevent initialization errors
+        self.firebase_patcher = patch("firebase_admin.firestore.client")
+        self.mock_firestore = self.firebase_patcher.start()
+        
+        # Set up fake Firestore client
+        from tests.fake_firestore import FakeFirestoreClient
+        fake_firestore = FakeFirestoreClient()
+        self.mock_firestore.return_value = fake_firestore
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
@@ -317,6 +324,11 @@ class TestAPIResponseFormatConsistency(unittest.TestCase):
                     assert (
                         True
                     ), f"{endpoint} uses new format but frontend is compatible"
+
+    def tearDown(self):
+        """Clean up Firebase mocks."""
+        if hasattr(self, 'firebase_patcher'):
+            self.firebase_patcher.stop()
 
 
 if __name__ == "__main__":

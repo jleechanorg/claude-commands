@@ -73,10 +73,6 @@ class TestGeminiTokenManagement(unittest.TestCase):
         self.assertIsInstance(tokens, (int, float))
         self.assertGreater(tokens, 0)
 
-    @unittest.skipIf(
-        not GEMINI_SERVICE_AVAILABLE,
-        "Skipping real gemini_service tests in CI environment",
-    )
     def test_token_constants_in_real_service(self):
         """Test that token constants are properly set in real service."""
         # This test only runs when real gemini_service is available

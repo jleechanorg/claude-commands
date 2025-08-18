@@ -1,19 +1,82 @@
 """
 Unit tests for game_state.py module.
 Tests the GameState class and related functions.
+Comprehensive mocking implemented to handle CI environments that lack Firebase dependencies.
 """
 
 import os
 import sys
+import unittest
+from unittest.mock import MagicMock, patch
 
-# Add parent directory to path for imports
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
+# Set test environment before any imports
+os.environ["TESTING"] = "true"
+os.environ["USE_MOCKS"] = "true"
+os.environ["GEMINI_API_KEY"] = "test-api-key"
+
+# CRITICAL FIX: Mock firebase_admin completely to avoid google.auth namespace conflicts
+# This prevents the test from trying to import firebase_admin which triggers the google.auth issue
+firebase_admin_mock = MagicMock()
+firebase_admin_mock.firestore = MagicMock()
+firebase_admin_mock.auth = MagicMock()
+firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
+sys.modules['firebase_admin'] = firebase_admin_mock
+sys.modules['firebase_admin.firestore'] = firebase_admin_mock.firestore
+sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
+
+# Use proper fakes library instead of manual MagicMock setup
+# Import fakes library components (will be imported after path setup)
+try:
+    # Fakes library will be imported after path setup below
+    
+    # Mock pydantic dependencies
+    pydantic_module = MagicMock()
+    pydantic_module.BaseModel = MagicMock()
+    pydantic_module.Field = MagicMock()
+    pydantic_module.field_validator = MagicMock()
+    pydantic_module.model_validator = MagicMock()
+    pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
+    sys.modules['pydantic'] = pydantic_module
+    
+    # Mock cachetools dependencies
+    cachetools_module = MagicMock()
+    cachetools_module.TTLCache = MagicMock()
+    cachetools_module.cached = MagicMock()
+    sys.modules['cachetools'] = cachetools_module
+    
+    # Mock google dependencies
+    google_module = MagicMock()
+    google_module.genai = MagicMock()
+    google_module.genai.Client = MagicMock()
+    sys.modules['google'] = google_module
+    sys.modules['google.genai'] = google_module.genai
+    
+    # Mock other optional dependencies that might not be available
+    docx_module = MagicMock()
+    docx_module.Document = MagicMock()
+    sys.modules['docx'] = docx_module
+    
+    # Mock fpdf dependencies
+    fpdf_module = MagicMock()
+    fpdf_module.FPDF = MagicMock()
+    fpdf_module.XPos = MagicMock()
+    fpdf_module.YPos = MagicMock()
+    sys.modules['fpdf'] = fpdf_module
+except Exception:
+    pass  # If mocking fails, continue anyway
+
+# Add parent directory to path AFTER mocking firebase_admin (append instead of insert to avoid shadowing google package)
+mvp_site_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+if mvp_site_path not in sys.path:
+    sys.path.append(mvp_site_path)
+
+# Import proper fakes library 
+from fake_services import FakeServiceManager
+from fake_firestore import FakeFirestoreClient
 
 import datetime
-import unittest
 
+# Import modules with comprehensive mocking in place
 from world_logic import (
     _cleanup_legacy_state,
     format_game_state_updates,

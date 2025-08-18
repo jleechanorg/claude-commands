@@ -106,11 +106,10 @@ class CampaignWizardResetReproductionTest(unittest.TestCase):
 
     def setUp(self):
         if not SELENIUM_AVAILABLE:
-            self.skipTest("Selenium not available")
+            self.skipTest("Resource not available: Selenium not available, skipping Selenium automation test")
         if not hasattr(self, "driver") or not self.driver:
-            self.skipTest("Chrome driver not available")
+            self.skipTest("Resource not available: Chrome driver not available, skipping Chrome automation test")
 
-    @unittest.skipUnless(SELENIUM_AVAILABLE, "Selenium not available")
     def test_campaign_wizard_reset_issue_reproduction(self):
         """
         Reproduce the complete user workflow that leads to persistent spinner

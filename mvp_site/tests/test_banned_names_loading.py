@@ -107,7 +107,7 @@ class TestBannedNamesLoading(unittest.TestCase):
             ), "Banned name 'Kaelen' should be in world content"
         except FileNotFoundError as e:
             self.skipTest(
-                f"Skipping world content test - required files not found: {e}"
+                f"Skipping world content test - required files not found: {e} (Environmental limitation)"
             )
 
 

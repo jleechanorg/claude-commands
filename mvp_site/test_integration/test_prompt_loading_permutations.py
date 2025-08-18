@@ -11,14 +11,17 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-# Mock dependencies
+# Mock dependencies before importing anything that depends on them
+sys.modules["firebase_admin"] = MagicMock()
+sys.modules["firebase_admin.credentials"] = MagicMock()
+sys.modules["firebase_admin.firestore"] = MagicMock()
 sys.modules["google"] = MagicMock()
 sys.modules["google.genai"] = MagicMock()
-sys.modules["firebase_admin"] = MagicMock()
-sys.modules["firebase_admin.firestore"] = MagicMock()
+sys.modules["pydantic"] = MagicMock()
+sys.modules["cachetools"] = MagicMock()
 
 os.environ["GEMINI_API_KEY"] = "test"
 

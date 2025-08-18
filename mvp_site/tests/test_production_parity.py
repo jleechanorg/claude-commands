@@ -36,18 +36,25 @@ def has_firebase_credentials():
         return False
 
 
+from unittest.mock import patch
+
 from main import create_app  # noqa: E402
 
 
-@unittest.skipUnless(
-    has_firebase_credentials(),
-    "Skipping production parity tests - Firebase credentials not available (expected in CI)",
-)
 class TestProductionParity(unittest.TestCase):
     """Test production-like configurations to catch parity issues."""
 
     def setUp(self):
         """Set up test client for production parity testing."""
+        
+        # Mock Firebase to prevent initialization errors
+        self.firebase_patcher = patch("firebase_admin.firestore.client")
+        self.mock_firestore = self.firebase_patcher.start()
+        
+        # Set up fake Firestore client
+        from tests.fake_firestore import FakeFirestoreClient
+        fake_firestore = FakeFirestoreClient()
+        self.mock_firestore.return_value = fake_firestore
         # Direct calls are now the default - no MCP server setup needed
 
         self.app = create_app()
@@ -64,7 +71,9 @@ class TestProductionParity(unittest.TestCase):
 
     def tearDown(self):
         """Restore original environment."""
-        # No environment cleanup needed - direct calls are default
+        # Stop Firebase mock patcher to ensure proper test isolation
+        self.firebase_patcher.stop()
+        # No additional environment cleanup needed - direct calls are default
 
     def test_campaigns_list_response_format_compatibility(self):
         """Test that campaigns list response format is frontend-compatible.

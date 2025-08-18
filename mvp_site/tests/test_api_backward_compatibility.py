@@ -37,18 +37,25 @@ def has_firebase_credentials():
 
 
 # This import must be after the environment setup and skip check
+from unittest.mock import patch
+
 from main import create_app  # noqa: E402
 
 
-@unittest.skipUnless(
-    has_firebase_credentials(),
-    "Skipping API backward compatibility tests - Firebase credentials not available (expected in CI)",
-)
 class TestAPIBackwardCompatibility(unittest.TestCase):
     """Test that API responses maintain backward compatibility."""
 
     def setUp(self):
         """Set up test client."""
+        
+        # Mock Firebase to prevent initialization errors
+        self.firebase_patcher = patch("firebase_admin.firestore.client")
+        self.mock_firestore = self.firebase_patcher.start()
+        
+        # Set up fake Firestore client
+        from tests.fake_firestore import FakeFirestoreClient
+        fake_firestore = FakeFirestoreClient()
+        self.mock_firestore.return_value = fake_firestore
         # Direct calls are now the default - no MCP server setup needed
 
         self.app = create_app()

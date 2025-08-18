@@ -12,11 +12,17 @@ import sys
 import unittest
 from unittest.mock import patch
 
+# Set test environment before any imports
+os.environ["TESTING"] = "true"
+os.environ["USE_MOCKS"] = "true"
+
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from firestore_service import _perform_append, _truncate_log_json
+# Mock Firebase before importing firestore_service
+with patch("firebase_admin.firestore.client"):
+    from firestore_service import _perform_append, _truncate_log_json
 
 
 class TestFirestoreHelperFunctions(unittest.TestCase):

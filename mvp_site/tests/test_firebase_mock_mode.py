@@ -10,6 +10,10 @@ import sys
 import unittest
 from unittest.mock import MagicMock, patch
 
+# Import proper fakes library 
+from fake_services import FakeServiceManager
+from fake_firestore import FakeFirestoreClient
+
 
 class TestFirebaseMockMode(unittest.TestCase):
     """Test Firebase initialization with MOCK_SERVICES_MODE."""
@@ -33,12 +37,40 @@ class TestFirebaseMockMode(unittest.TestCase):
             mock_firebase._apps = []
             mock_firebase.initialize_app = MagicMock()
             
-            # Add mvp_site to path
-            mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            # Add proper path setup for importing main module
+            test_dir = os.path.dirname(os.path.abspath(__file__))
+            mvp_site_path = os.path.dirname(test_dir)  # mvp_site directory
+            project_root = os.path.dirname(mvp_site_path)  # project root
+            
+            # Ensure mvp_site is in path for main.py imports  
             if mvp_site_path not in sys.path:
                 sys.path.insert(0, mvp_site_path)
+            # Also add project root to path for other imports
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
             
-            with patch.dict('sys.modules', {'firebase_admin': mock_firebase}):
+            # Mock all required modules to prevent import errors
+            mock_logging_util = MagicMock()
+            mock_logging_util.LoggingUtil.get_log_file.return_value = '/tmp/test.log'
+            mock_logging_util.info = MagicMock()
+            mock_logging_util.error = MagicMock()
+            
+            mock_modules = {
+                'firebase_admin': mock_firebase,
+                'firebase_admin.auth': MagicMock(),
+                'logging_util': mock_logging_util,
+                'constants': MagicMock(),
+                'custom_types': MagicMock(),
+                'mcp_client': MagicMock(),
+                'firestore_service': MagicMock(),
+                'firebase_utils': MagicMock(),
+            }
+            
+            # Set up firebase_utils.should_skip_firebase_init to return True for MOCK_SERVICES_MODE
+            mock_firebase_utils = mock_modules['firebase_utils']
+            mock_firebase_utils.should_skip_firebase_init.return_value = True
+            
+            with patch.dict('sys.modules', mock_modules):
                 # Clear any cached imports
                 if 'main' in sys.modules:
                     del sys.modules['main']
@@ -46,7 +78,7 @@ class TestFirebaseMockMode(unittest.TestCase):
                 # Import main - this should check MOCK_SERVICES_MODE and skip Firebase init
                 import main
                 
-                # Verify Firebase was NOT initialized
+                # Verify Firebase was NOT initialized (because MOCK_SERVICES_MODE is set)
                 mock_firebase.initialize_app.assert_not_called()
                 
         finally:
@@ -60,6 +92,10 @@ class TestFirebaseMockMode(unittest.TestCase):
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
             elif "MOCK_SERVICES_MODE" in os.environ:
                 del os.environ["MOCK_SERVICES_MODE"]
+                
+            # Clean up any test imports from sys.modules to avoid interference
+            if 'main' in sys.modules:
+                del sys.modules['main']
     
     def test_world_logic_skips_firebase_with_mock_mode(self):
         """
@@ -80,23 +116,41 @@ class TestFirebaseMockMode(unittest.TestCase):
             mock_firebase._apps = []
             mock_firebase.initialize_app = MagicMock()
             
+            # Add proper path setup
+            test_dir = os.path.dirname(os.path.abspath(__file__))
+            mvp_site_path = os.path.dirname(test_dir)  # mvp_site directory
+            project_root = os.path.dirname(mvp_site_path)  # project root
+            
+            # Ensure proper paths are available
+            if mvp_site_path not in sys.path:
+                sys.path.insert(0, mvp_site_path)
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            
+            # Mock logging_util with proper methods
+            mock_logging_util = MagicMock()
+            mock_logging_util.LoggingUtil.get_log_file.return_value = '/tmp/test.log'
+            mock_logging_util.info = MagicMock()
+            mock_logging_util.error = MagicMock()
+            
             mocks = {
                 'firebase_admin': mock_firebase,
+                'firebase_admin.auth': MagicMock(),
                 'constants': MagicMock(),
                 'document_generator': MagicMock(),
-                'logging_util': MagicMock(),
+                'logging_util': mock_logging_util,
                 'structured_fields_utils': MagicMock(),
                 'custom_types': MagicMock(),
                 'debug_hybrid_system': MagicMock(),
                 'firestore_service': MagicMock(),
                 'gemini_service': MagicMock(),
                 'game_state': MagicMock(),
+                'firebase_utils': MagicMock(),
             }
             
-            # Add mvp_site to path
-            mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            if mvp_site_path not in sys.path:
-                sys.path.insert(0, mvp_site_path)
+            # Set up firebase_utils.should_skip_firebase_init to return True for MOCK_SERVICES_MODE
+            mock_firebase_utils = mocks['firebase_utils']
+            mock_firebase_utils.should_skip_firebase_init.return_value = True
             
             with patch.dict('sys.modules', mocks):
                 # Clear any cached imports
@@ -120,6 +174,10 @@ class TestFirebaseMockMode(unittest.TestCase):
                 os.environ["MOCK_SERVICES_MODE"] = original_mock
             elif "MOCK_SERVICES_MODE" in os.environ:
                 del os.environ["MOCK_SERVICES_MODE"]
+                
+            # Clean up any test imports from sys.modules to avoid interference
+            if 'world_logic' in sys.modules:
+                del sys.modules['world_logic']
 
 
 if __name__ == "__main__":
