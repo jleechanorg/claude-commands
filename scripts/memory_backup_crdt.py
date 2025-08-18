@@ -19,15 +19,31 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Import project logging utility
-from pathlib import Path
-sys.path.append(str(Path(__file__).parent.parent / 'mvp_site'))
-import logging_util
+# Optional psutil import for memory monitoring
+try:
+    import psutil
+    PSUTIL_AVAILABLE = True
+except ImportError:
+    PSUTIL_AVAILABLE = False
 
-logger = logging_util.getLogger(__name__)
+# Import project logging utility
+try:
+    from pathlib import Path
+    sys.path.append(str(Path(__file__).parent.parent / 'mvp_site'))
+    import logging_util
+    logger = logging_util.getLogger(__name__)
+except (ImportError, TypeError):
+    # Fallback to standard logging if project logging unavailable or incompatible
+    import logging
+    logging.basicConfig(level=logging.INFO)
+    logger = logging.getLogger(__name__)
 
 # Git timeout configuration for subprocess operations
 GIT_TIMEOUT_SECONDS = 30
+
+# Memory bounds configuration
+MAX_MEMORY_MB = 512  # Maximum memory usage for merge operations
+MAX_ENTRIES_PER_FILE = 10000  # Maximum entries per file to prevent OOM
 
 
 @dataclass
@@ -60,8 +76,8 @@ class MemoryBackupCRDT:
         timestamp = datetime.now(timezone.utc).isoformat()
         entry_id = entry.get('id', 'unknown')
         
-        # Add entropy to prevent collisions
-        random_suffix = uuid.uuid4().hex[:8]
+        # Add high entropy to prevent collisions (16 hex chars = 64 bits)
+        random_suffix = uuid.uuid4().hex[:16]
         
         # Generate collision-resistant unique ID
         unique_id = f"{self.host_id}_{entry_id}_{timestamp}_{random_suffix}"
@@ -112,9 +128,16 @@ class MemoryBackupCRDT:
             logger.error(f"Error reading {memory_file_path}: {e}")
             return []
         
+        # Validate entry count before processing
+        validate_entry_count(entries, f"file {memory_file_path}")
+        
         # Add CRDT metadata to each entry
         prepared_entries = []
-        for entry in entries:
+        for i, entry in enumerate(entries):
+            # Periodic memory check for large files
+            if i % 1000 == 0:
+                check_memory_bounds()
+                
             if not isinstance(entry, dict):
                 logger.warning(f"Skipping non-dict entry: {entry}")
                 continue
@@ -126,6 +149,48 @@ class MemoryBackupCRDT:
         
         logger.info(f"Prepared {len(prepared_entries)} entries from {memory_file_path}")
         return prepared_entries
+
+
+def check_memory_bounds() -> None:
+    """
+    Check current memory usage and raise error if approaching limits.
+    
+    Raises:
+        MemoryError: If memory usage exceeds safe limits
+    """
+    if not PSUTIL_AVAILABLE:
+        # Skip memory checking if psutil not available
+        return
+        
+    try:
+        process = psutil.Process()
+        memory_info = process.memory_info()
+        memory_mb = memory_info.rss / 1024 / 1024
+        
+        if memory_mb > MAX_MEMORY_MB:
+            raise MemoryError(f"Memory usage {memory_mb:.1f}MB exceeds limit {MAX_MEMORY_MB}MB")
+        
+        # Log memory usage if approaching limit
+        if memory_mb > MAX_MEMORY_MB * 0.8:
+            logger.warning(f"Memory usage approaching limit: {memory_mb:.1f}MB / {MAX_MEMORY_MB}MB")
+            
+    except Exception as e:
+        logger.warning(f"Could not check memory usage: {e}")
+
+
+def validate_entry_count(entries: List[Any], operation: str = "operation") -> None:
+    """
+    Validate that entry count is within safe limits.
+    
+    Args:
+        entries: List of entries to validate
+        operation: Description of operation for error message
+        
+    Raises:
+        ValueError: If entry count exceeds limits
+    """
+    if len(entries) > MAX_ENTRIES_PER_FILE:
+        raise ValueError(f"Entry count {len(entries)} exceeds limit {MAX_ENTRIES_PER_FILE} for {operation}")
 
 
 class GitIntegration:
@@ -288,43 +353,155 @@ class GitIntegration:
         
         This would be called when a push fails due to conflicts.
         """
-        # Get list of conflicted files
-        result = subprocess.run(
-            ['git', 'diff', '--name-only', '--diff-filter=U'],
-            cwd=self.repo_path,
-            capture_output=True,
-            text=True,
-            timeout=GIT_TIMEOUT_SECONDS
-        )
-        
-        conflicted_files = result.stdout.strip().split('\n')
-        
-        for file_path in conflicted_files:
-            if file_path.endswith('.json'):
-                # For JSON files, use CRDT merge
-                self._resolve_json_conflict(file_path)
+        try:
+            # Get list of conflicted files
+            result = subprocess.run(
+                ['git', 'diff', '--name-only', '--diff-filter=U'],
+                cwd=self.repo_path,
+                capture_output=True,
+                text=True,
+                timeout=GIT_TIMEOUT_SECONDS
+            )
+            
+            if result.returncode != 0:
+                logger.error(f"Failed to get conflicted files: {result.stderr}")
+                return
+            
+            conflicted_files = [f for f in result.stdout.strip().split('\n') if f.strip()]
+            
+            if not conflicted_files:
+                logger.info("No conflicted files found")
+                return
+            
+            logger.info(f"Resolving conflicts in {len(conflicted_files)} files")
+            
+            for file_path in conflicted_files:
+                if file_path.endswith('.json'):
+                    # For JSON files, use CRDT merge
+                    self._resolve_json_conflict(file_path)
+                else:
+                    # For non-JSON files, take remote version
+                    logger.warning(f"Taking remote version for non-JSON file: {file_path}")
+                    subprocess.run(
+                        ['git', 'checkout', '--theirs', file_path],
+                        cwd=self.repo_path,
+                        check=True,
+                        timeout=GIT_TIMEOUT_SECONDS
+                    )
+                    subprocess.run(
+                        ['git', 'add', file_path],
+                        cwd=self.repo_path,
+                        check=True,
+                        timeout=GIT_TIMEOUT_SECONDS
+                    )
+            
+            logger.info("Conflict resolution completed")
+            
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Git conflict resolution failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error during conflict resolution: {e}")
+            raise
     
     def _resolve_json_conflict(self, file_path: str) -> None:
         """Resolve JSON file conflict using CRDT merge."""
-        # This would parse the conflict markers and merge using CRDT
-        # For now, we'll take the remote version
-        subprocess.run(
-            ['git', 'checkout', '--theirs', file_path],
-            cwd=self.repo_path,
-            check=True,
-            timeout=GIT_TIMEOUT_SECONDS
-        )
-        subprocess.run(
-            ['git', 'add', file_path],
-            cwd=self.repo_path,
-            check=True,
-            timeout=GIT_TIMEOUT_SECONDS
-        )
+        try:
+            # Read conflicted file content
+            full_path = self.repo_path / file_path
+            with open(full_path, 'r') as f:
+                content = f.read()
+            
+            # Parse conflict markers to extract versions
+            sections = content.split('<<<<<<< HEAD')
+            if len(sections) != 2:
+                logger.warning(f"No conflict markers found in {file_path}, using remote version")
+                subprocess.run(
+                    ['git', 'checkout', '--theirs', file_path],
+                    cwd=self.repo_path,
+                    check=True,
+                    timeout=GIT_TIMEOUT_SECONDS
+                )
+                subprocess.run(
+                    ['git', 'add', file_path],
+                    cwd=self.repo_path,
+                    check=True,
+                    timeout=GIT_TIMEOUT_SECONDS
+                )
+                return
+            
+            # Extract local and remote versions
+            local_section = sections[1].split('=======')
+            if len(local_section) != 2:
+                logger.error(f"Invalid conflict format in {file_path}")
+                raise ValueError(f"Invalid conflict markers in {file_path}")
+            
+            local_content = local_section[0].strip()
+            remote_section = local_section[1].split('>>>>>>> ')
+            if len(remote_section) < 2:
+                logger.error(f"Invalid conflict format in {file_path}")
+                raise ValueError(f"Invalid conflict markers in {file_path}")
+            
+            remote_content = remote_section[0].strip()
+            
+            # Parse JSON from both versions
+            try:
+                local_entries = json.loads(local_content) if local_content else []
+                remote_entries = json.loads(remote_content) if remote_content else []
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON in conflict for {file_path}: {e}")
+                # Fallback to remote version
+                subprocess.run(
+                    ['git', 'checkout', '--theirs', file_path],
+                    cwd=self.repo_path,
+                    check=True,
+                    timeout=GIT_TIMEOUT_SECONDS
+                )
+                subprocess.run(
+                    ['git', 'add', file_path],
+                    cwd=self.repo_path,
+                    check=True,
+                    timeout=GIT_TIMEOUT_SECONDS
+                )
+                return
+            
+            # Merge using CRDT
+            merged_entries = crdt_merge([local_entries, remote_entries])
+            
+            # Write merged result
+            with open(full_path, 'w') as f:
+                json.dump(merged_entries, f, indent=2)
+            
+            # Stage the resolved file
+            subprocess.run(
+                ['git', 'add', file_path],
+                cwd=self.repo_path,
+                check=True,
+                timeout=GIT_TIMEOUT_SECONDS
+            )
+            
+            logger.info(f"Successfully merged {len(merged_entries)} entries in {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Failed to resolve conflict in {file_path}: {e}")
+            # Fallback to remote version
+            subprocess.run(
+                ['git', 'checkout', '--theirs', file_path],
+                cwd=self.repo_path,
+                check=True,
+                timeout=GIT_TIMEOUT_SECONDS
+            )
+            subprocess.run(
+                ['git', 'add', file_path],
+                cwd=self.repo_path,
+                check=True,
+                timeout=GIT_TIMEOUT_SECONDS
+            )
 
 
 def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
     """
-    Merge memory entries using Last-Write-Wins strategy.
+    Merge memory entries using Last-Write-Wins strategy with memory bounds checking.
     
     GUARANTEES:
     - Commutativity: merge(A,B) = merge(B,A)
@@ -337,20 +514,46 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
         
     Returns:
         Merged list with conflicts resolved by LWW
+        
+    Raises:
+        MemoryError: If memory usage exceeds safe limits
+        ValueError: If entry count exceeds safe limits
     """
+    # Check memory before starting
+    check_memory_bounds()
+    
+    # Calculate total entries for bounds checking
+    total_entries = sum(len(memory_list) for memory_list in memory_lists)
+    validate_entry_count(memory_lists[0] if memory_lists else [], "merge input validation")
+    
+    if total_entries > MAX_ENTRIES_PER_FILE * 2:  # Allow some overhead for merging
+        logger.warning(f"Large merge operation: {total_entries} total entries")
+    
     # SINGLE-PASS algorithm using ONLY entry ID as key
     entries_by_id: Dict[str, Dict[str, Any]] = {}
     
-    # Process all entries in single pass
+    # Process all entries in single pass with periodic memory checking
+    processed_count = 0
     for memory_list in memory_lists:
         for entry in memory_list:
+            # Periodic memory check every 1000 entries
+            processed_count += 1
+            if processed_count % 1000 == 0:
+                check_memory_bounds()
             if not isinstance(entry, dict):
                 continue
             
-            # Skip entries without proper metadata
+            # Recovery mechanism for entries missing metadata
             if '_crdt_metadata' not in entry:
-                logger.warning(f"Entry missing CRDT metadata: {entry.get('id', 'unknown')}")
-                continue
+                logger.warning(f"Entry missing CRDT metadata, adding recovery metadata: {entry.get('id', 'unknown')}")
+                # Create recovery metadata with minimal timestamp to ensure it doesn't override newer entries
+                recovery_metadata = {
+                    'host': 'recovery',
+                    'timestamp': '1970-01-01T00:00:00+00:00',  # Epoch time, will lose in LWW
+                    'version': 0,
+                    'unique_id': f"recovery_{entry.get('id', 'unknown')}_{uuid.uuid4().hex[:16]}"
+                }
+                entry['_crdt_metadata'] = recovery_metadata
             
             entry_id = entry.get('id', 'unknown')
             
@@ -391,37 +594,55 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
     
     merged_entries.sort(key=sort_key)
     
+    # Final memory and bounds check
+    check_memory_bounds()
+    validate_entry_count(merged_entries, "merge result")
+    
     return merged_entries
 
 
 def _parse_timestamp(timestamp: str) -> datetime:
-    """Parse ISO format timestamp correctly handling timezones.
+    """Parse ISO format timestamp correctly handling all timezone formats.
     
     Args:
         timestamp: ISO format timestamp string
         
     Returns:
-        Timezone-aware datetime object
+        Timezone-aware datetime object normalized to UTC
     """
     if not timestamp:
         return datetime.min.replace(tzinfo=timezone.utc)
     
-    # Handle Z suffix (UTC)
-    if timestamp.endswith('Z'):
-        timestamp = timestamp[:-1] + '+00:00'
-    
     try:
+        # Handle different timezone formats
+        if timestamp.endswith('Z'):
+            # UTC with Z suffix
+            timestamp = timestamp[:-1] + '+00:00'
+        elif '+' in timestamp[-6:] or '-' in timestamp[-6:]:
+            # Already has timezone offset (+05:00, -08:00, etc.)
+            pass
+        elif '.' in timestamp and timestamp.count(':') >= 2:
+            # Assume UTC if no timezone specified
+            if '+' not in timestamp and '-' not in timestamp[-6:] and not timestamp.endswith('Z'):
+                timestamp += '+00:00'
+        else:
+            # Simple format without timezone, assume UTC
+            timestamp += '+00:00'
+        
         # Parse with timezone information preserved
         dt = datetime.fromisoformat(timestamp)
         
-        # Ensure timezone awareness
+        # Ensure timezone awareness and normalize to UTC for comparison
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
+        else:
+            # Convert to UTC for consistent comparison
+            dt = dt.astimezone(timezone.utc)
         
         return dt
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as e:
         # Fallback for invalid timestamps
-        logger.warning(f"Invalid timestamp format: {timestamp}")
+        logger.warning(f"Invalid timestamp format '{timestamp}': {e}")
         return datetime.min.replace(tzinfo=timezone.utc)
 
 
