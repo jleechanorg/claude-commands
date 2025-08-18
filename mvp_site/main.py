@@ -936,7 +936,46 @@ if __name__ == "__main__":
             )  # Default to True (skip HTTP), override with --mcp-http
             app._mcp_server_url = args.mcp_server_url
 
-            port = int(os.environ.get("PORT", "8081"))
+            # Robust port parsing to handle descriptive PORT environment variables
+            def parse_port_robust(port_string):
+                """
+                Parse port number from environment variable that may contain descriptive text.
+                Handles cases like: "ℹ️ Port 8081 in use, trying 8082...\n8082"
+                """
+                import re
+                
+                default_port = 8081
+                
+                if not port_string or not isinstance(port_string, str):
+                    return default_port
+                    
+                # Clean the string - remove extra whitespace and newlines
+                port_string = port_string.strip()
+                
+                # Try direct conversion first (normal case)
+                try:
+                    return int(port_string)
+                except ValueError:
+                    pass
+                    
+                # Extract all numbers from the string
+                numbers = re.findall(r'\d+', port_string)
+                
+                if not numbers:
+                    return default_port
+                    
+                # Use the last number found (often the actual port after conflicts)
+                try:
+                    port = int(numbers[-1])
+                    # Validate port range
+                    if 1024 <= port <= 65535:
+                        return port
+                    else:
+                        return default_port
+                except (ValueError, IndexError):
+                    return default_port
+            
+            port = parse_port_robust(os.environ.get("PORT", "8081"))
             mode = (
                 "direct calls"
                 if app._skip_mcp_http

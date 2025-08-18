@@ -8,6 +8,43 @@ set -e  # Exit on error
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/../scripts/server-utils.sh"
 
+# Robust port parsing function to handle descriptive PORT environment variables
+parse_port_robust_bash() {
+    local port_string="$1"
+    local default_port=8081
+    
+    # If empty or null, return default
+    if [ -z "$port_string" ]; then
+        echo "$default_port"
+        return
+    fi
+    
+    # Try direct number check first (normal case)
+    if [[ "$port_string" =~ ^[0-9]+$ ]]; then
+        # Validate range
+        if [ "$port_string" -ge 1024 ] && [ "$port_string" -le 65535 ]; then
+            echo "$port_string"
+            return
+        else
+            echo "$default_port"
+            return
+        fi
+    fi
+    
+    # Extract all numbers using grep and get the last one
+    numbers=$(echo "$port_string" | grep -o '[0-9]\+' | tail -1)
+    
+    if [ -n "$numbers" ]; then
+        # Validate range
+        if [ "$numbers" -ge 1024 ] && [ "$numbers" -le 65535 ]; then
+            echo "$numbers"
+            return
+        fi
+    fi
+    
+    echo "$default_port"
+}
+
 print_banner "WorldArchitect.AI Local Server Launcher" "Single Flask server with comprehensive logging and validation"
 
 # Function to offer cleanup of existing servers
@@ -122,8 +159,11 @@ esac
 echo "${EMOJI_CLOCK} Waiting for server to initialize..."
 sleep 3
 
+# Parse PORT robustly to handle descriptive text
+PARSED_PORT=$(parse_port_robust_bash "$PORT")
+
 # Validate server startup
-if validate_server $PORT; then
+if validate_server $PARSED_PORT; then
     echo ""
     echo "${EMOJI_CHECK} SUCCESS: WorldArchitect.AI server is ready!"
     echo "${EMOJI_INFO} PID: $SERVER_PID"

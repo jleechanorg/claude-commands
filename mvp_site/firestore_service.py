@@ -417,7 +417,7 @@ def json_serial(obj: Any) -> str | None:
 
 def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
     """Handles serialization of data types json doesn't know, like datetimes."""
-    if isinstance(o, datetime.datetime | datetime.date):
+    if isinstance(o, (datetime.datetime, datetime.date)):
         return o.isoformat()
     # Check for Firestore's special DELETE_FIELD sentinel.
     if o == firestore.DELETE_FIELD:

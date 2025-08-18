@@ -118,9 +118,10 @@ class TestTypeSafetyFoundation(unittest.TestCase):
         ]
         
         for invalid_response in invalid_responses:
-            if invalid_response is not None and invalid_response.get('success') is True:
-                # Should fail validation if success=True but missing campaign_id
-                self.assertFalse(self._validate_api_response(invalid_response))
+            self.assertFalse(
+                self._validate_api_response(invalid_response),
+                f"Invalid response unexpectedly passed validation: {invalid_response}"
+            )
         
         print("✅ Error handling patterns verified")
 

@@ -9,6 +9,7 @@ after the red-green fix that rebuilt the app with environment variables.
 import os
 import unittest
 import requests
+import re
 from pathlib import Path
 
 RUN_V2_E2E = os.getenv("RUN_V2_E2E") == "1"
@@ -65,7 +66,6 @@ class TestV2FrontendVerification(unittest.TestCase):
             self.fail(f"Failed to fetch HTML for asset testing: {e}")
         
         # Extract JS bundle filename
-        import re
         js_match = re.search(r'assets/js/(index-[^"]+\.js)', html_content)
         css_match = re.search(r'assets/(index-[^"]+\.css)', html_content)
         
@@ -111,18 +111,17 @@ class TestV2FrontendVerification(unittest.TestCase):
         except (IOError, UnicodeDecodeError) as e:
             self.fail(f"Failed to read JS bundle file {main_js_file}: {e}")
         
-        # Check for Firebase-related content
-        firebase_indicators = [
-            'firebase',
-            'worldarchitect',  # Part of Firebase project ID
-            'apiKey',
-            'authDomain'
+        # Check for Firebase-related content (use word boundaries, case-insensitive)
+        firebase_indicator_patterns = [
+            r'\bfirebase\b',
+            r'worldarchitect',  # Part of Firebase project ID
+            r'\bapiKey\b',
+            r'\bauthDomain\b'
         ]
-        
-        found_indicators = []
-        for indicator in firebase_indicators:
-            if indicator in js_content:
-                found_indicators.append(indicator)
+        found_indicators = [
+            p for p in firebase_indicator_patterns
+            if re.search(p, js_content, re.IGNORECASE)
+        ]
         
         self.assertTrue(len(found_indicators) >= 2, 
                        f"Should find Firebase configuration indicators. Found: {found_indicators}")

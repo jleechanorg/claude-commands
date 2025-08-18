@@ -362,12 +362,12 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
         if "attributes" in pc_data and isinstance(pc_data["attributes"], dict):
             # Check if any numeric stats exist (STR, strength, etc.)
             stats_updated = any(
-                isinstance(v, int | float) for v in pc_data["attributes"].values()
+                isinstance(v, (int, float)) for v in pc_data["attributes"].values()
             )
         elif "stats" in pc_data and isinstance(pc_data["stats"], dict):
             # Fallback check for old structure
             stats_updated = any(
-                isinstance(v, int | float) for v in pc_data["stats"].values()
+                isinstance(v, (int, float)) for v in pc_data["stats"].values()
             )
 
         # Check for gold in various locations
@@ -406,7 +406,7 @@ class TestInteractionIntegration(BaseCampaignIntegrationTest):
 
         # Also accept if AI created any new numeric fields
         new_numeric_fields = any(
-            isinstance(v, int | float)
+            isinstance(v, (int, float))
             for k, v in pc_data.items()
             if k not in initial_pc_data
         )

@@ -147,7 +147,7 @@ class TestProductionParity(unittest.TestCase):
             # or the destructuring will fail
 
             assert isinstance(
-                response_data, list | dict
+                response_data, (list, dict)
             ), "Response should be list or dict"
 
             if isinstance(response_data, dict):

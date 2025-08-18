@@ -468,7 +468,7 @@ def mcp_to_http_response(mcp_result: Any, status_code: int = 200) -> Response:
         # Handle different result types
         if isinstance(mcp_result, dict):
             response_data = mcp_result
-        elif isinstance(mcp_result, list | str | int | float | bool):
+        elif isinstance(mcp_result, (list, str, int, float, bool)):
             response_data = {"result": mcp_result}
         else:
             # Try to serialize complex objects

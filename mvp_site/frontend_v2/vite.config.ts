@@ -73,8 +73,10 @@ export default defineConfig({
 
   // Build configuration
   build: {
-    // Output directory
-    outDir: '../static/v2',
+    // Output directory - configurable via V2_BUILD_OUT_DIR for testing
+    outDir: process.env.V2_BUILD_OUT_DIR 
+      ? path.resolve(__dirname, process.env.V2_BUILD_OUT_DIR)
+      : '../static/v2',
 
     // Clean output directory before build
     emptyOutDir: true,

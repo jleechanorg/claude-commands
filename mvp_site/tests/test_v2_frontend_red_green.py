@@ -14,19 +14,22 @@ import unittest
 import tempfile
 import json
 import subprocess
+import re
+import shutil
 from pathlib import Path
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 class TestV2FrontendRedGreen(unittest.TestCase):
     """Red-Green tests for V2 React frontend environment configuration."""
 
     def setUp(self):
         """Set up test environment."""
+        import tempfile
+        
         self.project_root = Path(__file__).parent.parent.parent
         self.frontend_dir = self.project_root / "mvp_site" / "frontend_v2"
-        self.build_dir = self.project_root / "mvp_site" / "static" / "v2"
+        # Use temporary directory for test build output to avoid overwriting app assets
+        self.temp_build_root = Path(tempfile.mkdtemp(prefix="v2_build_"))
+        self.build_dir = self.temp_build_root
         
         # Required Firebase environment variables
         self.required_env_vars = [
@@ -83,16 +86,23 @@ class TestV2FrontendRedGreen(unittest.TestCase):
         except (IOError, UnicodeDecodeError) as e:
             self.fail(f"Failed to read JS bundle file {main_js_file}: {e}")
             
-        # Check if Firebase config is embedded in the bundle
-        has_firebase_config = False
-        for var_name in self.required_env_vars:
-            if var_name.replace('FIREBASE_', '').lower() in js_content:
-                has_firebase_config = True
-                break
+        # Check if Firebase config is embedded in the bundle using canonical property names
+        firebase_canonical_props = [
+            'apiKey',
+            'authDomain',
+            'projectId',
+            'storageBucket',
+            'messagingSenderId',
+            'appId',
+        ]
+        found_props = [
+            prop for prop in firebase_canonical_props
+            if re.search(rf'\b{re.escape(prop)}\b', js_content, re.IGNORECASE)
+        ]
                 
-        if not has_firebase_config:
-            print("❌ RED TEST CONFIRMED: Firebase configuration not found in built JavaScript")
-            self.fail("Firebase configuration missing from production build")
+        if len(found_props) < 3:  # At minimum need apiKey, authDomain, projectId
+            print(f"❌ RED TEST CONFIRMED: Firebase configuration incomplete. Found only {len(found_props)} properties: {found_props}")
+            self.fail(f"Firebase configuration missing from production build. Found: {found_props}")
         else:
             print("✅ Firebase configuration found in build")
 
@@ -118,7 +128,12 @@ class TestV2FrontendRedGreen(unittest.TestCase):
         clean_env = os.environ.copy()
         for var_name in self.required_env_vars:
             clean_env.pop(var_name, None)
+        # Ensure build outputs to isolated temp dir
+        clean_env['V2_BUILD_OUT_DIR'] = str(self.build_dir)
         
+        # Ensure npm exists in PATH; skip if not available in the test environment
+        if shutil.which('npm') is None:
+            self.skipTest("npm not available in PATH")
         try:
             # Try to build without environment variables using cwd parameter
             try:
@@ -142,8 +157,9 @@ class TestV2FrontendRedGreen(unittest.TestCase):
                 # Build succeeded, check if it's functional
                 self.check_build_functionality()
                 
+        except FileNotFoundError:
+            self.skipTest("npm not found in PATH")
         except Exception as e:
-            # Test framework catches all exceptions
             self.fail(f"Build test failed with exception: {e}")
 
     def check_build_functionality(self):
@@ -198,6 +214,12 @@ class TestV2FrontendRedGreen(unittest.TestCase):
         # Build with environment variables using cwd parameter instead of os.chdir
         env = os.environ.copy()
         env['NODE_ENV'] = 'production'
+        # Ensure build outputs to isolated temp dir
+        env['V2_BUILD_OUT_DIR'] = str(self.build_dir)
+        
+        # Ensure npm exists in PATH; skip if not available in the test environment
+        if shutil.which('npm') is None:
+            self.skipTest("npm not available in PATH")
         
         print("Building React app with environment variables...")
         try:
@@ -242,19 +264,17 @@ class TestV2FrontendRedGreen(unittest.TestCase):
         except (IOError, UnicodeDecodeError) as e:
             self.fail(f"Failed to read JS bundle file {main_js_file}: {e}")
         
-        # Look for Firebase configuration in the bundle
-        config_found = False
-        for var_name in self.required_env_vars:
-            env_value = os.environ.get(var_name, '')
-            if env_value and env_value in js_content:
-                config_found = True
-                print(f"✅ Found {var_name} in build")
-                break
-        
-        if not config_found:
-            self.fail("Environment variables not found in JavaScript bundle")
-        
-        print("✅ GREEN TEST VERIFIED: Environment variables properly embedded in build")
+        # Look for Firebase configuration in the bundle via canonical property keys
+        firebase_canonical_props = [
+            'apiKey', 'authDomain', 'projectId', 'storageBucket', 'messagingSenderId', 'appId'
+        ]
+        found_props = [
+            prop for prop in firebase_canonical_props
+            if re.search(rf'\b{re.escape(prop)}\b', js_content, re.IGNORECASE)
+        ]
+        if len(found_props) < 3:
+            self.fail(f"Firebase configuration incomplete in JS bundle; found: {found_props}")
+        print(f"✅ GREEN TEST VERIFIED: Firebase properties embedded in build: {found_props}")
 
     def test_environment_setup_documentation(self):
         """

@@ -63,9 +63,11 @@ def setup_ci_fast_mode():
     """Set up fast mode for CI environment."""
     if CI_MODE and not os.environ.get('FAST_TESTS'):
         os.environ['FAST_TESTS'] = '1'
+        global FAST_MODE
+        FAST_MODE = True
 
-# Call setup function instead of global modification
-setup_ci_fast_mode()
+# Don't automatically call on import - let tests decide
+# setup_ci_fast_mode()
 
 # Performance diagnostic
 def print_performance_config():

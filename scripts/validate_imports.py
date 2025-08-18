@@ -48,7 +48,7 @@ class ImportValidator(ast.NodeVisitor):
 
         # Check if try block contains imports
         for child in ast.walk(node):
-            if isinstance(child, ast.Import | ast.ImportFrom):
+            if isinstance(child, (ast.Import, ast.ImportFrom)):
                 self.violations.append(
                     ImportViolation(
                         file=self.file_path,
