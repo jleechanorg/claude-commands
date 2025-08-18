@@ -1,4 +1,37 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Requires bash 4+ for associative arrays
+
+# Safe exit that won't kill the parent shell if sourced
+safe_exit() {
+  local code="${1:-0}"
+  # If the script is sourced, 'return' is available; else 'return' errors and we 'exit'
+  return "$code" 2>/dev/null || exit "$code"
+}
+
+# Check bash version for associative array support
+if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo "❌ Error: This script requires bash 4.0 or higher for associative array support"
+    echo "   Current bash version: ${BASH_VERSION}"
+    echo "   Install newer bash: brew install bash (macOS) or update your system"
+    safe_exit 1
+fi
+
+# Detect timeout command for cross-platform compatibility
+TIMEOUT_CMD=""
+if command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
+elif command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+elif [ -x "/opt/homebrew/opt/coreutils/libexec/gnubin/timeout" ]; then
+    TIMEOUT_CMD="/opt/homebrew/opt/coreutils/libexec/gnubin/timeout"
+fi
+
+# Detect flock availability for file locking
+USE_FLOCK=false
+if command -v flock >/dev/null 2>&1; then
+    USE_FLOCK=true
+fi
+
 echo "🚀 Installing MCP Servers with Enhanced Reliability..."
 
 # Colors for output
@@ -17,9 +50,26 @@ update_stats() {
     local name="$2"
     local result="$3"
     
-    # Use flock for atomic updates without creating a subshell
-    {
-        flock -x 200
+    # Use flock for atomic updates when available
+    if [ "$USE_FLOCK" = true ]; then
+        {
+            flock -x 200
+            case "$stat_type" in
+                "TOTAL")
+                    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+                    ;;
+                "SUCCESS")
+                    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+                    INSTALL_RESULTS["$name"]="$result"
+                    ;;
+                "FAILURE")
+                    FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                    INSTALL_RESULTS["$name"]="$result"
+                    ;;
+            esac
+        } 200>"$STATS_LOCK_FILE"
+    else
+        # No flock available, proceed without locking
         case "$stat_type" in
             "TOTAL")
                 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
@@ -33,7 +83,7 @@ update_stats() {
                 INSTALL_RESULTS["$name"]="$result"
                 ;;
         esac
-    } 200>"$STATS_LOCK_FILE"
+    fi
 }
 
 # Set up logging
@@ -62,7 +112,7 @@ NPX_PATH=$(which npx)
 
 if [ -z "$NODE_PATH" ] || [ -z "$NPX_PATH" ]; then
     echo -e "${RED}❌ Node.js or NPX not found. Please install Node.js first.${NC}"
-    exit 1
+    safe_exit 1
 fi
 
 echo -e "${BLUE}📍 Node path: $NODE_PATH${NC}"
@@ -159,12 +209,23 @@ test_mcp_server() {
     echo -e "${BLUE}  🧪 Testing server $name...${NC}"
 
     # Try to get server info (this will fail if server can't start)
-    if timeout 5s claude mcp list | grep -q "^$name:"; then
-        echo -e "${GREEN}  ✅ Server $name is responding${NC}"
-        return 0
+    if [ -n "$TIMEOUT_CMD" ]; then
+        if $TIMEOUT_CMD 5s claude mcp list | grep -q "^$name:"; then
+            echo -e "${GREEN}  ✅ Server $name is responding${NC}"
+            return 0
+        else
+            echo -e "${YELLOW}  ⚠️ Server $name added but may need configuration${NC}"
+            return 1
+        fi
     else
-        echo -e "${YELLOW}  ⚠️ Server $name added but may need configuration${NC}"
-        return 1
+        # No timeout available, run without it
+        if claude mcp list | grep -q "^$name:"; then
+            echo -e "${GREEN}  ✅ Server $name is responding${NC}"
+            return 0
+        else
+            echo -e "${YELLOW}  ⚠️ Server $name added but may need configuration${NC}"
+            return 1
+        fi
     fi
 }
 
@@ -370,7 +431,7 @@ if [ -f "$TOKEN_HELPER" ]; then
         echo -e "${YELLOW}💡 Run '$TOKEN_HELPER create' to create template token file${NC}"
         echo -e "${YELLOW}💡 Run '$TOKEN_HELPER help' for more options${NC}"
         log_with_timestamp "ERROR: Token loading failed, aborting for security"
-        exit 1
+        safe_exit 1
     fi
 else
     echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
@@ -385,7 +446,7 @@ else
     else
         echo -e "${RED}❌ No token file found${NC}"
         echo -e "${YELLOW}💡 Create ~/.token file with your tokens${NC}"
-        exit 1
+        safe_exit 1
     fi
 fi
 
@@ -713,13 +774,13 @@ else
     claude mcp remove "filesystem" >/dev/null 2>&1 || true
 
     # Add filesystem server with proper directory configuration
-    echo -e "${BLUE}  🔗 Adding filesystem server with /home/jleechan/projects access...${NC}"
-    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "/home/jleechan/projects" 2>&1)
+    echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
+    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
-        log_with_timestamp "Successfully added filesystem server with /home/jleechan/projects access"
+        log_with_timestamp "Successfully added filesystem server with $HOME/projects access"
         INSTALL_RESULTS["filesystem"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
@@ -939,9 +1000,9 @@ if [ "$SUCCESSFUL_INSTALLS" -gt 0 ]; then
         echo -e "${YELLOW}⚠️ Some servers failed to install. Check the detailed results above or log file.${NC}"
         echo -e "${YELLOW}💡 Log file: $LOG_FILE${NC}"
     fi
-    exit 0
+    safe_exit 0
 else
     echo -e "\n${RED}❌ No servers were successfully installed. Please check the errors above.${NC}"
     echo -e "${RED}💡 Check the detailed log: $LOG_FILE${NC}"
-    exit 1
+    safe_exit 1
 fi
