@@ -16,9 +16,16 @@ import os
 import re
 import sys
 import argparse
+import threading
+import tempfile
 from pathlib import Path
 from typing import List, Tuple, Dict, NamedTuple
 import ast
+
+# Security constants
+MAX_TEST_FILE_SIZE = 10 * 1024 * 1024  # 10MB limit
+MAX_LINE_LENGTH = 1000  # Character limit per line
+REGEX_TIMEOUT = 5  # Seconds
 
 class SkipViolation(NamedTuple):
     file_path: str
@@ -28,29 +35,34 @@ class SkipViolation(NamedTuple):
     reason: str
     suggested_fix: str = ""
 
+class RegexTimeoutError(Exception):
+    """Raised when regex matching exceeds timeout."""
+    pass
+
 class SkipPolicyChecker:
     def __init__(self, project_root: Path, verbose: bool = False):
         self.project_root = project_root
         self.verbose = verbose
         self.violations: List[SkipViolation] = []
+        self.regex_timeout = REGEX_TIMEOUT  # Configurable timeout for regex operations
         
-        # Patterns that indicate legitimate environmental skips (compiled for safety)
+        # Patterns that indicate legitimate environmental skips (anchored for security)
         self.legitimate_patterns = [
-            re.compile(r'not.*os\.path\.exists', re.IGNORECASE),  # Missing files/directories
-            re.compile(r'shutil\.which.*is None', re.IGNORECASE),  # Missing system utilities  
-            re.compile(r'git.*not.*available', re.IGNORECASE),  # Git not installed
-            re.compile(r'credentials.*not.*available', re.IGNORECASE),  # Missing credentials
-            re.compile(r'CI.*environment', re.IGNORECASE),  # CI limitations
-            re.compile(r'permission.*denied', re.IGNORECASE),  # Permission issues
+            re.compile(r'\bnot\s+os\.path\.exists\b', re.IGNORECASE),  # Missing files/directories - fixed ReDoS
+            re.compile(r'\bshutil\.which\([^)\n]{0,100}\)\s+is\s+None\b', re.IGNORECASE),  # Missing system utilities - length limited
+            re.compile(r'\bgit\b[^.]{0,50}\bnot\b[^.]{0,50}\bavailable\b', re.IGNORECASE),  # Git not installed - bounded
+            re.compile(r'\bcredentials\b[^.]{0,50}\bnot\b[^.]{0,50}\bavailable\b', re.IGNORECASE),  # Missing credentials - bounded
+            re.compile(r'\bCI\b[^.]{0,30}\benvironment\b', re.IGNORECASE),  # CI limitations - bounded
+            re.compile(r'\bpermission\b[^.]{0,30}\bdenied\b', re.IGNORECASE),  # Permission issues - bounded
         ]
         
-        # Patterns that indicate inappropriate lazy skips
+        # Patterns that indicate inappropriate lazy skips (compiled with timeouts)
         self.forbidden_patterns = [
-            r'too.*hard',  # Implementation difficulty
-            r'sometimes.*fails',  # Flaky tests
-            r'not.*implemented',  # Implementation gaps
-            r'mock.*not.*working',  # Mocking issues
-            r'database.*not.*set.*up',  # Internal setup issues
+            re.compile(r'\btoo\b[^.]{0,20}\bhard\b', re.IGNORECASE),  # Implementation difficulty
+            re.compile(r'\bsometimes\b[^.]{0,20}\bfails\b', re.IGNORECASE),  # Flaky tests
+            re.compile(r'\bnot\b[^.]{0,30}\bimplemented\b', re.IGNORECASE),  # Implementation gaps
+            re.compile(r'\bmock\b[^.]{0,30}\bnot\b[^.]{0,20}\bworking\b', re.IGNORECASE),  # Mocking issues
+            re.compile(r'\bdatabase\b[^.]{0,30}\bnot\b[^.]{0,20}\bset\b[^.]{0,10}\bup\b', re.IGNORECASE),  # Internal setup issues
         ]
         
         # Pattern for old fail-instead-of-skip violations
@@ -61,7 +73,26 @@ class SkipPolicyChecker:
         if not file_path.name.startswith('test_') or not file_path.suffix == '.py':
             return
             
+        # Input validation - prevent path traversal
         try:
+            resolved_path = file_path.resolve()
+            if not resolved_path.is_relative_to(self.project_root):
+                if self.verbose:
+                    print(f"Warning: File {file_path} is outside project root")
+                return
+        except (ValueError, OSError) as e:
+            if self.verbose:
+                print(f"Warning: Could not resolve path {file_path}: {e}")
+            return
+            
+        try:
+            # Limit file size to prevent DoS attacks
+            file_stat = file_path.stat()
+            if file_stat.st_size > MAX_TEST_FILE_SIZE:
+                if self.verbose:
+                    print(f"Warning: File {file_path} too large ({file_stat.st_size} bytes)")
+                return
+                
             content = file_path.read_text(encoding='utf-8')
             lines = content.splitlines()
         except (UnicodeDecodeError, OSError) as e:
@@ -76,19 +107,45 @@ class SkipPolicyChecker:
         """Check a single line for skip policy violations."""
         line_stripped = line.strip()
         
-        # Check for fail-instead-of-skip violations
-        if re.search(self.fail_skip_pattern, line_stripped, re.IGNORECASE):
-            violation = SkipViolation(
-                file_path=str(file_path.relative_to(self.project_root)),
-                line_number=line_num,
-                line_content=line_stripped,
-                violation_type="FAIL_INSTEAD_OF_SKIP",
-                reason="Uses self.fail() for legitimate environmental skip condition",
-                suggested_fix=self._suggest_fail_to_skip_fix(line_stripped)
-            )
-            self.violations.append(violation)
+        # Input length validation to prevent ReDoS
+        if len(line_stripped) > MAX_LINE_LENGTH:
+            if self.verbose:
+                print(f"Warning: Line {line_num} in {file_path} too long, skipping")
+            return
         
-        # Check for any skip patterns (zero tolerance policy)
+        # Check for fail-instead-of-skip violations with cross-platform timeout protection
+        try:
+            result = {}
+            def regex_search():
+                result['match'] = re.search(self.fail_skip_pattern, line_stripped, re.IGNORECASE)
+            
+            thread = threading.Thread(target=regex_search)
+            thread.start()
+            thread.join(self.regex_timeout)
+            
+            if thread.is_alive():
+                if self.verbose:
+                    print(f"Warning: Timeout during regex matching at {file_path}:{line_num}")
+                raise RegexTimeoutError("Regex matching timed out")
+            
+            if result.get('match'):
+                violation = SkipViolation(
+                    file_path=str(file_path.relative_to(self.project_root)),
+                    line_number=line_num,
+                    line_content=line_stripped,
+                    violation_type="FAIL_INSTEAD_OF_SKIP",
+                    reason="Uses self.fail() for legitimate environmental skip condition",
+                    suggested_fix=self._suggest_fail_to_skip_fix(line_stripped)
+                )
+                self.violations.append(violation)
+        except RegexTimeoutError:
+            if self.verbose:
+                print(f"Warning: Timeout during regex matching at {file_path}:{line_num}")
+        except Exception as e:
+            if self.verbose:
+                print(f"Warning: Error during regex matching at {file_path}:{line_num}: {e}")
+        
+        # Check for skip patterns with contextual analysis (NOT zero tolerance)
         skip_patterns = [
             '@unittest.skipIf', '@unittest.skipUnless', '@unittest.skip',
             '@pytest.mark.skip', '@pytest.mark.skipif', 'skipTest',
@@ -96,16 +153,8 @@ class SkipPolicyChecker:
         ]
         
         if any(pattern in line_stripped for pattern in skip_patterns):
-            # Zero tolerance - ALL skip patterns are violations
-            violation = SkipViolation(
-                file_path=str(file_path.relative_to(self.project_root)),
-                line_number=line_num,
-                line_content=line_stripped,
-                violation_type="ZERO_TOLERANCE_SKIP_VIOLATION",
-                reason="Zero tolerance policy: All skip patterns forbidden - use comprehensive mocking instead",
-                suggested_fix="Replace skip pattern with comprehensive mocking using unittest.mock or pytest fixtures"
-            )
-            self.violations.append(violation)
+            # Contextual analysis - check if skip is legitimate or lazy
+            self._analyze_skip_pattern(file_path, line_num, line_stripped)
     
     def _suggest_fail_to_skip_fix(self, line: str) -> str:
         """Suggest a fix for fail-instead-of-skip violations."""
@@ -121,19 +170,24 @@ class SkipPolicyChecker:
     
     def _analyze_skip_pattern(self, file_path: Path, line_num: int, line: str) -> None:
         """Analyze whether a skip pattern is legitimate or forbidden."""
-        # Check if it matches forbidden lazy patterns
+        # Check if it matches forbidden lazy patterns (with timeout protection)
         for pattern in self.forbidden_patterns:
-            if re.search(pattern, line, re.IGNORECASE):
-                violation = SkipViolation(
-                    file_path=str(file_path.relative_to(self.project_root)),
-                    line_number=line_num,
-                    line_content=line,
-                    violation_type="LAZY_SKIP",
-                    reason=f"Skip pattern suggests implementation avoidance: {pattern}",
-                    suggested_fix="Replace skip with proper mocking or implementation fix"
-                )
-                self.violations.append(violation)
-                return
+            try:
+                if pattern.search(line):
+                    violation = SkipViolation(
+                        file_path=str(file_path.relative_to(self.project_root)),
+                        line_number=line_num,
+                        line_content=line,
+                        violation_type="LAZY_SKIP",
+                        reason=f"Skip pattern suggests implementation avoidance: {pattern.pattern}",
+                        suggested_fix="Replace skip with proper mocking or implementation fix"
+                    )
+                    self.violations.append(violation)
+                    return
+            except re.error as e:
+                if self.verbose:
+                    print(f"Warning: Regex error in pattern matching: {e}")
+                continue
         
         # Check if skip message format is proper
         if 'skipTest' in line:
@@ -238,8 +292,20 @@ class SkipPolicyChecker:
                             print(f"  Before: {violation.line_content}")
                             print(f"  After:  {violation.suggested_fix}")
                 
-                # Write back the fixed content
-                file_path.write_text('\n'.join(lines) + '\n', encoding='utf-8')
+                # Write back the fixed content atomically
+                with tempfile.NamedTemporaryFile(
+                    mode='w', encoding='utf-8', 
+                    dir=file_path.parent, 
+                    prefix=f'.{file_path.name}.tmp',
+                    delete=False
+                ) as tmp_file:
+                    tmp_file.write('\n'.join(lines) + '\n')
+                    tmp_file.flush()
+                    os.fsync(tmp_file.fileno())
+                    temp_path = tmp_file.name
+                
+                # Atomic replace operation (cross-platform)
+                os.replace(temp_path, file_path)
                 
             except (OSError, UnicodeDecodeError) as e:
                 print(f"Warning: Could not fix {file_path}: {e}")

@@ -916,7 +916,7 @@ This export **excludes** the following project-specific directories:
 ## Manual Installation
 From your project root:
 ```bash
-mkdir -p .claude/{commands,hooks,agents}
+mkdir -p .claude/{{commands,hooks,agents}}
 cp -R commands/. .claude/commands/
 cp -R hooks/. .claude/hooks/
 cp -R agents/. .claude/agents/
