@@ -4,6 +4,21 @@
 
 set -euo pipefail
 
+# Wrapper for timeout command (macOS compatibility)
+timeout_cmd() {
+    local duration=$1
+    shift
+    if command -v timeout &>/dev/null; then
+        timeout "$duration" "$@"
+    elif command -v gtimeout &>/dev/null; then
+        gtimeout "$duration" "$@"
+    else
+        # Fallback: run without timeout but warn
+        echo "Warning: timeout command not found, running without timeout protection" >&2
+        "$@"
+    fi
+}
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -83,11 +98,19 @@ fi
 # Setup crontab for automated backups
 print_status "Setting up crontab for automated memory backups..."
 
-# Define the cron job (every 15 minutes)
-CRON_JOB="*/15 * * * * $BACKUP_SCRIPT > /tmp/memory_backup.log 2>&1"
+# Validate backup script path to prevent injection
+if [[ ! "$BACKUP_SCRIPT" =~ ^[a-zA-Z0-9/_.-]+$ ]]; then
+    print_error "Invalid backup script path detected - potential security risk"
+    exit 1
+fi
 
-# Check if crontab already contains our backup job
-if crontab -l 2>/dev/null | grep -q "memory_backup_crdt.sh"; then
+# Define the cron job (every 15 minutes) with validated path
+# Use secure log location with restricted permissions
+LOG_FILE="$HOME/.cache/memory_backup.log"
+CRON_JOB="*/15 * * * * $BACKUP_SCRIPT > $LOG_FILE 2>&1"
+
+# Check if crontab already contains our backup job (with timeout protection)
+if timeout_cmd 5s crontab -l 2>/dev/null | grep -q "memory_backup_crdt.sh"; then
     print_warning "Memory backup cron job already exists"
     print_status "Current crontab entries:"
     crontab -l 2>/dev/null | grep "memory_backup"
@@ -95,16 +118,22 @@ else
     # Add the cron job
     print_status "Adding memory backup to crontab (every 15 minutes)"
     
-    # Get existing crontab (if any) and add our job
-    (crontab -l 2>/dev/null || true; echo "$CRON_JOB") | crontab -
+    # Get existing crontab (if any) and add our job with timeout protection
+    # Validate cron expression format before adding
+    if ! echo "$CRON_JOB" | grep -qE '^(\*/[0-9]+|[0-9]+) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) [a-zA-Z0-9/_.-]+ >'; then
+        print_error "Invalid cron job format detected"
+        exit 1
+    fi
+    
+    (timeout_cmd 5s crontab -l 2>/dev/null || true; echo "$CRON_JOB") | timeout_cmd 5s crontab -
     
     print_success "Added memory backup cron job"
     print_status "Backup will run every 15 minutes"
 fi
 
-# Test the backup script
+# Test the backup script with timeout protection
 print_status "Testing backup script..."
-if "$BACKUP_SCRIPT" --test 2>/dev/null; then
+if timeout_cmd 10s "$BACKUP_SCRIPT" --test 2>/dev/null; then
     print_success "Backup script test passed"
 else
     print_warning "Backup script test failed - this may be expected if no memory data exists"
@@ -120,12 +149,12 @@ echo "  - Memory directory: $MEMORY_DIR"
 echo "  - Memory file: $MEMORY_FILE"
 echo "  - Backup script: $BACKUP_SCRIPT"
 echo "  - Cron schedule: Every 15 minutes"
-echo "  - Log file: /tmp/memory_backup.log"
+echo "  - Log file: $LOG_FILE"
 echo
 echo "🔧 Manual Commands:"
 echo "  - Run backup now: $BACKUP_SCRIPT"
 echo "  - View crontab: crontab -l"
-echo "  - View backup log: tail -f /tmp/memory_backup.log"
+echo "  - View backup log: tail -f $LOG_FILE"
 echo "  - Check memory: cat $MEMORY_FILE | jq ."
 echo
 echo "🚀 The system will automatically backup memory every 15 minutes"
@@ -136,7 +165,7 @@ read -p "Run initial backup now? (y/N): " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     print_status "Running initial backup..."
-    if "$BACKUP_SCRIPT"; then
+    if timeout_cmd 30s "$BACKUP_SCRIPT"; then
         print_success "Initial backup completed"
     else
         print_warning "Initial backup had issues - check the log for details"
