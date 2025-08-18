@@ -19,10 +19,14 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Import project logging utility
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'mvp_site'))
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / 'mvp_site'))
 import logging_util
 
 logger = logging_util.getLogger(__name__)
+
+# Git timeout configuration for subprocess operations
+GIT_TIMEOUT_SECONDS = 30
 
 
 @dataclass
@@ -152,13 +156,13 @@ class GitIntegration:
         for attempt in range(max_attempts):
             try:
                 # Pull latest changes first
-                self._git_pull()
+                self._git_pull(timeout=GIT_TIMEOUT_SECONDS)
                 
                 # Perform atomic commit
-                self.atomic_commit(file_path, host_id)
+                self.atomic_commit(file_path, host_id, timeout=GIT_TIMEOUT_SECONDS)
                 
                 # Push changes
-                self._git_push(attempt)
+                self._git_push(attempt, timeout=GIT_TIMEOUT_SECONDS)
                 
                 logger.info("Backup completed successfully")
                 return True
@@ -175,13 +179,14 @@ class GitIntegration:
         
         return False
     
-    def atomic_commit(self, file_path: str, host_id: str) -> None:
+    def atomic_commit(self, file_path: str, host_id: str, timeout: int = GIT_TIMEOUT_SECONDS) -> None:
         """
         Perform atomic Git operations for backup.
         
         Args:
             file_path: Path to file to commit
             host_id: Host identifier for commit message
+            timeout: Timeout in seconds for Git operations
             
         Raises:
             subprocess.CalledProcessError: If Git command fails
@@ -200,7 +205,8 @@ class GitIntegration:
                 cwd=self.repo_path,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
             
             # Commit with descriptive message
@@ -212,7 +218,8 @@ class GitIntegration:
                 ['git', 'commit', '-m', commit_msg],
                 cwd=self.repo_path,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
             
             # Handle both success and "nothing to commit" cases
@@ -227,7 +234,7 @@ class GitIntegration:
             logger.error(f"Git command failed: {e.stderr}")
             raise
     
-    def _git_pull(self) -> None:
+    def _git_pull(self, timeout: int = GIT_TIMEOUT_SECONDS) -> None:
         """Pull latest changes from remote."""
         try:
             subprocess.run(
@@ -235,18 +242,20 @@ class GitIntegration:
                 cwd=self.repo_path,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
         except subprocess.CalledProcessError as e:
             logger.warning(f"Git pull failed: {e.stderr}")
             # Continue anyway - might be first commit
     
-    def _git_push(self, attempt: int) -> None:
+    def _git_push(self, attempt: int, timeout: int = GIT_TIMEOUT_SECONDS) -> None:
         """
         Push changes to remote with retry.
         
         Args:
             attempt: Current attempt number for backoff calculation
+            timeout: Timeout in seconds for Git operations
             
         Raises:
             subprocess.CalledProcessError: If push fails
@@ -257,7 +266,8 @@ class GitIntegration:
                 cwd=self.repo_path,
                 check=True,
                 capture_output=True,
-                text=True
+                text=True,
+                timeout=timeout
             )
             logger.info("Successfully pushed changes to remote")
         except subprocess.CalledProcessError as e:
@@ -278,7 +288,8 @@ class GitIntegration:
             ['git', 'diff', '--name-only', '--diff-filter=U'],
             cwd=self.repo_path,
             capture_output=True,
-            text=True
+            text=True,
+            timeout=GIT_TIMEOUT_SECONDS
         )
         
         conflicted_files = result.stdout.strip().split('\n')
@@ -295,12 +306,14 @@ class GitIntegration:
         subprocess.run(
             ['git', 'checkout', '--theirs', file_path],
             cwd=self.repo_path,
-            check=True
+            check=True,
+            timeout=GIT_TIMEOUT_SECONDS
         )
         subprocess.run(
             ['git', 'add', file_path],
             cwd=self.repo_path,
-            check=True
+            check=True,
+            timeout=GIT_TIMEOUT_SECONDS
         )
 
 

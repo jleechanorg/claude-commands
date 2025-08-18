@@ -85,9 +85,34 @@ else
     print_status "Memory file already exists: $MEMORY_FILE"
 fi
 
-# Make backup script executable
+# Make backup script executable with security validation
 BACKUP_SCRIPT="$SCRIPT_DIR/memory_backup_crdt.sh"
 if [ -f "$BACKUP_SCRIPT" ]; then
+    # Resolve real path and ensure it lives under SCRIPT_DIR
+    REAL_PATH=$(readlink -f "$BACKUP_SCRIPT")
+    if [[ "$REAL_PATH" != "$SCRIPT_DIR/"* ]]; then
+        print_error "Backup script path escapes SCRIPT_DIR: $REAL_PATH"
+        exit 1
+    fi
+    # Reject symlinks
+    if [ -L "$BACKUP_SCRIPT" ]; then
+        print_error "Backup script must not be a symlink"
+        exit 1
+    fi
+    # Verify owner is current user
+    OWNER_UID=$(stat -c '%u' "$BACKUP_SCRIPT" 2>/dev/null || stat -f '%u' "$BACKUP_SCRIPT" 2>/dev/null)
+    CURRENT_UID=$(id -u)
+    if [ "$OWNER_UID" -ne "$CURRENT_UID" ]; then
+        print_error "Backup script is owned by UID $OWNER_UID, not $CURRENT_UID"
+        exit 1
+    fi
+    # Ensure no group/world write bits (mask 022)
+    PERMS=$(stat -c '%a' "$BACKUP_SCRIPT" 2>/dev/null || stat -f '%Lp' "$BACKUP_SCRIPT" 2>/dev/null)
+    if (( PERMS & 022 )); then
+        print_error "Backup script is group/world-writable (mode $PERMS)"
+        exit 1
+    fi
+
     chmod +x "$BACKUP_SCRIPT"
     print_success "Made backup script executable: $BACKUP_SCRIPT"
 else
@@ -106,7 +131,10 @@ fi
 
 # Define the cron job (every 15 minutes) with validated path
 # Use secure log location with restricted permissions
-LOG_FILE="$HOME/.cache/memory_backup.log"
+LOG_DIR="$HOME/.cache/mcp-memory/logs"
+mkdir -p "$LOG_DIR"
+chmod 700 "$LOG_DIR"
+LOG_FILE="$LOG_DIR/memory_backup.log"
 CRON_JOB="*/15 * * * * $BACKUP_SCRIPT > $LOG_FILE 2>&1"
 
 # Check if crontab already contains our backup job (with timeout protection)
@@ -118,14 +146,29 @@ else
     # Add the cron job
     print_status "Adding memory backup to crontab (every 15 minutes)"
     
-    # Get existing crontab (if any) and add our job with timeout protection
+    # Safely update crontab with validation
+    TEMP_CRON=$(mktemp)
+    trap "rm -f $TEMP_CRON" EXIT
+    
+    # Get existing crontab
+    timeout_cmd 5s crontab -l 2>/dev/null > "$TEMP_CRON" || true
+    
     # Validate cron expression format before adding
     if ! echo "$CRON_JOB" | grep -qE '^(\*/[0-9]+|[0-9]+) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) (\*/[0-9]+|[0-9]+|\*) [a-zA-Z0-9/_.-]+ >'; then
         print_error "Invalid cron job format detected"
         exit 1
     fi
     
-    (timeout_cmd 5s crontab -l 2>/dev/null || true; echo "$CRON_JOB") | timeout_cmd 5s crontab -
+    # Add our job
+    echo "$CRON_JOB" >> "$TEMP_CRON"
+    
+    # Validate and install
+    if timeout_cmd 5s crontab "$TEMP_CRON"; then
+        print_success "Added memory backup cron job"
+    else
+        print_error "Failed to update crontab"
+        exit 1
+    fi
     
     print_success "Added memory backup cron job"
     print_status "Backup will run every 15 minutes"
