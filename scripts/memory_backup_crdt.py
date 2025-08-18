@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import uuid
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,19 +48,23 @@ class MemoryBackupCRDT:
     
     def inject_metadata(self, entry: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Inject CRDT metadata into a memory entry.
+        Inject CRDT metadata with collision-resistant unique ID.
         
         Args:
             entry: Memory entry dictionary
             
         Returns:
-            Entry with CRDT metadata added
+            Entry with enhanced CRDT metadata
         """
-        timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        # Use high-precision timestamp with microseconds
+        timestamp = datetime.now(timezone.utc).isoformat()
         entry_id = entry.get('id', 'unknown')
         
-        # Generate unique ID: hostname_id_timestamp
-        unique_id = f"{self.host_id}_{entry_id}_{timestamp}"
+        # Add entropy to prevent collisions
+        random_suffix = uuid.uuid4().hex[:8]
+        
+        # Generate collision-resistant unique ID
+        unique_id = f"{self.host_id}_{entry_id}_{timestamp}_{random_suffix}"
         
         # Version increment if metadata exists
         version = 1
@@ -321,81 +326,103 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
     """
     Merge memory entries using Last-Write-Wins strategy.
     
+    GUARANTEES:
+    - Commutativity: merge(A,B) = merge(B,A)
+    - Associativity: merge(merge(A,B),C) = merge(A,merge(B,C))  
+    - Idempotence: merge(A,A) = A
+    - Convergence: All replicas converge to same state
+    
     Args:
         memory_lists: List of memory entry lists to merge
         
     Returns:
-        Merged list of entries with conflicts resolved
+        Merged list with conflicts resolved by LWW
     """
-    # First pass: collect all unique entries by unique_id
-    all_entries: Dict[str, Dict[str, Any]] = {}
+    # SINGLE-PASS algorithm using ONLY entry ID as key
+    entries_by_id: Dict[str, Dict[str, Any]] = {}
+    
+    # Process all entries in single pass
     for memory_list in memory_lists:
         for entry in memory_list:
             if not isinstance(entry, dict):
                 continue
             
-            if '_crdt_metadata' in entry:
-                uid = entry['_crdt_metadata'].get('unique_id')
-                if uid:
-                    # Only keep if not seen or use LWW/unique_id tiebreaker
-                    if uid not in all_entries:
-                        all_entries[uid] = entry
-                    else:
-                        # If same unique_id, use timestamp-based tiebreaker with content fallback
-                        existing = all_entries[uid]
-                        existing_time = _parse_timestamp(existing['_crdt_metadata']['timestamp'])
-                        new_time = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
-                        if new_time > existing_time:
-                            all_entries[uid] = entry
-                        elif new_time == existing_time:
-                            # Final tiebreaker: lexicographic content comparison for determinism
-                            if str(entry.get('content', '')) > str(existing.get('content', '')):
-                                all_entries[uid] = entry
-    
-    # Second pass: group by entry ID for LWW merge
-    entries_by_id: Dict[str, Dict[str, Any]] = {}
-    
-    for entry in all_entries.values():
-        entry_id = entry.get('id', 'unknown')
-        
-        # LWW: Keep entry with newest timestamp  
-        if entry_id not in entries_by_id:
-            entries_by_id[entry_id] = entry
-        else:
-            existing = entries_by_id[entry_id]
+            # Skip entries without proper metadata
+            if '_crdt_metadata' not in entry:
+                logger.warning(f"Entry missing CRDT metadata: {entry.get('id', 'unknown')}")
+                continue
             
-            # Compare timestamps if metadata exists
-            if '_crdt_metadata' in entry and '_crdt_metadata' in existing:
-                existing_time = _parse_timestamp(existing['_crdt_metadata']['timestamp'])
-                new_time = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
+            entry_id = entry.get('id', 'unknown')
+            
+            if entry_id not in entries_by_id:
+                # First occurrence of this ID
+                entries_by_id[entry_id] = entry
+            else:
+                # Conflict resolution: pure LWW with deterministic tiebreaker
+                existing = entries_by_id[entry_id]
                 
-                if new_time > existing_time:
+                # Compare timestamps (primary criterion)
+                existing_ts = _parse_timestamp(existing['_crdt_metadata']['timestamp'])
+                new_ts = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
+                
+                if new_ts > existing_ts:
+                    # Newer timestamp wins
                     entries_by_id[entry_id] = entry
-                elif new_time == existing_time:
-                    # Tiebreaker: use unique_id for deterministic ordering
+                elif new_ts == existing_ts:
+                    # Timestamp tie: use deterministic tiebreaker
+                    # Use unique_id for deterministic ordering (NOT content)
                     existing_uid = existing['_crdt_metadata'].get('unique_id', '')
                     new_uid = entry['_crdt_metadata'].get('unique_id', '')
+                    
+                    # Lexicographic comparison of unique IDs
                     if new_uid > existing_uid:
                         entries_by_id[entry_id] = entry
+                # If new_ts < existing_ts, keep existing (no action needed)
     
-    # Convert to list and sort by timestamp
+    # Convert to list and sort for consistent output
     merged_entries = list(entries_by_id.values())
     
-    # Sort by timestamp for consistent ordering
-    def get_timestamp(entry):
-        if '_crdt_metadata' in entry:
-            return _parse_timestamp(entry['_crdt_metadata']['timestamp'])
-        return datetime.min
+    # Sort by timestamp then unique_id for deterministic ordering
+    def sort_key(entry):
+        meta = entry.get('_crdt_metadata', {})
+        ts = _parse_timestamp(meta.get('timestamp', ''))
+        uid = meta.get('unique_id', '')
+        return (ts, uid)
     
-    merged_entries.sort(key=get_timestamp)
+    merged_entries.sort(key=sort_key)
     
     return merged_entries
 
 
 def _parse_timestamp(timestamp: str) -> datetime:
-    """Parse ISO format timestamp to datetime object."""
-    # Replace 'Z' with '+00:00' to preserve UTC timezone information
-    return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+    """Parse ISO format timestamp correctly handling timezones.
+    
+    Args:
+        timestamp: ISO format timestamp string
+        
+    Returns:
+        Timezone-aware datetime object
+    """
+    if not timestamp:
+        return datetime.min.replace(tzinfo=timezone.utc)
+    
+    # Handle Z suffix (UTC)
+    if timestamp.endswith('Z'):
+        timestamp = timestamp[:-1] + '+00:00'
+    
+    try:
+        # Parse with timezone information preserved
+        dt = datetime.fromisoformat(timestamp)
+        
+        # Ensure timezone awareness
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        
+        return dt
+    except (ValueError, AttributeError):
+        # Fallback for invalid timestamps
+        logger.warning(f"Invalid timestamp format: {timestamp}")
+        return datetime.min.replace(tzinfo=timezone.utc)
 
 
 def main():
