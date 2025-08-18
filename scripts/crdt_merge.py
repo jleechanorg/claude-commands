@@ -156,7 +156,8 @@ def _parse_timestamp(timestamp: str) -> datetime:
     Returns:
         Datetime object
     """
-    return datetime.fromisoformat(timestamp.rstrip('Z'))
+    # Replace 'Z' with '+00:00' to preserve UTC timezone information
+    return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
 
 
 def compare_timestamps(ts1: str, ts2: str) -> int:

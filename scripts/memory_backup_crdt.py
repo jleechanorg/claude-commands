@@ -312,15 +312,20 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
             if '_crdt_metadata' in entry:
                 uid = entry['_crdt_metadata'].get('unique_id')
                 if uid:
-                    # Only keep if not seen or has different content
+                    # Only keep if not seen or use LWW/unique_id tiebreaker
                     if uid not in all_entries:
                         all_entries[uid] = entry
                     else:
-                        # If same unique_id, use deterministic selection
-                        existing_content = str(all_entries[uid].get('content', ''))
-                        new_content = str(entry.get('content', ''))
-                        if new_content > existing_content:
+                        # If same unique_id, use timestamp-based tiebreaker with content fallback
+                        existing = all_entries[uid]
+                        existing_time = _parse_timestamp(existing['_crdt_metadata']['timestamp'])
+                        new_time = _parse_timestamp(entry['_crdt_metadata']['timestamp'])
+                        if new_time > existing_time:
                             all_entries[uid] = entry
+                        elif new_time == existing_time:
+                            # Final tiebreaker: lexicographic content comparison for determinism
+                            if str(entry.get('content', '')) > str(existing.get('content', '')):
+                                all_entries[uid] = entry
     
     # Second pass: group by entry ID for LWW merge
     entries_by_id: Dict[str, Dict[str, Any]] = {}
@@ -364,7 +369,8 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
 
 def _parse_timestamp(timestamp: str) -> datetime:
     """Parse ISO format timestamp to datetime object."""
-    return datetime.fromisoformat(timestamp.rstrip('Z'))
+    # Replace 'Z' with '+00:00' to preserve UTC timezone information
+    return datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
 
 
 def main():

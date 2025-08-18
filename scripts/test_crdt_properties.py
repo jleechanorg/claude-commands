@@ -47,7 +47,12 @@ def memory_entry_strategy(draw):
 
 @composite
 def memory_list_strategy(draw, min_size=1, max_size=10):
-    """Strategy to generate a list of memory entries."""
+    """Strategy to generate a list of memory entries.
+    
+    Uses probabilistic ID reuse to create conflicts - approximately 50% chance
+    of reusing an existing ID when multiple IDs are available. This creates
+    realistic conflict scenarios for CRDT testing while maintaining randomness.
+    """
     size = draw(st.integers(min_value=min_size, max_value=max_size))
     entries = []
     used_ids = set()

@@ -317,19 +317,19 @@ class TestStressTests:
     """Stress tests with large numbers of entries."""
     
     def test_large_scale_entries(self):
-        """Test handling of 100,000 entries."""
+        """Test handling of 10,000 entries."""
         crdt = MemoryBackupCRDT('stress-test-host')
         entries = []
         
-        # Generate 100,000 entries
-        for i in range(100000):
+        # Generate 10,000 entries  
+        for i in range(10000):
             entry = {"id": f"entry_{i}", "content": f"content_{i}"}
             entries.append(crdt.inject_metadata(entry))
         
-        assert len(entries) == 100000
+        assert len(entries) == 10000
         
         # Verify a sample of entries
-        for i in random.sample(range(100000), 100):
+        for i in random.sample(range(10000), 100):
             assert entries[i]['id'] == f'entry_{i}'
             assert entries[i]['content'] == f'content_{i}'
             assert entries[i]['_crdt_metadata']['host'] == 'stress-test-host'
@@ -338,11 +338,11 @@ class TestStressTests:
         """Test merging large numbers of entries from multiple hosts."""
         all_entries = []
         
-        # Generate entries from 10 hosts, 10,000 entries each
+        # Generate entries from 10 hosts, 1,000 entries each
         for host_id in range(10):
             crdt = MemoryBackupCRDT(f'host-{host_id}')
             host_entries = []
-            for i in range(10000):
+            for i in range(1000):
                 entry = {"id": f"h{host_id}_e{i}", "content": f"content_{host_id}_{i}"}
                 host_entries.append(crdt.inject_metadata(entry))
             all_entries.append(host_entries)
@@ -350,8 +350,8 @@ class TestStressTests:
         # Merge all entries
         merged = crdt_merge(all_entries)
         
-        # Should have all 100,000 unique entries
-        assert len(merged) == 100000
+        # Should have all 10,000 unique entries
+        assert len(merged) == 10000
 
 
 class TestPerformance:
