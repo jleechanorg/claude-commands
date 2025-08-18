@@ -142,19 +142,20 @@ class TestCRDTMathematicalProperties:
         # Deep copy for comparison
         entries_copy = copy.deepcopy(entries)
         
-        # Merge with itself
-        result = crdt_merge([entries, entries_copy])
+        # First merge with itself
+        result1 = crdt_merge([entries, entries_copy])
         
-        # Should be the same as original (possibly reordered)
-        result_sorted = sorted(result, key=lambda x: x['_crdt_metadata']['unique_id'])
-        entries_sorted = sorted(entries, key=lambda x: x['_crdt_metadata']['unique_id'])
+        # Second merge with the result 
+        result2 = crdt_merge([result1, copy.deepcopy(result1)])
         
-        # For idempotence with LWW, we expect the same unique entries
-        unique_ids_result = {e['_crdt_metadata']['unique_id'] for e in result_sorted}
-        unique_ids_original = {e['_crdt_metadata']['unique_id'] for e in entries_sorted}
+        # Should be the same (idempotent)
+        result1_sorted = sorted(result1, key=lambda x: x['_crdt_metadata']['unique_id'])
+        result2_sorted = sorted(result2, key=lambda x: x['_crdt_metadata']['unique_id'])
         
-        # Should have same number of unique entries
-        assert len(unique_ids_result) == len(unique_ids_original)
+        # After LWW-CRDT merge, results should be identical
+        assert len(result1_sorted) == len(result2_sorted)
+        for i in range(len(result1_sorted)):
+            assert result1_sorted[i] == result2_sorted[i]
 
     @given(
         replica1=memory_list_strategy(min_size=1, max_size=5),

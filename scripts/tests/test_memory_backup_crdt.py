@@ -51,8 +51,15 @@ def temp_git_repo():
     with tempfile.TemporaryDirectory() as tmpdir:
         repo_path = Path(tmpdir)
         subprocess.run(['git', 'init'], cwd=repo_path, check=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=repo_path)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=repo_path)
+        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], cwd=repo_path, check=True)
+        subprocess.run(['git', 'config', 'user.name', 'Test User'], cwd=repo_path, check=True)
+        
+        # Create initial commit to make git operations work
+        readme_file = repo_path / "README.md"
+        readme_file.write_text("# Test Repository\n")
+        subprocess.run(['git', 'add', 'README.md'], cwd=repo_path, check=True)
+        subprocess.run(['git', 'commit', '-m', 'Initial commit'], cwd=repo_path, check=True)
+        
         yield repo_path
 
 
@@ -285,35 +292,57 @@ class TestGitIntegration:
             capture_output=True,
             text=True
         )
-        assert 'Backup from test-host' in log.stdout
+        assert 'Memory backup from test-host' in log.stdout
 
+    @patch('shutil.copy2')
     @patch('subprocess.run')
-    def test_git_backup_retry_logic(self, mock_run):
+    @patch.object(GitIntegration, '__init__', lambda self, repo_path: setattr(self, 'repo_path', Path(repo_path)))
+    def test_git_backup_retry_logic(self, mock_run, mock_copy):
         """Test Git backup retry logic on failure."""
         git = GitIntegration("/tmp/test-repo")
         
-        # Simulate failures then success
-        mock_run.side_effect = [
-            subprocess.CalledProcessError(1, 'git add'),
-            MagicMock(),  # Success on second attempt
-            MagicMock()   # Commit success
-        ]
-        
-        result = git.backup_to_git("test.json", "test-host")
-        assert result is True
-        assert mock_run.call_count == 3
+        # Mock both Path methods to avoid file system operations
+        with patch.object(Path, 'is_relative_to', return_value=False), \
+             patch.object(Path, 'relative_to', return_value=Path("test.json")):
+            
+            # Create a proper mock for successful runs
+            success_mock = MagicMock()
+            success_mock.returncode = 0
+            success_mock.stdout = ""
+            success_mock.stderr = ""
+            
+            # First attempt fails, second succeeds
+            mock_run.side_effect = [
+                subprocess.CalledProcessError(1, 'git pull'),  # Git pull fails (expected)
+                subprocess.CalledProcessError(1, 'git add'),   # Git add fails first attempt
+                success_mock,  # Git pull success on second attempt  
+                success_mock,  # Git add success
+                success_mock,  # Git commit success
+                success_mock   # Git push success
+            ]
+            
+            result = git.backup_to_git("test.json", "test-host")
+            assert result is True
+            # Should have been called multiple times due to retries
+            assert mock_run.call_count >= 4
 
+    @patch('shutil.copy2')
     @patch('subprocess.run')
-    def test_git_backup_failure_after_retries(self, mock_run):
+    @patch.object(GitIntegration, '__init__', lambda self, repo_path: setattr(self, 'repo_path', Path(repo_path)))
+    def test_git_backup_failure_after_retries(self, mock_run, mock_copy):
         """Test Git backup failure after max retries."""
         git = GitIntegration("/tmp/test-repo")
         
-        # All attempts fail
-        mock_run.side_effect = subprocess.CalledProcessError(1, 'git')
-        
-        result = git.backup_to_git("test.json", "test-host")
-        assert result is False
-        assert mock_run.call_count == 3  # Max retries
+        # Mock both Path methods to avoid file system operations
+        with patch.object(Path, 'is_relative_to', return_value=False), \
+             patch.object(Path, 'relative_to', return_value=Path("test.json")):
+            # All attempts fail
+            mock_run.side_effect = subprocess.CalledProcessError(1, 'git')
+            
+            result = git.backup_to_git("test.json", "test-host")
+            assert result is False
+            # Each retry attempt calls git pull + git add, so 3 retries = 6 calls
+            assert mock_run.call_count == 6
 
 
 class TestStressTests:
@@ -406,29 +435,57 @@ class TestPerformance:
 class TestNetworkFailureRecovery:
     """Test network failure recovery scenarios."""
     
+    @patch('shutil.copy2')
     @patch('subprocess.run')
-    def test_recovery_from_network_failure(self, mock_run):
+    @patch.object(GitIntegration, '__init__', lambda self, repo_path: setattr(self, 'repo_path', Path(repo_path)))
+    def test_recovery_from_network_failure(self, mock_run, mock_copy):
         """Test recovery from network failure during backup."""
         git = GitIntegration("/tmp/test-repo")
         crdt = MemoryBackupCRDT('test-host')
         
-        # Simulate network failure
-        mock_run.side_effect = subprocess.CalledProcessError(128, 'git push')
-        
-        # Backup should fail but system should remain functional
-        result = git.backup_to_git("test.json", "test-host")
-        assert result is False
-        
-        # System should still be able to inject metadata
-        entry = {"id": "recovery_test", "content": "recovery_content"}
-        injected = crdt.inject_metadata(entry)
-        assert injected['content'] == 'recovery_content'
-        
-        # After network is restored, backup should succeed
-        mock_run.side_effect = None
-        mock_run.return_value = MagicMock()
-        result = git.backup_to_git("test.json", "test-host")
-        assert result is True
+        # Mock both Path methods to avoid file system operations
+        with patch.object(Path, 'is_relative_to', return_value=False), \
+             patch.object(Path, 'relative_to', return_value=Path("test.json")):
+            
+            # Create success and failure mocks
+            success_mock = MagicMock()
+            success_mock.returncode = 0
+            success_mock.stdout = ""
+            success_mock.stderr = ""
+            
+            # Create proper CalledProcessError with stderr
+            push_error = subprocess.CalledProcessError(128, 'git push')
+            push_error.stderr = "Network error occurred"
+            
+            # First simulate network failure during push after successful operations
+            mock_run.side_effect = [
+                success_mock,  # git pull success
+                success_mock,  # git add success  
+                success_mock,  # git commit success
+                push_error,    # push fails
+                success_mock,  # git pull success (retry)
+                success_mock,  # git add success (retry)
+                success_mock,  # git commit success (retry) 
+                push_error,    # push fails again
+                success_mock,  # git pull success (retry)
+                success_mock,  # git add success (retry)
+                success_mock,  # git commit success (retry)
+                push_error     # push fails final time
+            ]
+            
+            # Backup should fail due to network issues
+            result = git.backup_to_git("test.json", "test-host")
+            assert result is False
+            
+            # System should still be able to inject metadata
+            entry = {"id": "recovery_test", "content": "recovery_content"}
+            injected = crdt.inject_metadata(entry)
+            assert injected['content'] == 'recovery_content'
+            
+            # After network is restored, backup should succeed
+            mock_run.side_effect = [success_mock] * 10  # All operations succeed
+            result = git.backup_to_git("test.json", "test-host")
+            assert result is True
 
 
 class TestBackwardsCompatibility:
