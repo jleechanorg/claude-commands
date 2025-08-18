@@ -524,7 +524,10 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
     
     # Calculate total entries for bounds checking
     total_entries = sum(len(memory_list) for memory_list in memory_lists)
-    validate_entry_count(memory_lists[0] if memory_lists else [], "merge input validation")
+    
+    # Validate each memory list for bounds checking
+    for i, memory_list in enumerate(memory_lists):
+        validate_entry_count(memory_list, f"merge input list {i}")
     
     if total_entries > MAX_ENTRIES_PER_FILE * 2:  # Allow some overhead for merging
         logger.warning(f"Large merge operation: {total_entries} total entries")
