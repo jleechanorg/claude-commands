@@ -6,7 +6,7 @@ Implements Last-Write-Wins (LWW) conflict resolution.
 
 import json
 import socket
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
 
 
@@ -30,7 +30,7 @@ def add_crdt_metadata(
         host = socket.gethostname()
     
     if timestamp is None:
-        timestamp = datetime.utcnow().isoformat() + 'Z'
+        timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
     
     # Get entry ID for unique ID generation
     entry_id = entry.get('id', 'unknown')

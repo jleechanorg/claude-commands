@@ -6,24 +6,23 @@ Uses Last-Write-Wins (LWW) conflict resolution for automatic merging.
 
 import argparse
 import json
-import logging
 import os
+import shutil
 import socket
 import subprocess
 import sys
 import tempfile
 import time
 from dataclasses import dataclass, asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
+# Import project logging utility
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'mvp_site'))
+import logging_util
+
+logger = logging_util.getLogger(__name__)
 
 
 @dataclass
@@ -52,7 +51,7 @@ class MemoryBackupCRDT:
         Returns:
             Entry with CRDT metadata added
         """
-        timestamp = datetime.utcnow().isoformat() + 'Z'
+        timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
         entry_id = entry.get('id', 'unknown')
         
         # Generate unique ID: hostname_id_timestamp
@@ -192,7 +191,6 @@ class GitIntegration:
             file_path = Path(file_path)
             if not file_path.is_relative_to(self.repo_path):
                 dest_path = self.repo_path / f"memory-{host_id}.json"
-                import shutil
                 shutil.copy2(file_path, dest_path)
                 file_path = dest_path
             
@@ -206,7 +204,7 @@ class GitIntegration:
             )
             
             # Commit with descriptive message
-            timestamp = datetime.utcnow().isoformat() + 'Z'
+            timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
             commit_msg = f"Memory backup from {host_id} at {timestamp}"
             
             subprocess.run(
