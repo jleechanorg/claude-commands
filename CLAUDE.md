@@ -587,6 +587,12 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - ❌ **IGNORE**: Bot comments about `--dangerously-skip-permissions` when user explicitly chose to keep it
 - ✅ **ACKNOWLEDGE**: Respond but indicate user decision to retain flag
 
+🚨 **DANGEROUSLY-SKIP-PERMISSIONS FLAG POLICY**: ⚠️ MANDATORY - User has explicitly approved this flag
+- ✅ **APPROVED**: `--dangerously-skip-permissions` flag is acceptable and should NOT be flagged as security issue
+- ❌ **DO NOT COMPLAIN**: Stop identifying this flag as critical vulnerability in reviews
+- ✅ **USER JUDGMENT**: Trust user decision on security boundaries for their own codebase
+- 📝 **CONTEXT**: User explicitly corrected AI assessment - this flag is fine to use when needed
+
 ### Testing Protocol
 
 🚨 **ZERO TOLERANCE**: Run ALL tests, fix ALL failures. No "pre-existing issues" excuse. Commands: `./run_tests.sh` | `./run_ui_tests.sh mock`

@@ -228,32 +228,112 @@ class TaskDispatcher:
             # Don't fail agent creation if cleanup fails
             print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
 
-    def _generate_unique_name(self, base_name: str, role_suffix: str = "") -> str:
-        """Generate unique agent name with collision detection."""
-        # Use microsecond precision for better uniqueness
-        timestamp = (
-            int(time.time() * 1000000) % TIMESTAMP_MODULO
-        )  # 8 digits from microseconds
-
+    def _generate_unique_name(self, base_name: str, task_description: str = "", role_suffix: str = "") -> str:
+        """Generate meaningful agent name based on task content with collision detection."""
+        import re
+        
+        # Extract meaningful components from task description
+        task_suffix = ""
+        if task_description:
+            # Check for PR references first
+            pr_match = re.search(r'(?:PR|pull request)\s*#?(\d+)', task_description, re.IGNORECASE)
+            if pr_match:
+                task_suffix = f"pr{pr_match.group(1)}"
+            else:
+                # Extract key action words for general tasks
+                action_words = re.findall(r'\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b', 
+                                        task_description.lower())
+                if action_words:
+                    # Use first action word + key object words
+                    action = action_words[0]
+                    # Extract key nouns/objects after cleaning
+                    clean_desc = re.sub(r'[^a-zA-Z0-9\s]', '', task_description.lower())
+                    words = [word for word in clean_desc.split() if word not in ['the', 'and', 'or', 'for', 'with', 'in', 'on', 'at', 'to', 'from', 'by', 'of', 'a', 'an']]
+                    
+                    # Skip action word and take next meaningful words
+                    content_words = [w for w in words if w != action][:2]
+                    if content_words:
+                        desc_part = '-'.join(word[:6] for word in content_words)
+                        task_suffix = f"{action}-{desc_part}"
+                    else:
+                        task_suffix = action
+                else:
+                    # Fallback to first few meaningful words
+                    clean_desc = re.sub(r'[^a-zA-Z0-9\s]', '', task_description.lower())
+                    words = [word for word in clean_desc.split() if len(word) > 2][:2]
+                    if words:
+                        task_suffix = '-'.join(word[:6] for word in words)
+                    else:
+                        task_suffix = "task"
+        
+        # Limit task_suffix length for readability
+        if len(task_suffix) > 20:
+            task_suffix = task_suffix[:20]
+        
+        # Use microsecond precision for uniqueness only as fallback
+        timestamp = int(time.time() * 1000000) % 10000  # 4 digits for brevity
+        
         # Get existing agents
         existing = self._check_existing_agents()
         existing.update(self.active_agents)
-
-        # Try base name with timestamp
-        if role_suffix:
-            candidate = f"{base_name}-{role_suffix}-{timestamp}"
+        
+        # Build candidate name
+        if task_suffix:
+            if role_suffix:
+                candidate = f"{base_name}-{task_suffix}-{role_suffix}"
+            else:
+                candidate = f"{base_name}-{task_suffix}"
         else:
-            candidate = f"{base_name}-{timestamp}"
-
-        # If collision, increment until unique
-        counter = 1
+            # Fallback to timestamp-based
+            if role_suffix:
+                candidate = f"{base_name}-{role_suffix}-{timestamp}"
+            else:
+                candidate = f"{base_name}-{timestamp}"
+        
+        # If collision, add timestamp suffix
         original_candidate = candidate
+        counter = 1
         while candidate in existing:
-            candidate = f"{original_candidate}-{counter}"
-            counter += 1
-
+            if task_suffix:
+                candidate = f"{original_candidate}-{timestamp}"
+                if candidate in existing:
+                    candidate = f"{original_candidate}-{timestamp}-{counter}"
+                    counter += 1
+            else:
+                candidate = f"{original_candidate}-{counter}"
+                counter += 1
+        
         self.active_agents.add(candidate)
         return candidate
+
+    def _extract_workspace_config(self, task_description: str):
+        """Extract workspace configuration from task description if present.
+        
+        Looks for patterns like:
+        - --workspace-name tmux-pr123
+        - --workspace-root /path/to/.worktrees
+        """
+        import re
+        
+        workspace_config = {}
+        
+        # Extract workspace name
+        workspace_name_match = re.search(r'--workspace-name\s+([^\s]+)', task_description)
+        if workspace_name_match:
+            workspace_config["workspace_name"] = workspace_name_match.group(1)
+        
+        # Extract workspace root
+        workspace_root_match = re.search(r'--workspace-root\s+([^\s]+)', task_description)
+        if workspace_root_match:
+            workspace_config["workspace_root"] = workspace_root_match.group(1)
+        
+        # Extract PR number from workspace name if it follows tmux-pr pattern
+        if "workspace_name" in workspace_config:
+            pr_match = re.search(r'tmux-pr(\d+)', workspace_config["workspace_name"])
+            if pr_match:
+                workspace_config["pr_number"] = pr_match.group(1)
+        
+        return workspace_config if workspace_config else None
 
     def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
         """Detect if task is about updating an existing PR.
@@ -413,6 +493,11 @@ class TaskDispatcher:
         """Create appropriate agent for the given task with PR context awareness."""
         print("\n🧠 Processing task request...")
 
+        # Extract workspace configuration if present
+        workspace_config = self._extract_workspace_config(task_description)
+        if workspace_config:
+            print(f"🏗️ Extracted workspace config: {workspace_config}")
+
         # Detect PR context
         pr_number, mode = self._detect_pr_context(task_description)
 
@@ -453,7 +538,7 @@ class TaskDispatcher:
             print("   New branch will be created from main")
 
         # Use the same unique name generation as other methods
-        agent_name = self._generate_unique_name("task-agent")
+        agent_name = self._generate_unique_name("task-agent", task_description)
 
         # Get default capabilities from discovery method
         capabilities = list(self.agent_capabilities.keys())
@@ -547,28 +632,43 @@ Execute the task exactly as requested. Key points:
 
 Complete the task, then use /pr to create a new pull request."""
 
-        return [
-            {
-                "name": agent_name,
-                "type": "development",
-                "focus": task_description,
-                "capabilities": capabilities,
-                "pr_context": {"mode": mode, "pr_number": pr_number}
-                if mode == "update"
-                else None,
-                "prompt": prompt,
-            }
-        ]
+        agent_spec = {
+            "name": agent_name,
+            "type": "development",
+            "focus": task_description,
+            "capabilities": capabilities,
+            "prompt": prompt,
+        }
+        
+        # Add PR context if updating existing PR
+        if mode == "update":
+            agent_spec["pr_context"] = {"mode": mode, "pr_number": pr_number}
+        
+        # Add workspace configuration if specified
+        if workspace_config:
+            agent_spec["workspace_config"] = workspace_config
+            print(f"🏗️ Custom workspace config: {workspace_config}")
+        
+        return [agent_spec]
 
     def create_dynamic_agent(self, agent_spec: dict) -> bool:
         """Create agent with enhanced Redis coordination and worktree management."""
-        agent_name = agent_spec.get("name")
+        original_agent_name = agent_spec.get("name")
         agent_focus = agent_spec.get("focus", "general task completion")
         agent_prompt = agent_spec.get("prompt", "Complete the assigned task")
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
+        workspace_config = agent_spec.get("workspace_config", {})
+        
+        # Handle workspace name alignment - if workspace config specifies a name, use it
+        if workspace_config and workspace_config.get("workspace_name"):
+            agent_name = workspace_config["workspace_name"]
+            print(f"🔄 Aligning agent name: {original_agent_name} → {agent_name} (workspace alignment)")
+        else:
+            agent_name = original_agent_name
 
         # Clean up any existing stale prompt files for this agent to prevent task reuse
+        # Use final agent name for cleanup (after workspace alignment)
         self._cleanup_stale_prompt_files(agent_name)
 
         # Refresh actively working agents count from tmux sessions (excludes idle agents)
@@ -594,9 +694,31 @@ Complete the task, then use /pr to create a new pull request."""
             if not claude_path:
                 return False
 
-            # Create worktree for agent (inherit from current branch)
+            # Create worktree for agent with configurable naming and location
             current_dir = os.getcwd()
-            agent_dir = os.path.join(current_dir, f"agent_workspace_{agent_name}")
+            
+            # Support custom workspace naming via agent_spec
+            workspace_config = agent_spec.get("workspace_config", {})
+            custom_workspace_name = workspace_config.get("workspace_name")
+            custom_workspace_root = workspace_config.get("workspace_root")
+            
+            if custom_workspace_name:
+                # Use custom naming format (e.g., tmux-pr1234)
+                workspace_name = custom_workspace_name
+                if custom_workspace_root:
+                    # Use external worktree directory (e.g., .worktrees/)
+                    os.makedirs(custom_workspace_root, exist_ok=True)
+                    agent_dir = os.path.join(custom_workspace_root, workspace_name)
+                else:
+                    # Use custom name in current directory
+                    agent_dir = os.path.join(current_dir, workspace_name)
+                
+                # Update agent name to match workspace for consistency
+                agent_name = workspace_name
+            else:
+                # Default orchestration pattern - agent name matches workspace
+                agent_dir = os.path.join(current_dir, agent_name)
+            
             branch_name = f"{agent_name}-work"
 
             # Always create fresh branch from main (equivalent to /nb)

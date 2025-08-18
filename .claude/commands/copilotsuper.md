@@ -28,13 +28,77 @@
 4. **Monitor Progress**: Track all agents via orchestration system
 5. **Aggregate Results**: Compile summary from all agent results
 
-**Individual Agent Per PR with Reuse**:
+**Individual Agent Per PR with Custom Workspace Management**:
 ```bash
-# Delegates to orchestration system for optimal agent management
+# Delegates to orchestration system with custom workspace configuration for tmux-pr naming
 for PR in $PR_LIST; do
-    /orchestrate "Run copilot analysis on PR #$PR with agent reuse preference"
+    # Calculate workspace paths consistent with tmux-pr naming convention
+    main_repo_path="$(git rev-parse --show-toplevel 2>/dev/null)"
+    worktrees_root="${WORKTREE_ROOT:-"$(dirname "$main_repo_path")/.worktrees"}"
+    workspace_name="tmux-pr${PR}"
+    
+    # Delegate to orchestration with custom workspace configuration
+    /orchestrate "Run copilot analysis on PR #$PR --workspace-name $workspace_name --workspace-root $worktrees_root"
 done
 ```
+
+## 🏗️ Git Worktree Management
+
+**Integrated with Orchestration System**: Each tmux agent spawns in independent git worktrees using the orchestration system's configurable workspace management, ensuring complete isolation and preventing conflicts.
+
+**Enhanced Orchestration Integration**:
+```bash
+# Copilotsuper delegates to orchestration with embedded workspace configuration
+for PR in $PR_LIST; do
+    # Calculate workspace paths following tmux-pr{ID} naming convention
+    main_repo_path="$(git rev-parse --show-toplevel 2>/dev/null)"
+    worktrees_root="${WORKTREE_ROOT:-"$(dirname "$main_repo_path")/.worktrees"}"
+    workspace_name="tmux-pr${PR}"
+    
+    # Delegate to orchestration with workspace config embedded in task description
+    /orchestrate "Run copilot analysis on PR #$PR --workspace-name $workspace_name --workspace-root $worktrees_root"
+done
+```
+
+**Orchestration System Integration**:
+The orchestration system's `create_dynamic_agent()` function now accepts custom workspace configuration and automatically aligns agent names with workspace directories:
+
+```python
+# Enhanced orchestration agent creation with unified naming
+agent_spec = {
+    "name": agent_name,                               # Will be updated to match workspace_name
+    "focus": f"Run copilot analysis on PR #{pr_number}",
+    "workspace_config": {
+        "workspace_name": f"tmux-pr{pr_number}",      # Agent name becomes: tmux-pr1234
+        "workspace_root": worktrees_root              # External .worktrees directory
+    }
+}
+
+# Result: Agent session name = tmux-pr1234, Workspace directory = tmux-pr1234
+```
+
+**Unified Naming & Workspace Management**:
+- ✅ **Perfect Alignment**: Agent session names now match workspace directory names exactly
+- ✅ **Meaningful Names**: Default orchestration uses task-based names instead of timestamps
+- ✅ **Consistent PR Format**: `tmux-pr{ID}` format for all PR-related work across both systems
+- ✅ **External Location**: Worktrees created in `.worktrees` directory outside main repo  
+- ✅ **Reuse Optimization**: Orchestration checks for existing workspaces by name first
+- ✅ **Branch Isolation**: Each task gets completely isolated git environment
+- ✅ **Unified Cleanup**: Single orchestration system handles all workspace lifecycle management
+- ✅ **Parameter Extraction**: Workspace configuration embedded in task descriptions and automatically extracted
+
+**New Naming Examples**:
+- **Default Tasks**: `task-agent-implement-auth` (instead of `task-agent-44509833`)
+- **PR Tasks**: `tmux-pr1234` (agent name = workspace name = `tmux-pr1234`)
+- **Workspaces**: Match agent names exactly (no more `agent_workspace_` prefix)
+
+**Worktree Benefits**:
+- ✅ **Perfect Isolation**: Each PR analysis in separate git environment
+- ✅ **Reuse Optimization**: Existing worktrees reused for repeated analysis  
+- ✅ **Consistent Naming**: `tmux-pr1234` format for easy identification
+- ✅ **Safe External Location**: Created in `.worktrees` directory outside main repo
+- ✅ **Automatic Cleanup**: Invalid worktrees detected and cleaned
+- ✅ **Security**: PR number validation prevents path injection attacks
 
 **Key Benefits** (via orchestration system):
 - ✅ **Agent Reuse**: 50-80% efficiency gains through intelligent reuse
@@ -124,24 +188,37 @@ User: /copilotsuper 718 719 720
 
 ## ⚡ Performance Considerations
 
-**Performance is managed by the orchestration system** (see `orchestrate.md`):
-- **Agent Reuse**: 50-80% efficiency gains through intelligent reuse
-- **Parallel Processing**: All PRs processed simultaneously
+**Enhanced Performance through Worktree Management**:
+- **🏗️ Worktree Reuse**: Existing `tmux-pr{ID}` worktrees reused for 50-80% setup time savings
+- **⚡ Parallel Processing**: All PRs processed simultaneously in isolated environments
+- **📂 External Isolation**: Worktrees in dedicated `.worktrees` directory prevent repo contamination
+- **♻️ Smart Cleanup**: Invalid worktrees automatically detected and cleaned for optimal performance
+- **🎯 Consistent Naming**: `tmux-pr1234` format enables efficient worktree lookup and management
+
+**Additional Performance (via orchestration system)**:
+- **Agent Reuse**: 50-80% efficiency gains through intelligent agent reuse
 - **Resource Optimization**: Strategic agent lifecycle management
-- **Isolated Workspaces**: Dedicated worktrees prevent conflicts
-- **Scalable**: Handle 10+ PRs with optimal resource utilization
+- **Scalable Architecture**: Handle 10+ PRs with optimal resource utilization
 
 → **See `orchestrate.md`** for complete performance architecture and optimization details.
 
 ## 🚨 Safety Features
 
-**Safety is handled by the orchestration system** (see `orchestrate.md`):
-- **Branch Isolation**: Absolute branch isolation protocol prevents contamination
-- **Agent Isolation**: Each agent works in separate worktree
-- **Failure Recovery**: Independent agent execution with fault tolerance
-- **Resource Cleanup**: Automatic workspace cleanup
+**Enhanced Safety through Git Worktree Isolation**:
+- **🏗️ Worktree Isolation**: Each agent works in completely separate `tmux-pr{ID}` external directory
+- **🔒 Branch Protection**: Absolute branch isolation - no interference with current work
+- **♻️ Smart Reuse**: Existing worktrees validated before reuse, invalid ones cleaned
+- **🧹 Auto Cleanup**: Orphaned worktrees detected and removed automatically
+- **📍 Consistent Naming**: `tmux-pr1234` format for easy identification and management
+- **🛡️ Failure Recovery**: Independent agent execution with fault tolerance
+- **📂 External Structure**: Worktrees created in dedicated `.worktrees` directory outside main repo
 
-→ **See `orchestrate.md`** for complete safety protocols and branch isolation details.
+**Additional Safety (via orchestration system)**:
+- **Agent Reuse**: Intelligent agent lifecycle management
+- **Resource Management**: Automatic workspace cleanup
+- **Error Isolation**: Agent failures don't affect other PR processing
+
+→ **See `orchestrate.md`** for complete orchestration safety protocols.
 
 ## 🔄 Integration with Existing Commands
 
