@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 """
-/status command - Comprehensive PR status dashboard
+/gstatus command - Comprehensive PR status dashboard
 
 Shows complete PR overview including files, CI status, merge conflicts, and GitHub state.
 Integrates with /header and provides authoritative GitHub data.
 """
 
-import os
-import sys
 import json
 import subprocess
-import datetime
-from pathlib import Path
+import sys
 
 def run_command(cmd, capture_output=True, shell=True):
     """Run shell command and return result"""
     try:
         result = subprocess.run(
-            cmd, 
-            shell=shell, 
-            capture_output=capture_output, 
+            cmd,
+            shell=shell,
+            capture_output=capture_output,
             text=True,
             timeout=30
         )
@@ -32,7 +29,7 @@ def get_repo_info():
     remote_url = run_command("git remote get-url origin")
     if not remote_url:
         return None, None
-    
+
     # Handle both HTTPS and SSH formats
     if remote_url.startswith('https://github.com/'):
         repo_part = remote_url.replace('https://github.com/', '').replace('.git', '')
@@ -154,7 +151,7 @@ def format_file_changes(files):
     output.append("")
     
     for i, file in enumerate(files, 1):
-        filename = file.get('filename', 'unknown')
+        filename = file.get('path', 'unknown')
         additions = file.get('additions', 0)
         deletions = file.get('deletions', 0)
         status = file.get('status', 'modified')
