@@ -48,7 +48,7 @@ class TestMainAuthenticationAdvanced(unittest.TestCase):
         # Should return valid JSON response
         if response.status_code == 200:
             data = response.get_json()
-            assert isinstance(data, list | dict), "Response should be valid JSON"
+            assert isinstance(data, (list, dict)), "Response should be valid JSON"
 
     def test_mcp_auth_without_headers(self):
         """Test MCP authentication without bypass headers"""

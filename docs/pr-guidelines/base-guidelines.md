@@ -130,6 +130,38 @@
 - **Pattern recognition**: Universal composition vs embedded implementation
 - **Evidence-based**: Use actual execution results to determine pattern
 
+### **Converge Autonomy Violations** 
+
+#### ❌ **CRITICAL: Progress Celebration Syndrome**
+```bash
+# WRONG - Stopping after partial progress for user acknowledgment
+/converge "complete all tests" → T2.1 complete → STOP → wait for user praise
+
+# WRONG - Treating individual milestones as stopping points
+Goal: 20 tests → Complete 1 test → "Look what I did!" → PAUSE
+
+# WRONG - Mixing progress reporting with approval requests
+"T2.1 completed successfully! [IMPLIED: waiting for user to say continue]"
+```
+
+#### ✅ **Correct Autonomous Behavior**
+```bash
+# CORRECT - Continuous execution until goal fully achieved
+/converge "complete all tests" → T2.1 complete → validate (30% done) → continue T2.2 immediately
+
+# CORRECT - Progress reporting without stopping
+"T2.1 completed (1/15 remaining). Continuing to T2.2..."
+
+# CORRECT - Autonomy preservation
+Report progress → Continue execution → No user intervention until 100% or max iterations
+```
+
+#### 🚨 **Critical Prevention Rules**
+- **Never stop**: /converge continues until goal 100% achieved or max iterations
+- **Progress ≠ Approval**: Report progress but never wait for permission
+- **Autonomy boundary**: Zero user intervention after goal statement
+- **Mental model**: "Set and forget" not "step-by-step approval system"
+
 ### **File Operation Mistakes**
 
 #### ❌ **Creating Unnecessary Files**

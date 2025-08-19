@@ -50,12 +50,12 @@ find_available_port() {
             return 0
         fi
         
-        echo "${EMOJI_INFO} Port $port in use, trying $((port + 1))..."
+        echo "${EMOJI_INFO} Port $port in use, trying $((port + 1))..." >&2
         port=$((port + 1))
         attempts=$((attempts + 1))
     done
 
-    echo "${EMOJI_ERROR} ERROR: No available ports found in range $start_port-$((start_port + max_attempts - 1))"
+    echo "${EMOJI_ERROR} ERROR: No available ports found in range $start_port-$((start_port + max_attempts - 1))" >&2
     return 1
 }
 

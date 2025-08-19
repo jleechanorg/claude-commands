@@ -45,22 +45,34 @@ class ApiService {
   private testAuthBypass: { enabled: boolean; userId: string } | null = null;
 
   constructor() {
-    // Enable test mode authentication bypass only when explicitly requested via URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const isTestMode = urlParams.get('test_mode') === 'true';
-    
-    if (isTestMode) {
-      const testUserId = urlParams.get('test_user_id') || 'test-user-123';
-      this.testAuthBypass = {
-        enabled: true,
-        userId: testUserId
-      };
+    // SECURITY: Only enable test mode authentication bypass in non-production environments
+    // This prevents authentication bypass in production builds via URL manipulation
+    if (import.meta.env.MODE !== 'production') {
+      // Enable test mode authentication bypass only when explicitly requested via URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const isTestMode = urlParams.get('test_mode') === 'true';
       
-      if (import.meta.env?.DEV) {
-        devLog('🧪 Test authentication bypass enabled for user:', testUserId);
+      if (isTestMode) {
+        const testUserId = urlParams.get('test_user_id') || 'test-user-123';
+        this.testAuthBypass = {
+          enabled: true,
+          userId: testUserId
+        };
+        
+        if (import.meta.env?.DEV) {
+          devLog('🧪 Test authentication bypass enabled for user:', testUserId);
+        }
+      } else {
+        this.testAuthBypass = null;
       }
     } else {
+      // SECURITY: In production, test authentication bypass is completely disabled
       this.testAuthBypass = null;
+      
+      // Only log in development mode to avoid production console noise
+      if (import.meta.env?.DEV) {
+        devLog('🔒 Test authentication bypass disabled in production mode');
+      }
     }
 
     // Clean up expired cache entries periodically

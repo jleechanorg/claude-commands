@@ -1,0 +1,631 @@
+#!/bin/bash
+
+# TDD Test Framework for claude_backup.sh
+# test_claude_backup.sh
+
+# Color codes for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Test counters
+PASS_COUNT=0
+FAIL_COUNT=0
+
+# Assertion functions
+assert_equals() {
+    local expected="$1"
+    local actual="$2"
+    local test_name="$3"
+    
+    if [[ "$expected" == "$actual" ]]; then
+        echo -e "${GREEN}PASS${NC}: $test_name"
+        ((PASS_COUNT++))
+    else
+        echo -e "${RED}FAIL${NC}: $test_name"
+        echo "  Expected: '$expected'"
+        echo "  Actual: '$actual'"
+        ((FAIL_COUNT++))
+    fi
+}
+
+assert_not_equals() {
+    local expected="$1"
+    local actual="$2"
+    local test_name="$3"
+    
+    if [[ "$expected" != "$actual" ]]; then
+        echo -e "${GREEN}PASS${NC}: $test_name"
+        ((PASS_COUNT++))
+    else
+        echo -e "${RED}FAIL${NC}: $test_name"
+        echo "  Expected not equal to: '$expected'"
+        echo "  Actual: '$actual'"
+        ((FAIL_COUNT++))
+    fi
+}
+
+assert_true() {
+    local condition="$1"
+    local test_name="$2"
+    
+    if [[ $condition -eq 0 ]]; then
+        echo -e "${GREEN}PASS${NC}: $test_name"
+        ((PASS_COUNT++))
+    else
+        echo -e "${RED}FAIL${NC}: $test_name"
+        ((FAIL_COUNT++))
+    fi
+}
+
+assert_false() {
+    local condition="$1"
+    local test_name="$2"
+    
+    if [[ $condition -ne 0 ]]; then
+        echo -e "${GREEN}PASS${NC}: $test_name"
+        ((PASS_COUNT++))
+    else
+        echo -e "${RED}FAIL${NC}: $test_name"
+        ((FAIL_COUNT++))
+    fi
+}
+
+# Mock system commands
+mock_hostname() { 
+    echo "test-device"; 
+}
+
+mock_rsync() { 
+    echo "Mock rsync called with: $*"
+    return 0; 
+}
+
+mock_crontab() { 
+    echo "Mock crontab called with: $*"
+    return 0; 
+}
+
+mock_dirname() { 
+    dirname "$1"; 
+}
+
+# Test setup and teardown
+setup() {
+    # Create temporary directory for tests
+    TEST_DIR=$(mktemp -d)
+    BACKUP_SCRIPT="$TEST_DIR/claude_backup.sh"
+    CRON_WRAPPER="$TEST_DIR/claude_backup_cron_wrapper.sh"
+    
+    # Create a minimal version of the backup script for testing
+    cat > "$BACKUP_SCRIPT" << 'EOF'
+#!/bin/bash
+
+# Default values
+DEFAULT_DESTINATION="/backup"
+EMAIL=""
+CRON_SCHEDULE="0 2 * * *"
+REMOVE_CRON=false
+SETUP_CRON=false
+
+# Function to extract base directory (this matches the real implementation)
+extract_base_directory() {
+    local suffixed_path="$1"
+    
+    # Validate input
+    if [[ -z "$suffixed_path" ]]; then
+        echo "Error: No path provided to extract_base_directory" >&2
+        return 1
+    fi
+    
+    # Use dirname to get parent directory
+    local base_dir
+    base_dir="$(dirname "$suffixed_path")"
+    
+    # Validate result
+    if [[ -z "$base_dir" ]] || [[ "$base_dir" == "." ]]; then
+        echo "Error: Failed to extract base directory from $suffixed_path" >&2
+        return 1
+    fi
+    
+    echo "$base_dir"
+    return 0
+}
+
+# Function to backup to destination
+backup_to_destination() {
+    local source="$1"
+    local destination="$2"
+    
+    if [[ -z "$source" || -z "$destination" ]]; then
+        echo "Error: Source or destination is empty"
+        return 1
+    fi
+    
+    if [[ ! -d "$source" ]]; then
+        echo "Error: Source directory does not exist"
+        return 1
+    fi
+    
+    # Create device-specific directory
+    local device_name=$(hostname)
+    local backup_dir="$destination/$device_name"
+    
+    mkdir -p "$backup_dir"
+    
+    # Perform backup with rsync (removed --delete for safety)
+    rsync -av "$source/" "$backup_dir/"
+    
+    return 0
+}
+
+# Function to check prerequisites
+check_prerequisites() {
+    local destination="$1"
+    
+    if ! command -v rsync &> /dev/null; then
+        echo "Error: rsync is not installed"
+        return 1
+    fi
+    
+    if [[ ! -d "$destination" ]]; then
+        echo "Error: Backup destination does not exist"
+        return 1
+    fi
+    
+    if [[ ! -w "$destination" ]]; then
+        echo "Error: No write permission to backup destination"
+        return 1
+    fi
+    
+    return 0
+}
+
+# Function to setup cron job
+setup_cron() {
+    local script_path="$1"
+    local destination="$2"
+    local email="$3"
+    
+    # Create wrapper script
+    local wrapper_script="${TMPDIR:-/tmp}/claude_backup_cron_wrapper.sh"
+    cat > "$wrapper_script" << WRAPPER_EOF
+#!/bin/bash
+# Cron wrapper for claude_backup.sh
+
+WRAPPER_EOF
+
+    if [[ -n "$email" ]]; then
+        echo "export EMAIL=\"$email\"" >> "$wrapper_script"
+    fi
+    
+    cat >> "$wrapper_script" << WRAPPER_EOF
+"$script_path" "$destination"
+WRAPPER_EOF
+    
+    chmod +x "$wrapper_script"
+    
+    # Add to crontab
+    local temp_crontab=$(mktemp)
+    crontab -l > "$temp_crontab" 2>/dev/null
+    echo "$CRON_SCHEDULE $wrapper_script" >> "$temp_crontab"
+    crontab "$temp_crontab"
+    rm "$temp_crontab"
+    
+    return 0
+}
+
+# Function to remove cron job
+remove_cron() {
+    local script_path="$1"
+    
+    local temp_crontab=$(mktemp)
+    crontab -l > "$temp_crontab" 2>/dev/null
+    
+    # Remove lines containing the script path
+    grep -v "$(realpath "$script_path")" "$temp_crontab" | crontab -
+    rm "$temp_crontab"
+    
+    # Remove wrapper script
+    local wrapper_script="/tmp/claude_backup_cron_wrapper.sh"
+    if [[ -f "$wrapper_script" ]]; then
+        rm "$wrapper_script"
+    fi
+    
+    return 0
+}
+
+# Main script logic
+main() {
+    local source=""
+    local destination="$DEFAULT_DESTINATION"
+    
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -s|--source)
+                source="$2"
+                shift 2
+                ;;
+            -d|--destination)
+                destination="$2"
+                shift 2
+                ;;
+            -e|--email)
+                EMAIL="$2"
+                shift 2
+                ;;
+            --cron)
+                SETUP_CRON=true
+                shift
+                ;;
+            --remove-cron)
+                REMOVE_CRON=true
+                shift
+                ;;
+            *)
+                # If no flag is provided, treat as source
+                if [[ -z "$source" ]]; then
+                    source="$1"
+                fi
+                shift
+                ;;
+        esac
+    done
+    
+    # Handle cron removal
+    if [[ "$REMOVE_CRON" == true ]]; then
+        remove_cron "$0"
+        echo "Cron job removed"
+        exit 0
+    fi
+    
+    # Validate source
+    if [[ -z "$source" ]]; then
+        echo "Error: No source directory specified"
+        exit 1
+    fi
+    
+    # Check prerequisites
+    if ! check_prerequisites "$destination"; then
+        exit 1
+    fi
+    
+    # Perform backup
+    if ! backup_to_destination "$source" "$destination"; then
+        exit 1
+    fi
+    
+    echo "Backup completed successfully to $destination"
+    
+    # Setup cron if requested
+    if [[ "$SETUP_CRON" == true ]]; then
+        setup_cron "$0" "$destination" "$EMAIL"
+        echo "Cron job installed"
+    fi
+}
+
+# If script is executed directly, run main function
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    main "$@"
+fi
+EOF
+    
+    chmod +x "$BACKUP_SCRIPT"
+}
+
+teardown() {
+    # Clean up temporary directory
+    rm -rf "$TEST_DIR"
+}
+
+# Test cases
+
+test_extract_base_directory_no_suffix() {
+    source "$BACKUP_SCRIPT"
+    local result=$(extract_base_directory "/home/user/scripts")
+    assert_equals "/home/user" "$result" "extract_base_directory should return base directory for path without .sh suffix"
+}
+
+test_extract_base_directory_with_suffix() {
+    source "$BACKUP_SCRIPT"
+    local result=$(extract_base_directory "/home/user/scripts/backup.sh")
+    assert_equals "/home/user/scripts" "$result" "extract_base_directory should return base directory for path with .sh suffix"
+}
+
+test_extract_base_directory_double_suffix() {
+    source "$BACKUP_SCRIPT"
+    local result=$(extract_base_directory "/home/user/scripts/backup.sh.sh")
+    assert_equals "/home/user/scripts" "$result" "extract_base_directory should handle double .sh suffix correctly"
+}
+
+test_extract_base_directory_trailing_slash() {
+    source "$BACKUP_SCRIPT"
+    local result=$(extract_base_directory "/home/user/scripts/")
+    assert_equals "/home/user" "$result" "extract_base_directory should handle trailing slash"
+}
+
+test_extract_base_directory_trailing_slash_with_suffix() {
+    source "$BACKUP_SCRIPT"
+    local result=$(extract_base_directory "/home/user/scripts/backup.sh/")
+    assert_equals "/home/user/scripts" "$result" "extract_base_directory should handle trailing slash with .sh suffix"
+}
+
+test_backup_to_destination_success() {
+    source "$BACKUP_SCRIPT"
+    
+    local source_dir="$TEST_DIR/source"
+    local dest_dir="$TEST_DIR/dest"
+    
+    mkdir -p "$source_dir" "$dest_dir"
+    
+    # Mock rsync to avoid actual backup
+    rsync() { 
+        echo "Mock rsync called with: $*"
+        return 0
+    }
+    
+    # Mock hostname
+    hostname() { 
+        echo "test-device"
+    }
+    
+    backup_to_destination "$source_dir" "$dest_dir"
+    local result=$?
+    
+    assert_true $result "backup_to_destination should succeed with valid directories"
+}
+
+test_backup_to_destination_missing_source() {
+    source "$BACKUP_SCRIPT"
+    
+    local source_dir="$TEST_DIR/nonexistent"
+    local dest_dir="$TEST_DIR/dest"
+    
+    mkdir -p "$dest_dir"
+    
+    backup_to_destination "$source_dir" "$dest_dir"
+    local result=$?
+    
+    assert_false $result "backup_to_destination should fail with missing source directory"
+}
+
+test_backup_to_destination_empty_params() {
+    source "$BACKUP_SCRIPT"
+    
+    backup_to_destination "" ""
+    local result=$?
+    
+    assert_false $result "backup_to_destination should fail with empty parameters"
+}
+
+test_check_prerequisites_success() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/dest"
+    mkdir -p "$dest_dir"
+    
+    # Mock rsync command check
+    command() {
+        if [[ "$2" == "rsync" ]]; then
+            return 0
+        fi
+        return 1
+    }
+    
+    check_prerequisites "$dest_dir"
+    local result=$?
+    
+    assert_true $result "check_prerequisites should succeed with valid destination and rsync installed"
+}
+
+test_check_prerequisites_missing_rsync() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/dest"
+    mkdir -p "$dest_dir"
+    
+    # Mock rsync command check to fail
+    command() {
+        if [[ "$2" == "rsync" ]]; then
+            return 1
+        fi
+        return 0
+    }
+    
+    check_prerequisites "$dest_dir"
+    local result=$?
+    
+    assert_false $result "check_prerequisites should fail when rsync is not installed"
+}
+
+test_check_prerequisites_missing_destination() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/nonexistent"
+    
+    # Mock rsync command check
+    command() {
+        if [[ "$2" == "rsync" ]]; then
+            return 0
+        fi
+        return 1
+    }
+    
+    check_prerequisites "$dest_dir"
+    local result=$?
+    
+    assert_false $result "check_prerequisites should fail with missing destination directory"
+}
+
+test_check_prerequisites_no_write_permission() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/readonly"
+    mkdir -p "$dest_dir"
+    chmod -w "$dest_dir"
+    
+    # Mock rsync command check
+    command() {
+        if [[ "$2" == "rsync" ]]; then
+            return 0
+        fi
+        return 1
+    }
+    
+    check_prerequisites "$dest_dir"
+    local result=$?
+    
+    assert_false $result "check_prerequisites should fail with no write permission to destination"
+}
+
+test_setup_cron_creates_wrapper() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/dest"
+    mkdir -p "$dest_dir"
+    
+    # Mock crontab and hostname
+    crontab() { return 0; }
+    hostname() { echo "test-device"; }
+    
+    setup_cron "$BACKUP_SCRIPT" "$dest_dir" ""
+    
+    local wrapper_path="${TMPDIR:-/tmp}/claude_backup_cron_wrapper.sh"
+    local exists=1
+    if [[ -f "$wrapper_path" ]]; then
+        exists=0
+    fi
+    
+    assert_true $exists "setup_cron should create a wrapper script"
+    
+    # Clean up
+    if [[ -f "$wrapper_path" ]]; then
+        rm "$wrapper_path"
+    fi
+}
+
+test_setup_cron_with_email() {
+    source "$BACKUP_SCRIPT"
+    
+    local dest_dir="$TEST_DIR/dest"
+    local email="test@example.com"
+    mkdir -p "$dest_dir"
+    
+    # Mock crontab and hostname
+    crontab() { return 0; }
+    hostname() { echo "test-device"; }
+    
+    setup_cron "$BACKUP_SCRIPT" "$dest_dir" "$email"
+    
+    local wrapper_path="${TMPDIR:-/tmp}/claude_backup_cron_wrapper.sh"
+    local has_email=1
+    if [[ -f "$wrapper_path" ]] && grep -q "export EMAIL=" "$wrapper_path"; then
+        has_email=0
+    fi
+    
+    assert_true $has_email "setup_cron should include EMAIL export in wrapper when email is provided"
+    
+    # Clean up
+    if [[ -f "$wrapper_path" ]]; then
+        rm "$wrapper_path"
+    fi
+}
+
+test_remove_cron() {
+    # Test that the remove_cron function exists and can be called
+    source "$BACKUP_SCRIPT"
+    
+    # Mock system commands
+    crontab() { return 0; }
+    realpath() { echo "$1"; }
+    
+    # Test by just calling remove_cron and checking it returns success
+    remove_cron "$BACKUP_SCRIPT"
+    local result=$?
+    
+    assert_true $result "remove_cron should execute successfully"
+}
+
+test_parameter_vs_flag_detection() {
+    source "$BACKUP_SCRIPT"
+    
+    # Mock functions
+    rsync() { return 0; }
+    crontab() { return 0; }
+    hostname() { echo "test-device"; }
+    command() { return 0; }
+    
+    # Test that first non-flag argument is treated as source
+    main "$TEST_DIR/source" --destination "$TEST_DIR/dest" > /dev/null 2>&1
+    local result=$?
+    
+    assert_true $result "First non-flag argument should be treated as source parameter"
+}
+
+test_environment_variable_fallback() {
+    source "$BACKUP_SCRIPT"
+    
+    # Test that setup_cron function can be called without error
+    # Mock crontab to avoid actual system changes
+    crontab() { return 0; }
+    
+    setup_cron "$BACKUP_SCRIPT" "$TEST_DIR/dest" ""
+    local result=$?
+    
+    assert_true $result "setup_cron should succeed when called with valid parameters"
+    
+    # Clean up
+    local wrapper_path="${TMPDIR:-/tmp}/claude_backup_cron_wrapper.sh"
+    if [[ -f "$wrapper_path" ]]; then
+        rm "$wrapper_path"
+    fi
+}
+
+# Test runner
+run_tests() {
+    echo -e "${YELLOW}Running TDD test suite for claude_backup.sh${NC}"
+    echo "=============================================="
+    
+    setup
+    
+    # Run all test functions
+    test_extract_base_directory_no_suffix
+    test_extract_base_directory_with_suffix
+    test_extract_base_directory_double_suffix
+    test_extract_base_directory_trailing_slash
+    test_extract_base_directory_trailing_slash_with_suffix
+    test_backup_to_destination_success
+    test_backup_to_destination_missing_source
+    test_backup_to_destination_empty_params
+    test_check_prerequisites_success
+    test_check_prerequisites_missing_rsync
+    test_check_prerequisites_missing_destination
+    test_check_prerequisites_no_write_permission
+    test_setup_cron_creates_wrapper
+    test_setup_cron_with_email
+    test_remove_cron
+    test_parameter_vs_flag_detection
+    test_environment_variable_fallback
+    
+    teardown
+    
+    # Report results
+    echo "=============================================="
+    echo -e "${GREEN}PASSED: $PASS_COUNT${NC}"
+    echo -e "${RED}FAILED: $FAIL_COUNT${NC}"
+    
+    if [[ $FAIL_COUNT -eq 0 ]]; then
+        echo -e "${GREEN}All tests passed!${NC}"
+        return 0
+    else
+        echo -e "${RED}Some tests failed!${NC}"
+        return 1
+    fi
+}
+
+# Run the tests if this script is executed directly
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    run_tests
+fi

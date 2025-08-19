@@ -96,7 +96,7 @@ def json_default_serializer(obj):
     Handles specific known types with targeted exception handling.
     """
     # Handle datetime objects
-    if isinstance(obj, datetime.datetime | datetime.date):
+    if isinstance(obj, (datetime.datetime, datetime.date)):
         return obj.isoformat()
 
     # Handle objects with to_dict method (like GameState, entities)

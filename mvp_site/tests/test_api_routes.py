@@ -50,7 +50,7 @@ class TestAPIRoutes(unittest.TestCase):
         if response.status_code == 200:
             data = response.get_json()
             assert isinstance(
-                data, dict | list
+                data, (dict, list)
             ), "Campaigns response should be dict or list format"
 
     def test_mcp_get_specific_campaign_endpoint(self):
@@ -81,7 +81,7 @@ class TestAPIRoutes(unittest.TestCase):
 
         data = response.get_json()
         assert isinstance(
-            data, list | dict
+            data, (list, dict)
         ), "Campaigns should return list or dict format"
 
         # Accept any response format - could be empty list or list with existing campaigns
