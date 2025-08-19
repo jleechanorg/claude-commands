@@ -9,14 +9,9 @@ import subprocess
 import time
 import unittest
 
-try:
-    import requests
-    REQUESTS_AVAILABLE = True
-except ImportError:
-    REQUESTS_AVAILABLE = False
+import requests
 
 
-@unittest.skipUnless(REQUESTS_AVAILABLE, "requests library not available")
 class TestClaudeBotServer(unittest.TestCase):
     """Test Claude bot server responses and quality."""
 
