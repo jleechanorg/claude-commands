@@ -76,11 +76,9 @@ class MemoryBackupCRDT:
         timestamp = datetime.now(timezone.utc).isoformat()
         entry_id = entry.get('id', 'unknown')
         
-        # Add high entropy to prevent collisions (16 hex chars = 64 bits)
-        random_suffix = uuid.uuid4().hex[:16]
-        
-        # Generate collision-resistant unique ID
-        unique_id = f"{self.host_id}_{entry_id}_{timestamp}_{random_suffix}"
+        # Use cryptographically secure UUID for collision resistance
+        # This prevents predictable collisions in high-throughput scenarios
+        unique_id = str(uuid.uuid4())
         
         # Version increment if metadata exists
         version = 1
@@ -554,7 +552,7 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
                     'host': 'recovery',
                     'timestamp': '1970-01-01T00:00:00+00:00',  # Epoch time, will lose in LWW
                     'version': 0,
-                    'unique_id': f"recovery_{entry.get('id', 'unknown')}_{uuid.uuid4().hex[:16]}"
+                    'unique_id': str(uuid.uuid4())  # Collision-resistant UUID
                 }
                 entry['_crdt_metadata'] = recovery_metadata
             
@@ -583,6 +581,16 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
                     # Lexicographic comparison of unique IDs
                     if new_uid > existing_uid:
                         entries_by_id[entry_id] = entry
+                    elif new_uid == existing_uid:
+                        # Final deterministic tiebreaker: content hash comparison
+                        # This ensures commutativity even when unique_ids are identical
+                        import hashlib
+                        existing_content = json.dumps(existing, sort_keys=True)
+                        new_content = json.dumps(entry, sort_keys=True)
+                        existing_hash = hashlib.sha256(existing_content.encode()).hexdigest()
+                        new_hash = hashlib.sha256(new_content.encode()).hexdigest()
+                        if new_hash > existing_hash:
+                            entries_by_id[entry_id] = entry
                 # If new_ts < existing_ts, keep existing (no action needed)
     
     # Convert to list and sort for consistent output
@@ -605,42 +613,28 @@ def crdt_merge(memory_lists: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]
 
 
 def _parse_timestamp(timestamp: str) -> datetime:
-    """Parse ISO format timestamp correctly handling all timezone formats.
+    """Parse ISO format timestamp with simplified, deterministic handling.
     
     Args:
         timestamp: ISO format timestamp string
         
     Returns:
-        Timezone-aware datetime object normalized to UTC
+        Timezone-aware datetime object
     """
     if not timestamp:
         return datetime.min.replace(tzinfo=timezone.utc)
     
     try:
-        # Handle different timezone formats
+        # Handle Z suffix (UTC) - preserve timezone information
         if timestamp.endswith('Z'):
-            # UTC with Z suffix
             timestamp = timestamp[:-1] + '+00:00'
-        elif '+' in timestamp[-6:] or '-' in timestamp[-6:]:
-            # Already has timezone offset (+05:00, -08:00, etc.)
-            pass
-        elif '.' in timestamp and timestamp.count(':') >= 2:
-            # Assume UTC if no timezone specified
-            if '+' not in timestamp and '-' not in timestamp[-6:] and not timestamp.endswith('Z'):
-                timestamp += '+00:00'
-        else:
-            # Simple format without timezone, assume UTC
-            timestamp += '+00:00'
         
         # Parse with timezone information preserved
         dt = datetime.fromisoformat(timestamp)
         
-        # Ensure timezone awareness and normalize to UTC for comparison
+        # Ensure timezone awareness
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        else:
-            # Convert to UTC for consistent comparison
-            dt = dt.astimezone(timezone.utc)
         
         return dt
     except (ValueError, AttributeError) as e:
