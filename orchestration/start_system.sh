@@ -76,14 +76,42 @@ setup_directories() {
     log_info "Dynamic agent directories created"
 }
 
+# Setup crontab entry for automatic monitor restart
+setup_monitor_crontab() {
+    local project_root
+    project_root="$(cd "$SCRIPT_DIR/.." && pwd)"
+    local monitor_script="$project_root/orchestration/start_monitor.sh"
+    
+    # Check if monitor script exists
+    if [ ! -f "$monitor_script" ]; then
+        log_warn "Monitor script not found at $monitor_script - skipping crontab setup"
+        return
+    fi
+    
+    # Create crontab entry to restart monitor every 30 minutes if not running
+    local cron_command="*/30 * * * * /bin/bash -c 'if ! pgrep -f agent_monitor.py > /dev/null; then cd $project_root && bash $monitor_script; fi'"
+    
+    # Check if crontab entry already exists
+    if crontab -l 2>/dev/null | grep -q "agent_monitor.py"; then
+        log_info "Crontab entry for agent monitor already exists"
+    else
+        # Add crontab entry
+        (crontab -l 2>/dev/null; echo "$cron_command") | crontab -
+        log_info "Added crontab entry to restart agent monitor every 30 minutes if needed"
+    fi
+}
+
 # Start the Python monitoring coordinator (lightweight, no LLM)
 start_monitor() {
     log_info "Starting Python monitoring coordinator..."
 
+    # Setup crontab for automatic restart
+    setup_monitor_crontab
+
     # Start the agent monitor in background
     if [ -f "$SCRIPT_DIR/start_monitor.sh" ]; then
         bash "$SCRIPT_DIR/start_monitor.sh"
-        log_info "🤖 Agent monitor started - pings agents every 2 minutes"
+        log_info "🤖 Agent monitor started - pings agents every 2 minutes with auto-restart"
     else
         log_warn "start_monitor.sh not found. Monitor unavailable."
     fi

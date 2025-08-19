@@ -267,8 +267,11 @@ Genesis Coder, Prime Mover,
 1. **Directory Context:** Operates in worktree directory shown in environment
 2. **Test Execution:** Use `TESTING=true vpython` from project root
 3. **Gemini SDK:** `from google import genai` (NOT `google.generativeai`)
-4. **Path Conventions:** Always use `~` instead of `/home/jleechan`
-5. 🚨 **DATE INTERPRETATION:** Run `date "+%Y-%m-%d"` for current date
+4. **Path Conventions:** Always use `~` instead of hardcoded user paths
+5. 🚨 **DATE INTERPRETATION:** Run `date "+%Y-%m-%d"` to get current date
+   - Format: YYYY-MM-DD
+   - Human-readable: `date "+%B %d, %Y"`
+   - Always derive date at runtime by executing these commands (no hardcoded dates)
 6. 🚨 **PUSH VERIFICATION:** ⚠️ ALWAYS verify push success after every `git push`
 7. 🚨 **PR STATUS:** OPEN = WIP | MERGED = Completed | CLOSED = Abandoned
 8. 🚨 **PLAYWRIGHT MCP DEFAULT:** ⚠️ MANDATORY - Use Playwright MCP for browser automation (headless mode)
@@ -297,6 +300,13 @@ Genesis Coder, Prime Mover,
 🚨 **ORCHESTRATION DIRECT EXECUTION PREVENTION:** ⚠️ MANDATORY
 - **Hard Stop:** "/orch" prefix → immediate tmux orchestration delegation, NO exceptions
 - **Mental Model:** "/orch" = "create tmux agent to do this"
+
+🚨 **CONVERGE AUTONOMY PRESERVATION**: ⚠️ MANDATORY HARD STOP PROTOCOL
+- **Hard Stop Pattern**: Input scan for "/converge" → autonomous execution until goal achieved, NO stopping for approval
+- **Mental Model**: "/converge" = "set and forget until complete", NEVER "/converge" = "step-by-step approval system"
+- **Zero Exception Rule**: /converge NEVER stops for user input unless max iterations reached or unrecoverable error
+- **CRITICAL**: Progress reporting ≠ stopping for approval. Report progress but continue autonomously
+- **Autonomy Boundary**: Once /converge starts, zero user intervention until 100% goal achievement or limits
 
 🚨 **ABSOLUTE BRANCH ISOLATION:** ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
 - ❌ FORBIDDEN: `git checkout`, `git switch`, or any branch switching
@@ -381,7 +391,7 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 **Browser Tests:** Playwright MCP preferred (headless mode). Test URL: `http://localhost:8081?test_mode=true&test_user_id=test-user-123`
 
-**Coverage:** Use `./run_tests.sh --coverage` or `./coverage.sh`. HTML at `/tmp/worldarchitectai/coverage/index.html`
+**Coverage:** Use `./run_tests.sh --coverage` or `./coverage.sh`. HTML at `<project_root>/tmp/worldarchitectai/coverage/index.html`
 
 ## Git Workflow
 
@@ -398,24 +408,13 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - ❌ FORBIDDEN: `@v4`, `@main`, `@latest` (can be changed by attackers)
 - ✅ REQUIRED: Full commit SHA like `@b4ffde65f46336ab88eb53be808477a3936bae11`
 
-## Project Overview
-
-WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
-
-**Stack:** Python 3.11/Flask/Gunicorn | Gemini API | Firebase Firestore | Vanilla JS/Bootstrap | Docker/Cloud Run
-
-**Key Docs:**
-- **AI Assistant Guide:** → `mvp_site/README_FOR_AI.md` (CRITICAL system architecture for AI assistants)
-- **📋 MVP Site Architecture:** → `mvp_site/README.md` (comprehensive codebase overview)
-- **📋 Code Review & File Responsibilities:** → `mvp_site/CODE_REVIEW_SUMMARY.md` (detailed file-by-file analysis)
-
 ## Environment & Scripts
 
 🚨 **CLAUDE CODE HOOKS:** Executable scripts auto-run at specific points. Config: `.claude/settings.json`, Scripts: `.claude/hooks/` (executable)
 
 **Python:** Verify venv activated. Run from project root with `TESTING=true vpython`. Use Python for restricted file ops.
 
-**Logs:** Located at `/tmp/worldarchitect.ai/[branch]/[service].log`. Use `tail -f` for monitoring.
+**Logs:** Located at `<project_root>/tmp/worldarchitect.ai/[branch]/[service].log`. Use `tail -f` for monitoring.
 
 **Sync Check:** `scripts/sync_check.sh` detects/pushes unpushed commits automatically.
 
@@ -543,17 +542,6 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 **Flask:** SPA route for index.html, hard refresh for CSS/JS, cache-bust in prod
 **Python:** venv required, source .bashrc after changes
 **AI/LLM:** Detailed prompts crucial, critical instructions first
-
-## Quick Reference
-
-- **Test:** `TESTING=true vpython mvp_site/test_file.py` (from root)
-- **All Tests:** `./run_tests.sh` (CI simulation by default)
-- **CI Simulation:** `./run_tests.sh` (default) or `./run_tests.sh --ci-sim`
-- **Local Mode:** `./run_tests.sh --no-ci-sim` (full environment)
-- **Specific Test:** `./run_tests.sh path/to/test_file.py`
-- **Test Pattern:** `./run_tests.sh test_pattern_name`
-- **New Branch:** `./integrate.sh`
-- **Deploy:** `./deploy.sh` or `./deploy.sh stable`
 
 ## Additional Documentation
 

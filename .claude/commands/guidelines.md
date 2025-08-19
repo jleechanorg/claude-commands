@@ -12,28 +12,40 @@
 
 ### Automatic Guidelines Consultation Protocol
 
-**1. CLAUDE.md Reading** (MANDATORY):
+**1. Memory MCP Integration** (MANDATORY):
+- **Command**: `mcp__memory-server__search_nodes` - Search for relevant guidelines and patterns from memory
+- **Command**: `mcp__memory-server__open_nodes` - Retrieve historical guidelines applications and outcomes
+- Extract learned patterns, successful strategies, and documented anti-patterns from memory graph
+- Identify context-specific guidelines and decision patterns from previous work
+
+**2. CLAUDE.md Reading** (MANDATORY):
 - Always read CLAUDE.md first to understand current rules and constraints
 - Apply meta-rules, critical implementation rules, and system understanding
 - Check for any task-specific protocols or recent rule updates
 
-**2. Base Guidelines Discovery**:
+**3. Base Guidelines Discovery**:
 - Read `docs/pr-guidelines/base-guidelines.md` for general patterns
 - Extract canonical protocols, principles, tenets, anti-patterns
 - Apply tool selection hierarchy and subprocess safety rules
+- Cross-reference with memory patterns for validation and enhancement
 
-**3. PR Context Detection**:
+**4. PR Context Detection**:
 - **Primary**: Auto-detect PR number from current branch context via GitHub API
 - **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
 - **Fallback 2**: If no PR context, use branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
 - **Fallback 3**: If outside any PR/branch context, proceed with base guidelines only
 - **Manual Override**: Accept explicit PR number via `/guidelines --pr 1286`
+- **Memory Context**: Search for PR-specific patterns and learnings in memory graph
 
-**4. PR-Specific Guidelines Management**:
+**5. PR-Specific Guidelines Management**:
 - Check for existing `docs/pr-guidelines/{PR_NUMBER}/guidelines.md`
 - If missing, create basic PR-specific guidelines template
 - If exists, read and apply PR-specific patterns and learnings
-- Auto-update with new patterns discovered during command execution
+- **Memory Integration**: Store PR guidelines and outcomes in persistent knowledge graph
+  - **Command**: `mcp__memory-server__create_entities` - Create PR guideline entities with metadata
+  - **Command**: `mcp__memory-server__create_relations` - Link PR patterns to project and guideline contexts
+  - **Command**: `mcp__memory-server__add_observations` - Store specific guideline applications and results
+- Auto-update with new patterns discovered during command execution and persist to memory
 
 ## Usage Patterns
 
@@ -67,11 +79,15 @@
 3. **Pattern Extraction**: Extract relevant anti-patterns and best practices
 4. **Tool Selection Guidance**: Apply hierarchy (Serena MCP → Read tool → Bash)
 
-### Phase 3: Application Preparation
-1. **Context Integration**: Merge base and PR-specific guidance
-2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns
+### Phase 3: Application Preparation and Memory Persistence
+1. **Context Integration**: Merge base, PR-specific, and memory-based guidance
+2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns (enhanced by memory patterns)
 3. **Quality Standards**: Set expectations for evidence-based development
 4. **Resource Optimization**: Apply efficient tool usage patterns
+5. **Memory Learning**: Capture guidelines consultation and application patterns
+   - **Command**: `mcp__memory-server__add_observations` - Store guidelines effectiveness and application contexts
+   - **Command**: `mcp__memory-server__create_relations` - Link guideline success to specific task types and outcomes
+   - Build persistent knowledge graph for continuous guidelines improvement
 
 ## Guidelines Creation Template
 
@@ -178,11 +194,16 @@
 
 ## Advanced Features
 
-### Pattern Learning Integration
-- **Memory MCP Connection**: Persist learned patterns across sessions
-- **Evidence Collection**: Document specific incidents with PR references
-- **Continuous Improvement**: Update guidelines based on execution outcomes
-- **Cross-PR Learning**: Apply patterns learned in one PR to future work
+### Enhanced Pattern Learning with Memory MCP
+- **Memory MCP Connection**: Full persistent knowledge graph integration
+  - **Command**: `mcp__memory-server__create_entities` - Store guideline patterns as structured entities
+  - **Command**: `mcp__memory-server__create_relations` - Link patterns to contexts, outcomes, and effectiveness
+  - **Command**: `mcp__memory-server__search_nodes` - Query for relevant patterns during consultation
+- **Evidence Collection**: Document specific incidents with PR references and structured metadata
+- **Continuous Improvement**: Update guidelines based on execution outcomes with persistent learning
+- **Cross-PR Learning**: Apply patterns learned in one PR to future work through memory graph analysis
+- **Pattern Recognition**: Identify recurring patterns and anti-patterns across multiple contexts
+- **Success Correlation**: Track guideline effectiveness and optimization opportunities
 
 ### Automation Capabilities
 - **Auto-Update Detection**: Identify when guidelines need pattern additions

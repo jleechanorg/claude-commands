@@ -159,3 +159,4 @@ logs/
 logs/*.json
 logs/*.txt
 logs/*.log
+task-agent-*/
