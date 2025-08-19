@@ -1,0 +1,18 @@
+{
+  "timestamp": "2025-08-19T05:12:46.3NZ",
+  "repository": "worldarchitect.ai",
+  "entries": [{
+    "id": "memory_Real_CRDT_Test_A_1755580366",
+    "name": "Real_CRDT_Test_A",
+    "type": "technical_learning", 
+    "content": "First concurrent memory entry for real repository testing",
+    "created_at": "2025-08-19T05:12:46.3NZ",
+    "source": "concurrent_test_real_repo",
+    "_crdt_metadata": {
+      "host": "Jeffreys-MBP.home",
+      "timestamp": "2025-08-19T05:12:46.3NZ",
+      "version": 1,
+      "unique_id": "85ed41e0-ffd5-4e4d-9e8b-91a306c33d9e"
+    }
+  }]
+}
