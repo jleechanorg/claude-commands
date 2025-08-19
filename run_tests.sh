@@ -651,6 +651,20 @@ if [ -x ".claude/hooks/tests/run_all_hook_tests.sh" ]; then
     echo
 fi
 
+# Run backup script tests if they exist
+if [ -f "tests/scripts/test_claude_backup.sh" ]; then
+    print_status "💾 Running backup script tests..."
+    # Ensure failed_tests is initialized before incrementing in this early block
+    failed_tests=${failed_tests:-0}
+    if bash tests/scripts/test_claude_backup.sh; then
+        print_success "Backup script tests passed"
+    else
+        print_error "Backup script tests failed"
+        failed_tests=$((failed_tests + 1))
+    fi
+    echo
+fi
+
 # Run cross-platform compatibility tests if they exist
 if [ -x "tests/test_claude_mcp_cross_platform.sh" ]; then
     print_status "🌍 Running cross-platform compatibility tests..."

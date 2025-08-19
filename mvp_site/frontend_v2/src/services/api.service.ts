@@ -69,6 +69,7 @@ class ApiService {
       // SECURITY: In production, test authentication bypass is completely disabled
       this.testAuthBypass = null;
       
+      // Only log in development mode to avoid production console noise
       if (import.meta.env?.DEV) {
         devLog('🔒 Test authentication bypass disabled in production mode');
       }
