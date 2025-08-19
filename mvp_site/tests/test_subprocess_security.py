@@ -13,7 +13,9 @@ import os
 from unittest.mock import patch, MagicMock, call
 
 # Add the directory containing the utils module to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '.claude', 'commands', '_copilot_modules'))
+# From mvp_site/tests, we need to go up two levels to project root, then to .claude/commands/_copilot_modules
+project_root = os.path.join(os.path.dirname(__file__), '..', '..')
+sys.path.insert(0, os.path.join(project_root, '.claude', 'commands', '_copilot_modules'))
 
 from utils import GitCommands
 
