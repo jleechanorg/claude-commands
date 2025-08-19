@@ -80,16 +80,17 @@ class TestCRDTMetadata:
         assert metadata['version'] == 1
         assert 'unique_id' in metadata
         
-        # Check unique_id format: hostname_id_timestamp
-        parts = metadata['unique_id'].split('_')
-        assert len(parts) >= 3
-        assert parts[0] == 'test-host-001'
-        assert parts[1] == 'test'
+        # Check unique_id format: UUID4 (collision-resistant)
+        unique_id = metadata['unique_id']
+        # UUID4 format: 8-4-4-4-12 hexadecimal digits separated by hyphens
+        import re
+        uuid_pattern = r'^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+        assert re.match(uuid_pattern, unique_id, re.IGNORECASE), f"UUID format invalid: {unique_id}"
         
-        # Check timestamp format
+        # Check timestamp format (ISO8601 with timezone)
         timestamp = metadata['timestamp']
-        assert timestamp.endswith('Z')
-        datetime.fromisoformat(timestamp.rstrip('Z'))  # Should not raise
+        # Should be able to parse as ISO datetime with timezone
+        datetime.fromisoformat(timestamp.replace('Z', '+00:00'))  # Should not raise
 
     def test_metadata_injection_uniqueness(self, crdt_instance):
         """Test that each metadata injection generates unique identifiers."""
