@@ -169,6 +169,37 @@ fi
 echo ""
 ```
 
+### Phase 9: Guidelines Integration & Learning
+**Command**: `/guidelines` - Post-execution guidelines consultation and pattern capture
+- **Universal Composition**: Call `/guidelines` at completion for systematic learning
+- **Pattern Capture**: Document successful approaches and anti-patterns discovered
+- **Mistake Prevention**: Update PR-specific guidelines with lessons learned
+- **Continuous Improvement**: Enhance guidelines system with execution insights
+- **Integration**: Seamless handoff using command composition for systematic learning
+
+```bash
+# PHASE 9: POST-EXECUTION GUIDELINES INTEGRATION
+echo ""
+echo "📚 PHASE 9: GUIDELINES INTEGRATION & LEARNING"
+echo "============================================="
+echo "🔄 Calling /guidelines for post-execution pattern capture..."
+
+# Execute and capture output + status
+GUIDE_OUTPUT=$(/guidelines 2>&1)
+GUIDE_STATUS=$?
+
+# Surface output for transparency
+printf "%s\n" "$GUIDE_OUTPUT"
+
+if [ "$GUIDE_STATUS" -ne 0 ]; then
+  echo "❌ /guidelines failed (exit $GUIDE_STATUS)" >&2
+  return 1 2>/dev/null || exit 1
+fi
+
+echo "📝 Guidelines integration completed successfully"
+echo "🎯 Mistake prevention system enhanced for future executions"
+```
+
 ## 🧠 Decision Logic
 
 ### When to Use /copilot
@@ -302,18 +333,20 @@ echo ""
 - **`/fixpr`** - Can be used independently for issue resolution
 - **`/commentreply`** - Handles response generation and posting
 - **`/pushl`** - Handles git operations and branch management
+- **`/guidelines`** - Post-execution pattern capture and mistake prevention system enhancement
 
 ### Workflow Combinations
 ```bash
 # Standard /copilot execution pattern
-/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl
+/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl → /guidelines
 
 # Continue until clean (repeat cycle)
-/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl
+/execute → /commentfetch → /fixpr → /commentreply → /commentcheck → /pushl → /guidelines
 # Keep iterating until GitHub shows: no failing tests, no merge conflicts, no unaddressed comments
+# Final /guidelines call captures patterns and enhances mistake prevention system
 
 # /commentcheck MUST pass (100% coverage) before /pushl
-# If /commentcheck fails → re-run /commentreply → /commentcheck → /pushl
+# If /commentcheck fails → re-run /commentreply → /commentcheck → /pushl → /guidelines
 ```
 
 ## 🚨 Important Notes
