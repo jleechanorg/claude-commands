@@ -16,6 +16,19 @@ if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
     safe_exit 1
 fi
 
+# Detect operating system for enhanced cross-platform compatibility
+OS_TYPE="$(uname -s)"
+case "$OS_TYPE" in
+    Linux*)     MACHINE=Linux;;
+    Darwin*)    MACHINE=Mac;;
+    CYGWIN*)    MACHINE=Cygwin;;
+    MINGW*)     MACHINE=MinGw;;
+    MSYS*)      MACHINE=Git;;
+    *)          MACHINE="UNKNOWN:$OS_TYPE"
+esac
+
+echo "🔍 Detected platform: $MACHINE ($OS_TYPE)"
+
 # Detect timeout command for cross-platform compatibility
 TIMEOUT_CMD=""
 if command -v timeout >/dev/null 2>&1; then
@@ -24,6 +37,14 @@ elif command -v gtimeout >/dev/null 2>&1; then
     TIMEOUT_CMD="gtimeout"
 elif [ -x "/opt/homebrew/opt/coreutils/libexec/gnubin/timeout" ]; then
     TIMEOUT_CMD="/opt/homebrew/opt/coreutils/libexec/gnubin/timeout"
+elif [ -x "/usr/local/opt/coreutils/libexec/gnubin/timeout" ]; then
+    TIMEOUT_CMD="/usr/local/opt/coreutils/libexec/gnubin/timeout"
+fi
+
+if [ -n "$TIMEOUT_CMD" ]; then
+    echo "✅ Timeout command available: $TIMEOUT_CMD"
+else
+    echo "⚠️ No timeout command found - operations will run without timeout protection"
 fi
 
 # Detect flock availability for file locking
@@ -106,12 +127,44 @@ log_error_details() {
     echo "Error details: $error_output" >> "$LOG_FILE"
 }
 
-# Get Node and NPX paths
-NODE_PATH=$(which node)
-NPX_PATH=$(which npx)
+# Get Node and NPX paths with cross-platform detection
+NODE_PATH=$(which node 2>/dev/null)
+NPX_PATH=$(which npx 2>/dev/null)
+
+# Windows/Git Bash specific path detection
+if [ -z "$NODE_PATH" ] && { [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ] || [ "$MACHINE" = "Cygwin" ]; }; then
+    echo -e "${BLUE}🔍 Checking Windows-specific Node.js locations...${NC}"
+    
+    # Common Windows Node.js installation paths
+    for potential_node in \
+        "/c/Program Files/nodejs/node.exe" \
+        "/c/Program Files (x86)/nodejs/node.exe" \
+        "$USERPROFILE/AppData/Roaming/npm/node.exe" \
+        "$APPDATA/npm/node.exe"
+    do
+        if [ -x "$potential_node" ]; then
+            NODE_PATH="$potential_node"
+            break
+        fi
+    done
+    
+    # Find npx alongside node
+    if [ -n "$NODE_PATH" ]; then
+        NODE_DIR=$(dirname "$NODE_PATH")
+        if [ -x "$NODE_DIR/npx.exe" ]; then
+            NPX_PATH="$NODE_DIR/npx.exe"
+        elif [ -x "$NODE_DIR/npx" ]; then
+            NPX_PATH="$NODE_DIR/npx"
+        fi
+    fi
+fi
 
 if [ -z "$NODE_PATH" ] || [ -z "$NPX_PATH" ]; then
     echo -e "${RED}❌ Node.js or NPX not found. Please install Node.js first.${NC}"
+    echo -e "${YELLOW}💡 Platform: $MACHINE - Install from https://nodejs.org/${NC}"
+    if [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ]; then
+        echo -e "${YELLOW}💡 For Git Bash on Windows, restart terminal after Node.js installation${NC}"
+    fi
     safe_exit 1
 fi
 
@@ -559,6 +612,11 @@ declare -A BATCH_2=(
     ["ddg-search"]="@oevortex/ddg_search"
 )
 
+# New Batch 3: iOS Simulator and development tools
+declare -A BATCH_3=(
+    ["ios-simulator-mcp"]="ios-simulator-mcp"
+)
+
 # Function to install server batch in parallel
 install_batch_parallel() {
     local -n batch_ref=$1
@@ -619,6 +677,186 @@ install_batch_parallel() {
     declare -A PARALLEL_PIDS
     
     echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
+}
+
+# Function to install iOS Simulator MCP server with special handling
+install_ios_simulator_mcp() {
+    local name="ios-simulator-mcp"
+    local TEMP_DIR
+    local MCP_SERVERS_DIR
+    local IOS_MCP_PATH
+    local add_output
+    local add_exit_code
+    local clone_cmd
+    
+    echo -e "${BLUE}📱 Setting up iOS Simulator MCP Server...${NC}"
+    log_with_timestamp "Setting up iOS Simulator MCP Server with special handling"
+    
+    # Check if server already exists
+    if server_already_exists "$name"; then
+        echo -e "${GREEN}  ✅ Server $name already exists, skipping installation${NC}"
+        log_with_timestamp "Server $name already exists, skipping"
+        INSTALL_RESULTS["$name"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        return 0
+    fi
+    
+    # Check for macOS environment (iOS Simulator requires macOS)
+    if [ "$MACHINE" != "Mac" ]; then
+        echo -e "${YELLOW}  ⚠️ iOS Simulator MCP server requires macOS, skipping on $MACHINE${NC}"
+        case "$MACHINE" in
+            "Linux")
+                echo -e "${BLUE}  💡 Consider using Android emulator alternatives for mobile development on Linux${NC}"
+                ;;
+            "Cygwin"|"MinGw"|"Git")
+                echo -e "${BLUE}  💡 Consider using Windows Subsystem for Android (WSA) or Android Studio emulators${NC}"
+                ;;
+        esac
+        log_with_timestamp "iOS Simulator MCP server skipped: requires macOS, current platform is $MACHINE"
+        INSTALL_RESULTS["$name"]="PLATFORM_INCOMPATIBLE"
+        # Don't count as failure - this is expected behavior on non-Mac platforms
+        return 0
+    fi
+    
+    # Check for Xcode command line tools
+    echo -e "${BLUE}  🔍 Checking for Xcode command line tools...${NC}"
+    if ! command -v xcrun >/dev/null 2>&1; then
+        echo -e "${RED}  ❌ xcrun not found - Xcode command line tools required${NC}"
+        echo -e "${YELLOW}  💡 Install with: xcode-select --install${NC}"
+        log_with_timestamp "xcrun not found, Xcode command line tools required for iOS Simulator MCP"
+        INSTALL_RESULTS["$name"]="DEPENDENCY_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    else
+        echo -e "${GREEN}  ✅ Xcode command line tools found${NC}"
+    fi
+    
+    # Check if iOS Simulator is available
+    echo -e "${BLUE}  🔍 Checking iOS Simulator availability...${NC}"
+    if ! xcrun simctl list devices >/dev/null 2>&1; then
+        echo -e "${YELLOW}  ⚠️ iOS Simulator may not be available or configured${NC}"
+        echo -e "${YELLOW}  💡 Install Xcode from App Store for full iOS Simulator support${NC}"
+    else
+        echo -e "${GREEN}  ✅ iOS Simulator is available${NC}"
+    fi
+    
+    # Install ios-simulator-mcp using git since it's not on npm
+    echo -e "${BLUE}  📦 Installing ios-simulator-mcp from GitHub repository...${NC}"
+    
+    # Create temporary directory for installation
+    TEMP_DIR=$(mktemp -d)
+    echo -e "${BLUE}  📁 Using temporary directory: $TEMP_DIR${NC}"
+    
+    # Clone the repository with security improvements
+    echo -e "${BLUE}  🔄 Cloning ios-simulator-mcp repository...${NC}"
+    if [ -n "$TIMEOUT_CMD" ]; then
+        clone_cmd="$TIMEOUT_CMD 60 git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git \"$TEMP_DIR/ios-simulator-mcp\""
+    else
+        clone_cmd="git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git \"$TEMP_DIR/ios-simulator-mcp\""
+    fi
+    
+    if ! eval "$clone_cmd" >/dev/null 2>&1; then
+        echo -e "${RED}  ❌ Failed to clone ios-simulator-mcp repository${NC}"
+        log_with_timestamp "Failed to clone ios-simulator-mcp repository"
+        rm -rf "$TEMP_DIR"
+        INSTALL_RESULTS["$name"]="CLONE_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+    
+    # Verify repository integrity
+    if [ ! -f "$TEMP_DIR/ios-simulator-mcp/package.json" ]; then
+        echo -e "${RED}  ❌ Repository integrity check failed - missing package.json${NC}"
+        log_with_timestamp "Repository integrity check failed"
+        rm -rf "$TEMP_DIR"
+        INSTALL_RESULTS["$name"]="INTEGRITY_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+    
+    # Install dependencies in the cloned repository
+    echo -e "${BLUE}  📦 Installing dependencies...${NC}"
+    if ! npm --prefix "$TEMP_DIR/ios-simulator-mcp" install >/dev/null 2>&1; then
+        echo -e "${RED}  ❌ Failed to install dependencies${NC}"
+        log_with_timestamp "Failed to install dependencies for ios-simulator-mcp"
+        rm -rf "$TEMP_DIR"
+        INSTALL_RESULTS["$name"]="INSTALL_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+    
+    # Move to permanent location in ~/.mcp/servers/
+    # Use robust home directory detection for cross-platform compatibility
+    if [ -n "$HOME" ]; then
+        MCP_SERVERS_DIR="$HOME/.mcp/servers"
+    elif [ -n "$USERPROFILE" ]; then
+        # Windows fallback
+        MCP_SERVERS_DIR="$USERPROFILE/.mcp/servers"
+    else
+        # Last resort fallback
+        MCP_SERVERS_DIR="/tmp/.mcp/servers"
+        echo -e "${YELLOW}  ⚠️ Using temporary directory for MCP servers: $MCP_SERVERS_DIR${NC}"
+    fi
+    mkdir -p "$MCP_SERVERS_DIR"
+    IOS_MCP_PATH="$MCP_SERVERS_DIR/ios-simulator-mcp"
+    
+    # Remove existing installation if present
+    if [ -d "$IOS_MCP_PATH" ]; then
+        # Validate path before removal for safety
+        case "$IOS_MCP_PATH" in
+            */\.mcp/servers/ios-simulator-mcp)
+                echo -e "${BLUE}  🧹 Removing existing installation...${NC}"
+                rm -rf "$IOS_MCP_PATH"
+                ;;
+            *)
+                echo -e "${RED}❌ Error: Unexpected installation path '$IOS_MCP_PATH', aborting for safety${NC}"
+                return 1
+                ;;
+        esac
+    fi
+    
+    # Move to permanent location
+    echo -e "${BLUE}  📦 Installing to permanent location: $IOS_MCP_PATH${NC}"
+    if ! mv "$TEMP_DIR/ios-simulator-mcp" "$IOS_MCP_PATH"; then
+        echo -e "${RED}  ❌ Failed to move to permanent location${NC}"
+        log_with_timestamp "Failed to move ios-simulator-mcp to permanent location"
+        rm -rf "$TEMP_DIR"
+        INSTALL_RESULTS["$name"]="INSTALL_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+    
+    # Cleanup temporary directory
+    rm -rf "$TEMP_DIR"
+    
+    # Add server to Claude MCP configuration
+    echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to Claude configuration...${NC}"
+    
+    # Remove existing server if present
+    claude mcp remove "$name" >/dev/null 2>&1 || true
+    
+    # Add server using node to run the index.js file
+    add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" 2>&1)
+    add_exit_code=$?
+    
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
+        echo -e "${BLUE}  📋 Server info:${NC}"
+        echo -e "     • Path: $IOS_MCP_PATH/index.js"
+        echo -e "     • Platform: macOS with iOS Simulator support"
+        echo -e "     • Features: iOS app control, simulator management, screenshot capture"
+        echo -e "     • Repository: https://github.com/joshuayoes/ios-simulator-mcp"
+        log_with_timestamp "Successfully added iOS Simulator MCP server"
+        INSTALL_RESULTS["$name"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add iOS Simulator MCP server to Claude configuration${NC}"
+        log_error_details "claude mcp add ios-simulator-mcp" "$name" "$add_output"
+        echo -e "${RED}  📋 Add error: $add_output${NC}"
+        INSTALL_RESULTS["$name"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
 }
 
 # Core MCP Servers Installation
@@ -714,6 +952,15 @@ fi
 
 display_step "Installing Batch 2 Servers (Parallel)..."
 install_batch_parallel BATCH_2 "Batch 2"
+
+display_step "Installing iOS Simulator MCP Server..."
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+install_ios_simulator_mcp
+
+display_step "Installing Batch 3 Servers (Development Tools)..."
+# Note: Batch 3 currently only contains iOS Simulator MCP which has special handling above
+# This step is kept for future expansion of development tools
+echo -e "${BLUE}📱 Batch 3 (Development Tools) completed with custom installations${NC}"
 
 display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
@@ -982,6 +1229,12 @@ for server in "${!INSTALL_RESULTS[@]}"; do
             ;;
         "DEPENDENCY_MISSING")
             echo -e "${RED}  ❌ $server: Required dependency not found${NC}"
+            ;;
+        "PLATFORM_INCOMPATIBLE")
+            echo -e "${YELLOW}  ⚠️ $server: Platform incompatible (requires different OS)${NC}"
+            ;;
+        "CLONE_FAILED")
+            echo -e "${RED}  ❌ $server: Failed to clone repository${NC}"
             ;;
     esac
 done
