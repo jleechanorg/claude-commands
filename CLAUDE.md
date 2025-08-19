@@ -386,10 +386,10 @@ Genesis Coder, Prime Mover,
 4. **File Paths**: Always absolute paths
 5. **Gemini SDK**: `from google import genai` (NOT `google.generativeai`)
 6. **Path Conventions**: `roadmap/` = `/roadmap/` from project root | ✅ **USE ~ NOT /home/jleechan**: Always use `~` instead of `/home/jleechan` in paths for portability
-7. 🚨 **DATE INTERPRETATION**: Environment shows "Today's date: 2025-08-12" meaning August 12th, 2025
-   - Format is YYYY-MM-DD where MM is month number (01=Jan, 02=Feb, 07=July, 08=August, 09=September)
-   - **Current date**: August 12, 2025 - Use this for "latest", "recent", "current" research queries
-   - **Research context**: When searching for "2024-2025" info, we're in late 2025 looking at recent developments
+7. 🚨 **DATE INTERPRETATION**: Run `date "+%Y-%m-%d"` to get the current date
+   - Format: YYYY-MM-DD
+   - Human-readable: `date "+%B %d, %Y"`
+   - Always derive date at runtime by executing these commands (no hardcoded dates)
 8. 🚨 **Branch Protocol**: → See "Git Workflow" section
 9. 🚨 **TOOL EXPLANATION VS EXECUTION**: ⚠️ MANDATORY distinction
    - ✅ When user asks "does X tool do Y?", clearly state if you're explaining or executing
