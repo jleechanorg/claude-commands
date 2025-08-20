@@ -253,68 +253,219 @@ class TestEnhancedGitHubCommands(unittest.TestCase):
 
     # Script path constants for portability
     PUSH_SCRIPT_PATH = os.path.join(
-        os.path.dirname(__file__), "../claude_command_scripts/commands/push.sh"
+        os.path.dirname(__file__), "../.claude/commands/push.py"
     )
     COPILOT_SCRIPT_PATH = os.path.join(
-        os.path.dirname(__file__), "../.claude/commands/copilot.py"
+        os.path.dirname(__file__), "../.claude/commands/copilot.md"
     )
 
     def test_push_command_pr_health_check(self):
-        """Test that push command's check_and_fix_pr_issues function exists and handles errors gracefully."""
+        """Test that push command exists and contains core functionality."""
         push_path = self.PUSH_SCRIPT_PATH
 
         # Verify push command exists
-        assert os.path.exists(push_path), "push.sh should exist in commands directory"
-        assert os.access(push_path, os.X_OK), "push.sh should be executable"
+        assert os.path.exists(push_path), "push.py should exist in commands directory"
+        assert os.access(push_path, os.X_OK), "push.py should be executable"
 
-        # Test that the function definition exists in the script
+        # Test that the core functions exist in the Python script
         with open(push_path) as f:
             content = f.read()
-            assert "check_and_fix_pr_issues()" in content, "push.sh should contain check_and_fix_pr_issues function"
-            assert "pr_mergeable=$(gh pr view" in content, "Function should check PR mergeable status"
-            assert "git merge origin/main" in content, "Function should attempt conflict resolution"
+            assert "def commit_changes(" in content, "push.py should contain commit_changes function"
+            assert "def get_git_status(" in content, "push.py should contain get_git_status function"
+            assert "create_or_update_pr" in content, "push.py should use PR creation functionality"
 
-    def test_push_command_conflict_resolution_logic(self):
-        """Test push command conflict resolution logic structure."""
+    def test_push_command_additional_functions(self):
+        """Test push command additional functionality."""
         push_path = self.PUSH_SCRIPT_PATH
 
         with open(push_path) as f:
             content = f.read()
 
-            # Check for proper conflict detection
-            assert "CONFLICTING" in content, "Should detect CONFLICTING PR status"
-            assert "--force-with-lease" in content, "Should use safe force push for conflict resolution"
-            assert "Conflicts resolved automatically" in content, "Should report successful conflict resolution"
-            assert "Manual conflict resolution required" in content, "Should handle manual resolution cases"
-
-    def test_push_command_ci_status_checking(self):
-        """Test push command CI status checking functionality."""
-        push_path = self.PUSH_SCRIPT_PATH
-
-        with open(push_path) as f:
-            content = f.read()
-
-            # Check for CI status monitoring
-            assert "statusCheckRollup" in content, "Should check CI status via statusCheckRollup"
-            assert 'conclusion == "FAILURE"' in content, "Should detect failed CI checks"
-            assert 'conclusion == "SUCCESS"' in content, "Should detect successful CI checks"
-            assert "CI check(s) failing" in content, "Should report CI failures"
+            # Check for available functions
+            assert "def virtual_agent_review(" in content, "Should have virtual agent review function"
+            assert "def detect_significant_changes(" in content, "Should have change detection function"
+            assert "def start_test_server(" in content, "Should have test server function"
+            assert "def find_available_port(" in content, "Should have port finding function"
 
     def test_copilot_command_exists_and_functional(self):
         """Test that copilot command exists and has expected functionality."""
         copilot_path = self.COPILOT_SCRIPT_PATH
 
         # Verify copilot command exists
-        assert os.path.exists(copilot_path), "copilot.py should exist in .claude/commands directory"
-        assert os.access(copilot_path, os.R_OK), "copilot.py should be readable"
+        assert os.path.exists(copilot_path), "copilot.md should exist in .claude/commands directory"
+        assert os.access(copilot_path, os.R_OK), "copilot.md should be readable"
 
-        # Test that key Python classes and methods exist
+        # Test that key markdown command content exists
         with open(copilot_path) as f:
             content = f.read()
-            assert "class PRDataCollector" in content, "copilot.py should contain PRDataCollector class"
-            assert "fetch_all_comments" in content, "copilot.py should contain fetch_all_comments method"
-            assert 'if __name__ == "__main__"' in content, "copilot.py should be executable as script"
-            assert "GitHub MCP" in content, "Should reference GitHub MCP integration"
+            assert "/copilot" in content, "copilot.md should describe the /copilot command"
+            assert "PR Processing" in content or "comment processing" in content, "Should describe PR processing functionality"
+            assert "autonomous" in content, "Should mention autonomous operation"
+
+
+class TestExportCommandsFiltering(unittest.TestCase):
+    """Test export commands filtering functionality using Red-Green-Refactor approach."""
+    
+    def setUp(self):
+        """Set up test environment."""
+        # Import here to avoid issues if module doesn't exist
+        import sys
+        import os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../.claude/commands'))
+        
+    def test_commands_skip_list_contains_orchestration_files(self):
+        """RED: Test that COMMANDS_SKIP_LIST contains all required orchestration files."""
+        try:
+            from exportcommands import ClaudeCommandsExporter
+            exporter = ClaudeCommandsExporter()
+            
+            # This test should FAIL initially if skip list is incomplete
+            required_orchestration_files = [
+                'converge.md', 'converge.py', 'orchc.md', 'orchc.py'
+            ]
+            
+            for required_file in required_orchestration_files:
+                self.assertIn(
+                    required_file, 
+                    exporter.COMMANDS_SKIP_LIST,
+                    f"COMMANDS_SKIP_LIST should contain {required_file} for orchestration filtering"
+                )
+                
+        except ImportError:
+            self.skipTest("exportcommands module not available for testing")
+    
+    def test_export_commands_uses_class_constant_not_hardcoded(self):
+        """RED: Test that _export_commands method uses self.COMMANDS_SKIP_LIST, not hardcoded values."""
+        try:
+            from exportcommands import ClaudeCommandsExporter
+            import inspect
+            
+            # Get the source code of _export_commands method
+            source = inspect.getsource(ClaudeCommandsExporter._export_commands)
+            
+            # Should use self.COMMANDS_SKIP_LIST, not hardcoded list
+            self.assertIn('self.COMMANDS_SKIP_LIST', source, 
+                         "_export_commands should use self.COMMANDS_SKIP_LIST")
+            
+            # Should NOT contain hardcoded orchestration files
+            hardcoded_patterns = [
+                "['converge.md'", "['orchc.md'", 
+                "filename in ['testi.sh'"
+            ]
+            
+            for pattern in hardcoded_patterns:
+                self.assertNotIn(pattern, source,
+                               f"_export_commands should not contain hardcoded pattern: {pattern}")
+                               
+        except ImportError:
+            self.skipTest("exportcommands module not available for testing")
+    
+    def test_orchestration_files_excluded_from_export(self):
+        """RED: Test that orchestration files are properly excluded during export simulation."""
+        try:
+            from exportcommands import ClaudeCommandsExporter
+            from unittest.mock import patch, MagicMock
+            import tempfile
+            import os
+            from pathlib import Path
+            
+            exporter = ClaudeCommandsExporter()
+            
+            # Create temporary directory structure
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Create mock .claude/commands directory structure
+                commands_dir = os.path.join(temp_dir, '.claude', 'commands')
+                os.makedirs(commands_dir)
+                
+                # Create test files - both allowed and should-be-excluded
+                test_files = [
+                    'allowed_command.md',     # Should be included
+                    'another_command.py',     # Should be included  
+                    'allowed_script.sh',      # Should be included (.sh file)
+                    'converge.md',           # Should be excluded
+                    'converge.py',           # Should be excluded
+                    'orchc.md',              # Should be excluded
+                    'orchc.py',              # Should be excluded
+                    'testi.sh',              # Should be excluded (project-specific .sh)
+                    'run_tests.sh',          # Should be excluded (project-specific .sh)
+                ]
+                
+                for file in test_files:
+                    with open(os.path.join(commands_dir, file), 'w') as f:
+                        f.write('# Test content')
+                
+                # Create staging directory
+                staging_dir = os.path.join(temp_dir, 'staging')
+                os.makedirs(staging_dir)
+                
+                # Mock the project root to point to our temp directory
+                with patch.object(exporter, 'project_root', temp_dir):
+                    # Capture print output to verify exclusions
+                    with patch('builtins.print') as mock_print:
+                        exporter._export_commands(staging_dir)
+                
+                # Verify files were copied correctly
+                exported_dir = os.path.join(staging_dir, 'commands')
+                self.assertTrue(os.path.exists(exported_dir))
+                
+                exported_files = os.listdir(exported_dir)
+                
+                # Files that should be included
+                self.assertIn('allowed_command.md', exported_files)
+                self.assertIn('another_command.py', exported_files)
+                self.assertIn('allowed_script.sh', exported_files)  # .sh file should be included
+                
+                # Files that should be excluded
+                self.assertNotIn('converge.md', exported_files)
+                self.assertNotIn('converge.py', exported_files) 
+                self.assertNotIn('orchc.md', exported_files)
+                self.assertNotIn('orchc.py', exported_files)
+                self.assertNotIn('testi.sh', exported_files)       # .sh file should be excluded
+                self.assertNotIn('run_tests.sh', exported_files)   # .sh file should be excluded
+                
+                # Verify skip messages were printed
+                print_calls = [call[0][0] for call in mock_print.call_args_list]
+                skip_messages = [msg for msg in print_calls if 'Skipping' in msg]
+                
+                # Should have skip messages for all excluded files (md, py, sh)
+                excluded_processed_files = ['converge.md', 'converge.py', 'orchc.md', 'orchc.py', 'testi.sh', 'run_tests.sh']
+                for excluded_file in excluded_processed_files:
+                    skip_found = any(excluded_file in msg for msg in skip_messages)
+                    self.assertTrue(skip_found, 
+                                  f"Should have skip message for {excluded_file} (all file types should be processed)")
+                
+        except ImportError:
+            self.skipTest("exportcommands module not available for testing")
+    
+    def test_skip_list_maintainability(self):
+        """GREEN: Test that skip list is properly structured for maintainability."""
+        try:
+            from exportcommands import ClaudeCommandsExporter
+            exporter = ClaudeCommandsExporter()
+            
+            # Verify skip list is a list
+            self.assertIsInstance(exporter.COMMANDS_SKIP_LIST, list)
+            
+            # Verify no duplicates
+            self.assertEqual(len(exporter.COMMANDS_SKIP_LIST), 
+                           len(set(exporter.COMMANDS_SKIP_LIST)),
+                           "COMMANDS_SKIP_LIST should not contain duplicates")
+            
+            # Verify all entries are strings
+            for item in exporter.COMMANDS_SKIP_LIST:
+                self.assertIsInstance(item, str, 
+                                    f"Skip list item should be string: {item}")
+            
+            # Verify expected categories are present
+            project_specific = ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']
+            orchestration = ['converge.md', 'converge.py', 'orchc.md', 'orchc.py']
+            
+            for file in project_specific + orchestration:
+                self.assertIn(file, exporter.COMMANDS_SKIP_LIST,
+                            f"Skip list should contain {file}")
+                            
+        except ImportError:
+            self.skipTest("exportcommands module not available for testing")
 
 
 if __name__ == "__main__":

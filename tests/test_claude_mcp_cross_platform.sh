@@ -165,10 +165,13 @@ test_timeout_command_detection() {
     
     assert_equals "timeout" "$TIMEOUT_CMD" "(standard timeout)"
     
-    # Test 2: GNU timeout (gtimeout)
+    # Test 2: GNU timeout (gtimeout) - isolate PATH to only include test directory
     rm -f "$TEST_DIR/bin/timeout"
     echo '#!/bin/bash\necho "gtimeout"' > "$TEST_DIR/bin/gtimeout"
     chmod +x "$TEST_DIR/bin/gtimeout"
+    
+    # Completely isolate PATH to only test directory
+    export PATH="$TEST_DIR/bin"
     
     TIMEOUT_CMD=""
     if command -v timeout >/dev/null 2>&1; then

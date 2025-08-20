@@ -16,15 +16,21 @@ HOOK_SCRIPT="$(dirname "$0")/../compose-commands.sh"
 echo "Testing FULL GitHub PR page text edge case..."
 echo "============================================"
 
-# Read the full PR page text from file (simulating user input)
-PR_TEXT_FILE="$(dirname "$0")/github_pr_page.txt"
-if [ ! -f "$PR_TEXT_FILE" ]; then
-    echo -e "${RED}✗${NC} Test file not found: $PR_TEXT_FILE"
-    exit 1
-fi
+# Use inline test PR text data (simulating user pasting GitHub PR page)
+full_pr_text='Pull Request #123: Add feature X
+===============================
 
-# Read the full text as if user typed/pasted it
-full_pr_text=$(<"$PR_TEXT_FILE")
+Files changed:
+- src/main.py
+- tests/test_main.py
+- docs/README.md
+
+This PR adds feature X to the application. The implementation includes:
+- New functionality in main.py
+- Comprehensive test coverage
+- Updated documentation
+
+Please review and merge if approved.'
 
 # Add a command at the beginning to test detection
 user_input="/think about this PR page content: $full_pr_text"

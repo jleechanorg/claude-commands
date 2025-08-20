@@ -48,6 +48,12 @@ class ClaudeCommandsExporter:
         # Export configuration - all directories will be exported automatically
         self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'infrastructure-scripts', 'orchestration']
         
+        # Commands to skip during export (project-specific and user-specified exclusions)
+        self.COMMANDS_SKIP_LIST = [
+            'testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh',  # project-specific
+            'converge.md', 'converge.py', 'orchc.md', 'orchc.py'           # orchestration commands to exclude
+        ]
+        
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
@@ -835,25 +841,56 @@ This is a filtered reference export from a working Claude Code project. Commands
         print("✅ Export branch created")
 
     def _copy_to_repository(self):
-        """Copy exported content to repository with differential sync (removes obsolete files)"""
-        print("📋 Copying exported content with differential sync...")
+        """Copy exported content to repository with proper .claude/ structure"""
+        print("📋 Copying exported content to proper .claude/ directory structure...")
 
-        # 🚨 NEW: DIFFERENTIAL SYNC - Removes files that no longer exist in source
-        print("🔍 Performing differential sync to remove obsolete files...")
-        sync_files_differential(self.project_root, self.repo_dir)
-        print("✅ Obsolete file cleanup completed")
+        # 🚨 FIXED: Copy to proper .claude/ directories instead of repository root
+        # Create .claude/ directory structure in target repository
+        claude_dir = os.path.join(self.repo_dir, '.claude')
+        os.makedirs(claude_dir, exist_ok=True)
 
-        # Create target directories if they don't exist
-        dirs_to_ensure = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
-        for dir_name in dirs_to_ensure:
-            dir_path = os.path.join(self.repo_dir, dir_name)
-            os.makedirs(dir_path, exist_ok=True)
+        # Create target directories with proper .claude/ structure
+        dirs_mapping = {
+            'commands': os.path.join(claude_dir, 'commands'),
+            'hooks': os.path.join(claude_dir, 'hooks'), 
+            'agents': os.path.join(claude_dir, 'agents'),
+            'orchestration': 'orchestration',  # Goes to repo root
+            'infrastructure-scripts': None     # Goes to repo root individually
+        }
 
-        # Copy new/updated content
+        # Create the .claude/ subdirectories
+        for local_name, target_path in dirs_mapping.items():
+            if target_path and target_path.startswith(claude_dir):
+                os.makedirs(target_path, exist_ok=True)
+
+        # Copy content with proper directory mapping
         staging_dir = os.path.join(self.export_dir, 'staging')
         for item in os.listdir(staging_dir):
             src = os.path.join(staging_dir, item)
-            dst = os.path.join(self.repo_dir, item)
+            
+            # Map to correct target location
+            if item in dirs_mapping:
+                target_path = dirs_mapping[item]
+                if target_path is None:
+                    # Handle infrastructure-scripts specially - copy individual files to repo root
+                    if item == 'infrastructure-scripts' and os.path.isdir(src):
+                        for script_file in os.listdir(src):
+                            script_src = os.path.join(src, script_file)
+                            script_dst = os.path.join(self.repo_dir, script_file)
+                            if os.path.isfile(script_src):
+                                shutil.copy2(script_src, script_dst)
+                                print(f"   • Added/Updated: {script_file}")
+                    continue
+                elif target_path.startswith(claude_dir):
+                    # Copy to .claude/ subdirectory
+                    dst = target_path
+                else:
+                    # Copy to repo root (for orchestration)
+                    dst = os.path.join(self.repo_dir, item)
+            else:
+                # Default: copy to repo root
+                dst = os.path.join(self.repo_dir, item)
+
             if os.path.isdir(src):
                 # Copy directory contents, preserving existing files
                 self._copy_directory_additive(src, dst)
@@ -864,7 +901,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Copy README (this can overwrite)
         shutil.copy2(os.path.join(self.export_dir, 'README.md'), self.repo_dir)
 
-        print("✅ Content copied additively - existing commands preserved")
+        print("✅ Content copied to proper .claude/ directory structure")
 
     def _copy_directory_additive(self, src_dir, dst_dir):
         """Copy directory contents while preserving existing files"""
