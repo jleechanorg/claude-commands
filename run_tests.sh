@@ -628,6 +628,14 @@ else
             test_files+=("$file")
         done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
     fi
+
+    # Include scripts/tests directory if it exists (CRDT backup tests)
+    if [ -d "scripts/tests" ]; then
+        print_status "Including scripts/tests..."
+        while IFS= read -r -d '' file; do
+            test_files+=("$file")
+        done < <(find scripts/tests -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
 fi
 
 # Run cerebras command tests if they exist

@@ -64,6 +64,22 @@ Genesis Coder, Prime Mover,
 - ✅ JUSTIFY: Why editing existing files won't suffice
 - 📝 INTEGRATE: How file connects to existing codebase
 
+## 🚨 CRITICAL: FILE PLACEMENT PROTOCOL - ZERO TOLERANCE
+
+**🚨 NEVER CREATE FILES IN PROJECT ROOT**: ⚠️ MANDATORY - Root directory hygiene
+- ❌ **FORBIDDEN**: Creating ANY new .py, .sh, .md files in project root
+- ❌ **FORBIDDEN**: Test files in root - ALL tests go in appropriate test directories
+- ❌ **FORBIDDEN**: Scripts in root - use `scripts/` directory for ALL scripts
+- ✅ **REQUIRED**: Python files → `mvp_site/` or module directories
+- ✅ **REQUIRED**: Shell scripts → `scripts/` directory  
+- ✅ **REQUIRED**: Test files → `mvp_site/tests/` or module test directories
+- ✅ **REQUIRED**: Documentation → `docs/` or module-specific docs
+- **Pattern**: Root = Configuration only (deploy.sh, run_tests.sh, etc.)
+- **Anti-Pattern**: memory_backup_*.sh in root instead of scripts/
+- **Violation Count**: 6+ memory backup scripts incorrectly placed in root
+
+**EXISTING ROOT FILES**: Only established project scripts remain in root for backward compatibility. NO NEW ADDITIONS.
+
 ## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
 
 **EVERY SINGLE RESPONSE MUST END WITH THIS HEADER - NO EXCEPTIONS:**
