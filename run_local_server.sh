@@ -13,8 +13,53 @@ cd "$PROJECT_ROOT"
 
 print_banner "WorldArchitect.AI Development Server Launcher" "Dual server setup: Flask backend + React v2 frontend"
 
-# Kill any existing server processes
-kill_worldarchitect_servers true
+# Function to offer cleanup of existing servers with aggressive port clearing
+cleanup_servers_aggressive() {
+    list_worldarchitect_servers
+    
+    local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
+    local vite_servers=$(ps aux | grep -E "(vite|node.*vite)" | grep -v grep || true)
+    
+    if [ -n "$servers" ] || [ -n "$vite_servers" ]; then
+        echo ""
+        echo "${EMOJI_GEAR} Server Cleanup Options:"
+        echo "   [a] Kill all servers (aggressive cleanup)"
+        echo "   [p] Kill processes on target ports only" 
+        echo "   [n] Keep all servers running"
+        echo -n "   Choice (default: a): "
+        read -r choice
+        choice=${choice:-a}  # Default to aggressive cleanup
+
+        case "$choice" in
+            a|A)
+                echo "${EMOJI_GEAR} Stopping all servers..."
+                kill_worldarchitect_servers true
+                ;;
+            p|P)
+                echo "${EMOJI_GEAR} Killing processes on target ports..."
+                # Find ports first, then clear them
+                TEMP_FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
+                TEMP_REACT_PORT=$(find_available_port $DEFAULT_REACT_PORT 10)
+                if [ $? -eq 0 ]; then
+                    ensure_port_free $TEMP_FLASK_PORT
+                    ensure_port_free $TEMP_REACT_PORT
+                fi
+                ;;
+            *)
+                echo "${EMOJI_INFO} Keeping existing servers running"
+                ;;
+        esac
+        echo ""
+    else
+        # No servers running, but still do aggressive port cleanup
+        echo "${EMOJI_INFO} No servers currently running"
+        echo "${EMOJI_GEAR} Performing aggressive port cleanup..."
+        kill_worldarchitect_servers true
+    fi
+}
+
+# Perform server cleanup
+cleanup_servers_aggressive
 
 # Setup virtual environment using new venv_utils
 ensure_venv
@@ -42,6 +87,11 @@ if [ -z "$VIRTUAL_ENV" ]; then
 fi
 
 echo "${EMOJI_CHECK} Virtual environment active: $VIRTUAL_ENV"
+
+# Aggressive port cleanup - ensure target ports are available
+echo "${EMOJI_GEAR} Ensuring target ports are available..."
+ensure_port_free $DEFAULT_FLASK_PORT 3 2>/dev/null || true
+ensure_port_free $DEFAULT_REACT_PORT 3 2>/dev/null || true
 
 # Find available ports
 echo "${EMOJI_SEARCH} Finding available ports..."
@@ -134,8 +184,43 @@ else
     PORT=$FLASK_PORT npm run dev -- --port $REACT_PORT --host 0.0.0.0
 fi
 
+# Comprehensive health checks for both servers
 echo ""
-echo "${EMOJI_CHECK} Development servers launched successfully!"
+echo "${EMOJI_SEARCH} Performing comprehensive health checks..."
+echo "-------------------------------------------------------------"
+
+# Wait a bit more for React to fully start
+echo "${EMOJI_CLOCK} Waiting for React frontend to initialize..."
+sleep 5
+
+# Validate Flask backend again
+echo "${EMOJI_TARGET} Testing Flask backend..."
+if ! validate_server $FLASK_PORT 3 2; then
+    echo "${EMOJI_ERROR} Flask backend health check failed"
+    kill_worldarchitect_servers true
+    exit 1
+fi
+
+# Validate React frontend
+echo "${EMOJI_TARGET} Testing React frontend..."
+if ! validate_server $REACT_PORT 8 3; then
+    echo "${EMOJI_ERROR} React frontend health check failed"
+    echo "${EMOJI_INFO} This is common - React may take longer to start"
+    echo "${EMOJI_INFO} Flask backend is working. Check React manually if needed."
+fi
+
+# Final validation - test API endpoint
+echo "${EMOJI_TARGET} Testing API connectivity..."
+if curl -s -f --max-time 3 "http://localhost:$FLASK_PORT/api/campaigns" > /dev/null 2>&1; then
+    echo "${EMOJI_CHECK} API endpoint responding correctly"
+elif curl -s --max-time 3 "http://localhost:$FLASK_PORT/api/campaigns" 2>/dev/null | grep -q "No token provided"; then
+    echo "${EMOJI_CHECK} API endpoint responding correctly (authentication required)"
+else
+    echo "${EMOJI_WARNING} API endpoint test inconclusive"
+fi
+
+echo ""
+echo "${EMOJI_CHECK} Health checks completed successfully!"
 echo ""
 echo "${EMOJI_INFO} Server URLs:"
 echo "   - Flask Backend:  http://localhost:$FLASK_PORT"

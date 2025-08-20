@@ -19,12 +19,13 @@ Usage:
 """
 
 import asyncio
+import concurrent.futures
 import json
 import traceback
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+from typing import Any, Dict, Union
 
 import logging_util
 import requests
@@ -52,7 +53,7 @@ class MCPError:
 
     code: int
     message: str
-    data: dict[str, Any] | None = None
+    data: Union[Dict[str, Any], None] = None
 
 
 class MCPClientError(Exception):
@@ -357,8 +358,6 @@ class MCPClient:
             return asyncio.run(self.call_tool(tool_name, arguments))
         else:
             # Already in an event loop, use thread pool to avoid nested loops
-            import concurrent.futures
-
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(
                     asyncio.run, self.call_tool(tool_name, arguments)
@@ -383,8 +382,6 @@ class MCPClient:
             return asyncio.run(self.get_resource(uri))
         else:
             # Already in an event loop, use thread pool to avoid nested loops
-            import concurrent.futures
-
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future = executor.submit(asyncio.run, self.get_resource(uri))
                 return future.result()
@@ -448,7 +445,13 @@ def http_to_mcp_request(flask_request: Request, tool_name: str) -> dict[str, Any
     arguments["_http_method"] = flask_request.method
     arguments["_http_path"] = flask_request.path
 
-    logger.debug(f"Converted Flask request to MCP arguments: {arguments}")
+    # Create safe version for logging (mask sensitive headers)
+    safe_arguments = arguments.copy()
+    if "_http_headers" in safe_arguments and "authorization" in safe_arguments["_http_headers"]:
+        safe_arguments["_http_headers"] = safe_arguments["_http_headers"].copy()
+        safe_arguments["_http_headers"]["authorization"] = "***MASKED***"
+    
+    logger.debug(f"Converted Flask request to MCP arguments: {safe_arguments}")
 
     return arguments
 
@@ -508,7 +511,7 @@ def mcp_to_http_response(mcp_result: Any, status_code: int = 200) -> Response:
         )
 
 
-def handle_mcp_errors(error: MCPClientError | Exception) -> Response:
+def handle_mcp_errors(error: Union[MCPClientError, Exception]) -> Response:
     """
     Map MCP errors to appropriate HTTP status codes and responses
 

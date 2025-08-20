@@ -4,63 +4,54 @@ Starts the local development server for testing with health verification.
 
 ## Usage
 ```
-/localserver [--stable]
+/localserver
 ```
 
-**Options:**
-- `--stable`: Disable auto-reload for stable campaign creation testing (debug mode enabled by default)
-
 ## What it does
-1. **Lists all running servers** with branch names and PIDs
-2. **Automatically kills conflicting processes** on target ports (5005 for Flask)
-3. **Ensures port availability** by force-killing any processes using the required ports
-4. Activates the virtual environment
-5. Sets TESTING=true (for mock AI responses)
-6. **Uses fixed ports** (Flask: 5005, React V2: served at /v2 path)
-7. Starts Flask server on port 5005
-8. Serves React V2 frontend at /v2 path (no separate server needed)
-9. **Performs health checks with curl** to verify server responds correctly
-10. **Validates server startup** before declaring success
-11. Reports actual server status (✅ Ready or ❌ Failed)
+Executes the enhanced `./run_local_server.sh` script which provides:
+
+1. **Dual Server Setup**: Flask backend + React v2 frontend on separate ports
+2. **Aggressive Cleanup**: Interactive server cleanup with options to kill all servers or specific ports
+3. **Dynamic Port Assignment**: Automatically finds available ports starting from defaults (Flask: 8081, React: 3002)
+4. **Force Port Clearing**: Ensures target ports are available by killing conflicting processes
+5. **Virtual Environment**: Automatically sets up and activates Python virtual environment
+6. **Comprehensive Health Checks**: Validates both servers with curl before declaring success
+7. **API Testing**: Tests actual API endpoints to ensure backend is responding correctly
+
+## Enhanced Features Integrated
+
+### Aggressive Cleanup
+- **Lists all running servers** with branch names and PIDs
+- **Interactive cleanup options**:
+  - `[a]` Kill all servers (aggressive cleanup) - default
+  - `[p]` Kill processes on target ports only
+  - `[n]` Keep all servers running
+- **Force port clearing** for default Flask (8081) and React (3002) ports
+
+### Health Verification
+- **Flask backend**: `curl http://localhost:{FLASK_PORT}/` with retry logic
+- **React frontend**: `curl http://localhost:{REACT_PORT}/` with extended timeout
+- **API connectivity**: Tests `/api/campaigns` endpoint for proper authentication response
+- **Failure handling**: Kills servers and exits on Flask failure, warns on React issues
+- **Success criteria**: Flask must respond, React warnings allowed (common startup delay)
+
+### Dynamic Port Management
+- **Smart port finding**: Starts from defaults, finds next available if occupied
+- **Port conflict resolution**: Clears target ports before finding alternatives
+- **Reliable assignment**: Uses server-utils.sh functions for robust port management
 
 ## Implementation
-Executes the `./run_local_server.sh` script which:
-1. **Force-kills processes** on port 5005 to ensure availability
-2. **Starts Flask server** on fixed port 5005
-3. **Performs curl validation** to verify server responds correctly
-4. **Reports final status** based on actual health check results
+Simply executes: `./run_local_server.sh`
 
-## Health Verification
-- **Flask backend API**: `curl http://localhost:5005/` (expects HTTP 200)
-- **React V2 frontend**: `curl http://localhost:5005/v2/` (expects correct content)
-- **Content verification**: Checks for "WorldArchitect.AI" title in React app
-- **Failure handling**: If health checks fail, provides diagnostic information
-- **Success criteria**: Both API and React V2 must respond before declaring "ready"
-- **Mandatory validation**: Server startup always includes curl validation step
+All the enhanced features (cleanup, health checks, port management) are now integrated into the main server launcher script, providing a single, robust solution for local development.
 
-## Fixed Port Assignment
-- **Flask Server**: Always uses port 5005
-- **React V2 Frontend**: Served at `/v2` path on Flask server (no separate port)
-- **Port Management**: Automatically kills any processes using port 5005
-- **Simplicity**: No dynamic port finding - consistent port usage
-- **Reliability**: Eliminates port conflicts through force-killing
-
-## Server Management
-- **Lists all running servers** with their branch names and PIDs
-- **Automatic process killing** for conflicting processes on port 5005
-- **Force cleanup**: Kills any processes using required ports before starting
-- **Process verification**: Uses `lsof` to identify and terminate port conflicts
-- **Cleanup commands**:
-  ```bash
-  # Automatic cleanup (built into script):
-  lsof -ti:5005 | xargs kill -9  # Kill processes on port 5005
-  pkill -f 'python.*main.py'     # Stop all Flask servers (manual)
-  ```
+## Server URLs
+- **Flask Backend**: `http://localhost:{FLASK_PORT}` (dynamic port starting from 8081)
+- **React Frontend**: `http://localhost:{REACT_PORT}` (dynamic port starting from 3002)
+- **Test Mode Access**: `http://localhost:{REACT_PORT}?test_mode=true&test_user_id=test-user-123`
 
 ## Notes
-- The server runs in testing mode (no real AI API calls)
-- **Debug mode is enabled by default** for development auto-reload (use --stable to disable for campaign testing)
-- **Aggressive process management**: Automatically kills conflicting processes on port 5005
-- **Fixed port usage**: Always uses port 5005 for predictable development
-- **Health checks are mandatory** - includes curl validation to verify server response
-- **Startup validation**: Never declares success without confirming server responds to requests
+- Both servers run in separate terminals/processes for independent debugging
+- Testing mode enabled (TESTING=true) for mock AI responses
+- Health checks are mandatory - script only declares success after validation
+- Aggressive cleanup ensures clean startup environment

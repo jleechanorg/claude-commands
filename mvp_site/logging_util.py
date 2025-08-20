@@ -8,7 +8,7 @@ that preserve logger context.
 import logging
 import os
 import subprocess
-from typing import Any
+from typing import Any, Union, Optional
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -78,7 +78,7 @@ class LoggingUtil:
 
     @staticmethod
     def error(
-        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
+        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
     ) -> None:
         """
         Log an error message with fire and red dot emojis.
@@ -97,7 +97,7 @@ class LoggingUtil:
 
     @staticmethod
     def warning(
-        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
+        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
     ) -> None:
         """
         Log a warning message with warning emoji.
@@ -185,7 +185,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: str | None = None) -> logging.Logger:
+    def getLogger(name: Optional[str] = None) -> logging.Logger:
         """
         Get a logger instance.
 
@@ -250,6 +250,6 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: str | None = None) -> logging.Logger:
+def getLogger(name: Optional[str] = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)

@@ -7,7 +7,7 @@ protocol definitions for better type safety.
 """
 
 from datetime import datetime
-from typing import Any, Literal, Protocol, TypedDict, Union
+from typing import Any, Dict, List, Literal, Protocol, TypedDict, Union
 
 
 # Firebase/Firestore data structures
@@ -17,8 +17,8 @@ class CampaignData(TypedDict, total=False):
     name: str
     prompt: str
     narrative: str
-    entities: dict[str, Any]
-    state_updates: list[dict[str, Any]]
+    entities: Dict[str, Any]
+    state_updates: List[Dict[str, Any]]
     started: bool
     created_at: datetime
     updated_at: datetime
@@ -32,9 +32,9 @@ class StateUpdate(TypedDict):
 
     type: str
     key: str
-    value: str | int | float | bool | None
-    description: str | None
-    category: str | None
+    value: Union[str, int, float, bool, None]
+    description: Union[str, None]
+    category: Union[str, None]
 
 
 class EntityData(TypedDict, total=False):
@@ -43,13 +43,13 @@ class EntityData(TypedDict, total=False):
     name: str
     type: str
     description: str
-    level: int | None
-    hp: int | None
-    max_hp: int | None
-    attributes: dict[str, str | int | float]
-    equipment: list[str]
-    spells: list[str]
-    location: str | None
+    level: Union[int, None]
+    hp: Union[int, None]
+    max_hp: Union[int, None]
+    attributes: Dict[str, Union[str, int, float]]
+    equipment: List[str]
+    spells: List[str]
+    location: Union[str, None]
 
 
 class MissionData(TypedDict):
@@ -59,36 +59,36 @@ class MissionData(TypedDict):
     title: str
     description: str
     status: Literal["active", "completed", "failed", "inactive"]
-    objectives: list[str]
-    rewards: list[str] | None
+    objectives: List[str]
+    rewards: Union[List[str], None]
 
 
 class ApiResponse(TypedDict):
     """Standard API response structure."""
 
     success: bool
-    message: str | None
-    data: dict[str, Any] | None
-    error: str | None
+    message: Union[str, None]
+    data: Union[Dict[str, Any], None]
+    error: Union[str, None]
 
 
 class GeminiRequest(TypedDict):
     """Type definition for Gemini API requests."""
 
     prompt: str
-    max_tokens: int | None
-    temperature: float | None
+    max_tokens: Union[int, None]
+    temperature: Union[float, None]
     response_mode: Literal["json", "text"]
-    model: str | None
+    model: Union[str, None]
 
 
 class GeminiResponse(TypedDict):
     """Type definition for Gemini API responses."""
 
     text: str
-    usage: dict[str, int]
+    usage: Dict[str, int]
     model: str
-    finish_reason: str | None
+    finish_reason: Union[str, None]
 
 
 # Type aliases
@@ -99,8 +99,8 @@ SessionId = str
 Timestamp = Union[datetime, float, int]
 
 # JSON-compatible types
-JsonValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
-JsonDict = dict[str, JsonValue]
+JsonValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
+JsonDict = Dict[str, JsonValue]
 
 
 # Protocol definitions for better interface contracts
@@ -109,7 +109,7 @@ class DatabaseService(Protocol):
 
     def get_campaign(
         self, user_id: UserId, campaign_id: CampaignId
-    ) -> CampaignData | None:
+    ) -> Union[CampaignData, None]:
         """Retrieve a campaign by ID."""
         ...
 
