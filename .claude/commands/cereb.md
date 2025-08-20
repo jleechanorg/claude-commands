@@ -1,22 +1,11 @@
 ---
 allowed-tools: Bash(cerebras:*), Read, Edit
-description: Generate large amounts of code using Cerebras
+description: Generate large amounts of code using Cerebras (alias for /cerebras)
 ---
 
-# Cerebras Code Generation
+# Cereb - Cerebras Code Generation Alias
 
-Delegating this task to Cerebras for fast, high-quality code generation.
-
-## Command Aliases
-- `/cerebras` - Primary command name
-- `/qwen` - Legacy alias (for backwards compatibility)
-- `/c` - Short alias
-- `/cereb` - Alternative short alias
-
-## Current Context
-- Working directory: !`pwd`
-- Git status: !`git status --porcelain | head -5`
-- Project structure: !`find . -maxdepth 2 -name "*.py" -o -name "*.js" -o -name "*.md" | head -10`
+This is an alternative short alias for the `/cerebras` command.
 
 ## Task Execution
 !`.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`

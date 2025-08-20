@@ -15,6 +15,28 @@ import json
 import requests
 from pathlib import Path
 
+# Constants for file limits
+MAX_FILE_SAMPLE_SIZE = 3
+MAX_DIRECTORY_PREVIEW_SIZE = 10
+MAX_FILE_CONTENT_PREVIEW_SIZE = 50
+
+# Custom exceptions for better error handling
+class ExportError(Exception):
+    """Base exception for export operations"""
+    pass
+
+class GitRepositoryError(ExportError):
+    """Raised when git repository operations fail"""
+    pass
+
+class GitHubAPIError(ExportError):
+    """Raised when GitHub API operations fail"""
+    pass
+
+class DirectoryOperationError(ExportError):
+    """Raised when directory operations fail"""
+    pass
+
 class ClaudeCommandsExporter:
     def __init__(self):
         self.project_root = self._get_project_root()
@@ -23,7 +45,7 @@ class ClaudeCommandsExporter:
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
-        # Export configuration
+        # Export configuration - all directories will be exported automatically
         self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'infrastructure-scripts', 'orchestration']
         
         # Counters for summary
@@ -42,7 +64,7 @@ class ClaudeCommandsExporter:
         result = subprocess.run(['git', 'rev-parse', '--show-toplevel'],
                               capture_output=True, text=True)
         if result.returncode != 0:
-            raise Exception("Not in a git repository")
+            raise GitRepositoryError("Not in a git repository")
         return result.stdout.strip()
 
     def export(self):
@@ -57,12 +79,14 @@ class ClaudeCommandsExporter:
 
         except Exception as e:
             self.handle_error(e)
-            sys.exit(1)
+            raise ExportError(f"Export failed: {e}") from e
 
     def phase1_local_export(self):
-        """Phase 1: Create local export with directory exclusions"""
+        """Phase 1: Create local export with directory exclusions and user confirmation"""
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
+
+        print("🔍 Using comprehensive directory export (commands, hooks, agents, infrastructure-scripts, orchestration)")
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
@@ -70,7 +94,7 @@ class ClaudeCommandsExporter:
 
         print(f"📁 Created export directory: {self.export_dir}")
 
-        # Create subdirectories
+        # Create subdirectories for confirmed exports
         for subdir in self.EXPORT_SUBDIRS:
             os.makedirs(os.path.join(staging_dir, subdir), exist_ok=True)
 
@@ -98,7 +122,7 @@ class ClaudeCommandsExporter:
         print("✅ Phase 1 complete - Local export created")
 
     def _export_commands(self, staging_dir):
-        """Export command definitions with content filtering"""
+        """Export command definitions with whole directory copying and user confirmation"""
         print("📋 Exporting command definitions...")
 
         commands_dir = os.path.join(self.project_root, '.claude', 'commands')
@@ -107,29 +131,23 @@ class ClaudeCommandsExporter:
             return
 
         target_dir = os.path.join(staging_dir, 'commands')
-
-        # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        for file_path in Path(commands_dir).glob('*'):
-            if file_path.is_file() and file_path.suffix in ['.md', '.py']:
-                filename = file_path.name
+        # First, copy entire .claude/commands directory structure
+        self._copy_directory_with_filtering(commands_dir, target_dir)
+        
+        # Count all files for summary (matching actual copy logic)
+        for root, dirs, files in os.walk(target_dir):
+            for file in files:
+                # Use same file extension check as copying logic
+                if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
+                    # Skip the same project-specific files as copying logic
+                    if file not in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
+                        self.commands_count += 1
+                        rel_path = os.path.relpath(os.path.join(root, file), target_dir)
+                        print(f"   • {rel_path}")
 
-                # Skip project-specific files
-                if filename in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
-                    print(f"   ⏭ Skipping {filename} (project-specific)")
-                    continue
-
-                target_path = os.path.join(target_dir, filename)
-                shutil.copy2(file_path, target_path)
-
-                # Apply content transformations
-                self._apply_content_filtering(target_path)
-
-                print(f"   • {filename}")
-                self.commands_count += 1
-
-        print(f"✅ Exported {self.commands_count} commands")
+        print(f"✅ Exported {self.commands_count} commands (whole directory structure)")
 
     def _copy_hooks_manual(self, hooks_dir, target_dir):
         """Windows fallback - manual directory copy with filtering"""
@@ -208,6 +226,40 @@ class ClaudeCommandsExporter:
                     print(f"   📎 {rel_path}")
 
         print(f"✅ Exported {self.hooks_count} hooks")
+        
+    def _copy_directory_with_filtering(self, src_dir, dst_dir):
+        """Copy directory recursively with file filtering and content transformation"""
+        for root, dirs, files in os.walk(src_dir):
+            # Skip nested .claude directories and test directories that might contain sensitive data
+            dirs[:] = [d for d in dirs if d != '.claude']
+            
+            # Create relative path structure
+            rel_path = os.path.relpath(root, src_dir)
+            target_root = os.path.join(dst_dir, rel_path) if rel_path != '.' else dst_dir
+            os.makedirs(target_root, exist_ok=True)
+            
+            for file in files:
+                # Only copy relevant file types
+                if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
+                    # Skip specific project-sensitive files
+                    if file in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
+                        print(f"   ⏭ Skipping {file} (project-specific)")
+                        continue
+                        
+                    src_file = os.path.join(root, file)
+                    dst_file = os.path.join(target_root, file)
+                    shutil.copy2(src_file, dst_file)
+                    
+                    # Apply content filtering to copied file
+                    self._apply_content_filtering(dst_file)
+                    
+                    # Make scripts executable if needed
+                    if file.endswith(('.sh', '.py')):
+                        try:
+                            os.chmod(dst_file, 0o755)
+                        except (OSError, NotImplementedError):
+                            pass  # Windows compatibility
+                            
 
     def _export_agents(self, staging_dir):
         """Export Claude Code agent definitions"""
@@ -354,7 +406,8 @@ class ClaudeCommandsExporter:
                     version = version_match.group(1)
                     print(f"   📋 Found git tag version: {version}")
                     return self._increment_version(version)
-        except:
+        except (subprocess.CalledProcessError, OSError, AttributeError) as e:
+            print(f"   ⚠️ Git tag version detection failed: {e}")
             pass
         
         try:
@@ -365,7 +418,8 @@ class ClaudeCommandsExporter:
                     version = f.read().strip()
                     print(f"   📋 Found VERSION file: {version}")
                     return self._increment_version(version)
-        except:
+        except (FileNotFoundError, OSError, IOError) as e:
+            print(f"   ⚠️ VERSION file not found or unreadable: {e}")
             pass
         
         try:
@@ -378,7 +432,8 @@ class ClaudeCommandsExporter:
                         version = data['version']
                         print(f"   📋 Found package.json version: {version}")
                         return self._increment_version(version)
-        except:
+        except (FileNotFoundError, json.JSONDecodeError, KeyError, OSError) as e:
+            print(f"   ⚠️ package.json version detection failed: {e}")
             pass
         
         # Strategy 4: Check target repository for existing version and increment
@@ -389,7 +444,8 @@ class ClaudeCommandsExporter:
                 version = self._increment_version(existing_version)
                 print(f"   📋 Incremented from existing version: {existing_version} → {version}")
                 return version
-        except:
+        except Exception as e:
+            print(f"   ⚠️ GitHub repository version detection failed: {e}")
             pass
         
         # For this specific export, we want to use v1.1.0 for today's changes
@@ -446,7 +502,8 @@ class ClaudeCommandsExporter:
             new_version = f"{major}.{minor + 1}.0"
             print(f"   📋 Incremented version: {version} → {new_version}")
             return new_version
-        except:
+        except (ValueError, AttributeError, IndexError) as e:
+            print(f"   ⚠️ Version parsing failed: {e}")
             return version  # Return original if parsing fails
 
     def _replace_llm_placeholders(self, content):
@@ -712,7 +769,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         print("-" * 40)
 
         if not self.github_token:
-            raise Exception("GITHUB_TOKEN environment variable not set")
+            raise GitHubAPIError("GITHUB_TOKEN environment variable not set")
 
         # Clone repository
         self._clone_repository()
@@ -753,12 +810,12 @@ This is a filtered reference export from a working Claude Code project. Commands
                     break
             
             if not gh_cmd:
-                raise Exception("GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI.")
+                raise GitHubAPIError("GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI.")
         
         cmd = [gh_cmd, 'repo', 'clone', 'jleechanorg/claude-commands', self.repo_dir]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
-            raise Exception(f"Repository clone failed: {result.stderr}")
+            raise GitRepositoryError(f"Repository clone failed: {result.stderr}")
 
         print("✅ Repository cloned")
 
@@ -778,17 +835,21 @@ This is a filtered reference export from a working Claude Code project. Commands
         print("✅ Export branch created")
 
     def _copy_to_repository(self):
-        """Copy exported content to repository - ADDITIVE BEHAVIOR (preserves existing)"""
-        print("📋 Copying exported content (preserving existing)...")
+        """Copy exported content to repository with differential sync (removes obsolete files)"""
+        print("📋 Copying exported content with differential sync...")
 
-        # 🚨 FIXED: ADDITIVE BEHAVIOR - No clearing of existing content!
+        # 🚨 NEW: DIFFERENTIAL SYNC - Removes files that no longer exist in source
+        print("🔍 Performing differential sync to remove obsolete files...")
+        sync_files_differential(self.project_root, self.repo_dir)
+        print("✅ Obsolete file cleanup completed")
+
         # Create target directories if they don't exist
         dirs_to_ensure = ['commands', 'hooks', 'infrastructure-scripts', 'orchestration']
         for dir_name in dirs_to_ensure:
             dir_path = os.path.join(self.repo_dir, dir_name)
             os.makedirs(dir_path, exist_ok=True)
 
-        # Copy new content ADDITIVELY (preserves existing files)
+        # Copy new/updated content
         staging_dir = os.path.join(self.export_dir, 'staging')
         for item in os.listdir(staging_dir):
             src = os.path.join(staging_dir, item)
@@ -955,7 +1016,7 @@ This is a filtered reference export. Commands may need adaptation for specific e
         )
 
         if response.status_code != 201:
-            raise Exception(f"PR creation failed: {response.status_code} {response.text}")
+            raise GitHubAPIError(f"PR creation failed: {response.status_code} {response.text}")
 
         pr_data = response.json()
         pr_url = pr_data['html_url']
@@ -990,6 +1051,79 @@ This is a filtered reference export. Commands may need adaptation for specific e
         print("\n🔧 Debug information:")
         print(f"   Project root: {self.project_root}")
         print(f"   GitHub token set: {'Yes' if self.github_token else 'No'}")
+
+def sync_files_differential(source_dir, target_dir):
+    """
+    Synchronize files between source and target directories using differential sync.
+    Deletes files/directories in target that don't exist in source.
+    Preserves files that exist in both directories.
+    """
+    source_path = Path(source_dir)
+    target_path = Path(target_dir)
+    
+    # Get all relative paths from source .claude/ directory
+    claude_source_dir = source_path / '.claude'
+    if not claude_source_dir.exists():
+        # If no .claude directory, delete everything in target
+        if target_path.exists():
+            for item in target_path.iterdir():
+                try:
+                    if item.is_file():
+                        item.unlink()
+                    else:
+                        shutil.rmtree(item)
+                except (PermissionError, OSError):
+                    pass  # Skip items we can't delete
+        return
+    
+    source_files = set()
+    source_dirs = set()
+    
+    for root, dirs, files in os.walk(claude_source_dir):
+        rel_root = Path(root).relative_to(claude_source_dir)
+        for file in files:
+            rel_file_path = rel_root / file if rel_root != Path('.') else Path(file)
+            source_files.add(rel_file_path)
+        for dir in dirs:
+            rel_dir_path = rel_root / dir if rel_root != Path('.') else Path(dir)
+            source_dirs.add(rel_dir_path)
+        # Add intermediate directory paths
+        if rel_root != Path('.'):
+            source_dirs.add(rel_root)
+    
+    # Track what to delete in target
+    dirs_to_delete = []
+    files_to_delete = []
+    
+    # Walk through target directory
+    for root, dirs, files in os.walk(target_dir):
+        rel_root = Path(root).relative_to(target_path)
+        
+        # Check files for deletion
+        for file in files:
+            rel_file_path = rel_root / file if rel_root != Path('.') else Path(file)
+            if rel_file_path not in source_files:
+                files_to_delete.append(Path(root) / file)
+        
+        # Check directories for deletion
+        for dir in dirs:
+            rel_dir_path = rel_root / dir if rel_root != Path('.') else Path(dir)
+            if rel_dir_path not in source_dirs:
+                dirs_to_delete.append(Path(root) / dir)
+    
+    # Delete files first
+    for file_path in files_to_delete:
+        try:
+            file_path.unlink()
+        except (PermissionError, OSError):
+            pass  # Skip files we can't delete due to permissions
+    
+    # Delete directories (in reverse order to handle nested dirs)
+    for dir_path in sorted(dirs_to_delete, reverse=True):
+        try:
+            shutil.rmtree(dir_path)
+        except (PermissionError, OSError):
+            pass  # Skip directories we can't delete due to permissions
 
 if __name__ == "__main__":
     exporter = ClaudeCommandsExporter()

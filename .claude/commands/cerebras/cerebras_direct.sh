@@ -102,7 +102,7 @@ if [ "$USE_SONNET" = true ]; then
       -H "anthropic-version: 2023-06-01" \
       -d "{
         \"model\": \"claude-3-5-sonnet-20241022\",
-        \"max_tokens\": 500000,
+        \"max_tokens\": 8192,
         \"temperature\": 0.1,
         \"system\": $(echo "$SYSTEM_PROMPT" | jq -Rs .),
         \"messages\": [
@@ -158,7 +158,7 @@ else
           {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
           {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
         ],
-        \"max_tokens\": 500000,
+        \"max_tokens\": 32768,
         \"temperature\": 0.1,
         \"stream\": false
       }")
