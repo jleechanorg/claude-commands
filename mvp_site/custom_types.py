@@ -7,7 +7,7 @@ protocol definitions for better type safety.
 """
 
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Protocol, TypedDict, Union
+from typing import Any, Literal, Protocol, TypedDict, Union
 
 
 # Firebase/Firestore data structures
@@ -17,8 +17,8 @@ class CampaignData(TypedDict, total=False):
     name: str
     prompt: str
     narrative: str
-    entities: Dict[str, Any]
-    state_updates: List[Dict[str, Any]]
+    entities: dict[str, Any]
+    state_updates: list[dict[str, Any]]
     started: bool
     created_at: datetime
     updated_at: datetime
@@ -46,9 +46,9 @@ class EntityData(TypedDict, total=False):
     level: Union[int, None]
     hp: Union[int, None]
     max_hp: Union[int, None]
-    attributes: Dict[str, Union[str, int, float]]
-    equipment: List[str]
-    spells: List[str]
+    attributes: dict[str, Union[str, int, float]]
+    equipment: list[str]
+    spells: list[str]
     location: Union[str, None]
 
 
@@ -59,8 +59,8 @@ class MissionData(TypedDict):
     title: str
     description: str
     status: Literal["active", "completed", "failed", "inactive"]
-    objectives: List[str]
-    rewards: Union[List[str], None]
+    objectives: list[str]
+    rewards: Union[list[str], None]
 
 
 class ApiResponse(TypedDict):
@@ -68,7 +68,7 @@ class ApiResponse(TypedDict):
 
     success: bool
     message: Union[str, None]
-    data: Union[Dict[str, Any], None]
+    data: Union[dict[str, Any], None]
     error: Union[str, None]
 
 
@@ -86,7 +86,7 @@ class GeminiResponse(TypedDict):
     """Type definition for Gemini API responses."""
 
     text: str
-    usage: Dict[str, int]
+    usage: dict[str, int]
     model: str
     finish_reason: Union[str, None]
 
@@ -99,8 +99,8 @@ SessionId = str
 Timestamp = Union[datetime, float, int]
 
 # JSON-compatible types
-JsonValue = Union[str, int, float, bool, None, Dict[str, Any], List[Any]]
-JsonDict = Dict[str, JsonValue]
+JsonValue = Union[str, int, float, bool, None, dict[str, Any], list[Any]]
+JsonDict = dict[str, JsonValue]
 
 
 # Protocol definitions for better interface contracts

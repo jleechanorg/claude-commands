@@ -25,7 +25,7 @@ import traceback
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 import logging_util
 import requests
@@ -53,7 +53,7 @@ class MCPError:
 
     code: int
     message: str
-    data: Union[Dict[str, Any], None] = None
+    data: Union[dict[str, Any], None] = None
 
 
 class MCPClientError(Exception):

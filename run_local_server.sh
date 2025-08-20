@@ -37,13 +37,9 @@ cleanup_servers_aggressive() {
                 ;;
             p|P)
                 echo "${EMOJI_GEAR} Killing processes on target ports..."
-                # Find ports first, then clear them
-                TEMP_FLASK_PORT=$(find_available_port $DEFAULT_FLASK_PORT 10)
-                TEMP_REACT_PORT=$(find_available_port $DEFAULT_REACT_PORT 10)
-                if [ $? -eq 0 ]; then
-                    ensure_port_free $TEMP_FLASK_PORT
-                    ensure_port_free $TEMP_REACT_PORT
-                fi
+                # Clear the default target ports explicitly
+                ensure_port_free "$DEFAULT_FLASK_PORT"
+                ensure_port_free "$DEFAULT_REACT_PORT"
                 ;;
             *)
                 echo "${EMOJI_INFO} Keeping existing servers running"
@@ -157,7 +153,7 @@ cd mvp_site/frontend_v2
 # Check if node_modules exists
 if [ ! -d "node_modules" ]; then
     echo "${EMOJI_WARNING} Node modules not found. Installing dependencies..."
-    npm install
+    npm install --ignore-scripts
     if [ $? -ne 0 ]; then
         echo "${EMOJI_ERROR} Failed to install npm dependencies"
         exit 1
@@ -173,15 +169,62 @@ echo "${EMOJI_INFO} Frontend will proxy API calls to Flask backend on port $FLAS
 export PORT=$FLASK_PORT  # For vite.config.ts proxy target
 export REACT_APP_API_URL="http://localhost:$FLASK_PORT"
 
-# Start the React development server
+# Function to safely export Firebase environment variables
+setup_firebase_env() {
+    # Source Firebase configuration from .bashrc with error handling
+    if [ -f ~/.bashrc ]; then
+        source ~/.bashrc 2>/dev/null || true
+    fi
+
+    # Export Firebase config with VITE_ prefix for frontend (safe quoting)
+    export VITE_FIREBASE_API_KEY="${FIREBASE_API_KEY:-}"
+    export VITE_FIREBASE_AUTH_DOMAIN="${FIREBASE_AUTH_DOMAIN:-}"
+    export VITE_FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID:-}"
+    export VITE_FIREBASE_STORAGE_BUCKET="${FIREBASE_STORAGE_BUCKET:-}"
+    export VITE_FIREBASE_MESSAGING_SENDER_ID="${FIREBASE_MESSAGING_SENDER_ID:-}"
+    export VITE_FIREBASE_APP_ID="${FIREBASE_APP_ID:-}"
+    export VITE_FIREBASE_MEASUREMENT_ID="${FIREBASE_MEASUREMENT_ID:-}"
+}
+
+# Function to build safe environment command for terminal spawning
+build_env_command() {
+    local port="$1"
+    # Use printf to safely build command with proper escaping
+    printf 'cd %q && source ~/.bashrc 2>/dev/null || true && export PORT=%q VITE_FIREBASE_API_KEY=%q VITE_FIREBASE_AUTH_DOMAIN=%q VITE_FIREBASE_PROJECT_ID=%q VITE_FIREBASE_STORAGE_BUCKET=%q VITE_FIREBASE_MESSAGING_SENDER_ID=%q VITE_FIREBASE_APP_ID=%q VITE_FIREBASE_MEASUREMENT_ID=%q && npx vite --port %q --host 0.0.0.0' \
+        "$PROJECT_ROOT/mvp_site/frontend_v2" \
+        "$port" \
+        "${FIREBASE_API_KEY:-}" \
+        "${FIREBASE_AUTH_DOMAIN:-}" \
+        "${FIREBASE_PROJECT_ID:-}" \
+        "${FIREBASE_STORAGE_BUCKET:-}" \
+        "${FIREBASE_MESSAGING_SENDER_ID:-}" \
+        "${FIREBASE_APP_ID:-}" \
+        "${FIREBASE_MEASUREMENT_ID:-}" \
+        "$REACT_PORT"
+}
+
+echo "${EMOJI_GEAR} Setting up Firebase environment variables..."
+setup_firebase_env
+echo "${EMOJI_CHECK} Firebase configuration loaded for React V2"
+
+# Start the React development server using safe environment handling
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="React Frontend" -- bash -c "PORT=$FLASK_PORT npm run dev -- --port $REACT_PORT --host 0.0.0.0; exec bash"
+    ENV_COMMAND=$(build_env_command "$FLASK_PORT")
+    gnome-terminal --tab --title="React Frontend" -- bash -c "$ENV_COMMAND; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "React Frontend" -e "PORT=$FLASK_PORT npm run dev -- --port $REACT_PORT --host 0.0.0.0" &
+    ENV_COMMAND=$(build_env_command "$FLASK_PORT")
+    xterm -title "React Frontend" -e bash -c "$ENV_COMMAND" &
 else
-    # Fallback: run in foreground
-    echo "${EMOJI_INFO} Starting React in current terminal..."
-    PORT=$FLASK_PORT npm run dev -- --port $REACT_PORT --host 0.0.0.0
+    # Fallback: run in background (already safe)
+    echo "${EMOJI_INFO} Running React in background (no terminal emulator found)"
+    (
+        cd "$PROJECT_ROOT/mvp_site/frontend_v2" || exit 1
+        setup_firebase_env
+        export PORT=$FLASK_PORT
+        npx vite --port $REACT_PORT --host 0.0.0.0
+    ) &
+    REACT_PID=$!
+    echo "${EMOJI_INFO} React frontend started in background (PID: $REACT_PID)"
 fi
 
 # Comprehensive health checks for both servers
@@ -189,6 +232,9 @@ echo ""
 echo "${EMOJI_SEARCH} Performing comprehensive health checks..."
 echo "-------------------------------------------------------------"
 
+# Initialize health status flags
+FLASK_OK=true
+REACT_OK=true
 # Wait a bit more for React to fully start
 echo "${EMOJI_CLOCK} Waiting for React frontend to initialize..."
 sleep 5
@@ -207,6 +253,7 @@ if ! validate_server $REACT_PORT 8 3; then
     echo "${EMOJI_ERROR} React frontend health check failed"
     echo "${EMOJI_INFO} This is common - React may take longer to start"
     echo "${EMOJI_INFO} Flask backend is working. Check React manually if needed."
+    REACT_OK=false
 fi
 
 # Final validation - test API endpoint
@@ -220,7 +267,13 @@ else
 fi
 
 echo ""
-echo "${EMOJI_CHECK} Health checks completed successfully!"
+if [ "$FLASK_OK" = true ] && [ "$REACT_OK" = true ]; then
+    echo "${EMOJI_CHECK} Health checks completed successfully!"
+elif [ "$FLASK_OK" = true ] && [ "$REACT_OK" = false ]; then
+    echo "${EMOJI_WARNING} Backend healthy; React may still be starting. Proceed to the frontend URL and refresh."
+else
+    echo "${EMOJI_ERROR} Health checks did not complete successfully."
+fi
 echo ""
 echo "${EMOJI_INFO} Server URLs:"
 echo "   - Flask Backend:  http://localhost:$FLASK_PORT"
