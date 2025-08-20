@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Memory Backup using CRDT-inspired Conflict-Free Merge Strategy
-# VERSION: 6.0.0 - No locks needed, always converges correctly
+# VERSION: 7.0.0 - Bi-directional sync with fetch before backup
 
 set -euo pipefail
 
@@ -82,10 +82,31 @@ merge_memory_files() {
     rm -f "$all_entities"
 }
 
+# Perform bi-directional sync before backup
+perform_fetch_before_backup() {
+    local fetch_script="$(dirname "${BASH_SOURCE[0]}")/memory_sync/fetch_memory.py"
+    
+    log "Performing bi-directional sync before backup"
+    
+    # Check if fetch script exists
+    if [[ -f "$fetch_script" ]]; then
+        if timeout_cmd 60s python3 "$fetch_script"; then
+            log "Fetch completed successfully"
+        else
+            log "WARNING: Fetch failed, proceeding with backup anyway"
+        fi
+    else
+        log "WARNING: Fetch script not found at $fetch_script, skipping fetch"
+    fi
+}
+
 # No locking needed - just merge and push
 # Git handles the "distributed" part, CRDT handles the "conflict" part
 perform_backup() {
-    log "Starting CRDT-based backup (no locks needed!)"
+    log "Starting CRDT-based backup with bi-directional sync"
+    
+    # Fetch latest changes first for bi-directional sync
+    perform_fetch_before_backup
     
     cd "$REPO_DIR"
     
