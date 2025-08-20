@@ -69,13 +69,22 @@ class TestExportCommandsMatrix(unittest.TestCase):
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def _create_test_files(self):
-        """Create test files with various content types."""
+        """Create test files with various content types including skip list files."""
         # Test command with project-specific content
         with open(os.path.join(self.project_root, '.claude', 'commands', 'test_command.md'), 'w') as f:
             f.write("""# Test Command
             
 This command uses mvp_site/ paths and references jleechan.
 Also mentions worldarchitect.ai and TESTING=true vpython.
+""")
+        
+        # Create files that should be skipped according to COMMANDS_SKIP_LIST
+        skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh']
+        for skip_file in skip_files:
+            with open(os.path.join(self.project_root, '.claude', 'commands', skip_file), 'w') as f:
+                f.write(f"""# {skip_file} - Should be skipped
+This file should be excluded from exports per COMMANDS_SKIP_LIST.
+Contains orchestration/testing content specific to original project.
 """)
         
         # Test hook with project-specific content
@@ -160,6 +169,97 @@ export USER="jleechan"
                                 # Project-specific content should be filtered
                                 self.assertNotIn('mvp_site/', content)
                                 self.assertIn('$PROJECT_ROOT/', content)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_commands_skip_list_functionality(self):
+        """Test that COMMANDS_SKIP_LIST properly excludes specified files."""
+        # Create staging directory
+        staging_dir = os.path.join(self.export_dir, 'staging')
+        os.makedirs(staging_dir, exist_ok=True)
+        
+        # Reset counter
+        self.exporter.commands_count = 0
+        
+        # Get initial count (should include test_command.md but exclude skip list files)
+        commands_dir = os.path.join(self.project_root, '.claude', 'commands')
+        total_files = len([f for f in os.listdir(commands_dir) if f.endswith(('.md', '.py', '.sh'))])
+        skip_files = ['conv.md', 'orchconverge.md', 'converge.md', 'orchc.md', 'testi.sh', 'run_tests.sh']
+        expected_count = total_files - len(skip_files)
+        
+        # Test export
+        self.exporter._export_commands(staging_dir)
+        
+        # Validate skip list worked correctly
+        self.assertEqual(self.exporter.commands_count, expected_count)
+        
+        # Check that skip list files were not exported
+        target_commands_dir = os.path.join(staging_dir, 'commands')
+        exported_files = os.listdir(target_commands_dir) if os.path.exists(target_commands_dir) else []
+        
+        for skip_file in skip_files:
+            self.assertNotIn(skip_file, exported_files, f"Skip list file {skip_file} should not be exported")
+        
+        # Check that regular files were exported
+        self.assertIn('test_command.md', exported_files, "Regular command files should be exported")
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_dynamic_placeholder_replacement(self):
+        """Test the new dynamic placeholder replacement functionality."""
+        # Test various placeholder patterns
+        test_content = """
+        This export contains **144 commands** that transform Claude Code.
+        Also mentions **118 commands** in another section.
+        Export statistics show **145 Commands** total.
+        And **22 Hooks** with **5 Scripts** available.
+        """
+        
+        # Set test counts
+        self.exporter.commands_count = 100
+        self.exporter.hooks_count = 15
+        self.exporter.scripts_count = 8
+        
+        # Apply dynamic replacement
+        result = self.exporter._replace_dynamic_placeholders(test_content)
+        
+        # Verify replacements
+        self.assertIn('**100 commands**', result)
+        self.assertNotIn('**144 commands**', result)
+        self.assertNotIn('**118 commands**', result)
+        self.assertIn('**100 Commands**', result)
+        self.assertIn('**15 Hooks**', result)
+        self.assertIn('**8 Scripts**', result)
+
+    @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
+    def test_copy_directory_with_filtering(self):
+        """Test the fixed _copy_directory_with_filtering method uses centralized skip list."""
+        # Create source directory with mixed files
+        source_dir = os.path.join(self.temp_dir, 'source')
+        os.makedirs(source_dir, exist_ok=True)
+        
+        # Create files including some from skip list
+        all_files = ['test_command.md', 'conv.md', 'orchconverge.md', 'normal_file.py', 'testi.sh']
+        for file_name in all_files:
+            with open(os.path.join(source_dir, file_name), 'w') as f:
+                f.write(f"Content of {file_name}")
+        
+        # Create target directory
+        target_dir = os.path.join(self.temp_dir, 'target')
+        os.makedirs(target_dir, exist_ok=True)
+        
+        # Test the copy with filtering
+        self.exporter._copy_directory_with_filtering(source_dir, target_dir)
+        
+        # Check results
+        copied_files = os.listdir(target_dir)
+        
+        # Should include normal files
+        self.assertIn('test_command.md', copied_files)
+        self.assertIn('normal_file.py', copied_files)
+        
+        # Should exclude skip list files
+        self.assertNotIn('conv.md', copied_files)
+        self.assertNotIn('orchconverge.md', copied_files) 
+        self.assertNotIn('testi.sh', copied_files)
 
     @unittest.skipIf(ClaudeCommandsExporter is None, "ClaudeCommandsExporter not available")
     def test_hooks_export_matrix(self):

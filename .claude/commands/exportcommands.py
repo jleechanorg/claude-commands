@@ -51,7 +51,8 @@ class ClaudeCommandsExporter:
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
             'testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh',  # project-specific
-            'converge.md', 'converge.py', 'orchc.md', 'orchc.py'           # orchestration commands to exclude
+            'converge.md', 'converge.py', 'orchc.md', 'orchc.py',          # orchestration commands to exclude
+            'conv.md', 'orchconverge.md'                                    # additional orchestration exclusions
         ]
         
         # Counters for summary
@@ -147,8 +148,8 @@ class ClaudeCommandsExporter:
             for file in files:
                 # Use same file extension check as copying logic
                 if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
-                    # Skip the same project-specific files as copying logic
-                    if file not in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
+                    # Skip files in the centralized skip list (same as copying logic)
+                    if file not in self.COMMANDS_SKIP_LIST:
                         self.commands_count += 1
                         rel_path = os.path.relpath(os.path.join(root, file), target_dir)
                         print(f"   • {rel_path}")
@@ -247,9 +248,9 @@ class ClaudeCommandsExporter:
             for file in files:
                 # Only copy relevant file types
                 if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
-                    # Skip specific project-sensitive files
-                    if file in ['testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh']:
-                        print(f"   ⏭ Skipping {file} (project-specific)")
+                    # Skip files in the centralized skip list
+                    if file in self.COMMANDS_SKIP_LIST:
+                        print(f"   ⏭ Skipping {file} (project-specific/orchestration)")
                         continue
                         
                     src_file = os.path.join(root, file)
@@ -513,8 +514,11 @@ class ClaudeCommandsExporter:
             return version  # Return original if parsing fails
 
     def _replace_llm_placeholders(self, content):
-        """Replace LLM placeholders with actual version information"""
+        """Replace LLM placeholders with actual version information and dynamic command counts"""
         print("🤖 Generating version information with LLM intelligence...")
+        
+        # Replace dynamic placeholders in template BEFORE version processing
+        content = self._replace_dynamic_placeholders(content)
         
         # Get current date for version
         current_date = time.strftime('%Y-%m-%d')
@@ -596,6 +600,32 @@ class ClaudeCommandsExporter:
         
         content = re.sub(llm_pattern, replacement, content, flags=re.DOTALL)
         
+        return content
+
+    def _replace_dynamic_placeholders(self, content):
+        """Replace dynamic placeholders in template with actual runtime values"""
+        print("🔧 Replacing dynamic placeholders with runtime values...")
+        
+        # Define replacement mappings
+        replacements = {
+            # Command count - handles various formats
+            r'\*\*144 commands\*\*': f'**{self.commands_count} commands**',
+            r'\*\*118 commands\*\*': f'**{self.commands_count} commands**',  # Handle legacy counts
+            r'144 commands': f'{self.commands_count} commands',
+            r'118 commands': f'{self.commands_count} commands',  # Handle legacy counts
+            
+            # Export statistics - make them dynamic
+            r'\*\*(\d+) Commands\*\*': f'**{self.commands_count} Commands**',
+            r'\*\*(\d+) Hooks\*\*': f'**{self.hooks_count} Hooks**',
+            r'\*\*(\d+) Scripts\*\*': f'**{self.scripts_count} Scripts**',
+            r'\*\*(\d+) Agents\*\*': f'**{self.agents_count} Agents**',
+        }
+        
+        # Apply all replacements
+        for pattern, replacement in replacements.items():
+            content = re.sub(pattern, replacement, content)
+            
+        print(f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents")
         return content
 
     def _generate_readme(self):
