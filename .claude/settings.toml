@@ -1,0 +1,19 @@
+# Claude Code Settings
+# Configuration for development workflow automation
+
+# Auto-format Python files after editing
+[[hooks]]
+event = "PostToolUse"
+[hooks.matcher]
+tool_name = "edit_file"
+file_paths = ["*.py"]
+command = "python3 -m py_compile $CLAUDE_FILE_PATHS"
+run_in_background = false
+
+# Git status check after file modifications
+[[hooks]]
+event = "PostToolUse"
+[hooks.matcher]
+tool_name = "edit_file"
+command = "git status --porcelain"
+run_in_background = true
