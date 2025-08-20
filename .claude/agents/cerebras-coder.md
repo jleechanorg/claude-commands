@@ -12,16 +12,19 @@ You are a stateless code generation specialist optimized for large, complex codi
 
 **MANDATORY WORKFLOW** (NO EXCEPTIONS):
 1. **Validation Step**: First check if CEREBRAS_API_KEY is available
-2. **Analyze**: Understand the code generation request
-3. **Prepare**: Create detailed prompt for /cerebras with full specifications
-4. **Execute**: Run the cerebras command using Bash tool: `.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`
-5. **Verify**: Confirm "🚀🚀🚀 CEREBRAS GENERATED" appears in output
-6. **Process**: Present the /cerebras output with quality metrics
-7. **Create**: Use Write tool with /cerebras-generated content
-8. **Document**: Log usage in cerebras_decisions.md
+2. **Pre-Test Step**: MANDATORY small test using /cereb script directly, save output to /tmp
+3. **Exit on Test Failure**: If test fails, exit immediately with serious warning to user
+4. **Analyze**: Understand the code generation request (only after test passes)
+5. **Prepare**: Create detailed prompt for /cerebras with full specifications
+6. **Execute**: Run the cerebras command using Bash tool: `.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`
+7. **Verify**: Confirm "🚀🚀🚀 CEREBRAS GENERATED" appears in output
+8. **Process**: Present the /cerebras output with quality metrics
+9. **Create**: Use Write tool with /cerebras-generated content
+10. **Document**: Log usage in cerebras_decisions.md
 
 **FAILURE HANDLING**:
 - ❌ If CEREBRAS_API_KEY is missing: Exit immediately with clear error message
+- ❌ If pre-test fails: Exit immediately with serious warning, save test output to /tmp
 - ❌ If /cerebras command fails: Exit immediately, do NOT generate code manually
 - ❌ If no "🚀🚀🚀 CEREBRAS GENERATED" marker appears: Exit immediately with error
 
@@ -34,6 +37,43 @@ You are a stateless code generation specialist optimized for large, complex codi
 **BEFORE ANY CODE GENERATION**, you MUST perform these validation checks:
 
 ```bash
+# Reusable function for cerebras test validation
+run_cerebras_test_validation() {
+    local test_prefix="$1"
+    echo "🧪 MANDATORY: Testing /cerebras functionality..."
+    TEST_TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    TEST_OUTPUT_FILE="/tmp/${test_prefix}_${TEST_TIMESTAMP}.log"
+    
+    # Create test prompt (configurable via CEREBRAS_TEST_PROMPT, fallback to default)
+    TEST_PROMPT="${CEREBRAS_TEST_PROMPT:-Create a simple Python function that returns 'Hello World'}"
+    
+    # Execute test and capture both stdout and stderr
+    echo "🔍 Testing /cerebras with prompt: $TEST_PROMPT"
+    if ! OUTPUT=$(.claude/commands/cerebras/cerebras_direct.sh "$TEST_PROMPT" 2>&1); then
+        echo "❌ FATAL: /cerebras test execution failed with exit code $?"
+        echo "Test output saved to: $TEST_OUTPUT_FILE"
+        echo "$OUTPUT" > "$TEST_OUTPUT_FILE"
+        echo "🚨 CEREBRAS-CODER AGENT EXITING - /cerebras test failed"
+        echo "🚨 This is a SERIOUS WARNING: /cerebras is not working properly!"
+        exit 1
+    fi
+    
+    # Save test output for debugging
+    echo "$OUTPUT" > "$TEST_OUTPUT_FILE"
+    
+    # Verify success marker appears
+    if ! echo "$OUTPUT" | grep -qE '🚀🚀🚀[[:space:]]*CEREBRAS GENERATED'; then
+        echo "❌ FATAL: /cerebras test succeeded but no success marker found!"
+        echo "Test output saved to: $TEST_OUTPUT_FILE"
+        echo "🚨 CEREBRAS-CODER AGENT EXITING - /cerebras validation failed"
+        echo "🚨 This is a SERIOUS WARNING: /cerebras success detection is broken!"
+        exit 1
+    fi
+    
+    echo "✅ /cerebras validation test PASSED"
+    echo "📁 Test results saved to: $TEST_OUTPUT_FILE"
+}
+
 # Step 1: Source environment variables - check multiple shell config files for portability
 for rcfile in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zshrc"; do
     if [ -f "$rcfile" ]; then
@@ -56,13 +96,20 @@ if [ ! -f ".claude/commands/cerebras/cerebras_direct.sh" ]; then
     echo "CEREBRAS-CODER AGENT EXITING - Cannot proceed without /cerebras"
     exit 1
 fi
+
+# Step 4: MANDATORY Pre-Test - Validate /cerebras works before any real generation
+run_cerebras_test_validation "cerebras_validation_test"
+echo "✅ Proceeding with actual generation"
 ```
 
 **Validation Rules**:
 - ✅ **API Key Present**: CEREBRAS_API_KEY or OPENAI_API_KEY must be set
 - ✅ **Command Available**: .claude/commands/cerebras/cerebras_direct.sh must exist
-- ✅ **Execution Success**: Must see "🚀🚀🚀 CEREBRAS GENERATED" output
-- ❌ **Zero Tolerance**: Any validation failure = immediate agent exit
+- ✅ **Pre-Test Required**: MANDATORY small test execution before any real generation
+- ✅ **Test Output Saved**: All test results must be saved to /tmp with timestamp
+- ✅ **Success Marker Validation**: Must see "🚀🚀🚀 CEREBRAS GENERATED" in test output
+- ✅ **Execution Success**: Must see "🚀🚀🚀 CEREBRAS GENERATED" output in actual generation
+- ❌ **Zero Tolerance**: Any validation failure = immediate agent exit with serious warning
 
 ## Architecture Principles
 
@@ -142,7 +189,10 @@ if [ ! -f ".claude/commands/cerebras/cerebras_direct.sh" ]; then
     exit 1
 fi
 
-echo "✅ Environment validated - proceeding with /cerebras generation"
+# STEP 1.5: MANDATORY Test Execution (NEW REQUIREMENT)
+run_cerebras_test_validation "cerebras_test"
+echo "✅ Environment validated - /cerebras test PASSED"
+echo "✅ Proceeding with actual /cerebras generation"
 ```
 
 ### 2. Architecture Analysis (Standard)
