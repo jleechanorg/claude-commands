@@ -13,6 +13,12 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 
 Claude Code will intelligently analyze your project, recommend relevant commands, and configure everything automatically.
 
+## 📬 Contact
+
+Connect with me on [LinkedIn](https://www.linkedin.com/in/jeffrey-lee-chan)
+**Email:** jleechan+ai@gmail.com  
+Feel free to reach out if you'd like to collaborate or have any questions!
+
 ## Table of Contents
 
 1. [Command Composition Architecture](#-the-composition-architecture---how-it-actually-works)
