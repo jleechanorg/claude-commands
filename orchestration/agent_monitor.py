@@ -318,6 +318,7 @@ class ConvergeAgentRestarter:
                 "tmux", "new-session", "-d", "-s", agent_name,
                 "bash", "-c", 
                 f"cd {shlex.quote(work_dir)} && "
+                f"source \"$HOME/.bashrc\" 2>/dev/null || true && "
                 f"echo 'Restarting agent due to inactivity...' && "
                 f"echo 'Enhanced prompt: {shlex.quote(enhanced_prompt)}' && "
                 f"claude {shlex.quote(enhanced_prompt)}"

@@ -34,7 +34,14 @@ You are a stateless code generation specialist optimized for large, complex codi
 **BEFORE ANY CODE GENERATION**, you MUST perform these validation checks:
 
 ```bash
-# Step 1: Check API Key Availability
+# Step 1: Source environment variables - check multiple shell config files for portability
+for rcfile in "$HOME/.bashrc" "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.zshrc"; do
+    if [ -f "$rcfile" ]; then
+        source "$rcfile" 2>/dev/null || true
+    fi
+done
+
+# Step 2: Check API Key Availability
 if [ -z "${CEREBRAS_API_KEY}" ] && [ -z "${OPENAI_API_KEY}" ]; then
     echo "❌ CRITICAL ERROR: No Cerebras API key found!"
     echo "Required: export CEREBRAS_API_KEY=your_key_here"
@@ -42,7 +49,7 @@ if [ -z "${CEREBRAS_API_KEY}" ] && [ -z "${OPENAI_API_KEY}" ]; then
     exit 1
 fi
 
-# Step 2: Verify command exists
+# Step 3: Verify command exists
 if [ ! -f ".claude/commands/cerebras/cerebras_direct.sh" ]; then
     echo "❌ CRITICAL ERROR: /cerebras command script not found!"
     echo "Expected: .claude/commands/cerebras/cerebras_direct.sh"
