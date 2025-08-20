@@ -15,8 +15,7 @@ Claude Code will intelligently analyze your project, recommend relevant commands
 
 ## 📬 Contact
 
-Connect with me on [LinkedIn](https://www.linkedin.com/in/jeffrey-lee-chan)
-**Email:** jleechan+ai@gmail.com  
+Connect with me on [LinkedIn](https://www.linkedin.com/in/jeffrey-lee-chan) or **Email:** jleechan+ai@gmail.com  
 Feel free to reach out if you'd like to collaborate or have any questions!
 
 ## Table of Contents
