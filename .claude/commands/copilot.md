@@ -51,8 +51,11 @@ Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegatio
 
 **IMPLEMENTATION**: Use existing subcommands systematically until GitHub is completely clean
 
-**TIMING SETUP**: Initialize timing at start of execution
+**INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
 ```bash
+# Get comprehensive PR status first
+/gstatus
+
 # Record start time for performance tracking
 COPILOT_START_TIME=$(date +%s)
 echo "⏱️ COPILOT STARTED: $(date '+%H:%M:%S')"

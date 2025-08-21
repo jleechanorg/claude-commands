@@ -39,9 +39,34 @@ Genesis Coder, Prime Mover,
 
 **Standards:** Be specific, actionable, context-aware. Prefer modular, reusable patterns. Anticipate edge cases. Each implementation better than the last through systematic learning.
 
-## 🚨 CRITICAL: /CEREBRAS HYBRID CODE GENERATION PROTOCOL
+## 🚨 CRITICAL: CEREBRAS-FIRST CODING PROTOCOL
 
-**🚀 SPEED**: /cerebras generates code 19.6x faster (500ms vs 10s) using Cerebras infrastructure
+**🚀 DEFAULT FOR ALL CODING: Use Cerebras API directly for most coding tasks**
+
+**MANDATORY THRESHOLD RULE:**
+- **Small edits ≤10 delta lines**: Claude handles directly  
+- **Larger tasks >10 delta lines**: MUST use `/cerebras` command or direct Cerebras API
+- **All new features, functions, classes**: Use Cerebras
+- **All file creation**: Use Cerebras  
+- **All refactoring implementation >10 delta lines**: Use Cerebras (after Claude analyzes and designs the refactoring)
+
+**WHY CEREBRAS FIRST:**
+- **19.6x faster execution** (500ms vs 10s)
+- **Superior code generation quality** for well-defined tasks
+- **Reduces Claude context consumption** for large code blocks
+- **Enables parallel development** across multiple components
+
+**CEREBRAS DECISION MATRIX:**
+```
+Task Size        | Tool Choice      | Rationale
+≤10 delta lines | Claude Direct    | Quick edits, context efficiency
+>10 delta lines | Cerebras API     | Speed advantage, quality generation
+New Files       | Cerebras API     | Template generation strength  
+Complex Logic   | Cerebras API     | Algorithm implementation expertise
+```
+
+**IMPLEMENTATION MANDATE**: Before any coding task >10 delta lines, explicitly state:
+*"This task exceeds 10 delta lines - using Cerebras API for optimal speed and quality"*
 
 **WORKFLOW - Claude as ARCHITECT, Cerebras as BUILDER:**
 1. Claude analyzes requirements and creates detailed specifications
@@ -52,17 +77,49 @@ Genesis Coder, Prime Mover,
 
 **USE /CEREBRAS FOR:** Well-defined code generation, boilerplate, templates, unit tests, algorithms, documentation, repetitive patterns
 
-**USE CLAUDE FOR:** Understanding existing code, debugging, refactoring, security-critical implementations, architectural decisions, complex integrations
+**USE CLAUDE FOR:** Understanding existing code, debugging, refactoring decisions, security-critical implementations, architectural decisions, complex integrations
 
-## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL
+## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL - EXTREME ANTI-CREATION BIAS
 
-**🚨 ZERO TOLERANCE:** All new file requests must be submitted in NEW_FILE_REQUESTS.md with description of all places searched for duplicate functionality
+**🚨 DEFAULT ANSWER IS ALWAYS "NO NEW FILES"** - You must prove why integration into existing files is IMPOSSIBLE
+
+**🚨 VIOLATION TRACKING**: User reports consistent violations - "you always make new files vs integrating into existing ones"
+
+**🚨 MANDATORY INTEGRATION-FIRST PROTOCOL**: ⚠️ BEFORE any Write tool usage:
+1. **ASSUME NO NEW FILES NEEDED** - Start with the assumption that existing files can handle it
+2. **IDENTIFY INTEGRATION TARGETS** - Which existing files could potentially hold this functionality?
+3. **ATTEMPT INTEGRATION FIRST** - Actually try to add the code to existing files before considering new ones
+4. **PROVE INTEGRATION IMPOSSIBLE** - Document why each potential target file cannot be used
+
+**🚨 INTEGRATION PREFERENCE HIERARCHY** (MANDATORY ORDER):
+1. **Add to existing file with similar purpose** - Even if file gets larger
+2. **Add to existing utility/helper file** - Even if not perfect fit
+3. **Add to existing module's __init__.py** - For module-level functionality
+4. **Add to existing test file** - For test code (prefer existing test files unless module complexity requires new test organization)
+5. **Add as method to existing class** - Even if class gets larger
+6. **Add to existing configuration file** - For config/settings
+7. **LAST RESORT: Create new file** - Only after documenting why ALL above options failed
+
+**🚨 EXAMPLES OF VIOLATIONS** (What NOT to do):
+- ❌ Creating `mcp_stdio_wrapper.py` instead of adding stdio logic to `mcp_api.py`
+- ❌ Creating `test_mcp_integration.py` instead of adding tests to existing test files
+- ❌ Creating new utility files instead of using existing `utils.py` or `helpers.py`
+- ❌ Creating new config files instead of adding to existing configuration
+- ❌ Creating temporary scripts instead of adding functionality to existing scripts
+
+**🚨 MANDATORY QUESTIONS BEFORE FILE CREATION**:
+1. "Can I add this to an existing file instead?" - DEFAULT ANSWER: YES
+2. "Have I tried integrating into at least 3 existing files?" - MUST BE YES
+3. "Is the file size concern valid?" - Files can be 1000+ lines, that's OK
+4. "Am I creating this for organization?" - NOT A VALID REASON
+5. "Am I creating a test file?" - ADD TO EXISTING TEST FILES
 
 **REQUIREMENTS:**
 - ❌ NO file creation without NEW_FILE_REQUESTS.md entry
 - 🔍 SEARCH FIRST: Document checking `/utils/`, `/helpers/`, `/lib/`, modules, configs
-- ✅ JUSTIFY: Why editing existing files won't suffice
+- ✅ JUSTIFY: Document failed integration attempts into existing files
 - 📝 INTEGRATE: How file connects to existing codebase
+- 🚨 **SUCCESS METRIC**: Zero new files created unless absolutely necessary for production functionality
 
 ## 🚨 CRITICAL: FILE PLACEMENT PROTOCOL - ZERO TOLERANCE
 
@@ -223,6 +280,15 @@ Genesis Coder, Prime Mover,
 🚨 **NO FAKE IMPLEMENTATIONS:** ⚠️ MANDATORY - Always audit existing functionality first
 - ❌ NEVER create placeholder/demo code or duplicate existing protocols
 - ✅ ALWAYS build real, functional code
+
+🚨 **PRE-IMPLEMENTATION DECISION FRAMEWORK:** ⚠️ MANDATORY - Prevent fake code at source
+- **🚪 DECISION GATE**: Before writing ANY function, ask: "Can I implement this fully right now?"
+- **✅ If YES**: Implement with working code immediately, no placeholders
+- **❌ If NO**: DON'T create the function - use orchestration/composition instead  
+- **🎯 Default Hierarchy**: Orchestration > Working Implementation > No Implementation > ❌ NEVER Placeholder
+- **🛡️ Prevention Rule**: Block yourself from creating placeholder functions
+- **🔄 Orchestration First**: Use existing commands (like /commentfetch) instead of reimplementing
+- **⚡ Working Solutions**: Pragmatic working implementation beats perfect placeholder
 
 🚨 **ORCHESTRATION OVER DUPLICATION:** ⚠️ MANDATORY
 - Orchestrators delegate to existing commands, never reimplement functionality
@@ -488,8 +554,19 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - **Test:** `TESTING=true vpython mvp_site/test_file.py` (from root)
 - **All Tests:** `./run_tests.sh` (CI simulation by default)  
 - **Local Mode:** `./run_tests.sh --no-ci-sim`
+- **Fake Code Check:** `/fake3` (before any commit - mandatory)
 - **New Branch:** `./integrate.sh`
 - **Deploy:** `./deploy.sh` or `./deploy.sh stable`
+
+### 🛡️ **MANDATORY Pre-Commit Workflow**
+```bash
+# Before any commit (MANDATORY)
+/fake3                    # Check for fake code patterns
+# Fix any issues found, then proceed:
+git add .
+git commit -m "message"
+git push
+```
 
 ## API Timeout Prevention (🚨)
 

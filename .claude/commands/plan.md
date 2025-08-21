@@ -132,7 +132,8 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 - [ ] Tool selection validated: Serena MCP → Read tool → Bash → /cerebras (per guidelines)
 - [ ] /cerebras delegation analysis: ✅ MANDATORY - Identified which parts suit /cerebras vs Claude
   *Required*: Must explicitly list tasks for /cerebras (well-specified generation) vs Claude (understanding/integration)
-  *Reference*: Read CLAUDE.md "/CEREBRAS HYBRID CODE GENERATION PROTOCOL" section for refresher on /cerebras usage patterns
+  *Reference*: Read CLAUDE.md "CEREBRAS-FIRST CODING PROTOCOL" section for 10-line threshold rule and delegation patterns
+  *10-Line Rule*: Tasks >10 delta lines MUST use Cerebras API, ≤10 lines can use Claude direct
   *Decision Log*: Document all /cerebras delegation decisions in cerebras_decisions.md
 - [ ] Execution method decision: /cerebras-First → Parallel → Sequential
   *Priority*: /cerebras batching takes precedence over parallelization decisions
