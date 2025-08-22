@@ -23,12 +23,7 @@ get_comprehensive_comment_count() {
     
     local total=$((general_comments + review_comments + inline_comments))
     
-    # Debug output for transparency
-    echo "🔍 COMPREHENSIVE COMMENT DETECTION:" >&2
-    echo "  📝 General comments: $general_comments" >&2
-    echo "  📋 Review comments: $review_comments" >&2  
-    echo "  💬 Inline review comments: $inline_comments" >&2
-    echo "  📊 Total: $total" >&2
+    # Silent operation - only output on errors or warnings
     
     echo "$total"
 }

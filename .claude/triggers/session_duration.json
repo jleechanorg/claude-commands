@@ -1,0 +1,6 @@
+{
+  "trigger_type": "session_duration",
+  "target_duration_minutes": 18.0,
+  "optimization_enabled": true,
+  "monitoring_active": true
+}

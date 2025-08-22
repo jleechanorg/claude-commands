@@ -1,0 +1,16 @@
+{
+  "trigger_type": "context_threshold",
+  "warning_threshold": 0.6,
+  "checkpoint_threshold": 0.8,
+  "actions": {
+    "warning": [
+      "show_optimization_hints",
+      "suggest_serena_mcp"
+    ],
+    "checkpoint": [
+      "trigger_checkpoint",
+      "optimize_tool_selection"
+    ]
+  },
+  "enabled": true
+}

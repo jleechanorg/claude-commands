@@ -1,0 +1,99 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(python:*)",
+      "Bash(./run_tests.sh)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [],
+    "PostToolUse": [
+      {
+        "matcher": "Bash(*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [ -x \".claude/hooks/command_output_trimmer.py\" ]; then echo \"$CLAUDE_TOOL_OUTPUT\" | .claude/hooks/command_output_trimmer.py; else echo \"$CLAUDE_TOOL_OUTPUT\"; fi'",
+            "description": "Smart compression for verbose command outputs"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; exit 0'",
+            "description": "Auto-sync commits to remote after git commit operations"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && exec \"$ROOT/.claude/hooks/git-header.sh\"; fi; exit 0'",
+            "description": "Display git status and branch information"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; printf %s\\n \"$*\"' --",
+            "description": "Universal command composition for slash command combinations"
+          }
+        ]
+      }
+    ]
+  },
+  "output_trimmer": {
+    "enabled": true,
+    "compression_threshold": 0.2,
+    "log_statistics": true,
+    "custom_rules": {
+      "test": {
+        "max_passed_tests": 3,
+        "preserve_summary": true,
+        "keep_failures": true
+      },
+      "pushl": {
+        "max_git_lines": 5,
+        "keep_pr_links": true,
+        "compress_git_ops": true
+      },
+      "copilot": {
+        "max_timing_lines": 2,
+        "keep_phases": true,
+        "keep_results": true
+      },
+      "coverage": {
+        "max_file_lines": 10,
+        "preserve_totals": true,
+        "keep_percentages": true
+      },
+      "execute": {
+        "max_explanation_lines": 3,
+        "keep_todo_states": true,
+        "preserve_checklist": true
+      }
+    },
+    "custom_patterns": {
+      "important": ["https?://[^\\s]+", "PR\\s+#\\d+", "Issue\\s+#\\d+", "ERROR:", "FAILED:", "✅", "❌", "🔄"],
+      "exclude": ["^\\s*$", "^\\s*#", "^\\s*//"]
+    }
+  }
+}

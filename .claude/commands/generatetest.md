@@ -170,9 +170,9 @@ const hasCriticalErrors = window.testErrorLog.filter(e =>
 **Pre-test Health Checks**:
 ```bash
 # Backend health check
-curl -f http://localhost:5005/ && echo "✅ Backend ready"
+curl -f http://localhost:5005/ >/dev/null 2>&1 && echo "✅ Backend ready" || echo "❌ Backend unavailable"
 # Frontend health check
-curl -f http://localhost:3002/ && echo "✅ Frontend ready"
+curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || echo "❌ Frontend unavailable"
 ```
 
 ## 📊 MILESTONE-BASED TEST ORGANIZATION
@@ -219,9 +219,9 @@ curl -f http://localhost:3002/ && echo "✅ Frontend ready"
 **Health Checks**:
 ```bash
 # Backend health check
-curl -f http://localhost:5005/ && echo "✅ Backend ready"
+curl -f http://localhost:5005/ >/dev/null 2>&1 && echo "✅ Backend ready" || echo "❌ Backend unavailable"
 # Frontend health check
-curl -f http://localhost:3002/ && echo "✅ Frontend ready"
+curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || echo "❌ Frontend unavailable"
 # Monitor logs: tail -f /tmp/worldarchitect.ai/$(git branch --show-current)/flask-server.log
 ```
 

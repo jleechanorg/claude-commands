@@ -3,39 +3,20 @@
 ## 🚨 Mandatory Comment Coverage Tracking
 This command automatically tracks comment coverage and warns about missing responses:
 ```bash
-# COVERAGE TRACKING: Monitor comment response completion
-echo "🔍 TRACKING: Comment coverage monitoring enabled"
-echo "⚠️ WARNING: Will alert if any comments remain unresponded"
-echo "📊 METRIC: Tracks original comments vs threaded replies ratio"
+# COVERAGE TRACKING: Monitor comment response completion (silent unless errors)
 ```
 
 ## ⏱️ Automatic Timing Protocol
-This command automatically tracks and reports execution time:
+This command silently tracks execution time and only reports if exceeded:
 ```bash
-# START: Record start time
+# Silent timing - only output if >3 minutes
 COPILOT_START_TIME=$(date +%s)
-
-# [Command execution phases happen here]
-
-# END: Calculate and display timing
+# ... execution phases ...
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-COPILOT_MINUTES=$((COPILOT_DURATION / 60))
-COPILOT_SECONDS=$((COPILOT_DURATION % 60))
-
-echo ""
-echo "⏱️ COPILOT EXECUTION TIMING"
-echo "=========================="
-echo "🚀 Start time: $(date -d @$COPILOT_START_TIME '+%H:%M:%S')"
-echo "🏁 End time: $(date -d @$COPILOT_END_TIME '+%H:%M:%S')"
-echo "⏱️ Total duration: ${COPILOT_MINUTES}m ${COPILOT_SECONDS}s"
-echo "🎯 Performance target: 2-3 minutes"
-if [ $COPILOT_DURATION -le 180 ]; then
-    echo "✅ PERFORMANCE: Target achieved (≤3 minutes)"
-else
-    echo "⚠️ PERFORMANCE: Exceeded target (>3 minutes)"
+if [ $COPILOT_DURATION -gt 180 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
 fi
-echo ""
 ```
 
 ## 🎯 Purpose
@@ -58,7 +39,6 @@ Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegatio
 
 # Record start time for performance tracking
 COPILOT_START_TIME=$(date +%s)
-echo "⏱️ COPILOT STARTED: $(date '+%H:%M:%S')"
 ```
 
 ### Phase 1: Assessment & Planning
@@ -114,62 +94,34 @@ echo "⏱️ COPILOT STARTED: $(date '+%H:%M:%S')"
 ### Phase 8: Coverage & Timing Report
 **MANDATORY COVERAGE + TIMING COMPLETION**: Calculate and display execution performance with coverage warnings
 ```bash
-# COVERAGE VERIFICATION FIRST - MANDATORY
-echo ""
-echo "📊 COMMENT COVERAGE VERIFICATION"
-echo "================================="
-
+# COVERAGE VERIFICATION - MANDATORY
 # Get current comment statistics
 TOTAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq length)
 THREADED_REPLIES=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
 ORIGINAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
 
-echo "📝 Total comments: $TOTAL_COMMENTS"
-echo "💬 Threaded replies: $THREADED_REPLIES"
-echo "📋 Original comments: $ORIGINAL_COMMENTS"
-
 # Calculate coverage percentage
 if [ "$ORIGINAL_COMMENTS" -gt 0 ]; then
     COVERAGE_PERCENT=$(( (THREADED_REPLIES * 100) / ORIGINAL_COMMENTS ))
-    echo "📊 Coverage: $COVERAGE_PERCENT% ($THREADED_REPLIES/$ORIGINAL_COMMENTS)"
     
-    # MANDATORY WARNING SYSTEM
+    # MANDATORY WARNING SYSTEM - only output if incomplete
     if [ "$COVERAGE_PERCENT" -lt 100 ]; then
         MISSING_REPLIES=$((ORIGINAL_COMMENTS - THREADED_REPLIES))
-        echo ""
         echo "🚨 WARNING: INCOMPLETE COMMENT COVERAGE DETECTED!"
         echo "❌ Missing replies: $MISSING_REPLIES comments"
-        echo "⚠️ Coverage below 100% - some comments unresponded"
+        echo "⚠️ Coverage: $COVERAGE_PERCENT% ($THREADED_REPLIES/$ORIGINAL_COMMENTS)"
         echo "🔧 REQUIRED ACTION: Run /commentreply to address missing responses"
-        echo ""
-    else
-        echo "✅ COVERAGE: 100% - All comments responded to"
     fi
-else
-    echo "✅ No comments found requiring responses"
 fi
 
-# Calculate execution time and display results
+# Calculate execution time - only report if over target
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-COPILOT_MINUTES=$((COPILOT_DURATION / 60))
-COPILOT_SECONDS=$((COPILOT_DURATION % 60))
-
-echo ""
-echo "⏱️ COPILOT EXECUTION TIMING"
-echo "=========================="
-echo "🚀 Start time: $(date -d @$COPILOT_START_TIME '+%H:%M:%S')"
-echo "🏁 End time: $(date -d @$COPILOT_END_TIME '+%H:%M:%S')"
-echo "⏱️ Total duration: ${COPILOT_MINUTES}m ${COPILOT_SECONDS}s"
-echo "🎯 Performance target: 2-3 minutes"
-if [ $COPILOT_DURATION -le 180 ]; then
-    echo "✅ PERFORMANCE: Target achieved (≤3 minutes)"
-elif [ $COPILOT_DURATION -le 300 ]; then
-    echo "⚠️ PERFORMANCE: Slightly over target (3-5 minutes)"
-else
-    echo "❌ PERFORMANCE: Significantly exceeded target (>5 minutes)"
+if [ $COPILOT_DURATION -gt 180 ]; then
+    COPILOT_MINUTES=$((COPILOT_DURATION / 60))
+    COPILOT_SECONDS=$((COPILOT_DURATION % 60))
+    echo "⚠️ PERFORMANCE: Duration ${COPILOT_MINUTES}m ${COPILOT_SECONDS}s exceeded 3m target"
 fi
-echo ""
 ```
 
 ### Phase 9: Guidelines Integration & Learning
@@ -182,11 +134,6 @@ echo ""
 
 ```bash
 # PHASE 9: POST-EXECUTION GUIDELINES INTEGRATION
-echo ""
-echo "📚 PHASE 9: GUIDELINES INTEGRATION & LEARNING"
-echo "============================================="
-echo "🔄 Calling /guidelines for post-execution pattern capture..."
-
 # Execute and capture output + status
 GUIDE_OUTPUT=$(/guidelines 2>&1)
 GUIDE_STATUS=$?
@@ -198,9 +145,6 @@ if [ "$GUIDE_STATUS" -ne 0 ]; then
   echo "❌ /guidelines failed (exit $GUIDE_STATUS)" >&2
   return 1 2>/dev/null || exit 1
 fi
-
-echo "📝 Guidelines integration completed successfully"
-echo "🎯 Mistake prevention system enhanced for future executions"
 ```
 
 ## 🧠 Decision Logic

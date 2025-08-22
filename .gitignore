@@ -48,6 +48,13 @@ mvp_site/bin/chromedriver*
 worktree_*/
 /worktree_*
 
+# Context optimization monitoring - temporary files and logs
+/tmp/worldarchitect.ai/context_optimization/
+scripts/context_monitor.log
+scripts/context_optimization_cache/
+.claude/hooks/*.pyc
+.claude/hooks/__pycache__/
+
 # Orchestration status files - auto-updated timestamps
 orchestration/tasks/shared_status.txt
 
