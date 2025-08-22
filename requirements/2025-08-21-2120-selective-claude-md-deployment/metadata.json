@@ -1,0 +1,24 @@
+{
+  "id": "selective-claude-md-deployment",
+  "started": "2025-08-21T21:20:00Z",
+  "lastUpdated": "2025-08-21T21:20:00Z",
+  "status": "active",
+  "phase": "complete",
+  "progress": {
+    "discovery": { "answered": 5, "total": 5 },
+    "detail": { "answered": 5, "total": 5 }
+  },
+  "contextFiles": [
+    "roadmap/CONTENT_AWARE_CLAUDE_MD_GENERATION_PLAN.md",
+    "mvp_site/frontend_v2/src/components/CLAUDE.md",
+    "mvp_site/tests/CLAUDE.md",
+    "docs/pr-guidelines/CLAUDE.md",
+    ".claude/commands/CLAUDE.md",
+    "orchestration/CLAUDE.md"
+  ],
+  "relatedFeatures": [
+    "hierarchical-claude-md-reference-system",
+    "content-aware-generation-methodology",
+    "directory-content-analysis"
+  ]
+}

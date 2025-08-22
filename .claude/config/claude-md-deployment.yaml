@@ -1,0 +1,268 @@
+# claude-md-deployment.yaml
+# Comprehensive deployment configuration implementing TR-5 requirements
+# Production-ready with error handling, monitoring, and rollback support
+
+# DEPLOYMENT CRITERIA CONFIGURATION
+deployment_criteria:
+  # Minimum file count required for directory deployment eligibility
+  file_count_threshold: 5
+  
+  # Complexity scoring weights for different file types
+  complexity_indicators:
+    code_files:
+      weight: 0.4
+      extensions: [.py, .js, .ts, .java, .go, .rs, .cpp, .cs]
+    documentation:
+      weight: 0.2
+      extensions: [.md, .rst, .txt, .adoc]
+    configuration:
+      weight: 0.2
+      extensions: [.yaml, .yml, .json, .toml, .ini, .env]
+    test_files:
+      weight: 0.2
+      extensions: [.test.js, .spec.js, .test.py, .spec.py, _test.go, _test.rs]
+  
+  # Developer interaction frequency metrics
+  interaction_metrics:
+    git_activity_weight: 0.6
+    modification_frequency_weight: 0.4
+    recent_activity_days: 30 # Consider files modified within last 30 days
+  
+  # Directory priority tiers for deployment selection
+  directory_tiers:
+    core:
+      paths: [src/, lib/, app/]
+      priority: 1.0
+    high_value:
+      paths: [api/, services/, components/]
+      priority: 0.8
+    infrastructure:
+      paths: [config/, deploy/, ci/]
+      priority: 0.6
+    domain_specific:
+      paths: [domain/, business/, features/]
+      priority: 0.7
+
+# TEMPLATE MAPPING RULES
+template_mapping:
+  # Directory type to template selection logic
+  directory_templates:
+    backend:
+      paths: [api/, services/, src/backend/, lib/]
+      template: backend-service
+    frontend:
+      paths: [components/, src/frontend/, ui/]
+      template: frontend-component
+    fullstack:
+      paths: [app/, src/]
+      template: fullstack-application
+    documentation:
+      paths: [docs/, documentation/]
+      template: documentation-set
+    infrastructure:
+      paths: [config/, deploy/, ci/]
+      template: infrastructure-config
+  
+  # Technology stack detection patterns
+  tech_stack_detection:
+    python_flask:
+      indicators: 
+        - requirements.txt
+        - flask
+        - .py
+      template_vars:
+        language: python
+        framework: flask
+    node_react:
+      indicators:
+        - package.json
+        - react
+        - .jsx
+        - .tsx
+      template_vars:
+        language: javascript
+        frontend_framework: react
+        backend_framework: nodejs
+    go_microservice:
+      indicators:
+        - go.mod
+        - .go
+      template_vars:
+        language: golang
+        pattern: microservice
+    java_spring:
+      indicators:
+        - pom.xml
+        - spring
+        - .java
+      template_vars:
+        language: java
+        framework: spring
+
+# QUALITY GATE THRESHOLDS
+quality_gates:
+  # Validation rule requiring 95% file reference accuracy
+  file_reference_accuracy:
+    threshold: 0.95
+    validation_rules:
+      - cross_reference_check
+      - dependency_validation
+      - link_integrity
+  
+  # Quality score requirement of >9.0/10 average rating
+  quality_score:
+    threshold: 9.0
+    metrics:
+      - content_completeness
+      - structural_consistency
+      - documentation_coverage
+  
+  # Content accuracy standards for template generation
+  content_accuracy:
+    standards:
+      - metadata_validation
+      - code_example_verification
+      - architectural_pattern_matching
+  
+  # Template compliance criteria and validation metrics
+  template_compliance:
+    validation_metrics:
+      - structure_conformance
+      - variable_substitution_accuracy
+      - output_format_consistency
+
+# EXCLUDE PATTERNS
+exclude_patterns:
+  # Archive and backup directory patterns
+  archive_directories:
+    - backup/
+    - archive/
+    - old/
+    - deprecated/
+  
+  # Generated content detection rules
+  generated_content:
+    - build/
+    - dist/
+    - node_modules/
+    - __pycache__/
+    - target/
+    - .next/
+  
+  # Development tool exclusions
+  dev_tools:
+    - .git/
+    - .vscode/
+    - .idea/
+    - tmp/
+    - .tmp/
+  
+  # Temporary file patterns
+  temporary_files:
+    - "*.tmp"
+    - "*.temp"
+    - "*.bak"
+    - "*~"
+    - ".DS_Store"
+
+# INTEGRATION SETTINGS
+integration:
+  # Command system integration for /deploy and /template commands
+  command_system:
+    deploy_command:
+      endpoint: /deploy
+      required_permissions: [deploy_access, system_admin]
+      agent_assignment: deployment_orchestrator
+    template_command:
+      endpoint: /template
+      required_permissions: [template_access, content_creator]
+      agent_assignment: template_generator
+  
+  # Orchestration deployment settings with agent assignments
+  orchestration:
+    deployment_agents:
+      primary: deployment_orchestrator
+      secondary: template_generator
+      monitoring: system_monitor
+    deployment_strategy: selective
+    target_directory_count: 80-100 # Target high-value directories
+  
+  # Git workflow hook configurations
+  git_hooks:
+    pre_deploy:
+      trigger: pre-push
+      validation: quality_gate_check
+    post_deploy:
+      trigger: post-merge
+      action: deployment_notification
+  
+  # CI/CD pipeline integration
+  ci_cd:
+    github_actions:
+      workflow_file: .github/workflows/deploy.yaml
+      deployment_trigger: tag_created
+      rollback_trigger: deployment_failed
+    automation:
+      enabled: true
+      rollback_enabled: true
+      version_control: semantic_versioning
+
+# ENVIRONMENT OVERRIDES
+environments:
+  development:
+    quality_gates:
+      file_reference_accuracy:
+        threshold: 0.85
+      quality_score:
+        threshold: 7.0
+    deployment_strategy: all_directories
+    monitoring:
+      level: debug
+      log_output: console
+  
+  staging:
+    quality_gates:
+      file_reference_accuracy:
+        threshold: 0.90
+      quality_score:
+        threshold: 8.0
+    deployment_strategy: high_value_only
+    monitoring:
+      level: info
+      log_output: file
+  
+  production:
+    quality_gates:
+      file_reference_accuracy:
+        threshold: 0.95
+      quality_score:
+        threshold: 9.0
+    deployment_strategy: selective
+    monitoring:
+      level: error
+      log_output: external_system
+
+# ROLLBACK AND VERSIONING STRATEGIES
+rollback:
+  strategy: atomic_rollback
+  retention_days: 30
+  backup_required: true
+  versioning:
+    scheme: semantic_versioning
+    auto_increment: true
+    git_tagging: true
+
+# MONITORING AND LOGGING CONFIGURATION
+monitoring:
+  logging:
+    level: info
+    format: json
+    output: 
+      - file: /var/log/claude-md/deployment.log
+      - external_system: monitoring_service_endpoint
+  metrics_collection:
+    enabled: true
+    interval: 60 # seconds
+  alerting:
+    failure_threshold: 3
+    notification_channels: [slack, email, webhook]
