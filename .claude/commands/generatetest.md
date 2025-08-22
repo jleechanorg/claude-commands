@@ -1,8 +1,34 @@
-# /generatetest - Generate Focused Test Protocol
+# /generatetest - Intelligent Test Protocol Generator
 
-**Purpose**: Generate execution-ready test protocols that prevent priority failures and ensure correct issue identification
+**Purpose**: Generate execution-ready test protocols for both MCP and browser testing with automatic detection
 
 **Usage**: `/generatetest [test_name] [target_component] [expected_behavior]`
+
+## 🔍 INTELLIGENT TEST TYPE DETECTION
+
+**Automatic Detection Logic:**
+- **MCP Tests**: Detects MCP-related keywords → `mcp`, `worldarchitect`, `campaign`, `create_campaign`, `get_campaigns`, `process_action`, `firebase`, `gemini`, `api integration`, `server integration`
+- **Browser Tests**: Detects UI/frontend keywords → `browser`, `ui`, `frontend`, `page`, `click`, `navigation`, `form`, `login`, `oauth`, `responsive`, `visual`
+- **Hybrid Tests**: Detects both patterns → Asks user for clarification
+
+**Keywords for MCP Test Generation:**
+```
+mcp, worldarchitect, campaign, create_campaign, get_campaigns_list, process_action, 
+get_campaign_state, firebase, firestore, gemini, api integration, server integration,
+real services, production mode, mcp tools, mcp server
+```
+
+**Keywords for Browser Test Generation:**
+```
+browser, ui, frontend, page, click, navigation, form, login, oauth, responsive, 
+visual, playwright, screenshot, element, button, input, landing page, user interface
+```
+
+**Decision Matrix:**
+- **IF** input contains MCP keywords → Generate MCP integration test
+- **IF** input contains browser keywords → Generate browser automation test  
+- **IF** input contains both → Ask user: "Detected both MCP and browser elements. Generate: (1) MCP integration test, (2) Browser automation test, or (3) Hybrid test?"
+- **IF** unclear → Ask user: "Generate: (1) MCP integration test or (2) Browser automation test?"
 
 **Default Behavior** (Focused & Execution-Ready):
 1. **Problem-First Design**: Start with specific user problem to solve
@@ -113,8 +139,14 @@ IF finding is ℹ️ LOW → Note briefly, continue testing
 ```javascript
 // Auto-generated console monitoring setup
 window.testErrorLog = [];
+const __origConsoleError = console.error.bind(console);
 console.error = function(...args) {
-    window.testErrorLog.push({type: 'error', timestamp: new Date().toISOString(), message: args.join(' ')});
+    window.testErrorLog.push({
+        type: 'error',
+        timestamp: new Date().toISOString(),
+        message: args.map(String).join(' ')
+    });
+    __origConsoleError(...args);
 };
 
 // Test-specific error validation
@@ -182,7 +214,62 @@ curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || e
 - **Progressive Enhancement**: Test basic functionality before complex features
 - **Historical Context**: Document what problems each test was created to solve
 
-**Generated Test Template**
+## 🎮 MCP INTEGRATION TEST TEMPLATE
+
+**Generated when MCP keywords detected:**
+
+# MCP Integration Test: [TEST_NAME]
+
+## Test Overview
+This test validates [specific MCP functionality] using real WorldArchitect MCP server integration with Firebase and Gemini services.
+
+## Test Configuration
+- **Test Type**: MCP Integration Test
+- **User ID**: `test-[test-name]-user@example.com`
+- **Expected Duration**: [estimated time]
+- **Dependencies**: MCP server running in production mode (`PRODUCTION_MODE=true`)
+
+## Test Steps
+
+### Phase 1: [Primary Test Objective]
+**Objective**: [What this phase validates]
+- **Action**: Call `mcp__worldarchitect__[relevant_mcp_tool]`
+  - `user_id`: `test-[test-name]-user@example.com`
+  - [additional parameters based on test]
+- **Expected Results**:
+  - [Specific outcome 1]
+  - [Specific outcome 2]
+  - [Data validation requirements]
+
+### Phase 2: [Secondary Validation]
+**Objective**: [Follow-up validation]
+- **Action**: [Subsequent MCP tool call]
+- **Expected Results**:
+  - [Expected behavior]
+  - [State persistence validation]
+
+## Success Criteria
+- ✅ [Primary success condition]
+- ✅ All responses contain real AI-generated content (no mocks)
+- ✅ [Data persistence requirement]
+- ✅ No error responses or timeout issues
+
+## Failure Indicators
+- ❌ Mock data detected in any response
+- ❌ [Specific failure condition]
+- ❌ MCP server connection failures
+- ❌ Firebase or Gemini API errors
+
+## Test Execution Notes
+- Run with MCP server in production mode (`PRODUCTION_MODE=true`)
+- Monitor server logs for error messages during execution
+- Verify all timestamps are realistic and progressive
+- Check that Firebase documents are actually created
+- Confirm Gemini API responses are genuine (not cached/mocked)
+
+## 🌐 BROWSER AUTOMATION TEST TEMPLATE
+
+**Generated when browser keywords detected:**
 
 # Test: [TEST_NAME]
 

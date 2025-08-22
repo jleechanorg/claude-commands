@@ -72,11 +72,14 @@ class TestBannedNamesLoading(unittest.TestCase):
             ), f"Extended banned name '{name}' not found in content"
 
     def test_banned_names_count_verification(self):
-        """Test that the content mentions 56 total banned names."""
+        """Test that the file has correct structure and name count."""
         content = world_loader.load_banned_names()
-        assert "56" in content, "Content should mention total count of 56 banned names"
-        assert "10 Primary" in content, "Content should mention 10 primary names"
-        assert "46 Extended" in content, "Content should mention 46 extended names"
+        # Count actual names (lines starting with "- ")
+        name_lines = [line for line in content.split('\n') if line.strip().startswith('- ')]
+        assert len(name_lines) >= 56, f"Expected at least 56 banned names, found {len(name_lines)}"
+        # Check for section headers which indicate proper file structure
+        assert "Primary Banned Names" in content, "Content should have Primary Banned Names section"
+        assert "Extended Banned Names" in content, "Content should have Extended Banned Names section"
 
     def test_banned_names_enforcement_directive(self):
         """Test that enforcement directive is present."""

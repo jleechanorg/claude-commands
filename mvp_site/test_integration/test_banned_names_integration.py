@@ -33,8 +33,8 @@ These names are overused by LLMs and cannot be used in any world content.
 - Valerius
 """
 
-        self.sample_book_content = "Book content here"
-        self.sample_world_content = "World content here"
+        self.sample_book_content = "PRIMARY CANON - CELESTIAL WARS ALEXIEL BOOK content here"
+        self.sample_world_content = "# World of Assiah - Compressed Campaign Guide\n\nWorld content here"
 
     def test_load_banned_names_success(self):
         """Test successful loading of banned names"""
@@ -53,7 +53,7 @@ These names are overused by LLMs and cannot be used in any world content.
     def test_load_banned_names_file_not_found(self):
         """Test behavior when banned names file is not found"""
         with patch("builtins.open", side_effect=FileNotFoundError):
-            with patch("logging.warning") as mock_warning:
+            with patch("logging_util.warning") as mock_warning:
                 result = load_banned_names()
 
                 assert result == ""
@@ -63,162 +63,142 @@ These names are overused by LLMs and cannot be used in any world content.
     def test_load_banned_names_general_error(self):
         """Test behavior when general error occurs loading banned names"""
         with patch("builtins.open", side_effect=Exception("Test error")):
-            with patch("logging.error") as mock_error:
+            with patch("logging_util.warning") as mock_error:
                 result = load_banned_names()
 
                 assert result == ""
                 mock_error.assert_called_once()
-                assert "Error loading banned names" in mock_error.call_args[0][0]
+                assert "Could not load banned names file" in mock_error.call_args[0][0]
 
     @patch("world_loader.load_banned_names")
-    def test_world_content_includes_banned_names(self, mock_load_banned):
+    @patch("world_loader.read_file_cached", autospec=True)
+    def test_world_content_includes_banned_names(self, mock_read_file_cached, mock_load_banned):
         """Test that world content includes banned names section"""
         mock_load_banned.return_value = self.sample_banned_names
+        
+        # Mock the cached file reader to return our test content
+        def mock_read_file_side_effect(filepath, encoding="utf-8"):
+            if "world_assiah" in str(filepath) or "assiah" in str(filepath):
+                return self.sample_world_content
+            return ""
+        
+        mock_read_file_cached.side_effect = mock_read_file_side_effect
+        
+        with patch("os.path.join") as mock_join:
+            mock_join.side_effect = lambda *args: "/".join(args)
 
-        # Mock file reads for book and world content
-        mock_files = {
-            "book_path": self.sample_book_content,
-            "world_path": self.sample_world_content,
-        }
+            result = load_world_content_for_system_instruction()
 
-        def mock_open_file(path, *args, **kwargs):
-            class MockFile:
-                def __enter__(self):
-                    return self
+            # Check structure
+            assert "WORLD CONTENT FOR CAMPAIGN CONSISTENCY" in result
+            assert "# World of Assiah - Compressed Campaign Guide" in result
+            assert "WORLD CANON - INTEGRATED CAMPAIGN GUIDE" in result
+            assert "CRITICAL NAMING RESTRICTIONS" in result
 
-                def __exit__(self, *args):
-                    pass
+            # Check banned names content
+            assert "Banned Names" in result
+            assert "must NEVER be used" in result
 
-                def read(self):
-                    if "celestial_wars" in str(path):
-                        return mock_files["book_path"]
-                    if "world_assiah" in str(path):
-                        return mock_files["world_path"]
-                    return ""
+            # Check enforcement text
+            assert "Enforcement" in result
+            assert "New NPCs being introduced" in result
+            assert "Player character suggestions" in result
 
-                def strip(self):
-                    return self.read().strip()
+            # Check world consistency rules
+            assert (
+                "6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section"
+                in result
+            )
 
-            return MockFile()
-
-        with patch("builtins.open", side_effect=mock_open_file):
-            with patch("os.path.join") as mock_join:
-                mock_join.side_effect = lambda *args: "/".join(args)
-
-                result = load_world_content_for_system_instruction()
-
-                # Check structure
-                assert "WORLD CONTENT FOR CAMPAIGN CONSISTENCY" in result
-                assert "PRIMARY CANON - CELESTIAL WARS ALEXIEL BOOK" in result
-                assert "SECONDARY CANON - WORLD OF ASSIAH DOCUMENTATION" in result
-                assert "CRITICAL NAMING RESTRICTIONS" in result
-
-                # Check banned names content
-                assert "Banned Names" in result
-                assert "must NEVER be used" in result
-
-                # Check enforcement text
-                assert "Enforcement" in result
-                assert "New NPCs being introduced" in result
-                assert "Player character suggestions" in result
-
-                # Check world consistency rules
-                assert (
-                    "7. **Name Restrictions**: NEVER use any name from the banned names list"
-                    in result
-                )
-
-    def test_banned_names_in_critical_section(self):
+    @patch("world_loader.load_banned_names") 
+    @patch("world_loader.read_file_cached", autospec=True)
+    def test_banned_names_in_critical_section(self, mock_read_file_cached, mock_load_banned):
         """Test that banned names appear in the critical naming restrictions section"""
-        with (
-            patch(
-                "world_loader.load_banned_names", return_value=self.sample_banned_names
-            ),
-            patch("builtins.open", mock_open(read_data="dummy content")),
-        ):
-            with patch("os.path.join") as mock_join:
-                mock_join.side_effect = lambda *args: "/".join(args)
+        mock_load_banned.return_value = self.sample_banned_names
+        mock_read_file_cached.return_value = self.sample_world_content
+        
+        with patch("os.path.join") as mock_join:
+            mock_join.side_effect = lambda *args: "/".join(args)
 
-                result = load_world_content_for_system_instruction()
+            result = load_world_content_for_system_instruction()
 
-                # Find the critical naming restrictions section
-                critical_start = result.find("CRITICAL NAMING RESTRICTIONS")
-                assert (
-                    critical_start != -1
-                ), "CRITICAL NAMING RESTRICTIONS section not found"
+            # Find the critical naming restrictions section
+            critical_start = result.find("CRITICAL NAMING RESTRICTIONS")
+            assert (
+                critical_start != -1
+            ), "CRITICAL NAMING RESTRICTIONS section not found"
 
-                # Find where it ends (next --- marker)
-                critical_end = result.find("---", critical_start + 1)
-                critical_section = result[critical_start:critical_end]
+            # Find where it ends (next --- marker)
+            critical_end = result.find("---", critical_start + 1)
+            critical_section = result[critical_start:critical_end]
 
-                # Check that banned names are in this section
-                assert "Alaric" in critical_section
-                assert "Corvus" in critical_section
-                assert "Elara" in critical_section
-                assert "Valerius" in critical_section
+            # Check that banned names are in this section
+            assert "Alaric" in critical_section
+            assert "Corvus" in critical_section
+            assert "Elara" in critical_section
+            assert "Valerius" in critical_section
 
-    def test_specific_banned_names_present(self):
+    @patch("world_loader.load_banned_names")
+    @patch("world_loader.read_file_cached", autospec=True)
+    def test_specific_banned_names_present(self, mock_read_file_cached, mock_load_banned):
         """Test that specific problematic names are included"""
         # Test only the names that are actually in our sample data
         names_to_test = ["Alaric", "Blackwood", "Corvus", "Elara", "Valerius"]
 
-        with (
-            patch(
-                "world_loader.load_banned_names", return_value=self.sample_banned_names
-            ),
-            patch("builtins.open", mock_open(read_data="dummy content")),
-        ):
-            with patch("os.path.join") as mock_join:
-                mock_join.side_effect = lambda *args: "/".join(args)
+        mock_load_banned.return_value = self.sample_banned_names
+        mock_read_file_cached.return_value = self.sample_world_content
+        
+        with patch("os.path.join") as mock_join:
+            mock_join.side_effect = lambda *args: "/".join(args)
 
-                result = load_world_content_for_system_instruction()
+            result = load_world_content_for_system_instruction()
 
-                for name in names_to_test:
-                    assert (
-                        name in result
-                    ), f"Banned name '{name}' not found in world content"
+            for name in names_to_test:
+                assert (
+                    name in result
+                ), f"Banned name '{name}' not found in world content"
 
-    def test_enforcement_instructions_complete(self):
+    @patch("world_loader.load_banned_names")
+    @patch("world_loader.read_file_cached", autospec=True)
+    def test_enforcement_instructions_complete(self, mock_read_file_cached, mock_load_banned):
         """Test that enforcement instructions are complete"""
-        with (
-            patch(
-                "world_loader.load_banned_names", return_value=self.sample_banned_names
-            ),
-            patch("builtins.open", mock_open(read_data="dummy content")),
-        ):
-            with patch("os.path.join") as mock_join:
-                mock_join.side_effect = lambda *args: "/".join(args)
+        mock_load_banned.return_value = self.sample_banned_names
+        mock_read_file_cached.return_value = self.sample_world_content
+        
+        with patch("os.path.join") as mock_join:
+            mock_join.side_effect = lambda *args: "/".join(args)
 
-                result = load_world_content_for_system_instruction()
+            result = load_world_content_for_system_instruction()
 
-                # Check all enforcement categories
-                enforcement_items = [
-                    "New NPCs being introduced",
-                    "Player character suggestions",
-                    "Location names",
-                    "Organization names",
-                    "Any other named entity",
-                ]
+            # Check all enforcement categories
+            enforcement_items = [
+                "New NPCs being introduced",
+                "Player character suggestions",
+                "Location names",
+                "Organization names",
+                "Any other named entity",
+            ]
 
-                for item in enforcement_items:
-                    assert item in result, f"Enforcement item '{item}' not found"
+            for item in enforcement_items:
+                assert item in result, f"Enforcement item '{item}' not found"
 
-    def test_world_consistency_rules_updated(self):
+    @patch("world_loader.load_banned_names")
+    @patch("world_loader.read_file_cached", autospec=True)
+    def test_world_consistency_rules_updated(self, mock_read_file_cached, mock_load_banned):
         """Test that world consistency rules include name restrictions"""
-        with patch(
-            "world_loader.load_banned_names", return_value=self.sample_banned_names
-        ):
-            with patch("builtins.open", mock_open(read_data="dummy content")):
-                with patch("os.path.join") as mock_join:
-                    mock_join.side_effect = lambda *args: "/".join(args)
+        mock_load_banned.return_value = self.sample_banned_names
+        mock_read_file_cached.return_value = self.sample_world_content
+        
+        with patch("os.path.join") as mock_join:
+            mock_join.side_effect = lambda *args: "/".join(args)
 
-                    result = load_world_content_for_system_instruction()
+            result = load_world_content_for_system_instruction()
 
-                    # Check that rule #7 exists
-                    assert (
-                        "7. **Name Restrictions**: NEVER use any name from the banned names list"
-                        in result
-                    )
+            # Check that rule #7 exists
+            assert (
+                "6. **Name Restrictions**: NEVER use any name from the CRITICAL NAMING RESTRICTIONS section"
+                in result
+            )
 
 
 class TestBannedNamesRealFile(unittest.TestCase):

@@ -15,6 +15,7 @@
 #   ./run_tests.sh --integration --coverage  # Run unit and integration tests with coverage
 #   ./run_tests.sh --full --integration      # Full suite including integration tests
 #   ./run_tests.sh --dry-run --integration   # Preview intelligent selection with integration tests
+#   ./run_tests.sh --mcp                     # Run MCP server tests (requires MCP server running)
 #
 # CI Simulation Features:
 # - Always simulates GitHub Actions environment to catch deployment issues early
@@ -230,6 +231,9 @@ for arg in "$@"; do
         --integration)
             include_integration=true
             ;;
+        --mcp)
+            mcp_tests=true
+            ;;
         --coverage)
             enable_coverage=true
             ;;
@@ -272,6 +276,30 @@ if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
 else
     print_status "Skipping integration tests (use --integration to include them)"
+fi
+
+# Handle MCP tests specifically
+if [ "$mcp_tests" = true ]; then
+    print_status "🚀 MCP Server Test Mode - Running MCP test client"
+    
+    # Check if MCP server is running
+    if ! curl -s -f "http://localhost:8000/health" >/dev/null 2>&1; then
+        print_error "❌ MCP server not running on localhost:8000"
+        print_error "Please start the MCP server first:"
+        print_error "  python3 mvp_site/mcp_api.py --host localhost --port 8000"
+        exit 1
+    fi
+    
+    print_success "✅ MCP server is running"
+    
+    # Run MCP test client
+    if TESTING=true python3 mvp_site/tests/mcp_test_client.py --test all; then
+        print_success "🎉 All MCP tests passed!"
+        exit 0
+    else
+        print_error "❌ MCP tests failed"
+        exit 1
+    fi
 fi
 
 # Test selection logic

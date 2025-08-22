@@ -536,3 +536,46 @@ The recent **Model Context Protocol (MCP)** refactor has dramatically improved t
 - Test bypass headers for authentication
 - Mock service implementations
 - Separate test database configurations
+
+## MCP Server Integration
+
+The WorldArchitect.AI MCP server (`mcp_api.py`) provides AI assistant integration through the Model Context Protocol (MCP).
+
+### Server Modes
+
+#### Dual Transport Mode (Recommended)
+- **Command**: `python3 mvp_site/mcp_api.py --dual`
+- **Purpose**: Supports both HTTP and stdio simultaneously
+- **Protocols**: HTTP JSON-RPC 2.0 + stdio JSON-RPC 2.0 (MCP standard)
+- **Use case**: Best of both worlds - manual testing via HTTP + AI integration via stdio
+- **Health Check**: `curl http://localhost:8000/health`
+
+#### HTTP-Only Mode (Legacy)
+- **Command**: `python3 mvp_site/mcp_api.py --host localhost --port 8000`
+- **Purpose**: HTTP endpoint only for local development
+- **Protocol**: HTTP JSON-RPC 2.0
+- **Use case**: When stdio transport is not needed
+
+#### Stdio-Only Mode (Legacy)
+- **Command**: `python3 mvp_site/mcp_api.py --stdio`
+- **Purpose**: AI assistant tool integration only
+- **Protocol**: stdio JSON-RPC 2.0 (MCP standard)
+- **Use case**: Pure Claude Code integration without HTTP
+
+### MCP Tools Available
+- `create_campaign` - Create new D&D campaigns
+- `get_campaign_state` - Retrieve campaign data
+- `process_action` - Process player actions and generate responses
+- `update_campaign` - Modify campaign metadata
+- `export_campaign` - Generate campaign documents (PDF/DOCX/TXT)
+- `get_campaigns_list` - List user campaigns
+- `get_user_settings` / `update_user_settings` - User preference management
+
+### Testing MCP Server
+```bash
+# Run MCP-specific tests
+./run_tests.sh --mcp
+
+# Manual health check
+curl http://localhost:8000/health
+```

@@ -8,9 +8,11 @@ Flask App → MCPClient → MCP Server → World Logic → Response Chain
 This supplements the existing Flask-only end2end tests with true MCP server integration.
 """
 
+import asyncio
 import os
 import subprocess
 import sys
+import threading
 import time
 import unittest
 
@@ -256,6 +258,145 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 [201, 400, 500],  # 201=created, 400=validation error, 500=server error
                 f"MCP should handle concurrent request {i}",
             )
+
+    def test_mcp_event_loop_performance_bug(self):
+        """Test that MCP does NOT create new event loops per request (RED test - should fail initially)."""
+        import requests
+        import json
+        from unittest.mock import patch
+        
+        # Track event loop creation calls
+        original_new_event_loop = asyncio.new_event_loop
+        loop_creation_count = {'count': 0}
+        
+        def tracked_new_event_loop():
+            loop_creation_count['count'] += 1
+            return original_new_event_loop()
+        
+        # Patch asyncio.new_event_loop to track calls
+        with patch('asyncio.new_event_loop', side_effect=tracked_new_event_loop):
+            # Make multiple JSON-RPC calls to MCP server directly
+            mcp_url = f"http://127.0.0.1:{self.mcp_port}"
+            headers = {"Content-Type": "application/json"}
+            
+            # Multiple different types of requests to cover different code paths
+            jsonrpc_requests = [
+                {
+                    "jsonrpc": "2.0",
+                    "method": "tools/list",
+                    "id": 1
+                },
+                {
+                    "jsonrpc": "2.0", 
+                    "method": "resources/list",
+                    "id": 2
+                },
+                {
+                    "jsonrpc": "2.0",
+                    "method": "tools/call",
+                    "params": {
+                        "name": "create_campaign",
+                        "arguments": {"title": "Test Campaign", "setting": "Test World"}
+                    },
+                    "id": 3
+                }
+            ]
+            
+            # Reset counter and make requests
+            loop_creation_count['count'] = 0
+            responses = []
+            
+            for request_data in jsonrpc_requests:
+                try:
+                    response = requests.post(
+                        mcp_url, 
+                        headers=headers, 
+                        data=json.dumps(request_data),
+                        timeout=5
+                    )
+                    responses.append(response)
+                except requests.exceptions.RequestException as e:
+                    # If MCP server isn't available, skip this test
+                    self.skipTest(f"MCP server not available for performance test: {e}")
+            
+            # CRITICAL ASSERTION: Should NOT create new event loops per request
+            # With the current bug, this will fail because each request creates a new loop
+            self.assertEqual(
+                loop_creation_count['count'], 
+                0,
+                f"PERFORMANCE BUG DETECTED: MCP created {loop_creation_count['count']} event loops for {len(jsonrpc_requests)} requests. "
+                f"Should reuse existing event loop, not create new ones per request. "
+                f"This causes major performance degradation."
+            )
+
+    def test_mcp_production_traceback_security_bug(self):
+        """Test that MCP does NOT expose tracebacks in production mode (RED test - should fail initially)."""
+        import requests
+        import json
+        import os
+        
+        # Set production mode environment variable
+        original_production_mode = os.environ.get('PRODUCTION_MODE')
+        os.environ['PRODUCTION_MODE'] = 'true'
+        
+        try:
+            # Make a malformed JSON-RPC request to trigger an error
+            mcp_url = f"http://127.0.0.1:{self.mcp_port}"
+            headers = {"Content-Type": "application/json"}
+            
+            # Send invalid JSON to trigger exception handling
+            invalid_request = "{{invalid json"
+            
+            try:
+                response = requests.post(
+                    mcp_url,
+                    headers=headers,
+                    data=invalid_request,
+                    timeout=5
+                )
+                
+                # Parse response
+                if response.status_code == 500:
+                    try:
+                        error_data = response.json()
+                        
+                        # CRITICAL SECURITY ASSERTION: Should NOT expose tracebacks in production
+                        # With the current bug, this will fail because traceback is included
+                        error_info = error_data.get('error', {})
+                        
+                        # Check if traceback information is exposed
+                        has_traceback = (
+                            'data' in error_info and 
+                            error_info['data'] and
+                            ('Traceback' in str(error_info['data']) or 
+                             'File "' in str(error_info['data']) or
+                             '.py", line' in str(error_info['data']))
+                        )
+                        
+                        self.assertFalse(
+                            has_traceback,
+                            f"SECURITY BUG DETECTED: MCP exposed traceback in production mode. "
+                            f"Error response contains sensitive traceback information: {error_info.get('data', 'N/A')}. "
+                            f"This violates security best practices and can leak sensitive system information to attackers."
+                        )
+                        
+                    except json.JSONDecodeError:
+                        # If response isn't valid JSON, that's also a problem
+                        self.fail("MCP returned invalid JSON in error response")
+                else:
+                    # If we don't get an error response, skip the security test
+                    self.skipTest(f"Expected error response but got {response.status_code}")
+                    
+            except requests.exceptions.RequestException as e:
+                # If MCP server isn't available, skip this test
+                self.skipTest(f"MCP server not available for security test: {e}")
+                
+        finally:
+            # Restore original production mode setting
+            if original_production_mode is not None:
+                os.environ['PRODUCTION_MODE'] = original_production_mode
+            else:
+                os.environ.pop('PRODUCTION_MODE', None)
 
     def test_mcp_authentication_integration(self):
         """Test authentication handling through MCP architecture."""

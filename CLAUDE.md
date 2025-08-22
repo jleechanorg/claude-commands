@@ -79,7 +79,9 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 **USE CLAUDE FOR:** Understanding existing code, debugging, refactoring decisions, security-critical implementations, architectural decisions, complex integrations
 
-## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL - EXTREME ANTI-CREATION BIAS
+## 🚨 CRITICAL: FILE JUSTIFICATION & CREATION PROTOCOL
+
+### 🚨 NEW FILE CREATION PROTOCOL - EXTREME ANTI-CREATION BIAS
 
 **🚨 DEFAULT ANSWER IS ALWAYS "NO NEW FILES"** - You must prove why integration into existing files is IMPOSSIBLE
 
@@ -95,10 +97,37 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 1. **Add to existing file with similar purpose** - Even if file gets larger
 2. **Add to existing utility/helper file** - Even if not perfect fit
 3. **Add to existing module's __init__.py** - For module-level functionality
-4. **Add to existing test file** - For test code (prefer existing test files unless module complexity requires new test organization)
+4. **Add to existing test file** - For test code (NEVER create new test files without permission)
 5. **Add as method to existing class** - Even if class gets larger
 6. **Add to existing configuration file** - For config/settings
 7. **LAST RESORT: Create new file** - Only after documenting why ALL above options failed
+
+### 🚨 FILE JUSTIFICATION PROTOCOL - MANDATORY FOR ALL PR FILE CHANGES
+
+**🚨 EVERY FILE CHANGE MUST BE JUSTIFIED**: ⚠️ MANDATORY before any commit/push operation
+
+**🚨 REQUIRED DOCUMENTATION FOR EACH CHANGED FILE**:
+1. **GOAL**: What is the purpose of this file/change in 1-2 sentences
+2. **MODIFICATION**: Specific changes made and why they were needed
+3. **NECESSITY**: Why this change is essential vs alternative approaches
+4. **INTEGRATION PROOF**: Evidence that integration into existing files was attempted first
+
+**🚨 FILE JUSTIFICATION CATEGORIES**:
+- ✅ **ESSENTIAL**: Core functionality, bug fixes, security improvements, production requirements
+- ⚠️ **ENHANCEMENT**: Performance improvements, user experience, maintainability with clear business value
+- ❌ **UNNECESSARY**: Documentation that could be integrated, temporary files, redundant implementations
+
+**🚨 MANDATORY QUESTIONS FOR EVERY FILE CHANGE**:
+1. "What specific problem does this file solve that existing files cannot?"
+2. "Have I proven that integration into existing files is impossible?"
+3. "Does this file provide unique value that justifies its existence?"
+4. "Could this functionality be achieved by modifying existing files instead?"
+
+**🚨 JUSTIFICATION ENFORCEMENT**:
+- **All /push and /pushl commands**: MUST reference File Justification Protocol
+- **All /copilot operations**: MUST validate file changes against justification criteria
+- **PR documentation**: MUST include file-by-file justification for all changes
+- **Commit messages**: MUST explain the necessity of each file modification
 
 **🚨 EXAMPLES OF VIOLATIONS** (What NOT to do):
 - ❌ Creating `mcp_stdio_wrapper.py` instead of adding stdio logic to `mcp_api.py`
@@ -106,6 +135,15 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - ❌ Creating new utility files instead of using existing `utils.py` or `helpers.py`
 - ❌ Creating new config files instead of adding to existing configuration
 - ❌ Creating temporary scripts instead of adding functionality to existing scripts
+
+**🚨 SEARCH EVIDENCE REQUIREMENTS**: ⚠️ MANDATORY - Document ALL searches performed:
+- ❌ **NEVER create files without exhaustive search** - This protocol violation causes "huge mistakes"
+- 🔍 **SEARCH HIERARCHY** (MANDATORY ORDER):
+  1. **Serena MCP semantic search** - Search for similar functionality by concept/purpose
+  2. **Grep tool pattern search** - Search for keywords, function names, class names
+  3. **Glob tool file discovery** - Search for files with similar names/patterns
+  4. **Directory exploration** - Check `/utils/`, `/helpers/`, `/lib/`, modules, configs, `mcp_*.py`, `*_api.py`
+  5. **Read existing files** - Examine similar-purpose files for existing implementations
 
 **🚨 MANDATORY QUESTIONS BEFORE FILE CREATION**:
 1. "Can I add this to an existing file instead?" - DEFAULT ANSWER: YES
@@ -116,9 +154,10 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 **REQUIREMENTS:**
 - ❌ NO file creation without NEW_FILE_REQUESTS.md entry
-- 🔍 SEARCH FIRST: Document checking `/utils/`, `/helpers/`, `/lib/`, modules, configs
+- 🔍 SEARCH FIRST: Complete search protocol above BEFORE any file creation
 - ✅ JUSTIFY: Document failed integration attempts into existing files
 - 📝 INTEGRATE: How file connects to existing codebase
+- 🚨 **VIOLATION CONSEQUENCE**: Creating files without integration attempts = "huge mistake" requiring protocol fixes
 - 🚨 **SUCCESS METRIC**: Zero new files created unless absolutely necessary for production functionality
 
 ## 🚨 CRITICAL: FILE PLACEMENT PROTOCOL - ZERO TOLERANCE

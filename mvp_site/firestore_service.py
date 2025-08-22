@@ -32,6 +32,7 @@ import json
 import os
 import time
 from typing import Any
+from unittest.mock import MagicMock
 
 import firebase_admin
 import constants
@@ -49,6 +50,14 @@ MAX_LOG_LINES: int = 20
 DELETE_TOKEN: str = (
     "__DELETE__"  # Token used to mark fields for deletion in state updates
 )
+
+
+def _env_truthy(name: str) -> bool:
+    """
+    Returns True if the environment variable `name` is set to
+    a truthy value (case-insensitive): "true", "1", "yes", "y", or "on".
+    """
+    return os.environ.get(name, "").strip().lower() in {"true", "1", "yes", "y", "on"}
 
 
 def _truncate_log_json(
@@ -420,9 +429,9 @@ def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
     if isinstance(o, (datetime.datetime, datetime.date)):
         return o.isoformat()
     # Check for Firestore's special DELETE_FIELD sentinel.
-    if o == firestore.DELETE_FIELD:
+    if o is firestore.DELETE_FIELD:
         return None  # Or another appropriate serializable value
-    if o == firestore.SERVER_TIMESTAMP:
+    if o is firestore.SERVER_TIMESTAMP:
         return "<SERVER_TIMESTAMP>"
     # Handle SceneManifest objects from entity tracking
     if hasattr(o, "to_dict") and callable(o.to_dict):
@@ -442,9 +451,11 @@ def get_db() -> firestore.Client:
     or similar mocking frameworks to provide test doubles.
     """
     # Check if Firebase initialization should be skipped (testing/mock mode)
-    if firebase_utils.should_skip_firebase_init():
-        logging_util.debug("Firebase initialization skipped - using mock client")
-        from unittest.mock import MagicMock
+    skip_init = firebase_utils.should_skip_firebase_init()
+    logging_util.info(f"🔧 DEBUG: Firebase init check - skip_init={skip_init}")
+    if skip_init:
+        logging_util.warning("🚨 Firebase initialization skipped - using mock client")
+        # Uses MagicMock imported at module level
         
         # Create JSON-serializable mock responses
         mock_doc_dict = {
@@ -476,17 +487,27 @@ def get_db() -> firestore.Client:
         return mock_client
     
     # Check if Firebase is already initialized
-    if not firebase_admin._apps:
-        # Firebase not initialized - attempt to initialize it
+    try:
+        firebase_admin.get_app()
+    except ValueError:
         try:
             logging_util.info("Firebase not initialized - attempting to initialize now")
             firebase_admin.initialize_app()
         except Exception as init_error:
             logging_util.error(f"Failed to initialize Firebase: {init_error}")
             # If we're in a testing context but skip check failed, provide mock
-            if os.environ.get('TESTING') == 'true' or os.environ.get('CI') == 'true':
-                logging_util.info("Using mock client due to initialization failure in test/CI environment")
-                from unittest.mock import MagicMock
+            testing_env = _env_truthy("TESTING")
+            ci_env = _env_truthy("CI")
+            production_mode = _env_truthy("PRODUCTION_MODE")
+            logging_util.warning(f"🚨 Firebase init failed! TESTING={testing_env}, CI={ci_env}, PRODUCTION_MODE={production_mode}")
+            
+            # PRODUCTION MODE: Never use mocks - fail fast instead
+            if production_mode:
+                raise ValueError(f"PRODUCTION MODE: Firebase initialization failed: {init_error}")
+            
+            if testing_env or ci_env:
+                logging_util.warning("🚨 Using mock client due to initialization failure in test/CI environment")
+                # Uses MagicMock imported at module level
                 
                 # Create JSON-serializable mock responses for initialization failure
                 mock_doc_snapshot = MagicMock()
@@ -517,12 +538,20 @@ def get_db() -> firestore.Client:
         return firestore.client()
     except Exception as client_error:
         logging_util.error(f"Failed to create Firestore client: {client_error}")
-        # Final fallback for test environments
-        if (os.environ.get('TESTING') == 'true' or 
-            os.environ.get('CI') == 'true' or
-            firebase_utils.should_skip_firebase_init()):
-            logging_util.info("Using mock client due to client creation failure in test/CI environment")
-            from unittest.mock import MagicMock
+        # Final fallback for test environments  
+        testing_env = _env_truthy("TESTING")
+        ci_env = _env_truthy("CI")
+        skip_init = firebase_utils.should_skip_firebase_init()
+        production_mode = _env_truthy("PRODUCTION_MODE")
+        logging_util.warning(f"🚨 Firestore client creation failed! TESTING={testing_env}, CI={ci_env}, skip_init={skip_init}, PRODUCTION_MODE={production_mode}")
+        
+        # PRODUCTION MODE: Never use mocks - fail fast instead
+        if production_mode:
+            raise ValueError(f"PRODUCTION MODE: Firestore client creation failed: {client_error}")
+            
+        if (testing_env or ci_env or skip_init):
+            logging_util.warning("🚨 Using mock client due to client creation failure in test/CI environment")
+            # Uses MagicMock imported at module level
             
             # Create JSON-serializable mock responses for client creation failure
             mock_doc_snapshot = MagicMock()
@@ -562,11 +591,11 @@ def get_campaigns_for_user(user_id: UserId) -> list[dict[str, Any]]:
 
         # Safely get and format timestamps
         created_at = campaign_data.get("created_at")
-        if created_at:
+        if created_at and hasattr(created_at, "isoformat"):
             campaign_data["created_at"] = created_at.isoformat()
 
         last_played = campaign_data.get("last_played")
-        if last_played:
+        if last_played and hasattr(last_played, "isoformat"):
             campaign_data["last_played"] = last_played.isoformat()
 
         campaign_list.append(campaign_data)
@@ -646,7 +675,44 @@ def get_campaign_by_id(
     # 3. Sort the list in Python, which is more powerful than a Firestore query.
     # We sort by timestamp first, and then by the 'part' number.
     # If 'part' is missing (for old docs), we treat it as 1.
-    all_story_entries.sort(key=lambda x: (x["timestamp"], x.get("part", 1)))
+    def _norm_ts(ts):
+        # Handle None/missing timestamps first
+        if ts is None:
+            return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        
+        # Handle datetime objects - ensure timezone consistency
+        if hasattr(ts, "isoformat"):
+            # If datetime is timezone-naive, make it UTC
+            if ts.tzinfo is None:
+                return ts.replace(tzinfo=datetime.UTC)
+            return ts
+            
+        # Handle string timestamps
+        if isinstance(ts, str):
+            if not ts.strip():  # Empty string
+                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+            # Best-effort parse; fallback to epoch for invalid strings
+            try:
+                parsed = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                # Ensure timezone consistency - make UTC if naive
+                if parsed.tzinfo is None:
+                    return parsed.replace(tzinfo=datetime.UTC)
+                return parsed
+            except Exception:
+                # Invalid string - return epoch for stable sorting
+                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        
+        # Handle integer/float timestamps (epoch seconds)
+        if isinstance(ts, (int, float)):
+            try:
+                return datetime.datetime.fromtimestamp(ts, datetime.UTC)
+            except (ValueError, OverflowError):
+                # Invalid timestamp value - return epoch
+                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        
+        # Fallback to epoch for any other unknown types (list, dict, etc.)
+        return datetime.datetime.fromtimestamp(0, datetime.UTC)
+    all_story_entries.sort(key=lambda x: (_norm_ts(x.get("timestamp")), x.get("part", 1)))
 
     # 4. Add a sequence ID and convert timestamps AFTER sorting.
     # Also add user_scene_number that only increments for AI responses

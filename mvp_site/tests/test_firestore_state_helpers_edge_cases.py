@@ -3,12 +3,13 @@
 Phase 5: Additional edge case tests for state helper functions
 """
 
+import datetime
 import os
 
 # Add parent directory to path
 import sys
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
@@ -24,6 +25,7 @@ with patch("firestore_service.get_db"):
         DELETE_TOKEN,
         _handle_append_syntax,
         update_state_with_changes,
+        get_campaign_by_id,
     )
 
 
@@ -310,6 +312,78 @@ class TestMCPMigrationEdgeCases(unittest.TestCase):
                 assert field in mock_response, (
                     f"Required field '{field}' missing from API response structure"
                 )
+
+    @patch('firestore_service.get_db')
+    def test_timestamp_normalization_mixed_types_bug(self, mock_db):
+        """Test that mixed timestamp types cause sorting errors (RED test - should fail initially)."""
+        # Mock Firestore documents with mixed timestamp types that cause sorting bugs
+        mock_campaign_doc = MagicMock()
+        mock_campaign_doc.exists = True
+        mock_campaign_doc.to_dict.return_value = {"title": "Test Campaign"}
+        
+        # Create story entries with mixed timestamp types that will cause TypeError in sorting
+        mock_story_docs = []
+        story_entries = [
+            # String timestamp
+            {"actor": "user", "text": "Hello", "timestamp": "2023-01-01T10:00:00Z", "part": 1},
+            # Datetime object  
+            {"actor": "gemini", "text": "Hi there", "timestamp": datetime.datetime(2023, 1, 1, 11, 0, 0), "part": 1},
+            # None timestamp (missing)
+            {"actor": "user", "text": "Test", "timestamp": None, "part": 1},
+            # Integer timestamp (epoch)
+            {"actor": "gemini", "text": "Response", "timestamp": 1672574400, "part": 1},
+            # Invalid string that can't be parsed
+            {"actor": "user", "text": "Error case", "timestamp": "invalid-date-string", "part": 1}
+        ]
+        
+        for entry in story_entries:
+            mock_doc = MagicMock()
+            mock_doc.to_dict.return_value = entry
+            mock_story_docs.append(mock_doc)
+        
+        # Mock Firestore collection chain
+        mock_story_collection = MagicMock()
+        mock_story_collection.order_by.return_value.stream.return_value = mock_story_docs
+        
+        mock_campaign_ref = MagicMock()
+        mock_campaign_ref.get.return_value = mock_campaign_doc
+        mock_campaign_ref.collection.return_value = mock_story_collection
+        
+        mock_campaigns_collection = MagicMock()
+        mock_campaigns_collection.document.return_value = mock_campaign_ref
+        
+        mock_user_doc = MagicMock() 
+        mock_user_doc.collection.return_value = mock_campaigns_collection
+        
+        mock_users_collection = MagicMock()
+        mock_users_collection.document.return_value = mock_user_doc
+        
+        mock_db.return_value.collection.return_value = mock_users_collection
+        
+        # CRITICAL ASSERTION: Should NOT raise TypeError when sorting mixed timestamp types  
+        # With the current bug, this will fail because mixed types can't be compared in Python sorting
+        try:
+            campaign_data, story_data = get_campaign_by_id("test_user", "test_campaign")
+            
+            # If we get here without exception, the bug is fixed
+            # But initially this should raise TypeError due to mixed types
+            self.assertIsNotNone(campaign_data, "Campaign data should be returned")
+            self.assertIsNotNone(story_data, "Story data should be returned")
+            
+            # Verify story entries are properly sorted despite mixed types
+            self.assertEqual(len(story_data), 5, "All story entries should be included")
+            
+        except TypeError as e:
+            # This is expected with the current bug - mixed types can't be sorted
+            if "not supported between instances" in str(e):
+                self.fail(
+                    f"TIMESTAMP NORMALIZATION BUG DETECTED: Mixed timestamp types cause sorting error. "
+                    f"Error: {e}. The _norm_ts function should handle mixed types (strings, datetime, None, int) "
+                    f"consistently to prevent TypeError during sorting operations."
+                )
+            else:
+                # Re-raise if it's a different TypeError
+                raise
 
 
 if __name__ == "__main__":

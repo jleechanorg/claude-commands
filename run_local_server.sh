@@ -141,6 +141,36 @@ if ! validate_server $FLASK_PORT 5 2; then
     exit 1
 fi
 
+# Start MCP Server for WorldArchitect.AI (Production Mode - HTTP for local development)
+echo ""
+echo "${EMOJI_ROCKET} Starting MCP server in production mode..."
+
+# Find available MCP port (default 8001)
+MCP_PORT=${MCP_SERVER_PORT:-8001}
+MCP_PORT=$(find_available_port $MCP_PORT 10)
+if [ $? -ne 0 ]; then
+    echo "${EMOJI_WARNING} Could not find available port for MCP server, using default $MCP_PORT"
+fi
+
+if command -v gnome-terminal &> /dev/null; then
+    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT; exec bash"
+elif command -v xterm &> /dev/null; then
+    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT" &
+else
+    # Fallback: run in background
+    echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"
+    (
+        cd "$PROJECT_ROOT" || exit 1
+        if [ -z "$VIRTUAL_ENV" ] && [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
+            source "$PROJECT_ROOT/venv/bin/activate"
+        fi
+        source "$PROJECT_ROOT/scripts/start_mcp_production.sh"
+        python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT
+    ) &
+    MCP_PID=$!
+    echo "${EMOJI_INFO} MCP server started in background (PID: $MCP_PID, Port: $MCP_PORT)"
+fi
+
 # Navigate to frontend directory
 if [ ! -d "mvp_site/frontend_v2" ]; then
     echo "${EMOJI_ERROR} ERROR: Frontend v2 directory not found!"
@@ -278,13 +308,14 @@ echo ""
 echo "${EMOJI_INFO} Server URLs:"
 echo "   - Flask Backend:  http://localhost:$FLASK_PORT"
 echo "   - React Frontend: http://localhost:$REACT_PORT"
+echo "   - MCP Server:     http://localhost:${MCP_PORT:-8001} (Production mode)"
 echo ""
 echo "${EMOJI_INFO} For authentication bypass in development:"
 echo "   http://localhost:$REACT_PORT?test_mode=true&test_user_id=test-user-123"
 echo ""
 echo "${EMOJI_GEAR} To stop servers:"
 echo "   - Close terminal tabs, or"
-echo "   - Run: pkill -f 'python.*main.py.*serve' && pkill -f 'node.*vite'"
+echo "   - Run: pkill -f 'python.*main.py.*serve' && pkill -f 'node.*vite' && pkill -f 'python.*mcp_api.py'"
 echo ""
 echo "Press Ctrl+C to exit this script (servers will continue running in background)"
 
@@ -299,5 +330,9 @@ while true; do
     if ! ps aux | grep -E "node.*vite" | grep -v grep > /dev/null; then
         echo "${EMOJI_WARNING} React frontend appears to have stopped"
         break
+    fi
+    if ! ps aux | grep -E "python.*mcp_api.py" | grep -v grep > /dev/null; then
+        echo "${EMOJI_WARNING} MCP server appears to have stopped"
+        # Don't break for MCP server - it's not critical for the web interface
     fi
 done

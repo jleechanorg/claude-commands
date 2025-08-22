@@ -100,9 +100,13 @@ mcp__serena__find_symbol --name_path="handleCampaignCreate" --include_body=true
 **🚀 MAXIMUM CODE GENERATION BATCHING CHECKLIST**:
 ```
 ## /CEREBRAS BATCHING PROTOCOL - SPEED-OPTIMIZED PLANNING
-- [ ] 📋 COMPLETE CODING TASK INVENTORY: ✅ MANDATORY FIRST STEP
+- [ ] 📖 READ CLAUDE.MD PROTOCOL: ✅ MANDATORY FIRST STEP
+  *Required*: Read CLAUDE.md focusing on NEW FILE CREATION PROTOCOL - EXTREME ANTI-CREATION BIAS
+  *Key Points*: DEFAULT ANSWER IS NO NEW FILES, Integration-first hierarchy, Mandatory questions before file creation
+  *Purpose*: Prevent creating unnecessary files, force integration into existing code
+- [ ] 📋 COMPLETE CODING TASK INVENTORY: ✅ MANDATORY SECOND STEP
   *Required*: List EVERY possible code generation opportunity in the task
-  *Examples*: New files, functions, classes, tests, configs, documentation
+  *Examples*: New files (ONLY if integration impossible), functions, classes, tests, configs, documentation
   *Guideline*: Aim to batch at least 80% of coding work to /cerebras, as maximizing batching leverages the 19.6x speed advantage. This percentage is a recommended target based on observed efficiency gains, but use your judgment for complex or edge cases.
 - [ ] 🎯 BATCH GROUPING STRATEGY:
   - [ ] File creation batches: Group related new files

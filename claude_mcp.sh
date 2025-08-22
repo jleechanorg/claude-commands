@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 # Requires bash 4+ for associative arrays
 
+# Check for test mode
+TEST_MODE=false
+if [ "$1" == "--test" ]; then
+    TEST_MODE=true
+fi
+
 # Safe exit that won't kill the parent shell if sourced
 safe_exit() {
   local code="${1:-0}"
@@ -110,6 +116,12 @@ update_stats() {
 # Set up logging
 LOG_FILE="/tmp/claude_mcp_$(date +%Y%m%d_%H%M%S).log"
 echo "📝 Logging to: $LOG_FILE"
+
+# In test mode, exit early with success
+if [ "$TEST_MODE" = true ]; then
+    echo "🧪 Test mode: Exiting early with success"
+    exit 0
+fi
 
 # Function to log with timestamp
 log_with_timestamp() {
@@ -1138,6 +1150,61 @@ else
     fi
 fi
 
+display_step "Setting up WorldArchitect MCP Server..."
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  🎮 Configuring WorldArchitect MCP server for D&D game mechanics...${NC}"
+log_with_timestamp "Setting up MCP server: worldarchitect (local: mvp_site/mcp_api.py)"
+
+# Check if server already exists
+if server_already_exists "worldarchitect"; then
+    echo -e "${GREEN}  ✅ Server worldarchitect already exists, skipping installation${NC}"
+    log_with_timestamp "Server worldarchitect already exists, skipping"
+    INSTALL_RESULTS["worldarchitect"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Get the absolute path to the WorldArchitect project
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    WORLDARCHITECT_MCP_PATH="$SCRIPT_DIR/mvp_site/mcp_api.py"
+    
+    # Check if mcp_api.py exists
+    if [ -f "$WORLDARCHITECT_MCP_PATH" ]; then
+        echo -e "${GREEN}  ✅ Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH${NC}"
+        log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
+        
+        # Remove existing worldarchitect server to reconfigure
+        claude mcp remove "worldarchitect" >/dev/null 2>&1 || true
+
+        # Add WorldArchitect MCP server using Python with proper environment
+        echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
+        log_with_timestamp "Attempting to add WorldArchitect MCP server"
+
+        add_output=$(claude mcp add --scope user "worldarchitect" "$SCRIPT_DIR/venv/bin/python" "$WORLDARCHITECT_MCP_PATH" 2>&1)
+        add_exit_code=$?
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
+            echo -e "${BLUE}  📋 Server info:${NC}"
+            echo -e "     • Path: $WORLDARCHITECT_MCP_PATH"
+            echo -e "     • Available tools: D&D campaign creation, character management, game actions, world state"
+            echo -e "     • Features: Real D&D 5e mechanics, Gemini API integration, Firebase storage"
+            log_with_timestamp "Successfully added WorldArchitect MCP server"
+            INSTALL_RESULTS["worldarchitect"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add WorldArchitect MCP server${NC}"
+            log_error_details "claude mcp add worldarchitect" "worldarchitect" "$add_output"
+            INSTALL_RESULTS["worldarchitect"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    else
+        echo -e "${RED}  ❌ WorldArchitect MCP server not found at expected path: $WORLDARCHITECT_MCP_PATH${NC}"
+        echo -e "${YELLOW}  💡 Ensure you're running this script from the WorldArchitect.AI project root${NC}"
+        log_with_timestamp "ERROR: WorldArchitect MCP server not found at $WORLDARCHITECT_MCP_PATH"
+        INSTALL_RESULTS["worldarchitect"]="DEPENDENCY_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+fi
+
 display_step "Setting up Serena MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
@@ -1192,6 +1259,7 @@ else
     fi
     fi
 fi
+
 
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"

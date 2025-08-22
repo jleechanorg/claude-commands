@@ -54,13 +54,37 @@ COPILOT_START_TIME=$(date +%s)
 - Identifies critical issues, security problems, merge conflicts
 - Creates clean JSON dataset for systematic processing
 
-### Phase 3: Issue Resolution  
-**Command**: `/fixpr` - Fix all identified problems systematically
-- **Priority Order**: Security → Runtime Errors → Test Failures → Style
-- Apply code fixes for review comments and bot suggestions
-- Resolve merge conflicts and dependency issues
-- Fix failing tests and CI pipeline problems
-- **Continue until**: All technical issues resolved
+### Phase 3: Issue Resolution with File Justification Protocol
+**Command**: `/fixpr` - Fix all identified problems systematically using ACTUAL CODE IMPLEMENTATION
+
+**🚨 MANDATORY FILE JUSTIFICATION PROTOCOL COMPLIANCE**:
+- **Every file modification** must follow FILE JUSTIFICATION PROTOCOL before implementation
+- **Required documentation**: Goal, Modification, Necessity, Integration Proof for each change
+- **Integration verification**: Proof that adding to existing files was attempted first
+- **Protocol adherence**: All changes must follow NEW FILE CREATION PROTOCOL hierarchy
+- **Justification categories**: Classify each change as Essential, Enhancement, or Unnecessary
+
+**Implementation with Protocol Enforcement**:
+- **Priority Order**: Security → Runtime Errors → Test Failures → Style  
+- **MANDATORY TOOLS**: Edit/MultiEdit for code changes, NOT GitHub review posting
+- **IMPLEMENTATION REQUIREMENT**: Must modify actual files to resolve issues WITH justification
+- **VERIFICATION**: Use git diff to confirm file changes made AND protocol compliance
+- **Protocol validation**: Each file change must be justified before Edit/MultiEdit usage
+- Resolve merge conflicts and dependency issues (with integration evidence)
+- Fix failing tests and CI pipeline problems (with necessity proof)
+- **Continue until**: All technical issues resolved with verified code changes AND justified modifications
+- **ANTI-PATTERN**: Posting GitHub reviews acknowledging issues ≠ fixing issues
+- **PROTOCOL VIOLATION**: Making file changes without FILE JUSTIFICATION PROTOCOL compliance
+
+### Phase 3.1: Implementation Tool Requirements (MANDATORY)
+**IMPLEMENTATION TOOLS** (in priority order):
+1. **Edit/MultiEdit tools** - For code changes, bug fixes, implementation
+2. **GitHub MCP tools** - ONLY for communication, NOT for implementation
+3. **Bash commands** - For file operations, testing, validation
+
+**CRITICAL DISTINCTION**:
+- ❌ **PERFORMATIVE**: `github_create_review("Fixed import issue")` 
+- ✅ **ACTUAL**: `Edit(old_string="import module", new_string="from package import module")`
 
 ### Phase 4: Response Generation
 **Command**: `/commentreply` - Reply to all review comments
@@ -69,12 +93,19 @@ COPILOT_START_TIME=$(date +%s)
 - Use proper GitHub threading for line-specific comments
 - **Continue until**: All comments have appropriate responses
 
-### Phase 5: Coverage Verification (MANDATORY WARNINGS)
-**Command**: `/commentcheck` - Verify 100% comment coverage and quality with warnings
-- Confirms all comments received appropriate responses
+### Phase 5: Coverage & Implementation Verification (MANDATORY)
+**Command**: `/commentcheck` - Verify 100% comment coverage AND actual implementation
+- **DUAL VERIFICATION REQUIRED**:
+  1. **Communication Coverage**: All comments have threaded responses
+  2. **Implementation Coverage**: All fixable issues have actual code changes
+- **IMPLEMENTATION VERIFICATION**: Use `git diff` to confirm file modifications
 - Validates response quality (not generic templates)
 - Detects any missed or unaddressed feedback
 - **🚨 CRITICAL**: Issues explicit warnings for unresponded comments
+- **FAILURE CONDITIONS**: 
+  - ❌ Comments acknowledged but not fixed = FAILURE
+  - ❌ GitHub reviews posted without code changes = FAILURE
+  - ✅ Comments responded to AND issues implemented = SUCCESS
 - **Must pass**: Zero unresponded comments before proceeding
 - **AUTO-FIX**: If coverage < 100%, automatically runs `/commentreply` again
 
@@ -228,6 +259,12 @@ fi
 - 🔧 **Auto-Fix Trigger**: Automatically runs `/commentreply` if gaps detected
 - 📊 **Coverage Metrics**: Real-time tracking of responses vs originals ratio
 - ❌ **FAILURE STATE**: < 100% coverage triggers warnings and corrective action
+
+### 🚨 IMPLEMENTATION SUCCESS CRITERIA (ZERO TOLERANCE)
+- ✅ **Code Changes Made**: `git diff` shows actual file modifications for reported issues
+- ✅ **Implementation Verification**: Fixed code can be demonstrated with specific file references
+- ❌ **FAILURE STATE**: GitHub reviews acknowledging issues without implementing fixes
+- 🔧 **ANTI-PATTERN DETECTION**: Any issue marked "fixed" must have corresponding file changes
 
 ### Completion Indicators
 - ✅ All critical comments addressed with technical responses
