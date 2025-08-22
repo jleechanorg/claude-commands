@@ -181,12 +181,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\"",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\"; fi; exit 0'",
             "description": "Optimize tool selection before command execution"
           },
           {
             "type": "command",
-            "command": "python3 \"$ROOT/.claude/hooks/context_monitor.py\"",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/context_monitor.py\" ] && python3 \"$ROOT/.claude/hooks/context_monitor.py\"; fi; exit 0'",
             "description": "Monitor context usage and provide real-time warnings"
           }
         ]
@@ -242,7 +242,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; printf %s\\n \"$*\"' --",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; printf %s\\n \"$*\"; exit 0' --",
             "description": "Universal command composition for slash command combinations"
           }
         ]

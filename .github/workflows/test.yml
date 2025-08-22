@@ -56,7 +56,7 @@ jobs:
         chmod +x vpython
         ./vpython --version
 
-    # Step 5: Run tests directly with activated venv
+    # Step 5: Run test suite using run_tests.sh
     - name: Run test suite
       run: |
         # Activate the virtual environment
@@ -67,67 +67,19 @@ jobs:
         echo "Virtual env: $VIRTUAL_ENV"
         python3 -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
 
-        # Navigate to mvp_site and run tests directly
-        cd mvp_site
-
-        # Set test environment variables for CI performance
+        # Set CI environment variables for GitHub Actions
         export TESTING=true
         export MOCK_SERVICES_MODE=true
         export FAST_TESTS=1
         export ENABLE_BROWSER_TESTS=0
         export ENABLE_BUILD_TESTS=0
         export ENABLE_NETWORK_TESTS=0
+        export GITHUB_ACTIONS=true
 
-        echo "Running tests directly with activated virtual environment..."
-
-        # Run tests using Python discovery (same pattern as run_tests.sh)
-        test_count=0
-        failed_count=0
-
-        # Find and run all test files (skip expensive categories in CI)
-        for test_file in $(find tests/ -name "test_*.py" -type f | sort); do
-          # Skip expensive test categories for CI performance
-          if [[ "$test_file" == *"test_integration"* ]]; then
-            echo "⏭️  Skipping integration test: $test_file"
-            continue
-          fi
-          
-          if [[ "$test_file" == *"wizard"* ]]; then
-            echo "⏭️  Skipping browser test: $test_file" 
-            continue
-          fi
-          
-          if [[ "$test_file" == *"browser"* ]]; then
-            echo "⏭️  Skipping browser test: $test_file"
-            continue
-          fi
-
-          if [[ "$test_file" == *"build"* ]]; then
-            echo "⏭️  Skipping build test: $test_file"
-            continue
-          fi
-
-          test_count=$((test_count + 1))
-          echo "Running: $test_file"
-
-          if TESTING=true python3 "$test_file"; then
-            echo "✅ PASS: $test_file"
-          else
-            echo "❌ FAIL: $test_file"
-            failed_count=$((failed_count + 1))
-          fi
-          echo "----------------------------------------"
-        done
-
-        echo ""
-        echo "========================================"
-        if [ $failed_count -eq 0 ]; then
-          echo "✅ ALL $test_count TESTS PASSED"
-        else
-          echo "❌ $failed_count/$test_count TESTS FAILED"
-          exit 1
-        fi
-        echo "========================================"
+        # Use run_tests.sh for consistent test execution
+        echo "Running tests using robust run_tests.sh script..."
+        chmod +x run_tests.sh
+        ./run_tests.sh
 
     # Step 5b: Run command utility tests
     - name: Run command utility tests

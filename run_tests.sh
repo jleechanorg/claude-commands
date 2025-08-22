@@ -302,6 +302,22 @@ if [ "$mcp_tests" = true ]; then
     fi
 fi
 
+# 🚨 CRITICAL: Settings validation check (runs before all other tests)
+print_status "🔒 Running critical Claude settings validation..."
+if ! TESTING=true python3 mvp_site/tests/test_claude_settings_validation.py >/tmp/settings_validation.log 2>&1; then
+    print_error "❌ CRITICAL: Claude settings.json validation FAILED!"
+    echo
+    echo "This indicates hook configuration issues that could cause system lockouts."
+    echo "Fix these issues before running other tests:"
+    echo
+    cat /tmp/settings_validation.log
+    echo
+    print_error "Aborting test run due to critical settings validation failure."
+    exit 1
+else
+    print_success "✅ Claude settings.json validation passed"
+fi
+
 # Test selection logic
 selected_test_files=()
 use_intelligent_selection=false
