@@ -20,7 +20,9 @@ Usage:
 
 import asyncio
 import concurrent.futures
+import inspect
 import json
+import threading
 import traceback
 import uuid
 from dataclasses import dataclass
@@ -30,6 +32,7 @@ from typing import Any, Union
 import logging_util
 import requests
 from flask import Request, Response
+
 
 # Initialize logging
 logger = logging_util.logging.getLogger(__name__)
@@ -79,11 +82,17 @@ class MCPClient:
             result = await client.call_tool("test_tool", {})
     """
 
+    # Class-level singleton event loop for sync operations (performance fix)
+    _shared_event_loop = None
+    _loop_lock = threading.RLock()
+    _loop_thread = None
+
     def __init__(
         self,
         base_url: str = "http://localhost:8000",
         timeout: int = 300,
         skip_http: bool = False,
+        world_logic_module: Any | None = None,
     ):
         """
         Initialize MCP client
@@ -93,6 +102,12 @@ class MCPClient:
             timeout: Request timeout in seconds (default 5 minutes)
             skip_http: If True, skip HTTP and call world_logic.py directly
         """
+        # Input validation
+        if not isinstance(base_url, str) or not base_url.strip():
+            raise ValueError("base_url must be a non-empty string")
+        if not isinstance(timeout, (int, float)) or timeout <= 0:
+            raise ValueError("timeout must be a positive number")
+            
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.skip_http = skip_http
@@ -100,19 +115,23 @@ class MCPClient:
         if not skip_http:
             self.session = requests.Session()
             self.session.headers.update(
-                {"Content-Type": "application/json", "Accept": "application/json"}
+                {
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                    "User-Agent": "WorldArchitect.MCPClient/1.0 (+mvp_site)",
+                }
             )
+            # Ensure SSL verification is enabled for security
+            self.session.verify = True
+            self.world_logic = None
         else:
             self.session = None
-            # Import world_logic.py for direct calls when skip_http=True
-            try:
-                import world_logic
-
-                self.world_logic = world_logic
-            except ImportError as e:
-                logger.error(f"world_logic.py not available for direct calls: {e}")
-                # In test mode, gracefully fallback to mock responses instead of hard failure
-                self.world_logic = None
+            self.world_logic = world_logic_module
+            if self.world_logic is None:
+                logger.warning(
+                    "skip_http=True but no world_logic module injected; "
+                    "direct calls will return mock/503 responses."
+                )
 
     def _generate_request_id(self) -> str:
         """Generate unique request ID for JSON-RPC"""
@@ -193,9 +212,12 @@ class MCPClient:
 
             logger.debug(f"Calling MCP tool {tool_name} with request: {request_data}")
 
-            # Make HTTP request
-            response = self.session.post(
-                f"{self.base_url}/rpc", json=request_data, timeout=self.timeout
+            # Make HTTP request (non-blocking)
+            response = await asyncio.to_thread(
+                self.session.post,
+                f"{self.base_url}/rpc",
+                json=request_data,
+                timeout=self.timeout,
             )
 
             # Handle HTTP errors
@@ -272,12 +294,13 @@ class MCPClient:
             if not function_name:
                 raise MCPClientError(f"Unknown tool: {tool_name}")
 
+            if not hasattr(self.world_logic, function_name):
+                raise MCPClientError(f"Tool not implemented: {function_name}", error_code=501)
+
             function = getattr(self.world_logic, function_name)
-
             logger.debug(f"Calling {function_name} directly with args: {arguments}")
-
-            # Call the unified API function directly
-            result = await function(arguments or {})
+            maybe_result = function(arguments or {})
+            result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
 
             logger.debug(f"Direct call {function_name} returned: {result}")
             return result
@@ -310,8 +333,11 @@ class MCPClient:
 
             logger.debug(f"Getting MCP resource {uri}")
 
-            response = self.session.post(
-                f"{self.base_url}/rpc", json=request_data, timeout=self.timeout
+            response = await asyncio.to_thread(
+                self.session.post,
+                f"{self.base_url}/rpc",
+                json=request_data,
+                timeout=self.timeout,
             )
 
             if response.status_code != 200:
@@ -339,9 +365,36 @@ class MCPClient:
             logger.error(f"Stacktrace: {traceback.format_exc()}")
             raise MCPClientError(f"Unexpected error: {e}") from e
 
+    @classmethod
+    def _get_shared_event_loop(cls):
+        """Get or create shared event loop for sync operations (performance fix)"""
+        with cls._loop_lock:
+            if cls._shared_event_loop is None or cls._shared_event_loop.is_closed():
+                cls._shared_event_loop = asyncio.new_event_loop()
+                # Start the event loop in a background thread
+                cls._loop_thread = threading.Thread(
+                    target=cls._run_event_loop_forever, 
+                    daemon=True, 
+                    name="MCP-EventLoop"
+                )
+                cls._loop_thread.start()
+                logger.debug("Created and started shared event loop for MCP operations")
+            return cls._shared_event_loop
+    
+    @classmethod
+    def _run_event_loop_forever(cls):
+        """Run the shared event loop forever in background thread"""
+        asyncio.set_event_loop(cls._shared_event_loop)
+        try:
+            cls._shared_event_loop.run_forever()
+        except Exception as e:
+            logger.error(f"Shared event loop error: {e}")
+        finally:
+            logger.debug("Shared event loop stopped")
+
     def call_tool_sync(self, tool_name: str, arguments: dict[str, Any] = None) -> Any:
         """
-        Synchronous wrapper for call_tool - useful for non-async Flask code
+        Synchronous wrapper for call_tool - uses singleton event loop for performance
 
         Args:
             tool_name: Name of the tool to call
@@ -352,21 +405,40 @@ class MCPClient:
         """
         # Check if we're already in an event loop
         try:
-            asyncio.get_running_loop()
-        except RuntimeError:
-            # No event loop running, safe to use asyncio.run
-            return asyncio.run(self.call_tool(tool_name, arguments))
-        else:
-            # Already in an event loop, use thread pool to avoid nested loops
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(
-                    asyncio.run, self.call_tool(tool_name, arguments)
+            current_loop = asyncio.get_running_loop()
+            # Use run_coroutine_threadsafe to avoid blocking the current loop
+            shared_loop = self._get_shared_event_loop()
+            if shared_loop == current_loop:
+                # Same loop - use fresh loop in thread to avoid conflicts
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    def run_in_fresh_loop():
+                        # Create fresh event loop for this thread to avoid async conflicts
+                        fresh_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(fresh_loop)
+                        try:
+                            return fresh_loop.run_until_complete(self.call_tool(tool_name, arguments))
+                        finally:
+                            fresh_loop.close()
+                            asyncio.set_event_loop(None)
+                    future = executor.submit(run_in_fresh_loop)
+                    return future.result(timeout=self.timeout)
+            else:
+                # Different loop, use run_coroutine_threadsafe
+                future = asyncio.run_coroutine_threadsafe(
+                    self.call_tool(tool_name, arguments), shared_loop
                 )
-                return future.result()
+                return future.result(timeout=self.timeout)
+        except RuntimeError:
+            # No event loop running, use shared singleton loop with run_coroutine_threadsafe
+            shared_loop = self._get_shared_event_loop()
+            future = asyncio.run_coroutine_threadsafe(
+                self.call_tool(tool_name, arguments), shared_loop
+            )
+            return future.result(timeout=self.timeout)
 
     def get_resource_sync(self, uri: str) -> Any:
         """
-        Synchronous wrapper for get_resource - useful for non-async Flask code
+        Synchronous wrapper for get_resource - uses singleton event loop for performance
 
         Args:
             uri: Resource URI
@@ -376,15 +448,36 @@ class MCPClient:
         """
         # Check if we're already in an event loop
         try:
-            asyncio.get_running_loop()
+            current_loop = asyncio.get_running_loop()
+            # Use run_coroutine_threadsafe to avoid blocking the current loop
+            shared_loop = self._get_shared_event_loop()
+            if shared_loop == current_loop:
+                # Same loop - use fresh loop in thread to avoid conflicts
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    def run_in_fresh_loop():
+                        # Create fresh event loop for this thread to avoid async conflicts
+                        fresh_loop = asyncio.new_event_loop()
+                        asyncio.set_event_loop(fresh_loop)
+                        try:
+                            return fresh_loop.run_until_complete(self.get_resource(uri))
+                        finally:
+                            fresh_loop.close()
+                            asyncio.set_event_loop(None)
+                    future = executor.submit(run_in_fresh_loop)
+                    return future.result(timeout=self.timeout)
+            else:
+                # Different loop, use run_coroutine_threadsafe
+                future = asyncio.run_coroutine_threadsafe(
+                    self.get_resource(uri), shared_loop
+                )
+                return future.result(timeout=self.timeout)
         except RuntimeError:
-            # No event loop running, safe to use asyncio.run
-            return asyncio.run(self.get_resource(uri))
-        else:
-            # Already in an event loop, use thread pool to avoid nested loops
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                future = executor.submit(asyncio.run, self.get_resource(uri))
-                return future.result()
+            # No event loop running, use shared singleton loop with run_coroutine_threadsafe
+            shared_loop = self._get_shared_event_loop()
+            future = asyncio.run_coroutine_threadsafe(
+                self.get_resource(uri), shared_loop
+            )
+            return future.result(timeout=self.timeout)
 
     def close(self):
         """Close the HTTP session"""
@@ -418,8 +511,10 @@ def http_to_mcp_request(flask_request: Request, tool_name: str) -> dict[str, Any
     arguments = {}
 
     # Extract JSON data from request body
-    if flask_request.is_json and flask_request.get_json():
-        arguments.update(flask_request.get_json())
+    if flask_request.is_json:
+        body = flask_request.get_json(silent=True)
+        if body is not None:
+            arguments.update(body)
 
     # Add form data if present
     if flask_request.form:
@@ -600,11 +695,11 @@ async def example_usage():
         # Get campaign state
         state = await client.get_resource("campaign://test-campaign/state")
 
-        print(f"Campaign created: {result}")
-        print(f"Campaign state: {state}")
+        logger.info("Campaign created: %s", result)
+        logger.info("Campaign state: %s", state)
 
     except MCPClientError as e:
-        print(f"MCP error: {e}")
+        logger.error("MCP error: %s", e)
     finally:
         client.close()
 

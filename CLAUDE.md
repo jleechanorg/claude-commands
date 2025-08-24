@@ -160,6 +160,29 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - 🚨 **VIOLATION CONSEQUENCE**: Creating files without integration attempts = "huge mistake" requiring protocol fixes
 - 🚨 **SUCCESS METRIC**: Zero new files created unless absolutely necessary for production functionality
 
+### 🚨 **PROTOCOL ENFORCEMENT - ZERO TOLERANCE**
+
+🚨 **CRISIS OVERRIDE PREVENTION PROTOCOL**: ⚠️ MANDATORY
+- ❌ **NO CONTEXT EXEMPTS FILE JUSTIFICATION** - Crisis, emergency, or urgent contexts do NOT override protocol
+- ❌ **FORBIDDEN JUSTIFICATIONS**: "Tests are failing", "Crisis mode", "Emergency fix", "Quick resolution needed"
+- ✅ **CRISIS RULE**: Crisis situations make protocol compliance MORE important, not optional
+- **Critical Pattern**: Emergency situations create hasty decisions - protocols prevent duplicate files and violations
+- **Learning**: PR #1418 duplicate script created during "infrastructure crisis" - protocol must have zero tolerance
+
+🚨 **MANDATORY PRE-WRITE HARD STOP**: ⚠️ BEFORE ANY Write tool usage, MUST verify ALL 4 checks:
+1. "Does this violate NEW FILE CREATION PROTOCOL?" → If YES, STOP immediately
+2. "Have I searched ALL existing files first?" → If NO, search `.claude/hooks/`, `scripts/`, `utils/`, modules  
+3. "Have I attempted integration into 3+ existing files?" → If NO, try integration first
+4. "Is this a path/reference problem, not missing file?" → If YES, fix references instead of creating file
+
+**HARD STOP ENFORCEMENT**: Write tool usage without completing ALL 4 checks = CRITICAL PROTOCOL VIOLATION
+
+🚨 **INTEGRATION ATTEMPT DOCUMENTATION**: ⚠️ MANDATORY for any new file creation:
+- **MUST DOCUMENT**: "Attempted integration into [file1, file2, file3] - failed because [specific technical reasons]"
+- **MUST VERIFY**: File doesn't exist elsewhere before creating (check hooks, scripts, utils, existing modules)
+- **PATTERN RECOGNITION**: "File not found" errors often mean wrong path, not missing file - fix paths first
+- **VIOLATION EXAMPLE**: Creating `claude_command_scripts/anti_demo_check_claude.sh` when `.claude/hooks/anti_demo_check_claude.sh` exists
+
 ## 🚨 CRITICAL: FILE PLACEMENT PROTOCOL - ZERO TOLERANCE
 
 **🚨 NEVER CREATE FILES IN PROJECT ROOT**: ⚠️ MANDATORY - Root directory hygiene
@@ -278,6 +301,8 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 1. "Does this violate NEW FILE CREATION PROTOCOL?"
 2. "Have I searched existing tools first?"
 3. "Do I need NEW_FILE_REQUESTS.md entry?"
+
+**🚨 ENHANCED**: See "MANDATORY PRE-WRITE HARD STOP" section above for complete 4-check verification protocol
 
 **🎯 Memory Aid:** The Write tool checkpoint prevents emergency-driven file creation, making protocol compliance automatic like greeting/header habits.
 
