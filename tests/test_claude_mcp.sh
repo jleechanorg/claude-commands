@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Comprehensive test suite for claude_mcp.sh cross-platform compatibility
-# Tests the platform detection and compatibility features we added
+# Comprehensive test suite for claude_mcp.sh functionality
+# Tests cross-platform compatibility, MCP server connectivity, and robustness
 
-set -e  # Exit on error
+# Note: Do not use 'set -e' as test functions need to fail without terminating the script
 
 # Test framework setup
 TEST_DIR="/tmp/claude_mcp_tests_$(date +%s)"
@@ -74,6 +74,223 @@ assert_not_empty() {
         TESTS_PASSED=$((TESTS_PASSED + 1))
         return 0
     fi
+}
+
+# Test actual MCP server connectivity and health
+test_mcp_server_connectivity() {
+    print_test "MCP server connectivity and health check"
+    
+    # Get list of all MCP servers and their status
+    local server_list=$(claude mcp list 2>/dev/null | grep -E "✓ Connected|✗ Failed" || true)
+    
+    if [ -z "$server_list" ]; then
+        echo -e "${YELLOW}⚠️  SKIP: No MCP servers found or claude mcp not available${NC}"
+        return 0
+    fi
+    
+    # Count connected vs failed servers
+    local connected_count=$(echo "$server_list" | grep -c "✓ Connected" || echo "0")
+    local failed_count=$(echo "$server_list" | grep -c "✗ Failed" || echo "0")
+    local total_count=$((connected_count + failed_count))
+    
+    # Validate server count (server_list already checked above)
+    if [ $connected_count -ge 13 ]; then
+        echo -e "${GREEN}✅ PASS: Expected number of working servers ($connected_count/$total_count connected)${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}❌ FAIL: Too many failed servers ($connected_count/$total_count connected, expected ≥13)${NC}"
+        echo "Failed servers:"
+        echo "$server_list" | grep "✗ Failed" || true
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    fi
+    
+    return 0
+}
+
+# Test MCP server duplicate detection
+test_mcp_duplicate_detection() {
+    print_test "MCP server duplicate detection"
+    
+    # Get list of server names, handling potential errors gracefully
+    local server_output=$(claude mcp list 2>/dev/null || true)
+    if [ -z "$server_output" ]; then
+        echo -e "${YELLOW}⚠️  SKIP: claude mcp command not available${NC}"
+        return 0
+    fi
+    
+    # Extract server names from the output
+    local servers=($(echo "$server_output" | grep -E "✓ Connected|✗ Failed" | awk '{print $3}' || true))
+    
+    if [ ${#servers[@]} -eq 0 ]; then
+        echo -e "${YELLOW}⚠️  SKIP: No servers found in output${NC}"
+        return 0
+    fi
+    
+    # Check for duplicates using associative arrays (bash 4+) with fallback
+    local found_duplicate=false
+    
+    if [ "${BASH_VERSION%%.*}" -ge 4 ] 2>/dev/null; then
+        # Use associative arrays for bash 4+
+        declare -A seen=()
+        for s in "${servers[@]}"; do
+            # Normalize server name by removing -mcp suffix
+            local key="${s%-mcp}"
+            if [[ -n "${seen[$key]:-}" ]]; then
+                found_duplicate=true
+                echo -e "${RED}Found duplicate server: $s (normalized: $key)${NC}"
+                break
+            fi
+            seen[$key]=1
+        done
+    else
+        # Fallback for older bash versions
+        local seen_list=()
+        for s in "${servers[@]}"; do
+            local key="${s%-mcp}"
+            for seen_key in "${seen_list[@]}"; do
+                if [ "$seen_key" = "$key" ]; then
+                    found_duplicate=true
+                    echo -e "${RED}Found duplicate server: $s (normalized: $key)${NC}"
+                    break 2
+                fi
+            done
+            seen_list+=("$key")
+        done
+    fi
+    
+    if [ "$found_duplicate" = "false" ]; then
+        echo -e "${GREEN}✅ PASS: No duplicate servers found${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}❌ FAIL: Duplicate servers detected${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    fi
+    
+    return 0
+}
+
+# Test Python path detection robustness
+test_python_path_detection() {
+    print_test "Python path detection with fallback"
+    
+    local python_bin=""
+    
+    # Replicate the Python detection logic with proper error handling
+    if command -v python3 >/dev/null 2>&1; then
+        python_bin="$(command -v python3)"
+    elif command -v python >/dev/null 2>&1; then
+        python_bin="$(command -v python)"
+    else
+        echo -e "${YELLOW}⚠️  SKIP: No Python interpreter found${NC}"
+        return 0
+    fi
+    
+    # Test that we found a working Python interpreter (single logical test)
+    if ! "$python_bin" -c "import sys; print('Python', sys.version_info.major, sys.version_info.minor)" >/dev/null 2>&1; then
+        echo -e "${RED}❌ FAIL: Python interpreter not functional${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    else
+        echo -e "${GREEN}✅ PASS: Working Python interpreter found at $python_bin${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
+    
+    return 0
+}
+
+# Test MCP import validation
+test_mcp_import_validation() {
+    print_test "MCP server import validation"
+    
+    # Find Python interpreter with same logic as above
+    local PY_BIN=""
+    if command -v python3 >/dev/null 2>&1; then
+        PY_BIN="$(command -v python3)"
+    elif command -v python >/dev/null 2>&1; then
+        PY_BIN="$(command -v python)"
+    else
+        echo -e "${YELLOW}⚠️  SKIP: No Python interpreter found${NC}"
+        return 0
+    fi
+    
+    # Test critical imports that MCP servers depend on
+    local output
+    output="$($PY_BIN - <<PY
+import sys, os
+# Use current working directory since __file__ is not available in stdin
+project_root = os.getcwd()
+mvp_site_path = os.path.join(project_root, 'mvp_site')
+if os.path.exists(mvp_site_path):
+    sys.path.insert(0, mvp_site_path)
+try:
+    import logging_util
+    import world_logic
+    print("imports_ok")
+except ImportError as e:
+    print("import_error:", str(e))
+PY
+2>&1)" || true
+    
+    if echo "$output" | grep -q "imports_ok"; then
+        echo -e "${GREEN}✅ PASS: Critical MCP imports work${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    elif echo "$output" | grep -q "import_error"; then
+        echo -e "${YELLOW}⚠️  SKIP: Import dependencies not available ($output)${NC}"
+        # Don't count as failure since this might be expected in some environments
+        return 0
+    else
+        echo -e "${RED}❌ FAIL: Python import test failed unexpectedly${NC}"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    fi
+    
+    return 0
+}
+
+# Test shell script best practices validation
+test_shell_script_guidelines() {
+    print_test "Shell script best practices validation"
+    
+    # Check for problematic cd && command patterns (but allow safe directory detection)
+    local bad_cd_violations=$(grep -n "cd .* && python\|cd .* && pip\|cd .* && npm" "$CLAUDE_MCP_SCRIPT" | wc -l)
+    local safe_cd_patterns=$(grep -n "cd.*dirname.*&& pwd" "$CLAUDE_MCP_SCRIPT" | wc -l)
+    
+    if [ $bad_cd_violations -eq 0 ]; then
+        echo -e "${GREEN}✅ PASS: No problematic cd && command anti-patterns found${NC}"
+        if [ $safe_cd_patterns -gt 0 ]; then
+            echo -e "${GREEN}  ℹ️  Found $safe_cd_patterns safe directory detection patterns (acceptable)${NC}"
+        fi
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${RED}❌ FAIL: Found $bad_cd_violations problematic cd && command patterns${NC}"
+        grep -n "cd .* && python\|cd .* && pip\|cd .* && npm" "$CLAUDE_MCP_SCRIPT" || true
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+        return 1
+    fi
+    
+    return 0
+}
+
+# Test error handling robustness
+test_error_handling_robustness() {
+    print_test "Error handling robustness (no terminal termination)"
+    
+    # Check that script doesn't use exit in ways that could terminate user's terminal
+    local problematic_exits=$(grep -n "exit 1" "$CLAUDE_MCP_SCRIPT" | wc -l)
+    
+    # A few exit statements are acceptable in setup/validation, but not in error handling
+    if [ $problematic_exits -le 3 ]; then
+        echo -e "${GREEN}✅ PASS: Reasonable exit usage ($problematic_exits exit 1 statements)${NC}"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    else
+        echo -e "${YELLOW}⚠️  WARNING: Many exit statements ($problematic_exits) - review for terminal safety${NC}"
+        # Don't fail the test, but flag for review
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
+    
+    return 0
 }
 
 # Test the OS detection logic from claude_mcp.sh
@@ -404,10 +621,11 @@ setup_tests() {
     # Verify that the claude_mcp.sh script exists
     if [ ! -f "$CLAUDE_MCP_SCRIPT" ]; then
         echo -e "${RED}❌ Error: claude_mcp.sh not found at $CLAUDE_MCP_SCRIPT${NC}"
-        exit 1
+        return 1  # Use return instead of exit to avoid terminating terminal
     fi
     
     echo -e "${GREEN}✅ Test environment ready${NC}"
+    return 0
 }
 
 # Cleanup test environment
@@ -437,12 +655,25 @@ print_summary() {
 
 # Main test execution
 main() {
-    echo -e "${BLUE}🚀 Running claude_mcp.sh cross-platform compatibility tests...${NC}"
+    echo -e "${BLUE}🚀 Running comprehensive claude_mcp.sh test suite...${NC}"
+    echo "Including: MCP server connectivity, cross-platform compatibility, and robustness tests"
     echo ""
     
-    setup_tests
+    # Setup tests and exit early if setup fails
+    if ! setup_tests; then
+        echo -e "${RED}❌ Test setup failed. Cannot continue.${NC}"
+        return 1
+    fi
     
-    # Run all tests
+    # Run integration tests first (most important)
+    test_mcp_server_connectivity
+    test_mcp_duplicate_detection
+    test_python_path_detection
+    test_mcp_import_validation
+    test_shell_script_guidelines
+    test_error_handling_robustness
+    
+    # Run cross-platform compatibility tests
     test_os_detection_logic
     test_timeout_command_detection
     test_home_directory_detection

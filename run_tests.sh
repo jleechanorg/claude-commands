@@ -717,13 +717,13 @@ if [ -f "tests/scripts/test_claude_backup.sh" ]; then
     echo
 fi
 
-# Run cross-platform compatibility tests if they exist
-if [ -x "tests/test_claude_mcp_cross_platform.sh" ]; then
-    print_status "🌍 Running cross-platform compatibility tests..."
-    if tests/test_claude_mcp_cross_platform.sh; then
-        print_success "Cross-platform tests passed"
+# Run MCP server tests if they exist
+if [ -x "tests/test_claude_mcp.sh" ]; then
+    print_status "🧪 Running MCP server tests..."
+    if tests/test_claude_mcp.sh; then
+        print_success "MCP server tests passed"
     else
-        print_error "Cross-platform tests failed"
+        print_error "MCP server tests failed"
         failed_tests=$((failed_tests + 1))
     fi
     echo
