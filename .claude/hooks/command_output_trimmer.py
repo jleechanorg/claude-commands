@@ -42,7 +42,7 @@ class OptimizedCommandOutputTrimmer:
         'copilot': re.compile(r'(Phase \d+|COPILOT|Comment coverage|⏱️ EXECUTION TIMING)', re.IGNORECASE),
         'coverage': re.compile(r'(Coverage report|TOTAL.*\d+%|\.py\s+\d+\s+\d+\s+\d+%)', re.IGNORECASE),
         'execute': re.compile(r'(TODO:|✅ COMPLETED|🔄 IN PROGRESS|TodoWrite tool)', re.IGNORECASE),
-        'cerebras': re.compile(r'(Cerebras|🚀 SPEED|Token generation|cerebras-coder)', re.IGNORECASE),
+        'cerebras': re.compile(r'(Cerebras|🚀 SPEED|Token generation)', re.IGNORECASE),
         'orchestrate': re.compile(r'(orchestration|tmux|task-agent-|Redis coordination)', re.IGNORECASE)
     }
     
