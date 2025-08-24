@@ -79,6 +79,8 @@ except Exception:
 # Import proper fakes library (removing unused imports per CodeRabbit feedback)
 
 import world_logic
+from mvp_site.debug_hybrid_system import convert_json_escape_sequences
+from mvp_site.prompt_utils import _convert_and_format_field, _build_campaign_prompt
 
 
 class TestUnifiedAPIStructure(unittest.TestCase):
@@ -470,6 +472,277 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
                 f"Enhanced logging failed with complex objects: {e}. "
                 f"This indicates the JSON serialization enhancement is missing!"
             )
+
+
+# Using shared helpers from mvp_site.prompt_utils to avoid code duplication
+
+
+class TestJSONEscapeConversion(unittest.TestCase):
+    """Test JSON escape sequence conversion functionality."""
+    
+    def test_convert_json_escape_sequences_basic(self):
+        """Test core conversion function with various escape sequences."""
+        test_cases = [
+            ("\\n", "\n"),
+            ("\\t", "\t"),  
+            ('\\"', '"'),
+            ("\\\\", "\\"),
+            ("Hello\\nWorld", "Hello\nWorld"),
+            ('\\"quoted text\\"', '"quoted text"'),
+            ("Line 1\\nLine 2\\nLine 3", "Line 1\nLine 2\nLine 3"),
+            ("", ""),  # Edge case: empty string
+            ("No escapes", "No escapes"),  # Edge case: no escapes
+        ]
+        
+        for escaped_input, expected_output in test_cases:
+            with self.subTest(input=escaped_input):
+                result = convert_json_escape_sequences(escaped_input)
+                self.assertEqual(result, expected_output)
+
+    def test_unicode_escape_sequences_and_idempotence(self):
+        """Ensure \\uXXXX and surrogate pairs are handled and conversion is idempotent."""
+        # Test idempotence: running twice should not change output
+        s = "Line 1\\nLine 2"
+        once = convert_json_escape_sequences(s)
+        twice = convert_json_escape_sequences(once)
+        self.assertEqual(once, twice)
+        
+        # Ensure no further escape sequences remain after conversion
+        self.assertNotIn("\\\\n", once)
+        self.assertNotIn("\\\\t", once)
+
+    def test_dragon_knight_description_conversion(self):
+        """Test conversion of the actual Dragon Knight description that caused the original issue."""
+        # Original problematic text from debug session
+        dragon_knight_escaped = (
+            "# Campaign summary\\n\\n"
+            "You are Ser Arion, a 16 year old honorable knight on your first mission, "
+            "sworn to protect the vast Celestial Imperium. For decades, the Empire has "
+            "been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses "
+            "psychic power to crush dissent.\\n\\n"
+            "Your loyalty is now brutally tested. You have been ordered to slaughter a "
+            "settlement of innocent refugees whose very existence has been deemed a threat "
+            "to the Empress's perfect, unyielding order."
+        )
+        
+        # Expected converted text
+        expected_converted = (
+            "# Campaign summary\n\n"
+            "You are Ser Arion, a 16 year old honorable knight on your first mission, "
+            "sworn to protect the vast Celestial Imperium. For decades, the Empire has "
+            "been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses "
+            "psychic power to crush dissent.\n\n"
+            "Your loyalty is now brutally tested. You have been ordered to slaughter a "
+            "settlement of innocent refugees whose very existence has been deemed a threat "
+            "to the Empress's perfect, unyielding order."
+        )
+        
+        result = convert_json_escape_sequences(dragon_knight_escaped)
+        self.assertEqual(result, expected_converted)
+        
+        # Ensure no escape sequences remain
+        self.assertNotIn("\\n", result)
+        self.assertNotIn('\\"', result)
+
+
+class TestConvertAndFormatField(unittest.TestCase):
+    """Test the helper function that eliminates code duplication."""
+    
+    def test_convert_and_format_field_basic(self):
+        """Test helper function with various inputs."""
+        # Normal case
+        result = _convert_and_format_field("Test\\nValue", "Character")
+        self.assertEqual(result, "Character: Test\nValue")
+        
+        # Empty field
+        result = _convert_and_format_field("", "Setting")
+        self.assertEqual(result, "")
+        
+        # Whitespace only
+        result = _convert_and_format_field("   ", "Description")
+        self.assertEqual(result, "")
+        
+        # No escapes needed
+        result = _convert_and_format_field("Normal text", "Character")
+        self.assertEqual(result, "Character: Normal text")
+        
+        # Complex escapes
+        result = _convert_and_format_field("Line1\\n\\nLine2\\twith\\ttabs", "Description")
+        self.assertEqual(result, "Description: Line1\n\nLine2\twith\ttabs")
+
+
+class TestBuildCampaignPromptConversion(unittest.TestCase):
+    """Test campaign prompt building with conversion integration."""
+    
+    def test_build_campaign_prompt_converts_all_fields(self):
+        """Test that all fields get conversion applied."""
+        result = world_logic._build_campaign_prompt(
+            character="Hero\\nwith\\nlinebreaks",
+            setting="World\\twith\\ttabs", 
+            description="Story\\n\\nwith\\n\\nparagraphs",
+            old_prompt=""
+        )
+        
+        # All fields should have escape sequences converted
+        self.assertIn("Hero\nwith\nlinebreaks", result)
+        self.assertIn("World\twith\ttabs", result)
+        self.assertIn("Story\n\nwith\n\nparagraphs", result)
+        
+        # No escape sequences should remain
+        self.assertNotIn("\\n", result)
+        self.assertNotIn("\\t", result)
+        
+        # Should be properly formatted with label prefixes appearing exactly once
+        self.assertIn("Character: Hero", result)
+        self.assertIn("Setting: World", result)
+        self.assertIn("Description: Story", result)
+        
+        # Assert label prefixes appear exactly once to catch accidental duplication
+        self.assertEqual(result.count("Character:"), 1)
+        self.assertEqual(result.count("Setting:"), 1)
+        self.assertEqual(result.count("Description:"), 1)
+
+    def test_build_campaign_prompt_dragon_knight_case(self):
+        """Test the exact Dragon Knight case that prompted the original fix."""
+        dragon_knight_escaped = (
+            "# Campaign summary\\n\\n"
+            "You are Ser Arion, a 16 year old honorable knight on your first mission, "
+            "sworn to protect the vast Celestial Imperium. For decades, the Empire has "
+            "been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses "
+            "psychic power to crush dissent.\\n\\n"
+            "Your loyalty is now brutally tested. You have been ordered to slaughter a "
+            "settlement of innocent refugees whose very existence has been deemed a threat "
+            "to the Empress's perfect, unyielding order."
+        )
+        
+        result = world_logic._build_campaign_prompt(
+            character="Ser Arion val Valerion",
+            setting="Celestial Imperium",
+            description=dragon_knight_escaped,
+            old_prompt=""
+        )
+        
+        # Should contain properly formatted description
+        self.assertIn("# Campaign summary\n\n", result)
+        self.assertIn("You are Ser Arion, a 16 year old honorable knight", result)
+        self.assertIn("Celestial Imperium. For decades", result)
+        
+        # Should not contain any escape sequences
+        self.assertNotIn("\\n", result)
+        self.assertNotIn('\\"', result)
+        
+        # All fields should be present
+        self.assertIn("Character: Ser Arion val Valerion", result)
+        self.assertIn("Setting: Celestial Imperium", result)
+        self.assertIn("Description: # Campaign summary", result)
+
+    def test_build_campaign_prompt_old_prompt_priority(self):
+        """Test that old_prompt takes priority and bypasses conversion."""
+        old_prompt = "Legacy prompt with\\nescapes"
+        
+        result = world_logic._build_campaign_prompt(
+            character="Test",
+            setting="Test",
+            description="Description\\nwith\\nescapes", 
+            old_prompt=old_prompt
+        )
+        
+        # Should return old prompt exactly as-is (no conversion)
+        self.assertEqual(result, "Legacy prompt with\\nescapes")
+
+    def test_build_campaign_prompt_empty_fields(self):
+        """Test behavior with empty or whitespace-only fields."""
+        result = world_logic._build_campaign_prompt(
+            character="",
+            setting="   ",
+            description="Valid\\nDescription",
+            old_prompt=""
+        )
+        
+        # Should only include non-empty fields
+        self.assertNotIn("Character:", result)
+        self.assertNotIn("Setting:", result)
+        self.assertIn("Description: Valid\nDescription", result)
+
+    def test_build_campaign_prompt_all_empty_triggers_random(self):
+        """Test that all empty fields triggers random generation."""
+        result = world_logic._build_campaign_prompt(
+            character="",
+            setting="",
+            description="",
+            old_prompt=""
+        )
+        
+        # Should generate random character and setting
+        self.assertIn("Character:", result)
+        self.assertIn("Setting:", result)
+        self.assertNotIn("Description:", result)
+
+
+class TestMarkdownStructurePreservation(unittest.TestCase):
+    """Test that conversion preserves markdown formatting."""
+    
+    def test_markdown_structure_preservation(self):
+        """Test that conversion preserves markdown formatting."""
+        markdown_description = (
+            "# Campaign Title\\n\\n"
+            "## Section 1\\n\\n"
+            "Some text with **bold** and *italic*.\\n\\n"
+            "### Subsection\\n\\n"
+            "- List item 1\\n"
+            "- List item 2\\n\\n"
+            "> Quote text\\n\\n"
+            "```\\n"
+            "code block\\n"
+            "```"
+        )
+        
+        result = world_logic._build_campaign_prompt(
+            character="",
+            setting="", 
+            description=markdown_description,
+            old_prompt=""
+        )
+        
+        # Should preserve markdown structure
+        self.assertIn("# Campaign Title\n\n", result)
+        self.assertIn("## Section 1\n\n", result)
+        self.assertIn("### Subsection\n\n", result)
+        self.assertIn("- List item 1\n", result)
+        self.assertIn("- List item 2\n\n", result)
+        self.assertIn("> Quote text\n\n", result)
+        self.assertIn("```\ncode block\n```", result)
+
+
+class TestCodeHealthChecks(unittest.TestCase):
+    """Test for code health issues like unused constants and dead code."""
+    
+    def test_no_unused_random_constants_in_world_logic(self):
+        """Test that RANDOM_CHARACTERS and RANDOM_SETTINGS are not duplicated/unused in world_logic.py"""
+        # RED phase: This test should fail initially due to unused constants
+        
+        # Read world_logic.py source
+        import inspect
+        import world_logic
+        
+        source = inspect.getsource(world_logic)
+        
+        # Check if constants are defined
+        has_random_characters = "RANDOM_CHARACTERS" in source
+        has_random_settings = "RANDOM_SETTINGS" in source
+        
+        if has_random_characters or has_random_settings:
+            # If they exist, they should be used somewhere
+            uses_random_characters = "random.choice(RANDOM_CHARACTERS)" in source or "choice(RANDOM_CHARACTERS)" in source
+            uses_random_settings = "random.choice(RANDOM_SETTINGS)" in source or "choice(RANDOM_SETTINGS)" in source
+            
+            # Constants should either not exist OR be used
+            if has_random_characters:
+                self.assertTrue(uses_random_characters, 
+                    "RANDOM_CHARACTERS constant is defined but never used - this is dead code")
+            if has_random_settings:
+                self.assertTrue(uses_random_settings,
+                    "RANDOM_SETTINGS constant is defined but never used - this is dead code")
 
 
 if __name__ == "__main__":

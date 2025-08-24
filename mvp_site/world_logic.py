@@ -27,7 +27,8 @@ import firebase_admin
 import logging_util
 import structured_fields_utils
 from custom_types import CampaignId, UserId
-from debug_hybrid_system import clean_json_artifacts, process_story_for_display
+from debug_hybrid_system import clean_json_artifacts, process_story_for_display, convert_json_escape_sequences
+from prompt_utils import _convert_and_format_field, _build_campaign_prompt as _build_campaign_prompt_impl
 
 import firestore_service
 import gemini_service
@@ -55,32 +56,7 @@ KEY_SUCCESS = "success"
 KEY_CAMPAIGN_ID = "campaign_id"
 KEY_PROMPT = "prompt"
 
-# Campaign Generation Constants (from original main.py)
-RANDOM_CHARACTERS = [
-    "A brave warrior seeking to prove their worth in battle",
-    "A cunning rogue with a mysterious past and hidden agenda",
-    "A wise wizard devoted to uncovering ancient magical secrets",
-    "A noble paladin sworn to protect the innocent from evil",
-    "A skilled ranger who knows the wilderness like no other",
-    "A charismatic bard who weaves magic through music and stories",
-    "A devout cleric blessed with divine power to heal and smite",
-    "A fierce barbarian driven by primal instincts and tribal honor",
-    "A stealthy monk trained in martial arts and inner discipline",
-    "A nature-loving druid who can shapeshift and command beasts",
-]
-
-RANDOM_SETTINGS = [
-    "The bustling city of Waterdeep, where intrigue and adventure await around every corner",
-    "The mystical Feywild, a realm where magic runs wild and reality bends to emotion",
-    "The treacherous Underdark, a vast network of caverns filled with dangerous creatures",
-    "The frozen lands of Icewind Dale, where survival means everything in the harsh tundra",
-    "The desert kingdom of Calimshan, where genies and merchants rule with equal power",
-    "The pirate-infested Sword Coast, where gold and glory are won by blade and cunning",
-    "The haunted moors of Barovia, trapped in eternal mist and ruled by dark powers",
-    "The floating city of Sharn, where magic and technology create vertical neighborhoods",
-    "The jungle continent of Chult, where ancient ruins hide deadly secrets and treasures",
-    "The war-torn kingdom of Cyre, struggling to rebuild after magical devastation",
-]
+# Random constants moved to prompt_utils.py to avoid duplication
 KEY_SELECTED_PROMPTS = "selected_prompts"
 KEY_USER_INPUT = "user_input"
 KEY_RESPONSE = "response"
@@ -250,6 +226,10 @@ def _strip_game_state_fields(
     return stripped_story
 
 
+# Helper function moved to prompt_utils.py to eliminate duplication
+
+
+
 def _build_campaign_prompt(
     character: str, setting: str, description: str, old_prompt: str
 ) -> str:
@@ -257,34 +237,8 @@ def _build_campaign_prompt(
     Build campaign prompt from parameters.
     Unified logic from main.py and world_logic.py.
     """
-    # If old prompt format is provided, use it
-    if old_prompt.strip():
-        return old_prompt.strip()
-
-    # Build new format prompt
-    prompt_parts = []
-
-    if character.strip():
-        prompt_parts.append(f"Character: {character.strip()}")
-
-    if setting.strip():
-        prompt_parts.append(f"Setting: {setting.strip()}")
-
-    if description.strip():
-        prompt_parts.append(f"Description: {description.strip()}")
-
-    if not prompt_parts:
-        # Use predefined random arrays for proper random campaign generation
-        random_character = random.choice(RANDOM_CHARACTERS)  # nosec B311
-        random_setting = random.choice(RANDOM_SETTINGS)  # nosec B311
-
-        prompt_parts = [f"Character: {random_character}", f"Setting: {random_setting}"]
-
-        logging_util.info(
-            f"Generated random campaign: character='{random_character}', setting='{random_setting}'"
-        )
-
-    return " | ".join(prompt_parts)
+    # Use the extracted implementation from prompt_utils.py
+    return _build_campaign_prompt_impl(character, setting, description, old_prompt)
 
 
 def _handle_debug_mode_command(

@@ -75,6 +75,26 @@ def contains_json_artifacts(text: str) -> bool:
     return is_likely_json or has_json_fields or has_json_escapes
 
 
+def convert_json_escape_sequences(text: str) -> str:
+    """
+    Convert JSON escape sequences to their actual characters.
+    
+    This function properly converts JSON escape sequences like \\n, \\t, \\" to
+    their actual character equivalents, preserving content structure.
+    
+    Args:
+        text: Text containing JSON escape sequences
+        
+    Returns:
+        Text with escape sequences converted to actual characters
+    """
+    if not text:
+        return text
+    
+    # Use json_utils.unescape_json_string for proper conversion
+    return unescape_json_string(text)
+
+
 def clean_json_artifacts(text: str) -> str:
     """
     Clean JSON artifacts from narrative text using the same logic as parse_structured_response.
