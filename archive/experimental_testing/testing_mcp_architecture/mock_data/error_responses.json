@@ -1,0 +1,149 @@
+{
+  "campaign_not_found": {
+    "status": "error",
+    "error_type": "not_found",
+    "error": "Campaign not found",
+    "details": {
+      "campaign_id": "non-existent-campaign",
+      "message": "The requested campaign does not exist or you do not have permission to access it."
+    }
+  },
+  "permission_denied": {
+    "status": "error",
+    "error_type": "permission_denied",
+    "error": "Access denied",
+    "details": {
+      "message": "You do not have permission to access this resource.",
+      "required_permission": "campaign:read",
+      "user_id": "unauthorized-user"
+    }
+  },
+  "validation_error": {
+    "status": "error",
+    "error_type": "validation_error",
+    "error": "Invalid request data",
+    "details": {
+      "field_errors": {
+        "name": ["Campaign name is required"],
+        "description": ["Description must be less than 1000 characters"]
+      },
+      "message": "The request contains invalid data. Please check the field errors and try again."
+    }
+  },
+  "server_error": {
+    "status": "error",
+    "error_type": "server_error",
+    "error": "Internal server error",
+    "details": {
+      "message": "An unexpected error occurred while processing your request. Please try again later.",
+      "error_id": "err-500-123456",
+      "timestamp": "2024-01-01T12:00:00Z"
+    }
+  },
+  "rate_limit_error": {
+    "status": "error",
+    "error_type": "rate_limit",
+    "error": "Rate limit exceeded",
+    "details": {
+      "message": "Too many requests. Please wait before making another request.",
+      "retry_after": 60,
+      "limit": 100,
+      "window": "1 hour"
+    }
+  },
+  "service_unavailable": {
+    "status": "error",
+    "error_type": "service_unavailable",
+    "error": "Service temporarily unavailable",
+    "details": {
+      "message": "The AI service is temporarily unavailable. Please try again in a few minutes.",
+      "service": "gemini_api",
+      "estimated_recovery": "2024-01-01T12:15:00Z"
+    }
+  },
+  "character_creation_failed": {
+    "status": "error",
+    "error_type": "validation_error",
+    "error": "Character creation failed",
+    "details": {
+      "field_errors": {
+        "attributes.strength": ["Strength must be between 3 and 18"],
+        "character_class": ["Invalid character class: SuperHero"]
+      },
+      "message": "Character data validation failed. Please check your character attributes and class."
+    }
+  },
+  "action_processing_failed": {
+    "status": "error",
+    "error_type": "validation_error",
+    "error": "Action processing failed",
+    "details": {
+      "message": "The requested action cannot be performed in the current game state.",
+      "action_type": "attack",
+      "reason": "No valid targets available",
+      "suggestions": [
+        "Move to a position where enemies are visible",
+        "Cast a detection spell to reveal hidden enemies",
+        "Try a different action type"
+      ]
+    }
+  },
+  "export_failed": {
+    "status": "error",
+    "error_type": "server_error",
+    "error": "Export generation failed",
+    "details": {
+      "message": "Failed to generate campaign export. The campaign may be too large or contain unsupported content.",
+      "campaign_id": "campaign-1",
+      "format": "pdf",
+      "max_size_mb": 50,
+      "current_size_estimate_mb": 75
+    }
+  },
+  "mcp_protocol_error": {
+    "jsonrpc": "2.0",
+    "error": {
+      "code": -32601,
+      "message": "Method not found",
+      "data": {
+        "method": "invalid_tool_name",
+        "available_methods": [
+          "create_campaign",
+          "get_campaigns",
+          "get_campaign",
+          "update_campaign",
+          "create_character",
+          "process_action",
+          "export_campaign",
+          "get_user_settings",
+          "update_user_settings"
+        ]
+      }
+    },
+    "id": 1
+  },
+  "mcp_invalid_params": {
+    "jsonrpc": "2.0",
+    "error": {
+      "code": -32602,
+      "message": "Invalid params",
+      "data": {
+        "required_params": ["name", "description", "user_id"],
+        "provided_params": ["name"],
+        "missing_params": ["description", "user_id"]
+      }
+    },
+    "id": 2
+  },
+  "timeout_error": {
+    "status": "error",
+    "error_type": "timeout",
+    "error": "Request timeout",
+    "details": {
+      "message": "The request took too long to process and timed out.",
+      "timeout_seconds": 30,
+      "operation": "ai_generation",
+      "suggestion": "Try reducing the complexity of your request or try again later."
+    }
+  }
+}

@@ -1,0 +1,33 @@
+// Firestore Security Rules for MCP Testing
+// These rules are permissive for testing purposes only
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow all reads and writes for testing
+    // In production, these would be much more restrictive
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Campaign documents
+    match /campaigns/{campaignId} {
+      allow read, write: if true;
+    }
+
+    // User settings
+    match /user_settings/{userId} {
+      allow read, write: if true;
+    }
+
+    // Character documents
+    match /characters/{characterId} {
+      allow read, write: if true;
+    }
+
+    // Session data
+    match /sessions/{sessionId} {
+      allow read, write: if true;
+    }
+  }
+}

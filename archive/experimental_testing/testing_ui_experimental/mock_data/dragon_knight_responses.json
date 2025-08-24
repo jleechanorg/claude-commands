@@ -1,0 +1,109 @@
+{
+  "test_type": "dragon_knight_creation",
+  "description": "Mock responses for Dragon Knight campaign creation and interactions",
+  "dragon_knight_narrative": "You are Ser Arion, a 16 year old honorable knight on your first mission, sworn to protect the vast Celestial Imperium. For decades, the Empire has been ruled by the iron-willed Empress Sariel, a ruthless tyrant who uses psychic power to crush dissent. While her methods are terrifying, her reign has brought undeniable benefits: the roads are safe, commerce thrives, and the Imperium has never been stronger. But dark whispers speak of the Dragon Knights - an ancient order that once served the realm before mysteriously vanishing. As you journey through this morally complex world, you must decide: will you serve the tyrant who brings order, or seek a different path?",
+  "campaign_creation_response": {
+    "success": true,
+    "campaign_id": "mock-dragon-knight-123"
+  },
+  "initial_story_response": {
+    "actor": "gemini",
+    "text": "[SESSION_HEADER]\nTimestamp: Year 11 New Peace, Kythorn Day 2, 00:00:00\nLocation: Imperial Training Grounds\nStatus: Lvl 1 Paladin | HP: 10/10 (Temp: 0) | XP: 0/300 | Gold: 15gp\nConditions: None | Exhaustion: 0 | Inspiration: No\n\nScene #1: The morning sun casts long shadows across the marble training grounds of the Imperial Citadel. You stand before Commander Vaelthys, your silver armor gleaming, the crimson drake emblazoned on your chest - symbol of your newly sworn oath to the Celestial Imperium. The Commander's weathered face bears the marks of countless campaigns in service to Empress Sariel.\n\n\"Ser Arion,\" she begins, her voice carrying the authority of decades in service, \"your first mission has arrived. Reports speak of unrest in the border village of Millhaven - farmers whisper of strange lights in the forest, and caravans have begun disappearing along the trade routes. The Empress demands order be restored.\"\n\nShe hands you a sealed scroll bearing the imperial seal. \"You have three approaches available: investigate the forest disturbances directly, question the local population about the missing caravans, or seek audience with the village elder who requested imperial intervention.\"\n\nThe weight of your first real mission settles upon your shoulders. How do you wish to begin your service to the realm?",
+    "mode": "character",
+    "user_scene_number": 1,
+    "structured_response": {
+      "narrative_text": "The morning sun casts long shadows across the marble training grounds of the Imperial Citadel. You stand before Commander Vaelthys, your silver armor gleaming, the crimson drake emblazoned on your chest - symbol of your newly sworn oath to the Celestial Imperium. The Commander's weathered face bears the marks of countless campaigns in service to Empress Sariel.\n\n\"Ser Arion,\" she begins, her voice carrying the authority of decades in service, \"your first mission has arrived. Reports speak of unrest in the border village of Millhaven - farmers whisper of strange lights in the forest, and caravans have begun disappearing along the trade routes. The Empress demands order be restored.\"\n\nShe hands you a sealed scroll bearing the imperial seal. \"You have three approaches available: investigate the forest disturbances directly, question the local population about the missing caravans, or seek audience with the village elder who requested imperial intervention.\"\n\nThe weight of your first real mission settles upon your shoulders. How do you wish to begin your service to the realm?",
+      "session_header": "Year 11 New Peace, Kythorn Day 2, 00:00:00 | Imperial Training Grounds | Lvl 1 Paladin | HP: 10/10 | XP: 0/300 | Gold: 15gp",
+      "planning_block": {
+        "thinking": "This is Ser Arion's first mission - establishing the character as a young, idealistic knight in service to a complex empire. Setting up moral tension between duty to the Empress (who brings order through tyranny) and the mysterious disappearances that may challenge his worldview.",
+        "context": "Imperial setting with established authority structure. Player has clear mission with multiple approach options. Hints at larger mysteries (Dragon Knights, strange forest lights) for future development.",
+        "plan": "Present three clear paths forward: direct investigation (action-oriented), social investigation (roleplay-focused), or formal protocol (diplomatic). Each will reveal different aspects of the situation and test different aspects of Ser Arion's character."
+      },
+      "dice_rolls": [],
+      "resource_updates": {
+        "character_creation": {
+          "name": "Ser Arion",
+          "level": 1,
+          "class": "Paladin",
+          "race": "Human",
+          "background": "Noble",
+          "alignment": "Lawful Good",
+          "stats": {
+            "strength": 16,
+            "dexterity": 12,
+            "constitution": 14,
+            "intelligence": 10,
+            "wisdom": 13,
+            "charisma": 15
+          },
+          "hp": {
+            "current": 10,
+            "max": 10
+          },
+          "armor_class": 18,
+          "equipment": [
+            "Chain mail",
+            "Shield with imperial drake",
+            "Longsword",
+            "Imperial seal scroll",
+            "15 gold pieces"
+          ]
+        }
+      }
+    }
+  },
+  "interaction_responses": {
+    "forest_investigation": {
+      "narrative_text": "You stride confidently toward the Whispering Woods, your armor clanking softly with each step. The forest looms ahead, ancient oaks twisted into unnatural shapes. As you enter the treeline, an eerie silence falls - no birdsong, no rustling leaves. Strange silver lights dance between the trees in the distance, pulsing with an otherworldly rhythm.\n\nSuddenly, you hear a voice - melodic yet haunting - calling from deeper in the woods: \"Ser Arion... come closer, young knight. The Dragon Knights once walked these paths...\"\n\nYour hand instinctively moves to your sword hilt. Do you follow the voice, investigate the strange lights, or retreat to gather more information?",
+      "planning_block": {
+        "thinking": "Introducing supernatural elements and connecting to the Dragon Knights mystery. Testing Ser Arion's courage vs. prudence in his first real challenge.",
+        "context": "Player chose direct action approach. Forest investigation reveals magical/mysterious elements beyond simple bandit activity."
+      }
+    },
+    "village_questioning": {
+      "narrative_text": "You make your way to Millhaven's central square, where worried villagers cluster around the old stone well. Their conversations hush as they notice your imperial colors. An elderly farmer named Gareth approaches cautiously.\n\n\"Ser Knight,\" he says with a mixture of hope and fear, \"the missing folk... they all had one thing in common. Each one claimed to see a figure in ancient armor near the forest edge - armor bearing symbols we don't recognize. Not imperial symbols, mind you, but something... older.\"\n\nA young woman adds nervously, \"My brother was among the disappeared. Before he vanished, he kept talking about dreams of flying, of a great purpose calling him. We thought he'd lost his mind.\"\n\nHow do you respond to their concerns?",
+      "planning_block": {
+        "thinking": "Social investigation path reveals connection to Dragon Knights through witness testimony. Builds tension between imperial duty and growing mystery.",
+        "context": "Villagers are cooperative but fearful. Information gathered points to supernatural recruitment or calling rather than simple banditry."
+      }
+    }
+  },
+  "custom_campaign_response": {
+    "narrative_text": "Welcome to your custom adventure! Based on your character and setting choices, let me craft an opening that brings your vision to life...",
+    "planning_block": {
+      "thinking": "Custom campaign with player-specified character and setting. Adapting narrative style to incorporate their choices while maintaining D&D structure.",
+      "context": "Player has provided specific character and world details to incorporate."
+    }
+  },
+  "api_structure_responses": {
+    "valid_response": {
+      "success": true,
+      "narrative": "Test narrative response",
+      "session_header": "Session 1, Turn 1",
+      "planning_block": {
+        "thinking": "Test thinking",
+        "context": "Test context"
+      },
+      "dice_rolls": [
+        {
+          "type": "Investigation",
+          "result": 15,
+          "modifier": 3,
+          "total": 18
+        }
+      ]
+    }
+  },
+  "error_responses": {
+    "invalid_input": {
+      "success": false,
+      "error": "Invalid user input provided"
+    },
+    "server_error": {
+      "success": false,
+      "error": "Internal server error occurred"
+    }
+  },
+  "captured_at": "2025-07-10T10:23:00Z",
+  "notes": "Mock data created based on Dragon Knight narrative from PR #478 and expected D&D 5e response structure"
+}
