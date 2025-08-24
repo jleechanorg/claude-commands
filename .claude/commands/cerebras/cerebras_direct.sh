@@ -1,17 +1,16 @@
 #!/bin/bash
 
-# Ultra-fast direct API wrapper
-# Supports both Cerebras (default) and Anthropic (--sonnet flag)
+# Ultra-fast direct API wrapper for Cerebras
 
 # Parse command line arguments
-USE_SONNET=false
 PROMPT=""
+CONTEXT_FILE=""
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --sonnet)
-            USE_SONNET=true
-            shift
+        --context-file)
+            CONTEXT_FILE="$2"
+            shift 2
             ;;
         *)
             PROMPT="$PROMPT $1"
@@ -30,26 +29,23 @@ if [[ "$PROMPT" =~ [\$\`\;\|\&] ]]; then
 fi
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--sonnet] <prompt>"
-    echo "  --sonnet    Use Anthropic Claude Sonnet instead of Cerebras"
+    echo "Usage: cerebras_direct.sh [--context-file FILE] <prompt>"
+    echo "  --context-file   Include conversation context from file"
     exit 1
 fi
 
-# Validate API keys based on chosen mode
-if [ "$USE_SONNET" = true ]; then
-    if [ -z "${CLAUDE_API_KEY}" ]; then
-        echo "Error: CLAUDE_API_KEY environment variable is not set." >&2
-        echo "Please set your Anthropic API key in environment variables." >&2
-        exit 2
-    fi
-else
-    # Prefer CEREBRAS_API_KEY; allow OPENAI_API_KEY as fallback for compatibility
-    API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
-    if [ -z "${API_KEY}" ]; then
-        echo "Error: CEREBRAS_API_KEY (preferred) or OPENAI_API_KEY must be set." >&2
-        echo "Please set your Cerebras API key in environment variables." >&2
-        exit 2
-    fi
+# Validate API key
+API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
+if [ -z "${API_KEY}" ]; then
+    echo "Error: CEREBRAS_API_KEY (preferred) or OPENAI_API_KEY must be set." >&2
+    echo "Please set your Cerebras API key in environment variables." >&2
+    exit 2
+fi
+
+# Load conversation context if provided
+CONVERSATION_CONTEXT=""
+if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
+    CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE")
 fi
 
 # Claude Code system prompt for consistency
@@ -92,124 +88,75 @@ OUTPUT FORMAT:
 - Include file_path:line references when mentioning specific code locations"
 
 # User task
-USER_PROMPT="Task: $PROMPT
+if [ -n "$CONVERSATION_CONTEXT" ]; then
+    USER_PROMPT="$CONVERSATION_CONTEXT
+
+---
+
+Task: $PROMPT
+
+Generate the code following the above guidelines with full awareness of the conversation context above."
+else
+    USER_PROMPT="Task: $PROMPT
 
 Generate the code following the above guidelines."
+fi
 
 # Start timing
 START_TIME=$(date +%s%N)
 
-# Choose API based on flag
-if [ "$USE_SONNET" = true ]; then
-    # Anthropic Claude Sonnet API call with error handling
-    HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.anthropic.com/v1/messages" \
-      -H "x-api-key: ${CLAUDE_API_KEY}" \
-      -H "Content-Type: application/json" \
-      -H "anthropic-version: 2023-06-01" \
-      -d "{
-        \"model\": \"claude-3-5-sonnet-20241022\",
-        \"max_tokens\": 8192,
-        \"temperature\": 0.1,
-        \"system\": $(echo "$SYSTEM_PROMPT" | jq -Rs .),
-        \"messages\": [
-          {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-        ]
-      }")
+# Direct API call to Cerebras with error handling
+HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.cerebras.ai/v1/chat/completions" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"qwen-3-coder-480b\",
+    \"messages\": [
+      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ],
+    \"max_tokens\": 32768,
+    \"temperature\": 0.1,
+    \"stream\": false
+  }")
     
-    # Extract HTTP status and body
-    HTTP_BODY=$(echo $HTTP_RESPONSE | sed -E 's/HTTPSTATUS\:[0-9]{3}$//')
-    HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
-    
-    # Check for API errors
-    if [ "$HTTP_STATUS" -ne 200 ]; then
-        ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
-        echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
-        exit 3
-    fi
-    
-    RESPONSE="$HTTP_BODY"
-    
-    # Calculate elapsed time
-    END_TIME=$(date +%s%N)
-    ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
-    
-    # Extract and display the response (Anthropic format)
-    CONTENT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
-    if [ -z "$CONTENT" ]; then
-        echo "Error: Unexpected API response format." >&2
-        echo "Raw response:" >&2
-        echo "$RESPONSE" >&2
-        exit 4
-    fi
-    
-    # Count lines in generated content
-    LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
-    
-    # Show timing at the beginning with line count
-    echo ""
-    echo "🧠🧠🧠 SONNET GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🧠🧠🧠"
-    echo ""
-    echo "$CONTENT"
-    
-    # Show prominent timing display at the end
-    echo ""
-    echo "🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠"
-    echo "⚡ SONNET PERFORMANCE: ${ELAPSED_MS}ms"
-    echo "🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠"
-else
-    # Direct API call to Cerebras with error handling
-    HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.cerebras.ai/v1/chat/completions" \
-      -H "Authorization: Bearer ${API_KEY}" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"model\": \"qwen-3-coder-480b\",
-        \"messages\": [
-          {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
-          {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-        ],
-        \"max_tokens\": 32768,
-        \"temperature\": 0.1,
-        \"stream\": false
-      }")
-    
-    # Extract HTTP status and body
-    HTTP_BODY=$(echo $HTTP_RESPONSE | sed -E 's/HTTPSTATUS\:[0-9]{3}$//')
-    HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
-    
-    # Check for API errors
-    if [ "$HTTP_STATUS" -ne 200 ]; then
-        ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
-        echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
-        exit 3
-    fi
-    
-    RESPONSE="$HTTP_BODY"
-    
-    # Calculate elapsed time
-    END_TIME=$(date +%s%N)
-    ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
-    
-    # Extract and display the response (OpenAI format)
-    CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-    if [ -z "$CONTENT" ]; the
-        echo "Error: Unexpected API response format." >&2
-        echo "Raw response:" >&2
-        echo "$RESPONSE" >&2
-        exit 4
-    fi
-    
-    # Count lines in generated content
-    LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
-    
-    # Show timing at the beginning with line count
-    echo ""
-    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
-    echo ""
-    echo "$CONTENT"
-    
-    # Show prominent timing display at the end
-    echo ""
-    echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-    echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms (vs Sonnet comparison)"
-    echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+# Extract HTTP status and body safely (no subshell whitespace issues)
+HTTP_STATUS="${HTTP_RESPONSE##*HTTPSTATUS:}"
+HTTP_BODY="${HTTP_RESPONSE%HTTPSTATUS:*}"
+
+# Check for API errors
+if [ "$HTTP_STATUS" -ne 200 ]; then
+    ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
+    echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
+    exit 3
 fi
+
+RESPONSE="$HTTP_BODY"
+
+# Calculate elapsed time
+END_TIME=$(date +%s%N)
+ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+
+# Extract and display the response (OpenAI format)
+CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+if [ -z "$CONTENT" ]; then
+    echo "Error: Unexpected API response format." >&2
+    echo "Raw response:" >&2
+    echo "$RESPONSE" >&2
+    exit 4
+fi
+
+# Count lines in generated content
+LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
+
+# Show timing at the beginning with line count
+echo ""
+echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+echo ""
+echo "$CONTENT"
+
+# Show prominent timing display at the end
+echo ""
+echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms"
+echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"

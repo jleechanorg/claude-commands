@@ -554,6 +554,12 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 
 🚨 **CLAUDE CODE HOOKS:** Executable scripts auto-run at specific points. Config: `.claude/settings.json`, Scripts: `.claude/hooks/` (executable)
 
+🚨 **TEMPORARY FILE ISOLATION:** ⚠️ MANDATORY - Prevent multi-branch conflicts
+- ❌ **FORBIDDEN**: Using `/tmp/` with predictable names - causes conflicts between parallel branch work
+- ✅ **REQUIRED**: Use `mktemp` for secure, unique temporary files when needed
+- ✅ **PATTERN**: Include branch name for multi-branch isolation: `BRANCH_NAME="$(git branch --show-current | sed 's/[^a-zA-Z0-9_-]/_/g')"` then `CTX_FILE="$(mktemp "/tmp/prefix_${BRANCH_NAME}_XXXXXX.txt")"`
+- **CRITICAL**: Multiple branches working simultaneously must not interfere with each other's temp files
+
 **Python:** Verify venv activated. Run from project root with `TESTING=true vpython`. Use Python for restricted file ops.
 
 **Logs:** Located at `<project_root>/tmp/worldarchitect.ai/[branch]/[service].log`. Use `tail -f` for monitoring.

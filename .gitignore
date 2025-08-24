@@ -167,3 +167,5 @@ logs/*.json
 logs/*.txt
 logs/*.log
 task-agent-*/
+logs/react-mcp-logs.json
+logs/react-mcp-logs.txt
