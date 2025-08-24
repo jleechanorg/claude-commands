@@ -1,0 +1,324 @@
+import requests
+import logging
+import time
+import random
+from typing import Optional, Dict, Any, List, Union
+from functools import wraps
+import json
+
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
+class HTTPRetryError(Exception):
+    """Raised when all retry attempts have been exhausted."""
+    pass
+
+
+class RetryableHTTPClient:
+    """
+    HTTP client with configurable retry logic and exponential backoff.
+    
+    Supports automatic retries for transient failures with customizable
+    retry strategies, backoff policies, and error handling.
+    """
+    
+    def __init__(
+        self,
+        max_retries: int = 3,
+        base_delay: float = 1.0,
+        max_delay: float = 60.0,
+        backoff_factor: float = 2.0,
+        jitter: bool = True,
+        retryable_status_codes: Optional[List[int]] = None,
+        timeout: float = 30.0
+    ):
+        """
+        Initialize the HTTP client with retry configuration.
+        
+        Args:
+            max_retries: Maximum number of retry attempts
+            base_delay: Initial delay between retries (seconds)
+            max_delay: Maximum delay between retries (seconds)
+            backoff_factor: Exponential backoff multiplier
+            jitter: Add random jitter to prevent thundering herd
+            retryable_status_codes: HTTP status codes that should trigger retries
+            timeout: Request timeout in seconds
+        """
+        self.max_retries = max_retries
+        self.base_delay = base_delay
+        self.max_delay = max_delay
+        self.backoff_factor = backoff_factor
+        self.jitter = jitter
+        self.timeout = timeout
+        
+        # Default retryable status codes (server errors and some client errors)
+        self.retryable_status_codes = retryable_status_codes or [
+            408,  # Request Timeout
+            429,  # Too Many Requests
+            500,  # Internal Server Error
+            502,  # Bad Gateway
+            503,  # Service Unavailable
+            504,  # Gateway Timeout
+        ]
+        
+        # Create session for connection pooling
+        self.session = requests.Session()
+        self.session.timeout = self.timeout
+    
+    def _calculate_delay(self, attempt: int) -> float:
+        """
+        Calculate delay for the given attempt using exponential backoff.
+        
+        Args:
+            attempt: Current attempt number (0-indexed)
+            
+        Returns:
+            Delay in seconds
+        """
+        delay = self.base_delay * (self.backoff_factor ** attempt)
+        delay = min(delay, self.max_delay)
+        
+        if self.jitter:
+            # Add random jitter (±25% of calculated delay)
+            jitter_amount = delay * 0.25
+            delay += random.uniform(-jitter_amount, jitter_amount)
+        
+        return max(0, delay)
+    
+    def _is_retryable_error(self, response: Optional[requests.Response], exception: Optional[Exception]) -> bool:
+        """
+        Determine if an error is retryable.
+        
+        Args:
+            response: HTTP response object (if any)
+            exception: Exception that occurred (if any)
+            
+        Returns:
+            True if the error should trigger a retry
+        """
+        # Network/connection errors are retryable
+        if exception:
+            if isinstance(exception, (
+                requests.exceptions.ConnectionError,
+                requests.exceptions.Timeout,
+                requests.exceptions.ChunkedEncodingError,
+                requests.exceptions.ReadTimeout
+            )):
+                return True
+        
+        # HTTP status code errors
+        if response and response.status_code in self.retryable_status_codes:
+            return True
+        
+        return False
+    
+    def _log_retry_attempt(self, attempt: int, url: str, error: Union[requests.Response, Exception]):
+        """Log retry attempt details."""
+        if isinstance(error, requests.Response):
+            logger.warning(
+                f"Attempt {attempt + 1} failed for {url}. "
+                f"Status: {error.status_code}, Reason: {error.reason}"
+            )
+        else:
+            logger.warning(
+                f"Attempt {attempt + 1} failed for {url}. "
+                f"Error: {type(error).__name__}: {str(error)}"
+            )
+    
+    def request_with_retry(
+        self,
+        method: str,
+        url: str,
+        **kwargs
+    ) -> requests.Response:
+        """
+        Make an HTTP request with retry logic and exponential backoff.
+        
+        Args:
+            method: HTTP method (GET, POST, etc.)
+            url: Target URL
+            **kwargs: Additional arguments passed to requests
+            
+        Returns:
+            requests.Response: Successful response
+            
+        Raises:
+            HTTPRetryError: If all retry attempts are exhausted
+        """
+        last_exception = None
+        last_response = None
+        
+        for attempt in range(self.max_retries + 1):
+            try:
+                logger.info(f"Making {method} request to {url} (attempt {attempt + 1})")
+                
+                response = self.session.request(
+                    method=method,
+                    url=url,
+                    timeout=self.timeout,
+                    **kwargs
+                )
+                
+                # Check if response indicates success
+                if response.status_code < 400:
+                    logger.info(f"Request successful: {response.status_code}")
+                    return response
+                
+                # Store response for potential retry logic
+                last_response = response
+                
+                # Check if this error is retryable
+                if not self._is_retryable_error(response, None):
+                    logger.error(f"Non-retryable error: {response.status_code}")
+                    response.raise_for_status()
+                
+                # Log retry attempt
+                self._log_retry_attempt(attempt, url, response)
+                
+            except requests.exceptions.RequestException as e:
+                last_exception = e
+                
+                # Check if this exception is retryable
+                if not self._is_retryable_error(None, e):
+                    logger.error(f"Non-retryable exception: {type(e).__name__}: {str(e)}")
+                    raise
+                
+                # Log retry attempt
+                self._log_retry_attempt(attempt, url, e)
+            
+            # If this was the last attempt, break without sleeping
+            if attempt == self.max_retries:
+                break
+            
+            # Calculate and apply delay
+            delay = self._calculate_delay(attempt)
+            logger.info(f"Waiting {delay:.2f} seconds before retry...")
+            time.sleep(delay)
+        
+        # All retries exhausted
+        if last_response:
+            error_msg = f"All {self.max_retries + 1} attempts failed. Last status: {last_response.status_code}"
+            logger.error(error_msg)
+            raise HTTPRetryError(error_msg)
+        else:
+            error_msg = f"All {self.max_retries + 1} attempts failed. Last error: {str(last_exception)}"
+            logger.error(error_msg)
+            raise HTTPRetryError(error_msg) from last_exception
+    
+    def get(self, url: str, **kwargs) -> requests.Response:
+        """Make a GET request with retry logic."""
+        return self.request_with_retry('GET', url, **kwargs)
+    
+    def post(self, url: str, **kwargs) -> requests.Response:
+        """Make a POST request with retry logic."""
+        return self.request_with_retry('POST', url, **kwargs)
+    
+    def put(self, url: str, **kwargs) -> requests.Response:
+        """Make a PUT request with retry logic."""
+        return self.request_with_retry('PUT', url, **kwargs)
+    
+    def delete(self, url: str, **kwargs) -> requests.Response:
+        """Make a DELETE request with retry logic."""
+        return self.request_with_retry('DELETE', url, **kwargs)
+    
+    def close(self):
+        """Close the session and cleanup resources."""
+        if self.session:
+            self.session.close()
+    
+    def __enter__(self):
+        """Context manager entry."""
+        return self
+    
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit."""
+        self.close()
+
+
+def retry_on_failure(
+    max_retries: int = 3,
+    base_delay: float = 1.0,
+    backoff_factor: float = 2.0
+):
+    """
+    Decorator for adding retry logic to any function.
+    
+    Args:
+        max_retries: Maximum number of retry attempts
+        base_delay: Initial delay between retries
+        backoff_factor: Exponential backoff multiplier
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            
+            for attempt in range(max_retries + 1):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    
+                    if attempt == max_retries:
+                        break
+                    
+                    delay = base_delay * (backoff_factor ** attempt)
+                    logger.warning(f"Function {func.__name__} failed (attempt {attempt + 1}). Retrying in {delay}s...")
+                    time.sleep(delay)
+            
+            raise last_exception
+        return wrapper
+    return decorator
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Example 1: Using the RetryableHTTPClient
+    client = RetryableHTTPClient(
+        max_retries=3,
+        base_delay=1.0,
+        backoff_factor=2.0,
+        jitter=True
+    )
+    
+    try:
+        # This will succeed
+        response = client.get('https://httpbin.org/status/200')
+        print(f"Success: {response.status_code}")
+        
+        # This will retry and eventually fail
+        # response = client.get('https://httpbin.org/status/500')
+        
+    except HTTPRetryError as e:
+        print(f"Request failed after retries: {e}")
+    finally:
+        client.close()
+    
+    # Example 2: Using context manager
+    with RetryableHTTPClient(max_retries=2) as client:
+        try:
+            response = client.get('https://httpbin.org/delay/1')
+            data = response.json()
+            print(f"Response data: {data}")
+        except HTTPRetryError as e:
+            print(f"Request failed: {e}")
+    
+    # Example 3: Using the decorator
+    @retry_on_failure(max_retries=2, base_delay=0.5)
+    def unreliable_function():
+        import random
+        if random.random() < 0.7:  # 70% chance of failure
+            raise ValueError("Random failure")
+        return "Success!"
+    
+    try:
+        result = unreliable_function()
+        print(f"Function result: {result}")
+    except ValueError as e:
+        print(f"Function failed after retries: {e}")

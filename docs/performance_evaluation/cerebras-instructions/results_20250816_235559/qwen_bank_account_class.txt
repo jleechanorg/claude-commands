@@ -1,0 +1,34 @@
+
+🚀🚀🚀 QWEN GENERATED IN 250ms 🚀🚀🚀
+
+```python
+class BankAccount:
+ def __init__(self, account_number, initial_balance=0):
+ self.account_number = account_number
+ self.balance = initial_balance
+ self.transaction_history = []
+ 
+ def deposit(self, amount):
+ if amount <= 0:
+ raise ValueError("Deposit amount must be positive")
+ self.balance += amount
+ self.transaction_history.append(f"Deposited: ${amount:.2f}")
+ 
+ def withdraw(self, amount):
+ if amount <= 0:
+ raise ValueError("Withdrawal amount must be positive")
+ if amount > self.balance:
+ raise ValueError("Insufficient funds")
+ self.balance -= amount
+ self.transaction_history.append(f"Withdrew: ${amount:.2f}")
+ 
+ def check_balance(self):
+ return self.balance
+ 
+ def get_transaction_history(self):
+ return self.transaction_history.copy()
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 250ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀

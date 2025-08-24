@@ -1,0 +1,362 @@
+[
+  {
+    "test_id": "small_1",
+    "approach": "traditional_claude",
+    "duration": 1.499805212020874,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_2",
+    "approach": "traditional_claude",
+    "duration": 1.5349340438842773,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_3",
+    "approach": "traditional_claude",
+    "duration": 1.616960048675537,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_4",
+    "approach": "traditional_claude",
+    "duration": 1.5183918476104736,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_5",
+    "approach": "traditional_claude",
+    "duration": 1.5492420196533203,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_1",
+    "approach": "traditional_claude",
+    "duration": 1.5312561988830566,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_2",
+    "approach": "traditional_claude",
+    "duration": 1.9285621643066406,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_3",
+    "approach": "traditional_claude",
+    "duration": 1.8301949501037598,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_4",
+    "approach": "traditional_claude",
+    "duration": 1.929548978805542,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_5",
+    "approach": "traditional_claude",
+    "duration": 1.9350988864898682,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_1",
+    "approach": "traditional_claude",
+    "duration": 1.9588112831115723,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_2",
+    "approach": "traditional_claude",
+    "duration": 1.9647901058197021,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_3",
+    "approach": "traditional_claude",
+    "duration": 2.5385169982910156,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_4",
+    "approach": "traditional_claude",
+    "duration": 2.3870739936828613,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_5",
+    "approach": "traditional_claude",
+    "duration": 2.542382001876831,
+    "success": false,
+    "output": "",
+    "error": "Traditional Claude failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_1",
+    "approach": "cerebras_instructions",
+    "duration": 2.5205600261688232,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_2",
+    "approach": "cerebras_instructions",
+    "duration": 2.4704477787017822,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_3",
+    "approach": "cerebras_instructions",
+    "duration": 2.526458978652954,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_4",
+    "approach": "cerebras_instructions",
+    "duration": 2.3704302310943604,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_5",
+    "approach": "cerebras_instructions",
+    "duration": 2.101605176925659,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_1",
+    "approach": "cerebras_instructions",
+    "duration": 2.113887071609497,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_2",
+    "approach": "cerebras_instructions",
+    "duration": 2.5722908973693848,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_3",
+    "approach": "cerebras_instructions",
+    "duration": 2.118138074874878,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_4",
+    "approach": "cerebras_instructions",
+    "duration": 2.626354932785034,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_5",
+    "approach": "cerebras_instructions",
+    "duration": 2.557797908782959,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_1",
+    "approach": "cerebras_instructions",
+    "duration": 2.091752052307129,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_2",
+    "approach": "cerebras_instructions",
+    "duration": 2.509216785430908,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_3",
+    "approach": "cerebras_instructions",
+    "duration": 2.442641019821167,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_4",
+    "approach": "cerebras_instructions",
+    "duration": 2.6275219917297363,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_5",
+    "approach": "cerebras_instructions",
+    "duration": 1.914290189743042,
+    "success": false,
+    "output": "",
+    "error": "Cerebras instructions failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_1",
+    "approach": "cerebras_mcp",
+    "duration": 2.4841361045837402,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_2",
+    "approach": "cerebras_mcp",
+    "duration": 1.922957181930542,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_3",
+    "approach": "cerebras_mcp",
+    "duration": 2.5366709232330322,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_4",
+    "approach": "cerebras_mcp",
+    "duration": 2.435760974884033,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "small_5",
+    "approach": "cerebras_mcp",
+    "duration": 2.5283091068267822,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_1",
+    "approach": "cerebras_mcp",
+    "duration": 2.4779739379882812,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_2",
+    "approach": "cerebras_mcp",
+    "duration": 2.543409824371338,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_3",
+    "approach": "cerebras_mcp",
+    "duration": 2.5463197231292725,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_4",
+    "approach": "cerebras_mcp",
+    "duration": 2.060868978500366,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "medium_5",
+    "approach": "cerebras_mcp",
+    "duration": 2.1017088890075684,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_1",
+    "approach": "cerebras_mcp",
+    "duration": 2.4317712783813477,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_2",
+    "approach": "cerebras_mcp",
+    "duration": 2.610865831375122,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_3",
+    "approach": "cerebras_mcp",
+    "duration": 2.6027169227600098,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_4",
+    "approach": "cerebras_mcp",
+    "duration": 2.0762240886688232,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  },
+  {
+    "test_id": "large_5",
+    "approach": "cerebras_mcp",
+    "duration": 2.090458869934082,
+    "success": false,
+    "output": "",
+    "error": "Cerebras MCP failed: error: unknown option '--new-conversation'\n"
+  }
+]

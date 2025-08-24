@@ -1,0 +1,57 @@
+{
+  "timestamp": "2025-08-22 10:04:20",
+  "tests": {
+    "direct_mcp_call": {
+      "success": true,
+      "details": "Tool executed in 0.002s (target: <2s)",
+      "duration": 0.0019991397857666016
+    },
+    "code_quality": {
+      "success": true,
+      "details": "Quality: 6/6 checks passed",
+      "duration": 2.009559154510498
+    },
+    "performance_baseline": {
+      "success": true,
+      "details": "Avg: 0.412s/call, 4/5 successful",
+      "duration": 1.7697620391845703
+    },
+    "claude_cli_integration": {
+      "success": false,
+      "details": "CLI integration issues: 0/4 indicators",
+      "duration": 30.076006174087524
+    },
+    "use_case_coverage": {
+      "success": true,
+      "details": "Coverage: 5/5 use cases",
+      "duration": 11.96272587776184
+    }
+  },
+  "performance": {
+    "avg_call_time": 0.4115815758705139,
+    "success_rate": 0.8
+  },
+  "coverage": {
+    "use_cases": 5,
+    "total_cases": 5,
+    "success_rate": 1.0
+  },
+  "usage_validation": {
+    "technical_criteria": {
+      "mcp_integration": true,
+      "code_quality": true,
+      "performance": true,
+      "cli_integration": false,
+      "use_case_coverage": true
+    },
+    "performance_metrics": {
+      "speed_target": true,
+      "success_rate_target": true,
+      "coverage_target": true
+    },
+    "technical_score": 0.8,
+    "performance_score": 1.0,
+    "overall_score": 0.9,
+    "meets_80_percent_target": true
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "evaluation_metadata": {
+    "total_tests": 45,
+    "approaches_tested": 3,
+    "tasks_per_approach": 15,
+    "execution_timestamp": "2025-08-22 11:47:56",
+    "evaluation_duration": 1264.322119464824
+  },
+  "aggregate_statistics": {
+    "traditional-claude": {
+      "mean_generation_time": 46.7065766393262,
+      "std_generation_time": 9.918879714414203,
+      "mean_lines_of_code": 1371.5333333333333,
+      "compilation_success_rate": 0.7333333333333333,
+      "average_test_pass_rate": 0.6064351427601269,
+      "average_quality_score": 3.3596242966413095,
+      "total_tests": 15
+    },
+    "cerebras-mcp": {
+      "mean_generation_time": 4.904171146787615,
+      "std_generation_time": 1.6999006408691066,
+      "mean_lines_of_code": 1369.4666666666667,
+      "compilation_success_rate": 0.8,
+      "average_test_pass_rate": 0.6613692997723287,
+      "average_quality_score": 3.559337269559665,
+      "total_tests": 15
+    },
+    "cerebras-instructions": {
+      "mean_generation_time": 32.67739351154112,
+      "std_generation_time": 6.092157402173674,
+      "mean_lines_of_code": 1371.7333333333333,
+      "compilation_success_rate": 0.8666666666666667,
+      "average_test_pass_rate": 0.7282890032448367,
+      "average_quality_score": 3.839120570358286,
+      "total_tests": 15
+    }
+  },
+  "comparative_analysis": {
+    "baseline_approach": "traditional-claude",
+    "baseline_mean_time": 46.7065766393262,
+    "improvements": {
+      "cerebras-instructions": {
+        "speed_improvement_percent": 30.036847350470836,
+        "speed_multiplier": 1.4293238113630515,
+        "absolute_time_saved": 14.029183127785082
+      },
+      "cerebras-mcp": {
+        "speed_improvement_percent": 89.50004153663794,
+        "speed_multiplier": 9.523847198913616,
+        "absolute_time_saved": 41.80240549253858
+      }
+    }
+  },
+  "raw_results_file": "/Users/jleechan/projects/worldarchitect.ai/worktree_cmd/test-results/raw_results.csv"
+}

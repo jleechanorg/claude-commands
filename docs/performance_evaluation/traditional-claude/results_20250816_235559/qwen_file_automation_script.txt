@@ -1,0 +1,94 @@
+
+🚀🚀🚀 QWEN GENERATED IN 548ms 🚀🚀🚀
+
+```python
+import os
+import shutil
+from pathlib import Path
+from datetime import datetime
+
+def organize_files_by_type_and_date(source_dir, target_dir):
+ """
+ Organize files by moving them to folders based on file type and creation date.
+ 
+ Args:
+ source_dir (str): Directory containing files to organize
+ target_dir (str): Directory where organized files will be moved
+ """
+ source_path = Path(source_dir)
+ target_path = Path(target_dir)
+ 
+ if not source_path.exists():
+ raise FileNotFoundError(f"Source directory {source_dir} does not exist")
+ 
+ if not target_path.exists():
+ target_path.mkdir(parents=True, exist_ok=True)
+ 
+ # File type mappings
+ file_types = {
+ 'images': ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.tiff', '.svg'],
+ 'documents': ['.pdf', '.doc', '.docx', '.txt', '.rtf', '.odt'],
+ 'spreadsheets': ['.xls', '.xlsx', '.csv', '.ods'],
+ 'presentations': ['.ppt', '.pptx', '.odp'],
+ 'videos': ['.mp4', '.avi', '.mkv', '.mov', '.wmv'],
+ 'audio': ['.mp3', '.wav', '.flac', '.aac', '.ogg'],
+ 'archives': ['.zip', '.rar', '.7z', '.tar', '.gz'],
+ 'code': ['.py', '.js', '.html', '.css', '.java', '.cpp', '.c']
+ }
+ 
+ for file_path in source_path.iterdir():
+ if file_path.is_file():
+ # Determine file type category
+ file_ext = file_path.suffix.lower()
+ category = 'others'
+ for cat, extensions in file_types.items():
+ if file_ext in extensions:
+ category = cat
+ break
+ 
+ # Get creation date
+ try:
+ stat = file_path.stat()
+ creation_time = stat.st_birthtime if hasattr(stat, 'st_birthtime') else stat.st_ctime
+ except AttributeError:
+ creation_time = file_path.stat().st_ctime
+ 
+ creation_date = datetime.fromtimestamp(creation_time)
+ date_folder = creation_date.strftime('%Y-%m')
+ 
+ # Create target directory structure
+ target_folder = target_path / category / date_folder
+ target_folder.mkdir(parents=True, exist_ok=True)
+ 
+ # Move file
+ target_file_path = target_folder / file_path.name
+ if target_file_path.exists():
+ # If file already exists, add timestamp to filename
+ timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+ name_without_ext = file_path.stem
+ new_filename = f"{name_without_ext}_{timestamp}{file_ext}"
+ target_file_path = target_folder / new_filename
+ 
+ shutil.move(str(file_path), str(target_file_path))
+
+if __name__ == "__main__":
+ import sys
+ 
+ if len(sys.argv) != 3:
+ print("Usage: python file_organizer.py <source_directory> <target_directory>")
+ sys.exit(1)
+ 
+ source_directory = sys.argv[1]
+ target_directory = sys.argv[2]
+ 
+ try:
+ organize_files_by_type_and_date(source_directory, target_directory)
+ print(f"Files organized successfully from {source_directory} to {target_directory}")
+ except Exception as e:
+ print(f"Error organizing files: {e}")
+ sys.exit(1)
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 548ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
