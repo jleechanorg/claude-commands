@@ -20,8 +20,14 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Remove leading space from PROMPT
+# Remove leading space from PROMPT and validate input
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
+
+# Input validation - prevent command injection
+if [[ "$PROMPT" =~ [\$\`\;\|\&] ]]; then
+    echo "Error: Invalid characters detected in prompt." >&2
+    exit 1
+fi
 
 if [ -z "$PROMPT" ]; then
     echo "Usage: cerebras_direct.sh [--sonnet] <prompt>"
@@ -33,7 +39,7 @@ fi
 if [ "$USE_SONNET" = true ]; then
     if [ -z "${CLAUDE_API_KEY}" ]; then
         echo "Error: CLAUDE_API_KEY environment variable is not set." >&2
-        echo "Please set your Anthropic API key: export CLAUDE_API_KEY=your_key_here" >&2
+        echo "Please set your Anthropic API key in environment variables." >&2
         exit 2
     fi
 else
@@ -41,7 +47,7 @@ else
     API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
     if [ -z "${API_KEY}" ]; then
         echo "Error: CEREBRAS_API_KEY (preferred) or OPENAI_API_KEY must be set." >&2
-        echo "Set your Cerebras key: export CEREBRAS_API_KEY=your_cerebras_key_here" >&2
+        echo "Please set your Cerebras API key in environment variables." >&2
         exit 2
     fi
 fi
@@ -127,11 +133,6 @@ if [ "$USE_SONNET" = true ]; then
     END_TIME=$(date +%s%N)
     ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     
-    # Show timing at the beginning
-    echo ""
-    echo "🧠🧠🧠 SONNET GENERATED IN ${ELAPSED_MS}ms 🧠🧠🧠"
-    echo ""
-    
     # Extract and display the response (Anthropic format)
     CONTENT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
     if [ -z "$CONTENT" ]; then
@@ -140,6 +141,14 @@ if [ "$USE_SONNET" = true ]; then
         echo "$RESPONSE" >&2
         exit 4
     fi
+    
+    # Count lines in generated content
+    LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
+    
+    # Show timing at the beginning with line count
+    echo ""
+    echo "🧠🧠🧠 SONNET GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🧠🧠🧠"
+    echo ""
     echo "$CONTENT"
     
     # Show prominent timing display at the end
@@ -180,19 +189,22 @@ else
     END_TIME=$(date +%s%N)
     ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
     
-    # Show timing at the beginning
-    echo ""
-    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms 🚀🚀🚀"
-    echo ""
-    
     # Extract and display the response (OpenAI format)
     CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-    if [ -z "$CONTENT" ]; then
+    if [ -z "$CONTENT" ]; the
         echo "Error: Unexpected API response format." >&2
         echo "Raw response:" >&2
         echo "$RESPONSE" >&2
         exit 4
     fi
+    
+    # Count lines in generated content
+    LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
+    
+    # Show timing at the beginning with line count
+    echo ""
+    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+    echo ""
     echo "$CONTENT"
     
     # Show prominent timing display at the end
