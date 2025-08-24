@@ -25,8 +25,28 @@ LOG_FILE="/tmp/claude_backup_$(date +%Y%m%d).log"
 # Source directory
 SOURCE_DIR="$HOME/.claude"
 
-# Get device name for backup folder suffix
-DEVICE_NAME=$(hostname -s | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+# Portable function to get cleaned hostname (Mac and PC compatible)
+get_clean_hostname() {
+    local HOSTNAME=""
+    
+    # Try Mac-specific way first
+    if command -v scutil >/dev/null 2>&1; then
+        # Mac: Use LocalHostName if set, otherwise fallback to hostname
+        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME=$(hostname)
+        fi
+    else
+        # Non-Mac: Use hostname
+        HOSTNAME=$(hostname)
+    fi
+    
+    # Clean up: lowercase, replace spaces with '-'
+    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+# Get device name for backup folder suffix using portable function
+DEVICE_NAME=$(get_clean_hostname)
 
 # Destination directory - now supports parameter override with device suffix
 # If parameter provided, append device suffix to it, otherwise use default
