@@ -421,28 +421,31 @@ remove_cron() {
     echo "✅ Cron job removed"
 }
 
-# Parse command line arguments
-case "${1:-}" in
-    --setup-cron)
-        setup_cron "$@"
-        exit 0
-        ;;
-    --remove-cron)
-        remove_cron
-        exit 0
-        ;;
-    --help|-h)
-        show_help
-        exit 0
-        ;;
-    --*)
-        echo "Error: Unknown option '$1'" >&2
-        echo "Use --help for usage information" >&2
-        show_help >&2
-        exit 2
-        ;;
-    *)
-        # Run backup (default or with destination parameter)
-        run_backup
-        ;;
-esac
+# Only run CLI when script is executed directly (not when sourced)
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    # Parse command line arguments
+    case "${1:-}" in
+        --setup-cron)
+            setup_cron "$@"
+            exit 0
+            ;;
+        --remove-cron)
+            remove_cron
+            exit 0
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --*)
+            echo "Error: Unknown option '$1'" >&2
+            echo "Use --help for usage information" >&2
+            show_help >&2
+            exit 2
+            ;;
+        *)
+            # Run backup (default or with destination parameter)
+            run_backup
+            ;;
+    esac
+fi
