@@ -78,13 +78,13 @@ test_backup_destination() {
 DEVICE="test-device"
 
 # Scenario 1: DROPBOX_DIR with device suffix
-assert_equals "/custom/path/claude_backup_test-device" "$(test_backup_destination '/custom/path' '$DEVICE' '')" "DROPBOX_DIR gets device suffix"
+assert_equals "/custom/path/claude_backup_test-device" "$(test_backup_destination '/custom/path' "$DEVICE" '')" "DROPBOX_DIR gets device suffix"
 
 # Scenario 2: Parameter override with device suffix
-assert_equals "/override/path/claude_backup_test-device" "$(test_backup_destination '/custom/path' '$DEVICE' '/override/path')" "Parameter override gets device suffix"
+assert_equals "/override/path/claude_backup_test-device" "$(test_backup_destination '/custom/path' "$DEVICE" '/override/path')" "Parameter override gets device suffix"
 
 # Scenario 3: Default path construction
-assert_equals "$HOME/Library/CloudStorage/Dropbox/claude_backup_test-device" "$(test_backup_destination '' '$DEVICE' '')" "Default path gets device suffix"
+assert_equals "$HOME/Library/CloudStorage/Dropbox/claude_backup_test-device" "$(test_backup_destination '' "$DEVICE" '')" "Default path gets device suffix"
 
 echo ""
 

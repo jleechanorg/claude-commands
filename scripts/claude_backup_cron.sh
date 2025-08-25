@@ -1,14 +1,20 @@
 #!/bin/bash
 # Cron wrapper for claude backup enhanced
+set -euo pipefail
+# Minimal cron-safe trap
+trap '{
+  ts="$(date "+%Y-%m-%d %H:%M:%S")"
+  echo "[$ts] [cron][err] Failure at line $LINENO" >> "${CRON_LOG:-/tmp/claude_backup_cron.log}"
+}' ERR
 export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
 export SHELL="/bin/bash"
 
 # Load environment variables from ~/.bashrc for cron compatibility
 if [ -f "$HOME/.bashrc" ]; then
     # Source bashrc in non-interactive mode to get environment variables
-    set +e  # Temporarily disable exit on error for sourcing
-    source "$HOME/.bashrc" 2>/dev/null
-    set -e  # Re-enable exit on error
+    set +e +u +o pipefail
+    source "$HOME/.bashrc" 2>/dev/null || true
+    set -euo pipefail
 fi
 
 # Preserve email credentials from environment if available

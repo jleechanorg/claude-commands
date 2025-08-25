@@ -54,7 +54,7 @@ def run_git_command(cmd):
             cmd = shlex.split(cmd)
             
         result = subprocess.run(
-            cmd, check=False, shell=False, capture_output=True, text=True, 
+            cmd, check=False, shell=False, stdout=subprocess.PIPE, text=True, 
             stderr=stderr_redirect, timeout=30
         )
         return result.stdout.strip()

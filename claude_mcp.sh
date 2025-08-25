@@ -1437,6 +1437,9 @@ verify_backup_system() {
             ((issues_found++))
         fi
     else
+        # Define the expected log locations for user reference
+        local backup_log_secure="$backup_log_dir/claude_backup_*.log"
+        local backup_log_legacy="/tmp/claude_backup.log"
         echo -e "${YELLOW}  ⚠️ No backup log found in secure ($backup_log_secure) or legacy ($backup_log_legacy) locations${NC}"
         backup_status="warning"
         ((issues_found++))
