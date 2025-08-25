@@ -1307,6 +1307,91 @@ for server in "${!INSTALL_RESULTS[@]}"; do
     esac
 done
 
+# Backup System Verification
+verify_backup_system() {
+    local backup_status="healthy"
+    local issues_found=0
+    
+    echo -e "\n${BLUE}🔍 Verifying Claude backup system...${NC}"
+    
+    # Check if backup cron job is configured
+    if crontab -l 2>/dev/null | grep -q "claude_backup"; then
+        echo -e "${GREEN}  ✅ Backup cron job is configured${NC}"
+        local cron_line=$(crontab -l 2>/dev/null | grep "claude_backup")
+        echo -e "${CYAN}     Schedule: $cron_line${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️ No backup cron job found${NC}"
+        echo -e "${YELLOW}     Run: ./scripts/claude_backup.sh --setup-cron${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Check if backup script exists and is executable
+    local backup_script="$(dirname "$0")/scripts/claude_backup.sh"
+    if [[ -x "$backup_script" ]]; then
+        echo -e "${GREEN}  ✅ Backup script is executable: $backup_script${NC}"
+    elif [[ -f "$backup_script" ]]; then
+        echo -e "${YELLOW}  ⚠️ Backup script exists but not executable: $backup_script${NC}"
+        echo -e "${YELLOW}     Run: chmod +x $backup_script${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    else
+        echo -e "${RED}  ❌ Backup script not found: $backup_script${NC}"
+        backup_status="error"
+        ((issues_found++))
+    fi
+    
+    # Check if backup destination is accessible
+    local claude_dir="$HOME/.claude"
+    if [[ -d "$claude_dir" ]]; then
+        echo -e "${GREEN}  ✅ Claude directory exists: $claude_dir${NC}"
+        local file_count=$(find "$claude_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
+        echo -e "${CYAN}     Files to backup: $file_count${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️ Claude directory not found: $claude_dir${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Check recent backup activity
+    local backup_log="/tmp/claude_backup_cron.log"
+    if [[ -f "$backup_log" ]]; then
+        local last_backup_time=$(stat -c %Y "$backup_log" 2>/dev/null || stat -f %m "$backup_log" 2>/dev/null)
+        local current_time=$(date +%s)
+        local hours_since_backup=$(( (current_time - last_backup_time) / 3600 ))
+        
+        if [[ $hours_since_backup -le 6 ]]; then
+            echo -e "${GREEN}  ✅ Recent backup activity (${hours_since_backup}h ago)${NC}"
+        else
+            echo -e "${YELLOW}  ⚠️ No recent backup activity (${hours_since_backup}h ago)${NC}"
+            backup_status="warning"
+            ((issues_found++))
+        fi
+    else
+        echo -e "${YELLOW}  ⚠️ No backup log found: $backup_log${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Summary
+    case "$backup_status" in
+        "healthy")
+            echo -e "${GREEN}  🎉 Backup system is healthy${NC}"
+            ;;
+        "warning")
+            echo -e "${YELLOW}  ⚠️ Backup system has $issues_found warnings${NC}"
+            ;;
+        "error")
+            echo -e "${RED}  ❌ Backup system has $issues_found errors${NC}"
+            ;;
+    esac
+    
+    return $issues_found
+}
+
+# Run backup verification
+verify_backup_system
+
 echo -e "\n${BLUE}🔍 Current MCP Server List:${NC}"
 echo "$MCP_LIST"
 
