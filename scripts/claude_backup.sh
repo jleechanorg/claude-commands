@@ -510,6 +510,16 @@ remove_cron() {
 
 # Only run CLI when script is executed directly (not when sourced)
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    # Auto-report on unexpected errors during CLI execution
+    on_error() {
+        local exit_code=$?
+        local line_number=$1
+        add_result "ERROR" "Unexpected Failure" "Script failed at line $line_number with exit code $exit_code"
+        send_email_report 2>/dev/null || true  # Attempt email, but don't fail if unavailable
+        exit $exit_code
+    }
+    trap 'on_error $LINENO' ERR
+    
     # Parse command line arguments
     case "${1:-}" in
         --setup-cron)

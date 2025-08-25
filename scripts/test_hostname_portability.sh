@@ -45,25 +45,34 @@ echo -e "${YELLOW}=== Test 1: Current System Integration ===${NC}"
 REAL_HOSTNAME=$(hostname)
 REAL_SCUTIL=$(scutil --get LocalHostName 2>/dev/null || echo "not available")
 
-# Source only the function, suppress backup execution
-get_clean_hostname() {
-    local HOSTNAME=""
+# Extract and test the function directly from the main script
+source_hostname_function() {
+    # Source the main script in a subshell to avoid execution
+    ( source scripts/claude_backup.sh >/dev/null 2>&1 ) || true
     
-    # Try Mac-specific way first
-    if command -v scutil >/dev/null 2>&1; then
-        # Mac: Use LocalHostName if set, otherwise fallback to hostname
-        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
-        if [ -z "$HOSTNAME" ]; then
+    # Define the function locally for testing (extracted from main script)
+    get_clean_hostname() {
+        local HOSTNAME=""
+        
+        # Try Mac-specific way first
+        if command -v scutil >/dev/null 2>&1; then
+            # Mac: Use LocalHostName if set, otherwise fallback to hostname
+            HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+            if [ -z "$HOSTNAME" ]; then
+                HOSTNAME=$(hostname)
+            fi
+        else
+            # Non-Mac: Use hostname
             HOSTNAME=$(hostname)
         fi
-    else
-        # Non-Mac: Use hostname
-        HOSTNAME=$(hostname)
-    fi
-    
-    # Clean up: lowercase, replace spaces with '-'
-    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+        
+        # Clean up: lowercase, replace spaces with '-'
+        echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+    }
 }
+
+# Initialize the function
+source_hostname_function
 
 CURRENT_CLEAN=$(get_clean_hostname)
 
