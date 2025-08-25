@@ -33,7 +33,7 @@ SOURCE_DIR="$HOME/.claude"
 validate_hostname() {
     local host="$1"
     if [[ ! "$host" =~ ^[a-zA-Z0-9.-]+$ ]]; then
-        log "ERROR: Invalid hostname detected: $host"
+        echo "ERROR: Invalid hostname detected: $host" >&2
         exit 1
     fi
 }
@@ -45,13 +45,13 @@ validate_path() {
     
     # Check for path traversal patterns
     if [[ "$path" =~ \.\./|/\.\. ]]; then
-        log "ERROR: Path traversal attempt detected in $context: $path"
+        echo "ERROR: Path traversal attempt detected in $context: $path" >&2
         exit 1
     fi
     
     # Check for null bytes
     if [[ "$path" =~ $'\x00' ]]; then
-        log "ERROR: Null byte detected in $context: $path"
+        echo "ERROR: Null byte detected in $context: $path" >&2
         exit 1
     fi
     
@@ -60,7 +60,7 @@ validate_path() {
     if [[ -e "$path" ]]; then
         canonical_path=$(realpath "$path" 2>/dev/null)
         if [[ $? -ne 0 ]]; then
-            log "ERROR: Failed to canonicalize existing path in $context: $path"
+            echo "ERROR: Failed to canonicalize existing path in $context: $path" >&2
             exit 1
         fi
     else
@@ -69,13 +69,13 @@ validate_path() {
         if [[ -e "$parent_dir" ]]; then
             canonical_path=$(realpath "$parent_dir" 2>/dev/null)
             if [[ $? -ne 0 ]]; then
-                log "ERROR: Failed to canonicalize parent directory in $context: $parent_dir"
+                echo "ERROR: Failed to canonicalize parent directory in $context: $parent_dir" >&2
                 exit 1
             fi
         fi
     fi
     
-    log "Validated path for $context: $path"
+    # Path validation completed successfully
 }
 
 # Portable function to get cleaned hostname (Mac and PC compatible)
@@ -139,8 +139,8 @@ EMAIL_FROM="claude-backup@worldarchitect.ai"
 BACKUP_STATUS="SUCCESS"
 declare -a BACKUP_RESULTS=()
 
-# Logging function
-log() {
+# Logging function (renamed to avoid conflict with system log command)
+backup_log() {
     local message="$1"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] $message" | tee -a "$LOG_FILE"
@@ -158,12 +158,12 @@ add_result() {
         BACKUP_STATUS="FAILURE"
     fi
 
-    log "$status: $operation - $details"
+    backup_log "$status: $operation - $details"
 }
 
 # Check prerequisites
 check_prerequisites() {
-    log "=== Checking Prerequisites ==="
+    backup_log "=== Checking Prerequisites ==="
 
     # Check if source directory exists
     if [ ! -d "$SOURCE_DIR" ]; then
@@ -199,7 +199,7 @@ backup_to_destination() {
     local dest_dir="$1"
     local dest_name="$2"
 
-    log "=== Backing up to $dest_name ==="
+    backup_log "=== Backing up to $dest_name ==="
 
     # Create destination directory if it doesn't exist
     if ! mkdir -p "$dest_dir" 2>/dev/null; then
@@ -284,12 +284,12 @@ EOF
 send_failure_email() {
     local report_file="$1"
 
-    log "=== Sending Failure Email Notification ==="
+    backup_log "=== Sending Failure Email Notification ==="
 
     # Check if email credentials are configured
     if [ -z "${EMAIL_USER:-}" ] || [ -z "${EMAIL_PASS:-}" ] || [ -z "${BACKUP_EMAIL:-}" ]; then
         add_result "WARNING" "Email Config" "Email credentials not configured - saving report only"
-        log "Failure report saved to: $report_file"
+        backup_log "Failure report saved to: $report_file"
         return
     fi
 
@@ -315,11 +315,11 @@ send_failure_email() {
 
 # Main backup function
 run_backup() {
-    log "Starting Claude backup at $(date)"
+    backup_log "Starting Claude backup at $(date)"
 
     # Check prerequisites
     if ! check_prerequisites; then
-        log "Prerequisites check failed, aborting backup"
+        backup_log "Prerequisites check failed, aborting backup"
         return 1
     fi
 
@@ -332,7 +332,7 @@ run_backup() {
         send_failure_email "$report_file"
     fi
 
-    log "Claude backup completed with status: $BACKUP_STATUS"
+    backup_log "Claude backup completed with status: $BACKUP_STATUS"
 
     # Return appropriate exit code
     if [ "$BACKUP_STATUS" = "SUCCESS" ]; then

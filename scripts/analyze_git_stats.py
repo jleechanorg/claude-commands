@@ -39,13 +39,19 @@ EXCLUDE_PATTERNS = [
 def run_git_command(cmd):
     """Run a git command and return output."""
     try:
+        # Security: Use shell=False and pass command as list to prevent shell injection
+        if isinstance(cmd, str):
+            cmd = cmd.split()
         result = subprocess.run(
-            cmd, check=False, shell=True, capture_output=True, text=True
+            cmd, check=False, shell=False, capture_output=True, text=True, timeout=30
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:
         print(f"Git command failed: {cmd}")
         print(f"Error: {e}")
+        return ""
+    except subprocess.TimeoutExpired:
+        print(f"Git command timed out: {cmd}")
         return ""
     except Exception as e:
         print(f"Unexpected error running command: {cmd}")
@@ -596,13 +602,13 @@ def analyze_git_diff_vs_main(main_branch="main"):
         # Try origin/main first, fallback to main
         for branch in [f"origin/{main_branch}", main_branch]:
             try:
-                # Get diff stats
-                diff_stats_cmd = f"git diff --stat {branch}...HEAD 2>/dev/null"
-                diff_stats = subprocess.run(diff_stats_cmd, shell=True, capture_output=True, text=True)
+                # Get diff stats - Security: Use shell=False
+                diff_stats_cmd = ["git", "diff", "--stat", f"{branch}...HEAD"]
+                diff_stats = subprocess.run(diff_stats_cmd, shell=False, capture_output=True, text=True, timeout=30)
                 
-                # Get changed files
-                diff_files_cmd = f"git diff --name-only {branch}...HEAD 2>/dev/null"
-                diff_files = subprocess.run(diff_files_cmd, shell=True, capture_output=True, text=True)
+                # Get changed files - Security: Use shell=False
+                diff_files_cmd = ["git", "diff", "--name-only", f"{branch}...HEAD"]
+                diff_files = subprocess.run(diff_files_cmd, shell=False, capture_output=True, text=True, timeout=30)
                 
                 if diff_stats.returncode == 0 and diff_files.returncode == 0:
                     break
@@ -745,9 +751,9 @@ def detect_outdated_pr_description(pr_number):
         dict: Contains is_outdated, deviation, pr_count, current_count, reason
     """
     try:
-        # Get PR description via gh CLI
-        pr_cmd = f"gh pr view {pr_number} --json body,title"
-        pr_result = subprocess.run(pr_cmd, shell=True, capture_output=True, text=True)
+        # Get PR description via gh CLI - Security: Use shell=False
+        pr_cmd = ["gh", "pr", "view", str(pr_number), "--json", "body,title"]
+        pr_result = subprocess.run(pr_cmd, shell=False, capture_output=True, text=True, timeout=30)
         
         if pr_result.returncode != 0:
             return {"error": f"Failed to fetch PR #{pr_number}"}

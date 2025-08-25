@@ -28,6 +28,20 @@ echo ""
 
 # Configuration
 INSTALL_DIR="$HOME/.local/bin"
+
+# Check for help flag
+if [[ "${1:-}" == "--help" ]] || [[ "${1:-}" == "-h" ]]; then
+    echo "Usage: $0 [dropbox_base_dir]"
+    echo ""
+    echo "Install backup scripts to stable location and update cron for portability."
+    echo ""
+    echo "Arguments:"
+    echo "  dropbox_base_dir    Base directory for Dropbox backups (default: \$HOME/Library/CloudStorage/Dropbox)"
+    echo ""
+    echo "This fixes the critical portability issue where cron jobs are hardcoded to specific worktree paths."
+    exit 0
+fi
+
 DROPBOX_BASE="${1:-$HOME/Library/CloudStorage/Dropbox}"
 
 # Ensure install directory exists
@@ -56,31 +70,61 @@ cat > "$INSTALL_DIR/claude_backup_cron.sh" << 'EOF'
 # Portable Cron Wrapper for Claude Backup
 # This script is installed in a stable location and references the main backup script
 set -euo pipefail
-# Security: Create secure temp directory for logs
+
+# Security: Create secure temp directory for logs with proper cleanup
 SECURE_TEMP=\$(mktemp -d)
 chmod 700 "\$SECURE_TEMP"
-trap 'echo "[cron] $(date +%F\ %T) error at line $LINENO" >> \$SECURE_TEMP/claude_backup_cron.log' ERR
+trap 'echo "[cron] \$(date +%F\\ %T) error at line \$LINENO" >> "\$SECURE_TEMP/claude_backup_cron.log"; rm -rf "\$SECURE_TEMP"' ERR
+trap 'rm -rf "\$SECURE_TEMP"' EXIT
 
-export PATH="/usr/local/bin:/usr/bin:/bin:$PATH"
+export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
 export SHELL="/bin/bash"
 
-# Preserve email credentials from environment
-[ -n "${EMAIL_USER:-}" ] && export EMAIL_USER="$EMAIL_USER"
-[ -n "${EMAIL_PASS:-}" ] && export EMAIL_PASS="$EMAIL_PASS"
-[ -n "${BACKUP_EMAIL:-}" ] && export BACKUP_EMAIL="$BACKUP_EMAIL"
+# Security: Path validation function
+validate_path() {
+    local path="\$1"
+    local context="\$2"
+    
+    # Check for path traversal patterns
+    if [[ "\$path" =~ \.\./|/\.\. ]]; then
+        echo "ERROR: Path traversal attempt detected in \$context: \$path" >&2
+        exit 1
+    fi
+    
+    # Check for null bytes
+    if [[ "\$path" =~ \$'\\x00' ]]; then
+        echo "ERROR: Null byte detected in \$context: \$path" >&2
+        exit 1
+    fi
+}
+
+# Preserve email credentials from environment (with validation)
+[ -n "\${EMAIL_USER:-}" ] && export EMAIL_USER="\$EMAIL_USER"
+[ -n "\${EMAIL_PASS:-}" ] && export EMAIL_PASS="\$EMAIL_PASS"  
+[ -n "\${BACKUP_EMAIL:-}" ] && export BACKUP_EMAIL="\$BACKUP_EMAIL"
 
 # Use the installed backup script with provided or default Dropbox location
-DROPBOX_BASE="${1:-"$HOME/Library/CloudStorage/Dropbox"}"
+DROPBOX_BASE="\${1:-\$HOME/Library/CloudStorage/Dropbox}"
 
-# Validate Dropbox base directory
-if [[ ! -d "$DROPBOX_BASE" ]]; then
-  echo "Dropbox base directory not found: $DROPBOX_BASE" >&2
+# Security: Validate the Dropbox base directory path
+validate_path "\$DROPBOX_BASE" "DROPBOX_BASE parameter"
+
+# Validate Dropbox base directory exists
+if [[ ! -d "\$DROPBOX_BASE" ]]; then
+  echo "Dropbox base directory not found: \$DROPBOX_BASE" >&2
   echo "Falling back to default: \$HOME/Library/CloudStorage/Dropbox" >&2
-  DROPBOX_BASE="$HOME/Library/CloudStorage/Dropbox"
+  DROPBOX_BASE="\$HOME/Library/CloudStorage/Dropbox"
+  validate_path "\$DROPBOX_BASE" "fallback Dropbox directory"
 fi
 
-# Run the installed backup script
-exec "$HOME/.local/bin/claude_backup.sh" "$DROPBOX_BASE" >> \$SECURE_TEMP/claude_backup_cron.log 2>&1
+# Security: Validate backup script exists and is executable
+if [[ ! -x "\$HOME/.local/bin/claude_backup.sh" ]]; then
+    echo "ERROR: Backup script not found or not executable: \$HOME/.local/bin/claude_backup.sh" >&2
+    exit 1
+fi
+
+# Run the installed backup script with secure logging
+exec "\$HOME/.local/bin/claude_backup.sh" "\$DROPBOX_BASE" >> "\$SECURE_TEMP/claude_backup_cron.log" 2>&1
 EOF
 
 chmod +x "$INSTALL_DIR/claude_backup_cron.sh"
@@ -99,7 +143,7 @@ fi
 # Add new portable cron entry
 echo -e "${YELLOW}   ➕ Adding new portable cron entry...${NC}"
 # Security: Use secure temp directory for cron logs
-CRON_ENTRY="0 */4 * * * $INSTALL_DIR/claude_backup_cron.sh \"$DROPBOX_BASE\" 2>&1"  # Logs handled by wrapper script
+CRON_ENTRY="0 */4 * * * \"$INSTALL_DIR/claude_backup_cron.sh\" \"$DROPBOX_BASE\" 2>&1"  # Logs handled by wrapper script
 {
     crontab -l 2>/dev/null || true
     echo "$CRON_ENTRY"
