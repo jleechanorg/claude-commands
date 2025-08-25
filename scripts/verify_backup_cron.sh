@@ -19,12 +19,11 @@ verify_backup_system() {
         status=1
     fi
     
-    # Check if backup script exists
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    if [ -x "$SCRIPT_DIR/claude_backup.sh" ]; then
-        echo "✅ Backup script executable"
+    # Check if backup script exists in proper portable location
+    if [ -x "$HOME/.local/bin/claude_backup.sh" ]; then
+        echo "✅ Backup script executable (portable location)"
     else
-        echo "❌ Backup script missing"
+        echo "❌ Backup script missing from portable location"
         status=1
     fi
     

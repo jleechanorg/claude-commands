@@ -223,11 +223,11 @@ verify_backup_system() {
         backup_status=1
     fi
     
-    # Check if backup script exists and is executable
-    if [ -x "$(dirname "$0")/scripts/claude_backup.sh" ]; then
-        echo -e "${GREEN}✅ Backup script is executable${NC}"
+    # Check if backup script exists and is executable in portable location
+    if [ -x "$HOME/.local/bin/claude_backup.sh" ]; then
+        echo -e "${GREEN}✅ Backup script is executable (portable location)${NC}"
     else
-        echo -e "${YELLOW}⚠️ Backup script not found or not executable${NC}"
+        echo -e "${YELLOW}⚠️ Backup script not found in portable location${NC}"
         backup_status=1
     fi
     
@@ -1368,19 +1368,18 @@ verify_backup_system() {
         ((issues_found++))
     fi
     
-    # Check if backup script exists and is executable
-    # Use BASH_SOURCE[0] to find this script's own directory robustly
-    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    local backup_script="$script_dir/scripts/claude_backup.sh"
+    # Check if backup script exists and is executable in portable location
+    local backup_script="$HOME/.local/bin/claude_backup.sh"
     if [[ -x "$backup_script" ]]; then
-        echo -e "${GREEN}  ✅ Backup script is executable: $backup_script${NC}"
+        echo -e "${GREEN}  ✅ Backup script is executable (portable location): $backup_script${NC}"
     elif [[ -f "$backup_script" ]]; then
         echo -e "${YELLOW}  ⚠️ Backup script exists but not executable: $backup_script${NC}"
         echo -e "${YELLOW}     Run: chmod +x $backup_script${NC}"
         backup_status="warning"
         ((issues_found++))
     else
-        echo -e "${RED}  ❌ Backup script not found: $backup_script${NC}"
+        echo -e "${RED}  ❌ Backup script not found in portable location: $backup_script${NC}"
+        echo -e "${RED}     Run: ./scripts/install_backup_system.sh${NC}"
         backup_status="error"
         ((issues_found++))
     fi
