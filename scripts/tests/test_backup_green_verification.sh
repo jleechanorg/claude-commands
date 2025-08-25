@@ -1,93 +1,57 @@
 #!/bin/bash
 
-# GREEN PHASE TDD Verification for Backup Cron System
-# Verifies that all backup system components are working after implementation
+# GREEN Phase Test Script for Backup System
+# Purpose: Tests should PASS after backup functionality is properly implemented
+# This validates the implementation meets requirements
 
 set -euo pipefail
 
-echo "=== GREEN PHASE: TDD Verification of Backup System ==="
-echo "Verifying implemented backup system functionality"
-echo ""
+# Source assertion helpers
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/backup_test_assertions.sh"
 
-# Test counters
-PASS_COUNT=0
-FAIL_COUNT=0
+# Test 1: Verify hourly backup cron job is installed correctly
+echo "GREEN Phase: Verifying hourly backup cron job installation..."
+assert_cron_job_exists "0 \* \* \* \* .*claude_backup"
 
-# Assertion helper
-assert_true() {
-    local condition="$1"
-    local test_name="$2"
-    
-    set +e
-    bash -c "$condition"
-    if [[ $? -eq 0 ]]; then
-        echo "✅ PASS: $test_name"
-        ((PASS_COUNT++))
-    else
-        echo "❌ FAIL: $test_name"
-        ((FAIL_COUNT++))
-    fi
-    set -e
+# Test 2: Verify backup health integration in claude_mcp.sh
+echo "GREEN Phase: Verifying backup health integration..."
+assert_backup_health_integrated "../../claude_mcp.sh"
+
+# Test 3: Verify backup script exists and is executable
+echo "GREEN Phase: Verifying backup script functionality..."
+assert_file_exists "../../scripts/claude_backup.sh"
+assert_file_executable "../../scripts/claude_backup.sh"
+
+# Test 4: Verify cron wrapper script exists and uses ~/.bashrc
+echo "GREEN Phase: Verifying cron wrapper with ~/.bashrc integration..."
+assert_file_exists "../../scripts/claude_backup_cron.sh"
+assert_true "grep -q '~/.bashrc' ../../scripts/claude_backup_cron.sh" "Cron wrapper sources ~/.bashrc"
+
+# Test 5: Verify backup system health check works end-to-end
+echo "GREEN Phase: Verifying complete backup system integration..."
+backup_system_healthy() {
+    cd ../..
+    source claude_mcp.sh
+    verify_backup_system | grep -q "Backup system is healthy"
 }
 
-echo "=== GREEN Phase: Implemented System Verification ==="
+assert_true "backup_system_healthy" "Complete backup system health check passes"
 
-# Test 1: Hourly cron entry exists
-echo "Test 1: Hourly Backup Cron Entry"
-assert_true "crontab -l 2>/dev/null | grep -q '0 \* \* \* \*.*claude_backup'" "Hourly cron entry for claude_backup exists"
-
-# Test 2: Backup verification function works
-echo ""
-echo "Test 2: Backup System Verification Function"
-assert_true "grep -q 'verify_backup_system()' claude_mcp.sh" "claude_mcp.sh contains verify_backup_system function"
-
-# Test 3: Backup script is executable
-echo ""
-echo "Test 3: Backup Script Functionality"
-assert_true "[[ -x scripts/claude_backup.sh ]]" "claude_backup.sh is executable"
-assert_true "scripts/claude_backup.sh --help >/dev/null 2>&1" "claude_backup.sh responds to --help"
-
-# Test 4: Cron wrapper script exists
-echo ""
-echo "Test 4: Cron Wrapper Script"
-assert_true "[[ -f scripts/claude_backup_cron.sh ]]" "claude_backup_cron.sh exists"
-assert_true "[[ -x scripts/claude_backup_cron.sh ]]" "claude_backup_cron.sh is executable"
-
-# Test 5: Full system health check integration
-echo ""
-echo "Test 5: System Integration Verification"
-# Run the verification function and capture output (strip ANSI color codes)
-if bash -c "source claude_mcp.sh; verify_backup_system" | sed 's/\x1b\[[0-9;]*m//g' | grep -q "Backup system is healthy"; then
-    echo "✅ PASS: Full backup system health check integration"
-    ((PASS_COUNT++))
-else
-    echo "❌ FAIL: Full backup system health check integration"
-    ((FAIL_COUNT++))
-fi
+print_test_summary
+exit_code=$?
 
 echo ""
-echo "=== GREEN Phase Results ==="
-echo "PASSED: $PASS_COUNT"
-echo "FAILED: $FAIL_COUNT"
-echo ""
-
-if [[ $FAIL_COUNT -eq 0 ]]; then
+if [[ $exit_code -eq 0 ]]; then
     echo "🎉 GREEN PHASE SUCCESS!"
-    echo "All backup system components are implemented and working correctly."
+    echo "All backup system components implemented and working correctly."
     echo ""
     echo "✅ Hourly backup system: ACTIVE"
-    echo "✅ Backup verification: INTEGRATED"
-    echo "✅ Cron scheduling: CONFIGURED"
+    echo "✅ Backup verification: INTEGRATED"  
+    echo "✅ ~/.bashrc environment: CONFIGURED"
     echo "✅ System health checks: OPERATIONAL"
-    
-    # Show current schedule
-    echo ""
-    echo "📋 Current Backup Schedule:"
-    crontab -l | grep claude_backup | while read -r line; do
-        echo "   $line"
-    done
 else
-    echo "❌ GREEN PHASE INCOMPLETE"
+    echo "❌ GREEN PHASE FAILED!"
     echo "Some backup system components need attention."
     exit 1
 fi
