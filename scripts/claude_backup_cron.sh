@@ -20,12 +20,25 @@ fi
 [ -n "${EMAIL_PASS:-}" ] && export EMAIL_PASS="$EMAIL_PASS"
 [ -n "${BACKUP_EMAIL:-}" ] && export BACKUP_EMAIL="$BACKUP_EMAIL"
 
-# Use ~/.local/bin/ installation instead of worktree-dependent paths
+# Resolve project root dynamically for portability
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Use environment variable for Dropbox path, with sane default
+DEFAULT_DROPBOX_BASE="$HOME/Library/CloudStorage/Dropbox"
+DROPBOX_BASE="${1:-"$DEFAULT_DROPBOX_BASE"}"
+
+# Validate Dropbox base directory exists
+if [[ ! -d "$DROPBOX_BASE" ]]; then
+  echo "[cron][warn] Dropbox base missing: $DROPBOX_BASE; falling back to $DEFAULT_DROPBOX_BASE" >&2
+  DROPBOX_BASE="$DEFAULT_DROPBOX_BASE"
+fi
+
+# Use ~/.local/bin/ installation if available, otherwise use worktree version
 if [ -x "$HOME/.local/bin/claude_backup.sh" ]; then
     # Use installed version in stable location
-    exec "$HOME/.local/bin/claude_backup.sh" "/Users/jleechan/Library/CloudStorage/Dropbox"
+    exec "$HOME/.local/bin/claude_backup.sh" "$DROPBOX_BASE"
 else
-    # Fallback to worktree version if installed version not available
-    cd "/Users/jleechan/projects/worldarchitect.ai/worktree_backip"
-    exec "/Users/jleechan/projects/worldarchitect.ai/worktree_backip/scripts/claude_backup.sh" "/Users/jleechan/Library/CloudStorage/Dropbox"
+    # Fallback to worktree version if installed version not available  
+    exec "$PROJECT_ROOT/scripts/claude_backup.sh" "$DROPBOX_BASE"
 fi

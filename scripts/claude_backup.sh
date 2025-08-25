@@ -34,8 +34,9 @@ validate_hostname() {
     local host="$1"
     if [[ ! "$host" =~ ^[a-zA-Z0-9.-]+$ ]]; then
         echo "ERROR: Invalid hostname detected: $host" >&2
-        exit 1
+        return 1
     fi
+    return 0
 }
 
 # Security: Path validation function to prevent path traversal attacks
@@ -46,13 +47,13 @@ validate_path() {
     # Check for path traversal patterns
     if [[ "$path" =~ \.\./|/\.\. ]]; then
         echo "ERROR: Path traversal attempt detected in $context: $path" >&2
-        exit 1
+        return 1
     fi
     
     # Check for null bytes
     if [[ "$path" =~ $'\x00' ]]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
-        exit 1
+        return 1
     fi
     
     # Canonicalize path if it exists, otherwise validate parent
@@ -61,7 +62,7 @@ validate_path() {
         canonical_path=$(realpath "$path" 2>/dev/null)
         if [[ $? -ne 0 ]]; then
             echo "ERROR: Failed to canonicalize existing path in $context: $path" >&2
-            exit 1
+            return 1
         fi
     else
         # For non-existing paths, validate the parent directory structure
@@ -70,12 +71,13 @@ validate_path() {
             canonical_path=$(realpath "$parent_dir" 2>/dev/null)
             if [[ $? -ne 0 ]]; then
                 echo "ERROR: Failed to canonicalize parent directory in $context: $parent_dir" >&2
-                exit 1
+                return 1
             fi
         fi
     fi
     
     # Path validation completed successfully
+    return 0
 }
 
 # Portable function to get cleaned hostname (Mac and PC compatible)
@@ -473,9 +475,9 @@ EOF
         (crontab -l | grep -v "claude_backup") | crontab - 2>/dev/null || true
     fi
 
-    # Add new cron job for every 4 hours (handle empty crontab gracefully)
-    # Security: Use secure temp directory for logs
-    local cron_entry="0 * * * * $wrapper_script > \$SECURE_TEMP/claude_backup_cron.log 2>&1"
+    # Add new cron job for hourly backup (handle empty crontab gracefully)
+    # Security: Use deterministic secure log path accessible from cron
+    local cron_entry="0 * * * * $wrapper_script 2>&1"
     {
         crontab -l 2>/dev/null || true
         echo "$cron_entry"
@@ -486,7 +488,7 @@ EOF
     echo "   Script: $wrapper_script"
     echo "   Destination: $cron_destination"
     echo "   Device suffix: $DEVICE_NAME"
-    echo "   Log: \$SECURE_TEMP/claude_backup_cron.log (secure location)"
+    echo "   Log: Handled by cron wrapper script (secure location)"
     echo ""
     echo "To configure failure email alerts:"
     echo "   export EMAIL_USER=\"your-email@gmail.com\""

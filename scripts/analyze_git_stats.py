@@ -41,7 +41,8 @@ def run_git_command(cmd):
     try:
         # Security: Use shell=False and pass command as list to prevent shell injection
         if isinstance(cmd, str):
-            cmd = cmd.split()
+            import shlex
+            cmd = shlex.split(cmd)
         result = subprocess.run(
             cmd, check=False, shell=False, capture_output=True, text=True, timeout=30
         )
