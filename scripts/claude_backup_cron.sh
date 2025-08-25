@@ -24,6 +24,11 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Set up secure logging directory for cron operations
+LOG_DIR="$PROJECT_ROOT/tmp"
+mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR"
+CRON_LOG="$LOG_DIR/claude_backup_cron.log"
+
 # Use environment variable for Dropbox path, with sane default
 DEFAULT_DROPBOX_BASE="$HOME/Library/CloudStorage/Dropbox"
 DROPBOX_BASE="${1:-"$DEFAULT_DROPBOX_BASE"}"
@@ -34,11 +39,17 @@ if [[ ! -d "$DROPBOX_BASE" ]]; then
   DROPBOX_BASE="$DEFAULT_DROPBOX_BASE"
 fi
 
-# Use ~/.local/bin/ installation if available, otherwise use worktree version
-if [ -x "$HOME/.local/bin/claude_backup.sh" ]; then
-    # Use installed version in stable location
-    exec "$HOME/.local/bin/claude_backup.sh" "$DROPBOX_BASE"
-else
-    # Fallback to worktree version if installed version not available  
-    exec "$PROJECT_ROOT/scripts/claude_backup.sh" "$DROPBOX_BASE"
-fi
+# Log cron execution start
+{
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting claude backup cron wrapper"
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Dropbox base: $DROPBOX_BASE"
+    
+    # Use ~/.local/bin/ installation if available, otherwise use worktree version
+    if [ -x "$HOME/.local/bin/claude_backup.sh" ]; then
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Using installed version: $HOME/.local/bin/claude_backup.sh"
+        exec "$HOME/.local/bin/claude_backup.sh" "$DROPBOX_BASE"
+    else
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Using worktree version: $PROJECT_ROOT/scripts/claude_backup.sh"
+        exec "$PROJECT_ROOT/scripts/claude_backup.sh" "$DROPBOX_BASE"
+    fi
+} >> "$CRON_LOG" 2>&1

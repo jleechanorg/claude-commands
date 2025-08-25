@@ -1397,17 +1397,26 @@ verify_backup_system() {
     fi
     
     # Check recent backup activity
-    # Security: Check multiple locations for backup logs
-    local backup_log_secure="${TMPDIR:-/tmp}/secure/claude_backup_cron.log"
-    local backup_log_legacy="/tmp/claude_backup_cron.log"
+    # Security: Check consistent shared backup log directory
+    local backup_log_dir="${TMPDIR:-/tmp}/claude_backup_logs"
     local backup_log=""
     
-    # Prefer secure location, fallback to legacy
-    if [[ -f "$backup_log_secure" ]]; then
-        backup_log="$backup_log_secure"
-    elif [[ -f "$backup_log_legacy" ]]; then
-        backup_log="$backup_log_legacy"
-        echo -e "${YELLOW}  ⚠️ Using insecure log location: $backup_log_legacy${NC}"
+    # Look for latest backup log in shared secure directory
+    if [[ -d "$backup_log_dir" ]]; then
+        # Find the most recent backup log file
+        backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -exec stat -c '%Y %n' {} + 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        if [[ -z "$backup_log" ]]; then
+            # If no timestamped logs, check for generic log name
+            if [[ -f "$backup_log_dir/claude_backup_cron.log" ]]; then
+                backup_log="$backup_log_dir/claude_backup_cron.log"
+            fi
+        fi
+    fi
+    
+    # Fallback to legacy insecure location if shared directory not found
+    if [[ -z "$backup_log" && -f "/tmp/claude_backup_cron.log" ]]; then
+        backup_log="/tmp/claude_backup_cron.log"
+        echo -e "${YELLOW}  ⚠️ Using insecure legacy log location: /tmp/claude_backup_cron.log${NC}"
     fi
     
     if [[ -n "$backup_log" && -f "$backup_log" ]]; then

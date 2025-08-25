@@ -103,30 +103,30 @@ get_clean_hostname() {
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
 
-# Get device name for backup folder suffix using portable function
-DEVICE_NAME=$(get_clean_hostname)
-
-# Destination directory - now supports parameter override with device suffix
-# If parameter provided, append device suffix to it, otherwise use default
-DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
-if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
-    # Parameter provided and it's not a flag - append device suffix
-    # Security: Validate input parameter to prevent path traversal
-    validate_path "${1}" "command line destination parameter"
-    BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
-else
-    # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
-    if [ -n "${DROPBOX_DIR:-}" ]; then
-        # Security: Validate environment variable path
-        validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
-        BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
+# Initialize backup destination - called lazily to prevent sourcing issues
+init_destination() {
+    DEVICE_NAME="$(get_clean_hostname)" || return 1
+    DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    
+    if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
+        # Parameter provided and it's not a flag - append device suffix
+        # Security: Validate input parameter to prevent path traversal
+        validate_path "${1}" "command line destination parameter" || return 2
+        BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
     else
-        BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
+        # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
+        if [ -n "${DROPBOX_DIR:-}" ]; then
+            # Security: Validate environment variable path
+            validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable" || return 2
+            BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
+        else
+            BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
+        fi
     fi
-fi
-
-# Security: Validate final destination path
-validate_path "$BACKUP_DESTINATION" "final backup destination"
+    
+    # Security: Validate final destination path
+    validate_path "$BACKUP_DESTINATION" "final backup destination" || return 2
+}
 
 # Email configuration
 SMTP_SERVER="smtp.gmail.com"
@@ -318,6 +318,16 @@ send_failure_email() {
 # Main backup function
 run_backup() {
     backup_log "Starting Claude backup at $(date)"
+    
+    # Initialize backup destination
+    if ! init_destination "$@"; then
+        backup_log "Destination initialization failed"
+        BACKUP_STATUS="FAILURE"
+        local report_file
+        report_file="$(generate_failure_email)"
+        send_failure_email "$report_file"
+        return 1
+    fi
 
     # Check prerequisites
     if ! check_prerequisites; then
@@ -383,7 +393,7 @@ FEATURES:
 
 LOGS:
     Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.log (secure)
-    Cron: $SECURE_TEMP/claude_backup_cron.log (secure)
+    Cron:   $PROJECT_ROOT/tmp/claude_backup_cron.log (secure)
     Alerts: ./tmp/backup_alerts/ (when email fails)
 
 From: claude-backup@worldarchitect.ai
@@ -514,8 +524,21 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     on_error() {
         local exit_code=$?
         local line_number=$1
+        
+        # Create error report file for email notification
+        local error_report="$SECURE_TEMP/error_report_$(date +%s).txt"
+        {
+            echo "UNEXPECTED SCRIPT FAILURE"
+            echo "========================"
+            echo "Script: $(basename "${BASH_SOURCE[0]}")"
+            echo "Line: $line_number"
+            echo "Exit Code: $exit_code"
+            echo "Time: $(date)"
+            echo "Command: ${BASH_COMMAND:-unknown}"
+        } > "$error_report"
+        
         add_result "ERROR" "Unexpected Failure" "Script failed at line $line_number with exit code $exit_code"
-        send_email_report 2>/dev/null || true  # Attempt email, but don't fail if unavailable
+        send_failure_email "$error_report" 2>/dev/null || true  # Use correct function name with parameter
         exit $exit_code
     }
     trap 'on_error $LINENO' ERR
