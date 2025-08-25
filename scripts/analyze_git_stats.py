@@ -39,18 +39,14 @@ EXCLUDE_PATTERNS = [
 def run_git_command(cmd):
     """Run a git command and return output."""
     try:
-        # Security: Use shell=False and handle redirection properly to prevent shell injection
-        stderr_redirect = subprocess.PIPE  # Default stderr handling
+        # Security: Use shell=False with proper subprocess handling
+        # Always use subprocess.DEVNULL for stderr to avoid parsing issues
+        stderr_redirect = subprocess.DEVNULL  # Suppress stderr by default for cleaner output
         
         if isinstance(cmd, str):
             import shlex
-            # Handle common shell redirection patterns securely
-            if '2>/dev/null' in cmd:
-                cmd = cmd.replace(' 2>/dev/null', '')
-                stderr_redirect = subprocess.DEVNULL
-            elif '2>&1' in cmd:
-                cmd = cmd.replace(' 2>&1', '')
-                stderr_redirect = subprocess.STDOUT
+            # Parse command without modifying it for redirections
+            # Let subprocess handle all I/O redirection
             cmd = shlex.split(cmd)
             
         result = subprocess.run(

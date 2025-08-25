@@ -1364,7 +1364,17 @@ verify_backup_system() {
     # Look for latest backup log in shared secure directory
     if [[ -d "$backup_log_dir" ]]; then
         # Find the most recent backup log file
-        backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -exec stat -c '%Y %n' {} + 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        # Cross-platform stat detection (GNU vs BSD)
+        if stat --version >/dev/null 2>&1; then
+            # GNU stat (Linux)
+            backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -exec stat -c '%Y %n' {} + 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        else
+            # BSD stat (macOS) - need different approach for find+stat
+            backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -print0 2>/dev/null | while IFS= read -r -d '' file; do
+                timestamp=$(stat -f %m "$file" 2>/dev/null)
+                echo "$timestamp $file"
+            done | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        fi
         if [[ -z "$backup_log" ]]; then
             # If no timestamped logs, check for generic log name
             if [[ -f "$backup_log_dir/claude_backup_cron.log" ]]; then
