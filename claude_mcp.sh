@@ -210,6 +210,47 @@ else
     USE_GLOBAL=false
 fi
 
+# Verify backup system functionality
+echo -e "${BLUE}🔍 Checking Claude backup system status...${NC}"
+verify_backup_system() {
+    local backup_status=0
+    
+    # Check if cron job exists for claude_backup
+    if crontab -l 2>/dev/null | grep -q "claude_backup"; then
+        echo -e "${GREEN}✅ Backup cron job is configured${NC}"
+    else
+        echo -e "${YELLOW}⚠️ No backup cron job found${NC}"
+        backup_status=1
+    fi
+    
+    # Check if backup script exists and is executable
+    if [ -x "$(dirname "$0")/scripts/claude_backup.sh" ]; then
+        echo -e "${GREEN}✅ Backup script is executable${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Backup script not found or not executable${NC}"
+        backup_status=1
+    fi
+    
+    # Check if Dropbox directory is accessible
+    if [ -d "$HOME/Library/CloudStorage/Dropbox" ]; then
+        echo -e "${GREEN}✅ Dropbox backup destination accessible${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Dropbox directory not found${NC}"
+        backup_status=1
+    fi
+    
+    if [ $backup_status -eq 0 ]; then
+        echo -e "${GREEN}✅ Backup system is healthy${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Backup system needs attention${NC}"
+        echo -e "${YELLOW}   Run: ./scripts/claude_backup.sh --setup-cron to configure${NC}"
+    fi
+    
+    return $backup_status
+}
+
+verify_backup_system
+
 # Track installation results
 declare -A INSTALL_RESULTS
 TOTAL_SERVERS=0
@@ -1357,8 +1398,20 @@ verify_backup_system() {
     fi
     
     # Check recent backup activity
-    local backup_log="/tmp/claude_backup_cron.log"
-    if [[ -f "$backup_log" ]]; then
+    # Security: Check multiple locations for backup logs
+    local backup_log_secure="${TMPDIR:-/tmp}/secure/claude_backup_cron.log"
+    local backup_log_legacy="/tmp/claude_backup_cron.log"
+    local backup_log=""
+    
+    # Prefer secure location, fallback to legacy
+    if [[ -f "$backup_log_secure" ]]; then
+        backup_log="$backup_log_secure"
+    elif [[ -f "$backup_log_legacy" ]]; then
+        backup_log="$backup_log_legacy"
+        echo -e "${YELLOW}  ⚠️ Using insecure log location: $backup_log_legacy${NC}"
+    fi
+    
+    if [[ -n "$backup_log" && -f "$backup_log" ]]; then
         local last_backup_time=$(stat -c %Y "$backup_log" 2>/dev/null || stat -f %m "$backup_log" 2>/dev/null)
         local current_time=$(date +%s)
         if [[ "$last_backup_time" =~ ^[0-9]+$ ]] && (( current_time >= last_backup_time )); then
@@ -1376,7 +1429,7 @@ verify_backup_system() {
             ((issues_found++))
         fi
     else
-        echo -e "${YELLOW}  ⚠️ No backup log found: $backup_log${NC}"
+        echo -e "${YELLOW}  ⚠️ No backup log found in secure ($backup_log_secure) or legacy ($backup_log_legacy) locations${NC}"
         backup_status="warning"
         ((issues_found++))
     fi

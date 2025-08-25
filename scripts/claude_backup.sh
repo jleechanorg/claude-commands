@@ -20,10 +20,63 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LOG_FILE="/tmp/claude_backup_$(date +%Y%m%d).log"
+
+# Security: Create secure temp directory with proper permissions (700)
+SECURE_TEMP=$(mktemp -d)
+chmod 700 "$SECURE_TEMP"
+LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 
 # Source directory
 SOURCE_DIR="$HOME/.claude"
+
+# Security: Hostname validation function
+validate_hostname() {
+    local host="$1"
+    if [[ ! "$host" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+        log "ERROR: Invalid hostname detected: $host"
+        exit 1
+    fi
+}
+
+# Security: Path validation function to prevent path traversal attacks
+validate_path() {
+    local path="$1"
+    local context="$2"
+    
+    # Check for path traversal patterns
+    if [[ "$path" =~ \.\./|/\.\. ]]; then
+        log "ERROR: Path traversal attempt detected in $context: $path"
+        exit 1
+    fi
+    
+    # Check for null bytes
+    if [[ "$path" =~ $'\x00' ]]; then
+        log "ERROR: Null byte detected in $context: $path"
+        exit 1
+    fi
+    
+    # Canonicalize path if it exists, otherwise validate parent
+    local canonical_path
+    if [[ -e "$path" ]]; then
+        canonical_path=$(realpath "$path" 2>/dev/null)
+        if [[ $? -ne 0 ]]; then
+            log "ERROR: Failed to canonicalize existing path in $context: $path"
+            exit 1
+        fi
+    else
+        # For non-existing paths, validate the parent directory structure
+        local parent_dir=$(dirname "$path")
+        if [[ -e "$parent_dir" ]]; then
+            canonical_path=$(realpath "$parent_dir" 2>/dev/null)
+            if [[ $? -ne 0 ]]; then
+                log "ERROR: Failed to canonicalize parent directory in $context: $parent_dir"
+                exit 1
+            fi
+        fi
+    fi
+    
+    log "Validated path for $context: $path"
+}
 
 # Portable function to get cleaned hostname (Mac and PC compatible)
 get_clean_hostname() {
@@ -41,6 +94,9 @@ get_clean_hostname() {
         HOSTNAME=$(hostname)
     fi
     
+    # Security: Validate hostname to prevent shell injection
+    validate_hostname "$HOSTNAME"
+    
     # Clean up: lowercase, replace spaces with '-'
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
@@ -53,15 +109,22 @@ DEVICE_NAME=$(get_clean_hostname)
 DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
 if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
     # Parameter provided and it's not a flag - append device suffix
+    # Security: Validate input parameter to prevent path traversal
+    validate_path "${1}" "command line destination parameter"
     BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
 else
     # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
     if [ -n "${DROPBOX_DIR:-}" ]; then
+        # Security: Validate environment variable path
+        validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
         BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
     else
         BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
     fi
 fi
+
+# Security: Validate final destination path
+validate_path "$BACKUP_DESTINATION" "final backup destination"
 
 # Email configuration
 SMTP_SERVER="smtp.gmail.com"
@@ -169,7 +232,8 @@ backup_to_destination() {
 
 # Generate failure email report
 generate_failure_email() {
-    local report_file="/tmp/claude_backup_failure_$(date +%Y%m%d_%H%M%S).txt"
+    # Security: Use secure temp directory instead of world-readable /tmp
+    local report_file="$SECURE_TEMP/claude_backup_failure_$(date +%Y%m%d_%H%M%S).txt"
 
     cat > "$report_file" << EOF
 Subject: ALERT: Claude Backup Failure - $(date '+%Y-%m-%d %H:%M')
@@ -316,8 +380,8 @@ FEATURES:
     ✅ Comprehensive logging
 
 LOGS:
-    Backup: /tmp/claude_backup_YYYYMMDD.log
-    Cron: /tmp/claude_backup_cron.log
+    Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.log (secure)
+    Cron: $SECURE_TEMP/claude_backup_cron.log (secure)
     Alerts: ./tmp/backup_alerts/ (when email fails)
 
 From: claude-backup@worldarchitect.ai
@@ -370,18 +434,34 @@ setup_cron() {
     local wrapper_script="$SCRIPT_DIR/claude_backup_cron.sh"
     cat > "$wrapper_script" << EOF
 #!/bin/bash
-# Cron wrapper for claude backup enhanced
+# Cron wrapper for claude backup enhanced with secure credential handling
 export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
 export SHELL="/bin/bash"
 
-# Preserve email credentials from environment if available
-# These must be set in the user's environment before setting up cron:
-# export EMAIL_USER="your-email@gmail.com"
-# export EMAIL_PASS="your-gmail-app-password"  
-# export BACKUP_EMAIL="your-email@gmail.com"
-[ -n "\${EMAIL_USER:-}" ] && export EMAIL_USER="\$EMAIL_USER"
-[ -n "\${EMAIL_PASS:-}" ] && export EMAIL_PASS="\$EMAIL_PASS"
-[ -n "\${BACKUP_EMAIL:-}" ] && export BACKUP_EMAIL="\$BACKUP_EMAIL"
+# Security: Use secure credential retrieval instead of environment variables
+# Credentials should be stored securely using the system keychain/credential manager
+get_secure_credential() {
+    local key="\$1"
+    # Try macOS keychain first
+    if command -v security >/dev/null 2>&1; then
+        security find-generic-password -s "claude-backup-\$key" -w 2>/dev/null || echo ""
+    elif command -v secret-tool >/dev/null 2>&1; then
+        # Linux Secret Service
+        secret-tool lookup service "claude-backup" key "\$key" 2>/dev/null || echo ""
+    else
+        # Fallback to environment variables (less secure)
+        case "\$key" in
+            user) echo "\${EMAIL_USER:-}" ;;
+            pass) echo "\${EMAIL_PASS:-}" ;;
+            email) echo "\${BACKUP_EMAIL:-}" ;;
+        esac
+    fi
+}
+
+# Get credentials securely
+export EMAIL_USER=\$(get_secure_credential "user")
+export EMAIL_PASS=\$(get_secure_credential "pass")
+export BACKUP_EMAIL=\$(get_secure_credential "email")
 
 cd "$PROJECT_ROOT"
 exec "$SCRIPT_DIR/claude_backup.sh" "$cron_destination"
@@ -394,7 +474,8 @@ EOF
     fi
 
     # Add new cron job for every 4 hours (handle empty crontab gracefully)
-    local cron_entry="0 * * * * $wrapper_script > /tmp/claude_backup_cron.log 2>&1"
+    # Security: Use secure temp directory for logs
+    local cron_entry="0 * * * * $wrapper_script > \$SECURE_TEMP/claude_backup_cron.log 2>&1"
     {
         crontab -l 2>/dev/null || true
         echo "$cron_entry"
@@ -405,7 +486,7 @@ EOF
     echo "   Script: $wrapper_script"
     echo "   Destination: $cron_destination"
     echo "   Device suffix: $DEVICE_NAME"
-    echo "   Log: /tmp/claude_backup_cron.log"
+    echo "   Log: \$SECURE_TEMP/claude_backup_cron.log (secure location)"
     echo ""
     echo "To configure failure email alerts:"
     echo "   export EMAIL_USER=\"your-email@gmail.com\""

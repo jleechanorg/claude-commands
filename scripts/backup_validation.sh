@@ -104,8 +104,12 @@ validate_config() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Security: Create secure temp directory
+SECURE_TEMP=$(mktemp -d)
+chmod 700 "$SECURE_TEMP"
+
 # Default configuration values (overridden by config file)
-LOG_FILE="/tmp/backup_validation_$(date +%Y%m%d).log"
+LOG_FILE="$SECURE_TEMP/backup_validation_$(date +%Y%m%d).log"
 EMAIL_RECIPIENT="backup-checker@worldarchitect.ai"
 EMAIL_FROM="claude-backup@worldarchitect.ai"
 EMAIL_SERVICE="gmail"
@@ -454,7 +458,7 @@ test_backup_restoration() {
     log "=== Testing Backup Restoration Capability ==="
 
     # Create temporary test directory
-    local test_dir="/tmp/backup_test_$$"
+    local test_dir="$SECURE_TEMP/backup_test_$$"
     mkdir -p "$test_dir"
 
     # Test memory backup restoration
@@ -481,7 +485,7 @@ test_backup_restoration() {
 
 # Generate email report
 generate_email_report() {
-    local report_file="/tmp/backup_report_$(date +%Y%m%d_%H%M%S).txt"
+    local report_file="$SECURE_TEMP/backup_report_$(date +%Y%m%d_%H%M%S).txt"
 
     cat > "$report_file" << EOF
 Subject: Daily Backup Validation Report - $(date '+%Y-%m-%d')
@@ -807,9 +811,9 @@ CONFIGURATION EXAMPLE:
     echo 'DROPBOX_BACKUP_DIR="/custom/path/to/backup"' >> ~/.backup_validation.conf
 
 LOGS:
-    Validation: /tmp/backup_validation_YYYYMMDD.log
-    Cron: /tmp/backup_validation_cron.log
-    Reports: /tmp/backup_report_*.txt
+    Validation: \$SECURE_TEMP/backup_validation_YYYYMMDD.log (secure)
+    Cron: \$SECURE_TEMP/backup_validation_cron.log (secure)
+    Reports: \$SECURE_TEMP/backup_report_*.txt (secure)
     Config: scripts/backup_validation.conf
 
 From: backup-checker@worldarchitect.ai
@@ -836,13 +840,13 @@ EOF
     (crontab -l 2>/dev/null | grep -v "backup_validation") | crontab - 2>/dev/null || true
 
     # Add new cron job for every 4 hours
-    local cron_entry="0 */4 * * * $wrapper_script > /tmp/backup_validation_cron.log 2>&1"
+    local cron_entry="0 */4 * * * $wrapper_script 2>&1"  # Logs handled by wrapper script with secure temp
     (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
 
     echo "✅ Cron job setup complete!"
     echo "   Schedule: Every 4 hours (0 */4 * * *)"
     echo "   Script: $wrapper_script"
-    echo "   Log: /tmp/backup_validation_cron.log"
+    echo "   Log: Secure temp directory (see wrapper script)"
     echo ""
     echo "To configure email notifications:"
     echo "   1. Edit scripts/backup_validation.conf or create ~/.backup_validation.conf"

@@ -89,27 +89,31 @@ assert_true "[[ -f \"$PROJECT_ROOT/scripts/verify_backup_cron.sh\" ]]" "Backup c
 # Test 5: Integration test - full backup system health check
 echo ""
 echo "Test 5: Full System Integration"
-# This comprehensive test should FAIL initially
-test_backup_system_health() {
-    # Check if cron is set up
-    if ! crontab -l 2>/dev/null | grep -q "claude_backup"; then
-        return 1
-    fi
-    
-    # Check if backup script works
-    if ! "$SCRIPT_DIR/claude_backup.sh" --help > /dev/null 2>&1; then
-        return 1
-    fi
-    
-    # Check if verification is integrated
-    if ! grep -q "verify_backup_system\|backup.*verify" "$PROJECT_ROOT/claude_mcp.sh" 2>/dev/null; then
-        return 1
-    fi
-    
-    return 0
-}
+# This comprehensive test should FAIL initially but now should pass
+integration_test_result=0
 
-assert_true "test_backup_system_health" "Full backup system health check passes (EXPECTED TO FAIL in RED phase)"
+# Check if cron is set up
+if ! crontab -l 2>/dev/null | grep -q "claude_backup"; then
+    integration_test_result=1
+fi
+
+# Check if backup script works
+if ! "$SCRIPT_DIR/claude_backup.sh" --help > /dev/null 2>&1; then
+    integration_test_result=1
+fi
+
+# Check if verification is integrated
+if ! grep -q "verify_backup_system\|backup.*verify" "$PROJECT_ROOT/claude_mcp.sh" 2>/dev/null; then
+    integration_test_result=1
+fi
+
+if [ $integration_test_result -eq 0 ]; then
+    echo "✅ PASS: Full backup system health check passes (GREEN PHASE SUCCESS!)"
+    ((PASS_COUNT++))
+else  
+    echo "❌ FAIL: Full backup system health check passes (EXPECTED TO FAIL in RED phase)"
+    ((FAIL_COUNT++))
+fi
 
 echo ""
 echo "=== RED Phase Results ==="
