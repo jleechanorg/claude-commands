@@ -3,7 +3,8 @@
 # Backup Cron Entry Verification Script
 # Verifies that claude_backup cron entries are properly configured and running
 
-set -e
+set -euo pipefail
+trap 'echo -e "${RED}Error at line $LINENO during backup verification${NC}" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -22,9 +23,9 @@ echo ""
 check_cron_entry() {
     echo -e "${BLUE}🔍 Checking for backup cron entries...${NC}"
     
-    if crontab -l 2>/dev/null | grep -q "claude_backup"; then
+    if crontab -l 2>/dev/null | grep -E '^[^#].*claude_backup(\.sh)?' -q; then
         echo -e "${GREEN}  ✅ Found backup cron entries:${NC}"
-        crontab -l 2>/dev/null | grep "claude_backup" | while read -r line; do
+        crontab -l 2>/dev/null | grep -E '^[^#].*claude_backup(\.sh)?' | while read -r line; do
             echo -e "${GREEN}     $line${NC}"
         done
         return 0
@@ -43,10 +44,10 @@ check_backup_script() {
         echo -e "${GREEN}  ✅ Backup script is executable: $backup_script${NC}"
         
         # Test help function
-        if "$backup_script" --help >/dev/null 2>&1; then
+        if "$backup_script" --help >/dev/null 2>"/tmp/claude_backup_cron_help.err"; then
             echo -e "${GREEN}  ✅ Backup script responds to --help${NC}"
         else
-            echo -e "${YELLOW}  ⚠️ Backup script --help failed${NC}"
+            echo -e "${YELLOW}  ⚠️ Backup script --help failed (see /tmp/claude_backup_cron_help.err)${NC}"
         fi
         return 0
     else
@@ -63,7 +64,7 @@ check_backup_activity() {
     if [[ -f "$backup_log" ]]; then
         echo -e "${GREEN}  ✅ Backup log exists: $backup_log${NC}"
         
-        local file_size=$(stat -c %s "$backup_log" 2>/dev/null || stat -f %z "$backup_log" 2>/dev/null)
+        local file_size=$(stat -c %s "$backup_log" 2>/dev/null || stat -f %z "$backup_log" 2>/dev/null || echo 0)
         echo -e "${BLUE}     Log size: $file_size bytes${NC}"
         
         # Show last few lines if log has content

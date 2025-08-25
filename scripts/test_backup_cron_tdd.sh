@@ -3,7 +3,8 @@
 # RED-GREEN TDD Test for Backup Cron System Verification
 # Tests that claude_mcp.sh can verify backup system is working via cron entries
 
-set -e
+set -euo pipefail
+trap 'echo "❌ Test harness error at line $LINENO"; exit 1' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -16,35 +17,37 @@ echo "=== RED-GREEN TDD: Backup Cron System Verification ==="
 echo "Phase: RED - Writing failing tests first"
 echo ""
 
-# Assertion helper - disable exit on error within assertions
+# Assertion helpers with secure evaluation (no eval)
 assert_true() {
     local condition="$1"
     local test_name="$2"
     
-    set +e  # Temporarily disable exit on error
-    if eval "$condition"; then
+    set +e
+    bash -c "$condition"
+    if [[ $? -eq 0 ]]; then
         echo "✅ PASS: $test_name"
         ((PASS_COUNT++))
     else
         echo "❌ FAIL: $test_name"
         ((FAIL_COUNT++))
     fi
-    set -e  # Re-enable exit on error
+    set -e
 }
 
 assert_false() {
     local condition="$1"
     local test_name="$2"
     
-    set +e  # Temporarily disable exit on error
-    if ! eval "$condition"; then
+    set +e
+    bash -c "$condition"
+    if [[ $? -ne 0 ]]; then
         echo "✅ PASS: $test_name"
         ((PASS_COUNT++))
     else
         echo "❌ FAIL: $test_name"
         ((FAIL_COUNT++))
     fi
-    set -e  # Re-enable exit on error
+    set -e
 }
 
 # RED PHASE: These tests should FAIL initially
@@ -52,8 +55,8 @@ echo "=== RED Phase: Tests That Should Fail Initially ==="
 
 # Test 1: Cron setup script should create hourly backup job
 echo "Test 1: Cron Setup Functionality"
-assert_true "[[ -f '$SCRIPT_DIR/claude_backup.sh' ]]" "claude_backup.sh exists"
-assert_true "grep -q 'setup_cron' '$SCRIPT_DIR/claude_backup.sh'" "setup_cron function exists"
+assert_true "[[ -f \"$SCRIPT_DIR/claude_backup.sh\" ]]" "claude_backup.sh exists"
+assert_true "grep -q 'setup_cron' \"$SCRIPT_DIR/claude_backup.sh\"" "setup_cron function exists"
 
 # Test 2: Cron entry should be created for hourly backup
 echo ""
@@ -71,7 +74,7 @@ echo ""
 echo "Test 3: claude_mcp.sh Backup Verification"
 CLAUDE_MCP_SCRIPT="$PROJECT_ROOT/claude_mcp.sh"
 if [[ -f "$CLAUDE_MCP_SCRIPT" ]]; then
-    assert_true "grep -q 'backup.*check\\|verify.*backup' '$CLAUDE_MCP_SCRIPT'" "claude_mcp.sh has backup verification logic (EXPECTED TO FAIL in RED phase)"
+    assert_true "grep -q 'backup.*check\\|verify.*backup' \"$CLAUDE_MCP_SCRIPT\"" "claude_mcp.sh has backup verification logic (EXPECTED TO FAIL in RED phase)"
 else
     echo "❌ FAIL: claude_mcp.sh not found at $CLAUDE_MCP_SCRIPT"
     ((FAIL_COUNT++))
@@ -81,7 +84,7 @@ fi
 echo ""
 echo "Test 4: Cron Entry Verification Function"
 # This should FAIL - function doesn't exist yet
-assert_true "[[ -f '$PROJECT_ROOT/scripts/verify_backup_cron.sh' ]]" "Backup cron verification script exists (EXPECTED TO FAIL in RED phase)"
+assert_true "[[ -f \"$PROJECT_ROOT/scripts/verify_backup_cron.sh\" ]]" "Backup cron verification script exists (EXPECTED TO FAIL in RED phase)"
 
 # Test 5: Integration test - full backup system health check
 echo ""

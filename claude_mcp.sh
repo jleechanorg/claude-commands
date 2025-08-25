@@ -66,6 +66,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Synchronization for parallel processing
@@ -1327,7 +1328,9 @@ verify_backup_system() {
     fi
     
     # Check if backup script exists and is executable
-    local backup_script="$(dirname "$0")/scripts/claude_backup.sh"
+    # Use BASH_SOURCE[0] to find this script's own directory robustly
+    local script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local backup_script="$script_dir/scripts/claude_backup.sh"
     if [[ -x "$backup_script" ]]; then
         echo -e "${GREEN}  ✅ Backup script is executable: $backup_script${NC}"
     elif [[ -f "$backup_script" ]]; then
@@ -1358,7 +1361,12 @@ verify_backup_system() {
     if [[ -f "$backup_log" ]]; then
         local last_backup_time=$(stat -c %Y "$backup_log" 2>/dev/null || stat -f %m "$backup_log" 2>/dev/null)
         local current_time=$(date +%s)
-        local hours_since_backup=$(( (current_time - last_backup_time) / 3600 ))
+        if [[ "$last_backup_time" =~ ^[0-9]+$ ]] && (( current_time >= last_backup_time )); then
+            local hours_since_backup=$(( (current_time - last_backup_time) / 3600 ))
+        else
+            echo -e "${YELLOW}  ⚠️ Unable to compute hours since last backup (stat parse issue)${NC}"
+            hours_since_backup=9999
+        fi
         
         if [[ $hours_since_backup -le 6 ]]; then
             echo -e "${GREEN}  ✅ Recent backup activity (${hours_since_backup}h ago)${NC}"
