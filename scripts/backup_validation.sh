@@ -111,7 +111,31 @@ EMAIL_FROM="claude-backup@worldarchitect.ai"
 EMAIL_SERVICE="gmail"
 MEMORY_CACHE_DIR="$HOME/.cache/claude-learning"
 CLAUDE_DIR="$PROJECT_ROOT/.claude"
-DROPBOX_BACKUP_DIR="${DROPBOX_DIR:-/mnt/c/Users/$(whoami)}/Dropbox/claude_backup"
+# Portable function to get cleaned hostname (Mac and PC compatible)
+get_clean_hostname() {
+    local HOSTNAME=""
+    
+    # Try Mac-specific way first
+    if command -v scutil >/dev/null 2>&1; then
+        # Mac: Use LocalHostName if set, otherwise fallback to hostname
+        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME=$(hostname)
+        fi
+    else
+        # Non-Mac: Use hostname
+        HOSTNAME=$(hostname)
+    fi
+    
+    # Clean up: lowercase, replace spaces with '-'
+    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+# Get device name for backup folder suffix
+DEVICE_NAME=$(get_clean_hostname)
+
+# Dropbox backup directory with device-specific suffix for Mac/PC portability
+DROPBOX_BACKUP_DIR="${DROPBOX_DIR:-/mnt/c/Users/$(whoami)/Dropbox}/claude_backup_$DEVICE_NAME"
 GOOGLE_DRIVE_SYNC_DIR="${GOOGLE_DRIVE_DIR:-/mnt/c/Users/$(whoami)}/My Drive/.tmp.drivedownload"
 
 # Email service configurations (defaults)
