@@ -673,12 +673,25 @@ else
         done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 
-    # Include scripts/tests directory if it exists (CRDT backup tests)
+    # Include scripts/tests directory if it exists (CRDT backup tests and shell tests)
     if [ -d "scripts/tests" ]; then
         print_status "Including scripts/tests..."
         while IFS= read -r -d '' file; do
             test_files+=("$file")
         done < <(find scripts/tests -name "test_*.py" -type f -print0 2>/dev/null)
+        
+        # Also run shell test scripts in scripts/tests
+        while IFS= read -r -d '' file; do
+            if [ -x "$file" ]; then
+                print_status "🧪 Running $(basename "$file")..."
+                if "$file"; then
+                    print_success "$(basename "$file") passed"
+                else
+                    print_error "$(basename "$file") failed"
+                    ((failed_tests++))
+                fi
+            fi
+        done < <(find scripts/tests -name "test_*.sh" -type f -print0 2>/dev/null)
     fi
 fi
 
