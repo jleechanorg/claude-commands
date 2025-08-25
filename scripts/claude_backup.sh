@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Claude Directory Backup Script
-# Backs up ~/.claude to Dropbox folder (synced by both Dropbox and Google Drive)
+# Backs up ~/.claude to Dropbox folder with device-specific naming
 # Runs hourly via cron and sends email alerts on failure
 #
 # USAGE:

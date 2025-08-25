@@ -136,7 +136,7 @@ DEVICE_NAME=$(get_clean_hostname)
 
 # Dropbox backup directory with device-specific suffix for Mac/PC portability
 DROPBOX_BACKUP_DIR="${DROPBOX_DIR:-/mnt/c/Users/$(whoami)/Dropbox}/claude_backup_$DEVICE_NAME"
-GOOGLE_DRIVE_SYNC_DIR="${GOOGLE_DRIVE_DIR:-/mnt/c/Users/$(whoami)}/My Drive/.tmp.drivedownload"
+# Google Drive variables removed - using Dropbox-only backup approach
 
 # Email service configurations (defaults)
 GMAIL_SMTP_SERVER="smtp.gmail.com"
@@ -244,45 +244,8 @@ validate_memory_backup() {
 }
 
 # Validate claude directory backup
-# Validate Google Drive sync health
-validate_google_drive_sync() {
-    log "=== Validating Google Drive Sync Health ==="
-
-    # Check for Google Drive temporary sync directory (indicates active syncing)
-    local google_drive_tmp="$GOOGLE_DRIVE_SYNC_DIR"
-    
-    if [ ! -d "$google_drive_tmp" ]; then
-        add_result "WARN" "Google Drive Sync" "No .tmp.drivedownload directory found - sync may not be active"
-        return
-    fi
-
-    # Check for recent sync activity (files created in last hour)
-    local recent_sync_files=$(find "$google_drive_tmp" -mmin -60 -type f 2>/dev/null | wc -l)
-    local total_sync_files=$(ls "$google_drive_tmp" 2>/dev/null | wc -l)
-    
-    if [ "$recent_sync_files" -gt 0 ]; then
-        add_result "PASS" "Google Drive Sync" "Active sync detected - $recent_sync_files files in last hour (total: $total_sync_files)"
-    elif [ "$total_sync_files" -gt 0 ]; then
-        add_result "WARN" "Google Drive Sync" "Sync directory exists with $total_sync_files files but no recent activity"
-    else
-        add_result "WARN" "Google Drive Sync" "Sync directory exists but is empty"
-    fi
-
-    # Check if sync is processing large amounts of data (indicator of backup sync)
-    local large_sync_files=$(find "$google_drive_tmp" -size +1M -type f 2>/dev/null | wc -l)
-    if [ "$large_sync_files" -gt 0 ]; then
-        add_result "PASS" "Google Drive Large Files" "$large_sync_files large files being synced (backup activity)"
-    fi
-
-    # Validate sync health by checking file age distribution
-    if [ "$total_sync_files" -gt 100 ]; then
-        add_result "PASS" "Google Drive Activity" "High sync activity detected ($total_sync_files temporary files)"
-    elif [ "$total_sync_files" -gt 10 ]; then
-        add_result "PASS" "Google Drive Activity" "Moderate sync activity detected ($total_sync_files temporary files)"
-    elif [ "$total_sync_files" -gt 0 ]; then
-        add_result "WARN" "Google Drive Activity" "Low sync activity detected ($total_sync_files temporary files)"
-    fi
-}
+# Google Drive validation removed - backup system now uses Dropbox-only approach
+# This simplifies the validation to focus on single backup destination
 
 # Validate claude backup folder (single Dropbox location synced by both services)
 validate_claude_backup_folders() {
@@ -354,8 +317,7 @@ validate_claude_backup_folders() {
         add_result "PASS" "Dropbox Selective Backup" "Clean selective backup (no unwanted files)"
     fi
 
-    # Always check Google Drive sync status for the Dropbox backup folder
-    validate_google_drive_sync
+    # Google Drive validation removed - using Dropbox-only backup approach
 }
 
 # Validate memory backup with GitHub repo sync check
@@ -796,7 +758,7 @@ CONFIGURATION:
     2. User overrides: ~/.backup_validation.conf (optional)
     
     Key configuration sections:
-    - Backup paths (Dropbox, Google Drive, memory cache)
+    - Backup paths (Dropbox, memory cache)
     - Email service settings (Gmail, Mailgun, SendGrid, SES, sendmail)
     - Validation thresholds (file age limits)
     - Logging preferences
@@ -831,7 +793,7 @@ VALIDATION CHECKS:
     ✅ Memory backups with configurable age thresholds
     ✅ Memory GitHub sync validation (dotfiles_backup/)
     ✅ Claude backup folder with freshness monitoring
-    ✅ Google Drive sync health (.tmp.drivedownload activity)
+    ✅ Dropbox backup validation (device-specific folders)
     ✅ Claude directory backups (.claude/*.backup)
     ✅ System prerequisites and restore capability
     ✅ Configurable cron schedule compliance
