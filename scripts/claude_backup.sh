@@ -55,8 +55,12 @@ if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
     # Parameter provided and it's not a flag - append device suffix
     BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
 else
-    # No parameter or it's a flag - use default or environment variable
-    BACKUP_DESTINATION="${DROPBOX_DIR:-$DEFAULT_BACKUP_DIR}"
+    # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
+    if [ -n "${DROPBOX_DIR:-}" ]; then
+        BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
+    else
+        BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
+    fi
 fi
 
 # Email configuration
