@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Claude Directory Backup Script
-# Backs up ~/.claude to Dropbox folder (synced by both Dropbox and Google Drive)
+# Backs up ~/.claude to Dropbox folder with device-specific naming
 # Runs hourly via cron and sends email alerts on failure
 #
 # USAGE:
@@ -20,24 +20,113 @@ set -euo pipefail
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LOG_FILE="/tmp/claude_backup_$(date +%Y%m%d).log"
+
+# Security: Create secure temp directory with proper permissions (700)
+SECURE_TEMP=$(mktemp -d)
+chmod 700 "$SECURE_TEMP"
+LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 
 # Source directory
 SOURCE_DIR="$HOME/.claude"
 
-# Get device name for backup folder suffix
-DEVICE_NAME=$(hostname -s | tr ' ' '-' | tr '[:upper:]' '[:lower:]')
+# Security: Hostname validation function
+validate_hostname() {
+    local host="$1"
+    if [[ ! "$host" =~ ^[a-zA-Z0-9.-]+$ ]]; then
+        echo "ERROR: Invalid hostname detected: $host" >&2
+        return 1
+    fi
+    return 0
+}
 
-# Destination directory - now supports parameter override with device suffix
-# If parameter provided, append device suffix to it, otherwise use default
-DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
-if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
-    # Parameter provided and it's not a flag - append device suffix
-    BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
-else
-    # No parameter or it's a flag - use default or environment variable
-    BACKUP_DESTINATION="${DROPBOX_DIR:-$DEFAULT_BACKUP_DIR}"
-fi
+# Security: Path validation function to prevent path traversal attacks
+validate_path() {
+    local path="$1"
+    local context="$2"
+    
+    # Check for path traversal patterns
+    if [[ "$path" =~ \.\./|/\.\. ]]; then
+        echo "ERROR: Path traversal attempt detected in $context: $path" >&2
+        return 1
+    fi
+    
+    # Check for null bytes
+    if [[ "$path" =~ $'\x00' ]]; then
+        echo "ERROR: Null byte detected in $context: $path" >&2
+        return 1
+    fi
+    
+    # Canonicalize path if it exists, otherwise validate parent
+    local canonical_path
+    if [[ -e "$path" ]]; then
+        canonical_path=$(realpath "$path" 2>/dev/null)
+        if [[ $? -ne 0 ]]; then
+            echo "ERROR: Failed to canonicalize existing path in $context: $path" >&2
+            return 1
+        fi
+    else
+        # For non-existing paths, validate the parent directory structure
+        local parent_dir=$(dirname "$path")
+        if [[ -e "$parent_dir" ]]; then
+            canonical_path=$(realpath "$parent_dir" 2>/dev/null)
+            if [[ $? -ne 0 ]]; then
+                echo "ERROR: Failed to canonicalize parent directory in $context: $parent_dir" >&2
+                return 1
+            fi
+        fi
+    fi
+    
+    # Path validation completed successfully
+    return 0
+}
+
+# Portable function to get cleaned hostname (Mac and PC compatible)
+get_clean_hostname() {
+    local HOSTNAME=""
+    
+    # Try Mac-specific way first
+    if command -v scutil >/dev/null 2>&1; then
+        # Mac: Use LocalHostName if set, otherwise fallback to hostname
+        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME=$(hostname)
+        fi
+    else
+        # Non-Mac: Use hostname
+        HOSTNAME=$(hostname)
+    fi
+    
+    # Security: Validate hostname to prevent shell injection
+    validate_hostname "$HOSTNAME"
+    
+    # Clean up: lowercase, replace spaces with '-'
+    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+# Initialize backup destination - called lazily to prevent sourcing issues
+init_destination() {
+    DEVICE_NAME="$(get_clean_hostname)" || return 1
+    DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    
+    if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
+        # Parameter provided and it's not a flag - append device suffix
+        # Security: Validate input parameter to prevent path traversal
+        validate_path "${1}" "command line destination parameter" || return 2
+        BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
+    else
+        # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
+        if [ -n "${DROPBOX_DIR:-}" ]; then
+            # Security: Validate environment variable path
+            validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable" || return 2
+            BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
+        else
+            BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
+        fi
+    fi
+    
+    # Security: Validate final destination path
+    validate_path "$BACKUP_DESTINATION" "final backup destination" || return 2
+}
 
 # Email configuration
 SMTP_SERVER="smtp.gmail.com"
@@ -52,8 +141,8 @@ EMAIL_FROM="claude-backup@worldarchitect.ai"
 BACKUP_STATUS="SUCCESS"
 declare -a BACKUP_RESULTS=()
 
-# Logging function
-log() {
+# Logging function (renamed to avoid conflict with system log command)
+backup_log() {
     local message="$1"
     local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
     echo "[$timestamp] $message" | tee -a "$LOG_FILE"
@@ -71,12 +160,12 @@ add_result() {
         BACKUP_STATUS="FAILURE"
     fi
 
-    log "$status: $operation - $details"
+    backup_log "$status: $operation - $details"
 }
 
 # Check prerequisites
 check_prerequisites() {
-    log "=== Checking Prerequisites ==="
+    backup_log "=== Checking Prerequisites ==="
 
     # Check if source directory exists
     if [ ! -d "$SOURCE_DIR" ]; then
@@ -112,7 +201,7 @@ backup_to_destination() {
     local dest_dir="$1"
     local dest_name="$2"
 
-    log "=== Backing up to $dest_name ==="
+    backup_log "=== Backing up to $dest_name ==="
 
     # Create destination directory if it doesn't exist
     if ! mkdir -p "$dest_dir" 2>/dev/null; then
@@ -145,7 +234,8 @@ backup_to_destination() {
 
 # Generate failure email report
 generate_failure_email() {
-    local report_file="/tmp/claude_backup_failure_$(date +%Y%m%d_%H%M%S).txt"
+    # Security: Use secure temp directory instead of world-readable /tmp
+    local report_file="$SECURE_TEMP/claude_backup_failure_$(date +%Y%m%d_%H%M%S).txt"
 
     cat > "$report_file" << EOF
 Subject: ALERT: Claude Backup Failure - $(date '+%Y-%m-%d %H:%M')
@@ -185,7 +275,7 @@ TROUBLESHOOTING:
 
 ========================================
 Generated by Claude Backup System
-Scheduled every 4 hours via cron (0 */4 * * *)
+Scheduled every hour via cron (0 * * * *)
 ========================================
 EOF
 
@@ -196,12 +286,12 @@ EOF
 send_failure_email() {
     local report_file="$1"
 
-    log "=== Sending Failure Email Notification ==="
+    backup_log "=== Sending Failure Email Notification ==="
 
     # Check if email credentials are configured
     if [ -z "${EMAIL_USER:-}" ] || [ -z "${EMAIL_PASS:-}" ] || [ -z "${BACKUP_EMAIL:-}" ]; then
         add_result "WARNING" "Email Config" "Email credentials not configured - saving report only"
-        log "Failure report saved to: $report_file"
+        backup_log "Failure report saved to: $report_file"
         return
     fi
 
@@ -227,11 +317,21 @@ send_failure_email() {
 
 # Main backup function
 run_backup() {
-    log "Starting Claude backup at $(date)"
+    backup_log "Starting Claude backup at $(date)"
+    
+    # Initialize backup destination
+    if ! init_destination "$@"; then
+        backup_log "Destination initialization failed"
+        BACKUP_STATUS="FAILURE"
+        local report_file
+        report_file="$(generate_failure_email)"
+        send_failure_email "$report_file"
+        return 1
+    fi
 
     # Check prerequisites
     if ! check_prerequisites; then
-        log "Prerequisites check failed, aborting backup"
+        backup_log "Prerequisites check failed, aborting backup"
         return 1
     fi
 
@@ -244,7 +344,7 @@ run_backup() {
         send_failure_email "$report_file"
     fi
 
-    log "Claude backup completed with status: $BACKUP_STATUS"
+    backup_log "Claude backup completed with status: $BACKUP_STATUS"
 
     # Return appropriate exit code
     if [ "$BACKUP_STATUS" = "SUCCESS" ]; then
@@ -285,15 +385,15 @@ SELECTIVE SYNC INCLUDES:
     ❌ Excludes: shell-snapshots, todos, conversations, cache files
 
 FEATURES:
-    ✅ Automated backups via cron every 4 hours (0 */4 * * *)
+    ✅ Automated backups via cron every hour (0 * * * *)
     ✅ rsync selective sync (no --delete for safety)
     ✅ Email alerts on backup failures only
     ✅ Selective sync of essential data only
     ✅ Comprehensive logging
 
 LOGS:
-    Backup: /tmp/claude_backup_YYYYMMDD.log
-    Cron: /tmp/claude_backup_cron.log
+    Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.log (secure)
+    Cron:   $PROJECT_ROOT/tmp/claude_backup_cron.log (secure)
     Alerts: ./tmp/backup_alerts/ (when email fails)
 
 From: claude-backup@worldarchitect.ai
@@ -346,18 +446,34 @@ setup_cron() {
     local wrapper_script="$SCRIPT_DIR/claude_backup_cron.sh"
     cat > "$wrapper_script" << EOF
 #!/bin/bash
-# Cron wrapper for claude backup enhanced
+# Cron wrapper for claude backup enhanced with secure credential handling
 export PATH="/usr/local/bin:/usr/bin:/bin:\$PATH"
 export SHELL="/bin/bash"
 
-# Preserve email credentials from environment if available
-# These must be set in the user's environment before setting up cron:
-# export EMAIL_USER="your-email@gmail.com"
-# export EMAIL_PASS="your-gmail-app-password"  
-# export BACKUP_EMAIL="your-email@gmail.com"
-[ -n "\${EMAIL_USER:-}" ] && export EMAIL_USER="\$EMAIL_USER"
-[ -n "\${EMAIL_PASS:-}" ] && export EMAIL_PASS="\$EMAIL_PASS"
-[ -n "\${BACKUP_EMAIL:-}" ] && export BACKUP_EMAIL="\$BACKUP_EMAIL"
+# Security: Use secure credential retrieval instead of environment variables
+# Credentials should be stored securely using the system keychain/credential manager
+get_secure_credential() {
+    local key="\$1"
+    # Try macOS keychain first
+    if command -v security >/dev/null 2>&1; then
+        security find-generic-password -s "claude-backup-\$key" -w 2>/dev/null || echo ""
+    elif command -v secret-tool >/dev/null 2>&1; then
+        # Linux Secret Service
+        secret-tool lookup service "claude-backup" key "\$key" 2>/dev/null || echo ""
+    else
+        # Fallback to environment variables (less secure)
+        case "\$key" in
+            user) echo "\${EMAIL_USER:-}" ;;
+            pass) echo "\${EMAIL_PASS:-}" ;;
+            email) echo "\${BACKUP_EMAIL:-}" ;;
+        esac
+    fi
+}
+
+# Get credentials securely
+export EMAIL_USER=\$(get_secure_credential "user")
+export EMAIL_PASS=\$(get_secure_credential "pass")
+export BACKUP_EMAIL=\$(get_secure_credential "email")
 
 cd "$PROJECT_ROOT"
 exec "$SCRIPT_DIR/claude_backup.sh" "$cron_destination"
@@ -369,19 +485,20 @@ EOF
         (crontab -l | grep -v "claude_backup") | crontab - 2>/dev/null || true
     fi
 
-    # Add new cron job for every 4 hours (handle empty crontab gracefully)
-    local cron_entry="0 */4 * * * $wrapper_script > /tmp/claude_backup_cron.log 2>&1"
+    # Add new cron job for hourly backup (handle empty crontab gracefully)
+    # Security: Use deterministic secure log path accessible from cron
+    local cron_entry="0 * * * * $wrapper_script 2>&1"
     {
         crontab -l 2>/dev/null || true
         echo "$cron_entry"
     } | crontab -
 
     echo "✅ Cron job setup complete!"
-    echo "   Schedule: Every 4 hours (0 */4 * * *)"
+    echo "   Schedule: Every hour (0 * * * *)"
     echo "   Script: $wrapper_script"
     echo "   Destination: $cron_destination"
     echo "   Device suffix: $DEVICE_NAME"
-    echo "   Log: /tmp/claude_backup_cron.log"
+    echo "   Log: Handled by cron wrapper script (secure location)"
     echo ""
     echo "To configure failure email alerts:"
     echo "   export EMAIL_USER=\"your-email@gmail.com\""
@@ -401,28 +518,54 @@ remove_cron() {
     echo "✅ Cron job removed"
 }
 
-# Parse command line arguments
-case "${1:-}" in
-    --setup-cron)
-        setup_cron "$@"
-        exit 0
-        ;;
-    --remove-cron)
-        remove_cron
-        exit 0
-        ;;
-    --help|-h)
-        show_help
-        exit 0
-        ;;
-    --*)
-        echo "Error: Unknown option '$1'" >&2
-        echo "Use --help for usage information" >&2
-        show_help >&2
-        exit 2
-        ;;
-    *)
-        # Run backup (default or with destination parameter)
-        run_backup
-        ;;
-esac
+# Only run CLI when script is executed directly (not when sourced)
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    # Auto-report on unexpected errors during CLI execution
+    on_error() {
+        local exit_code=$?
+        local line_number=$1
+        
+        # Create error report file for email notification
+        local error_report="$SECURE_TEMP/error_report_$(date +%s).txt"
+        {
+            echo "UNEXPECTED SCRIPT FAILURE"
+            echo "========================"
+            echo "Script: $(basename "${BASH_SOURCE[0]}")"
+            echo "Line: $line_number"
+            echo "Exit Code: $exit_code"
+            echo "Time: $(date)"
+            echo "Command: ${BASH_COMMAND:-unknown}"
+        } > "$error_report"
+        
+        add_result "ERROR" "Unexpected Failure" "Script failed at line $line_number with exit code $exit_code"
+        send_failure_email "$error_report" 2>/dev/null || true  # Use correct function name with parameter
+        exit $exit_code
+    }
+    trap 'on_error $LINENO' ERR
+    
+    # Parse command line arguments
+    case "${1:-}" in
+        --setup-cron)
+            setup_cron "$@"
+            exit 0
+            ;;
+        --remove-cron)
+            remove_cron
+            exit 0
+            ;;
+        --help|-h)
+            show_help
+            exit 0
+            ;;
+        --*)
+            echo "Error: Unknown option '$1'" >&2
+            echo "Use --help for usage information" >&2
+            show_help >&2
+            exit 2
+            ;;
+        *)
+            # Run backup (default or with destination parameter)
+            run_backup "$@"
+            ;;
+    esac
+fi

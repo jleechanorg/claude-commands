@@ -66,6 +66,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Synchronization for parallel processing
@@ -208,6 +209,7 @@ else
     echo -e "${YELLOW}   Will use npx direct installation method${NC}"
     USE_GLOBAL=false
 fi
+
 
 # Track installation results
 declare -A INSTALL_RESULTS
@@ -1306,6 +1308,131 @@ for server in "${!INSTALL_RESULTS[@]}"; do
             ;;
     esac
 done
+
+# Backup System Verification
+verify_backup_system() {
+    local backup_status="healthy"
+    local issues_found=0
+    
+    echo -e "\n${BLUE}🔍 Verifying Claude backup system...${NC}"
+    
+    # Check if backup cron job is configured
+    if crontab -l 2>/dev/null | grep -q "claude_backup"; then
+        echo -e "${GREEN}  ✅ Backup cron job is configured${NC}"
+        local cron_line=$(crontab -l 2>/dev/null | grep "claude_backup")
+        echo -e "${CYAN}     Schedule: $cron_line${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️ No backup cron job found${NC}"
+        echo -e "${YELLOW}     Run: ./scripts/claude_backup.sh --setup-cron${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Check if backup script exists and is executable in portable location
+    local backup_script="$HOME/.local/bin/claude_backup.sh"
+    if [[ -x "$backup_script" ]]; then
+        echo -e "${GREEN}  ✅ Backup script is executable (portable location): $backup_script${NC}"
+    elif [[ -f "$backup_script" ]]; then
+        echo -e "${YELLOW}  ⚠️ Backup script exists but not executable: $backup_script${NC}"
+        echo -e "${YELLOW}     Run: chmod +x $backup_script${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    else
+        echo -e "${RED}  ❌ Backup script not found in portable location: $backup_script${NC}"
+        echo -e "${RED}     Run: ./scripts/install_backup_system.sh${NC}"
+        backup_status="error"
+        ((issues_found++))
+    fi
+    
+    # Check if backup destination is accessible
+    local claude_dir="$HOME/.claude"
+    if [[ -d "$claude_dir" ]]; then
+        echo -e "${GREEN}  ✅ Claude directory exists: $claude_dir${NC}"
+        local file_count=$(find "$claude_dir" -type f 2>/dev/null | wc -l | tr -d ' ')
+        echo -e "${CYAN}     Files to backup: $file_count${NC}"
+    else
+        echo -e "${YELLOW}  ⚠️ Claude directory not found: $claude_dir${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Check recent backup activity
+    # Security: Check consistent shared backup log directory
+    local backup_log_dir="${TMPDIR:-/tmp}/claude_backup_logs"
+    local backup_log=""
+    
+    # Look for latest backup log in shared secure directory
+    if [[ -d "$backup_log_dir" ]]; then
+        # Find the most recent backup log file
+        # Cross-platform stat detection (GNU vs BSD)
+        if stat --version >/dev/null 2>&1; then
+            # GNU stat (Linux)
+            backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -exec stat -c '%Y %n' {} + 2>/dev/null | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        else
+            # BSD stat (macOS) - need different approach for find+stat
+            backup_log=$(find "$backup_log_dir" -name "claude_backup_*.log" -type f -print0 2>/dev/null | while IFS= read -r -d '' file; do
+                timestamp=$(stat -f %m "$file" 2>/dev/null)
+                echo "$timestamp $file"
+            done | sort -n | tail -1 | cut -d' ' -f2- || echo "")
+        fi
+        if [[ -z "$backup_log" ]]; then
+            # If no timestamped logs, check for generic log name
+            if [[ -f "$backup_log_dir/claude_backup_cron.log" ]]; then
+                backup_log="$backup_log_dir/claude_backup_cron.log"
+            fi
+        fi
+    fi
+    
+    # Fallback to legacy insecure location if shared directory not found
+    if [[ -z "$backup_log" && -f "/tmp/claude_backup_cron.log" ]]; then
+        backup_log="/tmp/claude_backup_cron.log"
+        echo -e "${YELLOW}  ⚠️ Using insecure legacy log location: /tmp/claude_backup_cron.log${NC}"
+    fi
+    
+    if [[ -n "$backup_log" && -f "$backup_log" ]]; then
+        local last_backup_time=$(stat -c %Y "$backup_log" 2>/dev/null || stat -f %m "$backup_log" 2>/dev/null)
+        local current_time=$(date +%s)
+        if [[ "$last_backup_time" =~ ^[0-9]+$ ]] && (( current_time >= last_backup_time )); then
+            local hours_since_backup=$(( (current_time - last_backup_time) / 3600 ))
+        else
+            echo -e "${YELLOW}  ⚠️ Unable to compute hours since last backup (stat parse issue)${NC}"
+            hours_since_backup=9999
+        fi
+        
+        if [[ $hours_since_backup -le 6 ]]; then
+            echo -e "${GREEN}  ✅ Recent backup activity (${hours_since_backup}h ago)${NC}"
+        else
+            echo -e "${YELLOW}  ⚠️ No recent backup activity (${hours_since_backup}h ago)${NC}"
+            backup_status="warning"
+            ((issues_found++))
+        fi
+    else
+        # Define the expected log locations for user reference
+        local backup_log_secure="$backup_log_dir/claude_backup_*.log"
+        local backup_log_legacy="/tmp/claude_backup.log"
+        echo -e "${YELLOW}  ⚠️ No backup log found in secure ($backup_log_secure) or legacy ($backup_log_legacy) locations${NC}"
+        backup_status="warning"
+        ((issues_found++))
+    fi
+    
+    # Summary
+    case "$backup_status" in
+        "healthy")
+            echo -e "${GREEN}  🎉 Backup system is healthy${NC}"
+            ;;
+        "warning")
+            echo -e "${YELLOW}  ⚠️ Backup system has $issues_found warnings${NC}"
+            ;;
+        "error")
+            echo -e "${RED}  ❌ Backup system has $issues_found errors${NC}"
+            ;;
+    esac
+    
+    return $issues_found
+}
+
+# Run backup verification
+verify_backup_system
 
 echo -e "\n${BLUE}🔍 Current MCP Server List:${NC}"
 echo "$MCP_LIST"

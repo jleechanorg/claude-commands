@@ -133,6 +133,26 @@ extract_base_directory() {
     return 0
 }
 
+# Portable function to get cleaned hostname (Mac and PC compatible)
+get_clean_hostname() {
+    local HOSTNAME=""
+    
+    # Try Mac-specific way first
+    if command -v scutil >/dev/null 2>&1; then
+        # Mac: Use LocalHostName if set, otherwise fallback to hostname
+        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME=$(hostname)
+        fi
+    else
+        # Non-Mac: Use hostname
+        HOSTNAME=$(hostname)
+    fi
+    
+    # Clean up: lowercase, replace spaces with '-'
+    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
 # Function to backup to destination
 backup_to_destination() {
     local source="$1"
@@ -583,6 +603,132 @@ test_environment_variable_fallback() {
     fi
 }
 
+# Shared mock helper for hostname tests
+setup_mock_command() {
+    local scutil_available="$1"  # 0=available, 1=not available
+    
+    command() {
+        if [[ "$2" == "scutil" ]]; then
+            return $scutil_available
+        fi
+        return 1
+    }
+}
+
+# New tests for hostname portability
+test_get_clean_hostname_mac_style() {
+    # Test Mac hostname behavior with scutil
+    local mock_scutil_result="MacBook Pro"
+    
+    # Test the function in isolation to avoid global variable conflicts
+    test_get_clean_hostname() {
+        local HOSTNAME=""
+        
+        # Simulate Mac behavior with scutil available
+        if command -v scutil >/dev/null 2>&1; then
+            HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+            if [ -z "$HOSTNAME" ]; then
+                HOSTNAME=$(hostname)
+            fi
+        else
+            HOSTNAME=$(hostname)
+        fi
+        
+        # Clean up: lowercase, replace spaces with '-'
+        echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+    }
+    
+    # Setup mocks for this isolated test
+    setup_mock_command 0
+    
+    scutil() {
+        if [[ "$*" == "--get LocalHostName" ]]; then
+            echo "$mock_scutil_result"
+            return 0
+        fi
+        return 1
+    }
+    
+    # Test the isolated function
+    result=$(test_get_clean_hostname)
+    assert_equals "macbook-pro" "$result" "get_clean_hostname should return cleaned hostname for Mac with spaces"
+}
+
+test_get_clean_hostname_pc_style() {
+    # Test PC hostname behavior without scutil
+    local mock_hostname_result="MY-WINDOWS-PC"
+    
+    # Test the function in isolation
+    test_get_clean_hostname() {
+        local HOSTNAME=""
+        
+        # Simulate PC behavior without scutil
+        if command -v scutil >/dev/null 2>&1; then
+            HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+            if [ -z "$HOSTNAME" ]; then
+                HOSTNAME=$(hostname)
+            fi
+        else
+            HOSTNAME=$(hostname)
+        fi
+        
+        # Clean up: lowercase, replace spaces with '-'
+        echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+    }
+    
+    # Setup mocks for PC environment
+    setup_mock_command 1
+    
+    hostname() {
+        echo "$mock_hostname_result"
+    }
+    
+    # Test the isolated function
+    local result=$(test_get_clean_hostname)
+    assert_equals "my-windows-pc" "$result" "get_clean_hostname should return cleaned hostname for PC"
+}
+
+test_get_clean_hostname_fallback() {
+    # Test fallback when scutil returns empty but exists
+    
+    # Test the function in isolation
+    test_get_clean_hostname() {
+        local HOSTNAME=""
+        
+        # Simulate Mac with scutil returning empty
+        if command -v scutil >/dev/null 2>&1; then
+            HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+            if [ -z "$HOSTNAME" ]; then
+                HOSTNAME=$(hostname)
+            fi
+        else
+            HOSTNAME=$(hostname)
+        fi
+        
+        # Clean up: lowercase, replace spaces with '-'
+        echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+    }
+    
+    # Setup mocks for fallback scenario
+    setup_mock_command 0
+    
+    scutil() {
+        if [[ "$*" == "--get LocalHostName" ]]; then
+            echo ""  # Empty result
+            return 0
+        fi
+        return 1
+    }
+    
+    hostname() {
+        echo "fallback-hostname"
+    }
+    
+    # Test the isolated function
+    local result=$(test_get_clean_hostname)
+    assert_equals "fallback-hostname" "$result" "get_clean_hostname should fallback to hostname when scutil returns empty"
+}
+
 # Test runner
 run_tests() {
     echo -e "${YELLOW}Running TDD test suite for claude_backup.sh${NC}"
@@ -608,6 +754,9 @@ run_tests() {
     test_remove_cron
     test_parameter_vs_flag_detection
     test_environment_variable_fallback
+    test_get_clean_hostname_mac_style
+    test_get_clean_hostname_pc_style
+    test_get_clean_hostname_fallback
     
     teardown
     

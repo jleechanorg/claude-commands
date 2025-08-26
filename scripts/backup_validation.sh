@@ -104,15 +104,43 @@ validate_config() {
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+# Security: Create secure temp directory
+SECURE_TEMP=$(mktemp -d)
+chmod 700 "$SECURE_TEMP"
+
 # Default configuration values (overridden by config file)
-LOG_FILE="/tmp/backup_validation_$(date +%Y%m%d).log"
+LOG_FILE="$SECURE_TEMP/backup_validation_$(date +%Y%m%d).log"
 EMAIL_RECIPIENT="backup-checker@worldarchitect.ai"
 EMAIL_FROM="claude-backup@worldarchitect.ai"
 EMAIL_SERVICE="gmail"
 MEMORY_CACHE_DIR="$HOME/.cache/claude-learning"
 CLAUDE_DIR="$PROJECT_ROOT/.claude"
-DROPBOX_BACKUP_DIR="${DROPBOX_DIR:-/mnt/c/Users/$(whoami)}/Dropbox/claude_backup"
-GOOGLE_DRIVE_SYNC_DIR="${GOOGLE_DRIVE_DIR:-/mnt/c/Users/$(whoami)}/My Drive/.tmp.drivedownload"
+# Portable function to get cleaned hostname (Mac and PC compatible)
+get_clean_hostname() {
+    local HOSTNAME=""
+    
+    # Try Mac-specific way first
+    if command -v scutil >/dev/null 2>&1; then
+        # Mac: Use LocalHostName if set, otherwise fallback to hostname
+        HOSTNAME=$(scutil --get LocalHostName 2>/dev/null)
+        if [ -z "$HOSTNAME" ]; then
+            HOSTNAME=$(hostname)
+        fi
+    else
+        # Non-Mac: Use hostname
+        HOSTNAME=$(hostname)
+    fi
+    
+    # Clean up: lowercase, replace spaces with '-'
+    echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
+}
+
+# Get device name for backup folder suffix
+DEVICE_NAME=$(get_clean_hostname)
+
+# Dropbox backup directory with device-specific suffix for Mac/PC portability
+DROPBOX_BACKUP_DIR="${DROPBOX_DIR:-/mnt/c/Users/$(whoami)/Dropbox}/claude_backup_$DEVICE_NAME"
+# Google Drive variables removed - using Dropbox-only backup approach
 
 # Email service configurations (defaults)
 GMAIL_SMTP_SERVER="smtp.gmail.com"
@@ -220,45 +248,8 @@ validate_memory_backup() {
 }
 
 # Validate claude directory backup
-# Validate Google Drive sync health
-validate_google_drive_sync() {
-    log "=== Validating Google Drive Sync Health ==="
-
-    # Check for Google Drive temporary sync directory (indicates active syncing)
-    local google_drive_tmp="$GOOGLE_DRIVE_SYNC_DIR"
-    
-    if [ ! -d "$google_drive_tmp" ]; then
-        add_result "WARN" "Google Drive Sync" "No .tmp.drivedownload directory found - sync may not be active"
-        return
-    fi
-
-    # Check for recent sync activity (files created in last hour)
-    local recent_sync_files=$(find "$google_drive_tmp" -mmin -60 -type f 2>/dev/null | wc -l)
-    local total_sync_files=$(ls "$google_drive_tmp" 2>/dev/null | wc -l)
-    
-    if [ "$recent_sync_files" -gt 0 ]; then
-        add_result "PASS" "Google Drive Sync" "Active sync detected - $recent_sync_files files in last hour (total: $total_sync_files)"
-    elif [ "$total_sync_files" -gt 0 ]; then
-        add_result "WARN" "Google Drive Sync" "Sync directory exists with $total_sync_files files but no recent activity"
-    else
-        add_result "WARN" "Google Drive Sync" "Sync directory exists but is empty"
-    fi
-
-    # Check if sync is processing large amounts of data (indicator of backup sync)
-    local large_sync_files=$(find "$google_drive_tmp" -size +1M -type f 2>/dev/null | wc -l)
-    if [ "$large_sync_files" -gt 0 ]; then
-        add_result "PASS" "Google Drive Large Files" "$large_sync_files large files being synced (backup activity)"
-    fi
-
-    # Validate sync health by checking file age distribution
-    if [ "$total_sync_files" -gt 100 ]; then
-        add_result "PASS" "Google Drive Activity" "High sync activity detected ($total_sync_files temporary files)"
-    elif [ "$total_sync_files" -gt 10 ]; then
-        add_result "PASS" "Google Drive Activity" "Moderate sync activity detected ($total_sync_files temporary files)"
-    elif [ "$total_sync_files" -gt 0 ]; then
-        add_result "WARN" "Google Drive Activity" "Low sync activity detected ($total_sync_files temporary files)"
-    fi
-}
+# Google Drive validation removed - backup system now uses Dropbox-only approach
+# This simplifies the validation to focus on single backup destination
 
 # Validate claude backup folder (single Dropbox location synced by both services)
 validate_claude_backup_folders() {
@@ -330,8 +321,7 @@ validate_claude_backup_folders() {
         add_result "PASS" "Dropbox Selective Backup" "Clean selective backup (no unwanted files)"
     fi
 
-    # Always check Google Drive sync status for the Dropbox backup folder
-    validate_google_drive_sync
+    # Google Drive validation removed - using Dropbox-only backup approach
 }
 
 # Validate memory backup with GitHub repo sync check
@@ -468,7 +458,7 @@ test_backup_restoration() {
     log "=== Testing Backup Restoration Capability ==="
 
     # Create temporary test directory
-    local test_dir="/tmp/backup_test_$$"
+    local test_dir="$SECURE_TEMP/backup_test_$$"
     mkdir -p "$test_dir"
 
     # Test memory backup restoration
@@ -495,7 +485,7 @@ test_backup_restoration() {
 
 # Generate email report
 generate_email_report() {
-    local report_file="/tmp/backup_report_$(date +%Y%m%d_%H%M%S).txt"
+    local report_file="$SECURE_TEMP/backup_report_$(date +%Y%m%d_%H%M%S).txt"
 
     cat > "$report_file" << EOF
 Subject: Daily Backup Validation Report - $(date '+%Y-%m-%d')
@@ -772,7 +762,7 @@ CONFIGURATION:
     2. User overrides: ~/.backup_validation.conf (optional)
     
     Key configuration sections:
-    - Backup paths (Dropbox, Google Drive, memory cache)
+    - Backup paths (Dropbox, memory cache)
     - Email service settings (Gmail, Mailgun, SendGrid, SES, sendmail)
     - Validation thresholds (file age limits)
     - Logging preferences
@@ -807,7 +797,7 @@ VALIDATION CHECKS:
     ✅ Memory backups with configurable age thresholds
     ✅ Memory GitHub sync validation (dotfiles_backup/)
     ✅ Claude backup folder with freshness monitoring
-    ✅ Google Drive sync health (.tmp.drivedownload activity)
+    ✅ Dropbox backup validation (device-specific folders)
     ✅ Claude directory backups (.claude/*.backup)
     ✅ System prerequisites and restore capability
     ✅ Configurable cron schedule compliance
@@ -821,9 +811,9 @@ CONFIGURATION EXAMPLE:
     echo 'DROPBOX_BACKUP_DIR="/custom/path/to/backup"' >> ~/.backup_validation.conf
 
 LOGS:
-    Validation: /tmp/backup_validation_YYYYMMDD.log
-    Cron: /tmp/backup_validation_cron.log
-    Reports: /tmp/backup_report_*.txt
+    Validation: \$SECURE_TEMP/backup_validation_YYYYMMDD.log (secure)
+    Cron: \$SECURE_TEMP/backup_validation_cron.log (secure)
+    Reports: \$SECURE_TEMP/backup_report_*.txt (secure)
     Config: scripts/backup_validation.conf
 
 From: backup-checker@worldarchitect.ai
@@ -850,13 +840,13 @@ EOF
     (crontab -l 2>/dev/null | grep -v "backup_validation") | crontab - 2>/dev/null || true
 
     # Add new cron job for every 4 hours
-    local cron_entry="0 */4 * * * $wrapper_script > /tmp/backup_validation_cron.log 2>&1"
+    local cron_entry="0 */4 * * * $wrapper_script 2>&1"  # Logs handled by wrapper script with secure temp
     (crontab -l 2>/dev/null; echo "$cron_entry") | crontab -
 
     echo "✅ Cron job setup complete!"
     echo "   Schedule: Every 4 hours (0 */4 * * *)"
     echo "   Script: $wrapper_script"
-    echo "   Log: /tmp/backup_validation_cron.log"
+    echo "   Log: Secure temp directory (see wrapper script)"
     echo ""
     echo "To configure email notifications:"
     echo "   1. Edit scripts/backup_validation.conf or create ~/.backup_validation.conf"
