@@ -98,11 +98,11 @@
 ```
 
 ### File Format Understanding
-Based on research of `.claude/projects` structure:
+Based on research of `~/.claude/projects` structure:
 
 **Directory Structure**:
 ```
-.claude/projects/
+~/.claude/projects/
 ├── -home-$USER-projects-worldarchitect-ai/
 │   ├── uuid1.jsonl
 │   ├── uuid2.jsonl
@@ -200,7 +200,7 @@ Query: git merge conflicts | Matches: 3 | Files: 2
 
 ## Error Handling
 
-- **Missing Directory**: Graceful handling if `.claude/projects` doesn't exist
+- **Missing Directory**: Graceful handling if `~/.claude/projects` doesn't exist
 - **Corrupted JSONL**: Skip malformed lines with warning
 - **Permission Issues**: Clear error messages for access problems  
 - **Large Result Sets**: Automatic pagination and memory management
