@@ -107,9 +107,26 @@ User Request → Claude Analysis → Smart Content → Pushlite Script → GitHu
 - Flags PRs where line counts don't match actual `git diff --stat`
 - Warns when PR description describes old changes
 
+## 🚨 MANDATORY: FILE JUSTIFICATION PROTOCOL ENFORCEMENT
+
+**CRITICAL**: Before any push operation, ALL file changes must comply with FILE JUSTIFICATION PROTOCOL
+
+**Required Checks**:
+1. **Goal Justification**: Every modified file must have clear purpose documentation
+2. **Integration Verification**: Proof that integration into existing files was attempted first
+3. **Necessity Validation**: Evidence that each file change is essential vs alternatives
+4. **Protocol Compliance**: All changes must follow NEW FILE CREATION PROTOCOL hierarchy
+
+**File Categories**:
+- ✅ **ESSENTIAL**: Core functionality, bug fixes, security, production requirements
+- ⚠️ **ENHANCEMENT**: Clear business value with integration evidence
+- ❌ **UNNECESSARY**: Documentation that could be integrated, temporary files, redundant implementations
+
+**Enforcement**: This command will validate each file change against justification criteria before pushing
+
 **Use Cases**:
-- Quick documentation updates
-- Small fixes that don't need full test environment
-- When you want manual control over automation
-- Fast iteration during development
-- Adding CI tools, browser dependencies, or supporting files
+- Quick documentation updates (with integration justification)
+- Small fixes that don't need full test environment (with necessity proof)
+- When you want manual control over automation (with protocol compliance)
+- Fast iteration during development (with file justification documentation)
+- Adding CI tools, browser dependencies, or supporting files (with integration evidence)

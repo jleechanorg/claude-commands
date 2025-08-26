@@ -18,27 +18,27 @@
 ### **Matrix 1: Core Field Interactions (Campaign Type × Character × Setting)**
 | | **Empty Character** | **Custom Character** | **Special Chars** | **Unicode** | **Long Name** |
 |---|---|---|---|---|---|
-| **Dragon Knight + Empty** | [1,1,1] RED→GREEN | [1,2,1] RED→GREEN | [1,3,1] RED→GREEN | [1,4,1] RED→GREEN | [1,5,1] RED→GREEN |
-| **Dragon Knight + Short** | [1,1,2] RED→GREEN | [1,2,2] RED→GREEN | [1,3,2] RED→GREEN | [1,4,2] RED→GREEN | [1,5,2] RED→GREEN |
-| **Custom + Empty** | [2,1,1] RED→GREEN | [2,2,1] RED→GREEN | [2,3,1] RED→GREEN | [2,4,1] RED→GREEN | [2,5,1] RED→GREEN |
-| **Custom + Short** | [2,1,2] RED→GREEN | [2,2,2] RED→GREEN | [2,3,2] RED→GREEN | [2,4,2] RED→GREEN | [2,5,2] RED→GREEN |
+| **Dragon Knight + Empty** | [1,1,1] | [1,2,1] | [1,3,1] | [1,4,1] | [1,5,1] |
+| **Dragon Knight + Short** | [1,1,2] | [1,2,2] | [1,3,2] | [1,4,2] | [1,5,2] |
+| **Custom + Empty** | [2,1,1] | [2,2,1] | [2,3,1] | [2,4,1] | [2,5,1] |
+| **Custom + Short** | [2,1,2] | [2,2,2] | [2,3,2] | [2,4,2] | [2,5,2] |
 
 ### **Matrix 2: AI Personality Testing (All Checkbox Combinations)**
-| Campaign Type | Default World | Mechanical | Companions | TDD Status | Expected Behavior |
-|---------------|---------------|------------|-------------|------------|-------------------|
-| Dragon Knight | ✅ | ✅ | ✅ | [AI-1,1] RED→GREEN | All personalities active |
-| Dragon Knight | ✅ | ✅ | ❌ | [AI-1,2] RED→GREEN | Default + Mechanical only |
-| Dragon Knight | ❌ | ❌ | ❌ | [AI-1,8] RED→GREEN | No AI personalities |
-| Custom | ✅ | ✅ | ✅ | [AI-2,1] RED→GREEN | All personalities with custom |
-| Custom | ❌ | ❌ | ❌ | [AI-2,8] RED→GREEN | Minimal custom setup |
+| Campaign Type | Default World | Mechanical | Companions | Expected Behavior |
+|---------------|---------------|------------|-------------|-------------------|
+| Dragon Knight | ✅ | ✅ | ✅ | All personalities active |
+| Dragon Knight | ✅ | ✅ | ❌ | Default + Mechanical only |
+| Dragon Knight | ❌ | ❌ | ❌ | No AI personalities |
+| Custom | ✅ | ✅ | ✅ | All personalities with custom |
+| Custom | ❌ | ❌ | ❌ | Minimal custom setup |
 
 ### **Matrix 3: State Transition Testing**
-| From State | To State | TDD Phase | Expected Behavior |
-|------------|----------|-----------|-------------------|
-| Dragon Knight → Custom | With data | RED→GREEN | Placeholder changes, data preserved |
-| Custom → Dragon Knight | With data | RED→GREEN | Auto-fills setting, maintains character |
-| Collapsed → Expanded | Description | RED→GREEN | Shows textarea, preserves state |
-| Expanded → Collapsed | With text | RED→GREEN | Hides textarea, preserves text |
+| From State | To State | Expected Behavior |
+|------------|----------|-------------------|
+| Dragon Knight → Custom | Placeholder changes, data preserved |
+| Custom → Dragon Knight | Auto-fills setting, maintains character |
+| Collapsed → Expanded | Shows textarea, preserves state |
+| Expanded → Collapsed | Hides textarea, preserves text |
 
 **Total Matrix Tests**: 86 systematic test cases covering all field interactions
 ```
@@ -193,27 +193,27 @@ tests/
 ### **Matrix Coverage Tracking**
 ```markdown
 ## Complete Matrix Coverage Report
-✅ **Core Field Matrix**: 50/50 tests (100%)
+✅ **Core Field Matrix**: 50/50 tests
   - Campaign Type × Character × Setting: All combinations covered
   - Dynamic placeholder switching: Verified
   - State preservation during transitions: Tested
 
-✅ **AI Personality Matrix**: 16/16 tests (100%)
+✅ **AI Personality Matrix**: 16/16 tests
   - All checkbox combinations: Covered
   - Visual highlighting verification: Tested
   - Campaign type compatibility: Verified
 
-✅ **Title Variations Matrix**: 12/12 tests (100%)
+✅ **Title Variations Matrix**: 12/12 tests
   - Empty, short, long, special chars, Unicode: Covered
   - UI layout handling: Verified
   - Text truncation behavior: Tested
 
-✅ **State Transition Matrix**: 8/8 tests (100%)
+✅ **State Transition Matrix**: 8/8 tests
   - Type switching with data: Covered
   - Description expand/collapse: Tested
   - Form state persistence: Verified
 
-**Total Matrix Coverage**: 86/86 tests (100%)
+**Total Matrix Coverage**: 86/86 tests
 
 ❌ **Previously Failing Patterns**:
 - ✅ FIXED: Custom Campaign + Empty Character (Cell [2,1,1])

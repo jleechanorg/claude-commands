@@ -52,7 +52,8 @@ class ClaudeCommandsExporter:
         self.COMMANDS_SKIP_LIST = [
             'testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh',  # project-specific
             'converge.md', 'converge.py', 'orchc.md', 'orchc.py',          # orchestration commands to exclude
-            'conv.md', 'orchconverge.md'                                    # additional orchestration exclusions
+            'conv.md', 'orchconverge.md',                                   # additional orchestration exclusions
+            'copilotc.md', 'fixprc.md'                                      # new autonomous composition commands
         ]
         
         # Counters for summary
