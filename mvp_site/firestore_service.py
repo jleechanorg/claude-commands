@@ -31,7 +31,7 @@ import datetime
 import json
 import os
 import time
-from typing import Any
+from typing import Any, Optional
 from unittest.mock import MagicMock
 
 import firebase_admin
@@ -741,7 +741,7 @@ def add_story_entry(
     campaign_id: CampaignId,
     actor: str,
     text: str,
-    mode: str | None = None,
+    mode: Optional[str] = None,
     structured_fields: dict[str, Any] | None = None,
 ) -> None:
     """Add a story entry to Firestore with write-then-read pattern for data integrity.
@@ -854,7 +854,7 @@ def _write_story_entry_to_firestore(
     campaign_id: CampaignId,
     actor: str,
     text: str,
-    mode: str | None = None,
+    mode: Optional[str] = None,
     structured_fields: dict[str, Any] | None = None,
 ) -> str:
     """Internal implementation to write story entry data directly to Firestore
@@ -908,7 +908,7 @@ def _write_story_entry_to_firestore(
 
     # Simple and reliable write with document ID capture
     timestamp: datetime.datetime = datetime.datetime.now(datetime.UTC)
-    document_id: str | None = None
+    document_id: Optional[str] = None
 
     for i, chunk in enumerate(chunks):
         entry_data: dict[str, Any] = base_entry_data.copy()

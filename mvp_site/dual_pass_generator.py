@@ -3,6 +3,7 @@ Dual-Pass Generation System (Option 7)
 First pass generates narrative, second pass verifies and injects missing entities.
 """
 
+from typing import Optional
 from dataclasses import dataclass
 
 import logging_util
@@ -20,7 +21,7 @@ class GenerationPass:
     prompt: str
     response: str
     entities_found: list[str]
-    validation_result: ValidationResult | None = None
+    validation_result: Optional[ValidationResult] = None
 
 
 @dataclass
@@ -28,7 +29,7 @@ class DualPassResult:
     """Result of dual-pass generation"""
 
     first_pass: GenerationPass
-    second_pass: GenerationPass | None
+    second_pass: Optional[GenerationPass]
     final_narrative: str
     total_entities_found: list[str]
     success: bool
@@ -50,7 +51,7 @@ class DualPassGenerator:
         self,
         initial_prompt: str,
         expected_entities: list[str],
-        location: str | None = None,
+        location: Optional[str] = None,
         generation_callback: callable = None,
     ) -> DualPassResult:
         """
@@ -160,7 +161,7 @@ class DualPassGenerator:
         self,
         original_narrative: str,
         missing_entities: list[str],
-        location: str | None = None,
+        location: Optional[str] = None,
     ) -> str:
         """Create prompt for second pass entity injection"""
         injection_instructions = []
@@ -213,7 +214,7 @@ class DualPassGenerator:
     def create_entity_injection_snippet(
         self,
         entity: str,
-        location: str | None = None,
+        location: Optional[str] = None,
         context: str = "responds to the situation",
     ) -> str:
         """Create a snippet to inject a missing entity (REFACTORED: uses EntityValidator templates)"""
@@ -245,7 +246,7 @@ class AdaptiveEntityInjector:
         }
 
     def inject_entities_adaptively(
-        self, narrative: str, missing_entities: list[str], location: str | None = None
+        self, narrative: str, missing_entities: list[str], location: Optional[str] = None
     ) -> str:
         """Adaptively inject missing entities based on narrative context"""
         enhanced_narrative = narrative
@@ -284,7 +285,7 @@ class AdaptiveEntityInjector:
         return "presence_based"
 
     def _inject_via_dialogue(
-        self, narrative: str, entity: str, location: str | None
+        self, narrative: str, entity: str, location: Optional[str]
     ) -> str:
         """Inject entity through dialogue"""
         dialogue_snippet = (
@@ -293,7 +294,7 @@ class AdaptiveEntityInjector:
         return narrative + dialogue_snippet
 
     def _inject_via_action(
-        self, narrative: str, entity: str, location: str | None
+        self, narrative: str, entity: str, location: Optional[str]
     ) -> str:
         """Inject entity through action"""
         action_snippet = (
@@ -302,7 +303,7 @@ class AdaptiveEntityInjector:
         return narrative + action_snippet
 
     def _inject_via_presence(
-        self, narrative: str, entity: str, location: str | None
+        self, narrative: str, entity: str, location: Optional[str]
     ) -> str:
         """Inject entity through simple presence"""
         presence_snippet = (
@@ -311,7 +312,7 @@ class AdaptiveEntityInjector:
         return narrative + presence_snippet
 
     def _inject_via_reaction(
-        self, narrative: str, entity: str, location: str | None
+        self, narrative: str, entity: str, location: Optional[str]
     ) -> str:
         """Inject entity through emotional reaction"""
         reaction_snippet = (
