@@ -10,7 +10,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-
+    strategy:
+      fail-fast: false  # Continue other jobs even if one fails
+      matrix:
+        test-group: [unit-fast, integration-slow, commands]
+    
     steps:
     # Step 1: Get your code
     - name: Checkout repository
@@ -56,15 +60,15 @@ jobs:
         chmod +x vpython
         ./vpython --version
 
-    # Step 5: Run test suite using run_tests.sh
-    - name: Run test suite
+    # Step 5: Run test group based on matrix strategy
+    - name: Run test group - ${{ matrix.test-group }}
       run: |
         # Activate the virtual environment
         source venv/bin/activate
 
         # Verify environment is correct
         echo "Current Python: $(which python3)"
-        echo "Virtual env: $VIRTUAL_ENV"
+        echo "Virtual env: $VIRTUAL_ENV" 
         python3 -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
 
         # Set CI environment variables for GitHub Actions
@@ -76,70 +80,53 @@ jobs:
         export ENABLE_NETWORK_TESTS=0
         export GITHUB_ACTIONS=true
 
-        # Use run_tests.sh for consistent test execution
-        echo "Running tests using robust run_tests.sh script..."
+        # Run specific test group based on matrix
         chmod +x run_tests.sh
-        ./run_tests.sh
-
-    # Step 5b: Run command utility tests
-    - name: Run command utility tests
-      run: |
-        # Activate the virtual environment
-        source venv/bin/activate
-        
-        # Run tests for .claude/commands utilities
-        echo "Running command utility tests..."
-        
-        # Navigate to project root
-        cd ${{ github.workspace }}
-        
-        # Set test environment variables
-        export TESTING=true
-        export PYTHONPATH="${PYTHONPATH}:${PWD}/.claude/commands"
-        
-        # Find and run all test files in commands/tests
-        test_count=0
-        failed_count=0
-        
-        if [ -d ".claude/commands/tests" ]; then
-          for test_file in $(find .claude/commands/tests -name "test_*.py" -type f | sort); do
-            test_count=$((test_count + 1))
-            echo "Running: $test_file"
-            
-            if TESTING=true python3 "$test_file"; then
-              echo "✅ PASS: $test_file"
-            else
-              echo "❌ FAIL: $test_file"
-              failed_count=$((failed_count + 1))
+        case "${{ matrix.test-group }}" in
+          "unit-fast")
+            echo "🚀 Running UNIT tests (fast, parallel execution)..."
+            ./run_tests.sh --unit --parallel
+            ;;
+          "integration-slow")
+            echo "🔗 Running INTEGRATION tests (comprehensive)..."
+            ./run_tests.sh --integration
+            ;;
+          "commands")
+            echo "⚙️  Running COMMAND utility tests..."
+            export PYTHONPATH="${PYTHONPATH}:${PWD}/.claude/commands"
+            # Find and run command tests
+            test_count=0
+            failed_count=0
+            if [ -d ".claude/commands/tests" ]; then
+              for test_file in $(find .claude/commands/tests -name "test_*.py" -type f | sort); do
+                test_count=$((test_count + 1))
+                echo "Running: $test_file"
+                if TESTING=true python3 "$test_file"; then
+                  echo "✅ PASS: $test_file"
+                else
+                  echo "❌ FAIL: $test_file"
+                  failed_count=$((failed_count + 1))
+                fi
+              done
+              if [ $failed_count -eq 0 ]; then
+                echo "✅ Command tests: $test_count/$test_count passed (all tests succeeded)"
+              else
+                echo "❌ Command tests: $((test_count - failed_count))/$test_count passed ($failed_count failed)"
+              fi
+              [ $failed_count -eq 0 ] || exit 1
             fi
-            echo "----------------------------------------"
-          done
-          
-          echo ""
-          echo "========================================"
-          if [ $failed_count -eq 0 ]; then
-            echo "✅ ALL $test_count COMMAND TESTS PASSED"
-          else
-            echo "❌ $failed_count/$test_count COMMAND TESTS FAILED"
-            exit 1
-          fi
-          echo "========================================"
-        else
-          echo "No command tests found in .claude/commands/tests"
-        fi
-      env:
-        TESTING: true
-        MOCK_SERVICES_MODE: true
+            ;;
+        esac
 
     # Step 6: Upload test results (optional)
     - name: Upload test results
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()  # Run even if tests fail
       with:
-        name: test-results
+        name: test-results-${{ matrix.test-group }}
         path: |
           mvp_site/test-results/
-          mvp_site/coverage.xml
+          /tmp/worldarchitectai/coverage/
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
