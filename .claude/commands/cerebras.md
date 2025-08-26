@@ -18,16 +18,9 @@ Delegating this task to Cerebras for fast, high-quality code generation.
 - Git status: !`git status --porcelain | head -5`
 - Project structure: !`find . -maxdepth 2 -name "*.py" -o -name "*.js" -o -name "*.md" | head -10`
 
-## Conversation Context Extraction and Task Execution
+## Task Execution
 
-I'll now extract the recent conversation context to provide Cerebras with full background:
-
-!`BRANCH_NAME="$(git branch --show-current | sed 's/[^a-zA-Z0-9_-]/_/g')"`
-!`CTX_FILE="$(mktemp "/tmp/cerebras_context_${BRANCH_NAME}_XXXXXX.txt")"`
-!`python3 .claude/commands/cerebras/extract_conversation_context.py 50000 > "$CTX_FILE"`
-!`if [ -s "$CTX_FILE" ]; then CTX_ARG=(--context-file "$CTX_FILE"); else CTX_ARG=(); fi`
-!`.claude/commands/cerebras/cerebras_direct.sh "${CTX_ARG[@]}" "$ARGUMENTS"`
-!`rm -f "$CTX_FILE"  # Cleanup temporary context file`
+!`.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`
 
 ## Post-Generation Analysis
 

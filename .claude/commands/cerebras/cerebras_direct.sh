@@ -1,16 +1,22 @@
 #!/bin/bash
 
-# Ultra-fast direct API wrapper for Cerebras
+# Ultra-fast direct API wrapper for Cerebras with invisible context extraction
 
 # Parse command line arguments
 PROMPT=""
 CONTEXT_FILE=""
+DISABLE_AUTO_CONTEXT=false
+TOKEN_LIMIT=20000
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --context-file)
             CONTEXT_FILE="$2"
             shift 2
+            ;;
+        --no-auto-context)
+            DISABLE_AUTO_CONTEXT=true
+            shift
             ;;
         *)
             PROMPT="$PROMPT $1"
@@ -29,8 +35,9 @@ if [[ "$PROMPT" =~ [\$\`\;\|\&] ]]; then
 fi
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--context-file FILE] <prompt>"
-    echo "  --context-file   Include conversation context from file"
+    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] <prompt>"
+    echo "  --context-file      Include conversation context from file"
+    echo "  --no-auto-context   Skip automatic context extraction"
     exit 1
 fi
 
@@ -42,10 +49,52 @@ if [ -z "${API_KEY}" ]; then
     exit 2
 fi
 
-# Load conversation context if provided
+# Invisible automatic context extraction (if not disabled and no context file provided)
 CONVERSATION_CONTEXT=""
+AUTO_CONTEXT_FILE=""
+
+# Guaranteed cleanup for auto-extracted context (handles errors/interrupts)
+cleanup() {
+  if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
+    rm -f "$AUTO_CONTEXT_FILE" 2>/dev/null
+  fi
+}
+trap cleanup EXIT INT TERM
+
+if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
+    # Create branch-safe temporary file for auto-extracted context
+    BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
+    [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
+    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_auto_context_${BRANCH_NAME}_XXXXXX.txt" 2>/dev/null)"
+    
+    # Validate temporary file creation (graceful degradation on failure)
+    if [ -z "$AUTO_CONTEXT_FILE" ]; then
+        # Continue without context extraction if mktemp fails (invisible operation)
+        # No warning output - maintaining invisible operation for Claude Code CLI
+        :
+    fi
+    
+    # Silent context extraction (invisible to Claude Code CLI)
+    if [ -n "$AUTO_CONTEXT_FILE" ]; then
+        # Find the extract_conversation_context.py script
+        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
+        
+        if [ -f "$EXTRACT_SCRIPT" ]; then
+            # Extract context silently with configurable token limit (default: 20K)
+            python3 "$EXTRACT_SCRIPT" "$TOKEN_LIMIT" > "$AUTO_CONTEXT_FILE" 2>/dev/null
+            
+            # Use the auto-extracted context if successful
+            if [ -s "$AUTO_CONTEXT_FILE" ]; then
+                CONTEXT_FILE="$AUTO_CONTEXT_FILE"
+            fi
+        fi
+    fi
+fi
+
+# Load conversation context from file (manual or auto-extracted)
 if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
-    CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE")
+    CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE" 2>/dev/null)
 fi
 
 # Claude Code system prompt for consistency
@@ -160,3 +209,8 @@ echo ""
 echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
 echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms"
 echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+
+# Silent cleanup of auto-extracted context file (invisible to Claude Code CLI)
+if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
+    rm -f "$AUTO_CONTEXT_FILE" 2>/dev/null
+fi

@@ -2,6 +2,23 @@
 
 ## Active Development Tasks
 
+### 🔍 Debug External Memory Backup System (Priority: HIGH)
+**Status**: Ready for Implementation  
+**Classification**: Small & LLM Autonomous
+**Branch**: `debug-memory-backup-system`
+
+**Objective**: Investigate and fix failing health checks in external memory backup system (`/Users/jleechan/projects/worldarchitect-memory-backups/`) that shows 4/5 checks failing every 30 minutes.
+
+**Issues Identified**:
+- ⚠️ Cannot connect to remote repository (WARNING level)
+- ⚠️ Failed to fetch latest from remote (WARNING level) 
+- ⚠️ No historical snapshots found (WARNING level)
+- Note: Critical infrastructure issues (missing repo, uninitialized git, missing directories) already resolved
+
+**Requirements**: Debug remaining connection and data sync issues in external memory backup system. Focus on remote repository connectivity and historical snapshot population. System runs health checks every 30 minutes via cron. This is separate from the successfully implemented ~/.claude conversation backup system.
+
+**Success Criteria**: Reduce failing health checks from current 4/5 to 1/5 or better, focusing on remote connectivity and snapshot availability.
+
 ### 🚨 HANDOFF-COPILOT-SKIP-FIX (Priority: CRITICAL)
 **Status**: Ready for Implementation
 **Handoff Document**: `roadmap/scratchpad_handoff_copilot_skip_fix.md`
