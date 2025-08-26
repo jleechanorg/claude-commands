@@ -2,7 +2,7 @@
 
 **Usage**: `/history [search_query] [--options]`
 
-**Purpose**: Search through Claude Code CLI conversation history stored in `.claude/projects` using intelligent execution optimization and multiple search strategies.
+**Purpose**: Search through Claude Code CLI conversation history stored in `~/.claude/projects` using intelligent execution optimization and multiple search strategies.
 
 ## Command Architecture
 
