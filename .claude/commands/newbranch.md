@@ -11,9 +11,9 @@ Creates a fresh branch from the latest main branch code. Aborts if there are unc
 ## Behavior
 1. Checks for uncommitted changes using `git status`
 2. Aborts if any uncommitted changes are found
-3. Fetches latest code from origin/main
-4. Creates and switches to new branch from origin/main
-5. Sets up tracking to origin/main
+3. Switches to main and pulls latest changes from origin/main
+4. Creates and switches to new branch from latest main
+5. Sets up tracking to origin/<branch_name> (NOT origin/main)
 
 ## Examples
 ```
@@ -34,5 +34,8 @@ Creates a fresh branch from the latest main branch code. Aborts if there are unc
 
 ## Implementation Notes
 - Works in both regular repos and worktrees
-- Always creates from origin/main (not local main)
-- Automatically sets up remote tracking
+- Always creates from updated local main (after pulling from origin/main)
+- Automatically sets up remote tracking to origin/<branch_name>
+- ⚠️ **CRITICAL**: Must use Python script (.claude/commands/newbranch.py)
+- ❌ **NEVER** manually run: `git branch --set-upstream-to=origin/main`
+- ✅ **CORRECT**: Let script handle tracking with `git push -u origin <branch>`

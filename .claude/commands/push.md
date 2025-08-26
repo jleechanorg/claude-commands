@@ -14,11 +14,20 @@
 
 The command orchestrates a complete production-ready push workflow:
 
-### 1. Untracked Files Analysis
+### 1. File Justification & Untracked Files Analysis
+
+**🚨 MANDATORY FILE JUSTIFICATION PROTOCOL CHECK**:
+- **EVERY file change** must be justified before push proceeds
+- **Required documentation**: Goal, Modification, Necessity, Integration Proof
+- **Protocol compliance**: Verify NEW FILE CREATION PROTOCOL adherence
+- **Categories validation**: Essential vs Enhancement vs Unnecessary classification
+
+**Untracked Files Analysis**:
 - Check for untracked files in working directory
 - Intelligently analyze file context and relevance to current PR work
-- Interactive selection for files to include
-- Auto-suggest appropriate commit messages
+- **Apply FILE JUSTIFICATION PROTOCOL** to each file before inclusion
+- Interactive selection for files to include (with justification required)
+- Auto-suggest appropriate commit messages (with protocol compliance notes)
 
 ### 2. `/review` - Code Quality Gate
 - Execute `/review` command for comprehensive code analysis

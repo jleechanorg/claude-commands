@@ -15,7 +15,7 @@
 **The `/execute` command is a composition of**:
 1. **`/plan`** - Create detailed implementation plan with TodoWrite
 2. **`/preapprove`** - Prepare approval context and validation
-3. **`/autoapprove`** - Automatic approval mechanism that displays message: "User already approves - proceeding with execution"
+3. **`/autoapprove`** - Automatic approval mechanism (proceeds silently with execution)
 4. **Execute** - Proceed with planned implementation
 
 ### Phase 1: Planning (/plan)
@@ -33,7 +33,7 @@
 
 **Full Approval Workflow**:
 - **`/preapprove`**: Prepare approval context, validate plan completeness
-- **`/autoapprove`**: Trigger automatic approval mechanism and display message: "User already approves - proceeding with execution"
+- **`/autoapprove`**: Trigger automatic approval mechanism (proceeds silently)
 - **Key difference from `/plan`**: Built-in auto-approval eliminates manual approval requirement
 - Proceed directly to execution phase with approval satisfied
 
@@ -69,8 +69,7 @@ Execution Plan:
 
 Phase 2 - Approval Chain:
 /preapprove - Validating plan completeness and context
-/autoapprove - Triggering automatic approval mechanism
-User already approves - proceeding with execution
+/autoapprove - Proceeding with execution
 
 Phase 3 - Implementation:
 [Follows plan: Read current styles, Edit CSS, Test, Commit]
@@ -104,8 +103,7 @@ Sequential Task Plan:
 
 Phase 2 - Approval Chain:
 /preapprove - Validating comprehensive plan and dependencies
-/autoapprove - Triggering automatic approval for complex implementation
-User already approves - proceeding with execution
+/autoapprove - Proceeding with implementation
 
 Phase 3 - Implementation:
 [Research: Auth patterns across codebase using Serena MCP]

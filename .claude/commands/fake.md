@@ -96,7 +96,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
    ```
 
 3. **Log results**:
-   - Show: "🔍 Memory searched: {len(result1.entities + result2.entities)} relevant fake patterns found"
+   - Log results only if patterns found or errors occur
    - If patterns found, list them briefly
    - Use these patterns to inform subsequent analysis
 
@@ -184,7 +184,7 @@ After analysis completes, store new findings:
    ```
 
 3. **Log storage**:
-   - Show: "📚 Stored {count} new fake patterns in memory for future detection"
+   - Log storage only if successful or errors occur
    - List what was stored for transparency
 
 **Benefits**: Builds persistent knowledge base for improved future detection

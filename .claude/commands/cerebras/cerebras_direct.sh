@@ -1,16 +1,54 @@
 #!/bin/bash
 
-# Ultra-fast direct API wrapper
-# Supports both Cerebras (default) and Anthropic (--sonnet flag)
+set -euo pipefail
+
+# Ultra-fast direct API wrapper for Cerebras with invisible context extraction
+
+# Pre-flight dependency checks
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed." >&2
+  exit 5
+fi
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Error: curl is required but not installed." >&2
+  exit 5
+fi
+
+# Check curl version and set appropriate flags for backward compatibility
+# Default to conservative --fail flag for safety
+CURL_FAIL_FLAG="--fail"
+
+# Attempt to parse curl version, fall back gracefully on any parsing failure
+if CURL_VERSION=$(curl --version 2>/dev/null | head -n1 | sed 's/curl \([0-9]*\.[0-9]*\).*/\1/' 2>/dev/null) && [ -n "$CURL_VERSION" ]; then
+    CURL_MAJOR=$(echo "$CURL_VERSION" | cut -d. -f1 2>/dev/null)
+    CURL_MINOR=$(echo "$CURL_VERSION" | cut -d. -f2 2>/dev/null)
+    
+    # Validate that we got numeric values before attempting comparison
+    if [[ "$CURL_MAJOR" =~ ^[0-9]+$ ]] && [[ "$CURL_MINOR" =~ ^[0-9]+$ ]]; then
+        # --fail-with-body requires curl 7.76.0+ (March 2021)
+        if [ "$CURL_MAJOR" -gt 7 ] || { [ "$CURL_MAJOR" -eq 7 ] && [ "$CURL_MINOR" -ge 76 ]; }; then
+            CURL_FAIL_FLAG="--fail-with-body"
+        fi
+    fi
+fi
 
 # Parse command line arguments
-USE_SONNET=false
 PROMPT=""
+CONTEXT_FILE=""
+DISABLE_AUTO_CONTEXT=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --sonnet)
-            USE_SONNET=true
+        --context-file)
+            if [ $# -lt 2 ] || [[ "$2" == --* ]]; then
+                echo "Error: --context-file requires a file path argument" >&2
+                exit 1
+            fi
+            CONTEXT_FILE="$2"
+            shift 2
+            ;;
+        --no-auto-context)
+            DISABLE_AUTO_CONTEXT=true
             shift
             ;;
         *)
@@ -20,30 +58,114 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Remove leading space from PROMPT
+# Remove leading space from PROMPT and validate input
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
-if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--sonnet] <prompt>"
-    echo "  --sonnet    Use Anthropic Claude Sonnet instead of Cerebras"
+# Input validation - prevent command injection
+if [[ "$PROMPT" =~ [\$\`\;\|\&] ]]; then
+    echo "Error: Invalid characters detected in prompt." >&2
     exit 1
 fi
 
-# Validate API keys based on chosen mode
-if [ "$USE_SONNET" = true ]; then
-    if [ -z "${CLAUDE_API_KEY}" ]; then
-        echo "Error: CLAUDE_API_KEY environment variable is not set." >&2
-        echo "Please set your Anthropic API key: export CLAUDE_API_KEY=your_key_here" >&2
-        exit 2
-    fi
+if [ -z "$PROMPT" ]; then
+    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] <prompt>"
+    echo "  --context-file      Include conversation context from file"
+    echo "  --no-auto-context   Skip automatic context extraction"
+    exit 1
+fi
+
+# Validate API key
+API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
+if [ -z "${API_KEY}" ]; then
+    echo "Error: CEREBRAS_API_KEY (preferred) or OPENAI_API_KEY must be set." >&2
+    echo "Please set your Cerebras API key in environment variables." >&2
+    exit 2
+fi
+
+# Invisible automatic context extraction (if not disabled and no context file provided)
+CONVERSATION_CONTEXT=""
+AUTO_CONTEXT_FILE=""
+
+# Cache project root path for performance (avoid repeated git calls)
+# Use git -C SCRIPT_DIR to make repo-root detection independent of caller's CWD
+# Resolve symlinks for SCRIPT_DIR to handle edge cases with symbolic links
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
+    :  # git worked, PROJECT_ROOT is set
 else
-    # Prefer CEREBRAS_API_KEY; allow OPENAI_API_KEY as fallback for compatibility
-    API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
-    if [ -z "${API_KEY}" ]; then
-        echo "Error: CEREBRAS_API_KEY (preferred) or OPENAI_API_KEY must be set." >&2
-        echo "Set your Cerebras key: export CEREBRAS_API_KEY=your_cerebras_key_here" >&2
-        exit 2
+    # Fallback: assume repo root is three levels up from this script: .claude/commands/cerebras/ -> repo root
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." 2>/dev/null && pwd)"
+    # Validate fallback by checking for CLAUDE.md
+    if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then
+        # Final fallback: traverse up from SCRIPT_DIR to find CLAUDE.md (preferred over caller CWD)
+        CURRENT_DIR="$SCRIPT_DIR"
+        PROJECT_ROOT=""  # Reset to ensure ultimate fallback triggers if traversal fails
+        while [ "$CURRENT_DIR" != "/" ]; do
+            if [ -f "$CURRENT_DIR/CLAUDE.md" ]; then
+                PROJECT_ROOT="$CURRENT_DIR"
+                break
+            fi
+            CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+        done
+        # Ultimate fallback to current directory (now guaranteed to trigger if traversal failed)
+        PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
     fi
+fi
+
+# Guaranteed cleanup for auto-extracted context (handles errors/interrupts)
+cleanup() {
+  if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
+    rm -f "$AUTO_CONTEXT_FILE" 2>/dev/null
+  fi
+}
+trap cleanup EXIT INT TERM
+
+if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
+    # Create branch-safe temporary file for auto-extracted context
+    BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
+    [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
+    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_auto_context_${BRANCH_NAME}_XXXXXX.txt" 2>/dev/null)"
+    
+    # Validate temporary file creation (graceful degradation on failure)
+    if [ -z "$AUTO_CONTEXT_FILE" ]; then
+        # Continue without context extraction if mktemp fails (invisible operation)
+        # No warning output - maintaining invisible operation for Claude Code CLI
+        :
+    fi
+    
+    # Silent context extraction (invisible to Claude Code CLI)
+    if [ -n "$AUTO_CONTEXT_FILE" ]; then
+        # Find the extract_conversation_context.py script (SCRIPT_DIR already set above)
+        EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
+        
+        if [ -f "$EXTRACT_SCRIPT" ]; then
+            # Extract context using script's default token limit
+            # Run from project root to ensure correct path resolution
+            if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
+                # Capture extractor exit code and emit minimal diagnostics when debug is on
+                EXTRACTOR_EXIT=0
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
+                    echo "Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
+                fi
+            else
+                # Mirror debug error handling to maintain invisible operation
+                EXTRACTOR_EXIT=0
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                # Continue silently regardless of extraction success - invisible operation maintained
+            fi
+            
+            # Use the auto-extracted context if successful
+            if [ -s "$AUTO_CONTEXT_FILE" ]; then
+                CONTEXT_FILE="$AUTO_CONTEXT_FILE"
+            fi
+        fi
+    fi
+fi
+
+# Load conversation context from file (manual or auto-extracted)
+if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
+    CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE" 2>/dev/null)
 fi
 
 # Claude Code system prompt for consistency
@@ -86,118 +208,90 @@ OUTPUT FORMAT:
 - Include file_path:line references when mentioning specific code locations"
 
 # User task
-USER_PROMPT="Task: $PROMPT
+if [ -n "$CONVERSATION_CONTEXT" ]; then
+    USER_PROMPT="$CONVERSATION_CONTEXT
+
+---
+
+Task: $PROMPT
+
+Generate the code following the above guidelines with full awareness of the conversation context above."
+else
+    USER_PROMPT="Task: $PROMPT
 
 Generate the code following the above guidelines."
+fi
 
 # Start timing
 START_TIME=$(date +%s%N)
 
-# Choose API based on flag
-if [ "$USE_SONNET" = true ]; then
-    # Anthropic Claude Sonnet API call with error handling
-    HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.anthropic.com/v1/messages" \
-      -H "x-api-key: ${CLAUDE_API_KEY}" \
-      -H "Content-Type: application/json" \
-      -H "anthropic-version: 2023-06-01" \
-      -d "{
-        \"model\": \"claude-3-5-sonnet-20241022\",
-        \"max_tokens\": 8192,
-        \"temperature\": 0.1,
-        \"system\": $(echo "$SYSTEM_PROMPT" | jq -Rs .),
-        \"messages\": [
-          {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-        ]
-      }")
+# Direct API call to Cerebras with error handling and timeouts
+# Prevent set -e from aborting on curl errors so we can map them explicitly
+CURL_EXIT=0
+HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
+  -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"model\": \"qwen-3-coder-480b\",
+    \"messages\": [
+      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ],
+    \"max_tokens\": 32768,
+    \"temperature\": 0.1,
+    \"stream\": false
+  }") || CURL_EXIT=$?
+
+# On transport or HTTP-level failures, emit the raw body (if any) and standardize exit code
+if [ "$CURL_EXIT" -ne 0 ]; then
+  [ -n "$HTTP_RESPONSE" ] && echo "$HTTP_RESPONSE" >&2
+  echo "API Error: curl failed with exit code $CURL_EXIT" >&2
+  exit 3
+fi
     
-    # Extract HTTP status and body
-    HTTP_BODY=$(echo $HTTP_RESPONSE | sed -E 's/HTTPSTATUS\:[0-9]{3}$//')
-    HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
-    
-    # Check for API errors
-    if [ "$HTTP_STATUS" -ne 200 ]; then
-        ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
-        echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
-        exit 3
-    fi
-    
-    RESPONSE="$HTTP_BODY"
-    
-    # Calculate elapsed time
-    END_TIME=$(date +%s%N)
-    ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
-    
-    # Show timing at the beginning
-    echo ""
-    echo "🧠🧠🧠 SONNET GENERATED IN ${ELAPSED_MS}ms 🧠🧠🧠"
-    echo ""
-    
-    # Extract and display the response (Anthropic format)
-    CONTENT=$(echo "$RESPONSE" | jq -r '.content[0].text // empty')
-    if [ -z "$CONTENT" ]; then
-        echo "Error: Unexpected API response format." >&2
-        echo "Raw response:" >&2
-        echo "$RESPONSE" >&2
-        exit 4
-    fi
-    echo "$CONTENT"
-    
-    # Show prominent timing display at the end
-    echo ""
-    echo "🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠"
-    echo "⚡ SONNET PERFORMANCE: ${ELAPSED_MS}ms"
-    echo "🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠"
-else
-    # Direct API call to Cerebras with error handling
-    HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.cerebras.ai/v1/chat/completions" \
-      -H "Authorization: Bearer ${API_KEY}" \
-      -H "Content-Type: application/json" \
-      -d "{
-        \"model\": \"qwen-3-coder-480b\",
-        \"messages\": [
-          {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
-          {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-        ],
-        \"max_tokens\": 32768,
-        \"temperature\": 0.1,
-        \"stream\": false
-      }")
-    
-    # Extract HTTP status and body
-    HTTP_BODY=$(echo $HTTP_RESPONSE | sed -E 's/HTTPSTATUS\:[0-9]{3}$//')
-    HTTP_STATUS=$(echo $HTTP_RESPONSE | tr -d '\n' | sed -E 's/.*HTTPSTATUS:([0-9]{3})$/\1/')
-    
-    # Check for API errors
-    if [ "$HTTP_STATUS" -ne 200 ]; then
-        ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
-        echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
-        exit 3
-    fi
-    
-    RESPONSE="$HTTP_BODY"
-    
-    # Calculate elapsed time
-    END_TIME=$(date +%s%N)
-    ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
-    
-    # Show timing at the beginning
-    echo ""
-    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms 🚀🚀🚀"
-    echo ""
-    
-    # Extract and display the response (OpenAI format)
-    CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-    if [ -z "$CONTENT" ]; then
-        echo "Error: Unexpected API response format." >&2
-        echo "Raw response:" >&2
-        echo "$RESPONSE" >&2
-        exit 4
-    fi
-    echo "$CONTENT"
-    
-    # Show prominent timing display at the end
-    echo ""
-    echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
-    echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms (vs Sonnet comparison)"
-    echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+# Extract HTTP status and body safely (no subshell whitespace issues)
+HTTP_STATUS="${HTTP_RESPONSE##*HTTPSTATUS:}"
+HTTP_BODY="${HTTP_RESPONSE%HTTPSTATUS:*}"
+
+# Check for API errors
+if [ "$HTTP_STATUS" -ne 200 ]; then
+    ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
+    echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
+    exit 3
+fi
+
+RESPONSE="$HTTP_BODY"
+
+# Calculate elapsed time
+END_TIME=$(date +%s%N)
+ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+
+# Extract and display the response (OpenAI format)
+CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+if [ -z "$CONTENT" ]; then
+    echo "Error: Unexpected API response format." >&2
+    echo "Raw response:" >&2
+    echo "$RESPONSE" >&2
+    exit 4
+fi
+
+# Count lines in generated content
+LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
+
+# Show timing at the beginning with line count
+echo ""
+echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+echo ""
+echo "$CONTENT"
+
+# Show prominent timing display at the end
+echo ""
+echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+echo "⚡ CEREBRAS BLAZING FAST: ${ELAPSED_MS}ms"
+echo "🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀"
+
+# Silent cleanup of auto-extracted context file (invisible to Claude Code CLI)
+if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
+    rm -f "$AUTO_CONTEXT_FILE" 2>/dev/null
 fi
