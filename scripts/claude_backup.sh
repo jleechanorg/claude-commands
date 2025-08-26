@@ -565,7 +565,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
             ;;
         *)
             # Run backup (default or with destination parameter)
-            run_backup
+            run_backup "$@"
             ;;
     esac
 fi
