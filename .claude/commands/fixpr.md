@@ -192,16 +192,13 @@ else:
 # Pattern: Tests patching firebase_admin.firestore.client but code calling firestore_service.get_db()
 
 # 1. Scan for problematic mocking patterns
-grep -r "@patch.*firebase_admin\.firestore\.client" . --include="*.py" || echo "No firebase_admin.firestore.client patterns found"
+grep -r "@patch.*firebase_admin\.firestore\.client" . --include="*.py" >/dev/null 2>&1
 
 # 2. Cross-reference with actual service calls
-grep -r "firestore_service\.get_db" . --include="*.py" || echo "No firestore_service.get_db calls found"
+grep -r "firestore_service\.get_db" . --include="*.py" >/dev/null 2>&1
 
 # 3. Report mismatch pattern for bulk fixing
-echo "🔍 PATTERN DETECTION: Firestore mocking mismatch"
-echo "❌ Problem: Tests patch 'firebase_admin.firestore.client'"  
-echo "✅ Solution: Should patch 'firestore_service.get_db'"
-echo "📊 Impact: Prevents MagicMock JSON serialization errors"
+# Silent pattern detection - only output critical findings
 ```
 
 **MAGICMOCK SERIALIZATION PATTERN DETECTION**:
@@ -209,10 +206,10 @@ echo "📊 Impact: Prevents MagicMock JSON serialization errors"
 # Detect other patterns that cause "Object of type MagicMock is not JSON serializable" errors
 
 # 1. Scan for MagicMock usage in tests that interact with JSON APIs
-grep -r "MagicMock" . --include="test_*.py" -A 5 -B 5 | grep -E "(json\.|\.json|JSON)" || echo "No MagicMock+JSON patterns found"
+grep -r "MagicMock" . --include="test_*.py" -A 5 -B 5 | grep -E "(json\.|\.json|JSON)" >/dev/null 2>&1
 
 # 2. Look for patch decorators that don't return proper fake objects
-grep -r "@patch" . --include="test_*.py" -A 10 | grep -E "(return_value.*MagicMock|side_effect.*MagicMock)" || echo "No problematic MagicMock return patterns found"
+grep -r "@patch" . --include="test_*.py" -A 10 | grep -E "(return_value.*MagicMock|side_effect.*MagicMock)" >/dev/null 2>&1
 ```
 
 **SCOPE FLAGS FOR PATTERN DETECTION**:

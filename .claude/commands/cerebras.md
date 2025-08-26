@@ -19,6 +19,7 @@ Delegating this task to Cerebras for fast, high-quality code generation.
 - Project structure: !`find . -maxdepth 2 -name "*.py" -o -name "*.js" -o -name "*.md" | head -10`
 
 ## Task Execution
+
 !`.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`
 
 ## Post-Generation Analysis

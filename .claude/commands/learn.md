@@ -100,7 +100,7 @@
 1. **Enhanced Search & Context**:
    - Extract specific technical terms (file names, error messages, PR numbers)
    - Search: `mcp__memory-server__search_nodes(technical_terms)`
-   - Log: "🔍 Memory searched: X relevant memories found"
+   - Log results only if found or errors
    - Integrate found context naturally into response
 
 2. **Quality-Enhanced Entity Creation**:
