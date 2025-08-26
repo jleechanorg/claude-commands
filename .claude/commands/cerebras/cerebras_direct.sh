@@ -1,16 +1,49 @@
 #!/bin/bash
 
+set -euo pipefail
+
 # Ultra-fast direct API wrapper for Cerebras with invisible context extraction
+
+# Pre-flight dependency checks
+if ! command -v jq >/dev/null 2>&1; then
+  echo "Error: jq is required but not installed." >&2
+  exit 5
+fi
+if ! command -v curl >/dev/null 2>&1; then
+  echo "Error: curl is required but not installed." >&2
+  exit 5
+fi
+
+# Check curl version and set appropriate flags for backward compatibility
+# Default to conservative --fail flag for safety
+CURL_FAIL_FLAG="--fail"
+
+# Attempt to parse curl version, fall back gracefully on any parsing failure
+if CURL_VERSION=$(curl --version 2>/dev/null | head -n1 | sed 's/curl \([0-9]*\.[0-9]*\).*/\1/' 2>/dev/null) && [ -n "$CURL_VERSION" ]; then
+    CURL_MAJOR=$(echo "$CURL_VERSION" | cut -d. -f1 2>/dev/null)
+    CURL_MINOR=$(echo "$CURL_VERSION" | cut -d. -f2 2>/dev/null)
+    
+    # Validate that we got numeric values before attempting comparison
+    if [[ "$CURL_MAJOR" =~ ^[0-9]+$ ]] && [[ "$CURL_MINOR" =~ ^[0-9]+$ ]]; then
+        # --fail-with-body requires curl 7.76.0+ (March 2021)
+        if [ "$CURL_MAJOR" -gt 7 ] || { [ "$CURL_MAJOR" -eq 7 ] && [ "$CURL_MINOR" -ge 76 ]; }; then
+            CURL_FAIL_FLAG="--fail-with-body"
+        fi
+    fi
+fi
 
 # Parse command line arguments
 PROMPT=""
 CONTEXT_FILE=""
 DISABLE_AUTO_CONTEXT=false
-TOKEN_LIMIT=20000
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         --context-file)
+            if [ $# -lt 2 ] || [[ "$2" == --* ]]; then
+                echo "Error: --context-file requires a file path argument" >&2
+                exit 1
+            fi
             CONTEXT_FILE="$2"
             shift 2
             ;;
@@ -81,8 +114,8 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
         EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
         
         if [ -f "$EXTRACT_SCRIPT" ]; then
-            # Extract context silently with configurable token limit (default: 20K)
-            python3 "$EXTRACT_SCRIPT" "$TOKEN_LIMIT" > "$AUTO_CONTEXT_FILE" 2>/dev/null
+            # Extract context silently using script's default token limit (20K)
+            python3 "$EXTRACT_SCRIPT" > "$AUTO_CONTEXT_FILE" 2>/dev/null
             
             # Use the auto-extracted context if successful
             if [ -s "$AUTO_CONTEXT_FILE" ]; then
@@ -154,8 +187,11 @@ fi
 # Start timing
 START_TIME=$(date +%s%N)
 
-# Direct API call to Cerebras with error handling
-HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.cerebras.ai/v1/chat/completions" \
+# Direct API call to Cerebras with error handling and timeouts
+# Prevent set -e from aborting on curl errors so we can map them explicitly
+CURL_EXIT=0
+HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
+  -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d "{
@@ -167,7 +203,14 @@ HTTP_RESPONSE=$(curl -s -w "HTTPSTATUS:%{http_code}" -X POST "https://api.cerebr
     \"max_tokens\": 32768,
     \"temperature\": 0.1,
     \"stream\": false
-  }")
+  }") || CURL_EXIT=$?
+
+# On transport or HTTP-level failures, emit the raw body (if any) and standardize exit code
+if [ "$CURL_EXIT" -ne 0 ]; then
+  [ -n "$HTTP_RESPONSE" ] && echo "$HTTP_RESPONSE" >&2
+  echo "API Error: curl failed with exit code $CURL_EXIT" >&2
+  exit 3
+fi
     
 # Extract HTTP status and body safely (no subshell whitespace issues)
 HTTP_STATUS="${HTTP_RESPONSE##*HTTPSTATUS:}"

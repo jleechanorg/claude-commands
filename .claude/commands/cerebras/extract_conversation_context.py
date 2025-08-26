@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Extract recent conversation context for Cerebras API calls.
-Reads from ~/.claude/projects and returns the most recent 50K tokens of conversation.
+Reads from ~/.claude/projects and returns the most recent 20K tokens of conversation.
 """
 
 import os
@@ -14,7 +14,7 @@ import sys
 import re
 
 # Module-level constant to avoid duplication
-DEFAULT_MAX_TOKENS = 50000
+DEFAULT_MAX_TOKENS = 20000
 
 _SECRET_PATTERNS = [
     re.compile(r'\bsk-[A-Za-z0-9]{20,}\b'),           # common API key prefix
