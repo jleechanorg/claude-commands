@@ -53,17 +53,175 @@ Genesis Coder, Prime Mover,
 - Enhance existing systems rather than creating parallel solutions
 - Consider testing, deployment, and maintenance from the first line of code
 
-## 🚨 CRITICAL: NEW FILE CREATION PROTOCOL
+## 🚨 CRITICAL: CEREBRAS-FIRST CODING PROTOCOL
 
-**🚨 ZERO TOLERANCE**: All new file requests must be submitted in NEW_FILE_REQUESTS.md with description of all places searched for duplicate functionality
+**🚀 DEFAULT FOR ALL CODING: Use Cerebras API directly for most coding tasks**
 
-**MANDATORY REQUIREMENTS**:
-- ❌ **NO file creation** without NEW_FILE_REQUESTS.md entry
-- 🔍 **SEARCH FIRST**: Document checking `/utils/`, `/helpers/`, `/lib/`, modules, configs  
-- ✅ **JUSTIFY**: Why editing existing files won't suffice
-- 📝 **INTEGRATE**: How file connects to existing codebase
+**MANDATORY THRESHOLD RULE:**
+- **Small edits ≤10 delta lines**: Qwen handles directly  
+- **Larger tasks >10 delta lines**: MUST use `/cerebras` command or direct Cerebras API
+- **All new features, functions, classes**: Use Cerebras
+- **All file creation**: Use Cerebras  
+- **All refactoring implementation >10 delta lines**: Use Cerebras (after Qwen analyzes and designs the refactoring)
 
-**Exception**: Emergency fixes with immediate post-creation documentation.
+**WHY CEREBRAS FIRST:**
+- **19.6x faster execution** (500ms vs 10s)
+- **Superior code generation quality** for well-defined tasks
+- **Reduces Qwen context consumption** for large code blocks
+- **Enables parallel development** across multiple components
+
+**CEREBRAS DECISION MATRIX:**
+```
+Task Size        | Tool Choice      | Rationale
+≤10 delta lines | Qwen Direct    | Quick edits, context efficiency
+>10 delta lines | Cerebras API     | Speed advantage, quality generation
+New Files       | Cerebras API     | Template generation strength  
+Complex Logic   | Cerebras API     | Algorithm implementation expertise
+```
+
+**IMPLEMENTATION MANDATE**: Before any coding task >10 delta lines, explicitly state:
+*"This task exceeds 10 delta lines - using Cerebras API for optimal speed and quality"*
+
+**WORKFLOW - Qwen as ARCHITECT, Cerebras as BUILDER:**
+1. Qwen analyzes requirements and creates detailed specifications
+2. Qwen generates precise, structured prompts with full context
+3. /cerebras executes the code generation at high speed
+4. Qwen verifies and integrates the generated code
+5. Document decision in `docs/{branch_name}/cerebras_decisions.md`
+
+**USE /CEREBRAS FOR:** Well-defined code generation, boilerplate, templates, unit tests, algorithms, documentation, repetitive patterns
+
+**USE QWEN FOR:** Understanding existing code, debugging, refactoring decisions, security-critical implementations, architectural decisions, complex integrations
+
+## 🚨 CRITICAL: FILE JUSTIFICATION & CREATION PROTOCOL
+
+### 🚨 NEW FILE CREATION PROTOCOL - EXTREME ANTI-CREATION BIAS
+
+**🚨 DEFAULT ANSWER IS ALWAYS "NO NEW FILES"** - You must prove why integration into existing files is IMPOSSIBLE
+
+**🚨 VIOLATION TRACKING**: User reports consistent violations - "you always make new files vs integrating into existing ones"
+
+**🚨 MANDATORY INTEGRATION-FIRST PROTOCOL**: ⚠️ BEFORE any Write tool usage:
+1. **ASSUME NO NEW FILES NEEDED** - Start with the assumption that existing files can handle it
+2. **IDENTIFY INTEGRATION TARGETS** - Which existing files could potentially hold this functionality?
+3. **ATTEMPT INTEGRATION FIRST** - Actually try to add the code to existing files before considering new ones
+4. **PROVE INTEGRATION IMPOSSIBLE** - Document why each potential target file cannot be used
+
+**🚨 INTEGRATION PREFERENCE HIERARCHY** (MANDATORY ORDER):
+1. **Add to existing file with similar purpose** - Even if file gets larger
+2. **Add to existing utility/helper file** - Even if not perfect fit
+3. **Add to existing module's __init__.py** - For module-level functionality
+4. **Add to existing test file** - For test code (NEVER create new test files without permission)
+5. **Add as method to existing class** - Even if class gets larger
+6. **Add to existing configuration file** - For config/settings
+7. **LAST RESORT: Create new file** - Only after documenting why ALL above options failed
+
+### 🚨 FILE JUSTIFICATION PROTOCOL - MANDATORY FOR ALL PR FILE CHANGES
+
+**🚨 EVERY FILE CHANGE MUST BE JUSTIFIED**: ⚠️ MANDATORY before any commit/push operation
+
+**🚨 REQUIRED DOCUMENTATION FOR EACH CHANGED FILE**:
+1. **GOAL**: What is the purpose of this file/change in 1-2 sentences
+2. **MODIFICATION**: Specific changes made and why they were needed
+3. **NECESSITY**: Why this change is essential vs alternative approaches
+4. **INTEGRATION PROOF**: Evidence that integration into existing files was attempted first
+
+**🚨 FILE JUSTIFICATION CATEGORIES**:
+- ✅ **ESSENTIAL**: Core functionality, bug fixes, security improvements, production requirements
+- ⚠️ **ENHANCEMENT**: Performance improvements, user experience, maintainability with clear business value
+- ❌ **UNNECESSARY**: Documentation that could be integrated, temporary files, redundant implementations
+
+**🚨 MANDATORY QUESTIONS FOR EVERY FILE CHANGE**:
+1. "What specific problem does this file solve that existing files cannot?"
+2. "Have I proven that integration into existing files is impossible?"
+3. "Does this file provide unique value that justifies its existence?"
+4. "Could this functionality be achieved by modifying existing files instead?"
+
+**🚨 JUSTIFICATION ENFORCEMENT**:
+- **All /push and /pushl commands**: MUST reference File Justification Protocol
+- **All /copilot operations**: MUST validate file changes against justification criteria
+- **PR documentation**: MUST include file-by-file justification for all changes
+- **Commit messages**: MUST explain the necessity of each file modification
+
+**🚨 EXAMPLES OF VIOLATIONS** (What NOT to do):
+- ❌ Creating `mcp_stdio_wrapper.py` instead of adding stdio logic to `mcp_api.py`
+- ❌ Creating `test_mcp_integration.py` instead of adding tests to existing test files
+- ❌ Creating new utility files instead of using existing `utils.py` or `helpers.py`
+- ❌ Creating new config files instead of adding to existing configuration
+- ❌ Creating temporary scripts instead of adding functionality to existing scripts
+
+**🚨 SEARCH EVIDENCE REQUIREMENTS**: ⚠️ MANDATORY - Document ALL searches performed:
+- ❌ **NEVER create files without exhaustive search** - This protocol violation causes "huge mistakes"
+- 🔍 **SEARCH HIERARCHY** (MANDATORY ORDER):
+  1. **Serena MCP semantic search** - Search for similar functionality by concept/purpose
+  2. **Grep tool pattern search** - Search for keywords, function names, class names
+  3. **Glob tool file discovery** - Search for files with similar names/patterns
+  4. **Directory exploration** - Check `/utils/`, `/helpers/`, `/lib/`, modules, configs, `mcp_*.py`, `*_api.py`
+  5. **Read existing files** - Examine similar-purpose files for existing implementations
+
+**🚨 MANDATORY QUESTIONS BEFORE FILE CREATION**:
+1. "Can I add this to an existing file instead?" - DEFAULT ANSWER: YES
+2. "Have I tried integrating into at least 3 existing files?" - MUST BE YES
+3. "Is the file size concern valid?" - Files can be 1000+ lines, that's OK
+4. "Am I creating this for organization?" - NOT A VALID REASON
+5. "Am I creating a test file?" - ADD TO EXISTING TEST FILES
+
+**REQUIREMENTS:**
+- ❌ NO file creation without NEW_FILE_REQUESTS.md entry
+- 🔍 SEARCH FIRST: Complete search protocol above BEFORE any file creation
+- ✅ JUSTIFY: Document failed integration attempts into existing files
+- 📝 INTEGRATE: How file connects to existing codebase
+- 🚨 **VIOLATION CONSEQUENCE**: Creating files without integration attempts = "huge mistake" requiring protocol fixes
+- 🚨 **SUCCESS METRIC**: Zero new files created unless absolutely necessary for production functionality
+
+### 🚨 **PROTOCOL ENFORCEMENT - ZERO TOLERANCE**
+
+🚨 **CRISIS OVERRIDE PREVENTION PROTOCOL**: ⚠️ MANDATORY
+- ❌ **NO CONTEXT EXEMPTS FILE JUSTIFICATION** - Crisis, emergency, or urgent contexts do NOT override protocol
+- ❌ **FORBIDDEN JUSTIFICATIONS**: "Tests are failing", "Crisis mode", "Emergency fix", "Quick resolution needed"
+- ✅ **CRISIS RULE**: Crisis situations make protocol compliance MORE important, not optional
+- **Critical Pattern**: Emergency situations create hasty decisions - protocols prevent duplicate files and violations
+- **Learning**: PR #1418 duplicate script created during "infrastructure crisis" - protocol must have zero tolerance
+
+🚨 **MANDATORY PRE-WRITE HARD STOP**: ⚠️ BEFORE ANY Write tool usage, MUST verify ALL 4 checks:
+1. "Does this violate NEW FILE CREATION PROTOCOL?" → If YES, STOP immediately
+2. "Have I searched ALL existing files first?" → If NO, search `.qwen/hooks/`, `scripts/`, `utils/`, modules  
+3. "Have I attempted integration into 3+ existing files?" → If NO, try integration first
+4. "Is this a path/reference problem, not missing file?" → If YES, fix references instead of creating file
+
+**HARD STOP ENFORCEMENT**: Write tool usage without completing ALL 4 checks = CRITICAL PROTOCOL VIOLATION
+
+🚨 **INTEGRATION ATTEMPT DOCUMENTATION**: ⚠️ MANDATORY for any new file creation:
+- **MUST DOCUMENT**: "Attempted integration into [file1, file2, file3] - failed because [specific technical reasons]"
+- **MUST VERIFY**: File doesn't exist elsewhere before creating (check hooks, scripts, utils, existing modules)
+- **PATTERN RECOGNITION**: "File not found" errors often mean wrong path, not missing file - fix paths first
+- **VIOLATION EXAMPLE**: Creating `qwen_command_scripts/anti_demo_check_qwen.sh` when `.qwen/hooks/anti_demo_check_qwen.sh` exists
+
+## 🚨 CRITICAL: FILE PLACEMENT PROTOCOL - ZERO TOLERANCE
+
+**🚨 NEVER CREATE FILES IN PROJECT ROOT**: ⚠️ MANDATORY - Root directory hygiene
+- ❌ **FORBIDDEN**: Creating ANY new .py, .sh, .md files in project root
+- ❌ **FORBIDDEN**: Test files in root - ALL tests go in appropriate test directories
+- ❌ **FORBIDDEN**: Scripts in root - use `scripts/` directory for ALL scripts
+- ✅ **REQUIRED**: Python files → `mvp_site/` or module directories
+- ✅ **REQUIRED**: Shell scripts → `scripts/` directory  
+- ✅ **REQUIRED**: Test files → `mvp_site/tests/` or module test directories
+- ✅ **REQUIRED**: Documentation → `docs/` or module-specific docs
+- **Pattern**: Root = Configuration only (deploy.sh, run_tests.sh, etc.)
+- **Anti-Pattern**: memory_backup_*.sh in root instead of scripts/
+- **Violation Count**: 6+ memory backup scripts incorrectly placed in root
+
+**EXISTING ROOT FILES**: Only established project scripts remain in root for backward compatibility. NO NEW ADDITIONS.
+
+## 🚨 CRITICAL: CONVERSATION HISTORY PROTECTION PROTOCOL
+
+**🚨 NEVER TOUCH ~/.qwen/projects/ DIRECTORY**: ⚠️ MANDATORY - Absolute protection of conversation history
+- ❌ **FORBIDDEN**: ANY modification, movement, archival, or deletion of ~/.qwen/projects/ directory or contents
+- ❌ **FORBIDDEN**: Moving, copying, or archiving conversation JSONL files without explicit user permission
+- ✅ **UNDERSTANDING**: Stored conversations are passive and only use context when resumed, NOT during new sessions
+- ✅ **REAL CONTEXT ISSUES**: Come from active session workflows (large file reads, tool accumulation, inefficient patterns)
+- **CRITICAL RULE**: "Never move or delete projects folder" - User's explicit instruction with zero tolerance
+- **LESSON LEARNED**: Context exhaustion is a workflow optimization problem, not a storage cleanup problem
 
 ## 🚨 CRITICAL: MANDATORY BRANCH HEADER PROTOCOL
 
@@ -138,6 +296,7 @@ Genesis Coder, Prime Mover,
 - **Pattern**: Tool fails → Try alternative method → Configure missing dependencies → NEVER give up
 - **Anti-Pattern**: Tool fails → Provide manual URL → Declare "complete" → User frustration
 - **Scope**: Applies to ALL `/pr`, `/push`, and PR creation workflows
+
 ## Legend
 🚨 = CRITICAL | ⚠️ = MANDATORY | ✅ = Always/Do | ❌ = Never/Don't | → = See reference | PR = Pull Request
 
@@ -151,6 +310,18 @@ Genesis Coder, Prime Mover,
 ## Meta-Rules
 
 🚨 **PRE-ACTION CHECKPOINT**: Before ANY action, ask: "Does this violate QWEN.md rules?" | "Check constraints first?"
+
+🚨 **PRE-WRITE CHECKPOINT**: Before ANY Write tool usage, ask:
+1. "Does this violate NEW FILE CREATION PROTOCOL?"
+2. "Have I searched existing tools first?"
+3. "Do I need NEW_FILE_REQUESTS.md entry?"
+
+**🚨 ENHANCED**: See "MANDATORY PRE-WRITE HARD STOP" section above for complete 4-check verification protocol
+
+**🎯 Memory Aid:** The Write tool checkpoint prevents emergency-driven file creation, making protocol compliance automatic like greeting/header habits.
+
+**Pattern**: Write usage → Check protocol → Search existing → Document necessity → Then create
+**Anti-Pattern**: Problem urgency → Create file immediately → Skip all protocols
 
 🚨 **DUAL COMPOSITION ARCHITECTURE**: Two command processing mechanisms
 - **Cognitive** (/think, /arch, /debug): Universal Composition (natural semantic understanding)
@@ -201,6 +372,15 @@ Genesis Coder, Prime Mover,
 - ✅ ALWAYS build real, functional code | Enhance existing systems vs creating parallel ones
 - **Pattern**: Real implementation > No implementation > Fake implementation
 - **Rule**: If you can't implement properly, don't create the file at all
+
+🚨 **PRE-IMPLEMENTATION DECISION FRAMEWORK**: ⚠️ MANDATORY - Prevent fake code at source
+- **🚪 DECISION GATE**: Before writing ANY function, ask: "Can I implement this fully right now?"
+- **✅ If YES**: Implement with working code immediately, no placeholders
+- **❌ If NO**: DON'T create the function - use orchestration/composition instead  
+- **🎯 Default Hierarchy**: Orchestration > Working Implementation > No Implementation > ❌ NEVER Placeholder
+- **🛡️ Prevention Rule**: Block yourself from creating placeholder functions
+- **🔄 Orchestration First**: Use existing commands (like /commentfetch) instead of reimplementing
+- **⚡ Working Solutions**: Pragmatic working implementation beats perfect placeholder
 
 🚨 **ORCHESTRATION OVER DUPLICATION**: ⚠️ MANDATORY
 - **Principle**: Orchestrators delegate to existing commands, never reimplement functionality
@@ -445,6 +625,13 @@ Genesis Coder, Prime Mover,
 - **Zero Exception Rule**: "/orch" ALWAYS triggers tmux orchestration system regardless of context or user statements
 - **CRITICAL**: Task tool ≠ orchestration system. Orchestration = tmux agents via `python3 .qwen/commands/orchestrate.py`
 
+🚨 **CONVERGE AUTONOMY PRESERVATION**: ⚠️ MANDATORY HARD STOP PROTOCOL
+- **Hard Stop Pattern**: Input scan for "/converge" → autonomous execution until goal achieved, NO stopping for approval
+- **Mental Model**: "/converge" = "set and forget until complete", NEVER "/converge" = "step-by-step approval system"
+- **Zero Exception Rule**: /converge NEVER stops for user input unless max iterations reached or unrecoverable error
+- **CRITICAL**: Progress reporting ≠ stopping for approval. Report progress but continue autonomously
+- **Autonomy Boundary**: Once /converge starts, zero user intervention until 100% goal achievement or limits
+
 🚨 **ABSOLUTE BRANCH ISOLATION PROTOCOL**: ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
 - ❌ **FORBIDDEN**: `git checkout`, `git switch`, or any branch switching commands
 - ❌ **FORBIDDEN**: Working on other branches, PRs, or repositories
@@ -629,9 +816,9 @@ Models: `qwen-2.5-flash` (default), `qwen-1.5-flash` (test)
 
 **Data Defense**: Use `dict.get()`, validate structures, implement code safeguards.
 
-**Memory MCP**: Search first → Create if new → Add observations → Build relationships
+**Memory MCP**: Search first → Create if new → Add observations → Build relationships.
 
-**TodoWrite**: Required for 3+ steps. Flow: `pending` → `in_progress` → `completed`
+**TodoWrite**: Required for 3+ steps. Flow: `pending` → `in_progress` → `completed`.
 
 **Operations**: MultiEdit max 3-4 edits. Check context % before complex ops. Try alternatives after 2 failures.
 
