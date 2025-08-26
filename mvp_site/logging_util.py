@@ -185,7 +185,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: str | None = None) -> logging.Logger:
+    def getLogger(name: Optional[str] = None) -> logging.Logger:
         """
         Get a logger instance.
 
@@ -250,6 +250,6 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: str | None = None) -> logging.Logger:
+def getLogger(name: Optional[str] = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
