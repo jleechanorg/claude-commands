@@ -86,6 +86,24 @@ fi
 CONVERSATION_CONTEXT=""
 AUTO_CONTEXT_FILE=""
 
+# Cache project root path for performance (avoid repeated git calls)
+# Use git if available, otherwise find project root by looking for CLAUDE.md
+if PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+    :  # git worked, PROJECT_ROOT is set
+else
+    # Fallback: traverse up from current directory to find CLAUDE.md
+    CURRENT_DIR="$(pwd)"
+    while [ "$CURRENT_DIR" != "/" ]; do
+        if [ -f "$CURRENT_DIR/CLAUDE.md" ]; then
+            PROJECT_ROOT="$CURRENT_DIR"
+            break
+        fi
+        CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+    done
+    # Ultimate fallback to current directory
+    PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+fi
+
 # Guaranteed cleanup for auto-extracted context (handles errors/interrupts)
 cleanup() {
   if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
@@ -114,8 +132,9 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
         EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
         
         if [ -f "$EXTRACT_SCRIPT" ]; then
-            # Extract context silently using script's default token limit (20K)
-            python3 "$EXTRACT_SCRIPT" > "$AUTO_CONTEXT_FILE" 2>/dev/null
+            # Extract context silently with configurable token limit (default: 20K)
+            # Run from project root to ensure correct path resolution
+            (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") > "$AUTO_CONTEXT_FILE" 2>/dev/null
             
             # Use the auto-extracted context if successful
             if [ -s "$AUTO_CONTEXT_FILE" ]; then

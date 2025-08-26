@@ -19,6 +19,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Dict, List, Set, Union
@@ -58,13 +59,29 @@ class TestDependencyAnalyzer:
             return False
         
     def _find_project_root(self) -> str:
-        """Find project root by looking for CLAUDE.md."""
+        """Find project root by looking for project markers."""
         current = Path(__file__).parent.absolute()
         while current.parent != current:
-            if (current / "CLAUDE.md").exists():
+            # Check for strong project root indicators (git, .claude directory)
+            if (current / ".git").exists() or (current / ".claude").exists():
                 return str(current)
+            
+            # Check for CLAUDE.md with additional validation (avoid subdirectory CLAUDE.md files)
+            if (current / "CLAUDE.md").exists():
+                # Validate this is the real project root by checking for typical project structure
+                # More flexible validation: require at least one key directory (not all three)
+                has_mvp_site = (current / "mvp_site").exists()
+                has_scripts = (current / "scripts").exists()
+                has_docs = (current / "docs").exists()
+                
+                # Accept if we have at least one major project directory
+                # This handles partial checkouts, development environments, or project restructuring
+                if has_mvp_site or has_scripts or has_docs:
+                    return str(current)
+            
             current = current.parent
-        # Fallback to script's parent directory
+            
+        # Fallback to script's grandparent directory (scripts/ is usually one level down from project root)
         return str(Path(__file__).parent.parent.absolute())
     
     def _load_config(self) -> Dict:
@@ -175,9 +192,73 @@ class TestDependencyAnalyzer:
         
         return matching_tests
     
+    def _find_tests_subdirectories(self, file_path: str) -> List[str]:
+        """Generic logic to find tests/ subdirectories for any changed file.
+        
+        This implements the user's request: 'always looks for tests/ subdir for any changed files'
+        Uses efficient Path.glob patterns and prevents duplicate processing.
+        """
+        start_time = time.perf_counter()  # Better timing precision
+        
+        tests_patterns: List[str] = []
+        processed_dirs = set()  # Prevent duplicate processing as suggested by Copilot
+        file_dir = Path(file_path).parent
+        
+        # Use cached project root and proper path anchoring for security
+        if not hasattr(self, '_cached_project_root'):
+            self._cached_project_root = Path(self._find_project_root()).resolve()
+        project_root = self._cached_project_root
+        
+        # Security: Ensure file_dir is anchored within project_root
+        try:
+            file_dir = file_dir.resolve()
+            file_dir.relative_to(project_root)  # Validates path is within project
+        except ValueError:
+            logger.warning(f"File {file_path} is outside project root {project_root}")
+            return []
+        
+        # Start from the file's directory and walk up to project root
+        current_dir = file_dir
+        
+        while project_root in current_dir.parents or current_dir == project_root:
+            # Avoid processing the same directory multiple times
+            dir_str = str(current_dir)
+            if dir_str not in processed_dirs:
+                processed_dirs.add(dir_str)
+                
+                # Check if this directory has a tests/ subdirectory
+                tests_dir = current_dir / "tests"
+                if tests_dir.exists() and tests_dir.is_dir():
+                    pattern = str((tests_dir / "test_*.py").as_posix())
+                    if pattern not in tests_patterns:
+                        tests_patterns.append(pattern)
+            
+            # Move to parent directory with early termination
+            if current_dir == current_dir.parent:
+                break  # Reached filesystem root
+            current_dir = current_dir.parent
+        
+        # Always include repository-root tests dir if not already added
+        root_pattern = "tests/test_*.py"
+        if root_pattern not in tests_patterns:
+            tests_patterns.append(root_pattern)
+        
+        # Performance monitoring as suggested by CodeRabbit
+        elapsed_time = time.perf_counter() - start_time
+        if tests_patterns:
+            logger.debug(f"Generic tests/ directory search for {file_path}: {tests_patterns} (took {elapsed_time:.3f}s, processed {len(processed_dirs)} dirs)")
+        
+        return tests_patterns
+
     def _get_conservative_mappings(self, file_path: str) -> List[str]:
         """Conservative fallback mappings when no specific rules match."""
         conservative_tests = []
+        
+        # FIRST: Always apply generic tests/ subdirectory logic (user's main request)
+        generic_tests = self._find_tests_subdirectories(file_path)
+        conservative_tests.extend(generic_tests)
+        
+        # THEN: Apply specific conservative mappings as additional coverage
         
         # Any Python file in mvp_site/ triggers core tests
         if file_path.startswith("mvp_site/") and file_path.endswith(".py"):
