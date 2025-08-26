@@ -87,21 +87,29 @@ CONVERSATION_CONTEXT=""
 AUTO_CONTEXT_FILE=""
 
 # Cache project root path for performance (avoid repeated git calls)
-# Use git if available, otherwise find project root by looking for CLAUDE.md
-if PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)"; then
+# Use git -C SCRIPT_DIR to make repo-root detection independent of caller's CWD
+# Resolve symlinks for SCRIPT_DIR to handle edge cases with symbolic links
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+if PROJECT_ROOT="$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel 2>/dev/null)"; then
     :  # git worked, PROJECT_ROOT is set
 else
-    # Fallback: traverse up from current directory to find CLAUDE.md
-    CURRENT_DIR="$(pwd)"
-    while [ "$CURRENT_DIR" != "/" ]; do
-        if [ -f "$CURRENT_DIR/CLAUDE.md" ]; then
-            PROJECT_ROOT="$CURRENT_DIR"
-            break
-        fi
-        CURRENT_DIR="$(dirname "$CURRENT_DIR")"
-    done
-    # Ultimate fallback to current directory
-    PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+    # Fallback: assume repo root is three levels up from this script: .claude/commands/cerebras/ -> repo root
+    PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." 2>/dev/null && pwd)"
+    # Validate fallback by checking for CLAUDE.md
+    if [ ! -f "$PROJECT_ROOT/CLAUDE.md" ]; then
+        # Final fallback: traverse up from SCRIPT_DIR to find CLAUDE.md (preferred over caller CWD)
+        CURRENT_DIR="$SCRIPT_DIR"
+        PROJECT_ROOT=""  # Reset to ensure ultimate fallback triggers if traversal fails
+        while [ "$CURRENT_DIR" != "/" ]; do
+            if [ -f "$CURRENT_DIR/CLAUDE.md" ]; then
+                PROJECT_ROOT="$CURRENT_DIR"
+                break
+            fi
+            CURRENT_DIR="$(dirname "$CURRENT_DIR")"
+        done
+        # Ultimate fallback to current directory (now guaranteed to trigger if traversal failed)
+        PROJECT_ROOT="${PROJECT_ROOT:-$(pwd)}"
+    fi
 fi
 
 # Guaranteed cleanup for auto-extracted context (handles errors/interrupts)
@@ -127,14 +135,25 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
     
     # Silent context extraction (invisible to Claude Code CLI)
     if [ -n "$AUTO_CONTEXT_FILE" ]; then
-        # Find the extract_conversation_context.py script
-        SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        # Find the extract_conversation_context.py script (SCRIPT_DIR already set above)
         EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
         
         if [ -f "$EXTRACT_SCRIPT" ]; then
-            # Extract context silently with configurable token limit (default: 20K)
+            # Extract context using script's default token limit
             # Run from project root to ensure correct path resolution
-            (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") > "$AUTO_CONTEXT_FILE" 2>/dev/null
+            if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
+                # Capture extractor exit code and emit minimal diagnostics when debug is on
+                EXTRACTOR_EXIT=0
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
+                    echo "Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
+                fi
+            else
+                # Mirror debug error handling to maintain invisible operation
+                EXTRACTOR_EXIT=0
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                # Continue silently regardless of extraction success - invisible operation maintained
+            fi
             
             # Use the auto-extracted context if successful
             if [ -s "$AUTO_CONTEXT_FILE" ]; then
