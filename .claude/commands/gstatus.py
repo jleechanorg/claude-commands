@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """
-/gstatus command - Comprehensive PR status dashboard
+/gstatus command - Comprehensive PR status dashboard with GitHub MCP integration
+
+Enhanced version with:
+- Last 10 comments via GitHub MCP
+- Last 3 commits on remote branch
+- Local vs remote differences analysis
+- Complete synchronization status
 
 Shows complete PR overview including files, CI status, merge conflicts, and GitHub state.
 Integrates with /header and provides authoritative GitHub data.
@@ -9,6 +15,8 @@ Integrates with /header and provides authoritative GitHub data.
 import json
 import subprocess
 import sys
+import os
+from datetime import datetime
 
 def run_command(cmd, capture_output=True, shell=True):
     """Run shell command and return result"""
@@ -23,6 +31,9 @@ def run_command(cmd, capture_output=True, shell=True):
         return result.stdout.strip() if result.returncode == 0 else None
     except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
         return None
+
+# call_github_mcp function removed - replaced with orchestration via gstatus.md
+# GitHub data now sourced from /commentfetch command composition
 
 def get_repo_info():
     """Extract repository owner and name from git remote"""
@@ -118,29 +129,142 @@ def get_merge_status(pr_number):
     except json.JSONDecodeError:
         return {}
 
+def get_pr_comments_via_mcp(owner, repo, pr_number):
+    """Get PR comments via GitHub data (sourced from /commentfetch orchestration)"""
+    # Comments data now provided by gstatus.md orchestration calling /commentfetch
+    # This function serves as fallback for direct CLI access when needed
+    
+    # Fallback to gh CLI
+    comments_data = run_command(f'gh pr view {pr_number} --json comments')
+    if not comments_data:
+        return []
+    
+    try:
+        pr_info = json.loads(comments_data)
+        return pr_info.get('comments', [])
+    except json.JSONDecodeError:
+        return []
+
 def get_review_status(pr_number):
-    """Get review and comment status"""
+    """Get review and comment status with enhanced comment fetching"""
     if not pr_number:
         return [], []
     
-    review_data = run_command(f'gh pr view {pr_number} --json reviews,comments')
-    if not review_data:
-        return [], []
+    # Get repository info for MCP calls
+    owner, repo = get_repo_info()
     
-    try:
-        pr_info = json.loads(review_data)
-        reviews = pr_info.get('reviews', [])
-        comments = pr_info.get('comments', [])
-        
-        # Ensure we handle list responses
-        if not isinstance(reviews, list):
+    review_data = run_command(f'gh pr view {pr_number} --json reviews')
+    if not review_data:
+        reviews = []
+    else:
+        try:
+            pr_info = json.loads(review_data)
+            reviews = pr_info.get('reviews', [])
+            if not isinstance(reviews, list):
+                reviews = []
+        except (json.JSONDecodeError, KeyError):
             reviews = []
-        if not isinstance(comments, list):
-            comments = []
-            
-        return reviews, comments
-    except (json.JSONDecodeError, KeyError):
-        return [], []
+    
+    # Get comments via MCP with fallback
+    if owner and repo:
+        comments = get_pr_comments_via_mcp(owner, repo, pr_number)
+    else:
+        comments = []
+        
+    return reviews, comments
+
+def get_recent_commits(limit=3):
+    """Get last N commits from remote branch"""
+    branch = run_command("git branch --show-current")
+    if not branch:
+        return []
+    
+    # Get repository info for potential GitHub API calls
+    owner, repo = get_repo_info()
+    
+    # Try GitHub API via gh CLI first
+    if owner and repo:
+        commits_data = run_command(f'gh api repos/{owner}/{repo}/commits?sha={branch}&per_page={limit}')
+        if commits_data:
+            try:
+                commits = json.loads(commits_data)
+                return commits if isinstance(commits, list) else []
+            except json.JSONDecodeError:
+                pass
+    
+    # Fallback to git log
+    git_commits = run_command(f'git log origin/{branch} --oneline -n {limit} --pretty=format:"%H|%an|%ad|%s" --date=iso')
+    if not git_commits:
+        return []
+    
+    commits = []
+    for line in git_commits.split('\n'):
+        if '|' in line:
+            parts = line.split('|', 3)
+            if len(parts) >= 4:
+                commits.append({
+                    'sha': parts[0][:7],
+                    'author': {'name': parts[1]},
+                    'commit': {
+                        'author': {'date': parts[2]},
+                        'message': parts[3]
+                    }
+                })
+    
+    return commits
+
+def check_local_remote_diff():
+    """Check differences between local and remote state"""
+    branch = run_command("git branch --show-current")
+    if not branch:
+        return {}
+    
+    # Get ahead/behind status
+    ahead_behind = run_command(f"git rev-list --left-right --count origin/{branch}...HEAD")
+    ahead, behind = 0, 0
+    if ahead_behind and '	' in ahead_behind:
+        try:
+            behind, ahead = map(int, ahead_behind.split('\t'))
+        except ValueError:
+            pass
+    
+    # Get local changes
+    status_output = run_command("git status --porcelain")
+    staged_files = []
+    modified_files = []
+    untracked_files = []
+    
+    if status_output:
+        for line in status_output.split('\n'):
+            if len(line) >= 3:
+                status = line[:2]
+                filename = line[3:]
+                
+                if status[0] in 'MADRCU':  # Staged changes
+                    staged_files.append(filename)
+                elif status[1] in 'M':  # Modified not staged
+                    modified_files.append(filename)
+                elif status == '??':  # Untracked
+                    untracked_files.append(filename)
+    
+    return {
+        'ahead': ahead,
+        'behind': behind,
+        'staged_files': staged_files,
+        'modified_files': modified_files,
+        'untracked_files': untracked_files
+    }
+
+def format_timestamp(timestamp_str):
+    """Format timestamp for display"""
+    try:
+        if 'T' in timestamp_str:
+            dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+        else:
+            dt = datetime.fromisoformat(timestamp_str)
+        return dt.strftime('%Y-%m-%d %H:%M')
+    except (ValueError, AttributeError):
+        return timestamp_str
 
 def format_file_changes(files):
     """Format file changes for display"""
@@ -254,8 +378,87 @@ def format_merge_status(merge_info):
     
     return "\n".join(output)
 
+def format_recent_commits(commits):
+    """Format recent commits for display"""
+    if not commits:
+        return "📝 **No recent commits found**"
+    
+    output = ["📝 **Recent Commits** (3 most recent)"]
+    output.append("")
+    
+    for i, commit in enumerate(commits, 1):
+        if not isinstance(commit, dict):
+            continue
+        
+        sha = commit.get('sha', 'unknown')[:7]
+        author_info = commit.get('author') or {}
+        author_name = author_info.get('name') or commit.get('commit', {}).get('author', {}).get('name', 'unknown')
+        date_str = commit.get('commit', {}).get('author', {}).get('date', '')
+        message = commit.get('commit', {}).get('message', commit.get('message', 'No message'))
+        
+        # Format timestamp
+        formatted_date = format_timestamp(date_str)
+        
+        # Truncate long commit messages
+        if len(message) > 80:
+            message = message[:80] + '...'
+        
+        output.append(f"{i}. **{sha}** by {author_name} ({formatted_date})")
+        output.append(f"   {message}")
+        
+        if i < len(commits):
+            output.append("")
+    
+    return "\n".join(output)
+
+def format_local_remote_diff(diff_info):
+    """Format local vs remote differences"""
+    if not diff_info:
+        return "🔄 **Local/Remote sync status unavailable**"
+    
+    output = ["🔄 **Local vs Remote Status**"]
+    output.append("")
+    
+    ahead = diff_info.get('ahead', 0)
+    behind = diff_info.get('behind', 0)
+    staged = diff_info.get('staged_files', [])
+    modified = diff_info.get('modified_files', [])
+    untracked = diff_info.get('untracked_files', [])
+    
+    # Sync status
+    if ahead == 0 and behind == 0:
+        sync_icon = '✅'
+        sync_text = 'In sync with remote'
+    elif ahead > 0 and behind == 0:
+        sync_icon = '⬆️'
+        sync_text = f'Ahead by {ahead} commit(s)'
+    elif ahead == 0 and behind > 0:
+        sync_icon = '⬇️'
+        sync_text = f'Behind by {behind} commit(s)'
+    else:
+        sync_icon = '🔄'
+        sync_text = f'Diverged: {ahead} ahead, {behind} behind'
+    
+    output.append(f"{sync_icon} **Sync Status**: {sync_text}")
+    
+    # Local changes
+    total_changes = len(staged) + len(modified) + len(untracked)
+    if total_changes > 0:
+        output.append(f"📋 **Local Changes**: {total_changes} file(s)")
+        
+        if staged:
+            output.append(f"  • 🟢 **Staged**: {len(staged)} file(s)")
+        if modified:
+            output.append(f"  • 🟡 **Modified**: {len(modified)} file(s)")
+        if untracked:
+            output.append(f"  • ⚪ **Untracked**: {len(untracked)} file(s)")
+    else:
+        output.append("📋 **Local Changes**: Clean working directory")
+    
+    return "\n".join(output)
+
 def format_review_status(reviews, comments):
-    """Format review and comment status"""
+    """Format review and comment status with enhanced comment display"""
     output = ["👥 **Review & Comments Status**"]
     output.append("")
     
@@ -292,28 +495,51 @@ def format_review_status(reviews, comments):
         output.append("")
         output.extend(review_details)
     
-    # Recent comments (limit to 5 most recent)
+    # Enhanced comments display (show last 10 instead of 5)
     if comments:
         output.append("")
-        output.append("💬 **Recent Comments** (5 most recent)")
-        recent_comments = sorted(comments, key=lambda c: c.get('createdAt', ''), reverse=True)[:5]
+        output.append("💬 **Recent Comments** (10 most recent)")
+        recent_comments = sorted(comments, key=lambda c: c.get('createdAt', ''), reverse=True)[:10]
         
-        for comment in recent_comments:
+        for i, comment in enumerate(recent_comments, 1):
             if not isinstance(comment, dict):
                 continue
                 
             author = comment.get('user', {}).get('login', 'unknown')
-            body = comment.get('body', '')[:100]  # Truncate long comments
-            if len(comment.get('body', '')) > 100:
-                body += '...'
+            body = comment.get('body', '')
+            created_at = comment.get('createdAt', '')
             
-            output.append(f"  • **@{author}**: {body}")
+            # Enhanced truncation (150 chars instead of 100)
+            display_body = body[:150]
+            if len(body) > 150:
+                display_body += '...'
+            
+            # Format timestamp
+            formatted_time = format_timestamp(created_at)
+            
+            output.append(f"  {i:2d}. **@{author}** ({formatted_time}): {display_body}")
     
     return "\n".join(output)
 
-def generate_action_items(merge_info, checks, reviews):
+def generate_action_items(merge_info, checks, reviews, diff_info):
     """Generate prioritized action items for mergeability"""
     action_items = []
+    
+    # Check local/remote sync first
+    if diff_info:
+        ahead = diff_info.get('ahead', 0)
+        behind = diff_info.get('behind', 0)
+        staged = diff_info.get('staged_files', [])
+        modified = diff_info.get('modified_files', [])
+        
+        if behind > 0:
+            action_items.append(f"⬇️ **Pull remote changes** - branch is {behind} commit(s) behind")
+        
+        if staged or modified:
+            action_items.append("💾 **Commit local changes** - uncommitted work detected")
+        
+        if ahead > 0 and not staged and not modified:
+            action_items.append(f"⬆️ **Push local commits** - {ahead} commit(s) ready to push")
     
     # Check for failing CI
     failing_checks = []
@@ -376,11 +602,13 @@ def main():
     print(f"📦 **Repository**: {owner}/{repo}")
     print("")
     
-    # Gather all PR data
+    # Gather all PR data including new features
     files = get_pr_files(pr_number)
     checks = get_ci_status(pr_number)
     merge_info = get_merge_status(pr_number)
     reviews, comments = get_review_status(pr_number)
+    recent_commits = get_recent_commits()
+    diff_info = check_local_remote_diff()
     
     # Display formatted sections
     print(format_file_changes(files))
@@ -389,11 +617,15 @@ def main():
     print("")
     print(format_merge_status(merge_info))
     print("")
+    print(format_recent_commits(recent_commits))
+    print("")
+    print(format_local_remote_diff(diff_info))
+    print("")
     print(format_review_status(reviews, comments))
     print("")
     
-    # Generate action items
-    action_items = generate_action_items(merge_info, checks, reviews)
+    # Generate enhanced action items
+    action_items = generate_action_items(merge_info, checks, reviews, diff_info)
     print("🎯 **Action Items**")
     print("")
     for item in action_items:

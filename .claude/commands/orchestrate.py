@@ -47,8 +47,12 @@ def main():
     task_args = sys.argv[1:]
 
     try:
+        # Use venv Python if available, fallback to system Python
+        venv_python = os.path.join(project_root, "venv", "bin", "python")
+        python_executable = venv_python if os.path.exists(venv_python) else sys.executable
+        
         result = subprocess.run(
-            [sys.executable, unified_script] + task_args, cwd=project_root
+            [python_executable, unified_script] + task_args, cwd=project_root
         )
         return result.returncode
     except Exception as e:

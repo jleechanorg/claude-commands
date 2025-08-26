@@ -9,10 +9,10 @@
 ## 🚨 CRITICAL: BATCH PROCESSING FOR TOKEN OPTIMIZATION
 
 **Token Efficiency**:
-- **Individual runs**: 72 × 4M tokens = 288M tokens ($288/week)
-- **Batch processing**: 15 sessions × 8M tokens = 120M tokens ($120/week)
+- **Individual runs**: 72 × 4M tokens = 288M tokens
+- **Batch processing**: 15 sessions × 8M tokens = 120M tokens
 - **With optimization**: Additional 20-40% savings for clean PRs
-- **Combined savings**: 65-75% reduction ($186-216/week saved)
+- **Combined savings**: 65-75% reduction
 
 ## Usage Examples
 
