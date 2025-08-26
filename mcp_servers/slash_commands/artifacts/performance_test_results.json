@@ -1,0 +1,187 @@
+{
+  "test_results": {
+    "prompt_1": {
+      "prompt": "Create a simple hello world function",
+      "built_in": {
+        "times": [
+          17.551083001308143,
+          40.70079102530144,
+          39.35962499235757
+        ],
+        "stats": {
+          "mean": 32.53716633965572,
+          "median": 39.35962499235757,
+          "min": 17.551083001308143,
+          "max": 40.70079102530144,
+          "stdev": 12.995641652104165
+        },
+        "success_rate": 0.0
+      },
+      "mcp": {
+        "times": [
+          64.41591700422578,
+          71.68316599563695,
+          72.20458399388008
+        ],
+        "stats": {
+          "mean": 69.43455566458094,
+          "median": 71.68316599563695,
+          "min": 64.41591700422578,
+          "max": 72.20458399388008,
+          "stdev": 4.354080808233989
+        },
+        "success_rate": 0.0
+      }
+    },
+    "prompt_2": {
+      "prompt": "Write a function that calculates fibonacci numbers",
+      "built_in": {
+        "times": [
+          37.26120799547061,
+          39.367166988085955,
+          33.22949999710545
+        ],
+        "stats": {
+          "mean": 36.619291660220675,
+          "median": 37.26120799547061,
+          "min": 33.22949999710545,
+          "max": 39.367166988085955,
+          "stdev": 3.1187788410110873
+        },
+        "success_rate": 0.0
+      },
+      "mcp": {
+        "times": [
+          72.76541698956862,
+          73.97487497655675,
+          67.4789999902714
+        ],
+        "stats": {
+          "mean": 71.40643065213226,
+          "median": 72.76541698956862,
+          "min": 67.4789999902714,
+          "max": 73.97487497655675,
+          "stdev": 3.454595614303638
+        },
+        "success_rate": 0.0
+      }
+    },
+    "prompt_3": {
+      "prompt": "Create a basic HTTP server using Python Flask",
+      "built_in": {
+        "times": [
+          30.32920800615102,
+          36.63937500095926,
+          39.057500020135194
+        ],
+        "stats": {
+          "mean": 35.34202767574849,
+          "median": 36.63937500095926,
+          "min": 30.32920800615102,
+          "max": 39.057500020135194,
+          "stdev": 4.50645125703348
+        },
+        "success_rate": 0.0
+      },
+      "mcp": {
+        "times": [
+          68.69070799439214,
+          75.59637498343363,
+          71.97429199004546
+        ],
+        "stats": {
+          "mean": 72.08712498929042,
+          "median": 71.97429199004546,
+          "min": 68.69070799439214,
+          "max": 75.59637498343363,
+          "stdev": 3.454215917567011
+        },
+        "success_rate": 0.0
+      }
+    },
+    "prompt_4": {
+      "prompt": "Implement a binary search tree with insert and search methods",
+      "built_in": {
+        "times": [
+          38.735542009817436,
+          25.087584013817832,
+          39.397999993525445
+        ],
+        "stats": {
+          "mean": 34.407042005720236,
+          "median": 38.735542009817436,
+          "min": 25.087584013817832,
+          "max": 39.397999993525445,
+          "stdev": 8.077681325242402
+        },
+        "success_rate": 0.0
+      },
+      "mcp": {
+        "times": [
+          71.03395802550949,
+          117.54591600038111,
+          73.10791598865762
+        ],
+        "stats": {
+          "mean": 87.22926333818275,
+          "median": 73.10791598865762,
+          "min": 71.03395802550949,
+          "max": 117.54591600038111,
+          "stdev": 26.275461877738916
+        },
+        "success_rate": 0.0
+      }
+    },
+    "prompt_5": {
+      "prompt": "Write a comprehensive unit test for a shopping cart class",
+      "built_in": {
+        "times": [
+          30.42366699082777,
+          40.67445799591951,
+          36.490291997324675
+        ],
+        "stats": {
+          "mean": 35.86280566135732,
+          "median": 36.490291997324675,
+          "min": 30.42366699082777,
+          "max": 40.67445799591951,
+          "stdev": 5.154122950016496
+        },
+        "success_rate": 0.0
+      },
+      "mcp": {
+        "times": [
+          73.08045800891705,
+          73.86608398519456,
+          72.70654200692661
+        ],
+        "stats": {
+          "mean": 73.21769466701274,
+          "median": 73.08045800891705,
+          "min": 72.70654200692661,
+          "max": 73.86608398519456,
+          "stdev": 0.5918275298474589
+        },
+        "success_rate": 0.0
+      }
+    }
+  },
+  "summary": {
+    "builtin_mean": 34.953666668540485,
+    "mcp_mean": 74.67501386223982,
+    "overhead": 39.72134719369934,
+    "builtin_success_rate": 0.0,
+    "mcp_success_rate": 0.0
+  },
+  "test_config": {
+    "prompts": [
+      "Create a simple hello world function",
+      "Write a function that calculates fibonacci numbers",
+      "Create a basic HTTP server using Python Flask",
+      "Implement a binary search tree with insert and search methods",
+      "Write a comprehensive unit test for a shopping cart class"
+    ],
+    "iterations": 3,
+    "timestamp": 1755991845.12538
+  }
+}

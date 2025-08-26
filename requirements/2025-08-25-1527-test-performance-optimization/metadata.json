@@ -1,0 +1,13 @@
+{
+  "id": "test-performance-optimization",
+  "started": "2025-08-25T15:27:00Z",
+  "lastUpdated": "2025-08-25T15:27:00Z",
+  "status": "active",
+  "phase": "setup",
+  "progress": {
+    "discovery": { "answered": 0, "total": 5 },
+    "detail": { "answered": 0, "total": 0 }
+  },
+  "contextFiles": [],
+  "relatedFeatures": ["test_dependency_analyzer", "github_actions_ci", "test_execution_pipeline"]
+}
