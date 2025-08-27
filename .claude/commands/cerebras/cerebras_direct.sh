@@ -36,6 +36,7 @@ fi
 PROMPT=""
 CONTEXT_FILE=""
 DISABLE_AUTO_CONTEXT=false
+SKIP_CODEGEN_SYS_PROMPT=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -51,6 +52,10 @@ while [[ $# -gt 0 ]]; do
             DISABLE_AUTO_CONTEXT=true
             shift
             ;;
+        --skip-codegen-sys-prompt)
+            SKIP_CODEGEN_SYS_PROMPT=true
+            shift
+            ;;
         *)
             PROMPT="$PROMPT $1"
             shift
@@ -61,16 +66,18 @@ done
 # Remove leading space from PROMPT and validate input
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
-# Input validation - prevent command injection
-if [[ "$PROMPT" =~ [\$\`\;\|\&] ]]; then
-    echo "Error: Invalid characters detected in prompt." >&2
+# Input validation - prevent command injection (relaxed for design prompts)
+# Only block the most dangerous patterns while allowing common punctuation
+if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
+    echo "Error: Potentially dangerous command patterns detected in prompt." >&2
     exit 1
 fi
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] <prompt>"
-    echo "  --context-file      Include conversation context from file"
-    echo "  --no-auto-context   Skip automatic context extraction"
+    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] <prompt>"
+    echo "  --context-file           Include conversation context from file"
+    echo "  --no-auto-context        Skip automatic context extraction"
+    echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
     exit 1
 fi
 
@@ -168,44 +175,27 @@ if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
     CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE" 2>/dev/null)
 fi
 
-# Claude Code system prompt for consistency
-SYSTEM_PROMPT="You are an expert software engineer following Claude Code guidelines.
+# Claude Code system prompt for consistency - can be overridden
+if [ "$SKIP_CODEGEN_SYS_PROMPT" = true ]; then
+    SYSTEM_PROMPT="You are an expert technical writer and software architect. Generate comprehensive, detailed documentation with complete sections and no placeholder content. Focus on thorough analysis, specific implementation details, and production-ready specifications."
+else
+    SYSTEM_PROMPT="You are an expert software engineer and code generator. Generate high-quality, production-ready code.
 
-CRITICAL RULES:
-- Be concise, direct, and to the point
-- Minimize output tokens while maintaining quality
-- NEVER add comments unless explicitly asked
-- NEVER create new files unless absolutely necessary
-- Always prefer editing existing files
-- Follow existing code conventions and patterns in the project
-- Use existing libraries already in the project
-- Follow security best practices
-- Assist with defensive security tasks only
+CORE RULES:
+- Generate complete, working code implementations
+- Follow modern best practices and conventions
+- Include proper imports and dependencies
+- Use appropriate error handling
+- Write clean, maintainable code
+- Follow the requested programming language standards
 
-FOLLOWING CONVENTIONS:
-- Check neighboring files and package.json/requirements.txt/Cargo.toml for existing libraries
-- Look at existing components/modules to understand code style before creating new ones
-- Examine imports and surrounding context to maintain framework consistency
-- Consider framework choice, naming conventions, typing patterns from existing code
-- Make changes that are idiomatic to the existing codebase
-
-FILE HANDLING:
-- ALWAYS read files before editing to understand current state
-- Use targeted edits instead of full file replacements
-- Preserve existing functionality unless explicitly asked to change it
-- When creating new components, follow patterns from similar existing components
-
-CODE REFERENCES:
-- When referencing specific functions include pattern: file_path:line_number
-- This helps users navigate to exact locations in the code
-- Example: 'Fixed the auth bug in src/auth/login.py:42'
-
-OUTPUT FORMAT:
-- Output code only unless explanation requested
-- No preamble or postamble
-- No unnecessary commentary
-- Just the code that solves the task
-- Include file_path:line references when mentioning specific code locations"
+OUTPUT REQUIREMENTS:
+- Generate actual code, not references or instructions
+- Provide complete implementations, not placeholders
+- Include all necessary imports and setup
+- Make code production-ready and functional
+- Focus on code generation, not tool usage or file operations"
+fi
 
 # User task
 if [ -n "$CONVERSATION_CONTEXT" ]; then
@@ -238,7 +228,7 @@ HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
       {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
       {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
     ],
-    \"max_tokens\": 32768,
+    \"max_tokens\": 1000000,
     \"temperature\": 0.1,
     \"stream\": false
   }") || CURL_EXIT=$?
@@ -279,9 +269,23 @@ fi
 # Count lines in generated content
 LINE_COUNT=$(echo "$CONTENT" | wc -l | tr -d ' ')
 
+# Get branch name for output directory
+CURRENT_BRANCH=$(git -C "$SCRIPT_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+OUTPUT_DIR="/tmp/${CURRENT_BRANCH}"
+mkdir -p "$OUTPUT_DIR"
+
+# Generate timestamp for unique filename
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+OUTPUT_FILE="${OUTPUT_DIR}/cerebras_output_${TIMESTAMP}.md"
+
+# Write content to file and also display
+echo "$CONTENT" > "$OUTPUT_FILE"
+
 # Show timing at the beginning with line count
 echo ""
 echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+echo ""
+echo "Output saved to: $OUTPUT_FILE"
 echo ""
 echo "$CONTENT"
 
