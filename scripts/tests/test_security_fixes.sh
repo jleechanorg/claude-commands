@@ -7,7 +7,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 
 # Color codes
 RED='\033[0;31m'
@@ -54,32 +54,32 @@ run_test() {
 
 # Test 1: Hostname Validation - Valid Hostname
 run_test "Valid hostname validation" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_hostname 'test-host.local'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_hostname 'test-host.local'" \
     "pass"
 
 # Test 2: Hostname Validation - Invalid Hostname (should fail)
 run_test "Invalid hostname validation (path injection)" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_hostname 'test; rm -rf /'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_hostname 'test; rm -rf /'" \
     "fail"
 
 # Test 3: Hostname Validation - Invalid Hostname with special chars (should fail)
 run_test "Invalid hostname validation (special chars)" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_hostname 'test\$(rm -rf /)'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_hostname 'test\$(rm -rf /)'" \
     "fail"
 
 # Test 4: Path Validation - Valid Path
 run_test "Valid path validation" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_path '/tmp/valid/path' 'test context'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_path '/tmp/valid/path' 'test context'" \
     "pass"
 
 # Test 5: Path Validation - Path Traversal Attack (should fail)
 run_test "Path traversal validation (../ attack)" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_path '/tmp/../../../etc/passwd' 'test context'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_path '/tmp/../../../etc/passwd' 'test context'" \
     "fail"
 
 # Test 6: Path Validation - Null Byte Injection (should fail)
 run_test "Null byte injection validation" \
-    "source $SCRIPT_DIR/claude_backup.sh && validate_path $'path\x00injection' 'test context'" \
+    "source $SCRIPT_DIR/../claude_backup.sh && validate_path $'path\x00injection' 'test context'" \
     "fail"
 
 # Test 7: Secure Temp Directory Creation
@@ -89,37 +89,37 @@ run_test "Secure temp directory creation with proper permissions" \
 
 # Test 8: Script Sources Create Secure Temp
 run_test "Backup script creates secure temp directory" \
-    "source $SCRIPT_DIR/claude_backup.sh && [[ -d \"\$SECURE_TEMP\" ]] && [[ \$(stat -c %a \"\$SECURE_TEMP\" 2>/dev/null || stat -f %A \"\$SECURE_TEMP\") == \"700\" ]]" \
+    "source $SCRIPT_DIR/../claude_backup.sh && [[ -d \"\$SECURE_TEMP\" ]] && [[ \$(stat -c %a \"\$SECURE_TEMP\" 2>/dev/null || stat -f %A \"\$SECURE_TEMP\") == \"700\" ]]" \
     "pass"
 
 # Test 9: Verify script creates secure temp
 run_test "Verify script creates secure temp directory" \
-    "source $SCRIPT_DIR/verify_backup_cron.sh && [[ -d \"\$SECURE_TEMP\" ]] && [[ \$(stat -c %a \"\$SECURE_TEMP\" 2>/dev/null || stat -f %A \"\$SECURE_TEMP\") == \"700\" ]]" \
+    "source $SCRIPT_DIR/../verify_backup_cron.sh && [[ -d \"\$SECURE_TEMP\" ]] && [[ \$(stat -c %a \"\$SECURE_TEMP\" 2>/dev/null || stat -f %A \"\$SECURE_TEMP\") == \"700\" ]]" \
     "pass"
 
 # Test 10: Secure Credential Function (macOS/Linux compatible)
 run_test "Secure credential retrieval function exists" \
-    "source $SCRIPT_DIR/claude_backup.sh && declare -f get_secure_credential >/dev/null" \
+    "source $SCRIPT_DIR/../claude_backup.sh && declare -f get_secure_credential >/dev/null" \
     "pass"
 
 # Test 11: No hardcoded /tmp in critical functions
 run_test "No hardcoded /tmp paths in backup script critical functions" \
-    "! grep -E '^[^#]*LOG_FILE=\"/tmp/' $SCRIPT_DIR/claude_backup.sh" \
+    "! grep -E '^[^#]*LOG_FILE=\"/tmp/' $SCRIPT_DIR/../claude_backup.sh" \
     "pass"
 
 # Test 12: Validation functions are called
 run_test "Hostname validation is called in get_clean_hostname" \
-    "grep -q 'validate_hostname' $SCRIPT_DIR/claude_backup.sh" \
+    "grep -q 'validate_hostname' $SCRIPT_DIR/../claude_backup.sh" \
     "pass"
 
 # Test 13: Path validation is called for user input
 run_test "Path validation is called for user input" \
-    "grep -q 'validate_path.*command line destination parameter' $SCRIPT_DIR/claude_backup.sh" \
+    "grep -q 'validate_path.*command line destination parameter' $SCRIPT_DIR/../claude_backup.sh" \
     "pass"
 
 # Test 14: Secure credential setup script exists and is executable
 run_test "Secure credential setup script exists and is executable" \
-    "[[ -x $SCRIPT_DIR/setup_secure_credentials.sh ]]" \
+    "[[ -x $SCRIPT_DIR/../setup_secure_credentials.sh ]]" \
     "pass"
 
 # Test 15: MCP integration uses secure path checking
@@ -129,17 +129,17 @@ run_test "MCP integration has secure backup log checking" \
 
 # Test 16: Install script uses secure temp directories
 run_test "Install script has secure temp directory setup" \
-    "grep -q 'SECURE_TEMP.*mktemp -d' $SCRIPT_DIR/install_backup_system.sh" \
+    "grep -q 'SECURE_TEMP.*mktemp -d' $SCRIPT_DIR/../install_backup_system.sh" \
     "pass"
 
 # Test 17: Backup validation script has secure temp
 run_test "Backup validation script has secure temp directory" \
-    "grep -q 'SECURE_TEMP.*mktemp -d' $SCRIPT_DIR/backup_validation.sh" \
+    "grep -q 'SECURE_TEMP.*mktemp -d' $SCRIPT_DIR/../backup_validation.sh" \
     "pass"
 
 # Test 18: No world-readable temp file creation in scripts
 run_test "No direct /tmp file creation in main backup script" \
-    "! grep -E '^[^#]*>/tmp/' $SCRIPT_DIR/claude_backup.sh" \
+    "! grep -E '^[^#]*>/tmp/' $SCRIPT_DIR/../claude_backup.sh" \
     "pass"
 
 echo -e "${BLUE}=== Security Test Results ===${NC}"

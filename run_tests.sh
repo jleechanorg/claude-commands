@@ -574,12 +574,12 @@ if [ ${#test_files[@]} -gt 0 ]; then
     temp_file="$(mktemp -p "${TMPDIR:-/tmp}" worldarchitect_tests.XXXXXX 2>/dev/null \
         || mktemp -t worldarchitect_tests.XXXXXX 2>/dev/null \
         || mktemp 2>/dev/null \
-        || echo "${TMPDIR:-/tmp}/worldarchitect_tests.$$")"
+        )" || { echo "❌ ERROR: Failed to create secure temporary file" >&2; exit 1; }
     
     # Add trap to ensure cleanup even on unexpected exit
     trap 'rm -f "$temp_file"' EXIT
     
-    printf '%s\n' "${test_files[@]}" | sort -u > "$temp_file"
+    printf '%s\n' "${test_files[@]}" | LC_ALL=C sort -u > "$temp_file"
     test_files=()
     while IFS= read -r file; do
         if [ -n "$file" ]; then
