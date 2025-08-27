@@ -86,11 +86,7 @@ local backup_script="$(dirname "$0")/scripts/claude_backup.sh"
 
 #### 1. Excellent Separation of Concerns
 ```
-<<<<<<< HEAD
-├── tests/test_backup_cron_tdd.sh    # TDD testing framework
-=======
-├── test_backup_cron_tdd.sh    # TDD testing framework
->>>>>>> origin/main
+├── scripts/tests/test_backup_cron_tdd.sh    # TDD testing framework
 ├── verify_backup_cron.sh      # Standalone verification
 ├── claude_backup.sh           # Core backup functionality  
 └── claude_mcp.sh              # Integration layer
@@ -100,11 +96,7 @@ local backup_script="$(dirname "$0")/scripts/claude_backup.sh"
 **Benefit**: Maintainable, testable, modular design
 
 #### 2. Proper TDD Implementation
-<<<<<<< HEAD
-**RED-GREEN Methodology**: Well-implemented in `tests/test_backup_cron_tdd.sh`
-=======
-**RED-GREEN Methodology**: Well-implemented in `test_backup_cron_tdd.sh`
->>>>>>> origin/main
+**RED-GREEN Methodology**: Well-implemented in `scripts/tests/test_backup_cron_tdd.sh`
 ```bash
 # RED PHASE: Tests should fail initially
 assert_false "[[ $cron_exists == false ]]" "EXPECTED TO FAIL in RED phase"
