@@ -568,8 +568,26 @@ if [ "$mcp_tests" = true ]; then
 fi
 
 # Remove duplicates and sort
-readarray -t test_files < <(printf '%s\n' "${test_files[@]}" | sort -u)
-
+# Use temp file approach that works on all bash versions (including 3.2+)
+if [ ${#test_files[@]} -gt 0 ]; then
+    # Use a temp file approach that works on GNU/BSD mktemp and falls back safely
+    temp_file="$(mktemp -p "${TMPDIR:-/tmp}" worldarchitect_tests.XXXXXX 2>/dev/null \
+        || mktemp -t worldarchitect_tests.XXXXXX 2>/dev/null \
+        || mktemp 2>/dev/null \
+        || echo "${TMPDIR:-/tmp}/worldarchitect_tests.$$")"
+    
+    # Add trap to ensure cleanup even on unexpected exit
+    trap 'rm -f "$temp_file"' EXIT
+    
+    printf '%s\n' "${test_files[@]}" | sort -u > "$temp_file"
+    test_files=()
+    while IFS= read -r file; do
+        if [ -n "$file" ]; then
+            test_files+=("$file")
+        fi
+    done < "$temp_file"
+    rm -f "$temp_file"
+fi
 print_status "📊 Found ${#test_files[@]} test files to execute"
 
 # Display first few test files as preview
