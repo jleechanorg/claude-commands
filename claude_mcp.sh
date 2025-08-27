@@ -619,6 +619,7 @@ echo ""
 PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
+GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
 
 declare -A BATCH_1=(
     ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
@@ -973,43 +974,55 @@ install_ios_simulator_mcp() {
     fi
 }
 
+# Function to install GitHub MCP server with environment guard
+install_github_mcp() {
+    if [[ "$GITHUB_MCP_ENABLED" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ GitHub MCP server disabled (set GITHUB_MCP_ENABLED=true to enable)${NC}"
+        return 0
+    fi
+    
+    echo -e "${BLUE}  🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
+    log_with_timestamp "Setting up GitHub MCP server with environment guard"
+
+    # Check if server already exists
+    if server_already_exists "github-server"; then
+        echo -e "${GREEN}  ✅ Server github-server already exists, skipping installation${NC}"
+        log_with_timestamp "Server github-server already exists, skipping"
+        INSTALL_RESULTS["github-server"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
+        log_with_timestamp "Adding GitHub official remote MCP server"
+
+        # Remove any old deprecated GitHub server first
+        claude mcp remove "github-server" >/dev/null 2>&1 || true
+
+        # Add the new official GitHub HTTP MCP server
+        add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
+        add_exit_code=$?
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
+            log_with_timestamp "Successfully added GitHub remote MCP server"
+            INSTALL_RESULTS["github-server"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
+            log_error_details "claude mcp add-json" "github-server" "$add_output"
+            echo -e "${RED}  📋 Add error: $add_output${NC}"
+            INSTALL_RESULTS["github-server"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    fi
+}
+
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers with Parallel Processing...${NC}"
 
 display_step "Setting up GitHub MCP Server (Official Remote)..."
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
-echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
-
-if server_already_exists "github-server"; then
-    echo -e "${GREEN}  ✅ Server github-server already exists, skipping installation${NC}"
-    log_with_timestamp "Server github-server already exists, skipping"
-    INSTALL_RESULTS["github-server"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
-    log_with_timestamp "Adding GitHub official remote MCP server"
-
-    # Remove any old deprecated GitHub server first
-    claude mcp remove "github-server" >/dev/null 2>&1 || true
-
-    # Add the new official GitHub HTTP MCP server
-    add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
-    add_exit_code=$?
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
-        log_with_timestamp "Successfully added GitHub remote MCP server"
-        INSTALL_RESULTS["github-server"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
-        log_error_details "claude mcp add-json" "github-server" "$add_output"
-        echo -e "${RED}  📋 Add error: $add_output${NC}"
-        INSTALL_RESULTS["github-server"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-fi
+install_github_mcp
 
 display_step "Installing Batch 1 Servers (Parallel)..."
 install_batch_parallel BATCH_1 "Batch 1"
