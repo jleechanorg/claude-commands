@@ -1,0 +1,13 @@
+{
+  "id": "ios-version",
+  "started": "2025-08-26T19:26:00Z",
+  "lastUpdated": "2025-08-26T19:26:00Z",
+  "status": "active",
+  "phase": "complete",
+  "progress": {
+    "discovery": { "answered": 5, "total": 5 },
+    "detail": { "answered": 5, "total": 5 }
+  },
+  "contextFiles": ["mvp_site/README.md", "mvp_site/README_FOR_AI.md"],
+  "relatedFeatures": []
+}
