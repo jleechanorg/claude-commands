@@ -1,0 +1,179 @@
+
+🚀🚀🚀 CEREBRAS GENERATED IN 1334ms (170 lines) 🚀🚀🚀
+
+Output saved to: /tmp/rename-context-file/cerebras_output_20250827_103323.md
+
+```python
+def fibonacci_memoized(n, memo=None):
+    """
+    Calculate the nth Fibonacci number using memoization to optimize performance.
+    
+    Args:
+        n (int): The position in the Fibonacci sequence (0-indexed)
+        memo (dict, optional): Memoization dictionary to cache computed values
+        
+    Returns:
+        int: The nth Fibonacci number
+        
+    Raises:
+        ValueError: If n is negative
+        TypeError: If n is not an integer
+        
+    Examples:
+        >>> fibonacci_memoized(0)
+        0
+        >>> fibonacci_memoized(1)
+        1
+        >>> fibonacci_memoized(10)
+        55
+        >>> fibonacci_memoized(50)
+        12586269025
+    """
+    # Input validation
+    if not isinstance(n, int):
+        raise TypeError("n must be an integer")
+    if n < 0:
+        raise ValueError("n must be non-negative")
+    
+    # Initialize memoization dictionary if not provided
+    if memo is None:
+        memo = {}
+    
+    # Base cases
+    if n in memo:
+        return memo[n]
+    if n <= 1:
+        return n
+    
+    # Recursive calculation with memoization
+    memo[n] = fibonacci_memoized(n - 1, memo) + fibonacci_memoized(n - 2, memo)
+    return memo[n]
+
+
+# Alternative implementation using a class for persistent memoization
+class FibonacciCalculator:
+    """
+    A class to calculate Fibonacci numbers with memoization.
+    
+    This implementation maintains a persistent cache across method calls.
+    """
+    
+    def __init__(self):
+        """Initialize the calculator with base cases in the memoization cache."""
+        self.memo = {0: 0, 1: 1}
+    
+    def calculate(self, n):
+        """
+        Calculate the nth Fibonacci number using memoization.
+        
+        Args:
+            n (int): The position in the Fibonacci sequence (0-indexed)
+            
+        Returns:
+            int: The nth Fibonacci number
+            
+        Raises:
+            ValueError: If n is negative
+            TypeError: If n is not an integer
+        """
+        # Input validation
+        if not isinstance(n, int):
+            raise TypeError("n must be an integer")
+        if n < 0:
+            raise ValueError("n must be non-negative")
+        
+        # Check if already computed
+        if n in self.memo:
+            return self.memo[n]
+        
+        # Compute all values up to n if not in cache
+        for i in range(len(self.memo), n + 1):
+            self.memo[i] = self.memo[i - 1] + self.memo[i - 2]
+        
+        return self.memo[n]
+    
+    def get_sequence(self, length):
+        """
+        Get a Fibonacci sequence of specified length.
+        
+        Args:
+            length (int): Number of Fibonacci numbers to generate
+            
+        Returns:
+            list: Fibonacci sequence of specified length
+            
+        Raises:
+            ValueError: If length is negative
+            TypeError: If length is not an integer
+        """
+        if not isinstance(length, int):
+            raise TypeError("length must be an integer")
+        if length < 0:
+            raise ValueError("length must be non-negative")
+        
+        return [self.calculate(i) for i in range(length)]
+
+
+# Example usage and testing
+if __name__ == "__main__":
+    # Test the function implementation
+    print("Testing function implementation:")
+    test_cases = [0, 1, 5, 10, 20, 30]
+    for i in test_cases:
+        result = fibonacci_memoized(i)
+        print(f"fibonacci_memoized({i}) = {result}")
+    
+    # Test the class implementation
+    print("\nTesting class implementation:")
+    fib_calc = FibonacciCalculator()
+    for i in test_cases:
+        result = fib_calc.calculate(i)
+        print(f"fib_calc.calculate({i}) = {result}")
+    
+    # Test sequence generation
+    print(f"\nFirst 10 Fibonacci numbers: {fib_calc.get_sequence(10)}")
+    
+    # Performance comparison example
+    import time
+    
+    print("\nPerformance comparison for large n:")
+    n = 35
+    
+    # Without memoization (naive recursive approach)
+    def fibonacci_naive(n):
+        if n <= 1:
+            return n
+        return fibonacci_naive(n - 1) + fibonacci_naive(n - 2)
+    
+    start_time = time.time()
+    try:
+        naive_result = fibonacci_naive(n)
+        naive_time = time.time() - start_time
+        print(f"Naive recursive fibonacci({n}) = {naive_result} (took {naive_time:.4f}s)")
+    except RecursionError:
+        print(f"Naive recursive fibonacci({n}) = RecursionError (too slow)")
+    
+    # With memoization
+    start_time = time.time()
+    memo_result = fibonacci_memoized(n)
+    memo_time = time.time() - start_time
+    print(f"Memoized fibonacci({n}) = {memo_result} (took {memo_time:.6f}s)")
+```
+
+This implementation provides two approaches to calculating Fibonacci numbers with memoization:
+
+1. A standalone function `fibonacci_memoized()` that accepts an optional memo dictionary
+2. A `FibonacciCalculator` class that maintains a persistent memoization cache
+
+Both implementations include:
+- Input validation for type and value constraints
+- Proper memoization to avoid redundant calculations
+- Error handling for edge cases
+- Documentation with examples
+- Efficient computation even for large values of n
+
+The class-based approach is particularly useful when you need to calculate multiple Fibonacci numbers, as it maintains the cache between calls. The function-based approach is more suitable for one-off calculations or when you want to control the memoization scope explicitly.
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ CEREBRAS BLAZING FAST: 1334ms
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
