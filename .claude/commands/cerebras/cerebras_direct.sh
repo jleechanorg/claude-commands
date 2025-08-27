@@ -37,6 +37,7 @@ PROMPT=""
 CONTEXT_FILE=""
 DISABLE_AUTO_CONTEXT=false
 SKIP_CODEGEN_SYS_PROMPT=false
+LIGHT_MODE=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -56,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             SKIP_CODEGEN_SYS_PROMPT=true
             shift
             ;;
+        --light)
+            LIGHT_MODE=true
+            shift
+            ;;
         *)
             PROMPT="$PROMPT $1"
             shift
@@ -68,16 +73,19 @@ PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
 # Input validation - prevent command injection (relaxed for design prompts)
 # Only block the most dangerous patterns while allowing common punctuation
-if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
-    echo "Error: Potentially dangerous command patterns detected in prompt." >&2
-    exit 1
+if [ "$LIGHT_MODE" = false ]; then
+    if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
+        echo "Error: Potentially dangerous command patterns detected in prompt." >&2
+        exit 1
+    fi
 fi
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] <prompt>"
+    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] [--light] <prompt>"
     echo "  --context-file           Include conversation context from file"
     echo "  --no-auto-context        Skip automatic context extraction"
     echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
+    echo "  --light                  Use light mode (no system prompts and no security filtering)"
     exit 1
 fi
 
@@ -176,7 +184,9 @@ if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
 fi
 
 # Claude Code system prompt for consistency - can be overridden
-if [ "$SKIP_CODEGEN_SYS_PROMPT" = true ]; then
+if [ "$LIGHT_MODE" = true ]; then
+    SYSTEM_PROMPT=""
+elif [ "$SKIP_CODEGEN_SYS_PROMPT" = true ]; then
     SYSTEM_PROMPT="You are an expert technical writer and software architect. Generate comprehensive, detailed documentation with complete sections and no placeholder content. Focus on thorough analysis, specific implementation details, and production-ready specifications."
 else
     SYSTEM_PROMPT="You are an expert software engineer and code generator. Generate high-quality, production-ready code.
@@ -218,16 +228,26 @@ START_TIME=$(date +%s%N)
 # Direct API call to Cerebras with error handling and timeouts
 # Prevent set -e from aborting on curl errors so we can map them explicitly
 CURL_EXIT=0
+
+# Prepare messages array - include system prompt only if it's not empty
+if [ -n "$SYSTEM_PROMPT" ]; then
+    MESSAGES="[
+      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ]"
+else
+    MESSAGES="[
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ]"
+fi
+
 HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
   -d "{
     \"model\": \"qwen-3-coder-480b\",
-    \"messages\": [
-      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
-      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-    ],
+    \"messages\": $MESSAGES,
     \"max_tokens\": 1000000,
     \"temperature\": 0.1,
     \"stream\": false
