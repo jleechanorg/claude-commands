@@ -1,0 +1,1 @@
+Error: Potentially dangerous command patterns detected in prompt.

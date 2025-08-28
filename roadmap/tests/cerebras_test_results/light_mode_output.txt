@@ -1,0 +1,23 @@
+
+🚀🚀🚀 CEREBRAS GENERATED IN 528ms (14 lines) 🚀🚀🚀
+
+Output saved to: /tmp/feature-cerebras-light-mode/cerebras_output_20250827_215747.md
+
+```python
+def add_numbers(a, b):
+    """
+    Add two numbers together.
+    
+    Args:
+        a (float or int): The first number.
+        b (float or int): The second number.
+    
+    Returns:
+        float or int: The sum of a and b.
+    """
+    return a + b
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ CEREBRAS BLAZING FAST: 528ms
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
