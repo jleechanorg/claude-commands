@@ -36,25 +36,26 @@ if [ -z "$RAW_WORKTREE_NAME" ]; then
     error_exit "Worktree base name cannot be empty. Please provide a name."
 fi
 
-# Prepend "worktree_" to the provided name
+# Prepend "worktree_" to the provided name and make it a sibling directory
 WORKTREE_NAME="worktree_${RAW_WORKTREE_NAME}"
+WORKTREE_PATH="../${WORKTREE_NAME}"
 
 info_message "Attempting to create a new worktree named '$WORKTREE_NAME'..."
 
 # --- 2. Collision Checks ---
 
-# Check 1: Does a directory with this name already exist in the current location?
-if [ -d "$WORKTREE_NAME" ]; then
-    info_message "Directory '$WORKTREE_NAME' already exists. Navigating into it instead of creating a new worktree."
+# Check 1: Does a directory with this name already exist as a sibling?
+if [ -d "$WORKTREE_PATH" ]; then
+    info_message "Directory '$WORKTREE_PATH' already exists as sibling. Navigating into it instead of creating a new worktree."
     
-    if ! cd "$WORKTREE_NAME"; then
-        echo "Error: Failed to navigate into existing directory '$WORKTREE_NAME'." >&2
+    if ! cd "$WORKTREE_PATH"; then
+        echo "Error: Failed to navigate into existing directory '$WORKTREE_PATH'." >&2
         return 1 2>/dev/null || exit 1
     fi
     
     # Verify it's a Git repository/worktree
     if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-        echo "Error: Directory '$WORKTREE_NAME' exists but is not a Git repository/worktree." >&2
+        echo "Error: Directory '$WORKTREE_PATH' exists but is not a Git repository/worktree." >&2
         return 1 2>/dev/null || exit 1
     fi
     
@@ -92,18 +93,18 @@ fi
 
 # --- 3. Create the Worktree ---
 
-# Use 'git worktree add' to create the new worktree.
+# Use 'git worktree add' to create the new worktree as a sibling directory.
 # The first argument is the path (directory name) for the new worktree.
 # The -b flag explicitly tells Git to create a new branch with the specified name.
 # If no starting point is given after the branch name, it defaults to HEAD.
-if git worktree add "$WORKTREE_NAME" -b "$WORKTREE_NAME"; then
-    info_message "Successfully created new Git worktree '$WORKTREE_NAME' at './$WORKTREE_NAME'."
+if git worktree add "$WORKTREE_PATH" -b "$WORKTREE_NAME"; then
+    info_message "Successfully created new Git worktree '$WORKTREE_NAME' at '$WORKTREE_PATH'."
     echo "A new branch '$WORKTREE_NAME' has been created and checked out in this worktree."
     echo ""
 
     # --- 4. Navigate into the new Worktree ---
-    info_message "Navigating into the new worktree directory: './$WORKTREE_NAME'..."
-    cd "$WORKTREE_NAME" || error_exit "Failed to navigate into the new worktree directory."
+    info_message "Navigating into the new worktree directory: '$WORKTREE_PATH'..."
+    cd "$WORKTREE_PATH" || error_exit "Failed to navigate into the new worktree directory."
 
     echo "=============================================="
     echo "✅ Worktree created and navigated to!"
