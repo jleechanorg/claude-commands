@@ -59,6 +59,61 @@ run_test() {
 echo "Testing compose-commands.sh hook..."
 echo "================================="
 
+# RED PHASE: Tests for Bug Fixes - These should FAIL initially
+echo -e "${YELLOW}🔴 RED PHASE: Bug Fix Tests (Should FAIL)${NC}"
+
+# Bug 1: PR number parsing - standalone numbers should not be interpreted as PR numbers  
+run_test "Bug Fix: PR parsing should not match standalone numbers" \
+    "print last 30 unresponded here" \
+    "print last 30 unresponded here"
+
+# Bug 2: SLASH_COMMAND_EXECUTE bypass protection
+run_test "Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match" \
+    "Some text with SLASH_COMMAND_EXECUTE: in middle" \
+    "Some text with SLASH_COMMAND_EXECUTE: in middle"
+
+# Bug 3: Command prefix removal breaks backward compatibility  
+run_test "Bug Fix: Single commands should preserve prefix for compatibility" \
+    '{"prompt": "/fake3"}' \
+    "/fake3"
+
+# Bug 4: Code fencing should be properly formatted
+test_code_fencing() {
+    local broken_fencing
+    broken_fencing=$(grep -c "^!\`" ../../commands/commentfetch.md 2>/dev/null || echo "0")
+    if [[ "$broken_fencing" -gt 0 ]]; then
+        echo -e "${RED}✗${NC} Bug Fix: Code fencing should not start with exclamation-backtick"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    else
+        echo -e "${GREEN}✓${NC} Bug Fix: Code fencing is properly formatted"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
+    TESTS_RUN=$((TESTS_RUN + 1))
+}
+test_code_fencing
+
+# Bug 5: Shell variables should be properly quoted to prevent word splitting
+test_unquoted_variables() {
+    local has_unquoted
+    if grep -q 'printf.*\$cmd_args[^"]' ../mcp_slash_command_executor.sh 2>/dev/null; then
+        has_unquoted=true
+    else
+        has_unquoted=false
+    fi
+    
+    if [[ "$has_unquoted" == "true" ]]; then
+        echo -e "${RED}✗${NC} Bug Fix: Shell variables should be quoted"
+        TESTS_FAILED=$((TESTS_FAILED + 1))
+    else
+        echo -e "${GREEN}✓${NC} Bug Fix: Shell variables are properly quoted"
+        TESTS_PASSED=$((TESTS_PASSED + 1))
+    fi
+    TESTS_RUN=$((TESTS_RUN + 1))
+}
+test_unquoted_variables
+
+echo -e "${YELLOW}🟢 GREEN PHASE: Original Tests (Should PASS)${NC}"
+
 # Test 1: Single command should pass through unchanged (using non-composition command)
 run_test "Single command passes through" \
     '{"prompt": "/help about this problem"}' \

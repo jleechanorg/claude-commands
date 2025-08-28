@@ -6,6 +6,13 @@
 # Read input from stdin (can be JSON or plain text)
 raw_input=$(cat)
 
+# CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
+# Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
+if [[ "$raw_input" == SLASH_COMMAND_EXECUTE:* ]]; then
+    echo "$raw_input"
+    exit 0
+fi
+
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; include PID for uniqueness
@@ -267,7 +274,8 @@ Use these approaches in combination:$all_commands. Apply this to: $text
                 output="$input"
             fi
         else
-            # Single command that's not a composition command passes through unchanged
+            # Single command that's not a composition command - preserve for backward compatibility
+            # Fixed: Don't strip command prefix to maintain compatibility with existing workflows
             output="$input"
         fi
     else

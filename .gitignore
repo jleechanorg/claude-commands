@@ -15,6 +15,12 @@ venv/
 mvp_site/venv/
 test_venv/
 
+# Test artifacts and performance results
+**/performance_test_results.json
+**/artifacts/**
+**/benchmarks/**
+logs/react-mcp-logs.json
+
 # Service account keys
 key.json
 

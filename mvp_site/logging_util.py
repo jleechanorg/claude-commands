@@ -8,14 +8,14 @@ that preserve logger context.
 import logging
 import os
 import subprocess
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
 FATAL = logging.FATAL
 ERROR = logging.ERROR
 WARNING = logging.WARNING
-WARN = logging.WARN
+# WARN is an alias of WARNING; export WARNING only to avoid ambiguity.
 INFO = logging.INFO
 DEBUG = logging.DEBUG
 NOTSET = logging.NOTSET
@@ -78,7 +78,7 @@ class LoggingUtil:
 
     @staticmethod
     def error(
-        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
+        message: str, *args: Any, logger: Union[logging.Logger, None] = None, **kwargs: Any
     ) -> None:
         """
         Log an error message with fire and red dot emojis.
@@ -90,14 +90,14 @@ class LoggingUtil:
             **kwargs: Additional keyword arguments for logging
         """
         enhanced_message = f"{LoggingUtil.ERROR_EMOJI} {message}"
-        if logger:
+        if logger is not None:
             logger.error(enhanced_message, *args, **kwargs)
         else:
             logging.error(enhanced_message, *args, **kwargs)
 
     @staticmethod
     def warning(
-        message: str, *args: Any, logger: Optional[logging.Logger] = None, **kwargs: Any
+        message: str, *args: Any, logger: Union[logging.Logger, None] = None, **kwargs: Any
     ) -> None:
         """
         Log a warning message with warning emoji.
@@ -109,7 +109,7 @@ class LoggingUtil:
             **kwargs: Additional keyword arguments for logging
         """
         enhanced_message = f"{LoggingUtil.WARNING_EMOJI} {message}"
-        if logger:
+        if logger is not None:
             logger.warning(enhanced_message, *args, **kwargs)
         else:
             logging.warning(enhanced_message, *args, **kwargs)
@@ -185,7 +185,11 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
+<<<<<<< HEAD
     def getLogger(name: Optional[str] = None) -> logging.Logger:
+=======
+    def getLogger(name: Union[str, None] = None) -> logging.Logger:
+>>>>>>> origin/main
         """
         Get a logger instance.
 
@@ -250,6 +254,10 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
+<<<<<<< HEAD
 def getLogger(name: Optional[str] = None) -> logging.Logger:
+=======
+def getLogger(name: Union[str, None] = None) -> logging.Logger:
+>>>>>>> origin/main
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
