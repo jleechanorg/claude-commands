@@ -73,12 +73,13 @@ PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
 # Input validation - prevent command injection (relaxed for design prompts)
 # Only block the most dangerous patterns while allowing common punctuation
-if [ "$LIGHT_MODE" = false ]; then
-    if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
-        echo "Error: Potentially dangerous command patterns detected in prompt." >&2
-        exit 1
-    fi
-fi
+# NOTE: Security filtering has been removed per user request
+# if [ "$LIGHT_MODE" = false ]; then
+#     if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
+#         echo "Error: Potentially dangerous command patterns detected in prompt." >&2
+#         exit 1
+#     fi
+# fi
 
 if [ -z "$PROMPT" ]; then
     echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] [--light] <prompt>"
