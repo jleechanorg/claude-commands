@@ -13,6 +13,40 @@ Delegating this task to Cerebras for fast, high-quality code generation.
 - `/c` - Short alias
 - `/cereb` - Alternative short alias
 
+## Cerebras Script Modes
+
+The cerebras_direct.sh script supports two modes of operation:
+
+### Default Mode
+- Uses structured system prompts for consistent code generation
+- Provides comprehensive documentation and error handling in generated code
+- Better for architectural design documents and robust implementations
+- Example: `/cerebras "Create a Python function that adds two numbers"`
+
+### Light Mode (--light flag)
+- Skips system prompts for faster, more direct code generation
+- Focuses on implementation without extensive documentation
+- Includes comprehensive testing strategies in output
+- Better for rapid prototyping and implementation-focused tasks
+- Example: `/cerebras --light "Create a Python function that adds two numbers"`
+
+## When to Use Each Mode
+
+### Use Default Mode When:
+- Generating architectural design documents
+- You need detailed explanations of design decisions
+- You want consistent code quality and structure
+- Working on small tasks where documentation is valued
+- You prefer iterative implementations for stack safety
+
+### Use Light Mode When:
+- You want faster code generation without system prompts
+- Generating implementation-focused design documents
+- You need comprehensive testing strategies included
+- Working on medium to large tasks
+- You encounter rate limiting with default mode
+- You prefer recursive implementations over iterative ones
+
 ## Current Context
 - Working directory: !`pwd`
 - Git status: !`git status --porcelain | head -5`
