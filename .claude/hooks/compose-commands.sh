@@ -179,9 +179,27 @@ command_count=$actual_cmd_count
 # Clean and deduplicate nested commands
 nested_commands=$(echo "$nested_commands" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')
 
+# ENHANCED: Check if we have any valid commands to process
+# Process single commands with composition potential OR multiple commands
+# Single command enhancement: Include more commands that should trigger composition
+single_command_processors="/pr /execute /copilot /orchestrate /research /think /debug /plan /arch /review"
+
+should_process_single_command() {
+    local cmd="$1"
+    # Strip any trailing spaces from input for robust comparison
+    cmd="${cmd% }"
+    # Check if this command should trigger intelligent composition
+    for proc_cmd in $single_command_processors; do
+        if [[ "$cmd" == "$proc_cmd" ]]; then
+            return 0  # Should process
+        fi
+    done
+    return 1  # Should not process
+}
+
 # Prepare intelligent multi-player output
-# Only trigger for multiple commands OR single composition commands with meaningful nested commands
-if [[ $command_count -gt 1 ]] || ( [[ $command_count -eq 1 ]] && [[ "$commands" == "/pr " || "$commands" == "/execute " || "$commands" == "/copilot " || "$commands" == "/orchestrate " ]] && [[ -n "$nested_commands" ]] ); then
+# Trigger for multiple commands OR single commands with composition potential
+if [[ $command_count -gt 1 ]] || ( [[ $command_count -eq 1 ]] && should_process_single_command "${commands%% *}" ); then
     # Build comprehensive command list (detected + nested)
     all_commands="$commands"
     if [[ -n "$nested_commands" ]]; then

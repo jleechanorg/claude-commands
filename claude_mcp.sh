@@ -614,22 +614,24 @@ echo ""
 
 # Define server installation batches for parallel processing
 # Group servers that can be installed concurrently without conflicts
+
+# Environment flags for optional MCP servers (disabled by default for context optimization)
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
+REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
+IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
+GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
+
 declare -A BATCH_1=(
     ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
-    ["playwright-mcp"]="@playwright/mcp"
     ["context7"]="@upstash/context7-mcp"
 )
 
 declare -A BATCH_2=(
-    ["puppeteer-server"]="@modelcontextprotocol/server-puppeteer"
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
 )
 
-# New Batch 3: iOS Simulator and development tools
-declare -A BATCH_3=(
-    ["ios-simulator-mcp"]="ios-simulator-mcp"
-)
+declare -A BATCH_3=()
 
 # Function to install server batch in parallel
 install_batch_parallel() {
@@ -693,8 +695,107 @@ install_batch_parallel() {
     echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
 }
 
-# Function to install iOS Simulator MCP server with special handling
+# Function to install Playwright MCP server with environment guard
+install_playwright_mcp() {
+    if [[ "$PLAYWRIGHT_ENABLED" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ Playwright MCP server disabled (set PLAYWRIGHT_ENABLED=true to enable)${NC}"
+        return 0
+    fi
+    
+    echo -e "${BLUE}  🎭 Installing Playwright MCP server...${NC}"
+    add_mcp_server "playwright-mcp" "@playwright/mcp"
+}
+
+# Function to install React MCP server with environment guard
+install_react_mcp() {
+    if [[ "$REACT_MCP_ENABLED" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ React MCP server disabled (set REACT_MCP_ENABLED=true to enable)${NC}"
+        return 0
+    fi
+
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  ⚛️ Configuring React MCP server for React development...${NC}"
+    log_with_timestamp "Setting up MCP server: react-mcp (local: react-mcp/index.js)"
+
+    # Check if server already exists
+    if server_already_exists "react-mcp"; then
+        echo -e "${GREEN}  ✅ Server react-mcp already exists, skipping installation${NC}"
+        log_with_timestamp "Server react-mcp already exists, skipping"
+        INSTALL_RESULTS["react-mcp"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        return 0
+    fi
+
+    # Get the absolute path to the react-mcp directory
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    REACT_MCP_PATH="$SCRIPT_DIR/react-mcp/index.js"
+    
+    # Check if react-mcp directory exists
+    if [ -f "$REACT_MCP_PATH" ]; then
+        echo -e "${GREEN}  ✅ Found React MCP server at: $REACT_MCP_PATH${NC}"
+        log_with_timestamp "Found React MCP server at: $REACT_MCP_PATH"
+        
+        # Ensure dependencies are installed
+        if [ -f "${SCRIPT_DIR}/react-mcp/package.json" ]; then
+            if [ ! -d "${SCRIPT_DIR}/react-mcp/node_modules" ]; then
+                echo -e "${BLUE}  📦 Installing react-mcp dependencies...${NC}"
+                
+                if [ -f "${SCRIPT_DIR}/react-mcp/package-lock.json" ]; then
+                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" ci 2>&1)
+                else
+                    echo -e "${YELLOW}  ⚠️ No package-lock.json found, using npm install instead${NC}"
+                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" install 2>&1)
+                fi
+                
+                if [ $? -ne 0 ]; then
+                    echo -e "${RED}  ❌ Failed to install react-mcp dependencies${NC}"
+                    log_error_details "npm dependency installation (react-mcp)" "react-mcp" "$dep_output"
+                    update_stats "FAILURE" "react-mcp" "INSTALL_FAILED"
+                    echo -e "${YELLOW}  ⚠️ Skipping react-mcp server addition due to dependency failure${NC}"
+                    return 1
+                fi
+                echo -e "${GREEN}  ✅ Dependencies installed for react-mcp${NC}"
+            fi
+        fi
+        
+        # Remove existing react-mcp server to reconfigure
+        claude mcp remove "react-mcp" >/dev/null 2>&1 || true
+
+        # Add React MCP server
+        echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
+        log_with_timestamp "Attempting to add React MCP server"
+
+        add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
+        if [ $? -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
+            log_with_timestamp "Successfully added React MCP server"
+            INSTALL_RESULTS["react-mcp"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add React MCP server${NC}"
+            log_error_details "claude mcp add react-mcp" "react-mcp" "$add_output"
+            INSTALL_RESULTS["react-mcp"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            return 1
+        fi
+    else
+        echo -e "${RED}  ❌ React MCP server not found at expected path: $REACT_MCP_PATH${NC}"
+        echo -e "${YELLOW}  💡 Run 'git submodule update --init --recursive' to initialize submodules${NC}"
+        log_with_timestamp "ERROR: React MCP server not found at $REACT_MCP_PATH"
+        INSTALL_RESULTS["react-mcp"]="DEPENDENCY_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+}
+
+# Function to install iOS Simulator MCP server with environment guard
 install_ios_simulator_mcp() {
+    if [[ "$IOS_SIMULATOR_ENABLED" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ iOS Simulator MCP server disabled (set IOS_SIMULATOR_ENABLED=true to enable)${NC}"
+        return 0
+    fi
+    
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
     local name="ios-simulator-mcp"
     local TEMP_DIR
     local MCP_SERVERS_DIR
@@ -873,46 +974,61 @@ install_ios_simulator_mcp() {
     fi
 }
 
+# Function to install GitHub MCP server with environment guard
+install_github_mcp() {
+    if [[ "$GITHUB_MCP_ENABLED" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ GitHub MCP server disabled (set GITHUB_MCP_ENABLED=true to enable)${NC}"
+        return 0
+    fi
+    
+    echo -e "${BLUE}  🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
+    log_with_timestamp "Setting up GitHub MCP server with environment guard"
+
+    # Check if server already exists
+    if server_already_exists "github-server"; then
+        echo -e "${GREEN}  ✅ Server github-server already exists, skipping installation${NC}"
+        log_with_timestamp "Server github-server already exists, skipping"
+        INSTALL_RESULTS["github-server"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
+        log_with_timestamp "Adding GitHub official remote MCP server"
+
+        # Remove any old deprecated GitHub server first
+        claude mcp remove "github-server" >/dev/null 2>&1 || true
+
+        # Add the new official GitHub HTTP MCP server
+        add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
+        add_exit_code=$?
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
+            log_with_timestamp "Successfully added GitHub remote MCP server"
+            INSTALL_RESULTS["github-server"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
+            log_error_details "claude mcp add-json" "github-server" "$add_output"
+            echo -e "${RED}  📋 Add error: $add_output${NC}"
+            INSTALL_RESULTS["github-server"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    fi
+}
+
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers with Parallel Processing...${NC}"
 
 display_step "Setting up GitHub MCP Server (Official Remote)..."
 # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
 # The new server is HTTP-based and hosted by GitHub for better reliability and features
-echo -e "${BLUE}🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
-
-if server_already_exists "github-server"; then
-    echo -e "${GREEN}  ✅ Server github-server already exists, skipping installation${NC}"
-    log_with_timestamp "Server github-server already exists, skipping"
-    INSTALL_RESULTS["github-server"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    echo -e "${BLUE}  🔗 Adding GitHub official remote MCP server...${NC}"
-    log_with_timestamp "Adding GitHub official remote MCP server"
-
-    # Remove any old deprecated GitHub server first
-    claude mcp remove "github-server" >/dev/null 2>&1 || true
-
-    # Add the new official GitHub HTTP MCP server
-    add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
-    add_exit_code=$?
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
-        log_with_timestamp "Successfully added GitHub remote MCP server"
-        INSTALL_RESULTS["github-server"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
-        log_error_details "claude mcp add-json" "github-server" "$add_output"
-        echo -e "${RED}  📋 Add error: $add_output${NC}"
-        INSTALL_RESULTS["github-server"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-fi
+install_github_mcp
 
 display_step "Installing Batch 1 Servers (Parallel)..."
 install_batch_parallel BATCH_1 "Batch 1"
+
+display_step "Installing Optional Playwright MCP Server..."
+install_playwright_mcp
 
 display_step "Setting up Memory MCP Server..."
 # Create memory data directory in user's home
@@ -968,13 +1084,10 @@ display_step "Installing Batch 2 Servers (Parallel)..."
 install_batch_parallel BATCH_2 "Batch 2"
 
 display_step "Installing iOS Simulator MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 install_ios_simulator_mcp
 
 display_step "Installing Batch 3 Servers (Development Tools)..."
-# Note: Batch 3 currently only contains iOS Simulator MCP which has special handling above
-# This step is kept for future expansion of development tools
-echo -e "${BLUE}📱 Batch 3 (Development Tools) completed with custom installations${NC}"
+install_batch_parallel BATCH_3 "Batch 3"
 
 display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
@@ -1052,105 +1165,10 @@ else
     fi
 fi
 
-display_step "Checking for Notion MCP Server..."
-if package_exists "@notionhq/notion-mcp-server"; then
-    add_mcp_server "notion-server" "@notionhq/notion-mcp-server"
-elif package_exists "@makenotion/notion-mcp-server"; then
-    add_mcp_server "notion-server" "@makenotion/notion-mcp-server"
-else
-    echo -e "${YELLOW}  ⚠️ Notion MCP server package not found, skipping...${NC}"
-fi
 
 
 display_step "Setting up React MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  ⚛️ Configuring React MCP server for React development...${NC}"
-log_with_timestamp "Setting up MCP server: react-mcp (local: react-mcp/index.js)"
-
-# Check if server already exists
-if server_already_exists "react-mcp"; then
-    echo -e "${GREEN}  ✅ Server react-mcp already exists, skipping installation${NC}"
-    log_with_timestamp "Server react-mcp already exists, skipping"
-    INSTALL_RESULTS["react-mcp"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Get the absolute path to the react-mcp directory
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-    REACT_MCP_PATH="$SCRIPT_DIR/react-mcp/index.js"
-    
-    # Check if react-mcp directory exists
-    if [ -f "$REACT_MCP_PATH" ]; then
-        echo -e "${GREEN}  ✅ Found React MCP server at: $REACT_MCP_PATH${NC}"
-        log_with_timestamp "Found React MCP server at: $REACT_MCP_PATH"
-        
-        # Ensure dependencies are installed without using 'cd'
-        if [ -f "${SCRIPT_DIR}/react-mcp/package.json" ]; then
-            if [ ! -d "${SCRIPT_DIR}/react-mcp/node_modules" ]; then
-                echo -e "${BLUE}  📦 Installing react-mcp dependencies...${NC}"
-                
-                # Check for package-lock.json before using npm ci
-                if [ -f "${SCRIPT_DIR}/react-mcp/package-lock.json" ]; then
-                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" ci 2>&1)
-                else
-                    echo -e "${YELLOW}  ⚠️ No package-lock.json found, using npm install instead${NC}"
-                    dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" install 2>&1)
-                fi
-                
-                dep_exit=$?
-                if [ $dep_exit -ne 0 ]; then
-                    echo -e "${RED}  ❌ Failed to install react-mcp dependencies${NC}"
-                    log_error_details "npm dependency installation (react-mcp)" "react-mcp" "$dep_output"
-                    update_stats "FAILURE" "react-mcp" "INSTALL_FAILED"
-                    # Skip server addition - dependency failure is critical
-                    echo -e "${YELLOW}  ⚠️ Skipping react-mcp server addition due to dependency failure${NC}"
-                    REACT_MCP_SKIP=true
-                else
-                    echo -e "${GREEN}  ✅ Dependencies installed for react-mcp${NC}"
-                    REACT_MCP_SKIP=false
-                fi
-            else
-                REACT_MCP_SKIP=false
-            fi
-        else
-            REACT_MCP_SKIP=false
-        fi
-        
-        # Only add server if dependencies were successful
-        if [ "$REACT_MCP_SKIP" != "true" ]; then
-            # Remove existing react-mcp server to reconfigure
-            claude mcp remove "react-mcp" >/dev/null 2>&1 || true
-
-            # Add React MCP server using discovered Node binary with absolute path
-            echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
-            log_with_timestamp "Attempting to add React MCP server"
-
-            add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
-            add_exit_code=$?
-
-            if [ $add_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
-            echo -e "${BLUE}  📋 Server info:${NC}"
-            echo -e "     • Path: $REACT_MCP_PATH"
-            echo -e "     • Available tools: Create React apps, run dev servers, file operations, package management"
-            echo -e "     • Features: React project management, terminal commands, process tracking"
-            log_with_timestamp "Successfully added React MCP server"
-            INSTALL_RESULTS["react-mcp"]="SUCCESS"
-            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-        else
-            echo -e "${RED}  ❌ Failed to add React MCP server${NC}"
-            log_error_details "claude mcp add react-mcp" "react-mcp" "$add_output"
-            INSTALL_RESULTS["react-mcp"]="ADD_FAILED"
-            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        fi
-        fi  # Close the REACT_MCP_SKIP check
-    else
-        echo -e "${RED}  ❌ React MCP server not found at expected path: $REACT_MCP_PATH${NC}"
-        echo -e "${YELLOW}  💡 Run 'git submodule update --init --recursive' to initialize submodules${NC}"
-        log_with_timestamp "ERROR: React MCP server not found at $REACT_MCP_PATH"
-        INSTALL_RESULTS["react-mcp"]="DEPENDENCY_MISSING"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-fi
+install_react_mcp
 
 display_step "Setting up WorldArchitect MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))

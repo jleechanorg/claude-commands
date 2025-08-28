@@ -59,10 +59,10 @@ run_test() {
 echo "Testing compose-commands.sh hook..."
 echo "================================="
 
-# Test 1: Single command should pass through unchanged
+# Test 1: Single command should pass through unchanged (using non-composition command)
 run_test "Single command passes through" \
-    '{"prompt": "/think about this problem"}' \
-    "/think about this problem"
+    '{"prompt": "/help about this problem"}' \
+    "/help about this problem"
 
 # Test 2: Multiple commands should be detected and composed
 run_test "Multiple commands detected" \
@@ -348,8 +348,8 @@ run_test "Context: Commands at end of pasted content (few commands)" \
 
 # Test 41: Mixed intentional and pasted commands should pass through (detected as pasted)
 run_test "Context: Intentional commands with pasted content" \
-    '{"prompt": "/think about this: Type / to search Pull requests Navigation Menu"}' \
-    "/think about this: Type / to search"
+    '{"prompt": "/help about this: Type / to search Pull requests Navigation Menu"}' \
+    "/help about this: Type / to search"
 
 # Test 42: File paths should not trigger pasted content detection
 run_test "Context: File paths don't trigger pasted detection" \
@@ -411,6 +411,76 @@ run_test "Security: Boundary detection with special chars" \
 run_test "Security: Prevent grep failures with problematic patterns" \
     '{"prompt": "/test( /debug) normal text"}' \
     "🔍 Detected slash commands:/test /debug"
+
+# Test 52: Single slash command in natural language - research
+run_test "Single command: Research in natural language" \
+    '{"prompt": "I want you to do /research and figure out X"}' \
+    "🔍 Detected slash commands:/research"
+
+# Test 53: Single slash command at beginning - research  
+run_test "Single command: Research at beginning" \
+    '{"prompt": "/research the latest AI trends"}' \
+    "🔍 Detected slash commands:/research"
+
+# Test 54: Single slash command at end - think
+run_test "Single command: Think command at end" \
+    '{"prompt": "Help me understand this using /think"}' \
+    "🔍 Detected slash commands:/think"
+
+# Test 55: Non-composition command should pass through
+run_test "Single command: Help should pass through unchanged" \
+    '{"prompt": "Can you /help me with this?"}' \
+    "Can you /help me with this?"
+
+# Test 56: Debug command with natural language 
+run_test "Single command: Debug with context preservation" \
+    '{"prompt": "Please /debug the failing test"}' \
+    "🔍 Detected slash commands:/debug"
+
+# Test 57: Plan command embedded in sentence
+run_test "Single command: Plan embedded in natural language" \
+    '{"prompt": "I need you to /plan this feature implementation"}' \
+    "🔍 Detected slash commands:/plan"
+
+# Test 58: Multiple commands with research and think
+run_test "Multiple commands: Research and think combination" \
+    '{"prompt": "/research this topic and /think about implications"}' \
+    "🔍 Detected slash commands:/research /think"
+
+# Test 59: Context preservation with complex sentence
+run_test "Single command: Complex context preservation" \
+    '{"prompt": "I want you to do /research and figure out the latest developments in quantum computing, then summarize"}' \
+    "quantum computing"
+
+# Test 60: Single composition command triggers main logic (now processed by enhanced system)
+run_test "Enhanced: /execute command triggers composition" \
+    '{"prompt": "/execute implement user auth"}' \
+    "🔍 Detected slash commands:/execute"
+
+# Test 61: Legacy composition command (not in enhanced list) with nested should trigger fallback logic
+run_test "Legacy: /status command with nested should use fallback" \
+    '{"prompt": "/status check progress"}' \
+    "/status check progress"
+
+# Test 62: Single non-composition command should pass through unchanged
+run_test "Legacy: Non-composition command passes through" \
+    '{"prompt": "/list all files"}' \
+    "/list all files"
+
+# Test 63: Another enhanced composition command triggers main logic
+run_test "Enhanced: /copilot triggers main composition logic" \
+    '{"prompt": "/copilot fix the failing tests"}' \
+    "🔍 Detected slash commands:/copilot"
+
+# Test 64: Robustness - function should work without trailing spaces (FIXED)
+run_test "Robustness: Command detection without format dependency" \
+    '{"prompt": "/research quantum computing"}' \
+    "🔍 Detected slash commands:/research"
+
+# Test 65: Edge case - single command parameter handling (FIXED)
+run_test "Robustness: Function handles single command extraction properly" \
+    '{"prompt": "/debug this issue"}' \
+    "🔍 Detected slash commands:/debug"
 
 # Summary
 echo "================================="

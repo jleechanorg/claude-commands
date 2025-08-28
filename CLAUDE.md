@@ -745,6 +745,12 @@ git push
 4. **Batch Operations** - MultiEdit for multiple changes
 5. **Bash Fallback** - Only when other tools insufficient
 
+🎯 **Auto-Optimization Rules** (Apply Every Session):
+- **Git Batching**: Combine `git status`, `git branch`, `git diff` into single calls
+- **MCP Substitution**: `Grep` → `mcp__serena__search_for_pattern` for code searches  
+- **Read Limits**: Auto-apply `limit=1000` for large files
+- **Session Init**: Use Serena MCP for first 3 codebase operations
+
 ⚡ **Session Longevity** (Layer 2 - 60% Impact):
 - **Auto-checkpoint** at 80% context usage
 - **Warning alerts** at 60% context usage  

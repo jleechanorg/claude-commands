@@ -37,6 +37,10 @@ class TestMCPServerHealth(unittest.TestCase):
         
     def test_react_mcp_server_exists(self):
         """Test that react-mcp server is properly installed and configured."""
+        # Skip if React MCP is not enabled
+        if os.environ.get('REACT_MCP_ENABLED') != 'true':
+            self.skipTest("React MCP server disabled (set REACT_MCP_ENABLED=true to enable)")
+            
         # Check if react-mcp directory exists
         react_mcp_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
@@ -106,32 +110,45 @@ class TestMCPServerHealth(unittest.TestCase):
         if not os.path.exists(self.mcp_config_path):
             self.skipTest(f"MCP config not found at {self.mcp_config_path} - likely CI environment")
             
+        # Core required servers (always enabled)
         required_servers = [
-            'react-mcp',
-            'worldarchitect-game',
             'sequential-thinking',
-            'puppeteer-server',
             'context7',
             'gemini-cli-mcp',
             'github-server',
-            'playwright-mcp',
             'filesystem',
             'serena',
-            'notion-server',
             'memory-server',
-            'perplexity-ask'
+            'perplexity-ask',
+            'worldarchitect'
         ]
+        
+        # Optional servers (enabled by environment variables)
+        optional_servers = {
+            'react-mcp': 'REACT_MCP_ENABLED',
+            'playwright-mcp': 'PLAYWRIGHT_ENABLED', 
+            'ios-simulator-mcp': 'IOS_SIMULATOR_ENABLED'
+        }
         
         with open(self.mcp_config_path, 'r') as f:
             config = json.load(f)
             
         mcpServers = config.get('mcpServers', {})
         
+        # Check required servers
         for server in required_servers:
             self.assertIn(
                 server, mcpServers,
-                f"Server {server} not found in MCP config"
+                f"Required server {server} not found in MCP config"
             )
+        
+        # Check optional servers only if environment variables are set
+        for server, env_var in optional_servers.items():
+            if os.environ.get(env_var) == 'true':
+                self.assertIn(
+                    server, mcpServers,
+                    f"Optional server {server} not found in MCP config (enabled by {env_var}=true)"
+                )
             
     def test_claude_mcp_script_success(self):
         """Test that claude_mcp.sh script runs successfully."""
@@ -163,6 +180,10 @@ class TestMCPServerHealth(unittest.TestCase):
         
     def test_react_mcp_dependencies_installed(self):
         """Test that react-mcp has all dependencies installed."""
+        # Skip if React MCP is not enabled
+        if os.environ.get('REACT_MCP_ENABLED') != 'true':
+            self.skipTest("React MCP server disabled (set REACT_MCP_ENABLED=true to enable)")
+            
         react_mcp_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
             "react-mcp"
