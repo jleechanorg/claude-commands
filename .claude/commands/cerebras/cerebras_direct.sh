@@ -71,16 +71,6 @@ done
 # Remove leading space from PROMPT and validate input
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
-# Input validation - prevent command injection (relaxed for design prompts)
-# Only block the most dangerous patterns while allowing common punctuation
-# NOTE: Security filtering has been removed per user request
-# if [ "$LIGHT_MODE" = false ]; then
-#     if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
-#         echo "Error: Potentially dangerous command patterns detected in prompt." >&2
-#         exit 1
-#     fi
-# fi
-
 if [ -z "$PROMPT" ]; then
     echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] [--light] <prompt>"
     echo "  --context-file           Include conversation context from file"
@@ -210,17 +200,33 @@ fi
 
 # User task
 if [ -n "$CONVERSATION_CONTEXT" ]; then
-    USER_PROMPT="$CONVERSATION_CONTEXT
+    if [ -n "$SYSTEM_PROMPT" ]; then
+        USER_PROMPT="$CONVERSATION_CONTEXT
 
 ---
 
 Task: $PROMPT
 
 Generate the code following the above guidelines with full awareness of the conversation context above."
+    else
+        USER_PROMPT="$CONVERSATION_CONTEXT
+
+---
+
+Task: $PROMPT
+
+Generate the code with full awareness of the conversation context above."
+    fi
 else
-    USER_PROMPT="Task: $PROMPT
+    if [ -n "$SYSTEM_PROMPT" ]; then
+        USER_PROMPT="Task: $PROMPT
 
 Generate the code following the above guidelines."
+    else
+        USER_PROMPT="Task: $PROMPT
+
+Generate the code."
+    fi
 fi
 
 # Start timing

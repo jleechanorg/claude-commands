@@ -276,24 +276,23 @@ class TestCerebrasDirectScript(unittest.TestCase):
         self.assertIn("CEREBRAS_API_KEY", output)
         self.assertEqual(result.returncode, 2)  # Should exit with code 2 for API key error
     
-    def test_input_validation_prevents_injection(self):
-        """Test that script prevents command injection"""
-        dangerous_inputs = [
-            "test; rm -rf /",
-            "test `rm -rf /`", 
-            "test | rm -rf /",
-            "test && rm -rf /"
-        ]
+    def test_light_mode_flag_recognized(self):
+        """Test that --light flag is recognized"""
+        # Remove API keys to avoid actual calls
+        env = os.environ.copy()
+        env.pop('CEREBRAS_API_KEY', None)
+        env.pop('OPENAI_API_KEY', None)
         
-        for dangerous_input in dangerous_inputs:
-            result = subprocess.run([self.script_path, dangerous_input], capture_output=True, text=True)
-            
-            # Should either reject dangerous input or exit with validation error
-            # Note: Security filtering has been removed per user request, so these might not be caught
-            # But they should still fail due to API key issues, not succeed in injection
-            output = (result.stdout or "") + (result.stderr or "")
-            # In the current implementation, security filtering is disabled so these inputs
-            # might not be rejected. They should still fail due to API key issues.
+        # Run with --light flag
+        result = subprocess.run(
+            [self.script_path, "--light", "test prompt"], 
+            capture_output=True, text=True, env=env
+        )
+        
+        # Should still fail due to missing API key but flag should be recognized
+        output = result.stderr + result.stdout
+        self.assertEqual(result.returncode, 2)  # API key error, not usage error
+        self.assertIn("CEREBRAS_API_KEY", output)
     
     def test_script_syntax_is_valid(self):
         """Test that script has valid bash syntax"""

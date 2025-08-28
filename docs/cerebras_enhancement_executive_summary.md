@@ -15,6 +15,7 @@ This project enhanced the cerebras_direct.sh script with a new `--light` mode fl
   - Bypasses system prompts for more direct code generation
   - Disables security filtering for maximum speed
   - Conditionally omits system message based on LIGHT_MODE flag
+- **Safety Considerations**: Reduced guardrails, requires manual output review
 
 ### 2. Session Token Limit Configuration
 - **Configured Limit**: 260K tokens (increased from previous 20K limit)

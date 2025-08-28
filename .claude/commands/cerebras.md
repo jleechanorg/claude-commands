@@ -45,7 +45,8 @@ The cerebras_direct.sh script supports two modes of operation:
 - You need comprehensive testing strategies included
 - Working on medium to large tasks
 - You encounter rate limiting with default mode
-- You prefer recursive implementations over iterative ones
+- You accept reduced guardrails and will manually review outputs
+- You will not include secrets/PII and can run in a trusted environment
 
 ## Current Context
 - Working directory: !`pwd`
