@@ -74,8 +74,17 @@ release_lock() {
     fi
 }
 
-# Ensure lock is released on exit
-trap 'release_lock' EXIT INT TERM
+# Unified cleanup to ensure resources are released and message logged
+cleanup() {
+    # Log if interrupted (INT/TERM) or on normal exit (EXIT)
+    log "Cleaning up before exit (signal or normal termination)"
+    release_lock
+}
+
+# Register a single cleanup trap for EXIT, INT and TERM. If other traps are
+# defined elsewhere, this appends to them rather than overwriting.
+# shellcheck disable=SC206 trap arguments split intentionally
+trap 'cleanup' EXIT INT TERM
 
 # Validate prerequisites
 validate_environment() {
@@ -367,8 +376,8 @@ main() {
     log "Repository location: $REPO_DIR"
 }
 
-# Handle signals for cleanup
-trap 'log "Backup interrupted"; release_lock; exit 1' INT TERM
+# Previous signal-specific trap is no longer necessary because the unified
+# cleanup trap above handles both normal exits and interruptions.
 
 # Run main function
 main "$@"
