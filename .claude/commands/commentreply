@@ -1,6 +1,9 @@
 #!/bin/bash
-# /commentreply command - invokes commentreply.md directly
-# No Python needed - Claude reads the .md file and executes
+# /commentreply command - systematic PR comment processing with proper threading
+# Implements the functionality documented in commentreply.md
 
-echo "Running /commentreply - Claude will read commentreply.md for instructions"
-echo "This command works directly through the .md file - no Python middleman!"
+echo "🚀 EXECUTING: /commentreply systematic comment processing"
+echo "📋 PURPOSE: Process ALL PR comments with GitHub API threading"
+
+# Execute the Python implementation
+python3 "$(dirname "$0")/commentreply.py" "$@"
