@@ -32,14 +32,13 @@ Until: Success criteria fully met
 **LOOP UNTIL CONVERGED OR MAX ITERATIONS REACHED (Default: 10 iterations)**:
 
 #### Step 1: Intelligent Autonomous Goal Definition and Context Setup
-**Command**: Goal Processing Agent - Intelligently define goals with smart defaults and autonomous analysis
-- **ENHANCED CONTEXT OPTIMIZATION**: Use goal-processor agent for minimal context consumption
-- **Agent Execution**: Use Task tool with goal-processor agent from .claude/agents/goal-processor.md
+**Command**: Goal Processing - Intelligently define goals with smart defaults and autonomous analysis
+- **ENHANCED CONTEXT OPTIMIZATION**: Use direct goal processing for minimal context consumption
+- **Method**: Direct inline goal analysis with structured output
 - **Output**: Structured goal-spec.json in /tmp/converge/{branch}/session-{timestamp}/
-- **Context Savings**: 90% reduction (5K tokens vs 50K+ tokens for inline processing)
+- **Context Savings**: Optimized direct processing approach
 - **Integration**: Load goal specification for subsequent phases without accumulating context
-- **Benefits**: Isolated processing, structured analysis, persistent storage, parallel capability
-- **Fallback**: Use inline goal analysis if agent unavailable
+- **Benefits**: Direct processing, structured analysis, persistent storage
 - Generate structured success criteria based on goal analysis and pattern recognition
 - Establish validation methods and completion thresholds using established frameworks
 - Create goal tracking structure with evidence requirements following proven patterns
@@ -290,7 +289,7 @@ Result: Builds feature incrementally with validation at each step
 
 ### Agent-Based Architecture
 **Independent Processing Agents**:
-- **Goal Processor**: `.claude/agents/goal-processor.md` - Isolated goal analysis (5K tokens)
+- **Goal Processing**: Direct inline goal analysis with structured output
 - **Planning Agent**: Future enhancement for command selection and sequencing
 - **Execution Agents**: Parallel task execution with minimal shared context
 - **Validation Agent**: Success criteria checking with targeted file access

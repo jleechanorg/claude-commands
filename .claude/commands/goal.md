@@ -15,11 +15,10 @@
 ### Goal Definition Protocol
 When defining a new goal, the system:
 
-1. **Goal Processing Agent**: Use standalone agent for structured goal analysis
-   - **Agent**: `goal-processor` - Process goal with minimal context using Task tool
+1. **Goal Processing**: Use direct analysis for structured goal processing
+   - **Method**: Inline goal analysis with structured output
    - **Output**: Structured goal analysis with success criteria
-   - **Benefits**: 5K token maximum context, persistent storage, standardized format
-   - **Fallback**: Use inline goal analysis if agent unavailable
+   - **Benefits**: Direct processing, persistent storage, standardized format
 
 2. **Memory MCP Integration**: Search and integrate with persistent knowledge
    - **Command**: `mcp__memory-server__search_nodes` - Search for related goals and patterns
@@ -33,8 +32,8 @@ When defining a new goal, the system:
    - Use base guidelines for goal quality standards and anti-patterns
    - Ensure goal aligns with project protocols and best practices
 
-4. **Load Agent Output**: Parse structured goal-spec.json from agent
-5. **Validate and Enhance**: Verify agent output and add context-specific enhancements
+4. **Process Goal Structure**: Parse structured goal specification
+5. **Validate and Enhance**: Verify output and add context-specific enhancements
 6. **Memory Persistence**: Captures goal definition in persistent knowledge graph with machine-readable patterns
    - **Command**: `mcp__memory-server__create_entities` - Create goal entity with structured metadata
      - **Entity Type**: `goal_pattern` with template classification and complexity scoring
