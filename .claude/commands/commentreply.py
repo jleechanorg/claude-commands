@@ -115,16 +115,43 @@ def get_git_commit_hash() -> str:
     success, commit_hash, _ = run_command(["git", "rev-parse", "--short", "HEAD"])
     return commit_hash.strip() if success else "unknown"
 
+def detect_comment_type(comment: Dict) -> str:
+    """Detect if comment is an issue comment or review comment"""
+    # Review comments have path, position, diff_hunk fields
+    # Issue comments do not have these fields
+    if comment.get("path") or comment.get("position") or comment.get("diff_hunk"):
+        return "review"
+    # Check URL pattern as backup detection method
+    html_url = comment.get("html_url", "")
+    if "#discussion_r" in html_url:
+        return "review"
+    elif "#issuecomment-" in html_url:
+        return "issue"
+    # Default to review for backward compatibility
+    return "review"
+
 def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
-    """Create a threaded reply to a PR comment using GitHub API"""
+    """Create a threaded reply to a PR comment using appropriate GitHub API"""
     comment_id = comment.get("id")
+    comment_type = detect_comment_type(comment)
 
-    print(f"🔗 CREATING: Threaded reply to comment #{comment_id}")
+    print(f"🔗 CREATING: Threaded reply to {comment_type} comment #{comment_id}")
 
-    # Prepare the API call data
+    if comment_type == "issue":
+        return create_issue_comment_reply(owner, repo, pr_number, comment_id, response_text)
+    else:
+        return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text)
+
+def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str) -> bool:
+    """Create a reply to an issue comment (general PR discussion)"""
+    print(f"📝 POSTING: Issue comment reply to #{comment_id}")
+
+    # Issue comments cannot be threaded directly, so we create a new issue comment
+    # with a reference to the original comment
+    reply_text = f"> In response to [comment #{comment_id}](https://github.com/{owner}/{repo}/pull/{pr_number}#issuecomment-{comment_id}):\n\n{response_text}"
+
     reply_data = {
-        "body": response_text,
-        "in_reply_to": comment_id
+        "body": reply_text
     }
 
     # Use secure JSON input with temporary file to prevent shell injection
@@ -135,7 +162,56 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
             json.dump(reply_data, temp_file)
             temp_file_path = temp_file.name
 
-        # Use secure subprocess call with proper argument separation
+        # Use issues endpoint for issue comments
+        success, response_json, stderr = run_command([
+            "gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments",
+            "--method", "POST",
+            "--header", "Content-Type: application/json",
+            "--header", "Accept: application/vnd.github+json",
+            "--input", temp_file_path
+        ])
+
+        # Clean up temporary file
+        import os
+        os.unlink(temp_file_path)
+
+    except Exception as e:
+        print(f"❌ ERROR: Failed to create secure JSON input: {e}")
+        return False
+
+    if success:
+        try:
+            response_data = json.loads(response_json)
+            reply_id = response_data.get("id")
+            reply_url = response_data.get("html_url")
+
+            print(f"✅ SUCCESS: Issue comment reply #{reply_id} created for comment #{comment_id}")
+            print(f"🔗 URL: {reply_url}")
+            return True
+        except json.JSONDecodeError:
+            print(f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}")
+            return True
+    else:
+        print(f"❌ ERROR: Failed to create issue comment reply for #{comment_id}")
+        print(f"   Error: {stderr}")
+        return False
+
+def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str) -> bool:
+    """Create a threaded reply to a review comment (code-specific)"""
+    print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
+
+    # Prepare the API call data for review comment threading
+    reply_data = {
+        "body": response_text,
+        "in_reply_to": comment_id
+    }
+
+    try:
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
+            json.dump(reply_data, temp_file)
+            temp_file_path = temp_file.name
+
+        # Use pulls/comments endpoint for review comment threading
         success, response_json, stderr = run_command([
             "gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments",
             "--method", "POST",
@@ -158,7 +234,7 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
             reply_id = response_data.get("id")
             reply_url = response_data.get("html_url")
 
-            print(f"✅ SUCCESS: Reply #{reply_id} created for comment #{comment_id}")
+            print(f"✅ SUCCESS: Review comment reply #{reply_id} created for comment #{comment_id}")
             print(f"🔗 URL: {reply_url}")
             return True
         except json.JSONDecodeError:
@@ -168,7 +244,7 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
         if "422" in (stderr or ""):
             print(f"↪️ SKIP: GitHub returned 422 (likely attempted reply-to-reply) for #{comment_id}")
             return False
-        print(f"❌ ERROR: Failed to create reply for comment #{comment_id}")
+        print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
         return False
 
