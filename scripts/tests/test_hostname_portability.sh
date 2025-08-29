@@ -2,8 +2,12 @@
 
 # Comprehensive hostname portability test for claude_backup.sh
 # Tests Mac/PC compatibility and integration with backup workflow
+#
+# This test validates the get_clean_hostname function across different platforms,
+# ensuring it properly handles Mac scutil, PC hostname, format cleaning, and
+# integration with the backup workflow.
 
-set -e
+set -euo pipefail
 
 # Color codes for output
 RED='\033[0;31m'
@@ -16,6 +20,19 @@ NC='\033[0m' # No Color
 PASS_COUNT=0
 FAIL_COUNT=0
 
+# Track temp directories for cleanup
+TEMP_DIRS=()
+
+# Cleanup trap for temp directories
+cleanup() {
+    for temp_dir in "${TEMP_DIRS[@]}"; do
+        if [[ -n "$temp_dir" ]] && [[ -d "$temp_dir" ]]; then
+            safe_rm_rf "$temp_dir"
+        fi
+    done
+}
+trap cleanup EXIT
+
 
 # Safe rm wrapper to prevent accidental deletion
 safe_rm_rf() {
@@ -24,8 +41,16 @@ safe_rm_rf() {
         echo "ERROR: Refusing to remove dangerous path: '$target'" >&2
         return 1
     fi
+
+    # Only allow removal of paths under /tmp
+    if [[ "$target" != /tmp/* ]]; then
+        echo "ERROR: safe_rm_rf only allows removal of /tmp paths, got: '$target'" >&2
+        return 1
+    fi
+
     rm -rf "$target"
-}# Assertion functions
+}
+# Assertion functions
 assert_equals() {
     local expected="$1"
     local actual="$2"
@@ -43,8 +68,9 @@ assert_equals() {
 }
 
 # Script directory and sourcing
+# Get repo root for sourcing scripts - ensures proper path resolution
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 echo -e "${BLUE}=== Hostname Portability Integration Test ===${NC}"
 echo "Testing get_clean_hostname function from claude_backup.sh"
 echo ""
@@ -57,7 +83,7 @@ REAL_SCUTIL=$(scutil --get LocalHostName 2>/dev/null || echo "not available")
 # Extract and test the function directly from the main script
 source_hostname_function() {
     # Source the main script in a subshell to avoid execution
-    ( source scripts/claude_backup.sh >/dev/null 2>&1 ) || true
+    ( source "$REPO_ROOT/scripts/claude_backup.sh" >/dev/null 2>&1 ) || true
 
     # Define the function locally for testing (extracted from main script)
     get_clean_hostname() {
@@ -90,7 +116,7 @@ echo "System scutil: $REAL_SCUTIL"
 echo "Clean result: $CURRENT_CLEAN"
 
 # Verify it's cleaned (no spaces, lowercase)
-if [[ "$CURRENT_CLEAN" =~ ^[a-z0-9.-]+$ ]] && [[ ! "$CURRENT_CLEAN" =~ [[:space:]] ]] && [[ ! "$CURRENT_CLEAN" =~ [[:upper:]] ]]; then
+if [[ "$CURRENT_CLEAN" =~ ^[a-z0-9._-]+$ ]] && [[ ! "$CURRENT_CLEAN" =~ [[:space:]] ]] && [[ ! "$CURRENT_CLEAN" =~ [[:upper:]] ]]; then
     assert_equals "valid_format" "valid_format" "Current system hostname is properly cleaned"
 else
     assert_equals "valid_format" "invalid_format" "Current system hostname should be properly cleaned (got: '$CURRENT_CLEAN')"
@@ -160,13 +186,14 @@ echo -e "${YELLOW}=== Test 5: Backup Integration Test ===${NC}"
 
 # Test that the function integrates properly with backup destination creation
 BACKUP_BASE="/tmp/test_backup_$$"
+TEMP_DIRS+=("$BACKUP_BASE")
 mkdir -p "$BACKUP_BASE"
 
 DEVICE_NAME=$(get_clean_hostname)
 BACKUP_DEST="$BACKUP_BASE/claude_backup_$DEVICE_NAME"
 
 # Verify backup destination path is valid
-if [[ -n "$DEVICE_NAME" ]] && [[ "$DEVICE_NAME" =~ ^[a-z0-9\-\.]+$ ]]; then
+if [[ -n "$DEVICE_NAME" ]] && [[ "$DEVICE_NAME" =~ ^[a-z0-9._-]+$ ]]; then
     mkdir -p "$BACKUP_DEST"
     if [[ -d "$BACKUP_DEST" ]]; then
         assert_equals "success" "success" "Backup destination created successfully with clean hostname"
@@ -177,8 +204,8 @@ else
     assert_equals "valid" "invalid" "Device name should be valid for filesystem use"
 fi
 
-# Cleanup test directory
-safe_rm_rf "$BACKUP_BASE"
+# Cleanup handled by trap
+
 
 echo ""
 
@@ -187,6 +214,7 @@ echo -e "${YELLOW}=== Test 6: Real Backup Process Verification ===${NC}"
 
 # Quick verification that our hostname works with the actual backup script
 TEMP_BACKUP_DIR="/tmp/hostname_integration_test_$$"
+TEMP_DIRS+=("$TEMP_BACKUP_DIR")
 mkdir -p "$TEMP_BACKUP_DIR"
 
 # Create minimal test source directory
@@ -215,8 +243,7 @@ else
     assert_equals "success" "mkdir_failed" "Integration test should create destination directory"
 fi
 
-# Cleanup
-safe_rm_rf "$TEMP_BACKUP_DIR"
+# Cleanup handled by trap
 
 echo ""
 
@@ -226,20 +253,33 @@ echo -e "${GREEN}PASSED: $PASS_COUNT${NC}"
 echo -e "${RED}FAILED: $FAIL_COUNT${NC}"
 echo ""
 
-if [[ $FAIL_COUNT -eq 0 ]]; then
-    echo -e "${GREEN}✅ All hostname portability tests passed!${NC}"
-    echo ""
-    echo -e "${BLUE}Summary:${NC}"
-    echo "• Mac detection: ✅ Uses scutil with fallback to hostname"
-    echo "• PC detection: ✅ Uses hostname directly when scutil unavailable"
-    echo "• Format cleaning: ✅ Converts to lowercase, spaces to dashes"
-    echo "• Integration: ✅ Works with backup destination creation"
-    echo "• Real process: ✅ Tested with actual rsync operations"
-    echo ""
-    echo "The claude_backup.sh script now supports reliable cross-platform hostname detection!"
-    exit 0
+# Preserve terminal sessions - avoid exit when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Script is being executed directly, safe to exit
+    if [[ $FAIL_COUNT -eq 0 ]]; then
+        echo -e "${GREEN}✅ All hostname portability tests passed!${NC}"
+        echo ""
+        echo -e "${BLUE}Summary:${NC}"
+        echo "• Mac detection: ✅ Uses scutil with fallback to hostname"
+        echo "• PC detection: ✅ Uses hostname directly when scutil unavailable"
+        echo "• Format cleaning: ✅ Converts to lowercase, spaces to dashes"
+        echo "• Integration: ✅ Works with backup destination creation"
+        echo "• Real process: ✅ Tested with actual rsync operations"
+        echo ""
+        echo "The claude_backup.sh script now supports reliable cross-platform hostname detection!"
+        exit 0
+    else
+        echo -e "${RED}❌ Some hostname portability tests failed!${NC}"
+        echo "Please review the failing tests above."
+        exit 1
+    fi
 else
-    echo -e "${RED}❌ Some hostname portability tests failed!${NC}"
-    echo "Please review the failing tests above."
-    exit 1
+    # Script is being sourced, return instead of exit
+    if [[ $FAIL_COUNT -eq 0 ]]; then
+        echo -e "${GREEN}✅ All hostname portability tests passed!${NC}"
+        return 0
+    else
+        echo -e "${RED}❌ Some hostname portability tests failed!${NC}"
+        return 1
+    fi
 fi
