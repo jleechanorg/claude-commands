@@ -185,6 +185,7 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
             "gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments",
             "--method", "POST",
             "--header", "Content-Type: application/json",
+            "--header", "Accept: application/vnd.github+json",
             "--input", temp_file_path
         ])
 
@@ -209,6 +210,9 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
             print(f"⚠️ WARNING: Reply created but couldn't parse response for comment #{comment_id}")
             return True
     else:
+        if "422" in (stderr or ""):
+            print(f"↪️ SKIP: GitHub returned 422 (likely attempted reply-to-reply) for #{comment_id}")
+            return False
         print(f"❌ ERROR: Failed to create reply for comment #{comment_id}")
         print(f"   Error: {stderr}")
         return False
@@ -313,7 +317,7 @@ def main():
     print("🎯 PURPOSE: Process ALL PR comments with proper threading to prevent missed comment bugs")
 
     # Step 1: Get PR and repo information
-    pr_number = get_current_pr()
+    pr_number = sys.argv[1].strip() if len(sys.argv) > 1 else get_current_pr()
     if not pr_number:
         sys.exit(1)
 
