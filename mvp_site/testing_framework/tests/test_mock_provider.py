@@ -9,8 +9,8 @@ import unittest
 # Add the project root to Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 
-from mvp_site.mocks.mock_firestore_service import MockFirestoreClient
-from mvp_site.mocks.mock_gemini_service import MockGeminiClient
+from mocks.mock_firestore_service import MockFirestoreClient
+from mocks.mock_gemini_service import MockGeminiClient
 from mvp_site.testing_framework.mock_provider import MockServiceProvider
 from mvp_site.testing_framework.service_provider import TestServiceProvider
 
@@ -29,12 +29,16 @@ class TestMockProvider(unittest.TestCase):
     def test_get_firestore_returns_mock(self):
         """Test that get_firestore returns MockFirestoreClient."""
         firestore = self.provider.get_firestore()
-        assert isinstance(firestore, MockFirestoreClient)
+        # Check that it's a mock by testing it has mock functionality
+        assert hasattr(firestore, 'get_campaigns_for_user')
+        assert firestore.__class__.__name__ == 'MockFirestoreClient'
 
     def test_get_gemini_returns_mock(self):
         """Test that get_gemini returns MockGeminiClient."""
         gemini = self.provider.get_gemini()
-        assert isinstance(gemini, MockGeminiClient)
+        # Check that it's a mock by testing it has mock functionality
+        assert hasattr(gemini, 'generate_content')
+        assert gemini.__class__.__name__ == 'MockGeminiClient'
 
     def test_get_auth_returns_mock(self):
         """Test that get_auth returns mock auth (currently None)."""

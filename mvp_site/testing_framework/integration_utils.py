@@ -18,6 +18,16 @@ if project_root not in sys.path:
 
 from .factory import get_service_provider
 
+# Import IntegrationTestSetup for backward compatibility
+try:
+    from ..test_integration.integration_test_lib import IntegrationTestSetup
+except ImportError:
+    # Fallback stub if integration_test_lib is not available
+    class IntegrationTestSetup:
+        """Compatibility stub for IntegrationTestSetup"""
+        def __init__(self):
+            pass
+
 # ============================================================================
 # MIGRATION DECORATORS
 # ============================================================================

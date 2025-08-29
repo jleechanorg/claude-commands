@@ -22,18 +22,27 @@ import sys
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+# Check for MCP dependencies and exit early if not available
 try:
     from mcp_servers.slash_commands.unified_router import create_tools, _execute_slash_command
     from mcp_servers.slash_commands.unified_router import main as server_main
     from fastmcp import FastMCP
     from mcp.types import TextContent
+    MCP_AVAILABLE = True
 except ImportError as e:
-    pytest.skip(f"MCP dependencies not available: {e}", allow_module_level=True)
+    MCP_AVAILABLE = False
+    SKIP_REASON = f"MCP dependencies not available: {e}"
+    
+    # Exit early if running as script (not being collected by pytest)
+    if __name__ == "__main__":
+        print(f"SKIPPED: {SKIP_REASON}")
+        sys.exit(0)
 
 
 class TestMCPCerebrasIntegration:
     """Comprehensive test suite proving MCP cerebras integration works correctly."""
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_tool_availability_and_security(self):
         """
         🔒 SECURITY TEST: Verify only cerebras tool is exposed.
@@ -58,6 +67,7 @@ class TestMCPCerebrasIntegration:
         
         print("✅ Security validated: Only cerebras tool exposed")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_slash_command_execution_pattern(self):
         """
         🎯 PROTOCOL TEST: Verify MCP tool returns SLASH_COMMAND_EXECUTE pattern.
@@ -76,6 +86,7 @@ class TestMCPCerebrasIntegration:
         
         print("✅ SLASH_COMMAND_EXECUTE pattern correct")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_execution_speed_and_format(self):
         """
         ⚡ PERFORMANCE TEST: Verify execution is fast (no 30-second timeouts).
@@ -102,6 +113,7 @@ class TestMCPCerebrasIntegration:
         
         print(f"✅ Execution speed: {execution_time_ms:.1f}ms (expected < 10ms)")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_argument_handling(self):
         """
         📝 ARGUMENT TEST: Verify different argument formats are handled correctly.
@@ -122,6 +134,7 @@ class TestMCPCerebrasIntegration:
         
         print("✅ Argument handling correct for all formats")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_server_initialization(self):
         """
         🚀 SERVER TEST: Verify server can initialize with correct name and tools.
@@ -142,6 +155,7 @@ class TestMCPCerebrasIntegration:
         except Exception as e:
             pytest.fail(f"Server initialization failed: {e}")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_error_conditions(self):
         """
         🛡️ ERROR HANDLING TEST: Verify proper error handling for edge cases.
@@ -162,6 +176,7 @@ class TestMCPCerebrasIntegration:
         
         print("✅ Error handling robust")
     
+    @pytest.mark.skipif(not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else "")
     def test_integration_proof(self):
         """
         🎯 INTEGRATION PROOF: Demonstrate the complete working flow.
@@ -205,6 +220,11 @@ class TestMCPCerebrasIntegration:
 
 
 if __name__ == "__main__":
+    # Only run if not being imported by pytest
+    if not MCP_AVAILABLE:
+        print(f"⚠️  SKIPPING: {SKIP_REASON}")
+        sys.exit(0)
+        
     print("🧪 MCP Cerebras Integration Test Suite")
     print("=" * 50)
     

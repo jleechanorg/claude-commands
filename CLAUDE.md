@@ -775,10 +775,10 @@ git push
 ### Real-Time Optimization Rules:
 
 🔧 **Tool Selection Hierarchy** (Layer 1 - 80% Impact):
-1. **Serena MCP FIRST** - Use `mcp__serena__*` for semantic operations
-2. **Targeted Reads** - Use Read tool with limits (max 5K chars per read)  
-3. **Grep Targeted** - Pattern search before full file reads
-4. **Batch Operations** - MultiEdit for multiple changes
+1. **Serena MCP FIRST** - ALWAYS use `mcp__serena__*` for semantic operations before Read tool
+2. **Targeted Reads** - Use Read tool with `limit=100` parameter (max 100 lines per read)  
+3. **Grep Targeted** - Use `head_limit=10` parameter, pattern search before full file reads
+4. **Batch Operations** - MultiEdit for multiple changes, batch tool calls in single messages
 5. **Bash Fallback** - Only when other tools insufficient
 
 🎯 **Auto-Optimization Rules** (Apply Every Session):
@@ -788,24 +788,35 @@ git push
 - **Session Init**: Use Serena MCP for first 3 codebase operations
 
 ⚡ **Session Longevity** (Layer 2 - 60% Impact):
-- **Auto-checkpoint** at 80% context usage
-- **Warning alerts** at 60% context usage  
+- **Auto-checkpoint** at 60% context usage (not 80%)
+- **Warning alerts** at 40% context usage  
 - **Semantic search** instead of loading multiple comparison files
-- **Streamlined responses** - minimize tool response overhead
+- **Streamlined responses** - count-only outputs, no verbose listings
+- **Remove --verbose flags** from all script executions
 
 🧠 **Workflow Intelligence** (Layer 3 - 40% Impact):  
 - **Predictive alerts** for context exhaustion scenarios
 - **Background monitoring** for continuous optimization
-- **Development velocity** optimized for 18+ minute sessions
+- **Development velocity** optimized for 15-20+ minute sessions
+- **Mental caching** - avoid re-reading same files within session
+
+### Mandatory Behavioral Changes:
+- ✅ **ALWAYS**: Use Serena MCP for code exploration before Read tool
+- ✅ **ALWAYS**: Use `limit` parameter on Read operations (100 lines max)
+- ✅ **ALWAYS**: Use `head_limit` parameter on Grep operations (10 results max)
+- ✅ **ALWAYS**: Batch multiple tool calls in single messages
+- ❌ **NEVER**: Read entire large files without limits
+- ❌ **NEVER**: Use verbose output modes unless debugging specific issues
+- ❌ **NEVER**: Re-read files already examined in current session
 
 ### Context Health Monitoring:
 
-✅ **ACTIVE MONITORING**: Real-time context usage feedback enabled
-✅ **OPTIMIZATION HOOKS**: Pre-command tool selection optimization  
-✅ **AUTOMATED TRIGGERS**: Context checkpointing at thresholds
+✅ **ACTIVE MONITORING**: Real-time context usage feedback via hooks
+✅ **OPTIMIZATION HOOKS**: `pre_command_optimize.py`, `context_monitor.py`, `command_output_trimmer.py`
+✅ **AUTOMATED TRIGGERS**: Context checkpointing at 60% threshold
 ✅ **PERFORMANCE TRACKING**: Session duration and token efficiency metrics
 
-**Usage**: Context optimization runs automatically. Monitor alerts and follow tool hierarchy.
+**Usage**: Context optimization runs automatically via hooks. Follow tool hierarchy and behavioral changes for optimal sessions.
 
 ## Additional Documentation
 

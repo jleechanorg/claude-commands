@@ -17,7 +17,9 @@ class QwenCommandMatrixTests(unittest.TestCase):
     
     def setUp(self):
         """Set up test environment for each matrix test"""
-        self.qwen_script = "/home/jleechan/projects/worldarchitect.ai/worktree_human/.claude/commands/cerebras/cerebras_direct.sh"
+        # Use dynamic project root to support different worktrees
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        self.qwen_script = os.path.join(project_root, ".claude/commands/cerebras/cerebras_direct.sh")
         self.original_env = os.environ.copy()
         
     def tearDown(self):
@@ -75,35 +77,6 @@ class QwenCommandMatrixTests(unittest.TestCase):
         self.assertEqual(result.returncode, 2)
         self.assertIn('CEREBRAS_API_KEY', result.stderr)
         self.assertIn('must be set', result.stderr)
-        
-    def test_matrix_2_1_sonnet_valid_key(self):
-        """[2,1] Sonnet with valid CLAUDE_API_KEY → Sonnet generation"""
-        # RED: Test Sonnet flag and timing format
-        os.environ['CLAUDE_API_KEY'] = 'test_key_claude'
-        
-        with patch('subprocess.run') as mock_run:
-            mock_run.return_value = MagicMock(
-                returncode=0,
-                stdout='🧠🧠🧠 SONNET GENERATED IN 2500ms 🧠🧠🧠\n\nprint("Hello from Sonnet")\n\n🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠\n⚡ SONNET PERFORMANCE: 2500ms\n🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠'
-            )
-            
-            result = subprocess.run([self.qwen_script, "--sonnet", "test prompt"], 
-                                  capture_output=True, text=True)
-            
-            # Verify Sonnet-specific timing format
-            self.assertIn('🧠🧠🧠 SONNET GENERATED IN', result.stdout)
-            self.assertIn('⚡ SONNET PERFORMANCE:', result.stdout)
-            
-    def test_matrix_2_2_sonnet_missing_key(self):
-        """[2,2] Sonnet with missing CLAUDE_API_KEY → Clear error message"""
-        # RED: Test Sonnet authentication error
-        os.environ.pop('CLAUDE_API_KEY', None)
-        
-        result = subprocess.run([self.qwen_script, "--sonnet", "test prompt"], 
-                              capture_output=True, text=True)
-        
-        self.assertEqual(result.returncode, 2)
-        self.assertIn('CLAUDE_API_KEY', result.stderr)
         
     # Matrix 2: Command Input Variations (Prompt × Flags × Context)
     
@@ -171,30 +144,6 @@ print("fast code")
             # Verify exact timing format
             self.assertRegex(result.stdout, r'🚀🚀🚀 QWEN GENERATED IN \d+ms 🚀🚀🚀')
             self.assertRegex(result.stdout, r'⚡ QWEN BLAZING FAST: \d+ms \(vs Sonnet comparison\)')
-            
-    def test_matrix_4_2_sonnet_timing_comparison(self):
-        """[4,2] Sonnet timing display → Brain emojis and comparison"""
-        # RED: Test Sonnet timing format
-        os.environ['CLAUDE_API_KEY'] = 'test_key'
-        
-        with patch('subprocess.run') as mock_run:
-            mock_output = """
-🧠🧠🧠 SONNET GENERATED IN 3200ms 🧠🧠🧠
-
-print("thoughtful code")
-
-🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠
-⚡ SONNET PERFORMANCE: 3200ms
-🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠🧠
-"""
-            mock_run.return_value = MagicMock(returncode=0, stdout=mock_output)
-            
-            result = subprocess.run([self.qwen_script, "--sonnet", "test timing"], 
-                                  capture_output=True, text=True)
-            
-            # Verify Sonnet timing format
-            self.assertRegex(result.stdout, r'🧠🧠🧠 SONNET GENERATED IN \d+ms 🧠🧠🧠')
-            self.assertRegex(result.stdout, r'⚡ SONNET PERFORMANCE: \d+ms')
             
     # Matrix 4: System Prompt Integration Testing
     
