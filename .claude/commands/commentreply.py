@@ -91,34 +91,67 @@ def fetch_all_pr_comments(owner: str, repo: str, pr_number: str) -> List[Dict]:
         print(f"❌ ERROR: Failed to parse comments JSON: {e}")
         return []
 
-def get_claude_response_for_comment(comment: Dict, commit_hash: str) -> str:
+def load_claude_responses(branch_name: str) -> Dict:
     """
-    Get Claude-generated response for a comment.
-    In the modern workflow, Claude analyzes and generates responses,
-    then this Python script handles the posting.
+    Load Claude-generated responses from JSON file.
+    In the modern workflow, Claude analyzes comments, implements fixes,
+    generates responses, and saves them to responses.json for Python to post.
+
+    Args:
+        branch_name: Current git branch name
+
+    Returns:
+        Dictionary containing responses data, empty dict if file not found
+    """
+    responses_file = f"/tmp/{branch_name}/responses.json"
+
+    if not os.path.exists(responses_file):
+        print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_file}")
+        print("⚠️  Claude should have generated responses.json after analyzing comments")
+        return {}
+
+    try:
+        with open(responses_file, 'r') as f:
+            responses_data = json.load(f)
+        print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}")
+        return responses_data
+    except json.JSONDecodeError as e:
+        print(f"❌ ERROR: Failed to parse responses JSON: {e}")
+        return {}
+    except Exception as e:
+        print(f"❌ ERROR: Failed to load responses file: {e}")
+        return {}
+
+def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: str) -> str:
+    """
+    Get Claude-generated response for a specific comment.
 
     Args:
         comment: Comment data from GitHub API
-        commit_hash: Current commit hash for response
+        responses_data: Loaded responses from Claude
+        commit_hash: Current commit hash as fallback
 
     Returns:
-        Claude-generated response text ready for posting
+        Claude-generated response text or placeholder if not found
     """
-    # This function should NOT generate templates!
-    # Instead, it should be called with Claude-provided responses
-    # For now, return a placeholder indicating Claude needs to provide the response
-
-    comment_id = comment.get("id")
+    comment_id = str(comment.get("id"))
     author = comment.get("user", {}).get("login", "unknown")
     body_snippet = comment.get("body", "")[:100]
 
+    # Look for Claude-generated response
+    responses = responses_data.get("responses", [])
+    for response_item in responses:
+        if str(response_item.get("comment_id")) == comment_id:
+            return response_item.get("response", "")
+
+    # If no Claude response found, return placeholder
     return f"""🚨 **CLAUDE RESPONSE NEEDED** (Commit: {commit_hash})
 
 Comment #{comment_id} by @{author}:
 > {body_snippet}...
 
-❌ This response was auto-generated because Claude hasn't provided a technical analysis yet.
-✅ Claude should analyze this comment and provide a specific technical response addressing the issues raised.
+❌ No Claude-generated response found for this comment.
+✅ Claude should analyze this comment and add response to responses.json
 
 **Required**: Claude must read comment content, implement any necessary fixes, and generate appropriate technical response."""
 
@@ -329,6 +362,9 @@ def main():
     commit_hash = get_git_commit_hash()
     print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
 
+    # Step 3: Load Claude-generated responses
+    responses_data = load_claude_responses(branch_name)
+
     for i, comment in enumerate(all_comments, 1):
         comment_id = comment.get("id")
         author = comment.get("user", {}).get("login", "unknown")
@@ -337,8 +373,8 @@ def main():
         print(f"\n[{i}/{len(all_comments)}] Processing comment #{comment_id} by @{author}")
         print(f"   Content: \"{body_snippet}...\"")
 
-        # Generate placeholder response - Claude should provide actual response in modern workflow
-        response_text = get_claude_response_for_comment(comment, commit_hash)
+        # Get Claude-generated response for this comment
+        response_text = get_response_for_comment(comment, responses_data, commit_hash)
 
         # Create threaded reply
         if create_threaded_reply(owner, repo, pr_number, comment, response_text):
