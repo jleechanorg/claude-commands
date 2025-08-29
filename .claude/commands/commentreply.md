@@ -20,8 +20,13 @@
 
 ### Step 3: Automated Posting (Python Execution)
 ```bash
+# Get repo info and pass to Python script
+OWNER=$(gh repo view --json owner --jq .owner.login)
+REPO=$(gh repo view --json name --jq .name)
+PR_NUMBER=$(gh pr view --json number --jq .number)
+
 # Python handles secure API posting with threading
-python3 .claude/commands/commentreply.py [PR_NUMBER]
+python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
 ```
 
 ## 🔧 CLAUDE'S TECHNICAL RESPONSIBILITIES
