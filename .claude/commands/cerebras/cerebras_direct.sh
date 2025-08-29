@@ -66,13 +66,6 @@ done
 # Remove leading space from PROMPT and validate input
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
-# Input validation - prevent command injection (relaxed for design prompts)
-# Only block the most dangerous patterns while allowing common punctuation
-if [[ "$PROMPT" =~ \`.*\` ]] || [[ "$PROMPT" =~ \$\( ]] || [[ "$PROMPT" =~ ^\; ]] || [[ "$PROMPT" =~ \|\| ]]; then
-    echo "Error: Potentially dangerous command patterns detected in prompt." >&2
-    exit 1
-fi
-
 if [ -z "$PROMPT" ]; then
     echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] <prompt>"
     echo "  --context-file           Include conversation context from file"
