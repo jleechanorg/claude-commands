@@ -212,7 +212,7 @@ jleechan2015 wants to merge 6 commits into main from compose-test
 /think about this PR'
 
 # Escape the text properly for JSON
-escaped_pr_text=$(printf '%s' "$pr_page_text" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+escaped_pr_text=$(printf '%s' "$pr_page_text" | sed 's/"/\\"/g' | python3 -c 'import sys; print(repr(sys.stdin.read())[1:-1])')
 run_test "Handles GitHub PR page text with file paths" \
     "{\"prompt\": \"$escaped_pr_text\"}" \
     "/think"
@@ -351,7 +351,7 @@ Checks 3
 Files changed 7
 
 This PR adds comprehensive universal command composition. Test this with /investigate /paranoid /diligent check the system then /commentreply to see results.'
-escaped_github=$(printf '%s' "$pasted_github_text" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+escaped_github=$(printf '%s' "$pasted_github_text" | sed 's/"/\\"/g' | python3 -c 'import sys; print(repr(sys.stdin.read())[1:-1])')
 run_test "Context-aware: Ignore commands in pasted GitHub content" \
     "{\"prompt\": \"$escaped_github\"}" \
     "# fix: Universal command composition hook"  # Should pass through unchanged
@@ -391,7 +391,7 @@ Some other content with /debug embedded
 Files changed 7'
 
 # Escape for JSON
-escaped_content=$(printf '%s' "$github_pr_content" | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+escaped_content=$(printf '%s' "$github_pr_content" | sed 's/"/\\"/g' | python3 -c 'import sys; print(repr(sys.stdin.read())[1:-1])')
 run_test "Context: Commands buried in pasted content ignored" \
     "{\"prompt\": \"$escaped_content\"}" \
     "Skip to content"

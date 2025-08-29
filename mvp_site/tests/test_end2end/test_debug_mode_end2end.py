@@ -180,7 +180,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         """Test Case 3: UI receives correct state when debug mode is ON."""
         # Use the same fake Firestore instance from setUp
         mock_get_db.return_value = self.fake_firestore
-
+        
         # Turn ON debug mode in settings
         debug_settings = {"debug_mode": True}
         response = self.client.post(

@@ -85,21 +85,21 @@ memory_monitor() {
     local monitor_file="$1"
     local log_counter=0
     local start_time=$(date +%s)
-    
+
     # Redirect output to avoid interfering with main script
     exec 3>&1  # Save stdout
     exec 1>/dev/null  # Redirect stdout to null during background monitoring
-    
+
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
         local total_memory=$(get_total_memory_usage_gb)
         local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l 2>/dev/null)
-        
+
         # Log detailed process info every 3 iterations (every 6 seconds)
         if [ $((log_counter % 3)) -eq 0 ]; then
             local elapsed=$((current_time - start_time))
             echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
-            
+
             # Show all Python test processes with memory usage
             local python_procs=$(pgrep -f "python.*test_" 2>/dev/null)
             if [ -n "$python_procs" ]; then
@@ -113,21 +113,21 @@ memory_monitor() {
                 done
             fi
         fi
-        
+
         # Check for memory violations
         if [ "$comparison" = "1" ]; then
             echo -e "${RED}[ERROR]${NC} 🚨 Total memory usage exceeds limit: ${total_memory}GB > ${MEMORY_LIMIT_GB}GB" >&3
             echo -e "${RED}[ERROR]${NC} 💀 Terminating all test processes for memory safety" >&3
-            
+
             # Kill all Python test processes
             pgrep -f "python.*test_" | xargs -r kill -TERM 2>/dev/null || true
             sleep 2
             pgrep -f "python.*test_" | xargs -r kill -KILL 2>/dev/null || true
-            
+
             echo -e "${RED}[ERROR]${NC} ❌ Test execution halted due to memory limit violation" >&3
             break
         fi
-        
+
         # Check individual process limits
         for pid in $(pgrep -f "python.*test_" 2>/dev/null); do
             local mem=$(get_memory_usage_gb "$pid")
@@ -141,11 +141,11 @@ memory_monitor() {
                 kill -KILL "$pid" 2>/dev/null || true
             fi
         done
-        
+
         log_counter=$((log_counter + 1))
         sleep $MONITOR_INTERVAL
     done
-    
+
     # Restore stdout
     exec 1>&3
     exec 3>&-
@@ -179,14 +179,14 @@ print_fail() {
 # Claude settings validation function
 validate_claude_settings() {
     local claude_settings="$PROJECT_ROOT/.claude/settings.json"
-    
+
     print_status "🔒 Running critical Claude settings validation..."
-    
+
     if [ ! -f "$claude_settings" ]; then
         print_error "❌ .claude/settings.json not found"
         return 1
     fi
-    
+
     # Basic JSON validation and key checks using Python
     if ! python3 -c "
 import json, sys
@@ -222,29 +222,29 @@ except Exception as e:
 # Intelligent test selection based on git changes
 intelligent_test_selection() {
     print_status "🔍 Analyzing git changes for intelligent test selection..."
-    
+
     # Create temporary file for selected tests
     local selected_tests_file="/tmp/selected_tests.txt"
     > "$selected_tests_file"  # Clear the file
-    
+
     # Check if we're in a git repository and have origin/main
     if ! git rev-parse --git-dir >/dev/null 2>&1; then
         print_warning "Not in a git repository, falling back to full test suite"
         return 1
     fi
-    
+
     if ! git rev-parse origin/main >/dev/null 2>&1; then
         print_warning "origin/main not found, falling back to full test suite"
         return 1
     fi
-    
+
     # Get list of changed files
     local changed_files
     changed_files=$(git diff --name-only origin/main..HEAD 2>/dev/null) || {
         print_warning "Failed to get git diff, falling back to full test suite"
         return 1
     }
-    
+
     if [ -z "$changed_files" ]; then
         print_warning "No changes detected vs origin/main, running minimal test set"
         # For no changes, run a minimal set of core tests
@@ -256,30 +256,30 @@ intelligent_test_selection() {
     else
         # Analyze changed files and select relevant tests
         local test_patterns=()
-        
+
         # Process each changed file
         while IFS= read -r file; do
             if [ -z "$file" ]; then continue; fi
-            
+
             # Skip certain file types that don't affect tests
             case "$file" in
                 *.md|*.txt|*.yml|*.yaml|*.json|*.gitignore|*.dockerignore)
                     continue ;;
             esac
-            
+
             # Extract base name without extension for test pattern matching
             local base_name=$(basename "$file" | sed 's/\.[^.]*$//')
             local dir_name=$(dirname "$file")
-            
+
             # Add patterns for test file discovery
             test_patterns+=("test_${base_name}.py")
             test_patterns+=("test_*${base_name}*.py")
-            
+
             # If it's a Python file, also look for tests in the same directory
             if [[ "$file" == *.py ]]; then
                 # Add directory-specific test patterns
                 test_patterns+=("${dir_name}/test_*.py")
-                
+
                 # Special handling for common directories
                 case "$dir_name" in
                     mvp_site/*)
@@ -297,7 +297,7 @@ intelligent_test_selection() {
                 esac
             fi
         done <<< "$changed_files"
-        
+
         # Find matching test files
         local found_count=0
         for pattern in "${test_patterns[@]}"; do
@@ -310,18 +310,18 @@ intelligent_test_selection() {
                 fi
             done
         done | sort -u >> "$selected_tests_file"
-        
+
         # Always include core critical tests
         find mvp_site -name "test_core*.py" -o -name "test_basic*.py" -o -name "test_critical*.py" 2>/dev/null >> "$selected_tests_file"
-        
+
         # Remove duplicates and empty lines
         sort -u "$selected_tests_file" | grep -v '^$' > "${selected_tests_file}.tmp" && mv "${selected_tests_file}.tmp" "$selected_tests_file"
     fi
-    
+
     # Check if we found any tests
     local test_count=$(wc -l < "$selected_tests_file" 2>/dev/null || echo "0")
     echo "Selected $test_count tests written to $selected_tests_file"
-    
+
     if [ "$test_count" -eq 0 ]; then
         print_warning "⚠️  Intelligent analysis produced no results, falling back to full suite"
         return 1
@@ -455,7 +455,7 @@ elif [ "$intelligent_mode" = true ] && [ "$mcp_tests" != true ]; then
                 test_files+=("$test_file")
             fi
         done < /tmp/selected_tests.txt
-        
+
         # Double-check we have valid files
         if [ ${#test_files[@]} -eq 0 ]; then
             print_warning "⚠️  No valid test files from intelligent selection, falling back to full suite"
@@ -474,12 +474,12 @@ if [ ${#test_files[@]} -eq 0 ]; then
     else
         print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
     fi
-    
+
     print_status "🔍 Discovering all test files (traditional mode)"
-    
+
     # Standard test discovery - find all test_*.py files
     test_files=($(find mvp_site -name "test_*.py" -type f 2>/dev/null | sort))
-    
+
     # Add .claude/commands tests if directory exists
     if [ -d ".claude/commands/tests" ]; then
         print_status "Including .claude/commands tests..."
@@ -487,7 +487,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find .claude/commands -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add orchestration tests if directory exists
     if [ -d "orchestration/tests" ]; then
         print_status "Including orchestration tests..."
@@ -495,7 +495,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find orchestration -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add claude_command_scripts tests if directory exists
     if [ -d "claude_command_scripts/tests" ]; then
         print_status "Including claude_command_scripts tests..."
@@ -503,7 +503,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find claude_command_scripts -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add claude-bot-commands tests if directory exists
     if [ -d "claude-bot-commands/tests" ]; then
         print_status "Including claude-bot-commands tests..."
@@ -511,7 +511,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find claude-bot-commands -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add .claude/hooks tests if they exist
     if [ -d ".claude/hooks" ]; then
         print_status "Including .claude/hooks tests..."
@@ -519,7 +519,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find .claude/hooks -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add direct .claude/commands test files (not in subdirectories)
     if [ -d ".claude/commands" ]; then
         print_status "Including .claude/commands direct test files..."
@@ -527,7 +527,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find .claude/commands -maxdepth 1 -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Add scripts/tests if directory exists
     if [ -d "scripts/tests" ]; then
         print_status "Including scripts/tests..."
@@ -535,7 +535,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             test_files+=("$test_file")
         done < <(find scripts/tests -name "test_*.py" -type f -print0 2>/dev/null)
     fi
-    
+
     # Discover cerebras command tests
     print_status "🚀 Discovering cerebras command tests..."
     if [ -d ".claude/commands/cerebras/tests" ]; then
@@ -575,10 +575,10 @@ if [ ${#test_files[@]} -gt 0 ]; then
         || mktemp -t worldarchitect_tests.XXXXXX 2>/dev/null \
         || mktemp 2>/dev/null \
         )" || { echo "❌ ERROR: Failed to create secure temporary file" >&2; exit 1; }
-    
+
     # Add trap to ensure cleanup even on unexpected exit
     trap 'rm -f "$temp_file"' EXIT
-    
+
     printf '%s\n' "${test_files[@]}" | LC_ALL=C sort -u > "$temp_file"
     test_files=()
     while IFS= read -r file; do
@@ -622,7 +622,7 @@ if [ -d ".claude/hooks" ]; then
         echo -e "${BLUE}║     Claude Code Hooks Test Suite          ║${NC}"
         echo -e "${BLUE}╚════════════════════════════════════════════╝${NC}"
         echo
-        
+
         if ! "$hook_test_script"; then
             print_fail "Hook tests failed"
         else
@@ -651,20 +651,20 @@ fi
 # Coverage mode setup
 if [ "$enable_coverage" = true ]; then
     print_status "🔍 Setting up coverage analysis..."
-    
+
     # Create coverage directory
     coverage_dir="/tmp/worldarchitectai/coverage"
     mkdir -p "$coverage_dir"
-    
+
     # Install coverage if not already installed
     if ! python3 -c "import coverage" 2>/dev/null; then
         print_status "Installing coverage package..."
         python3 -m pip install coverage
     fi
-    
+
     # Set coverage configuration
     export COVERAGE_FILE="$coverage_dir/.coverage"
-    
+
     print_status "📊 Coverage reports will be saved to: $coverage_dir"
 fi
 
@@ -690,12 +690,12 @@ cleanup() {
         kill "$monitor_pid" 2>/dev/null || true
         wait "$monitor_pid" 2>/dev/null || true
     fi
-    
+
     # Clean up any remaining test processes
     pgrep -f "python.*test_" | xargs -r kill -TERM 2>/dev/null || true
     sleep 1
     pgrep -f "python.*test_" | xargs -r kill -KILL 2>/dev/null || true
-    
+
     rm -rf "$tmp_dir"
 }
 trap cleanup EXIT INT TERM
@@ -734,11 +734,11 @@ run_single_test() {
     local test_file="$1"
     local result_file="$tmp_dir/$(basename "$test_file").result"
     local start_time=$(date +%s)
-    
+
     {
         echo "TESTFILE: $test_file"
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
-        
+
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
             if timeout 300 python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
@@ -754,7 +754,7 @@ run_single_test() {
                 echo "RESULT: FAIL"
             fi
         fi
-        
+
         local end_time=$(date +%s)
         local duration=$((end_time - start_time))
         echo "DURATION: ${duration}s"
@@ -792,11 +792,11 @@ print_status "📊 Processing test results..."
 # Process results from all test files
 for test_file in "${test_files[@]}"; do
     result_file="$tmp_dir/$(basename "$test_file").result"
-    
+
     if [ -f "$result_file" ]; then
         result=$(grep "^RESULT:" "$result_file" | cut -d' ' -f2)
         duration=$(grep "^DURATION:" "$result_file" | cut -d' ' -f2 || echo "?s")
-        
+
         case "$result" in
             "PASS")
                 passed_tests=$((passed_tests + 1))
@@ -806,7 +806,7 @@ for test_file in "${test_files[@]}"; do
                 failed_tests=$((failed_tests + 1))
                 failed_test_files+=("$test_file")
                 echo -e "  ${RED}✗${NC} $(basename "$test_file") (${duration})"
-                
+
                 # Show failure details
                 echo -e "    ${RED}Error details:${NC}"
                 grep -v "^\(TESTFILE:\|START:\|RESULT:\|DURATION:\|END:\)" "$result_file" | head -10 | sed 's/^/      /'
@@ -826,12 +826,12 @@ done
 # Generate coverage report if enabled
 if [ "$enable_coverage" = true ]; then
     print_status "📊 Generating coverage report..."
-    
+
     cd "$PROJECT_ROOT"
     python3 -m coverage combine 2>/dev/null || true
     python3 -m coverage html -d "$coverage_dir" 2>/dev/null || print_warning "Failed to generate HTML coverage report"
     python3 -m coverage report --show-missing || print_warning "Failed to generate coverage summary"
-    
+
     print_status "📊 Coverage HTML report: $coverage_dir/index.html"
 fi
 

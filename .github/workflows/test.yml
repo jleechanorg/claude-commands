@@ -49,8 +49,15 @@ jobs:
         # Upgrade pip and install resolver tools
         python -m pip install --upgrade pip setuptools wheel
 
-        # Install requirements (dependency resolver will handle compatibility)
+        # Install all requirements files in the project
+        # Core application requirements
         pip install -r mvp_site/requirements.txt
+        
+        # Install additional requirements for MCP servers and testing
+        find . -name "requirements.txt" -not -path "./venv/*" -not -path "./task-agent*" | while read req_file; do
+          echo "Installing $req_file"
+          pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
+        done
 
         # Verify key dependencies are available
         python -c "import pydantic; print(f'Pydantic {pydantic.__version__} installed')"
