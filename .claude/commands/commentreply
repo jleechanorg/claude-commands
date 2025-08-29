@@ -1,9 +1,14 @@
 #!/bin/bash
+set -Eeuo pipefail
 # /commentreply command - systematic PR comment processing with proper threading
 # Implements the functionality documented in commentreply.md
 
 echo "🚀 EXECUTING: /commentreply systematic comment processing"
 echo "📋 PURPOSE: Process ALL PR comments with GitHub API threading"
+
+# Preconditions
+command -v python3 >/dev/null || { echo "❌ python3 not found on PATH"; exit 127; }
+command -v gh >/dev/null || { echo "❌ gh CLI not found on PATH"; exit 127; }
 
 # Execute the Python implementation
 python3 "$(dirname "$0")/commentreply.py" "$@"
