@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-
+export SCRIPT_DIR PROJECT_ROOT
 # Color codes
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -30,15 +30,15 @@ run_test() {
     local test_name="$1"
     local test_command="$2"
     local expected_result="$3"  # "pass" or "fail"
-    
+
     ((TESTS_RUN++))
     echo -e "${BLUE}Test $TESTS_RUN: $test_name${NC}"
-    
+
     set +e
     eval "$test_command" >/dev/null 2>&1
     local result=$?
     set -e
-    
+
     if [[ "$expected_result" == "pass" && $result -eq 0 ]]; then
         echo -e "${GREEN}  ✅ PASS${NC}"
         ((TESTS_PASSED++))

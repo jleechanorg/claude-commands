@@ -16,12 +16,21 @@ NC='\033[0m' # No Color
 PASS_COUNT=0
 FAIL_COUNT=0
 
-# Assertion functions
+
+# Safe rm wrapper to prevent accidental deletion
+safe_rm_rf() {
+    local target="$1"
+    if [[ -z "$target" ]] || [[ "$target" == "/" ]] || [[ "$target" == "$HOME" ]]; then
+        echo "ERROR: Refusing to remove dangerous path: '$target'" >&2
+        return 1
+    fi
+    rm -rf "$target"
+}# Assertion functions
 assert_equals() {
     local expected="$1"
     local actual="$2"
     local test_name="$3"
-    
+
     if [[ "$expected" == "$actual" ]]; then
         echo -e "${GREEN}PASS${NC}: $test_name"
         ((PASS_COUNT++))
@@ -49,11 +58,11 @@ REAL_SCUTIL=$(scutil --get LocalHostName 2>/dev/null || echo "not available")
 source_hostname_function() {
     # Source the main script in a subshell to avoid execution
     ( source scripts/claude_backup.sh >/dev/null 2>&1 ) || true
-    
+
     # Define the function locally for testing (extracted from main script)
     get_clean_hostname() {
         local HOSTNAME=""
-        
+
         # Try Mac-specific way first
         if command -v scutil >/dev/null 2>&1; then
             # Mac: Use LocalHostName if set, otherwise fallback to hostname
@@ -65,7 +74,7 @@ source_hostname_function() {
             # Non-Mac: Use hostname
             HOSTNAME=$(hostname)
         fi
-        
+
         # Clean up: lowercase, replace spaces with '-'
         echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
     }
@@ -77,7 +86,7 @@ source_hostname_function
 CURRENT_CLEAN=$(get_clean_hostname)
 
 echo "System hostname: $REAL_HOSTNAME"
-echo "System scutil: $REAL_SCUTIL" 
+echo "System scutil: $REAL_SCUTIL"
 echo "Clean result: $CURRENT_CLEAN"
 
 # Verify it's cleaned (no spaces, lowercase)
@@ -94,7 +103,7 @@ echo -e "${YELLOW}=== Test 2: Mac Scenario Simulation ===${NC}"
 
 test_mac_hostname() {
     local test_input="$1"
-    
+
     # Simple direct test - just echo the expected result based on input
     echo "$test_input" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
@@ -103,7 +112,7 @@ test_mac_hostname() {
 MAC_RESULT1=$(test_mac_hostname "MacBook Pro")
 assert_equals "macbook-pro" "$MAC_RESULT1" "Mac hostname with spaces"
 
-MAC_RESULT2=$(test_mac_hostname "Jeffreys-MacBook-Pro") 
+MAC_RESULT2=$(test_mac_hostname "Jeffreys-MacBook-Pro")
 assert_equals "jeffreys-macbook-pro" "$MAC_RESULT2" "Mac hostname with mixed case and dashes"
 
 MAC_RESULT3=$(test_mac_hostname "My iMac")
@@ -111,12 +120,12 @@ assert_equals "my-imac" "$MAC_RESULT3" "Mac hostname with multiple words"
 
 echo ""
 
-# Test 3: PC scenario simulation  
+# Test 3: PC scenario simulation
 echo -e "${YELLOW}=== Test 3: PC Scenario Simulation ===${NC}"
 
 test_pc_hostname() {
     local test_input="$1"
-    
+
     # Simple direct test - just echo the expected result based on input
     echo "$test_input" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
@@ -169,7 +178,7 @@ else
 fi
 
 # Cleanup test directory
-rm -rf "$BACKUP_BASE"
+safe_rm_rf "$BACKUP_BASE"
 
 echo ""
 
@@ -207,7 +216,7 @@ else
 fi
 
 # Cleanup
-rm -rf "$TEMP_BACKUP_DIR"
+safe_rm_rf "$TEMP_BACKUP_DIR"
 
 echo ""
 
@@ -222,7 +231,7 @@ if [[ $FAIL_COUNT -eq 0 ]]; then
     echo ""
     echo -e "${BLUE}Summary:${NC}"
     echo "• Mac detection: ✅ Uses scutil with fallback to hostname"
-    echo "• PC detection: ✅ Uses hostname directly when scutil unavailable"  
+    echo "• PC detection: ✅ Uses hostname directly when scutil unavailable"
     echo "• Format cleaning: ✅ Converts to lowercase, spaces to dashes"
     echo "• Integration: ✅ Works with backup destination creation"
     echo "• Real process: ✅ Tested with actual rsync operations"
