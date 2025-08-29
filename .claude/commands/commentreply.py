@@ -13,6 +13,7 @@ import json
 import subprocess
 import sys
 import os
+import tempfile
 from typing import Dict, List, Optional, Tuple
 
 def run_command(cmd: List[str], description: str = "") -> Tuple[bool, str, str]:
@@ -155,8 +156,6 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id
     }
 
     # Use secure JSON input with temporary file to prevent shell injection
-    import tempfile
-
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
             json.dump(reply_data, temp_file)
@@ -251,8 +250,6 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
 
 def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: int, success_count: int, commit_hash: str) -> bool:
     """Post final summary comment to main PR issue"""
-    import tempfile
-    import os
 
     print(f"📝 POSTING: Final summary comment to PR #{pr_number}")
 
