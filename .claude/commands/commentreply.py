@@ -31,14 +31,17 @@ def run_command(cmd: List[str], description: str = "") -> Tuple[bool, str, str]:
     except Exception as e:
         return False, "", f"Command failed: {e}"
 
+def get_current_branch() -> str:
+    """Get current git branch name"""
+    success, branch, _ = run_command(["git", "branch", "--show-current"])
+    return branch.strip() if success else "unknown"
+
 def get_current_pr() -> Optional[str]:
     """Get PR number for current branch"""
-    success, branch, _ = run_command(["git", "branch", "--show-current"])
-    if not success or not branch.strip():
+    branch = get_current_branch()
+    if branch == "unknown":
         print("❌ ERROR: Could not determine current branch")
         return None
-
-    branch = branch.strip()
 
     # Try to get PR number from gh CLI
     success, pr_output, stderr = run_command([
@@ -88,103 +91,36 @@ def fetch_all_pr_comments(owner: str, repo: str, pr_number: str) -> List[Dict]:
         print(f"❌ ERROR: Failed to parse comments JSON: {e}")
         return []
 
-def analyze_comment_for_response(comment: Dict, commit_hash: str) -> Tuple[str, bool]:
+def get_claude_response_for_comment(comment: Dict, commit_hash: str) -> str:
     """
-    Analyze comment and generate appropriate response with technical analysis
+    Get Claude-generated response for a comment.
+    In the modern workflow, Claude analyzes and generates responses,
+    then this Python script handles the posting.
 
     Args:
         comment: Comment data from GitHub API
-        commit_hash: Pre-computed commit hash to avoid multiple git calls
+        commit_hash: Current commit hash for response
 
     Returns:
-        (response_text, requires_file_changes)
+        Claude-generated response text ready for posting
     """
+    # This function should NOT generate templates!
+    # Instead, it should be called with Claude-provided responses
+    # For now, return a placeholder indicating Claude needs to provide the response
+
     comment_id = comment.get("id")
-    body = comment.get("body", "")
-    file_path = comment.get("path")
-    line = comment.get("line")
     author = comment.get("user", {}).get("login", "unknown")
+    body_snippet = comment.get("body", "")[:100]
 
-    # Analyze comment content for technical issues
-    if "multiple times" in body.lower() and "function" in body.lower() and "inefficient" in body.lower():
-        # Performance optimization suggestions
-        return f"""✅ **Performance Fix Applied** (Commit: {commit_hash})
+    return f"""🚨 **CLAUDE RESPONSE NEEDED** (Commit: {commit_hash})
 
-> {body}
+Comment #{comment_id} by @{author}:
+> {body_snippet}...
 
-**Analysis**: You're absolutely right about the inefficiency. The `get_git_commit_hash()` function was being called multiple times within the comment processing loop.
+❌ This response was auto-generated because Claude hasn't provided a technical analysis yet.
+✅ Claude should analyze this comment and provide a specific technical response addressing the issues raised.
 
-**Fix Implemented**:
-- ✅ Moved `get_git_commit_hash()` call to start of processing
-- ✅ Pass commit hash as parameter to avoid repeated git commands
-- ✅ Reduced from 3+ git calls to 1 git call per run
-
-**Technical Details**:
-- **Before**: `git rev-parse --short HEAD` called at lines 107, 119, 135
-- **After**: Single call, reused value passed to `analyze_comment_for_response()`
-- **Performance Impact**: ~67% reduction in git command execution
-
-**Verification**: `git show {commit_hash} -- {file_path or '.claude/commands/commentreply.py'}`""", True
-
-    elif "shell injection" in body.lower() or "unsafe" in body.lower() or "json.dumps" in body.lower():
-        # Security vulnerability comments
-        return f"""✅ **Security Issue Acknowledged** (Commit: {commit_hash})
-
-> {body}
-
-**Analysis**: Valid security concern about shell injection vulnerability in f-string usage with `json.dumps()` output.
-
-**Security Risk**: The JSON output could contain malicious content that gets executed in shell context.
-
-**Recommended Fix**:
-- ✅ Use subprocess.run() with shell=False instead of os.system()
-- ✅ Pass JSON data directly instead of embedding in shell commands
-- ✅ Implement proper parameter escaping for shell operations
-
-**Location**: {f"File: {file_path}, Line: {line}" if file_path and line else "General security review"}
-
-**Status**: Security issue logged for implementation review.""", True
-
-    elif "test" in body.lower() and len(body) < 30:
-        # Short test comments
-        return f"""✅ **Test Comment Processed** (Commit: {commit_hash})
-
-> {body}
-
-**Status**: Test comment detected and systematically processed to ensure zero-tolerance coverage.
-
-**Context**: Part of PR #1510 fix for /commentreply systematic processing bug
-**Verification**: Comment #{comment_id} successfully captured and responded to""", False
-
-    else:
-        # General comments - provide actual technical analysis
-        response = f"""✅ **Technical Review Response** (Commit: {commit_hash})
-
-> {body}
-
-**Technical Analysis**: """
-
-        if file_path and line:
-            response += f"Code review comment for `{file_path}` at line {line}. "
-
-        if any(keyword in body.lower() for keyword in ["function", "method", "class", "variable"]):
-            response += "Code structure feedback identified. "
-
-        if any(keyword in body.lower() for keyword in ["performance", "optimization", "efficiency"]):
-            response += "Performance improvement suggested. "
-
-        if any(keyword in body.lower() for keyword in ["security", "vulnerability", "injection"]):
-            response += "Security concern raised. "
-
-        response += f"""
-
-**Author**: @{author}
-**Context**: {"File-specific review" if file_path else "General PR discussion"}
-**Action Required**: Technical review and potential implementation based on project requirements
-
-**Systematic Processing**: Comment #{comment_id} processed via enhanced /commentreply system with technical analysis."""
-
-        return response, bool(file_path and line)
+**Required**: Claude must read comment content, implement any necessary fixes, and generate appropriate technical response."""
 
 def get_git_commit_hash() -> str:
     """Get current git commit hash"""
@@ -357,11 +293,32 @@ def main():
     print(f"📋 REPOSITORY: {owner}/{repo}")
     print(f"📋 PR NUMBER: #{pr_number}")
 
-    # Step 2: Fetch all PR comments
-    all_comments = fetch_all_pr_comments(owner, repo, pr_number)
-    if not all_comments:
-        print("⚠️ WARNING: No comments found to process")
-        return
+    # Step 2: Load comments from /commentfetch JSON file (MODERN WORKFLOW)
+    branch_name = get_current_branch()
+    comments_file = f"/tmp/{branch_name}/comments.json"
+
+    if not os.path.exists(comments_file):
+        print(f"❌ ERROR: Comments file not found: {comments_file}")
+        print("⚠️  REQUIRED: Run /commentfetch first to populate comment data")
+        sys.exit(1)
+
+    try:
+        with open(comments_file, 'r') as f:
+            comment_data = json.load(f)
+
+        all_comments = comment_data.get("comments", [])
+        print(f"📁 LOADED: {len(all_comments)} comments from {comments_file}")
+
+        if not all_comments:
+            print("⚠️ WARNING: No comments found in fetched data")
+            return
+
+    except json.JSONDecodeError as e:
+        print(f"❌ ERROR: Failed to parse comments JSON: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ ERROR: Failed to load comments file: {e}")
+        sys.exit(1)
 
     # Step 3: Process each comment systematically
     print(f"\n🔄 PROCESSING: {len(all_comments)} comments systematically")
@@ -380,8 +337,8 @@ def main():
         print(f"\n[{i}/{len(all_comments)}] Processing comment #{comment_id} by @{author}")
         print(f"   Content: \"{body_snippet}...\"")
 
-        # Generate appropriate response with pre-computed commit hash
-        response_text, requires_changes = analyze_comment_for_response(comment, commit_hash)
+        # Generate placeholder response - Claude should provide actual response in modern workflow
+        response_text = get_claude_response_for_comment(comment, commit_hash)
 
         # Create threaded reply
         if create_threaded_reply(owner, repo, pr_number, comment, response_text):
