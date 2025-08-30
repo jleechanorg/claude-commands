@@ -10,5 +10,31 @@ echo "📋 PURPOSE: Process ALL PR comments with GitHub API threading"
 command -v python3 >/dev/null || { echo "❌ python3 not found on PATH"; exit 127; }
 command -v gh >/dev/null || { echo "❌ gh CLI not found on PATH"; exit 127; }
 
-# Execute the Python implementation
-python3 "$(dirname "$0")/commentreply.py" "$@"
+# Intelligent argument processing with autodetection
+if [ $# -eq 0 ]; then
+    echo "📝 No arguments provided - auto-detecting from current PR context..."
+
+    # Auto-detect repository info
+    OWNER=$(gh repo view --json owner --jq .owner.login 2>/dev/null || echo "")
+    REPO=$(gh repo view --json name --jq .name 2>/dev/null || echo "")
+    PR_NUMBER=$(gh pr view --json number --jq .number 2>/dev/null || echo "")
+
+    if [ -z "$OWNER" ] || [ -z "$REPO" ] || [ -z "$PR_NUMBER" ]; then
+        echo "❌ ERROR: Could not auto-detect repository context. Please ensure you're in a PR branch or provide arguments:"
+        echo "Usage: commentreply [owner] [repo] [pr_number]"
+        echo "Example: commentreply jleechanorg worldarchitect.ai 1510"
+        exit 1
+    fi
+
+    echo "🔍 Auto-detected: $OWNER/$REPO PR #$PR_NUMBER"
+    python3 "$(dirname "$0")/commentreply.py" "$OWNER" "$REPO" "$PR_NUMBER"
+elif [ $# -eq 3 ]; then
+    echo "📋 Using provided arguments: $1/$2 PR #$3"
+    python3 "$(dirname "$0")/commentreply.py" "$@"
+else
+    echo "❌ ERROR: Invalid number of arguments"
+    echo "Usage: commentreply [owner] [repo] [pr_number]"
+    echo "   OR: commentreply (auto-detects from current PR context)"
+    echo "Example: commentreply jleechanorg worldarchitect.ai 1510"
+    exit 1
+fi
