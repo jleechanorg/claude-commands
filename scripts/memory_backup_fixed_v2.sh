@@ -82,7 +82,7 @@ cleanup() {
 }
 
 # Register a single cleanup trap for EXIT, INT and TERM. If other traps are
-# defined elsewhere, this will overwrite them for these signals.
+# This replaces any existing traps for these signals (does not append).
 # shellcheck disable=SC2064 # Variables in single quotes expand at trap definition time
 trap 'cleanup' EXIT INT TERM
 
@@ -149,7 +149,7 @@ create_historical_snapshot() {
     fi
 
     # Add metadata header
-    local temp_file=$(mktemp)
+    local temp_file=$(mktemp "${TMPDIR:-/tmp}/memory_backup.XXXXXX")
     {
         echo "# Memory MCP Backup Snapshot"
         echo "# Date: $TIMESTAMP"
@@ -192,7 +192,7 @@ create_unified_memory() {
     # Acquire exclusive lock for unified file creation
     acquire_lock
 
-    local temp_unified=$(mktemp)
+    local temp_unified=$(mktemp "${TMPDIR:-/tmp}/memory_unified.XXXXXX")
     local total_entities=0
     local env_count=0
     local entity_checksums=""

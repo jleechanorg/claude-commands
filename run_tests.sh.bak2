@@ -148,10 +148,8 @@ memory_monitor() {
 
     # Restore stdout
     exec 1>&3
-    # Check if file descriptor 3 exists before closing
-    if [ -e /proc/$$/fd/3 ] || [ -e /dev/fd/3 ]; then
-        exec 3>&-
-    fi}
+    exec 3>&- 2>/dev/null || true
+}
 
 # Helper functions
 print_status() {
