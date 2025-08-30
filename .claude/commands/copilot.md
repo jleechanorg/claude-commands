@@ -22,11 +22,16 @@ fi
 ## 🎯 Purpose
 Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegation. Optimized for 2-3 minute execution vs 20+ minute agent overhead.
 
-## ⚡ **PERFORMANCE ARCHITECTURE: Direct Orchestration**
-- **No Task delegation** - Orchestrate all workflow phases directly within the copilot context (no external agents)
-- **Direct GitHub MCP tools** - Use GitHub MCP tools directly in each phase
+## ⚡ **PERFORMANCE ARCHITECTURE: Mandatory Parallel Agent Orchestration**
+
+🚨 **CRITICAL REQUIREMENT**: /copilot ALWAYS uses parallel agents - NO EXCEPTIONS
+
+- **MANDATORY**: Launch `copilot-fixpr` and `copilot-analysis` agents in parallel for EVERY execution
+- **NO DIRECT EXECUTION**: /copilot must NEVER handle tasks directly - always delegate to specialized agents
+- **PARALLEL PROCESSING**: Both agents work simultaneously for maximum efficiency
+- **EXPERTISE DISTRIBUTION**: Each agent handles its specialized domain (fixes vs analysis)
 - **30 recent comments focus** - Process only actionable recent feedback
-- **Expected time**: **2-3 minutes** (vs 20+ minutes with Task overhead)
+- **Expected time**: **2-3 minutes** with proper parallel agent coordination
 
 ## 🚀 Core Workflow - Parallel Agent Orchestration
 
@@ -40,6 +45,31 @@ Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegatio
 # Record start time for performance tracking
 COPILOT_START_TIME=$(date +%s)
 ```
+
+### 🚨 EXECUTION MANDATE: Immediate Parallel Agent Launch
+
+**STEP 1 - MANDATORY**: Launch both agents simultaneously using Task tool:
+
+```bash
+# REQUIRED: Launch both agents in parallel - NO EXCEPTIONS
+Task(
+  subagent_type="general-purpose",
+  description="copilot-fixpr agent execution",
+  prompt="Execute copilot-fixpr workflow for PR fixes and implementation"
+)
+
+Task(
+  subagent_type="general-purpose",
+  description="copilot-analysis agent execution",
+  prompt="Execute copilot-analysis workflow for communication and coordination"
+)
+```
+
+**CRITICAL RULES**:
+- ❌ **NEVER skip agent launch** - even for "simple" PRs
+- ❌ **NEVER handle tasks directly** - always delegate to agents
+- ✅ **ALWAYS use Task tool** to launch both agents
+- ✅ **ALWAYS coordinate results** after agents complete
 
 ### Phase 1: Parallel Agent Launch & Coordination Setup
 **Orchestration**: Launch specialized agents in parallel with shared GitHub data
