@@ -148,7 +148,7 @@ memory_monitor() {
 
     # Restore stdout
     exec 1>&3
-    exec 3>&-
+    exec 3>&- 2>/dev/null || true
 }
 
 # Helper functions
