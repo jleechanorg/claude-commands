@@ -191,7 +191,7 @@ validate_claude_settings() {
     fi
 
     # Basic JSON validation and key checks using Python
-    if ! python3 -c "
+    if python3 -c "
 import json, sys
 try:
     with open('$claude_settings', 'r') as f:

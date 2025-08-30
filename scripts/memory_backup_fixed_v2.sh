@@ -117,7 +117,9 @@ setup_repository() {
 
     # Use flock for git operations to prevent conflicts
     (
-        flock -x 200
+        if command -v flock >/dev/null 2>&1; then
+            flock -x 200
+        fi
 
         git checkout main || error_exit "Failed to checkout main branch"
         git pull origin main || error_exit "Failed to pull latest changes"
