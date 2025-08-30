@@ -81,7 +81,7 @@ cleanup() {
     release_lock
 }
 
-# Register a single cleanup trap for EXIT, INT and TERM. If other traps are
+# Register a single cleanup trap for EXIT, INT and TERM.
 # This replaces any existing traps for these signals (does not append).
 # shellcheck disable=SC2064 # Variables in single quotes expand at trap definition time
 trap 'cleanup' EXIT INT TERM
