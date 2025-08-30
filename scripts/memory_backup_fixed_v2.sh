@@ -82,7 +82,7 @@ cleanup() {
 }
 
 # Register a single cleanup trap for EXIT, INT and TERM. If other traps are
-# defined elsewhere, this appends to them rather than overwriting.
+# defined elsewhere, this will overwrite them for these signals.
 # shellcheck disable=SC2064 # Variables in single quotes expand at trap definition time
 trap 'cleanup' EXIT INT TERM
 
