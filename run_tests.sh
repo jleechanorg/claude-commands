@@ -151,7 +151,8 @@ memory_monitor() {
     # Check if file descriptor 3 exists before closing
     if [ -e /proc/$$/fd/3 ] || [ -e /dev/fd/3 ]; then
         exec 3>&-
-    fi}
+    fi
+}
 
 # Helper functions
 print_status() {
@@ -213,7 +214,7 @@ except Exception as e:
     print(f'Settings validation error: {e}')
     sys.exit(1)
 " 2>/dev/null; then
-        print_pass "✅ Claude settings.json validation passed"
+
         return 0
     else
         print_fail "❌ Claude settings.json validation failed"
@@ -862,7 +863,7 @@ fi
 
 # Calculate success rate
 if [ $total_tests -gt 0 ]; then
-    success_rate=$(echo "scale=1; $passed_tests * 100 / $total_tests" | bc -l 2>/dev/null || echo "0")
+    success_rate=$(awk -v p="$passed_tests" -v t="$total_tests" 'BEGIN {printf "%.1f", p * 100 / t}')
     echo -e "Success rate: ${success_rate}%"
     echo
 fi
