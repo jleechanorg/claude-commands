@@ -672,7 +672,7 @@ if [ "$enable_coverage" = true ]; then
 fi
 
 # Create temporary directory for parallel execution
-tmp_dir=$(mktemp -d)
+tmp_dir=$(mktemp -d -t worldarchitect_tests.XXXXXX 2>/dev/null || mktemp -d "${TMPDIR:-/tmp}/worldarchitect_tests.XXXXXX")
 trap "rm -rf $tmp_dir" EXIT
 
 # Create memory monitor file
