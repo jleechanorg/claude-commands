@@ -305,7 +305,7 @@ intelligent_test_selection() {
         local found_count=0
         for pattern in "${test_patterns[@]}"; do
             # Use find with the pattern, suppressing errors
-            find "$PROJECT_ROOT" -name "$pattern" -type f 2>/dev/null | while read -r test_file; do
+            find "$PROJECT_ROOT" -path "*/$pattern" -type f 2>/dev/null | while read -r test_file; do
                 # Skip if file doesn't exist or is not readable
                 if [ -f "$test_file" ] && [ -r "$test_file" ]; then
                     echo "$test_file"
