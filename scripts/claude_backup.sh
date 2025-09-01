@@ -43,19 +43,19 @@ validate_hostname() {
 validate_path() {
     local path="$1"
     local context="$2"
-    
+
     # Check for path traversal patterns
     if [[ "$path" =~ \.\./|/\.\. ]]; then
         echo "ERROR: Path traversal attempt detected in $context: $path" >&2
         return 1
     fi
-    
+
     # Check for null bytes
     if [[ "$path" =~ $'\x00' ]]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
     fi
-    
+
     # Canonicalize path if it exists, otherwise validate parent
     local canonical_path
     if [[ -e "$path" ]]; then
@@ -75,7 +75,7 @@ validate_path() {
             fi
         fi
     fi
-    
+
     # Path validation completed successfully
     return 0
 }
@@ -83,7 +83,7 @@ validate_path() {
 # Portable function to get cleaned hostname (Mac and PC compatible)
 get_clean_hostname() {
     local HOSTNAME=""
-    
+
     # Try Mac-specific way first
     if command -v scutil >/dev/null 2>&1; then
         # Mac: Use LocalHostName if set, otherwise fallback to hostname
@@ -95,10 +95,10 @@ get_clean_hostname() {
         # Non-Mac: Use hostname
         HOSTNAME=$(hostname)
     fi
-    
+
     # Security: Validate hostname to prevent shell injection
     validate_hostname "$HOSTNAME"
-    
+
     # Clean up: lowercase, replace spaces with '-'
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
@@ -107,7 +107,7 @@ get_clean_hostname() {
 init_destination() {
     DEVICE_NAME="$(get_clean_hostname)" || return 1
     DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
-    
+
     if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
         # Parameter provided and it's not a flag - append device suffix
         # Security: Validate input parameter to prevent path traversal
@@ -123,7 +123,7 @@ init_destination() {
             BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
         fi
     fi
-    
+
     # Security: Validate final destination path
     validate_path "$BACKUP_DESTINATION" "final backup destination" || return 2
 }
@@ -211,6 +211,8 @@ backup_to_destination() {
 
     # Perform selective rsync backup (only essential directories and files)
     if rsync -av \
+        --include='.claude.json' \
+        --include='.claude.json.backup*' \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -318,7 +320,7 @@ send_failure_email() {
 # Main backup function
 run_backup() {
     backup_log "Starting Claude backup at $(date)"
-    
+
     # Initialize backup destination
     if ! init_destination "$@"; then
         backup_log "Destination initialization failed"
@@ -404,23 +406,23 @@ EOF
 # This prevents the double suffix bug when setting up cron without explicit destination
 extract_base_directory() {
     local suffixed_path="$1"
-    
+
     # Validate input
     if [[ -z "$suffixed_path" ]]; then
         echo "Error: No path provided to extract_base_directory" >&2
         return 1
     fi
-    
+
     # Use dirname to get parent directory
     local base_dir
     base_dir="$(dirname "$suffixed_path")"
-    
+
     # Validate result
     if [[ -z "$base_dir" ]] || [[ "$base_dir" == "." ]]; then
         echo "Error: Failed to extract base directory from $suffixed_path" >&2
         return 1
     fi
-    
+
     echo "$base_dir"
     return 0
 }
@@ -428,7 +430,7 @@ extract_base_directory() {
 # Setup cron job
 setup_cron() {
     local cron_destination="$2"
-    
+
     # If no destination provided, extract base directory to avoid double suffix bug
     # The main script always appends the device suffix, so we must pass the parent directory
     # Example problem: DEFAULT_BACKUP_DIR="/path/claude_backup_device" + main script suffix = "/path/claude_backup_device/claude_backup_device"
@@ -439,7 +441,7 @@ setup_cron() {
             return 1
         fi
     fi
-    
+
     echo "Setting up 4-hour Claude backup cron job with device-specific naming..."
 
     # Create wrapper script for cron environment
@@ -524,7 +526,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
     on_error() {
         local exit_code=$?
         local line_number=$1
-        
+
         # Create error report file for email notification
         local error_report="$SECURE_TEMP/error_report_$(date +%s).txt"
         {
@@ -536,13 +538,13 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
             echo "Time: $(date)"
             echo "Command: ${BASH_COMMAND:-unknown}"
         } > "$error_report"
-        
+
         add_result "ERROR" "Unexpected Failure" "Script failed at line $line_number with exit code $exit_code"
         send_failure_email "$error_report" 2>/dev/null || true  # Use correct function name with parameter
         exit $exit_code
     }
     trap 'on_error $LINENO' ERR
-    
+
     # Parse command line arguments
     case "${1:-}" in
         --setup-cron)
