@@ -403,7 +403,7 @@ fi
 if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
 else
-    print_status "Skipping integration tests (use --integration to include them)"
+    print_status "Skipping integration tests (include_integration=${include_integration:-false}, use --integration to include them)"
 fi
 
 # Validate Claude settings before running tests
