@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Multi-Environment Safe Memory Backup Script with Proper Locking
 # VERSION: 2.1.0 - Fixes race conditions identified in v2.0.0
 
