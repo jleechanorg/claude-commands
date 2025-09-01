@@ -156,6 +156,7 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id
     }
 
     # Use secure JSON input with temporary file to prevent shell injection
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
             json.dump(reply_data, temp_file)
@@ -170,13 +171,13 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id
             "--input", temp_file_path
         ])
 
-        # Clean up temporary file
-        import os
-        os.unlink(temp_file_path)
-
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
         return False
+    finally:
+        # Clean up temporary file in all scenarios
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
 
     if success:
         try:
@@ -205,6 +206,7 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
         "in_reply_to": comment_id
     }
 
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
             json.dump(reply_data, temp_file)
@@ -219,13 +221,13 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
             "--input", temp_file_path
         ])
 
-        # Clean up temporary file
-        import os
-        os.unlink(temp_file_path)
-
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure JSON input: {e}")
         return False
+    finally:
+        # Clean up temporary file in all scenarios
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
 
     if success:
         try:
@@ -274,6 +276,7 @@ def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: i
     summary_data = {"body": summary_body}
 
     # Use secure JSON input with temporary file to prevent shell injection
+    temp_file_path = None
     try:
         with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as temp_file:
             json.dump(summary_data, temp_file)
@@ -287,12 +290,13 @@ def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: i
             "--input", temp_file_path
         ])
 
-        # Clean up temporary file
-        os.unlink(temp_file_path)
-
     except Exception as e:
         print(f"❌ ERROR: Failed to create secure summary JSON: {e}")
         return False
+    finally:
+        # Clean up temporary file in all scenarios
+        if temp_file_path and os.path.exists(temp_file_path):
+            os.unlink(temp_file_path)
 
     if success:
         try:
