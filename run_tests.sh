@@ -66,7 +66,7 @@ get_memory_usage_gb() {
         # Get RSS memory in KB and convert to GB
         local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
         if [ -n "$rss" ]; then
-            echo "scale=2; $rss / 1024 / 1024" | bc -l
+            awk -v rss="$rss" 'BEGIN {printf "%.2f", rss / 1024 / 1024}'
         else
             echo "0"
         fi
@@ -78,7 +78,7 @@ get_memory_usage_gb() {
 get_total_memory_usage_gb() {
     # Get total memory usage for all our test processes
     local total_kb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
-    echo "scale=2; $total_kb / 1024 / 1024" | bc -l
+    awk -v total="$total_kb" 'BEGIN {printf "%.2f", total / 1024 / 1024}'
 }
 
 memory_monitor() {
@@ -93,7 +93,7 @@ memory_monitor() {
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
         local total_memory=$(get_total_memory_usage_gb)
-        local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l 2>/dev/null)
+        local comparison=$(awk -v mem="$total_memory" -v limit="$MEMORY_LIMIT_GB" 'BEGIN {print (mem > limit) ? "1" : "0"}')
 
         # Log detailed process info every 3 iterations (every 6 seconds)
         if [ $((log_counter % 3)) -eq 0 ]; then
@@ -131,7 +131,7 @@ memory_monitor() {
         # Check individual process limits
         for pid in $(pgrep -f "python.*test_" 2>/dev/null); do
             local mem=$(get_memory_usage_gb "$pid")
-            local comparison=$(echo "$mem > $SINGLE_PROCESS_LIMIT_GB" | bc -l 2>/dev/null)
+            local comparison=$(awk -v mem="$mem" -v limit="$SINGLE_PROCESS_LIMIT_GB" 'BEGIN {print (mem > limit) ? "1" : "0"}')
             if [ "$comparison" = "1" ]; then
                 local cmd=$(ps -p "$pid" -o args= 2>/dev/null | head -c 60)
                 echo -e "${RED}[ERROR]${NC} 🚨 Process PID:$pid memory exceeds limit: ${mem}GB > ${SINGLE_PROCESS_LIMIT_GB}GB" >&3
@@ -717,7 +717,7 @@ elif [ -n "$CI" ]; then
     print_status "Running tests in parallel (CI replica: $max_workers workers - full CPU with memory monitoring)..."
 else
     # Local development - conservative parallelism to avoid overwhelming system
-    available_cores=$(nproc 2>/dev/null || echo "4")
+    available_cores=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo "4")
     max_workers=$((available_cores > 4 ? 4 : available_cores))
     print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
 fi
