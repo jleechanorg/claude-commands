@@ -23,7 +23,7 @@ from mvp_site.testing_framework import (
 )
 
 
-def test_component(name: str, test_func) -> dict[str, Any]:
+def validate_component(name: str, test_func) -> dict[str, Any]:
     """Run a test component and return results."""
     try:
         result = test_func()
@@ -38,7 +38,7 @@ def test_component(name: str, test_func) -> dict[str, Any]:
         }
 
 
-def test_mock_provider():
+def validate_mock_provider():
     """Test MockServiceProvider functionality."""
     provider = get_service_provider("mock")
 
@@ -73,7 +73,7 @@ def test_mock_provider():
     }
 
 
-def test_real_provider_validation():
+def validate_real_provider_validation():
     """Test RealServiceProvider configuration validation."""
     # Clear any existing API key
     original_key = os.environ.pop("TEST_GEMINI_API_KEY", None)
@@ -95,7 +95,7 @@ def test_real_provider_validation():
     return {"validation": "working"}
 
 
-def test_factory_switching():
+def validate_factory_switching():
     """Test service provider factory mode switching."""
     results = {}
 
@@ -137,7 +137,7 @@ def test_factory_switching():
     return results
 
 
-def test_global_provider_management():
+def validate_global_provider_management():
     """Test global provider state management."""
     # Reset to clean state
     reset_global_provider()
@@ -165,7 +165,7 @@ def test_global_provider_management():
     }
 
 
-def test_configuration():
+def validate_configuration():
     """Test configuration management."""
     config = TestConfig.get_real_service_config()
 
@@ -191,7 +191,7 @@ def test_configuration():
     }
 
 
-def test_interface_compliance():
+def validate_interface_compliance():
     """Test that all providers implement the same interface."""
     mock_provider = get_service_provider("mock")
 
@@ -220,12 +220,12 @@ def main():
 
     # Define test suite
     tests = [
-        ("Mock Provider Functionality", test_mock_provider),
-        ("Real Provider Validation", test_real_provider_validation),
-        ("Factory Mode Switching", test_factory_switching),
-        ("Global Provider Management", test_global_provider_management),
-        ("Configuration Management", test_configuration),
-        ("Interface Compliance", test_interface_compliance),
+        ("Mock Provider Functionality", validate_mock_provider),
+        ("Real Provider Validation", validate_real_provider_validation),
+        ("Factory Mode Switching", validate_factory_switching),
+        ("Global Provider Management", validate_global_provider_management),
+        ("Configuration Management", validate_configuration),
+        ("Interface Compliance", validate_interface_compliance),
     ]
 
     results = []
@@ -233,7 +233,7 @@ def main():
 
     for test_name, test_func in tests:
         print(f"\n🧪 Testing: {test_name}")
-        result = test_component(test_name, test_func)
+        result = validate_component(test_name, test_func)
         results.append(result)
 
         if result["status"] == "PASS":

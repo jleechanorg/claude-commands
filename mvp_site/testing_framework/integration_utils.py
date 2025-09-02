@@ -25,6 +25,7 @@ except ImportError:
     # Fallback stub if integration_test_lib is not available
     class IntegrationTestSetup:
         """Compatibility stub for IntegrationTestSetup"""
+
         def __init__(self):
             pass
 
@@ -194,9 +195,17 @@ class SmartPatcher:
                         mock_obj = self.provider.get_auth()
 
                 if mock_obj:
-                    patch_obj = patch(f"main.{service_name}", mock_obj)
-                    self.patches.append(patch_obj)
-                    patch_obj.__enter__()
+                    try:
+                        # Only patch if the attribute exists in main
+                        import main
+
+                        if hasattr(main, service_name):
+                            patch_obj = patch(f"main.{service_name}", mock_obj)
+                            self.patches.append(patch_obj)
+                            patch_obj.__enter__()
+                    except (ImportError, AttributeError):
+                        # Skip patching if main doesn't exist or attribute doesn't exist
+                        pass
 
         return self
 
