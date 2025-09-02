@@ -160,7 +160,7 @@ class CommentFetch(CopilotCommandBase):
             "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
             "--jq",
-            '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select(.body | contains("copilot"))',
+            '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select((.body|ascii_downcase) | contains("copilot"))',
         ]
 
         try:
@@ -209,14 +209,19 @@ class CommentFetch(CopilotCommandBase):
         Returns:
             False for meta-comments, True for actual technical comments
         """
-        body = comment.get("body", "")
+        body = str(comment.get("body") or "")
+        text = body.strip()
+
+        # Skip empty comments
+        if not text:
+            return False
 
         # Skip meta-comments created by previous commentreply runs
         if "CLAUDE RESPONSE NEEDED" in body and "No Claude-generated response found" in body:
             return False
 
         # Skip comments that are just quotes of other comments
-        if body.strip().startswith("> ") and len(body.strip().split('\n')) < 3:
+        if text.startswith("> ") and len(text.split('\n')) < 3:
             return False
 
         # Include actual technical comments that need responses
@@ -235,6 +240,7 @@ class CommentFetch(CopilotCommandBase):
             # Use /fixpr methodology: GitHub is authoritative source
             cmd = [
                 'gh', 'pr', 'view', self.pr_number,
+                '--repo', self.repo,
                 '--json', 'statusCheckRollup,mergeable,mergeStateStatus'
             ]
 
@@ -302,7 +308,7 @@ class CommentFetch(CopilotCommandBase):
                 },
                 'failing_checks': failing_checks,
                 'pending_checks': pending_checks,
-                'fetched_at': datetime.now().isoformat()
+                'fetched_at': datetime.now(timezone.utc).isoformat()
             }
 
         except subprocess.CalledProcessError as e:
@@ -371,7 +377,7 @@ class CommentFetch(CopilotCommandBase):
 
         # Count comments needing responses
         # After filtering, all remaining comments are unresponded
-        unresponded_count = len(self.comments)
+        unresponded_count = sum(1 for c in self.comments if c.get("requires_response"))
 
         # Prepare data to save
         data = {
@@ -415,7 +421,9 @@ class CommentFetch(CopilotCommandBase):
             state = ci_status.get('overall_state', 'UNKNOWN')
             failing = len(ci_status.get('failing_checks', []))
             pending = len(ci_status.get('pending_checks', []))
-            if failing > 0:
+            if failing > 0 and pending > 0:
+                ci_summary = f", CI: {failing} failing, {pending} pending"
+            elif failing > 0:
                 ci_summary = f", CI: {failing} failing"
             elif pending > 0:
                 ci_summary = f", CI: {pending} pending"
