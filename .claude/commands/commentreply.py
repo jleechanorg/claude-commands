@@ -100,8 +100,8 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
         if str(response_item.get("comment_id")) == comment_id:
             return response_item.get("response", "")
 
-    # If no Claude response found, return placeholder
-    return f"""🚨 **CLAUDE RESPONSE NEEDED** (Commit: {commit_hash})
+    # If no Claude response found, return placeholder with [AI responder] tag
+    return f"""[AI responder] 🚨 **CLAUDE RESPONSE NEEDED** (Commit: {commit_hash})
 
 Comment #{comment_id} by @{author}:
 > {body_snippet}...

@@ -45,7 +45,11 @@ For each comment, Claude must:
 - **❌ FORBIDDEN**: Claiming fixes without actual file modifications
 
 ### Response Generation
+**🚨 MANDATORY: [AI responder] TAG REQUIREMENT**
+ALL responses MUST begin with the tag **[AI responder]** to distinguish AI-generated responses from manual human responses.
+
 Create technical responses that:
+- **Start with [AI responder] tag** (MANDATORY for identification)
 - **Quote original comment** for context
 - **Explain specific changes made** with technical detail
 - **Include commit hash** for verification
@@ -56,7 +60,7 @@ Create technical responses that:
 
 ### Performance Issues (Example: Copilot efficiency comments)
 ```
-✅ **Performance Fix Applied** (Commit: abc1234)
+[AI responder] ✅ **Performance Fix Applied** (Commit: abc1234)
 
 > The get_git_commit_hash() function is called multiple times...
 
@@ -74,7 +78,7 @@ Create technical responses that:
 
 ### Security Issues (Example: Shell injection vulnerabilities)
 ```
-✅ **Security Issue Fixed** (Commit: def5678)
+[AI responder] ✅ **Security Issue Fixed** (Commit: def5678)
 
 > Using f-string with json.dumps() output in shell command is unsafe...
 
@@ -90,7 +94,7 @@ Create technical responses that:
 
 ### Code Structure Issues (Example: CodeRabbit suggestions)
 ```
-✅ **Code Structure Improved** (Commit: ghi9012)
+[AI responder] ✅ **Code Structure Improved** (Commit: ghi9012)
 
 > Add strict mode and tool checks to fail fast...
 
