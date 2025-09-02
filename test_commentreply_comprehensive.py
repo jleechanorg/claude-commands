@@ -96,10 +96,14 @@ class TestCommentReplyComprehensive(unittest.TestCase):
 
     def test_matrix_technical_comment_with_response_issue_api(self):
         """Matrix [Technical, HasResponse, Issue] → Success"""
-        # Modify comment to look like issue comment (no path/line)
-        issue_comment = self.sample_comments["technical_comment"].copy()
-        del issue_comment["path"]
-        del issue_comment["line"]
+        # Create proper issue comment (with issuecomment URL pattern)
+        issue_comment = {
+            "id": 12345,
+            "body": "Using f-string with json.dumps() output in shell command is unsafe.",
+            "user": {"login": "coderabbitai"},
+            "html_url": "https://github.com/owner/repo/pull/123#issuecomment-12345",
+            "created_at": "2025-09-02T01:00:00Z"
+        }
 
         responses_data = {
             "responses": [{
