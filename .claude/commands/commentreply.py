@@ -141,7 +141,7 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
     if comment_type == "issue":
         return create_issue_comment_reply(owner, repo, pr_number, comment_id, response_text)
     else:
-        return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text)
+        return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text, comment)
 
 def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str) -> bool:
     """Create a reply to an issue comment (general PR discussion)"""
@@ -196,9 +196,13 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id
         print(f"   Error: {stderr}")
         return False
 
-def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str) -> bool:
+def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str, comment: Dict = None) -> bool:
     """Create a threaded reply to a review comment (code-specific)"""
     print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
+
+    # SURGICAL FIX: Validate comment exists before attempting threading
+    if comment is None:
+        print(f"⚠️ WARNING: Comment object not provided for validation of #{comment_id}")
 
     # Prepare the API call data for review comment threading
     reply_data = {
@@ -243,8 +247,35 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
             return True
     else:
         if "422" in (stderr or ""):
-            print(f"↪️ SKIP: GitHub returned 422 (likely attempted reply-to-reply) for #{comment_id}")
-            return False
+            print(f"🔍 DEBUG 422: GitHub returned 422 for comment #{comment_id}")
+            print(f"🔍 DEBUG 422: Full stderr: {stderr}")
+
+            # Check for specific error patterns
+            if "not found" in (stderr or "").lower() or "does not exist" in (stderr or "").lower():
+                print(f"🚨 STALE COMMENT: Comment #{comment_id} no longer exists (deleted or from different PR state)")
+                print(f"↪️ SKIP: Cannot reply to non-existent comment #{comment_id}")
+                return False
+
+            if comment:
+                print(f"🔍 DEBUG 422: Comment type: {detect_comment_type(comment)}")
+                print(f"🔍 DEBUG 422: Comment URL: {comment.get('html_url', 'N/A')}")
+                print(f"🔍 DEBUG 422: Has path: {bool(comment.get('path'))}")
+                print(f"🔍 DEBUG 422: Has position: {bool(comment.get('position'))}")
+                print(f"🔍 DEBUG 422: Has diff_hunk: {bool(comment.get('diff_hunk'))}")
+
+                # SURGICAL FIX: Fallback to issue comment when review threading fails
+                print(f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}")
+                fallback_success = create_issue_comment_reply(owner, repo, pr_number, comment_id, response_text)
+                if fallback_success:
+                    print(f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}")
+                    return True
+                else:
+                    print(f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}")
+                    return False
+            else:
+                print(f"🔍 DEBUG 422: Comment object not available for detailed analysis")
+                print(f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}")
+                return False
         print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
         print(f"   Error: {stderr}")
         return False
