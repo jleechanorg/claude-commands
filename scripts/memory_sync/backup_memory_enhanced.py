@@ -144,7 +144,7 @@ def backup_memory() -> None:
     cache_path = os.path.expanduser("~/.cache/mcp-memory/memory.json")
     repo_dir = os.path.expanduser("~/projects/worldarchitect-memory-backups")
     repo_path = os.path.join(repo_dir, "memory.json")
-    repo_url = "${BACKUP_REPO_URL}"
+    repo_url = os.environ.get("BACKUP_REPO_URL", "")
 
     # Validate repository URL for security
     if not validate_repository_url(repo_url):

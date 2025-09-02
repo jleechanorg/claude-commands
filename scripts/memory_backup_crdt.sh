@@ -25,6 +25,12 @@ timeout_cmd() {
 HOSTNAME=$(hostname -s)
 MEMORY_FILE="${MEMORY_FILE:-$HOME/.cache/mcp-memory/memory.json}"
 REPO_URL="${BACKUP_REPO_URL:-}"
+# Validate repository URL is set
+if [ -z "$REPO_URL" ]; then
+    echo "❌ Error: BACKUP_REPO_URL environment variable is not set" >&2
+    echo "Please set BACKUP_REPO_URL to your GitHub memory backup repository URL" >&2
+    exit 1
+fi
 REPO_DIR="$HOME/.cache/memory-backup-repo"
 
 log() {
