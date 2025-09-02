@@ -44,6 +44,36 @@ For each comment, Claude must:
 - **❌ FORBIDDEN**: Generic acknowledgments without technical substance
 - **❌ FORBIDDEN**: Claiming fixes without actual file modifications
 
+## 🚨 CRITICAL: PATTERN-BASED FIX PROTOCOL
+
+**⚠️ MANDATORY**: When fixing patterns/variables mentioned in comments, apply systematic verification to prevent incomplete implementations.
+
+### Discovery Phase (MANDATORY)
+```bash
+# Find ALL instances of flawed pattern BEFORE claiming fix
+grep -n "problematic_pattern" target_file.py
+rg "problematic_pattern" . --type py -A 2 -B 2
+```
+
+### Implementation Phase (MANDATORY)
+- **✅ Map ALL instances**: Document each occurrence and required fix
+- **✅ Fix ALL instances**: Not just obvious ones - systematic coverage required
+- **❌ FORBIDDEN**: Partial pattern fixes that miss related usage
+
+### Verification Phase (MANDATORY)
+```bash
+# Prove ALL instances addressed before declaring complete
+git add -A && git diff --cached | grep -E "(\+|\-)" | grep "problematic_pattern"
+git show HEAD | grep -A 3 -B 3 "problematic_pattern"
+```
+
+### Examples of Pattern-Based Fixes
+- **Variable Usage**: `all_comments` vs `processed_comments` - must fix ALL usage (success criteria AND error reporting)
+- **Function Calls**: Signature changes require ALL call sites updated
+- **Import Changes**: Must verify ALL dependent code updated
+
+**🚨 LESSON**: Incomplete pattern fixes create false confidence - always verify completeness with evidence
+
 ### Response Generation
 **🚨 MANDATORY: [AI responder] TAG REQUIREMENT**
 ALL responses MUST begin with the tag **[AI responder]** to distinguish AI-generated responses from manual human responses.
