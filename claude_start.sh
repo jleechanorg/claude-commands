@@ -129,7 +129,7 @@ start_orchestration_background() {
         # Start orchestration agents in quiet mode
         ./start_system.sh --quiet start &> /dev/null
     ) &
-    
+
     # Store the background process PID for monitoring
     local START_PID=$!
 
@@ -137,7 +137,7 @@ start_orchestration_background() {
     local max_wait=10
     local wait_time=0
     local startup_success=false
-    
+
     while [ $wait_time -lt $max_wait ]; do
         # Check if the orchestration monitor is running
         if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
@@ -148,7 +148,7 @@ start_orchestration_background() {
                 break
             fi
         fi
-        
+
         # Also check if the start script is still running
         if ! kill -0 $START_PID 2>/dev/null; then
             # Start script exited, check if it was successful
@@ -159,7 +159,7 @@ start_orchestration_background() {
                 return 1
             fi
         fi
-        
+
         sleep 1
         wait_time=$((wait_time + 1))
     done
@@ -187,6 +187,40 @@ check_orchestration() {
         fi
     fi
 }
+
+# Check development environment setup (only if needed)
+if [ ! -d "venv" ] || [ ! -f "venv/bin/activate" ]; then
+    echo -e "${YELLOW}⚠️  Virtual environment not found - setting up development environment...${NC}"
+    if [ -f "scripts/setup-dev-env.sh" ]; then
+        ./scripts/setup-dev-env.sh
+        echo -e "${GREEN}✅ Development environment setup complete${NC}"
+    else
+        echo -e "${YELLOW}⚠️  setup-dev-env.sh not found - you may need to run it manually${NC}"
+    fi
+else
+    # Check if FastMCP is installed in the virtual environment (any Python version)
+    if [ -f "venv/bin/activate" ]; then
+        if source venv/bin/activate 2>/dev/null; then
+            if ! python -c "import fastmcp" >/dev/null 2>&1; then
+                echo -e "${YELLOW}⚠️  FastMCP not found in virtual environment - installing MCP dependencies...${NC}"
+                if [ -f "mcp_servers/slash_commands/requirements.txt" ]; then
+                    if pip install -r mcp_servers/slash_commands/requirements.txt; then
+                        echo -e "${GREEN}✅ MCP dependencies installed successfully${NC}"
+                    else
+                        echo -e "${RED}❌ Failed to install MCP dependencies${NC}"
+                        echo -e "${YELLOW}💡 Try running: ./scripts/setup-dev-env.sh${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠️  Cannot auto-install MCP dependencies - you may need to run setup-dev-env.sh${NC}"
+                fi
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Cannot check FastMCP - virtual environment activation failed${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Virtual environment activate script not found${NC}"
+    fi
+fi
 
 # Enhanced MCP server detection with better error handling
 echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
@@ -1500,7 +1534,7 @@ restart_claude_bot() {
     echo -e "${BLUE}🔄 Restarting Claude bot server...${NC}"
     stop_claude_bot
     sleep 2
-    
+
     if start_claude_bot_background; then
         sleep 3
         if is_claude_bot_running; then

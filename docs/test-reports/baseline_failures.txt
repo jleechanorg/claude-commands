@@ -1,0 +1,14 @@
+Baseline established on 2025-08-28 at 18:34:26 EDT
+Total failures: 11
+Failing tests:
+- ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+- ./mvp_site/tests/test_api_routes.py
+- ./mvp_site/tests/test_end2end/test_continue_story_end2end.py
+- ./mvp_site/tests/test_end2end/test_debug_mode_end2end.py
+- ./mvp_site/tests/test_main_auth.py
+- ./mvp_site/tests/test_main_interaction_structured_fields.py
+- ./mvp_site/tests/test_qwen_matrix.py
+- .claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+- .claude/commands/test_orchestrate_integration.py
+- claude_command_scripts/commands/test_fake_code_patterns.py
+- claude-bot-commands/tests/test_claude_bot_server.py

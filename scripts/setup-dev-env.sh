@@ -56,9 +56,18 @@ pip install --upgrade pip
 if [ -f "mvp_site/requirements.txt" ]; then
     print_info "Installing Python dependencies..."
     pip install -r mvp_site/requirements.txt
-    print_success "Dependencies installed"
+    print_success "Main dependencies installed"
 else
     print_warning "mvp_site/requirements.txt not found, skipping dependency installation"
+fi
+
+# 4.1. Install MCP server requirements
+if [ -f "mcp_servers/slash_commands/requirements.txt" ]; then
+    print_info "Installing MCP server dependencies..."
+    pip install -r mcp_servers/slash_commands/requirements.txt
+    print_success "MCP server dependencies installed"
+else
+    print_warning "mcp_servers/slash_commands/requirements.txt not found, skipping MCP installation"
 fi
 
 # 5. Install pre-commit

@@ -50,27 +50,27 @@ actual_output=$(printf '%s' "$json_input" | bash "$HOOK_SCRIPT")
 hook_status=$?
 set -e
 
-# With context-aware detection, the embedded commands in PR text should be filtered out
-# Only the /think command at the start should be processed
-# Since there's only one command, it should pass through unchanged (no composition)
-if [[ "$actual_output" == "/think about this PR page content:"* ]]; then
-    echo -e "${GREEN}✓${NC} FULL GitHub PR text handled correctly with context-aware filtering"
-    echo "  - Single /think command passed through unchanged"
+# With enhanced single command processing (PR #1490), /think commands trigger composition
+# The embedded commands in PR text should be filtered out, but /think should trigger composition
+# Since /think is a composition-worthy command, it should trigger intelligent composition
+if [[ "$actual_output" == *"🔍 Detected slash commands:/think"* ]]; then
+    echo -e "${GREEN}✓${NC} FULL GitHub PR text handled correctly with enhanced composition"
+    echo "  - Single /think command correctly triggers composition (PR #1490)"
     echo "  - Embedded commands in pasted content correctly ignored"
-    echo "  - This demonstrates intelligent context-aware detection"
+    echo "  - This demonstrates intelligent composition for composition-worthy commands"
     echo "  - Output starts with: ${actual_output:0:100}..."
     exit 0
 else
     echo -e "${RED}✗${NC} FULL GitHub PR text incorrectly parsed"
-    echo "Expected: /think about this PR page content:..."
+    echo "Expected: 🔍 Detected slash commands:/think..."
     echo "Actual output (first 200 chars): ${actual_output:0:200}..."
     echo "Hook exit status: $hook_status"
     
-    # Check if it incorrectly triggered composition
-    if [[ "$actual_output" == *"🔍 Detected slash commands:"* ]]; then
-        echo "❌ ERROR: Context-aware detection failed - should not trigger composition"
-        echo "  - Multiple commands were detected when they should have been filtered"
-        echo "  - Embedded commands in pasted content should be ignored"
+    # Check if composition failed to trigger for /think
+    if [[ "$actual_output" == "/think about this PR page content:"* ]]; then
+        echo "❌ ERROR: Enhanced composition failed - /think should trigger composition (PR #1490)"
+        echo "  - /think is now a composition-worthy command"
+        echo "  - Should output composition format, not pass through unchanged"
     fi
     exit 1
 fi

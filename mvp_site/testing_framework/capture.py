@@ -59,14 +59,32 @@ class CaptureManager:
             )
             raise
         finally:
+            # Apply any pending responses that were recorded during execution
+            if hasattr(self, '_pending_responses') and interaction["id"] in self._pending_responses:
+                interaction["response"] = self._pending_responses[interaction["id"]]
+                del self._pending_responses[interaction["id"]]
+            
             self.interactions.append(interaction)
 
     def record_response(self, interaction_id: int, response_data: Any):
         """Record response data for a specific interaction."""
+        # Find the interaction by ID in the active context or in the list
+        target_interaction = None
+        
+        # Check if interaction is already in the list
         if interaction_id < len(self.interactions):
-            self.interactions[interaction_id]["response"] = self._sanitize_data(
-                response_data
-            )
+            target_interaction = self.interactions[interaction_id]
+        else:
+            # This might be called during context manager execution
+            # where interaction hasn't been added to list yet
+            # Store response for later use when interaction is finalized
+            if not hasattr(self, '_pending_responses'):
+                self._pending_responses = {}
+            self._pending_responses[interaction_id] = self._sanitize_data(response_data)
+            return
+            
+        if target_interaction:
+            target_interaction["response"] = self._sanitize_data(response_data)
 
     def save_captures(self, filename: str | None = None) -> str:
         """Save captured interactions to file."""
@@ -93,11 +111,12 @@ class CaptureManager:
         if isinstance(data, dict):
             sanitized = {}
             for key, value in data.items():
-                # Redact sensitive fields
+                # Redact sensitive fields - match key patterns more specifically
+                key_lower = key.lower()
                 if any(
-                    sensitive in key.lower()
-                    for sensitive in ["password", "key", "secret", "token"]
-                ):
+                    pattern in key_lower
+                    for pattern in ["password", "secret", "token", "api_key", "auth_key", "private_key"]
+                ) or key_lower.endswith("_key") or key_lower.startswith("key_"):
                     sanitized[key] = "[REDACTED]"
                 else:
                     sanitized[key] = self._sanitize_data(value)

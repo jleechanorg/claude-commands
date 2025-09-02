@@ -297,17 +297,17 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 🚨 **PRE-ACTION CHECKPOINT:** Before ANY action: "Does this violate CLAUDE.md rules?"
 
-🚨 **PRE-WRITE CHECKPOINT**: Before ANY Write tool usage, ask:
-1. "Does this violate NEW FILE CREATION PROTOCOL?"
-2. "Have I searched existing tools first?"
-3. "Do I need NEW_FILE_REQUESTS.md entry?"
+🚨 **WRITE GATE CHECKPOINT**: ⚠️ MANDATORY - Before ANY Write tool usage, automatically ask:
+1. "Have I searched for existing files that could handle this?"
+2. "Have I attempted integration into existing files?"
+3. "Can I document why integration is impossible?"
+4. "Does this violate NEW FILE CREATION PROTOCOL?"
+5. "Do I need NEW_FILE_REQUESTS.md entry?"
 
+**🎯 Memory Aid:** The Write Gate Checkpoint prevents emergency-driven file creation, making protocol compliance automatic like greeting/header habits. Must become as automatic as behavioral anchors.
 **🚨 ENHANCED**: See "MANDATORY PRE-WRITE HARD STOP" section above for complete 4-check verification protocol
-
-**🎯 Memory Aid:** The Write tool checkpoint prevents emergency-driven file creation, making protocol compliance automatic like greeting/header habits.
-
-**Pattern**: Write usage → Check protocol → Search existing → Document necessity → Then create
-**Anti-Pattern**: Problem urgency → Create file immediately → Skip all protocols
+**Pattern**: Write usage → WRITE GATE CHECKPOINT → Search existing → Attempt integration → Document necessity → Then create
+**Anti-Pattern**: Problem urgency → Create file immediately → Skip all protocols → Violate integration-first mandate
 
 🚨 **DUAL COMPOSITION ARCHITECTURE**: Two command processing mechanisms
 - **Cognitive** (/think, /arch, /debug): Universal Composition (natural semantic understanding)
@@ -628,6 +628,42 @@ Models: `gemini-2.5-flash` (default), `gemini-1.5-flash` (test)
 - `/orch` ALWAYS triggers tmux agents - NEVER execute directly
 - `/execute` requires TodoWrite checklist
 
+## 🚨 CRITICAL: SLASH COMMAND EXECUTION PROTOCOL
+
+🚨 **DIRECT EXECUTION MANDATE:** ⚠️ MANDATORY - When user types slash command
+- ✅ **USER TYPES SLASH COMMAND**: Execute immediately by reading the .md file directly
+- ✅ **PATTERN**: User input starts with "/" → Read .claude/commands/[command].md → Execute instructions
+- ❌ **NEVER USE MCP SERVER**: When user types command directly - read and execute .md file
+- ❌ **NEVER ASK**: "Should I execute this?" or "Do you want me to run this?"
+- ❌ **NEVER DELAY**: Immediate execution upon slash command detection
+
+🚨 **AUTONOMOUS INFERENCE PROTOCOL:** ⚠️ MANDATORY - When inferring slash command usage
+- ✅ **INFERENCE TRIGGER**: User requests task that maps to available MCP slash command tools
+- ✅ **AUTONOMOUS EXECUTION**: Execute slash command when confident it matches user intent
+- ✅ **MANDATORY NOTIFICATION**: ALWAYS inform user: "Using `/command` for this task"
+- ❌ **NEVER SILENT**: Must announce slash command usage before execution
+
+**EXECUTION DECISION MATRIX:**
+```
+User Input Type           | Action                    | Example
+Direct Slash Command     | Execute immediately       | "/fake3" → Execute /fake3
+Task Request + Clear Map  | Execute + Announce       | "check fake code" → "Using /fake3" + Execute
+Task Request + Uncertain | Ask for clarification    | "analyze something" → Ask which tool
+```
+
+**SLASH COMMAND INTELLIGENCE PATTERNS:**
+- **Code Quality**: "check fake code", "detect placeholders" → Use `/fake3`
+- **Git Operations**: "push to PR", "create PR" → Use `/pushl`, `/pr`
+- **Testing**: "run tests", "fix failing tests" → Use `/test`, `/tester`
+- **Analysis**: "review code", "find issues" → Use `/copilot`, `/review`
+- **Performance**: "optimize", "improve speed" → Use `/cerebras`, `/optimize`
+
+🚨 **MCP SERVER INTEGRATION:** ⚠️ FOR AUTONOMOUS AI AGENTS ONLY
+- ✅ **AUTONOMOUS AGENTS**: AI agents can use MCP slash command server for background execution
+- ✅ **USER COMMANDS**: When user types "/command", read .md file directly, NOT via MCP
+- ✅ **HYBRID APPROACH**: Direct execution for user, MCP for autonomous agents
+- ❌ **NO MCP FOR USER**: Never use MCP server when user explicitly types slash command
+
 ## Special Protocols
 
 **PR Comments:** Address ALL sources. Status: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
@@ -739,10 +775,10 @@ git push
 ### Real-Time Optimization Rules:
 
 🔧 **Tool Selection Hierarchy** (Layer 1 - 80% Impact):
-1. **Serena MCP FIRST** - Use `mcp__serena__*` for semantic operations
-2. **Targeted Reads** - Use Read tool with limits (max 5K chars per read)  
-3. **Grep Targeted** - Pattern search before full file reads
-4. **Batch Operations** - MultiEdit for multiple changes
+1. **Serena MCP FIRST** - ALWAYS use `mcp__serena__*` for semantic operations before Read tool
+2. **Targeted Reads** - Use Read tool with `limit=100` parameter (max 100 lines per read)  
+3. **Grep Targeted** - Use `head_limit=10` parameter, pattern search before full file reads
+4. **Batch Operations** - MultiEdit for multiple changes, batch tool calls in single messages
 5. **Bash Fallback** - Only when other tools insufficient
 
 🎯 **Auto-Optimization Rules** (Apply Every Session):
@@ -752,24 +788,35 @@ git push
 - **Session Init**: Use Serena MCP for first 3 codebase operations
 
 ⚡ **Session Longevity** (Layer 2 - 60% Impact):
-- **Auto-checkpoint** at 80% context usage
-- **Warning alerts** at 60% context usage  
+- **Auto-checkpoint** at 60% context usage (not 80%)
+- **Warning alerts** at 40% context usage  
 - **Semantic search** instead of loading multiple comparison files
-- **Streamlined responses** - minimize tool response overhead
+- **Streamlined responses** - count-only outputs, no verbose listings
+- **Remove --verbose flags** from all script executions
 
 🧠 **Workflow Intelligence** (Layer 3 - 40% Impact):  
 - **Predictive alerts** for context exhaustion scenarios
 - **Background monitoring** for continuous optimization
-- **Development velocity** optimized for 18+ minute sessions
+- **Development velocity** optimized for 15-20+ minute sessions
+- **Mental caching** - avoid re-reading same files within session
+
+### Mandatory Behavioral Changes:
+- ✅ **ALWAYS**: Use Serena MCP for code exploration before Read tool
+- ✅ **ALWAYS**: Use `limit` parameter on Read operations (100 lines max)
+- ✅ **ALWAYS**: Use `head_limit` parameter on Grep operations (10 results max)
+- ✅ **ALWAYS**: Batch multiple tool calls in single messages
+- ❌ **NEVER**: Read entire large files without limits
+- ❌ **NEVER**: Use verbose output modes unless debugging specific issues
+- ❌ **NEVER**: Re-read files already examined in current session
 
 ### Context Health Monitoring:
 
-✅ **ACTIVE MONITORING**: Real-time context usage feedback enabled
-✅ **OPTIMIZATION HOOKS**: Pre-command tool selection optimization  
-✅ **AUTOMATED TRIGGERS**: Context checkpointing at thresholds
+✅ **ACTIVE MONITORING**: Real-time context usage feedback via hooks
+✅ **OPTIMIZATION HOOKS**: `pre_command_optimize.py`, `context_monitor.py`, `command_output_trimmer.py`
+✅ **AUTOMATED TRIGGERS**: Context checkpointing at 60% threshold
 ✅ **PERFORMANCE TRACKING**: Session duration and token efficiency metrics
 
-**Usage**: Context optimization runs automatically. Monitor alerts and follow tool hierarchy.
+**Usage**: Context optimization runs automatically via hooks. Follow tool hierarchy and behavioral changes for optimal sessions.
 
 ## Additional Documentation
 

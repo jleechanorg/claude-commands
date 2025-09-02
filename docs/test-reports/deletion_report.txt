@@ -1,0 +1,51 @@
+# Test Deletion Report
+Generated: 2025-08-27T23:12:59.060019
+Branch: fix-run-tests-readarray-compatibility
+Dry Run: False
+
+## Summary
+Total tests deleted: 16
+
+## Categories
+
+### Infrastructure Tests (Redis/tmux required)
+
+### Infrastructure Tests
+- orchestration/tests/test_a2a_integration.py
+- orchestration/tests/test_end_to_end.py
+- orchestration/tests/test_orchestrate_unified.py
+- orchestration/tests/test_orchestration_no_redis.py
+- orchestration/tests/test_prompt_file_lifecycle.py
+- orchestration/tests/test_simple_flow.py
+- orchestration/tests/test_stale_task_prevention.py
+- orchestration/tests/test_task_dispatcher.py
+- orchestration/tests/test_task_execution_verification.py
+- orchestration/tests/test_tmux_session_lifecycle.py
+- tests/test_infrastructure_commands.py
+
+### Experimental Tests
+- prototype/tests/test_narrative_sync.py
+- prototype/tests/test_word_boundary_bug.py
+- roadmap/cognitive_enhancement/test_framework.py
+- roadmap/tests/test_ai_content_personalization_fix.py
+
+### Dependencies Tests
+- scripts/tests/test_crdt_properties.py
+
+## All Deleted Tests
+- orchestration/tests/test_a2a_integration.py
+- orchestration/tests/test_end_to_end.py
+- orchestration/tests/test_orchestrate_unified.py
+- orchestration/tests/test_orchestration_no_redis.py
+- orchestration/tests/test_prompt_file_lifecycle.py
+- orchestration/tests/test_simple_flow.py
+- orchestration/tests/test_stale_task_prevention.py
+- orchestration/tests/test_task_dispatcher.py
+- orchestration/tests/test_task_execution_verification.py
+- orchestration/tests/test_tmux_session_lifecycle.py
+- prototype/tests/test_narrative_sync.py
+- prototype/tests/test_word_boundary_bug.py
+- roadmap/cognitive_enhancement/test_framework.py
+- roadmap/tests/test_ai_content_personalization_fix.py
+- scripts/tests/test_crdt_properties.py
+- tests/test_infrastructure_commands.py

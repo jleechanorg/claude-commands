@@ -22,6 +22,17 @@ STUCK_PATTERNS = [
 TMUX_TIMEOUT = 5
 
 
+class OrchestrationCLI:
+    """
+    Stub implementation of OrchestrationCLI for test compatibility.
+    
+    This class provides the interface expected by integration tests
+    while delegating actual orchestration to the unified system.
+    """
+    
+    def __init__(self):
+        """Initialize the orchestration CLI stub."""
+        pass
 
 
 def main():

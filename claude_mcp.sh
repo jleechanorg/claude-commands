@@ -1280,6 +1280,74 @@ else
     fi
 fi
 
+display_step "Setting up Slash Commands MCP Server..."
+TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+echo -e "${BLUE}  🚀 Configuring Slash Commands MCP server for WorldArchitect.AI...${NC}"
+log_with_timestamp "Setting up MCP server: slash-commands (local Python server)"
+
+# Check if server already exists
+if server_already_exists "claude-slash-commands"; then
+    echo -e "${GREEN}  ✅ Server slash-commands already exists, skipping installation${NC}"
+    log_with_timestamp "Server slash-commands already exists, skipping"
+    INSTALL_RESULTS["claude-slash-commands"]="ALREADY_EXISTS"
+    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+else
+    # Get the path to the MCP server
+    SLASH_COMMANDS_PATH="$SCRIPT_DIR/mcp_servers/slash_commands"
+    
+               if [ ! -f "$SLASH_COMMANDS_PATH/server.py" ]; then
+               echo -e "${RED}  ❌ Slash Commands MCP server not found at: $SLASH_COMMANDS_PATH/server.py${NC}"
+               log_with_timestamp "ERROR: Slash Commands MCP server not found at $SLASH_COMMANDS_PATH/server.py"
+        INSTALL_RESULTS["claude-slash-commands"]="PACKAGE_NOT_FOUND"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    else
+        # Remove existing server to reconfigure
+        claude mcp remove "claude-slash-commands" >/dev/null 2>&1 || true
+        
+        # Add the server using Python
+        echo -e "${BLUE}  🔗 Adding Slash Commands MCP server...${NC}"
+        log_with_timestamp "Attempting to add Slash Commands MCP server"
+        
+        # Check for Python 3
+        if command -v python3 >/dev/null 2>&1; then
+            PYTHON_CMD="python3"
+        elif command -v python >/dev/null 2>&1; then
+            PYTHON_CMD="python"
+        else
+            echo -e "${RED}  ❌ Python not found, cannot add Slash Commands MCP server${NC}"
+            log_with_timestamp "ERROR: Python not found"
+            INSTALL_RESULTS["claude-slash-commands"]="DEPENDENCY_MISSING"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+        
+        if [ -n "$PYTHON_CMD" ]; then
+                                               # Add the server with environment variables using FIXED FastMCP server with all 29 tools
+                add_output=$(claude mcp add --scope user "claude-slash-commands" "$SCRIPT_DIR/vpython" "$SLASH_COMMANDS_PATH/server.py" \
+                --env "CEREBRAS_API_KEY=$CEREBRAS_API_KEY" \
+                --env "GEMINI_API_KEY=$GEMINI_API_KEY" \
+                --env "GITHUB_TOKEN=$GITHUB_TOKEN" \
+                --env "PROJECT_ROOT=$SCRIPT_DIR" \
+                --env "PYTHONPATH=$SLASH_COMMANDS_PATH" 2>&1)
+            add_exit_code=$?
+            
+            if [ $add_exit_code -eq 0 ]; then
+                echo -e "${GREEN}  ✅ Successfully configured Slash Commands MCP server${NC}"
+                echo -e "${BLUE}  📋 Server info:${NC}"
+                echo -e "     • 29 tools available (cerebras_generate, converge_to_goal, etc.)"
+                echo -e "     • Thin proxy pattern for slash command execution"
+                echo -e "     • High-speed Cerebras code generation (19.6x faster)"
+                                       log_with_timestamp "Successfully added Slash Commands MCP server"
+                       INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+            else
+                echo -e "${RED}  ❌ Failed to add Slash Commands MCP server${NC}"
+                log_error_details "claude mcp add claude-slash-commands" "claude-slash-commands" "$add_output"
+                INSTALL_RESULTS["claude-slash-commands"]="ADD_FAILED"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            fi
+        fi
+    fi
+fi
 
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"

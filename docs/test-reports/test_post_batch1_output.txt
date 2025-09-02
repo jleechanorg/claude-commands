@@ -1,0 +1,1310 @@
+[0;34m[INFO][0m Activating virtual environment...
+Requirement already satisfied: Flask==3.0.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 1)) (3.0.0)
+Requirement already satisfied: gunicorn==21.2.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 2)) (21.2.0)
+Requirement already satisfied: firebase-admin==6.5.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 3)) (6.5.0)
+Requirement already satisfied: google-cloud-firestore==2.16.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 4)) (2.16.0)
+Requirement already satisfied: google-genai in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 5)) (1.31.0)
+Requirement already satisfied: protobuf<5.0.0,>=4.25.3 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 6)) (4.25.8)
+Requirement already satisfied: grpcio<2.0.0,>=1.62.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 7)) (1.74.0)
+Requirement already satisfied: grpcio-status<2.0.0,>=1.62.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 8)) (1.62.3)
+Requirement already satisfied: Flask-Cors==4.0.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 10)) (4.0.0)
+Requirement already satisfied: fpdf2 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 11)) (2.8.4)
+Requirement already satisfied: python-docx in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 12)) (1.2.0)
+Requirement already satisfied: google-cloud-secret-manager in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 13)) (2.24.0)
+Requirement already satisfied: selenium in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 14)) (4.35.0)
+Requirement already satisfied: pydantic in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 15)) (2.11.7)
+Requirement already satisfied: requests>=2.31.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 16)) (2.32.5)
+Requirement already satisfied: playwright>=1.40.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 17)) (1.54.0)
+Requirement already satisfied: beautifulsoup4>=4.12.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 18)) (4.13.5)
+Requirement already satisfied: psutil>=5.9.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 19)) (7.0.0)
+Requirement already satisfied: PyJWT>=2.8.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 20)) (2.10.1)
+Requirement already satisfied: ruff>=0.6.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 21)) (0.12.10)
+Requirement already satisfied: isort>=5.13.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 22)) (6.0.1)
+Requirement already satisfied: mypy>=1.8.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 23)) (1.17.1)
+Requirement already satisfied: bandit>=1.7.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 24)) (1.8.6)
+Requirement already satisfied: types-flask>=1.1.6 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 25)) (1.1.6)
+Requirement already satisfied: types-requests>=2.31.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 26)) (2.32.4.20250809)
+Requirement already satisfied: mcp>=1.0.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 27)) (1.13.1)
+Requirement already satisfied: pytest>=6.0.0 in ./venv/lib/python3.11/site-packages (from -r mvp_site/requirements.txt (line 28)) (8.4.1)
+Requirement already satisfied: Werkzeug>=3.0.0 in ./venv/lib/python3.11/site-packages (from Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (3.1.3)
+Requirement already satisfied: Jinja2>=3.1.2 in ./venv/lib/python3.11/site-packages (from Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (3.1.6)
+Requirement already satisfied: itsdangerous>=2.1.2 in ./venv/lib/python3.11/site-packages (from Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (2.2.0)
+Requirement already satisfied: click>=8.1.3 in ./venv/lib/python3.11/site-packages (from Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (8.2.1)
+Requirement already satisfied: blinker>=1.6.2 in ./venv/lib/python3.11/site-packages (from Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (1.9.0)
+Requirement already satisfied: packaging in ./venv/lib/python3.11/site-packages (from gunicorn==21.2.0->-r mvp_site/requirements.txt (line 2)) (25.0)
+Requirement already satisfied: cachecontrol>=0.12.6 in ./venv/lib/python3.11/site-packages (from firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (0.14.3)
+Requirement already satisfied: google-api-python-client>=1.7.8 in ./venv/lib/python3.11/site-packages (from firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (2.179.0)
+Requirement already satisfied: google-cloud-storage>=1.37.1 in ./venv/lib/python3.11/site-packages (from firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (3.3.0)
+Requirement already satisfied: google-api-core<3.0.0dev,>=1.22.1 in ./venv/lib/python3.11/site-packages (from google-api-core[grpc]<3.0.0dev,>=1.22.1; platform_python_implementation != "PyPy"->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (2.25.1)
+Requirement already satisfied: google-auth!=2.24.0,!=2.25.0,<3.0.0dev,>=2.14.1 in ./venv/lib/python3.11/site-packages (from google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (2.40.3)
+Requirement already satisfied: google-cloud-core<3.0.0dev,>=1.4.1 in ./venv/lib/python3.11/site-packages (from google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (2.4.3)
+Requirement already satisfied: proto-plus<2.0.0dev,>=1.22.0 in ./venv/lib/python3.11/site-packages (from google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (1.26.1)
+Requirement already satisfied: googleapis-common-protos>=1.5.5 in ./venv/lib/python3.11/site-packages (from grpcio-status<2.0.0,>=1.62.0->-r mvp_site/requirements.txt (line 8)) (1.70.0)
+Requirement already satisfied: charset_normalizer<4,>=2 in ./venv/lib/python3.11/site-packages (from requests>=2.31.0->-r mvp_site/requirements.txt (line 16)) (3.4.3)
+Requirement already satisfied: idna<4,>=2.5 in ./venv/lib/python3.11/site-packages (from requests>=2.31.0->-r mvp_site/requirements.txt (line 16)) (3.10)
+Requirement already satisfied: urllib3<3,>=1.21.1 in ./venv/lib/python3.11/site-packages (from requests>=2.31.0->-r mvp_site/requirements.txt (line 16)) (2.5.0)
+Requirement already satisfied: certifi>=2017.4.17 in ./venv/lib/python3.11/site-packages (from requests>=2.31.0->-r mvp_site/requirements.txt (line 16)) (2025.8.3)
+Requirement already satisfied: cachetools<6.0,>=2.0.0 in ./venv/lib/python3.11/site-packages (from google-auth!=2.24.0,!=2.25.0,<3.0.0dev,>=2.14.1->google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (5.5.2)
+Requirement already satisfied: pyasn1-modules>=0.2.1 in ./venv/lib/python3.11/site-packages (from google-auth!=2.24.0,!=2.25.0,<3.0.0dev,>=2.14.1->google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (0.4.2)
+Requirement already satisfied: rsa<5,>=3.1.4 in ./venv/lib/python3.11/site-packages (from google-auth!=2.24.0,!=2.25.0,<3.0.0dev,>=2.14.1->google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (4.9.1)
+Requirement already satisfied: pyasn1>=0.1.3 in ./venv/lib/python3.11/site-packages (from rsa<5,>=3.1.4->google-auth!=2.24.0,!=2.25.0,<3.0.0dev,>=2.14.1->google-cloud-firestore==2.16.0->-r mvp_site/requirements.txt (line 4)) (0.6.1)
+Requirement already satisfied: anyio<5.0.0,>=4.8.0 in ./venv/lib/python3.11/site-packages (from google-genai->-r mvp_site/requirements.txt (line 5)) (4.10.0)
+Requirement already satisfied: httpx<1.0.0,>=0.28.1 in ./venv/lib/python3.11/site-packages (from google-genai->-r mvp_site/requirements.txt (line 5)) (0.28.1)
+Requirement already satisfied: tenacity<9.2.0,>=8.2.3 in ./venv/lib/python3.11/site-packages (from google-genai->-r mvp_site/requirements.txt (line 5)) (9.1.2)
+Requirement already satisfied: websockets<15.1.0,>=13.0.0 in ./venv/lib/python3.11/site-packages (from google-genai->-r mvp_site/requirements.txt (line 5)) (15.0.1)
+Requirement already satisfied: typing-extensions<5.0.0,>=4.11.0 in ./venv/lib/python3.11/site-packages (from google-genai->-r mvp_site/requirements.txt (line 5)) (4.14.1)
+Requirement already satisfied: annotated-types>=0.6.0 in ./venv/lib/python3.11/site-packages (from pydantic->-r mvp_site/requirements.txt (line 15)) (0.7.0)
+Requirement already satisfied: pydantic-core==2.33.2 in ./venv/lib/python3.11/site-packages (from pydantic->-r mvp_site/requirements.txt (line 15)) (2.33.2)
+Requirement already satisfied: typing-inspection>=0.4.0 in ./venv/lib/python3.11/site-packages (from pydantic->-r mvp_site/requirements.txt (line 15)) (0.4.1)
+Requirement already satisfied: sniffio>=1.1 in ./venv/lib/python3.11/site-packages (from anyio<5.0.0,>=4.8.0->google-genai->-r mvp_site/requirements.txt (line 5)) (1.3.1)
+Requirement already satisfied: httpcore==1.* in ./venv/lib/python3.11/site-packages (from httpx<1.0.0,>=0.28.1->google-genai->-r mvp_site/requirements.txt (line 5)) (1.0.9)
+Requirement already satisfied: h11>=0.16 in ./venv/lib/python3.11/site-packages (from httpcore==1.*->httpx<1.0.0,>=0.28.1->google-genai->-r mvp_site/requirements.txt (line 5)) (0.16.0)
+Requirement already satisfied: defusedxml in ./venv/lib/python3.11/site-packages (from fpdf2->-r mvp_site/requirements.txt (line 11)) (0.7.1)
+Requirement already satisfied: Pillow!=9.2.*,>=8.0.0 in ./venv/lib/python3.11/site-packages (from fpdf2->-r mvp_site/requirements.txt (line 11)) (11.3.0)
+Requirement already satisfied: fonttools>=4.34.0 in ./venv/lib/python3.11/site-packages (from fpdf2->-r mvp_site/requirements.txt (line 11)) (4.59.1)
+Requirement already satisfied: lxml>=3.1.0 in ./venv/lib/python3.11/site-packages (from python-docx->-r mvp_site/requirements.txt (line 12)) (6.0.1)
+Requirement already satisfied: grpc-google-iam-v1<1.0.0,>=0.14.0 in ./venv/lib/python3.11/site-packages (from google-cloud-secret-manager->-r mvp_site/requirements.txt (line 13)) (0.14.2)
+Requirement already satisfied: trio~=0.30.0 in ./venv/lib/python3.11/site-packages (from selenium->-r mvp_site/requirements.txt (line 14)) (0.30.0)
+Requirement already satisfied: trio-websocket~=0.12.2 in ./venv/lib/python3.11/site-packages (from selenium->-r mvp_site/requirements.txt (line 14)) (0.12.2)
+Requirement already satisfied: websocket-client~=1.8.0 in ./venv/lib/python3.11/site-packages (from selenium->-r mvp_site/requirements.txt (line 14)) (1.8.0)
+Requirement already satisfied: attrs>=23.2.0 in ./venv/lib/python3.11/site-packages (from trio~=0.30.0->selenium->-r mvp_site/requirements.txt (line 14)) (25.3.0)
+Requirement already satisfied: sortedcontainers in ./venv/lib/python3.11/site-packages (from trio~=0.30.0->selenium->-r mvp_site/requirements.txt (line 14)) (2.4.0)
+Requirement already satisfied: outcome in ./venv/lib/python3.11/site-packages (from trio~=0.30.0->selenium->-r mvp_site/requirements.txt (line 14)) (1.3.0.post0)
+Requirement already satisfied: wsproto>=0.14 in ./venv/lib/python3.11/site-packages (from trio-websocket~=0.12.2->selenium->-r mvp_site/requirements.txt (line 14)) (1.2.0)
+Requirement already satisfied: pysocks!=1.5.7,<2.0,>=1.5.6 in ./venv/lib/python3.11/site-packages (from urllib3[socks]<3.0,>=2.5.0->selenium->-r mvp_site/requirements.txt (line 14)) (1.7.1)
+Requirement already satisfied: pyee<14,>=13 in ./venv/lib/python3.11/site-packages (from playwright>=1.40.0->-r mvp_site/requirements.txt (line 17)) (13.0.0)
+Requirement already satisfied: greenlet<4.0.0,>=3.1.1 in ./venv/lib/python3.11/site-packages (from playwright>=1.40.0->-r mvp_site/requirements.txt (line 17)) (3.2.4)
+Requirement already satisfied: soupsieve>1.2 in ./venv/lib/python3.11/site-packages (from beautifulsoup4>=4.12.0->-r mvp_site/requirements.txt (line 18)) (2.7)
+Requirement already satisfied: mypy_extensions>=1.0.0 in ./venv/lib/python3.11/site-packages (from mypy>=1.8.0->-r mvp_site/requirements.txt (line 23)) (1.1.0)
+Requirement already satisfied: pathspec>=0.9.0 in ./venv/lib/python3.11/site-packages (from mypy>=1.8.0->-r mvp_site/requirements.txt (line 23)) (0.12.1)
+Requirement already satisfied: PyYAML>=5.3.1 in ./venv/lib/python3.11/site-packages (from bandit>=1.7.0->-r mvp_site/requirements.txt (line 24)) (6.0.2)
+Requirement already satisfied: stevedore>=1.20.0 in ./venv/lib/python3.11/site-packages (from bandit>=1.7.0->-r mvp_site/requirements.txt (line 24)) (5.5.0)
+Requirement already satisfied: rich in ./venv/lib/python3.11/site-packages (from bandit>=1.7.0->-r mvp_site/requirements.txt (line 24)) (14.1.0)
+Requirement already satisfied: types-Jinja2 in ./venv/lib/python3.11/site-packages (from types-flask>=1.1.6->-r mvp_site/requirements.txt (line 25)) (2.11.9)
+Requirement already satisfied: types-Werkzeug in ./venv/lib/python3.11/site-packages (from types-flask>=1.1.6->-r mvp_site/requirements.txt (line 25)) (1.0.9)
+Requirement already satisfied: types-click in ./venv/lib/python3.11/site-packages (from types-flask>=1.1.6->-r mvp_site/requirements.txt (line 25)) (7.1.8)
+Requirement already satisfied: httpx-sse>=0.4 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.4.1)
+Requirement already satisfied: jsonschema>=4.20.0 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (4.25.1)
+Requirement already satisfied: pydantic-settings>=2.5.2 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (2.10.1)
+Requirement already satisfied: python-multipart>=0.0.9 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.0.20)
+Requirement already satisfied: sse-starlette>=1.6.1 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (3.0.2)
+Requirement already satisfied: starlette>=0.27 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.47.3)
+Requirement already satisfied: uvicorn>=0.31.1 in ./venv/lib/python3.11/site-packages (from mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.35.0)
+Requirement already satisfied: iniconfig>=1 in ./venv/lib/python3.11/site-packages (from pytest>=6.0.0->-r mvp_site/requirements.txt (line 28)) (2.1.0)
+Requirement already satisfied: pluggy<2,>=1.5 in ./venv/lib/python3.11/site-packages (from pytest>=6.0.0->-r mvp_site/requirements.txt (line 28)) (1.6.0)
+Requirement already satisfied: pygments>=2.7.2 in ./venv/lib/python3.11/site-packages (from pytest>=6.0.0->-r mvp_site/requirements.txt (line 28)) (2.19.2)
+Requirement already satisfied: msgpack<2.0.0,>=0.5.2 in ./venv/lib/python3.11/site-packages (from cachecontrol>=0.12.6->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (1.1.1)
+Requirement already satisfied: httplib2<1.0.0,>=0.19.0 in ./venv/lib/python3.11/site-packages (from google-api-python-client>=1.7.8->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (0.22.0)
+Requirement already satisfied: google-auth-httplib2<1.0.0,>=0.2.0 in ./venv/lib/python3.11/site-packages (from google-api-python-client>=1.7.8->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (0.2.0)
+Requirement already satisfied: uritemplate<5,>=3.0.1 in ./venv/lib/python3.11/site-packages (from google-api-python-client>=1.7.8->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (4.2.0)
+Requirement already satisfied: pyparsing!=3.0.0,!=3.0.1,!=3.0.2,!=3.0.3,<4,>=2.4.2 in ./venv/lib/python3.11/site-packages (from httplib2<1.0.0,>=0.19.0->google-api-python-client>=1.7.8->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (3.2.3)
+Requirement already satisfied: google-resumable-media<3.0.0,>=2.7.2 in ./venv/lib/python3.11/site-packages (from google-cloud-storage>=1.37.1->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (2.7.2)
+Requirement already satisfied: google-crc32c<2.0.0,>=1.1.3 in ./venv/lib/python3.11/site-packages (from google-cloud-storage>=1.37.1->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (1.7.1)
+Requirement already satisfied: MarkupSafe>=2.0 in ./venv/lib/python3.11/site-packages (from Jinja2>=3.1.2->Flask==3.0.0->-r mvp_site/requirements.txt (line 1)) (3.0.2)
+Requirement already satisfied: jsonschema-specifications>=2023.03.6 in ./venv/lib/python3.11/site-packages (from jsonschema>=4.20.0->mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (2025.4.1)
+Requirement already satisfied: referencing>=0.28.4 in ./venv/lib/python3.11/site-packages (from jsonschema>=4.20.0->mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.36.2)
+Requirement already satisfied: rpds-py>=0.7.1 in ./venv/lib/python3.11/site-packages (from jsonschema>=4.20.0->mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (0.27.0)
+Requirement already satisfied: python-dotenv>=0.21.0 in ./venv/lib/python3.11/site-packages (from pydantic-settings>=2.5.2->mcp>=1.0.0->-r mvp_site/requirements.txt (line 27)) (1.1.1)
+Requirement already satisfied: cryptography>=3.4.0 in ./venv/lib/python3.11/site-packages (from pyjwt[crypto]>=2.5.0->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (45.0.6)
+Requirement already satisfied: cffi>=1.14 in ./venv/lib/python3.11/site-packages (from cryptography>=3.4.0->pyjwt[crypto]>=2.5.0->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (1.17.1)
+Requirement already satisfied: pycparser in ./venv/lib/python3.11/site-packages (from cffi>=1.14->cryptography>=3.4.0->pyjwt[crypto]>=2.5.0->firebase-admin==6.5.0->-r mvp_site/requirements.txt (line 3)) (2.22)
+Requirement already satisfied: markdown-it-py>=2.2.0 in ./venv/lib/python3.11/site-packages (from rich->bandit>=1.7.0->-r mvp_site/requirements.txt (line 24)) (4.0.0)
+Requirement already satisfied: mdurl~=0.1 in ./venv/lib/python3.11/site-packages (from markdown-it-py>=2.2.0->rich->bandit>=1.7.0->-r mvp_site/requirements.txt (line 24)) (0.1.2)
+Requirement already satisfied: types-MarkupSafe in ./venv/lib/python3.11/site-packages (from types-Jinja2->types-flask>=1.1.6->-r mvp_site/requirements.txt (line 25)) (1.1.10)
+[0;34m[INFO][0m Running tests from project root for complete discovery...
+[0;34m[INFO][0m Setting TESTING=true for faster AI model usage
+[0;34m[INFO][0m TEST_MODE=mock (Real-Mode Testing Framework)
+[0;34m[INFO][0m 🔧 CI Simulation Mode: Simulating GitHub Actions environment
+[0;34m[INFO][0m ✅ CI simulation environment configured (matches GitHub Actions)
+[0;34m[INFO][0m 🧠 Intelligent Test Selection Mode (use --full for complete suite)
+[0;34m[INFO][0m Unit tests only (include_integration=false)
+[0;34m[INFO][0m 🔒 Running critical Claude settings validation...
+[0;32m[PASS][0m ✅ Claude settings.json validation passed
+[0;34m[INFO][0m 🔍 Analyzing git changes for intelligent test selection...
+[1;33m[WARN][0m ⚠️  Intelligent analysis failed, falling back to full suite
+[0;34m[INFO][0m Running tests in parallel mode (use --coverage for coverage analysis)
+[0;34m[INFO][0m 🔍 DEBUG: include_integration=false, use_intelligent_selection=false, selected_test_files count=0
+[0;34m[INFO][0m 🔍 Discovering all test files (traditional mode)
+[0;34m[INFO][0m Including .claude/commands tests...
+[0;34m[INFO][0m Including orchestration tests...
+[0;34m[INFO][0m Including claude_command_scripts tests...
+[0;34m[INFO][0m Including claude-bot-commands tests...
+[0;34m[INFO][0m Including .claude/hooks tests...
+[0;34m[INFO][0m Including .claude/commands direct test files...
+[0;34m[INFO][0m Including scripts/tests...
+[0;34m[INFO][0m Including mcp_servers/slash_commands tests...
+[0;34m[INFO][0m 🚀 Discovering cerebras command tests...
+  - Found: .claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+[0;34m[INFO][0m 📊 Found 181 test files to execute
+[0;34m[INFO][0m 📋 Test files preview (first 10):
+  ./mvp_site/tests/auth/test_auth_resilience.py
+  ./mvp_site/tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py
+  ./mvp_site/tests/integration/test_real_browser_settings_game_integration.py
+  ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+  ./mvp_site/tests/mcp_tests/test_mcp_comprehensive.py
+  ./mvp_site/tests/test_age_field_validation.py
+  ./mvp_site/tests/test_ai_content_simple.py
+  ./mvp_site/tests/test_always_json_mode.py
+  ./mvp_site/tests/test_animation_system.py
+  ./mvp_site/tests/test_api_backward_compatibility.py
+  ... and 171 more files
+
+[0;34m[INFO][0m 🪝 Running Claude Code hooks tests...
+[0;34m╔════════════════════════════════════════════╗[0m
+[0;34m║     Claude Code Hooks Test Suite          ║[0m
+[0;34m╚════════════════════════════════════════════╝[0m
+
+[1;33mRunning: [0mtest_compose_backward_compat
+----------------------------------------
+Testing compose-commands.sh backward compatibility...
+==================================================
+Testing plain text with single command... [0;31mSKIP[0m (Known Python seek bug - empty output)
+Testing plain text with multiple commands... [0;31mSKIP[0m (Known Python seek bug - empty output)
+Testing JSON input with prompt field... [0;31mSKIP[0m (Hook produces empty output in test environment)
+Testing JSON input with multiple commands... [0;31mSKIP[0m (Hook produces empty output in test environment)
+Testing empty plain text... [0;32mPASS[0m
+Testing empty JSON... [0;32mPASS[0m
+Testing plain text without commands... [0;32mPASS[0m
+Testing malformed JSON falls back gracefully... [0;32mPASS[0m
+==================================================
+Test Results:
+  Tests run:    8
+  Tests passed: 4
+  Tests failed: 0
+[0;32mAll runnable tests passed! (Some skipped due to known issues)[0m
+[0;32m✓ test_compose_backward_compat passed[0m
+
+[1;33mRunning: [0mtest_compose_commands
+----------------------------------------
+Testing compose-commands.sh hook...
+=================================
+[1;33m🔴 RED PHASE: Bug Fix Tests (Should FAIL)[0m
+[0;32m✓[0m Bug Fix: PR parsing should not match standalone numbers
+[0;32m✓[0m Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match
+[0;32m✓[0m Bug Fix: Single commands should preserve prefix for compatibility
+[0;32m✓[0m Bug Fix: Code fencing is properly formatted
+[0;32m✓[0m Bug Fix: Shell variables are properly quoted
+[1;33m🟢 GREEN PHASE: Original Tests (Should PASS)[0m
+[0;32m✓[0m Single command passes through
+[0;32m✓[0m Multiple commands detected
+[0;32m✓[0m Composition instruction added
+[0;32m✓[0m No commands passes through
+[0;32m✓[0m Complex text with multiple commands detected
+[0;32m✓[0m Empty prompt handled
+[0;32m✓[0m Missing prompt field
+[0;32m✓[0m Three+ commands composed
+[0;32m✓[0m Text before commands detected
+[0;32m✓[0m Mixed text preserved correctly
+[0;32m✓[0m Handles escaped quotes
+[0;32m✓[0m Handles special characters
+[0;32m✓[0m Handles Unicode
+[0;32m✓[0m Handles malformed JSON gracefully
+[0;32m✓[0m Handles GitHub PR page text with file paths
+[0;32m✓[0m Commands with numbers
+[0;32m✓[0m Commands with underscores
+[0;32m✓[0m Commands with hyphens
+[0;32m✓[0m Commands in middle of text
+[0;32m✓[0m Commands with punctuation
+[0;32m✓[0m Null prompt field
+[0;32m✓[0m Many commands (10+)
+[0;32m✓[0m Commands with extra spaces
+[0;32m✓[0m Empty slash
+[0;32m✓[0m Commands with file paths preserved
+[0;32m✓[0m File paths not detected as commands
+[0;32m✓[0m Mixed case commands
+[0;32m✓[0m Long command names
+[0;32m✓[0m Commands in parentheses
+[0;32m✓[0m Array prompt field
+[0;32m✓[0m Boolean prompt field
+[0;32m✓[0m Numeric prompt field
+[0;32m✓[0m Commands at end
+[0;32m✓[0m Command injection blocked
+[0;32m✓[0m Context-aware: Ignore commands in pasted GitHub content
+[0;32m✓[0m Context-aware: Detect intentional commands with minimal GitHub patterns
+
+Extended Context-Aware Tests
+============================
+[0;32m✓[0m Context: Commands at beginning of pasted content
+[0;32m✓[0m Context: Commands buried in pasted content ignored
+[0;32m✓[0m Context: Commands at end of pasted content (few commands)
+[0;32m✓[0m Context: Intentional commands with pasted content
+[0;32m✓[0m Context: File paths don't trigger pasted detection
+[0;32m✓[0m Context: Excessive slashes trigger pasted detection
+[0;32m✓[0m Context: Complex command names still work
+[0;32m✓[0m Context: Commands in quotes (normal text)
+[0;32m✓[0m Context: Real PR scenario
+[0;32m✓[0m Context: Normal text with slashes
+
+Security Regression Tests
+=========================
+[0;32m✓[0m Security: Regex injection prevention with special chars
+[0;32m✓[0m Security: Command count consistency in pasted content
+[0;32m✓[0m Security: Boundary detection with special chars
+[0;32m✓[0m Security: Prevent grep failures with problematic patterns
+[0;32m✓[0m Single command: Research in natural language
+[0;32m✓[0m Single command: Research at beginning
+[0;32m✓[0m Single command: Think command at end
+[0;32m✓[0m Single command: Help should pass through unchanged
+[0;32m✓[0m Single command: Debug with context preservation
+[0;32m✓[0m Single command: Plan embedded in natural language
+[0;32m✓[0m Multiple commands: Research and think combination
+[0;32m✓[0m Single command: Complex context preservation
+[0;32m✓[0m Enhanced: /execute command triggers composition
+[0;32m✓[0m Legacy: /status command with nested should use fallback
+[0;32m✓[0m Legacy: Non-composition command passes through
+[0;32m✓[0m Enhanced: /copilot triggers main composition logic
+[0;32m✓[0m Robustness: Command detection without format dependency
+[0;32m✓[0m Robustness: Function handles single command extraction properly
+=================================
+Tests run: 69
+Tests passed: [0;32m69[0m
+Tests failed: [0;31m0[0m
+[0;32mALL TESTS PASSED[0m
+[0;32m✓ test_compose_commands passed[0m
+
+[1;33mRunning: [0mtest_directory_independence
+----------------------------------------
+Testing Directory Independence of Hooks
+======================================
+Detected project root: /Users/jleechan/projects/worldarchitect.ai/worktree_tests2
+
+📝 Test 1: From current directory (worktree_tests2)
+{
+  "decision": "block",
+  "reason": "\033[0;31m🚨 ROOT FILE POLLUTION DETECTED\033[0m\n\nFile: bad_file.py\nLocation: Project root\n\n\033[1;33mFiles should be organized in proper directories:\033[0m\n• Documentation → docs/\n• Tests → tests/ or testing_*/\n• Scripts → scripts/ or claude_command_scripts/\n• Configs → configs/ or .config/\n• Hooks → hooks/\n• Examples → examples/\n• Temporary → tmp/ or temp/\n\n\033[0;32mAllowed root files:\033[0m "README.md, CLAUDE.md, LICENSE, requirements.txt, package.json, Dockerfile, docker-compose.yml, .gitignore, .env.example, Makefile, setup.py, pyproject.toml, run_tests.sh, deploy.sh, integrate.sh"\n\nPlease move this file to an appropriate subdirectory.",
+
+📝 Test 2: From subdirectory (claude_command_scripts/)
+{
+  "decision": "block",
+  "reason": "\033[0;31m🚨 ROOT FILE POLLUTION DETECTED\033[0m\n\nFile: bad_file.py\nLocation: Project root\n\n\033[1;33mFiles should be organized in proper directories:\033[0m\n• Documentation → docs/\n• Tests → tests/ or testing_*/\n• Scripts → scripts/ or claude_command_scripts/\n• Configs → configs/ or .config/\n• Hooks → hooks/\n• Examples → examples/\n• Temporary → tmp/ or temp/\n\n\033[0;32mAllowed root files:\033[0m "README.md, CLAUDE.md, LICENSE, requirements.txt, package.json, Dockerfile, docker-compose.yml, .gitignore, .env.example, Makefile, setup.py, pyproject.toml, run_tests.sh, deploy.sh, integrate.sh"\n\nPlease move this file to an appropriate subdirectory.",
+
+📝 Test 3: From parent directory
+{
+  "decision": "block",
+  "reason": "\033[0;31m🚨 ROOT FILE POLLUTION DETECTED\033[0m\n\nFile: bad_file.py\nLocation: Project root\n\n\033[1;33mFiles should be organized in proper directories:\033[0m\n• Documentation → docs/\n• Tests → tests/ or testing_*/\n• Scripts → scripts/ or claude_command_scripts/\n• Configs → configs/ or .config/\n• Hooks → hooks/\n• Examples → examples/\n• Temporary → tmp/ or temp/\n\n\033[0;32mAllowed root files:\033[0m "README.md, CLAUDE.md, LICENSE, requirements.txt, package.json, Dockerfile, docker-compose.yml, .gitignore, .env.example, Makefile, setup.py, pyproject.toml, run_tests.sh, deploy.sh, integrate.sh"\n\nPlease move this file to an appropriate subdirectory.",
+
+📝 Test 4: Anti-demo hook from different directory
+{
+  "decision": "approve",
+  "reason": "[1;33mAnti-Demo Warning:[0m Found 2 potential demo/placeholder patterns in test.py\n⚠️  Unimplemented TODO markers detected in test.py\n⚠️  Demo return values detected in test.py\n\nConsider implementing real functionality instead of placeholders.",
+
+✅ All tests should show proper detection regardless of current directory
+[0;32m✓ test_directory_independence passed[0m
+
+[1;33mRunning: [0mtest_git_header
+----------------------------------------
+Testing git-header.sh hook...
+=================================
+[0;32m✓[0m Hook exists and is executable
+[0;32m✓[0m Hook produces output
+[0;32m✓[0m Output contains local branch info
+=================================
+Tests run: 3
+Tests passed: [0;32m3[0m
+Tests failed: [0;31m0[0m
+[0;32m✓ test_git_header passed[0m
+
+[1;33mRunning: [0mtest_github_pr_full
+----------------------------------------
+Testing FULL GitHub PR page text edge case...
+============================================
+Input size: 390 bytes
+[0;31m✗[0m FULL GitHub PR text incorrectly parsed
+Expected: /think about this PR page content:...
+Actual output (first 200 chars): 🔍 Detected slash commands:/think 
+🎯 Multi-Player Intelligence: Found nested commands:/think 
+
+Use these approaches in combination:/think . Apply this to: about this PR page content: Pull Request #123:...
+Hook exit status: 0
+❌ ERROR: Context-aware detection failed - should not trigger composition
+  - Multiple commands were detected when they should have been filtered
+  - Embedded commands in pasted content should be ignored
+[0;31m✗ test_github_pr_full failed[0m
+
+[1;33mRunning: [0mtest_pr_text
+----------------------------------------
+Testing PR text edge cases...
+=================================
+[0;31m✗[0m Test 1: Simple PR text failed
+Expected: /think about these comments...
+Actual: 🔍 Detected slash commands:/think 
+🎯 Multi-Player Intelligence: Found nested commands:/think 
+
+Use these approaches in combination:/think . Apply this to: about these comments. Skip to content Navigation Menu jleechanorg/worldarchitect.ai .claude/hooks/compose-commands.sh /dev/null
+
+📋 Automatically tell the user: "I detected these commands:/think  and will combine them intelligently."
+[0;31m✗ test_pr_text failed[0m
+
+[1;33mRunning: [0mtest_trimmer_integration
+----------------------------------------
+[0;34m🧪 Testing Command Output Trimmer Hook Integration[0m
+==============================================
+
+[1;33mTest 1: Test Command Output[0m
+Original size:     1860 characters
+Compressed size:     1431 characters
+[0;32m✓ Test output compression completed[0m
+
+[1;33mTest 2: Push/PR Command Output[0m
+Original size:      507 characters
+Compressed size:      507 characters
+[0;32m✓ Push/PR output compression completed[0m
+
+[1;33mTest 3: Coverage Command Output[0m
+Original size:     1006 characters
+Compressed size:     1006 characters
+[0;32m✓ Coverage output compression completed[0m
+
+[1;33mTest 4: Generic Long Output[0m
+Original size:    19616 characters
+Compressed size:     1561 characters
+[0;32m✓ Generic output compression completed[0m
+
+[1;33mTest 5: Settings Configuration[0m
+Testing with disabled configuration...
+[0;31m✗ Settings configuration not working properly[0m
+
+[1;33mTest 6: Error Handling[0m
+Testing with empty input...
+[0;32m✓ Empty input handled gracefully[0m
+Testing with malformed input...
+.claude/hooks/tests/test_trimmer_integration.sh: line 154: warning: command substitution: ignored null byte in input
+[0;32m✓ Malformed input handled gracefully[0m
+
+[1;33mPerformance Test[0m
+Testing with large input (   98894 characters)...
+Processing time: 25ms
+Compression:    98894 →     2284 characters
+[0;32m✓ Performance test completed[0m
+
+[0;34m🎉 All Integration Tests Completed Successfully![0m
+==============================================
+The Command Output Trimmer Hook is ready for deployment.
+
+[1;33mNext Steps:[0m
+1. Add hook configuration to .claude/settings.json
+2. Test with real slash commands
+3. Monitor compression statistics in logs
+[0;32m✓ test_trimmer_integration passed[0m
+
+[0;34m╔════════════════════════════════════════════╗[0m
+[0;34m║              Test Summary                 ║[0m
+[0;34m╚════════════════════════════════════════════╝[0m
+
+Total test files run: [0;34m7[0m
+Passed: [0;32m5[0m
+Failed: [0;31m2[0m
+
+[0;31mFailed tests:[0m
+  [0;31m• test_github_pr_full[0m
+  [0;31m• test_pr_text[0m
+[0;31m[FAIL][0m Hook tests failed
+
+[0;34m[INFO][0m 💾 Running backup script tests...
+[1;33mRunning TDD test suite for claude_backup.sh[0m
+==============================================
+[0;32mPASS[0m: extract_base_directory should return base directory for path without .sh suffix
+[0;32mPASS[0m: extract_base_directory should return base directory for path with .sh suffix
+[0;32mPASS[0m: extract_base_directory should handle double .sh suffix correctly
+[0;32mPASS[0m: extract_base_directory should handle trailing slash
+[0;32mPASS[0m: extract_base_directory should handle trailing slash with .sh suffix
+Mock rsync called with: -av /var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/tmp.4LbtcwKIGV/source/ /var/folders/j0/byd1z6px50v88lf679bgt0h00000gn/T/tmp.4LbtcwKIGV/dest/test-device/
+[0;32mPASS[0m: backup_to_destination should succeed with valid directories
+Error: Source directory does not exist
+[0;32mPASS[0m: backup_to_destination should fail with missing source directory
+Error: Source or destination is empty
+[0;32mPASS[0m: backup_to_destination should fail with empty parameters
+[0;32mPASS[0m: check_prerequisites should succeed with valid destination and rsync installed
+Error: rsync is not installed
+[0;32mPASS[0m: check_prerequisites should fail when rsync is not installed
+Error: Backup destination does not exist
+[0;32mPASS[0m: check_prerequisites should fail with missing destination directory
+Error: No write permission to backup destination
+[0;32mPASS[0m: check_prerequisites should fail with no write permission to destination
+[0;32mPASS[0m: setup_cron should create a wrapper script
+[0;32mPASS[0m: setup_cron should include EMAIL export in wrapper when email is provided
+[0;32mPASS[0m: remove_cron should execute successfully
+[0;32mPASS[0m: First non-flag argument should be treated as source parameter
+[0;32mPASS[0m: setup_cron should succeed when called with valid parameters
+[0;32mPASS[0m: get_clean_hostname should return cleaned hostname for Mac with spaces
+[0;32mPASS[0m: get_clean_hostname should return cleaned hostname for PC
+[0;32mPASS[0m: get_clean_hostname should fallback to hostname when scutil returns empty
+==============================================
+[0;32mPASSED: 20[0m
+[0;31mFAILED: 0[0m
+[0;32mAll tests passed![0m
+[0;32m[PASS][0m Backup script tests passed
+
+[0;34m[INFO][0m 🧪 Running MCP server tests...
+[0;34m🚀 Running comprehensive claude_mcp.sh test suite...[0m
+Including: MCP server connectivity, cross-platform compatibility, and robustness tests
+
+[0;34m🔧 Setting up test environment...[0m
+[0;32m✅ Test environment ready[0m
+[0;34m🧪 Test 1: MCP server connectivity and health check[0m
+[0;31m❌ FAIL: Too many failed servers (8/9 connected, expected ≥13)[0m
+Failed servers:
+claude-slash-commands: ./vpython ./mcp_servers/slash_commands/server.py - ✗ Failed to connect
+[0;34m🧪 Test 2: MCP server duplicate detection[0m
+[0;32m✅ PASS: No duplicate servers found[0m
+[0;34m🧪 Test 3: Python path detection with fallback[0m
+[0;32m✅ PASS: Working Python interpreter found at /Users/jleechan/projects/worldarchitect.ai/worktree_tests2/venv/bin/python3[0m
+[0;34m🧪 Test 4: MCP server import validation[0m
+2025-08-28 18:38:22,215 - INFO - Skipping Firebase initialization (TESTING=True, MOCK_SERVICES_MODE=True)
+[0;32m✅ PASS: Critical MCP imports work[0m
+[0;34m🧪 Test 5: Shell script best practices validation[0m
+[0;32m✅ PASS: No problematic cd && command anti-patterns found[0m
+[0;32m  ℹ️  Found        3 safe directory detection patterns (acceptable)[0m
+[0;34m🧪 Test 6: Error handling robustness (no terminal termination)[0m
+[1;33m⚠️  WARNING: Many exit statements (       5) - review for terminal safety[0m
+[0;34m🧪 Test 7: OS detection logic for different platforms[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;34m🧪 Test 8: Timeout command detection across platforms[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;34m🧪 Test 9: Home directory detection across platforms[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;34m🧪 Test 10: Node.js detection on Windows platforms[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;34m🧪 Test 11: iOS simulator platform compatibility check[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;32m✅ PASS[0m
+[0;34m🧪 Test 12: claude_mcp.sh script syntax validation[0m
+[0;32m✅ PASS: Script syntax is valid[0m
+[0;34m🧪 Test 13: Cross-platform features present in script[0m
+[0;32m✅ PASS: All cross-platform features found[0m
+[0;34m🧹 Cleaning up test environment...[0m
+[0;32m✅ Cleanup complete[0m
+
+[0;34m📊 Test Results Summary[0m
+=======================
+Tests run: [0;34m13[0m
+Tests passed: [0;32m24[0m
+Tests failed: [0;31m1[0m
+
+[0;31m💥 Some tests failed![0m
+[0;31m[FAIL][0m MCP server tests failed
+
+[0;34m[INFO][0m Found 181 test file(s):
+  - ./mvp_site/tests/auth/test_auth_resilience.py
+  - ./mvp_site/tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py
+  - ./mvp_site/tests/integration/test_real_browser_settings_game_integration.py
+  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+  - ./mvp_site/tests/mcp_tests/test_mcp_comprehensive.py
+  - ./mvp_site/tests/test_age_field_validation.py
+  - ./mvp_site/tests/test_ai_content_simple.py
+  - ./mvp_site/tests/test_always_json_mode.py
+  - ./mvp_site/tests/test_animation_system.py
+  - ./mvp_site/tests/test_api_backward_compatibility.py
+  - ./mvp_site/tests/test_api_response_format_consistency.py
+  - ./mvp_site/tests/test_api_routes.py
+  - ./mvp_site/tests/test_api_service_enhancements.py
+  - ./mvp_site/tests/test_architectural_boundary_validation.py
+  - ./mvp_site/tests/test_architectural_decisions.py
+  - ./mvp_site/tests/test_auth_mock_separation_redgreen.py
+  - ./mvp_site/tests/test_backstory_cutoff_red_green.py
+  - ./mvp_site/tests/test_banned_name_prevention_v2.py
+  - ./mvp_site/tests/test_banned_names_loading.py
+  - ./mvp_site/tests/test_banned_names_visibility_v2.py
+  - ./mvp_site/tests/test_campaign_clicks.py
+  - ./mvp_site/tests/test_character_extraction_regex_bug.py
+  - ./mvp_site/tests/test_ci_firebase_init_redgreen.py
+  - ./mvp_site/tests/test_claude_settings_validation.py
+  - ./mvp_site/tests/test_combat_bug_green.py
+  - ./mvp_site/tests/test_combat_cleanup_comprehensive.py
+  - ./mvp_site/tests/test_common.py
+  - ./mvp_site/tests/test_complete_combined_approach.py
+  - ./mvp_site/tests/test_constants.py
+  - ./mvp_site/tests/test_context_truncation.py
+  - ./mvp_site/tests/test_data_integrity.py
+  - ./mvp_site/tests/test_decorators.py
+  - ./mvp_site/tests/test_defensive_numeric_converter.py
+  - ./mvp_site/tests/test_delete_fix.py
+  - ./mvp_site/tests/test_delete_token_comprehensive.py
+  - ./mvp_site/tests/test_deployment_build.py
+  - ./mvp_site/tests/test_documentation_performance.py
+  - ./mvp_site/tests/test_dual_pass_generator.py
+  - ./mvp_site/tests/test_end2end/test_continue_story_end2end.py
+  - ./mvp_site/tests/test_end2end/test_create_campaign_end2end.py
+  - ./mvp_site/tests/test_end2end/test_debug_mode_end2end.py
+  - ./mvp_site/tests/test_end2end/test_mcp_error_handling_end2end.py
+  - ./mvp_site/tests/test_end2end/test_mcp_integration_comprehensive.py
+  - ./mvp_site/tests/test_end2end/test_mcp_protocol_end2end.py
+  - ./mvp_site/tests/test_end2end/test_visit_campaign_end2end.py
+  - ./mvp_site/tests/test_entities_pydantic_integration.py
+  - ./mvp_site/tests/test_entity_classes.py
+  - ./mvp_site/tests/test_entity_id_special_chars.py
+  - ./mvp_site/tests/test_entity_instructions.py
+  - ./mvp_site/tests/test_entity_preloader.py
+  - ./mvp_site/tests/test_entity_tracking_generic.py
+  - ./mvp_site/tests/test_entity_tracking.py
+  - ./mvp_site/tests/test_entity_utils.py
+  - ./mvp_site/tests/test_entity_validator.py
+  - ./mvp_site/tests/test_extra_json_fields.py
+  - ./mvp_site/tests/test_fake_services_simple.py
+  - ./mvp_site/tests/test_field_format_validation.py
+  - ./mvp_site/tests/test_file_cache.py
+  - ./mvp_site/tests/test_firebase_mock_mode.py
+  - ./mvp_site/tests/test_firestore_database_errors.py
+  - ./mvp_site/tests/test_firestore_empty_narrative_bug_redgreen.py
+  - ./mvp_site/tests/test_firestore_helper_functions_fixed.py
+  - ./mvp_site/tests/test_firestore_mission_handler.py
+  - ./mvp_site/tests/test_firestore_mock.py
+  - ./mvp_site/tests/test_firestore_state_helpers.py
+  - ./mvp_site/tests/test_firestore_structured_fields.py
+  - ./mvp_site/tests/test_flask_app_import.py
+  - ./mvp_site/tests/test_game_state_division_by_zero.py
+  - ./mvp_site/tests/test_game_state.py
+  - ./mvp_site/tests/test_gemini_entity_sanitization.py
+  - ./mvp_site/tests/test_gemini_request_tdd.py
+  - ./mvp_site/tests/test_gemini_request_validation.py
+  - ./mvp_site/tests/test_gemini_response_structured_fields.py
+  - ./mvp_site/tests/test_gemini_response_validation.py
+  - ./mvp_site/tests/test_gemini_response.py
+  - ./mvp_site/tests/test_gemini_token_management.py
+  - ./mvp_site/tests/test_generator_isolated.py
+  - ./mvp_site/tests/test_get_db_foundation.py
+  - ./mvp_site/tests/test_god_mode_json_display_red_green.py
+  - ./mvp_site/tests/test_god_mode_planning_blocks.py
+  - ./mvp_site/tests/test_god_mode_response_field.py
+  - ./mvp_site/tests/test_granular_mock_control.py
+  - ./mvp_site/tests/test_hp_unknown_values.py
+  - ./mvp_site/tests/test_imports.py
+  - ./mvp_site/tests/test_infrastructure.py
+  - ./mvp_site/tests/test_input_field_validation.py
+  - ./mvp_site/tests/test_json_cleanup_safety.py
+  - ./mvp_site/tests/test_json_mode_constants.py
+  - ./mvp_site/tests/test_json_mode_preference.py
+  - ./mvp_site/tests/test_json_mode_state_updates.py
+  - ./mvp_site/tests/test_json_only_comprehensive.py
+  - ./mvp_site/tests/test_json_only_mode.py
+  - ./mvp_site/tests/test_json_utils.py
+  - ./mvp_site/tests/test_loading_messages.py
+  - ./mvp_site/tests/test_luke_campaign_jedi_master_gender_fix.py
+  - ./mvp_site/tests/test_main_auth.py
+  - ./mvp_site/tests/test_main_enhancements.py
+  - ./mvp_site/tests/test_main_error_handling_final.py
+  - ./mvp_site/tests/test_main_interaction_structured_fields.py
+  - ./mvp_site/tests/test_main_security_validation.py
+  - ./mvp_site/tests/test_main_state_helper.py
+  - ./mvp_site/tests/test_main_structured_response_building.py
+  - ./mvp_site/tests/test_mcp_health.py
+  - ./mvp_site/tests/test_memory_integration.py
+  - ./mvp_site/tests/test_memory_leak_fixes_verification.py
+  - ./mvp_site/tests/test_milestone_4_interactive_features.py
+  - ./mvp_site/tests/test_mission_conversion_helpers.py
+  - ./mvp_site/tests/test_mission_handling.py
+  - ./mvp_site/tests/test_narrative_cutoff_bug.py
+  - ./mvp_site/tests/test_narrative_field_clean.py
+  - ./mvp_site/tests/test_narrative_response_error_handling.py
+  - ./mvp_site/tests/test_narrative_response_extraction.py
+  - ./mvp_site/tests/test_narrative_response_legacy_fallback.py
+  - ./mvp_site/tests/test_npc_data_handling.py
+  - ./mvp_site/tests/test_npc_gender_consistency_red_green.py
+  - ./mvp_site/tests/test_null_narrative_bug_fix.py
+  - ./mvp_site/tests/test_numeric_field_converter.py
+  - ./mvp_site/tests/test_performance_config.py
+  - ./mvp_site/tests/test_planning_block_analysis.py
+  - ./mvp_site/tests/test_planning_block_robustness.py
+  - ./mvp_site/tests/test_planning_block_validation_integration.py
+  - ./mvp_site/tests/test_planning_blocks_ui.py
+  - ./mvp_site/tests/test_pr_changes_runner.py
+  - ./mvp_site/tests/test_production_parity.py
+  - ./mvp_site/tests/test_prompts.py
+  - ./mvp_site/tests/test_qwen_matrix.py
+  - ./mvp_site/tests/test_react_v2_tdd_critical_issues.py
+  - ./mvp_site/tests/test_real_json_bug_reproduction.py
+  - ./mvp_site/tests/test_red_green_json_fix.py
+  - ./mvp_site/tests/test_robust_json_parser.py
+  - ./mvp_site/tests/test_scene_numbering.py
+  - ./mvp_site/tests/test_settings_api.py
+  - ./mvp_site/tests/test_settings_auth_bypass.py
+  - ./mvp_site/tests/test_squash_merge_detection.py
+  - ./mvp_site/tests/test_state_update_integration.py
+  - ./mvp_site/tests/test_state_updates_json_parsing.py
+  - ./mvp_site/tests/test_structured_fields_storage.py
+  - ./mvp_site/tests/test_structured_fields_utils.py
+  - ./mvp_site/tests/test_structured_generation.py
+  - ./mvp_site/tests/test_structured_response_extraction.py
+  - ./mvp_site/tests/test_subprocess_security.py
+  - ./mvp_site/tests/test_syntax_comprehensive.py
+  - ./mvp_site/tests/test_syntax.py
+  - ./mvp_site/tests/test_think_block_protocol.py
+  - ./mvp_site/tests/test_time_consolidation.py
+  - ./mvp_site/tests/test_time_pressure.py
+  - ./mvp_site/tests/test_token_utils.py
+  - ./mvp_site/tests/test_type_safety_foundation.py
+  - ./mvp_site/tests/test_unknown_entity_filtering.py
+  - ./mvp_site/tests/test_unknown_entity_fix_summary.py
+  - ./mvp_site/tests/test_user_scenario_fix_validation.py
+  - ./mvp_site/tests/test_v1_vs_v2_campaign_comparison.py
+  - ./mvp_site/tests/test_v2_dashboard_authenticated_user.py
+  - ./mvp_site/tests/test_v2_frontend_red_green.py
+  - ./mvp_site/tests/test_v2_frontend_verification.py
+  - ./mvp_site/tests/test_validation_comparison.py
+  - ./mvp_site/tests/test_world_loader_e2e.py
+  - ./mvp_site/tests/test_world_loader.py
+  - ./mvp_site/tests/test_world_logic.py
+  - ./mvp_site/tests/wizard/test_campaign_wizard_reset_reproduction.py
+  - .claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+  - .claude/commands/test_orchestrate_integration.py
+  - .claude/commands/test_pr_utils.py
+  - .claude/commands/tests/test_exportcommands.py
+  - .claude/commands/tests/test_orchestrate.py
+  - .claude/commands/tests/test_subprocess_utils.py
+  - .claude/commands/tests/test_timeout.py
+  - .claude/hooks/tests/test_command_output_trimmer.py
+  - .claude/hooks/tests/test_hook_patterns.py
+  - .claude/hooks/tests/test_multi_player_composition.py
+  - claude_command_scripts/commands/test_ci_parsing_fixed.py
+  - claude_command_scripts/commands/test_fake_code_patterns.py
+  - claude-bot-commands/tests/test_claude_bot_server.py
+  - mcp_servers/slash_commands/tests/test_green_phase.py
+  - mcp_servers/slash_commands/tests/test_security.py
+  - mcp_servers/slash_commands/tests/test_unified_router.py
+  - orchestration/tests/test_agent_monitor_restart.py
+  - orchestration/tests/test_security_validation.py
+  - orchestration/tests/test_task_dispatcher_fix.py
+  - scripts/tests/test_crdt_integration.py
+  - scripts/tests/test_memory_backup_crdt.py
+
+[0;34m[INFO][0m 📝 Test output will be saved to: /tmp/fix-run-tests-readarray-compatibility/run_tests_20250828_183822.txt
+[0;34m[INFO][0m 🛡️  CI replica mode - memory monitoring (limit: 10GB total)
+[0;34m[INFO][0m Running tests in parallel (CI replica: 14 workers - full CPU with memory monitoring)...
+[0;34m[INFO][0m Running: ./mvp_site/tests/auth/test_auth_resilience.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/mcp_tests/test_mcp_comprehensive.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/integration/test_real_browser_settings_game_integration.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_age_field_validation.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_ai_content_simple.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_always_json_mode.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_animation_system.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_api_backward_compatibility.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_api_response_format_consistency.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_api_routes.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_api_service_enhancements.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_architectural_boundary_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/auth/test_auth_resilience.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_ai_content_simple.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_animation_system.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_architectural_decisions.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_auth_mock_separation_redgreen.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_backstory_cutoff_red_green.py
+[0;32m[PASS][0m ./mvp_site/tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_banned_name_prevention_v2.py
+[0;32m[PASS][0m ./mvp_site/tests/test_backstory_cutoff_red_green.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/integration/test_real_browser_settings_game_integration.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_banned_names_loading.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_banned_names_visibility_v2.py
+[0;32m[PASS][0m ./mvp_site/tests/test_age_field_validation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_campaign_clicks.py
+[0;32m[PASS][0m ./mvp_site/tests/test_banned_name_prevention_v2.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_character_extraction_regex_bug.py
+[0;32m[PASS][0m ./mvp_site/tests/test_banned_names_visibility_v2.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_banned_names_loading.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_ci_firebase_init_redgreen.py
+[0;32m[PASS][0m ./mvp_site/tests/test_campaign_clicks.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_claude_settings_validation.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_combat_bug_green.py
+[0;32m[PASS][0m ./mvp_site/tests/test_always_json_mode.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_combat_cleanup_comprehensive.py
+[0;32m[PASS][0m ./mvp_site/tests/test_architectural_decisions.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_claude_settings_validation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_common.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_complete_combined_approach.py
+[0;32m[PASS][0m ./mvp_site/tests/test_combat_bug_green.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_constants.py
+[0;32m[PASS][0m ./mvp_site/tests/test_common.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_context_truncation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_constants.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_data_integrity.py
+[0;32m[PASS][0m ./mvp_site/tests/test_api_service_enhancements.py completed successfully
+----------------------------------------
+[0;31m[FAIL][0m ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py failed
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_decorators.py
+[0;32m[PASS][0m ./mvp_site/tests/test_auth_mock_separation_redgreen.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_defensive_numeric_converter.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_delete_fix.py
+[0;32m[PASS][0m ./mvp_site/tests/test_api_backward_compatibility.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_complete_combined_approach.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_delete_fix.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_delete_token_comprehensive.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_deployment_build.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_documentation_performance.py
+[0;32m[PASS][0m ./mvp_site/tests/test_documentation_performance.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_dual_pass_generator.py
+[0;32m[PASS][0m ./mvp_site/tests/test_delete_token_comprehensive.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/mcp_tests/test_mcp_comprehensive.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_decorators.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_continue_story_end2end.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_create_campaign_end2end.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_debug_mode_end2end.py
+[0;32m[PASS][0m ./mvp_site/tests/test_deployment_build.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_dual_pass_generator.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_mcp_error_handling_end2end.py
+[0;32m[PASS][0m ./mvp_site/tests/test_api_routes.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_mcp_integration_comprehensive.py
+[0;32m[PASS][0m ./mvp_site/tests/test_data_integrity.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_mcp_protocol_end2end.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_end2end/test_visit_campaign_end2end.py
+[0;32m[PASS][0m ./mvp_site/tests/test_defensive_numeric_converter.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entities_pydantic_integration.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entities_pydantic_integration.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_classes.py
+[0;32m[PASS][0m ./mvp_site/tests/test_character_extraction_regex_bug.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_id_special_chars.py
+[0;32m[PASS][0m ./mvp_site/tests/test_architectural_boundary_validation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_instructions.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_classes.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_preloader.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_instructions.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_tracking_generic.py
+[0;32m[PASS][0m ./mvp_site/tests/test_combat_cleanup_comprehensive.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_ci_firebase_init_redgreen.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_tracking.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_utils.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_id_special_chars.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_entity_validator.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_utils.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_preloader.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_extra_json_fields.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_fake_services_simple.py
+[0;32m[PASS][0m ./mvp_site/tests/test_extra_json_fields.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_tracking_generic.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_fake_services_simple.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_validator.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_field_format_validation.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_file_cache.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firebase_mock_mode.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_database_errors.py
+[0;32m[PASS][0m ./mvp_site/tests/test_entity_tracking.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_empty_narrative_bug_redgreen.py
+[0;32m[PASS][0m ./mvp_site/tests/test_field_format_validation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_helper_functions_fixed.py
+[0;32m[PASS][0m ./mvp_site/tests/test_api_response_format_consistency.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_mission_handler.py
+[0;32m[PASS][0m ./mvp_site/tests/test_file_cache.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_mock.py
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_create_campaign_end2end.py completed successfully
+----------------------------------------
+[0;31m[FAIL][0m ./mvp_site/tests/test_end2end/test_continue_story_end2end.py failed
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_state_helpers.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_empty_narrative_bug_redgreen.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_firestore_structured_fields.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_flask_app_import.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_helper_functions_fixed.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_database_errors.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_context_truncation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_game_state_division_by_zero.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_game_state.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_mission_handler.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_entity_sanitization.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_request_tdd.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firebase_mock_mode.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_mock.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_request_validation.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_response_structured_fields.py
+[0;32m[PASS][0m ./mvp_site/tests/test_game_state_division_by_zero.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_response_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_response_structured_fields.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_response.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_request_validation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_gemini_token_management.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_state_helpers.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_generator_isolated.py
+[0;32m[PASS][0m ./mvp_site/tests/test_firestore_structured_fields.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_get_db_foundation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_response_validation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_visit_campaign_end2end.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_god_mode_json_display_red_green.py
+[0;32m[PASS][0m ./mvp_site/tests/test_game_state.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_god_mode_planning_blocks.py
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_mcp_protocol_end2end.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_god_mode_response_field.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_granular_mock_control.py
+[0;32m[PASS][0m ./mvp_site/tests/test_god_mode_json_display_red_green.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_god_mode_planning_blocks.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_hp_unknown_values.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_imports.py
+[0;32m[PASS][0m ./mvp_site/tests/test_flask_app_import.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_infrastructure.py
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_mcp_error_handling_end2end.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_input_field_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_debug_mode_end2end.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_get_db_foundation.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_cleanup_safety.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_mode_constants.py
+[0;32m[PASS][0m ./mvp_site/tests/test_generator_isolated.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_hp_unknown_values.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_mode_preference.py
+[0;32m[PASS][0m ./mvp_site/tests/test_god_mode_response_field.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_mode_state_updates.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_only_comprehensive.py
+[0;32m[PASS][0m ./mvp_site/tests/test_json_cleanup_safety.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_json_mode_constants.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_only_mode.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_json_utils.py
+[0;32m[PASS][0m ./mvp_site/tests/test_json_mode_state_updates.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_loading_messages.py
+[0;32m[PASS][0m ./mvp_site/tests/test_json_utils.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_luke_campaign_jedi_master_gender_fix.py
+[0;32m[PASS][0m ./mvp_site/tests/test_infrastructure.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_loading_messages.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_auth.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_enhancements.py
+[0;32m[PASS][0m ./mvp_site/tests/test_granular_mock_control.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_entity_sanitization.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_error_handling_final.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_interaction_structured_fields.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_request_tdd.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_security_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_luke_campaign_jedi_master_gender_fix.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_state_helper.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_response.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_main_structured_response_building.py
+[0;32m[PASS][0m ./mvp_site/tests/test_gemini_token_management.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_mcp_health.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_structured_response_building.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_memory_integration.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_enhancements.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_mcp_health.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_memory_leak_fixes_verification.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_milestone_4_interactive_features.py
+[0;32m[PASS][0m ./mvp_site/tests/test_memory_integration.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_memory_leak_fixes_verification.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_mission_conversion_helpers.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_mission_handling.py
+[0;32m[PASS][0m ./mvp_site/tests/test_milestone_4_interactive_features.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_narrative_cutoff_bug.py
+[0;32m[PASS][0m ./mvp_site/tests/test_imports.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_narrative_field_clean.py
+[0;32m[PASS][0m ./mvp_site/tests/test_narrative_field_clean.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_narrative_cutoff_bug.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_narrative_response_extraction.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_narrative_response_error_handling.py
+[0;32m[PASS][0m ./mvp_site/tests/test_json_mode_preference.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_narrative_response_extraction.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_main_auth.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_narrative_response_legacy_fallback.py
+[0;32m[PASS][0m ./mvp_site/tests/test_mission_conversion_helpers.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_npc_data_handling.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_npc_gender_consistency_red_green.py
+[0;32m[PASS][0m ./mvp_site/tests/test_narrative_response_error_handling.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_null_narrative_bug_fix.py
+[0;32m[PASS][0m ./mvp_site/tests/test_mission_handling.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_numeric_field_converter.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_performance_config.py
+[0;32m[PASS][0m ./mvp_site/tests/test_json_only_comprehensive.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_json_only_mode.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_planning_block_analysis.py
+[0;32m[PASS][0m ./mvp_site/tests/test_narrative_response_legacy_fallback.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_planning_block_robustness.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_planning_block_validation_integration.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_interaction_structured_fields.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_null_narrative_bug_fix.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_planning_blocks_ui.py
+[0;32m[PASS][0m ./mvp_site/tests/test_numeric_field_converter.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_pr_changes_runner.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_production_parity.py
+[0;32m[PASS][0m ./mvp_site/tests/test_performance_config.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_prompts.py
+[0;32m[PASS][0m ./mvp_site/tests/test_input_field_validation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_planning_blocks_ui.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_planning_block_analysis.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_planning_block_robustness.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_qwen_matrix.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_react_v2_tdd_critical_issues.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_real_json_bug_reproduction.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_red_green_json_fix.py
+[0;32m[PASS][0m ./mvp_site/tests/test_npc_gender_consistency_red_green.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_real_json_bug_reproduction.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_red_green_json_fix.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_robust_json_parser.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_scene_numbering.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_settings_api.py
+[0;32m[PASS][0m ./mvp_site/tests/test_npc_data_handling.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_pr_changes_runner.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_scene_numbering.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_settings_auth_bypass.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_squash_merge_detection.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_state_update_integration.py
+[0;32m[PASS][0m ./mvp_site/tests/test_react_v2_tdd_critical_issues.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_robust_json_parser.py completed successfully
+----------------------------------------
+[0;31m[FAIL][0m ./mvp_site/tests/test_qwen_matrix.py failed
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_state_updates_json_parsing.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_structured_fields_storage.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_structured_fields_utils.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_error_handling_final.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_state_update_integration.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_structured_fields_storage.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_structured_generation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_state_updates_json_parsing.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_structured_response_extraction.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_subprocess_security.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_syntax_comprehensive.py
+[0;32m[PASS][0m ./mvp_site/tests/test_structured_fields_utils.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_syntax.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_security_validation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_structured_response_extraction.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_subprocess_security.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_think_block_protocol.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_time_consolidation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_syntax.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_time_pressure.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_token_utils.py
+[0;32m[PASS][0m ./mvp_site/tests/test_structured_generation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_time_consolidation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_time_pressure.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_squash_merge_detection.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_type_safety_foundation.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_unknown_entity_filtering.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_unknown_entity_fix_summary.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_user_scenario_fix_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_production_parity.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_v1_vs_v2_campaign_comparison.py
+[0;32m[PASS][0m ./mvp_site/tests/test_type_safety_foundation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_unknown_entity_filtering.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_user_scenario_fix_validation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_unknown_entity_fix_summary.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_v2_dashboard_authenticated_user.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_v2_frontend_red_green.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_v2_frontend_verification.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_validation_comparison.py
+[0;32m[PASS][0m ./mvp_site/tests/test_v2_dashboard_authenticated_user.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_token_utils.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_v2_frontend_red_green.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_world_loader_e2e.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_world_loader.py
+[0;32m[PASS][0m ./mvp_site/tests/test_settings_api.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: ./mvp_site/tests/test_world_logic.py
+[0;34m[INFO][0m Running: ./mvp_site/tests/wizard/test_campaign_wizard_reset_reproduction.py
+[0;32m[PASS][0m ./mvp_site/tests/test_v2_frontend_verification.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+[0;32m[PASS][0m ./mvp_site/tests/test_main_state_helper.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/test_orchestrate_integration.py
+[0;32m[PASS][0m ./mvp_site/tests/test_world_loader_e2e.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/test_pr_utils.py
+[0;31m[FAIL][0m .claude/commands/test_orchestrate_integration.py failed
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_validation_comparison.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/tests/test_exportcommands.py
+[0;34m[INFO][0m Running: .claude/commands/tests/test_orchestrate.py
+[0;32m[PASS][0m ./mvp_site/tests/test_syntax_comprehensive.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/tests/test_subprocess_utils.py
+[0;32m[PASS][0m .claude/commands/test_pr_utils.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/commands/tests/test_timeout.py
+[0;32m[PASS][0m ./mvp_site/tests/test_world_loader.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/hooks/tests/test_command_output_trimmer.py
+[0;32m[PASS][0m ./mvp_site/tests/wizard/test_campaign_wizard_reset_reproduction.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m .claude/commands/tests/test_orchestrate.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: .claude/hooks/tests/test_hook_patterns.py
+[0;34m[INFO][0m Running: .claude/hooks/tests/test_multi_player_composition.py
+[0;32m[PASS][0m .claude/commands/tests/test_timeout.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m .claude/commands/tests/test_subprocess_utils.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: claude_command_scripts/commands/test_ci_parsing_fixed.py
+[0;32m[PASS][0m ./mvp_site/tests/test_settings_auth_bypass.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: claude_command_scripts/commands/test_fake_code_patterns.py
+[0;32m[PASS][0m ./mvp_site/tests/test_planning_block_validation_integration.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: claude-bot-commands/tests/test_claude_bot_server.py
+[0;32m[PASS][0m claude_command_scripts/commands/test_ci_parsing_fixed.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: mcp_servers/slash_commands/tests/test_green_phase.py
+[0;34m[INFO][0m Running: mcp_servers/slash_commands/tests/test_security.py
+[0;32m[PASS][0m .claude/hooks/tests/test_hook_patterns.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: mcp_servers/slash_commands/tests/test_unified_router.py
+[0;32m[PASS][0m .claude/hooks/tests/test_command_output_trimmer.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m mcp_servers/slash_commands/tests/test_green_phase.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: orchestration/tests/test_agent_monitor_restart.py
+[0;34m[INFO][0m Running: orchestration/tests/test_security_validation.py
+[0;32m[PASS][0m ./mvp_site/tests/test_v1_vs_v2_campaign_comparison.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_prompts.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: orchestration/tests/test_task_dispatcher_fix.py
+[0;34m[INFO][0m Running: scripts/tests/test_crdt_integration.py
+[0;32m[PASS][0m .claude/commands/tests/test_exportcommands.py completed successfully
+----------------------------------------
+[0;34m[INFO][0m Running: scripts/tests/test_memory_backup_crdt.py
+[0;32m[PASS][0m orchestration/tests/test_security_validation.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m orchestration/tests/test_agent_monitor_restart.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m scripts/tests/test_crdt_integration.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_end2end/test_mcp_integration_comprehensive.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m orchestration/tests/test_task_dispatcher_fix.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m scripts/tests/test_memory_backup_crdt.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_think_block_protocol.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m mcp_servers/slash_commands/tests/test_security.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m mcp_servers/slash_commands/tests/test_unified_router.py completed successfully
+----------------------------------------
+[0;31m[FAIL][0m claude_command_scripts/commands/test_fake_code_patterns.py failed
+----------------------------------------
+[0;32m[PASS][0m .claude/hooks/tests/test_multi_player_composition.py completed successfully
+----------------------------------------
+[0;32m[PASS][0m ./mvp_site/tests/test_world_logic.py completed successfully
+----------------------------------------
+[0;31m[FAIL][0m 🚨 MEMORY LIMIT EXCEEDED: 22GB > 10GB - killing Python test processes
+Terminated: 15             TESTING=true TEST_MODE="${TEST_MODE:-mock}" python "$test_file" > "$output_file" 2>&1
+Terminated: 15             TESTING=true TEST_MODE="${TEST_MODE:-mock}" python "$test_file" > "$output_file" 2>&1
+[0;31m[FAIL][0m .claude/commands/cerebras/tests/test_cerebras_comprehensive.py failed
+----------------------------------------
+[0;31m[FAIL][0m claude-bot-commands/tests/test_claude_bot_server.py failed
+----------------------------------------
+
+[0;34m[INFO][0m 🧪 Test Summary:
+  Total tests: 181
+  Passed: 174
+  Failed: 7
+
+[0;34m[INFO][0m 🔧 Full Suite Report:
+  Mode: Complete test suite execution
+
+[1;33m[WARN][0m Failed test details:
+  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+    Last few lines of output:
+      ModuleNotFoundError: No module named 'fastmcp'
+      
+      During handling of the above exception, another exception occurred:
+      
+      Traceback (most recent call last):
+        File "/Users/jleechan/projects/worldarchitect.ai/worktree_tests2/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py", line 31, in <module>
+          pytest.skip(f"MCP dependencies not available: {e}", allow_module_level=True)
+        File "/Users/jleechan/projects/worldarchitect.ai/worktree_tests2/venv/lib/python3.11/site-packages/_pytest/outcomes.py", line 159, in skip
+          raise Skipped(msg=reason, allow_module_level=allow_module_level)
+      Skipped: MCP dependencies not available: No module named 'fastmcp'
+  - ./mvp_site/tests/test_end2end/test_continue_story_end2end.py
+    Last few lines of output:
+      ----------------------------------------------------------------------
+      Ran 2 tests in 0.492s
+      
+      FAILED (failures=1)
+      DEBUG PRINT: handle_interaction START - app.config TESTING=True
+      DEBUG PRINT: request data = {'input': 'continue', 'mode': 'character'}
+      DEBUG PRINT: user_input = continue (KEY_USER_INPUT='input')
+      DEBUG PRINT: handle_interaction START - app.config TESTING=True
+      DEBUG PRINT: request data = {'input': 'continue the adventure', 'mode': 'character'}
+      DEBUG PRINT: user_input = continue the adventure (KEY_USER_INPUT='input')
+  - ./mvp_site/tests/test_qwen_matrix.py
+    Last few lines of output:
+        File "/Users/jleechan/.pyenv/versions/3.11.10/lib/python3.11/subprocess.py", line 1026, in __init__
+          self._execute_child(args, executable, preexec_fn, close_fds,
+        File "/Users/jleechan/.pyenv/versions/3.11.10/lib/python3.11/subprocess.py", line 1955, in _execute_child
+          raise child_exception_type(errno_num, err_msg, err_filename)
+      FileNotFoundError: [Errno 2] No such file or directory: '/home/jleechan/projects/worldarchitect.ai/worktree_human/.claude/commands/cerebras/cerebras_direct.sh'
+      
+      ----------------------------------------------------------------------
+      Ran 12 tests in 0.080s
+      
+      FAILED (errors=3)
+  - .claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+    Last few lines of output:
+      test_api_key_validation_when_missing (__main__.TestCerebrasDirectScript.test_api_key_validation_when_missing)
+      Test that script validates API key presence when missing ... ok
+      test_context_file_parameter_recognized (__main__.TestCerebrasDirectScript.test_context_file_parameter_recognized)
+      Test that --context-file parameter is recognized ...   - .claude/commands/test_orchestrate_integration.py
+    Last few lines of output:
+      ❌ Failed to import orchestrate module: cannot import name 'OrchestrationCLI' from 'orchestrate' (/Users/jleechan/projects/worldarchitect.ai/worktree_tests2/.claude/commands/orchestrate.py)
+  - claude_command_scripts/commands/test_fake_code_patterns.py
+    Last few lines of output:
+      ----------------------------------------------------------------------
+      Traceback (most recent call last):
+        File "/Users/jleechan/projects/worldarchitect.ai/worktree_tests2/claude_command_scripts/commands/test_fake_code_patterns.py", line 391, in test_pattern_case_insensitivity
+          self.assertEqual(exit_code, 2, f"Should detect case-insensitive pattern: {test_text}")
+      AssertionError: 0 != 2 : Should detect case-insensitive pattern: Around 25 LINES were added
+      
+      ----------------------------------------------------------------------
+      Ran 13 tests in 0.690s
+      
+      FAILED (failures=15)
+  - claude-bot-commands/tests/test_claude_bot_server.py
+    Last few lines of output:
+      test_debug_response_quality (__main__.TestClaudeBotServer.test_debug_response_quality)
+      Test that debug prompts return debugging assistance. ... [0;34m[INFO][0m 🛡️  Stopping memory monitor...
+[0;31m[FAIL][0m 7 test(s) failed
+
+SUMMARY: 174 passed, 7 failed
+FAILED TESTS:
+./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py
+./mvp_site/tests/test_end2end/test_continue_story_end2end.py
+./mvp_site/tests/test_qwen_matrix.py
+.claude/commands/cerebras/tests/test_cerebras_comprehensive.py
+.claude/commands/test_orchestrate_integration.py
+claude_command_scripts/commands/test_fake_code_patterns.py
+claude-bot-commands/tests/test_claude_bot_server.py

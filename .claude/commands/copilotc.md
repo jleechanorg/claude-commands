@@ -111,4 +111,4 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 
 **Universal Composition**: This command uses the universal composition system to intelligently orchestrate `/conv` and `/copilot` together, creating an autonomous loop optimized for GitHub comment resolution.
 
-**Context Efficiency**: Convergence system includes context optimization and goal-processor agent integration for efficient operation across multiple iterations.
+**Context Efficiency**: Convergence system includes context optimization and direct goal processing for efficient operation across multiple iterations.

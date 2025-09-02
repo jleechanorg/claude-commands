@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """
-Test Dependency Analyzer for Intelligent Test Selection
+Intelligent Test Selection Analyzer
+Based on PR #1313 design - analyzes git changes and selects relevant tests.
 
-Analyzes git changes and maps them to relevant tests using configurable rules.
+Implements two-tier strategy:
+- mvp_site/ directory: Full intelligent test selection with file-to-test mapping
+- Other directories: Simple tests/ subdirectory pattern
+
 Conservative approach: when uncertain, run more tests to ensure safety.
 
 Usage:
@@ -19,7 +23,6 @@ import logging
 import os
 import subprocess
 import sys
-import time
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Dict, List, Set, Union
@@ -31,7 +34,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-class TestDependencyAnalyzer:
+class DependencyAnalyzer:
     """Analyzes file changes and maps them to relevant tests."""
     
     def __init__(self, config_path: str = None):
@@ -69,13 +72,10 @@ class TestDependencyAnalyzer:
             # Check for CLAUDE.md with additional validation (avoid subdirectory CLAUDE.md files)
             if (current / "CLAUDE.md").exists():
                 # Validate this is the real project root by checking for typical project structure
-                # More flexible validation: require at least one key directory (not all three)
                 has_mvp_site = (current / "mvp_site").exists()
                 has_scripts = (current / "scripts").exists()
                 has_docs = (current / "docs").exists()
                 
-                # Accept if we have at least one major project directory
-                # This handles partial checkouts, development environments, or project restructuring
                 if has_mvp_site or has_scripts or has_docs:
                     return str(current)
             
@@ -101,33 +101,45 @@ class TestDependencyAnalyzer:
             return self._get_default_config()
     
     def _get_default_config(self) -> Dict:
-        """Get default configuration for test mappings."""
+        """Get default configuration for test mappings - focused on mvp_site/ intelligence."""
         return {
             "mappings": {
                 "direct": {
+                    # Core mvp_site application files - intelligent mapping
+                    "mvp_site/main.py": ["test_main*.py", "test_integration*.py"],
+                    "mvp_site/game_state.py": ["test_game_state*.py", "test_integration*.py"],
+                    "mvp_site/gemini_service.py": ["test_gemini*.py", "test_ai*.py"],
+                    "mvp_site/firestore_service.py": ["test_firestore*.py", "test_database*.py"],
+                    "mvp_site/mcp_client.py": ["test_mcp*.py", "test_integration*.py"],
+                    "mvp_site/world_logic.py": ["test_world*.py", "test_game_state*.py"],
+                    "mvp_site/constants.py": ["test_*"],  # Constants affect everything
+                    "mvp_site/config.py": ["test_*"],    # Config affects everything
+                    
+                    # Legacy root-level files (backward compatibility)
                     "main.py": ["test_main_*.py", "test_api_*.py"],
                     "gemini_service.py": ["test_gemini_*.py", "test_json_*.py"],
                     "firestore_service.py": ["test_firestore_*.py", "test_auth_*.py"],
-                    "world_logic.py": ["test_world_*.py", "test_integration_*.py"],
-                    "mvp_site/auth_service.py": ["test_auth_*.py", "test_main_authentication_*.py"],
-                    "mvp_site/campaign_service.py": ["test_campaign_*.py"],
-                    "mvp_site/character_service.py": ["test_character_*.py"],
-                    "mvp_site/game_state_service.py": ["test_game_state_*.py", "test_world_*.py"]
+                    "world_logic.py": ["test_world_*.py", "test_integration_*.py"]
                 },
                 "patterns": {
+                    # mvp_site patterns - intelligent mapping
+                    "mvp_site/schemas/**/*.py": ["test_schemas*.py", "test_entities*.py"],
+                    "mvp_site/testing_framework/**/*.py": ["test_testing_framework*.py"],
+                    "mvp_site/static/**/*": ["test_ui*.py", "test_integration*.py"],
+                    "mvp_site/templates/**/*": ["test_ui*.py", "test_integration*.py"],
+                    "mvp_site/prompts/**/*": ["test_gemini*.py", "test_ai*.py"],
+                    "mvp_site/requirements.txt": ["test_integration*.py"],
+                    
+                    # Other directories use simple tests/ pattern (handled separately)
+                    # Legacy patterns
                     "frontend_v2/**/*.tsx": ["test_v2_*.py", "testing_ui/test_v2_*.py"],
                     "frontend_v2/**/*.js": ["test_v2_*.py", "testing_ui/test_v2_*.py"],
-                    "mvp_site/mocks/*": ["test_mock_*.py"],
-                    "mvp_site/static/**/*": ["testing_ui/test_*.py"],
-                    "mvp_site/templates/**/*": ["testing_ui/test_*.py", "test_end2end/*.py"],
                     "*.yml": ["test_integration_*.py"],
-                    "*.yaml": ["test_integration_*.py"],
-                    "scripts/*": [".claude/hooks/tests/*"],
-                    ".claude/hooks/*": [".claude/hooks/tests/*"]
+                    "*.yaml": ["test_integration_*.py"]
                 },
                 "always_run": [
-                    "mvp_site/test_integration/test_integration_mock.py",
-                    ".claude/hooks/tests/test_fake_code_detection.py"
+                    "mvp_site/tests/test_integration*.py",
+                    "mvp_site/test_integration/test_integration_mock.py"
                 ]
             }
         }
@@ -169,22 +181,18 @@ class TestDependencyAnalyzer:
             return []
     
     def find_matching_tests(self, file_path: str) -> List[str]:
-        """Find tests that match a given file path."""
+        """Find tests that match a given file path using corrected strategy."""
         matching_tests = []
         
-        # Check direct mappings
-        direct_mappings = self.config.get("mappings", {}).get("direct", {})
-        for source_file, test_patterns in direct_mappings.items():
-            if file_path == source_file or file_path.endswith("/" + source_file):
-                matching_tests.extend(test_patterns)
-                logger.debug(f"Direct mapping: {file_path} -> {test_patterns}")
-        
-        # Check pattern mappings
-        pattern_mappings = self.config.get("mappings", {}).get("patterns", {})
-        for pattern, test_patterns in pattern_mappings.items():
-            if fnmatch(file_path, pattern):
-                matching_tests.extend(test_patterns)
-                logger.debug(f"Pattern mapping: {file_path} matches {pattern} -> {test_patterns}")
+        if file_path.startswith("mvp_site/"):
+            # mvp_site/: Full intelligent test selection
+            matching_tests = self._find_mvp_site_tests(file_path)
+        elif self._should_use_tests_subdir_pattern(file_path):
+            # Specific directories: Simple tests/ subdirectory pattern
+            matching_tests = self._find_other_directory_tests(file_path)
+        else:
+            # All other files: Conservative fallback only (no broad test inclusion)
+            matching_tests = []
         
         # If no specific mappings found, apply conservative rules
         if not matching_tests:
@@ -192,101 +200,154 @@ class TestDependencyAnalyzer:
         
         return matching_tests
     
-    def _find_tests_subdirectories(self, file_path: str) -> List[str]:
-        """Generic logic to find tests/ subdirectories for any changed file.
+    def _find_mvp_site_tests(self, file_path: str) -> List[str]:
+        """Find tests for mvp_site/ files using intelligent mapping."""
+        matching_tests = []
         
-        This implements the user's request: 'always looks for tests/ subdir for any changed files'
-        Uses efficient Path.glob patterns and prevents duplicate processing.
+<<<<<<< HEAD
+        # Check direct mappings
+        direct_mappings = self.config.get("mappings", {}).get("direct", {})
+        for source_file, test_patterns in direct_mappings.items():
+            if file_path == source_file or file_path.endswith("/" + source_file):
+                matching_tests.extend(test_patterns)
+                logger.debug(f"MVP direct mapping: {file_path} -> {test_patterns}")
+        
+        # Check pattern mappings
+        pattern_mappings = self.config.get("mappings", {}).get("patterns", {})
+        for pattern, test_patterns in pattern_mappings.items():
+            if fnmatch(file_path, pattern):
+                matching_tests.extend(test_patterns)
+                logger.debug(f"MVP pattern mapping: {file_path} matches {pattern} -> {test_patterns}")
+        
+        return matching_tests
+    
+    def _should_use_tests_subdir_pattern(self, file_path: str) -> bool:
+        """Determine if file should use tests/ subdirectory pattern."""
+        # Only specific directories should use tests/ subdirectory pattern
+        tests_subdir_directories = [
+            ".claude/commands/",
+            ".claude/hooks/", 
+            "scripts/",
+            "orchestration/",
+            "claude_command_scripts/",
+            "claude-bot-commands/"
+        ]
+        
+        return any(file_path.startswith(prefix) for prefix in tests_subdir_directories)
+    
+    def _find_other_directory_tests(self, file_path: str) -> List[str]:
+        """Find tests for specific directories using simple tests/ subdirectory pattern."""
+        # Use the existing tests/ subdirectory logic
+        test_patterns = self._find_tests_subdirectories(file_path)
+        logger.debug(f"Tests subdir mapping: {file_path} -> {test_patterns}")
+        return test_patterns
+    
+    def _find_tests_subdirectories(self, file_path: str) -> List[str]:
+        """Find tests/ subdirectories for specific changed files only.
+        
+        This only looks for tests in the immediate directory of the changed file,
+        not globally across the entire project.
         """
-        start_time = time.perf_counter()  # Better timing precision
+        start_time = time.perf_counter()
         
         tests_patterns: List[str] = []
-        processed_dirs = set()  # Prevent duplicate processing as suggested by Copilot
         file_dir = Path(file_path).parent
+=======
+        This implements the user's request: 'always looks for tests/ subdir for any changed files'
+        """
+        tests_patterns: List[str] = []
+        path_parts = Path(file_path).parts
+>>>>>>> main
         
-        # Use cached project root and proper path anchoring for security
-        if not hasattr(self, '_cached_project_root'):
-            self._cached_project_root = Path(self._find_project_root()).resolve()
-        project_root = self._cached_project_root
+        # For each directory level (exclude the file itself), look for a tests/ subdirectory
+        for i in range(max(0, len(path_parts) - 1)):
+            dir_path = Path(*path_parts[:i+1])
+            tests_patterns.append(str((dir_path / "tests" / "test_*.py").as_posix()))
+            if dir_path.parent != dir_path:
+                tests_patterns.append(str((dir_path.parent / "tests" / "test_*.py").as_posix()))
         
-        # Security: Ensure file_dir is anchored within project_root
-        try:
-            file_dir = file_dir.resolve()
-            file_dir.relative_to(project_root)  # Validates path is within project
-        except ValueError:
-            logger.warning(f"File {file_path} is outside project root {project_root}")
-            return []
+        # Always include repository-root tests dir
+        tests_patterns.append("tests/test_*.py")
+
+        # Remove duplicates while preserving order
+        unique_patterns = []
+        seen = set()
+        for pattern in tests_patterns:
+            if pattern not in seen:
+                unique_patterns.append(pattern)
+                seen.add(pattern)
         
-        # Start from the file's directory and walk up to project root
-        current_dir = file_dir
+<<<<<<< HEAD
+        # Only check the immediate directory and its parent for tests/ subdirectory
+        # This prevents the broad "tests/test_*.py" pattern from matching everything
+        dirs_to_check = [file_dir, file_dir.parent] if file_dir.parent != file_dir else [file_dir]
         
-        while project_root in current_dir.parents or current_dir == project_root:
-            # Avoid processing the same directory multiple times
-            dir_str = str(current_dir)
-            if dir_str not in processed_dirs:
-                processed_dirs.add(dir_str)
+        for current_dir in dirs_to_check:
+            # Stop if we've gone above project root
+            if not (project_root in current_dir.parents or current_dir == project_root):
+                break
                 
-                # Check if this directory has a tests/ subdirectory
-                tests_dir = current_dir / "tests"
-                if tests_dir.exists() and tests_dir.is_dir():
-                    pattern = str((tests_dir / "test_*.py").as_posix())
-                    if pattern not in tests_patterns:
-                        tests_patterns.append(pattern)
-            
-            # Move to parent directory with early termination
-            if current_dir == current_dir.parent:
-                break  # Reached filesystem root
-            current_dir = current_dir.parent
+            # Check if this directory has a tests/ subdirectory
+            tests_dir = current_dir / "tests"
+            if tests_dir.exists() and tests_dir.is_dir():
+                # Use full path to avoid matching every test in the project
+                relative_tests_path = tests_dir.relative_to(project_root)
+                pattern = str((relative_tests_path / "test_*.py").as_posix())
+                if pattern not in tests_patterns:
+                    tests_patterns.append(pattern)
         
-        # Always include repository-root tests dir if not already added
-        root_pattern = "tests/test_*.py"
-        if root_pattern not in tests_patterns:
-            tests_patterns.append(root_pattern)
-        
-        # Performance monitoring as suggested by CodeRabbit
+        # Performance monitoring
         elapsed_time = time.perf_counter() - start_time
         if tests_patterns:
-            logger.debug(f"Generic tests/ directory search for {file_path}: {tests_patterns} (took {elapsed_time:.3f}s, processed {len(processed_dirs)} dirs)")
+            logger.debug(f"Specific tests/ directory search for {file_path}: {tests_patterns} (took {elapsed_time:.3f}s)")
+        else:
+            logger.debug(f"No tests/ subdirectories found for {file_path}")
         
         return tests_patterns
+=======
+        if unique_patterns:
+            logger.debug(f"Generic tests/ directory search for {file_path}: {unique_patterns}")
+        
+        return unique_patterns
+>>>>>>> main
 
     def _get_conservative_mappings(self, file_path: str) -> List[str]:
         """Conservative fallback mappings when no specific rules match."""
         conservative_tests = []
         
-        # FIRST: Always apply generic tests/ subdirectory logic (user's main request)
-        generic_tests = self._find_tests_subdirectories(file_path)
-        conservative_tests.extend(generic_tests)
-        
-        # THEN: Apply specific conservative mappings as additional coverage
-        
-        # Any Python file in mvp_site/ triggers core tests
-        if file_path.startswith("mvp_site/") and file_path.endswith(".py"):
+        if file_path.startswith("mvp_site/"):
+            # mvp_site/ conservative mappings - more intelligent
+            if file_path.endswith(".py"):
+                conservative_tests.extend([
+                    "mvp_site/tests/test_integration*.py",
+                    "mvp_site/tests/test_main*.py"
+                ])
+                logger.debug(f"MVP conservative mapping for Python: {file_path}")
+            elif any(file_path.endswith(ext) for ext in [".html", ".js", ".css"]):
+                conservative_tests.extend([
+                    "mvp_site/tests/test_ui*.py",
+                    "mvp_site/tests/test_integration*.py"
+                ])
+                logger.debug(f"MVP conservative mapping for frontend: {file_path}")
+            elif any(file_path.endswith(ext) for ext in [".yml", ".yaml", ".json"]):
+                conservative_tests.extend([
+                    "mvp_site/tests/test_integration*.py"
+                ])
+                logger.debug(f"MVP conservative mapping for config: {file_path}")
+        elif self._should_use_tests_subdir_pattern(file_path):
+            # Only specific directories use tests/ subdirectory pattern
+            generic_tests = self._find_tests_subdirectories(file_path)
+            conservative_tests.extend(generic_tests)
+            logger.debug(f"Conservative tests/ subdir mapping: {file_path} -> {generic_tests}")
+        else:
+            # For all other files: minimal safety tests only
             conservative_tests.extend([
-                "test_main_*.py",
-                "test_api_*.py", 
-                "test_integration_*.py"
+                "mvp_site/tests/test_integration*.py"  # Just basic integration tests
             ])
-            logger.debug(f"Conservative mapping for mvp_site Python: {file_path}")
-        
-        # Frontend changes trigger UI tests
-        elif any(file_path.endswith(ext) for ext in [".html", ".js", ".tsx", ".css"]):
-            conservative_tests.extend([
-                "testing_ui/test_*.py",
-                "test_end2end/*.py"
-            ])
-            logger.debug(f"Conservative mapping for frontend: {file_path}")
-        
-        # Configuration changes trigger integration tests
-        elif any(file_path.endswith(ext) for ext in [".yml", ".yaml", ".json", ".sh"]):
-            conservative_tests.extend([
-                "test_integration_*.py",
-                ".claude/hooks/tests/*"
-            ])
-            logger.debug(f"Conservative mapping for config: {file_path}")
+            logger.debug(f"Minimal conservative mapping: {file_path} -> basic integration tests")
         
         # Test files themselves should always be included
-        elif "test_" in file_path and file_path.endswith(".py"):
+        if "test_" in file_path and file_path.endswith(".py"):
             conservative_tests.append(file_path)
             logger.debug(f"Test file directly included: {file_path}")
         
@@ -518,6 +579,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+  %(prog)s                                      # Default: git diff vs origin/main
   %(prog)s --git-diff                           # Use git diff vs origin/main
   %(prog)s --changes main.py,auth_service.py   # Analyze specific files
   %(prog)s --config custom_config.json         # Use custom configuration
@@ -562,7 +624,7 @@ Examples:
     
     try:
         # Initialize analyzer
-        analyzer = TestDependencyAnalyzer(config_path=args.config)
+        analyzer = DependencyAnalyzer(config_path=args.config)
         
         # Get changed files
         if args.git_diff:
@@ -576,8 +638,14 @@ Examples:
             changed_files = [f.strip() for f in args.changes.split(',') if f.strip()]
             selected_tests = analyzer.analyze_changes(changed_files)
         else:
-            logger.error("Must specify either --git-diff or --changes")
-            sys.exit(1)
+            # Default behavior: analyze current branch vs origin/main
+            logger.info("No arguments provided, defaulting to --git-diff mode vs origin/main")
+            changed_files = analyzer.get_git_changes(args.base_branch)
+            if not changed_files:
+                logger.warning("No changes detected, falling back to full test suite")
+                selected_tests = analyzer._get_all_tests()
+            else:
+                selected_tests = analyzer.analyze_changes(changed_files)
         
         # Update analyzer's selected tests
         analyzer.selected_tests = selected_tests
@@ -598,7 +666,7 @@ Examples:
         # Write all tests as fallback
         if not args.dry_run:
             try:
-                analyzer = TestDependencyAnalyzer()
+                analyzer = DependencyAnalyzer()
                 analyzer.selected_tests = analyzer._get_all_tests()
                 analyzer.write_selected_tests(args.output)
                 print(f"Fallback: All tests written to {args.output}")
