@@ -100,16 +100,9 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
         if str(response_item.get("comment_id")) == comment_id:
             return response_item.get("response", "")
 
-    # If no Claude response found, return placeholder with [AI responder] tag
-    return f"""[AI responder] 🚨 **CLAUDE RESPONSE NEEDED** (Commit: {commit_hash})
-
-Comment #{comment_id} by @{author}:
-> {body_snippet}...
-
-❌ No Claude-generated response found for this comment.
-✅ Claude should analyze this comment and add response to responses.json
-
-**Required**: Claude must read comment content, implement any necessary fixes, and generate appropriate technical response."""
+    # CRITICAL FIX: Never post placeholder comments - return empty string to skip posting
+    print(f"⚠️ SKIP: No Claude response found for comment #{comment_id} - will not post placeholder")
+    return ""
 
 def get_git_commit_hash() -> str:
     """Get current git commit hash"""
@@ -403,6 +396,11 @@ def main():
 
         # Get Claude-generated response for this comment
         response_text = get_response_for_comment(comment, responses_data, commit_hash)
+
+        # Skip posting if no response available (empty string = skip)
+        if not response_text or response_text.strip() == "":
+            print(f"   ⏭️  SKIPPED: No response available for comment #{comment_id}")
+            continue
 
         # Create threaded reply
         if create_threaded_reply(owner, repo, pr_number, comment, response_text):
