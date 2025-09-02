@@ -438,8 +438,9 @@ def main():
     # Step 6: Final report
     print(f"\n✅ COMPLETE: Comment processing finished")
     print(f"   📊 Total comments: {len(all_comments)}")
+    print(f"   🎯 Processed comments: {len(processed_comments)}")
     print(f"   ✅ Successful replies: {successful_replies}")
-    print(f"   ❌ Failed replies: {len(all_comments) - successful_replies}")
+    print(f"   ❌ Failed replies: {len(processed_comments) - successful_replies}")
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
     if not coverage_valid:
