@@ -154,11 +154,12 @@ class CommentFetch(CopilotCommandBase):
         """Fetch Copilot suppressed comments if available."""
         self.log("Checking for Copilot comments...")
 
-        # Try to get Copilot-specific comments using jq filtering
+        # Try to get Copilot-specific comments using jq filtering with pagination
         cmd = [
             "gh",
             "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
+            "--paginate",
             "--jq",
             '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select((.body|ascii_downcase) | contains("copilot"))',
         ]

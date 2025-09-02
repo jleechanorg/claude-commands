@@ -16,21 +16,27 @@ import os
 import tempfile
 from typing import Dict, List, Optional, Tuple
 
-def run_command(cmd: List[str], description: str = "") -> Tuple[bool, str, str]:
+def run_command(
+    cmd: List[str],
+    description: str = "",
+    timeout: int = 60,
+    input_text: Optional[str] = None,
+) -> Tuple[bool, str, str]:
     """Execute shell command safely with error handling"""
     try:
         result = subprocess.run(
             cmd,
+            input=input_text,
             capture_output=True,
             text=True,
             check=False,  # Don't raise on non-zero exit
-            timeout=30
+            timeout=timeout
         )
         return result.returncode == 0, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
-        return False, "", f"Command timed out: {' '.join(cmd)}"
+        return False, "", f"[timeout] {description or 'cmd'}: {' '.join(cmd)}"
     except Exception as e:
-        return False, "", f"Command failed: {e}"
+        return False, "", f"[failure] {description or 'cmd'}: {e}"
 
 def parse_arguments() -> Tuple[str, str, str]:
     """Parse command line arguments for owner, repo, and PR number"""
