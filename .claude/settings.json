@@ -46,6 +46,7 @@
       "Bash(../vpython test_deployment_build.py -v)",
       "Bash(../vpython test_world_loader.py -v)",
       "Bash(../vpython test_world_loader_integration.py -v)",
+
       "Bash(npm:*)",
       "Bash(npm install:*)",
       "Bash(npm run:*)",
@@ -61,6 +62,7 @@
       "Bash(npm audit:*)",
       "Bash(npm outdated:*)",
       "Bash(npx:*)",
+
       "Bash(yarn:*)",
       "Bash(yarn install)",
       "Bash(yarn add:*)",
@@ -77,6 +79,7 @@
       "Bash(bun install)",
       "Bash(bun run:*)",
       "Bash(bun test:*)",
+
       "Bash(make:*)",
       "Bash(make clean)",
       "Bash(make build)",
@@ -87,6 +90,7 @@
       "Bash(babel:*)",
       "Bash(rollup:*)",
       "Bash(esbuild:*)",
+
       "Bash(eslint:*)",
       "Bash(prettier:*)",
       "Bash(husky:*)",
@@ -96,6 +100,7 @@
       "Bash(flake8:*)",
       "Bash(mypy:*)",
       "Bash(isort:*)",
+
       "Bash(docker:*)",
       "Bash(docker build:*)",
       "Bash(docker run:*)",
@@ -105,11 +110,13 @@
       "Bash(docker compose:*)",
       "Bash(docker compose up:*)",
       "Bash(docker compose down:*)",
+
       "Bash(curl:*)",
       "Bash(wget:*)",
       "Bash(ssh:*)",
       "Bash(scp:*)",
       "Bash(rsync:*)",
+
       "Bash(head:*)",
       "Bash(tail:*)",
       "Bash(wc:*)",
@@ -125,6 +132,7 @@
       "Bash(unzip:*)",
       "Bash(gzip:*)",
       "Bash(gunzip:*)",
+
       "Bash(ps:*)",
       "Bash(top)",
       "Bash(htop)",
@@ -141,6 +149,7 @@
       "Bash(export:*)",
       "Bash(alias:*)",
       "Bash(history)",
+
       "Bash(pwd)",
       "Bash(whoami)",
       "Bash(id)",
@@ -150,13 +159,16 @@
       "Bash(du:*)",
       "Bash(free)",
       "Bash(uname:*)",
+
       "Bash(jq:*)",
       "Bash(yq:*)",
       "Bash(xmllint:*)",
+
       "Bash(mocha:*)",
       "Bash(pytest:*)",
       "Bash(coverage:*)",
       "Bash(nyc:*)",
+
       "Bash(git-lfs:*)",
       "Bash(git lfs:*)"
     ],
@@ -253,5 +265,9 @@
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   },
   "verbose": false,
-  "mcpServers": {}
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" | tail -1; else echo \"Not in git repo\"; fi'",
+    "padding": 0
+  }
 }
