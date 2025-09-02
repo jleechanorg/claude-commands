@@ -20,13 +20,13 @@ fi
 ```
 
 ## 🎯 Purpose
-Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegation. Optimized for 2-3 minute execution vs 20+ minute agent overhead.
+Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches copilot-fixpr and copilot-analysis agents by default for comprehensive coverage and quality assurance.
 
-## ⚡ **PERFORMANCE ARCHITECTURE: Direct Orchestration**
-- **No Task delegation** - Orchestrate all workflow phases directly within the copilot context (no external agents)
-- **Direct GitHub MCP tools** - Use GitHub MCP tools directly in each phase
+## ⚡ **PERFORMANCE ARCHITECTURE: Parallel Orchestration**
+– Launch `copilot-fixpr` and `copilot-analysis` in parallel
+– Use GitHub MCP directly for analysis; delegate code edits to fixpr via Edit/MultiEdit
 - **30 recent comments focus** - Process only actionable recent feedback
-- **Expected time**: **2-3 minutes** (vs 20+ minutes with Task overhead)
+- **Expected time**: **3-5 minutes** with parallel agents (superior quality and coverage)
 
 ## 🚀 Core Workflow - Subcommand Orchestration
 
@@ -41,21 +41,37 @@ Ultra-fast PR processing using direct GitHub MCP tools instead of Task delegatio
 COPILOT_START_TIME=$(date +%s)
 ```
 
-### Phase 1: Assessment & Planning
-**Command**: `/execute` - Plan the PR processing work with TodoWrite tracking
-- Analyze current PR state and comment volume
-- Create systematic processing plan with TodoWrite
-- Set up progress tracking for all phases
-- Evaluate skip conditions based on PR state
+### Phase 1: Parallel Agent Launch (DEFAULT BEHAVIOR)
+**ALWAYS launch parallel agents for optimal coverage and quality**:
 
-### Phase 2: Comment Collection
-**Command**: `/commentfetch` - Get all PR comments and issues
-- Fetches recent comments requiring responses
-- Identifies critical issues, security problems, merge conflicts
-- Creates clean JSON dataset for systematic processing
+**🚀 Launch copilot-fixpr Agent**:
+Launch specialized agent for technical implementation and security analysis:
+- Analyze current GitHub PR status and identify potential improvements
+- Review code changes for security vulnerabilities and quality issues
+- Verify implementations are properly coded and tested
+- Focus on code quality, performance optimization, and technical accuracy
 
-### Phase 3: Issue Resolution with File Justification Protocol
-**Command**: `/fixpr` - Fix all identified problems systematically using ACTUAL CODE IMPLEMENTATION
+**🚀 Launch copilot-analysis Agent**:
+Launch specialized agent for comment processing and communication coordination:
+- Process all PR comments and verify 100% coverage achievement
+- Generate technical responses with proper GitHub API threading
+- Coordinate communication workflow and quality assessment
+- Focus on comment coverage verification and threading API success
+
+**Coordination Setup**: Both agents work in parallel on shared GitHub PR data with specialized tool usage (Edit/MultiEdit for fixpr, GitHub MCP for analysis)
+
+### Phase 2: Agent Coordination & Integration
+**Integration of parallel agent results**:
+
+**Agent Result Collection**:
+- copilot-fixpr provides: Technical analysis, code fixes, security recommendations, implementation verification
+- copilot-analysis provides: Comment coverage verification, threading API results, communication quality assessment
+- Both agents maintain: Specialized tool usage boundaries and shared data coordination
+
+**Quality Integration**: Combine technical fixes from copilot-fixpr with communication strategies from copilot-analysis for comprehensive PR processing
+
+### Phase 3: Verification & Completion (AUTOMATIC)
+**Results verified by agent coordination**:
 
 **🚨 MANDATORY FILE JUSTIFICATION PROTOCOL COMPLIANCE**:
 - **Every file modification** must follow FILE JUSTIFICATION PROTOCOL before implementation
@@ -65,7 +81,7 @@ COPILOT_START_TIME=$(date +%s)
 - **Justification categories**: Classify each change as Essential, Enhancement, or Unnecessary
 
 **Implementation with Protocol Enforcement**:
-- **Priority Order**: Security → Runtime Errors → Test Failures → Style  
+- **Priority Order**: Security → Runtime Errors → Test Failures → Style
 - **MANDATORY TOOLS**: Edit/MultiEdit for code changes, NOT GitHub review posting
 - **IMPLEMENTATION REQUIREMENT**: Must modify actual files to resolve issues WITH justification
 - **VERIFICATION**: Use git diff to confirm file changes made AND protocol compliance
@@ -83,7 +99,7 @@ COPILOT_START_TIME=$(date +%s)
 3. **Bash commands** - For file operations, testing, validation
 
 **CRITICAL DISTINCTION**:
-- ❌ **PERFORMATIVE**: `github_create_review("Fixed import issue")` 
+- ❌ **PERFORMATIVE**: `github_create_review("Fixed import issue")`
 - ✅ **ACTUAL**: `Edit(old_string="import module", new_string="from package import module")`
 
 ### Phase 4: Response Generation
@@ -102,14 +118,14 @@ COPILOT_START_TIME=$(date +%s)
 - Validates response quality (not generic templates)
 - Detects any missed or unaddressed feedback
 - **🚨 CRITICAL**: Issues explicit warnings for unresponded comments
-- **FAILURE CONDITIONS**: 
+- **FAILURE CONDITIONS**:
   - ❌ Comments acknowledged but not fixed = FAILURE
   - ❌ GitHub reviews posted without code changes = FAILURE
   - ✅ Comments responded to AND issues implemented = SUCCESS
 - **Must pass**: Zero unresponded comments before proceeding
 - **AUTO-FIX**: If coverage < 100%, automatically runs `/commentreply` again
 
-### Phase 6: Verification & Iteration  
+### Phase 6: Verification & Iteration
 **Iterative Cycle**: Repeat `/commentfetch` → `/fixpr` → `/commentreply` → `/commentcheck` cycle until completion
 - **Keep going until**: No new comments, all tests pass, CI green, 100% coverage
 - **GitHub State**: Clean PR with no unresolved feedback
@@ -126,21 +142,30 @@ COPILOT_START_TIME=$(date +%s)
 **MANDATORY COVERAGE + TIMING COMPLETION**: Calculate and display execution performance with coverage warnings
 ```bash
 # COVERAGE VERIFICATION - MANDATORY
-# Get current comment statistics
-TOTAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq length)
-THREADED_REPLIES=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
-ORIGINAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+# Get current comment statistics - resolve repo and PR dynamically
+OWNER=$(gh repo view --json owner --jq .owner.login)
+REPO=$(gh repo view --json name --jq .name)
+PR_NUMBER=$(gh pr view --json number --jq .number)
 
-# Calculate coverage percentage
+TOTAL_COMMENTS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq length)
+THREADED_REPLIES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
+ORIGINAL_COMMENTS=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+
+# Calculate CORRECT coverage percentage - original comments with at least one reply
+ORIGINALS_WITH_REPLIES=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq -r '.[] | select(.in_reply_to_id == null) | .id' | while read -r original_id; do
+  replies_count=$(gh api "repos/$OWNER/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq --arg id "$original_id" '[.[] | select(.in_reply_to_id == ($id | tonumber))] | length')
+  if [ "$replies_count" -gt 0 ]; then echo "1"; fi
+done | wc -l)
+
 if [ "$ORIGINAL_COMMENTS" -gt 0 ]; then
-    COVERAGE_PERCENT=$(( (THREADED_REPLIES * 100) / ORIGINAL_COMMENTS ))
-    
+    COVERAGE_PERCENT=$(( (ORIGINALS_WITH_REPLIES * 100) / ORIGINAL_COMMENTS ))
+
     # MANDATORY WARNING SYSTEM - only output if incomplete
     if [ "$COVERAGE_PERCENT" -lt 100 ]; then
-        MISSING_REPLIES=$((ORIGINAL_COMMENTS - THREADED_REPLIES))
+        MISSING_REPLIES=$((ORIGINAL_COMMENTS - ORIGINALS_WITH_REPLIES))
         echo "🚨 WARNING: INCOMPLETE COMMENT COVERAGE DETECTED!"
         echo "❌ Missing replies: $MISSING_REPLIES comments"
-        echo "⚠️ Coverage: $COVERAGE_PERCENT% ($THREADED_REPLIES/$ORIGINAL_COMMENTS)"
+        echo "⚠️ Coverage: $COVERAGE_PERCENT% ($ORIGINALS_WITH_REPLIES/$ORIGINAL_COMMENTS)"
         echo "🔧 REQUIRED ACTION: Run /commentreply to address missing responses"
     fi
 fi
@@ -203,7 +228,7 @@ fi
 
 ### When to Use Full Processing
 - **Security Reviews**: Process all comments for comprehensive security analysis
-- **Major PRs**: Full processing for critical architectural changes  
+- **Major PRs**: Full processing for critical architectural changes
 - **Compliance**: Complete audit trail requirements
 - **Implementation**: Use full comment processing instead of recent 30 focus
 
@@ -269,7 +294,7 @@ fi
 ### Completion Indicators
 - ✅ All critical comments addressed with technical responses
 - ✅ All security vulnerabilities resolved
-- ✅ All test failures fixed 
+- ✅ All test failures fixed
 - ✅ All merge conflicts resolved
 - ✅ CI passing (green checkmarks)
 - ✅ No unaddressed reviewer feedback
@@ -294,7 +319,7 @@ fi
 # Expected outcome: All comments resolved, CI passing
 ```
 
-### High-Volume Comment Processing  
+### High-Volume Comment Processing
 ```bash
 /copilot
 # For PRs with 20+ comments from multiple reviewers
@@ -306,7 +331,7 @@ fi
 ```bash
 /copilot
 # Prioritizes security issues, applies fixes systematically
-# Estimated time: 2-3 minutes  
+# Estimated time: 2-3 minutes
 # Expected outcome: All vulnerabilities patched, tests passing
 ```
 
@@ -337,13 +362,14 @@ fi
 
 ### Autonomous Operation Protocol
 - **NEVER requires user approval** for comment processing and fixes
-- **NEVER requires user approval** for merge operations - operates fully autonomously
+- **Merges require explicit enablement** (`COPILOT_ALLOW_AUTOMERGE=1`) and must pass branch protection
+- Default: prepare merge and request approval; auto-merge only when policy allows
 - **Continues through standard conflicts** and applies systematic resolution
 - **Maintains full transparency** in all operations
 
 ### Priority Handling
 1. **Critical Security Issues** (undefined variables, injection risks)
-2. **Runtime Errors** (missing imports, syntax errors)  
+2. **Runtime Errors** (missing imports, syntax errors)
 3. **Test Failures** (failing assertions, integration issues)
 4. **Style & Performance** (optimization suggestions, formatting)
 5. **Documentation** (comment clarifications, README updates)
