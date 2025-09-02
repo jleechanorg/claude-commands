@@ -133,22 +133,35 @@ def detect_comment_type(comment: Dict) -> str:
 def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
     """Create a threaded reply to a PR comment using appropriate GitHub API"""
     comment_id = comment.get("id")
-    comment_type = detect_comment_type(comment)
+    comment_type = (comment.get("type") or detect_comment_type(comment))
 
     print(f"🔗 CREATING: Threaded reply to {comment_type} comment #{comment_id}")
 
     if comment_type == "issue":
-        return create_issue_comment_reply(owner, repo, pr_number, comment_id, response_text)
+        return create_issue_comment_reply(owner, repo, pr_number, comment, response_text)
     else:
         return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text, comment)
 
-def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment_id: int, response_text: str) -> bool:
+def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
     """Create a reply to an issue comment (general PR discussion)"""
+    comment_id = comment.get("id")
     print(f"📝 POSTING: Issue comment reply to #{comment_id}")
+
+    # Determine correct anchor based on comment type
+    ctype = (comment.get("type") or detect_comment_type(comment))
+    if ctype == "review":
+        anchor = f"pullrequestreview-{comment_id}"
+    elif ctype in ("inline", "copilot"):
+        anchor = f"discussion_r{comment_id}"
+    else:
+        anchor = f"issuecomment-{comment_id}"
 
     # Issue comments cannot be threaded directly, so we create a new issue comment
     # with a reference to the original comment
-    reply_text = f"> In response to [comment #{comment_id}](https://github.com/{owner}/{repo}/pull/{pr_number}#issuecomment-{comment_id}):\n\n{response_text}"
+    reply_text = (
+        f"> In response to [comment #{comment_id}]"
+        f"(https://github.com/{owner}/{repo}/pull/{pr_number}#{anchor}):\n\n{response_text}"
+    )
 
     reply_data = {
         "body": reply_text
@@ -264,7 +277,7 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
 
                 # SURGICAL FIX: Fallback to issue comment when review threading fails
                 print(f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}")
-                fallback_success = create_issue_comment_reply(owner, repo, pr_number, comment_id, response_text)
+                fallback_success = create_issue_comment_reply(owner, repo, pr_number, comment, response_text)
                 if fallback_success:
                     print(f"✅ FALLBACK SUCCESS: Posted as issue comment instead of threaded review reply for #{comment_id}")
                     return True
@@ -430,11 +443,10 @@ def main():
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
     if not coverage_valid:
-        print(f"\n❌ CRITICAL: Coverage validation failed - some comments may have been missed")
-        print(f"   This indicates a systematic processing bug that must be investigated")
+        print(f"\n❌ CRITICAL: Coverage validation failed")
         sys.exit(1)
 
-    if successful_replies < len(all_comments):
+    if successful_replies < len(processed_comments):
         print(f"\n⚠️ WARNING: Some replies failed - manual review recommended")
         sys.exit(1)
 

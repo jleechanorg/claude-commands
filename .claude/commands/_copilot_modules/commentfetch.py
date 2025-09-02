@@ -20,7 +20,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from base import CopilotCommandBase
+try:
+    from .base import CopilotCommandBase
+except ImportError:
+    from base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
@@ -165,7 +168,7 @@ class CommentFetch(CopilotCommandBase):
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
             if result.returncode == 0 and result.stdout.strip():
                 # Parse JSONL output
                 comments = []
@@ -193,6 +196,8 @@ class CommentFetch(CopilotCommandBase):
                     )
 
                 return standardized
+        except subprocess.TimeoutExpired:
+            self.log("Could not fetch Copilot comments: timed out")
         except Exception as e:
             self.log(f"Could not fetch Copilot comments: {e}")
 
@@ -222,7 +227,10 @@ class CommentFetch(CopilotCommandBase):
             return False
 
         # Skip comments that are just quotes of other comments
-        if text.startswith("> ") and len(text.split('\n')) < 3:
+        lines = text.strip().split('\n')
+        non_empty_lines = [line for line in lines if line.strip()]
+        if (len(non_empty_lines) <= 5 and
+            all(line.strip().startswith("> ") for line in non_empty_lines if line.strip())):
             return False
 
         # Include actual technical comments that need responses
@@ -245,7 +253,7 @@ class CommentFetch(CopilotCommandBase):
                 '--json', 'statusCheckRollup,mergeable,mergeStateStatus'
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=60)
             pr_data = json.loads(result.stdout)
 
             # Defensive programming: statusCheckRollup is often a LIST
@@ -312,6 +320,19 @@ class CommentFetch(CopilotCommandBase):
                 'fetched_at': datetime.now(timezone.utc).isoformat()
             }
 
+        except subprocess.TimeoutExpired:
+            self.log("Error fetching CI status: timed out")
+            return {
+                'overall_state': 'ERROR',
+                'error': "Failed to fetch CI status: timed out",
+                'checks': [],
+                'summary': {
+                    'total': 0,
+                    'passing': 0,
+                    'failing': 0,
+                    'pending': 0
+                }
+            }
         except subprocess.CalledProcessError as e:
             self.log(f"Error fetching CI status: {e}")
             return {
