@@ -372,7 +372,7 @@ show_help() {
 Claude Directory Backup Script (runs every 4 hours by default)
 
 USAGE:
-    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME)
+    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME)
     $0 --setup-cron [destination] # Setup cron job with destination
     $0 --remove-cron             # Remove cron job
     $0 --help                    # Show this help
@@ -386,7 +386,7 @@ EMAIL SETUP (for failure alerts):
 
 BACKUP TARGETS:
     Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME
+    Default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:
