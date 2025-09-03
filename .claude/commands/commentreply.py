@@ -16,6 +16,7 @@ import os
 import tempfile
 import html
 import re
+import time
 from typing import Dict, List, Optional, Tuple
 
 def run_command(
@@ -85,6 +86,90 @@ def load_claude_responses(branch_name: str) -> Dict:
     except Exception as e:
         print(f"❌ ERROR: Failed to load responses file: {e}")
         return {}
+
+def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, pr_number: str) -> List[Dict]:
+    """
+    Load comment data with staleness detection and real-time fallback.
+
+    Args:
+        branch_name: Current git branch name
+        owner: Repository owner
+        repo: Repository name
+        pr_number: PR number
+
+    Returns:
+        List of comment dictionaries (fresh or cached)
+    """
+    comments_file = f"/tmp/{branch_name}/comments.json"
+
+    # Check cache staleness (if older than 1 hour, fetch fresh data)
+    if os.path.exists(comments_file):
+        cache_age_hours = (time.time() - os.path.getmtime(comments_file)) / 3600
+        if cache_age_hours > 1.0:
+            print(f"⚠️  STALE CACHE: {cache_age_hours:.1f}h old - fetching fresh comments")
+            fetch_fresh_comments(owner, repo, pr_number, comments_file)
+        else:
+            print(f"✅ FRESH CACHE: {cache_age_hours:.1f}h old - using cached comments")
+    else:
+        print(f"📥 NO CACHE: Fetching fresh comments for {owner}/{repo}#{pr_number}")
+        fetch_fresh_comments(owner, repo, pr_number, comments_file)
+
+    try:
+        with open(comments_file, 'r') as f:
+            comment_data = json.load(f)
+        return comment_data.get('comments', [])
+    except Exception as e:
+        print(f"❌ ERROR: Failed to load comments: {e}")
+        sys.exit(1)
+
+def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str):
+    """Fetch fresh comments using GitHub API and save to cache file"""
+
+    # Fetch both review comments and issue comments
+    review_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate"]
+    issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate"]
+
+    print("📡 FETCHING: Fresh comment data from GitHub API...")
+
+    success_review, review_data, _ = run_command(review_cmd, "fetch review comments", timeout=90)
+    success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=90)
+
+    if not success_review or not success_issue:
+        print("❌ ERROR: Failed to fetch fresh comments from GitHub API")
+        if not os.path.exists(output_file):
+            sys.exit(1)
+        print("⚠️  Falling back to stale cache...")
+        return
+
+    # Parse and combine comments
+    try:
+        review_comments = json.loads(review_data) if review_data.strip() else []
+        issue_comments = json.loads(issue_data) if issue_data.strip() else []
+
+        # Add type information and combine
+        for comment in review_comments:
+            comment['type'] = 'review'
+        for comment in issue_comments:
+            comment['type'] = 'issue'
+
+        all_comments = review_comments + issue_comments
+
+        # Save to cache file
+        cache_data = {
+            "pr": pr_number,
+            "fetched_at": time.strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "comments": all_comments
+        }
+
+        os.makedirs(os.path.dirname(output_file), exist_ok=True)
+        with open(output_file, 'w') as f:
+            json.dump(cache_data, f, indent=2)
+
+        print(f"✅ CACHED: {len(all_comments)} comments saved to {output_file}")
+
+    except json.JSONDecodeError as e:
+        print(f"❌ ERROR: Failed to parse fresh comment data: {e}")
+        sys.exit(1)
 
 def validate_comment_data(comment: Dict) -> bool:
     """Validate comment data structure and content for security.
@@ -463,32 +548,14 @@ def main():
     print(f"📋 REPOSITORY: {owner}/{repo}")
     print(f"📋 PR NUMBER: #{pr_number}")
 
-    # Step 2: Load comments from /commentfetch JSON file (MODERN WORKFLOW)
+    # Step 2: Load comments with staleness detection and real-time fallback
     branch_name = get_current_branch()
-    comments_file = f"/tmp/{branch_name}/comments.json"
+    all_comments = load_comments_with_staleness_check(branch_name, owner, repo, pr_number)
+    print(f"📁 LOADED: {len(all_comments)} comments with staleness validation")
 
-    if not os.path.exists(comments_file):
-        print(f"❌ ERROR: Comments file not found: {comments_file}")
-        print("⚠️  REQUIRED: Run /commentfetch first to populate comment data")
-        sys.exit(1)
-
-    try:
-        with open(comments_file, 'r') as f:
-            comment_data = json.load(f)
-
-        all_comments = comment_data.get("comments", [])
-        print(f"📁 LOADED: {len(all_comments)} comments from {comments_file}")
-
-        if not all_comments:
-            print("⚠️ WARNING: No comments found in fetched data")
-            return
-
-    except json.JSONDecodeError as e:
-        print(f"❌ ERROR: Failed to parse comments JSON: {e}")
-        sys.exit(1)
-    except Exception as e:
-        print(f"❌ ERROR: Failed to load comments file: {e}")
-        sys.exit(1)
+    if not all_comments:
+        print("⚠️ WARNING: No comments found in fetched data")
+        return
 
     # Step 3: Process each comment systematically
     print(f"\n🔄 PROCESSING: {len(all_comments)} comments systematically")
