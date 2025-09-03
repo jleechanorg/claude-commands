@@ -17,6 +17,7 @@ import tempfile
 import html
 import re
 import time
+from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 def run_command(
@@ -54,7 +55,13 @@ def parse_arguments() -> Tuple[str, str, str]:
 def get_current_branch() -> str:
     """Get current git branch name for temp file path"""
     success, branch, _ = run_command(["git", "branch", "--show-current"])
-    return branch.strip() if success else "unknown"
+    if success and branch.strip():
+        # Sanitize branch name to prevent path traversal
+        branch = branch.strip()
+        # Remove dangerous characters that could be used for path traversal
+        safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch)
+        return safe_branch[:50]  # Limit length
+    return "unknown"
 
 def load_claude_responses(branch_name: str) -> Dict:
     """
@@ -63,12 +70,21 @@ def load_claude_responses(branch_name: str) -> Dict:
     generates responses, and saves them to responses.json for Python to post.
 
     Args:
-        branch_name: Current git branch name
+        branch_name: Current git branch name (sanitized)
 
     Returns:
         Dictionary containing responses data, empty dict if file not found
     """
-    responses_file = f"/tmp/{branch_name}/responses.json"
+    # Ensure branch_name is safe and create secure path
+    safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch_name)[:50]
+    responses_file = f"/tmp/{safe_branch}/responses.json"
+
+    # Verify the path doesn't contain traversal attempts
+    responses_path = Path(responses_file).resolve()
+    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
+    if not str(responses_path).startswith(str(expected_prefix)):
+        print(f"⚠️ SECURITY: Path traversal attempt blocked: {responses_file}")
+        return {}
 
     if not os.path.exists(responses_file):
         print(f"⚠️  RESPONSES FILE NOT FOUND: {responses_file}")
@@ -76,6 +92,13 @@ def load_claude_responses(branch_name: str) -> Dict:
         return {}
 
     try:
+        # Additional security: check file size before reading
+        if responses_path.exists():
+            file_size = responses_path.stat().st_size
+            if file_size > 10 * 1024 * 1024:  # 10MB limit
+                print(f"⚠️ SECURITY: File too large: {responses_file} ({file_size} bytes)")
+                return {}
+
         with open(responses_file, 'r') as f:
             responses_data = json.load(f)
         print(f"📁 LOADED: {len(responses_data.get('responses', []))} responses from {responses_file}")
@@ -92,7 +115,7 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
     Load comment data with staleness detection and real-time fallback.
 
     Args:
-        branch_name: Current git branch name
+        branch_name: Current git branch name (sanitized)
         owner: Repository owner
         repo: Repository name
         pr_number: PR number
@@ -100,7 +123,16 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
     Returns:
         List of comment dictionaries (fresh or cached)
     """
-    comments_file = f"/tmp/{branch_name}/comments.json"
+    # Ensure branch_name is safe and create secure path
+    safe_branch = re.sub(r'[^a-zA-Z0-9_-]', '_', branch_name)[:50]
+    comments_file = f"/tmp/{safe_branch}/comments.json"
+
+    # Verify the path doesn't contain traversal attempts
+    comments_path = Path(comments_file).resolve()
+    expected_prefix = Path(f"/tmp/{safe_branch}").resolve()
+    if not str(comments_path).startswith(str(expected_prefix)):
+        print(f"⚠️ SECURITY: Path traversal attempt blocked: {comments_file}")
+        sys.exit(1)
 
     # Check cache staleness (if older than 5 minutes, fetch fresh data)
     if os.path.exists(comments_file):
