@@ -194,9 +194,15 @@ def validate_comment_data(comment: Dict) -> bool:
     if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
         return False
 
-    # Validate user structure
+    # Validate user structure (support both user.login and author formats)
     user = comment.get('user')
-    if not isinstance(user, dict) or 'login' not in user:
+    author = comment.get('author')
+
+    # Accept either user.login structure or direct author field
+    has_valid_user = isinstance(user, dict) and 'login' in user
+    has_valid_author = isinstance(author, str) and author.strip()
+
+    if not (has_valid_user or has_valid_author):
         return False
 
     # Validate body content
@@ -259,7 +265,9 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
         return ""
 
     comment_id = str(comment.get("id"))
-    author = comment.get("user", {}).get("login", "unknown")
+    # Support both user.login and author field formats
+    user = comment.get("user", {})
+    author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
     body_snippet = sanitize_comment_content(comment.get("body", ""))[:100]
 
     # Look for Claude-generated response
@@ -576,7 +584,9 @@ def main():
             continue
 
         comment_id = comment.get("id")
-        author = comment.get("user", {}).get("login", "unknown")
+        # Support both user.login and author field formats
+        user = comment.get("user", {})
+        author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
         body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace("\n", " ")
 
         print(f"\n[{i}/{len(all_comments)}] Processing comment #{comment_id} by @{author}")
