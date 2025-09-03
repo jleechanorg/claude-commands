@@ -26,8 +26,8 @@ SECURE_TEMP=$(mktemp -d)
 chmod 700 "$SECURE_TEMP"
 LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 
-# Source directory (home directory to include ~/.claude.json)
-SOURCE_DIR="$HOME"
+# Source directory
+SOURCE_DIR="$HOME/.claude"
 
 # Security: Hostname validation function
 validate_hostname() {
@@ -209,26 +209,35 @@ backup_to_destination() {
         return 1
     fi
 
-    # Perform selective rsync backup (only essential directories and files)
+    # First, backup ~/.claude directory with selective rsync
     if rsync -av \
-        --include='/.claude.json' \
-        --include='/.claude.json.backup*' \
-        --include='/.claude/' \
-        --include='/.claude/settings.json' \
-        --include='/.claude/settings.json.backup*' \
-        --include='/.claude/settings.local.json' \
-        --include='/.claude/projects' \
-        --include='/.claude/projects/**' \
-        --include='/.claude/local' \
-        --include='/.claude/local/**' \
-        --include='/.claude/hooks' \
-        --include='/.claude/hooks/**' \
+        --include='settings.json' \
+        --include='settings.json.backup*' \
+        --include='settings.local.json' \
+        --include='projects' \
+        --include='projects/**' \
+        --include='local' \
+        --include='local/**' \
+        --include='hooks' \
+        --include='hooks/**' \
         --exclude='*' \
-        "$SOURCE_DIR/" "$dest_dir/" >/dev/null 2>&1; then
+        "$SOURCE_DIR/" "$dest_dir/.claude/" >/dev/null 2>&1; then
 
-        local file_count=$(find "$dest_dir" -type f | wc -l)
-        add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
-        return 0
+        # Second, backup ~/.claude.json files from home directory
+        if rsync -av \
+            --include='.claude.json' \
+            --include='.claude.json.backup*' \
+            --exclude='*' \
+            "$HOME/" "$dest_dir/" >/dev/null 2>&1; then
+            local file_count=$(find "$dest_dir" -type f | wc -l)
+            add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
+            return 0
+        else
+            add_result "WARNING" "$dest_name Claude.json Backup" "Main .claude directory synced, but .claude.json files failed"
+            local file_count=$(find "$dest_dir" -type f | wc -l)
+            add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
+            return 2  # Partial success exit code
+        fi
     else
         add_result "ERROR" "$dest_name Backup" "rsync failed to $dest_dir"
         return 1
@@ -376,15 +385,17 @@ EMAIL SETUP (for failure alerts):
     For Gmail App Password: https://myaccount.google.com/apppasswords
 
 BACKUP TARGETS:
-    Source: ~/.claude (selective sync)
+    Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
     Default: ~/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:
-    ✅ settings.json (Claude Code configuration)
-    ✅ projects/ (all project sessions - 2.4GB)
-    ✅ local/ (Claude installations and packages - 179MB)
-    ✅ hooks/ (custom hooks)
+    ✅ ~/.claude.json (Claude Code configuration file - 1.7MB)
+    ✅ ~/.claude.json.backup* (configuration backups)
+    ✅ ~/.claude/settings.json (Claude Code configuration)
+    ✅ ~/.claude/projects/ (all project sessions - 2.4GB)
+    ✅ ~/.claude/local/ (Claude installations and packages - 179MB)
+    ✅ ~/.claude/hooks/ (custom hooks)
     ❌ Excludes: shell-snapshots, todos, conversations, cache files
 
 FEATURES:
