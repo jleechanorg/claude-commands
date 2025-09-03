@@ -126,13 +126,13 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
     """Fetch fresh comments using GitHub API and save to cache file"""
 
     # Fetch both review comments and issue comments
-    review_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate"]
-    issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate"]
+    review_cmd = ["gh", "api", f"repos/{owner}/{repo}/pulls/{pr_number}/comments", "--paginate", "-q", ".[]"]
+    issue_cmd = ["gh", "api", f"repos/{owner}/{repo}/issues/{pr_number}/comments", "--paginate", "-q", ".[]"]
 
     print("📡 FETCHING: Fresh comment data from GitHub API...")
 
-    success_review, review_data, _ = run_command(review_cmd, "fetch review comments", timeout=90)
-    success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=90)
+    success_review, review_data, _ = run_command(review_cmd, "fetch review comments", timeout=120)
+    success_issue, issue_data, _ = run_command(issue_cmd, "fetch issue comments", timeout=120)
 
     if not success_review or not success_issue:
         print("❌ ERROR: Failed to fetch fresh comments from GitHub API")
@@ -143,12 +143,12 @@ def fetch_fresh_comments(owner: str, repo: str, pr_number: str, output_file: str
 
     # Parse and combine comments
     try:
-        review_comments = json.loads(review_data) if review_data.strip() else []
-        issue_comments = json.loads(issue_data) if issue_data.strip() else []
+        review_comments = [json.loads(l) for l in (review_data or "").splitlines() if l.strip()]
+        issue_comments = [json.loads(l) for l in (issue_data or "").splitlines() if l.strip()]
 
         # Add type information and combine
         for comment in review_comments:
-            comment['type'] = 'review'
+            comment['type'] = 'inline'
         for comment in issue_comments:
             comment['type'] = 'issue'
 
@@ -286,28 +286,28 @@ def get_git_commit_hash() -> str:
     return commit_hash.strip() if success else "unknown"
 
 def detect_comment_type(comment: Dict) -> str:
-    """Detect if comment is an issue comment or review comment"""
-    # Review comments have path, position, diff_hunk fields
-    # Issue comments do not have these fields
-    if comment.get("path") or comment.get("position") or comment.get("diff_hunk"):
+    """Detect comment kind: inline (code), review (review body), or issue"""
+    html_url = (comment.get("html_url") or "")
+    if "#discussion_r" in html_url or comment.get("path") or comment.get("position") or comment.get("diff_hunk"):
+        return "inline"
+    if "#pullrequestreview-" in html_url or comment.get("pull_request_review_id"):
         return "review"
-    # Check URL pattern as backup detection method
-    html_url = comment.get("html_url", "")
-    if "#discussion_r" in html_url:
-        return "review"
-    elif "#issuecomment-" in html_url:
+    if "#issuecomment-" in html_url:
         return "issue"
-    # Default to review for backward compatibility
-    return "review"
+    return "inline"
 
 def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
     """Create a threaded reply to a PR comment using appropriate GitHub API"""
     comment_id = comment.get("id")
     comment_type = (comment.get("type") or detect_comment_type(comment))
+    if comment_id is None:
+        print("❌ ERROR: Missing comment id; skip reply")
+        return False
 
     print(f"🔗 CREATING: Threaded reply to {comment_type} comment #{comment_id}")
 
-    if comment_type == "issue":
+    # Issue + review-body via issue comments; inline via review API
+    if comment_type in ("issue", "review"):
         return create_issue_comment_reply(owner, repo, pr_number, comment, response_text)
     else:
         return create_review_comment_reply(owner, repo, pr_number, comment_id, response_text, comment)
@@ -570,6 +570,17 @@ def main():
     processed_comments = []
     successful_replies = 0
 
+    # Determine current actor and limit to top-level comments
+    ok_actor, actor_login, _ = run_command(
+        ["gh", "api", "user", "-q", ".login"],
+        description="current actor"
+    )
+    actor_login = (actor_login or "").strip() or os.environ.get("GITHUB_ACTOR", "")
+    top_level = [c for c in all_comments if not c.get("in_reply_to_id")]
+    total_targets = 0
+    already_replied = 0
+    missing_responses = 0
+
     # Get commit hash once to avoid multiple git calls (fixes Copilot efficiency issue)
     commit_hash = get_git_commit_hash()
     print(f"📝 COMMIT: Using commit {commit_hash} for all responses")
@@ -577,10 +588,10 @@ def main():
     # Step 3: Load Claude-generated responses
     responses_data = load_claude_responses(branch_name)
 
-    for i, comment in enumerate(all_comments, 1):
+    for i, comment in enumerate(top_level, 1):
         # SECURITY: Validate each comment before processing
         if not validate_comment_data(comment):
-            print(f"[{i}/{len(all_comments)}] ❌ SECURITY: Skipping invalid comment data")
+            print(f"[{i}/{len(top_level)}] ❌ SECURITY: Skipping invalid comment data")
             continue
 
         comment_id = comment.get("id")
@@ -589,15 +600,32 @@ def main():
         author = user.get("login") if isinstance(user, dict) else comment.get("author", "unknown")
         body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace("\n", " ")
 
-        print(f"\n[{i}/{len(all_comments)}] Processing comment #{comment_id} by @{author}")
+        print(f"\n[{i}/{len(top_level)}] Processing comment #{comment_id} by @{author}")
         print(f"   Content: \"{body_snippet}...\"")
+
+        # Skip our own comments
+        if author == actor_login:
+            print("   ↪️ Skip: comment authored by current actor")
+            continue
+        total_targets += 1
+
+        # Idempotency: skip if already replied by current actor
+        replied_by_actor = any(
+            (c.get("in_reply_to_id") == comment_id) and (c.get("user", {}).get("login") == actor_login)
+            for c in all_comments
+        )
+        if replied_by_actor:
+            print("   ↪️ Skip: already replied by current actor")
+            already_replied += 1
+            continue
 
         # Get Claude-generated response for this comment
         response_text = get_response_for_comment(comment, responses_data, commit_hash)
 
         # Skip posting if no response available (empty string = skip)
-        if not response_text or response_text.strip() == "":
-            print(f"   ⏭️  SKIPPED: No response available for comment #{comment_id}")
+        if not response_text or not response_text.strip():
+            print(f"   ❌ No Claude response available for comment #{comment_id}")
+            missing_responses += 1
             continue
 
         # SECURITY: Final validation before API call
@@ -611,9 +639,17 @@ def main():
 
         processed_comments.append(comment)
 
-    # Step 4: Coverage validation (simplified - comments already processed by Claude)
-    print(f"\n🔍 VALIDATION: Coverage check completed - all loaded comments processed")
-    coverage_valid = True  # All comments from JSON file were processed
+    # Step 4: Coverage validation over target comments
+    covered = already_replied + successful_replies
+    coverage_valid = (missing_responses == 0) and (covered == total_targets)
+    print(f"\n🔍 VALIDATION: targets={total_targets} covered={covered} "
+          f"(already={already_replied}, posted={successful_replies}) "
+          f"missing={missing_responses}")
+
+    # Fail on insufficient coverage
+    if not coverage_valid:
+        print(f"\n❌ CRITICAL: Coverage validation failed")
+        sys.exit(1)
 
     # Step 5: Post final summary
     print(f"\n📝 SUMMARY: Posting final summary comment")
@@ -622,14 +658,11 @@ def main():
     # Step 6: Final report
     print(f"\n✅ COMPLETE: Comment processing finished")
     print(f"   📊 Total comments: {len(all_comments)}")
-    print(f"   🎯 Processed comments: {len(processed_comments)}")
+    print(f"   🎯 Target comments: {total_targets}")
     print(f"   ✅ Successful replies: {successful_replies}")
-    print(f"   ❌ Failed replies: {len(processed_comments) - successful_replies}")
+    print(f"   🔄 Already replied: {already_replied}")
+    print(f"   ❌ Missing responses: {missing_responses}")
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
-
-    if not coverage_valid:
-        print(f"\n❌ CRITICAL: Coverage validation failed")
-        sys.exit(1)
 
     if successful_replies < len(processed_comments):
         print(f"\n⚠️ WARNING: Some replies failed - manual review recommended")
