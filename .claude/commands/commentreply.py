@@ -102,14 +102,14 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
     """
     comments_file = f"/tmp/{branch_name}/comments.json"
 
-    # Check cache staleness (if older than 1 hour, fetch fresh data)
+    # Check cache staleness (if older than 5 minutes, fetch fresh data)
     if os.path.exists(comments_file):
-        cache_age_hours = (time.time() - os.path.getmtime(comments_file)) / 3600
-        if cache_age_hours > 1.0:
-            print(f"⚠️  STALE CACHE: {cache_age_hours:.1f}h old - fetching fresh comments")
+        cache_age_minutes = (time.time() - os.path.getmtime(comments_file)) / 60
+        if cache_age_minutes > 5.0:
+            print(f"⚠️  STALE CACHE: {cache_age_minutes:.1f}min old - fetching fresh comments")
             fetch_fresh_comments(owner, repo, pr_number, comments_file)
         else:
-            print(f"✅ FRESH CACHE: {cache_age_hours:.1f}h old - using cached comments")
+            print(f"✅ FRESH CACHE: {cache_age_minutes:.1f}min old - using cached comments")
     else:
         print(f"📥 NO CACHE: Fetching fresh comments for {owner}/{repo}#{pr_number}")
         fetch_fresh_comments(owner, repo, pr_number, comments_file)
