@@ -619,6 +619,18 @@ def main():
             already_replied += 1
             continue
 
+        # Skip if thread ends with [AI responder] comment indicating completion
+        thread_replies = [c for c in all_comments if c.get("in_reply_to_id") == comment_id]
+        if thread_replies:
+            # Sort by created_at to find the last reply
+            thread_replies.sort(key=lambda x: x.get("created_at", ""))
+            last_reply = thread_replies[-1]
+            last_reply_body = last_reply.get("body", "")
+            if "[AI responder]" in last_reply_body:
+                print("   ↪️ Skip: thread already completed with [AI responder] comment")
+                already_replied += 1
+                continue
+
         # Get Claude-generated response for this comment
         response_text = get_response_for_comment(comment, responses_data, commit_hash)
 
