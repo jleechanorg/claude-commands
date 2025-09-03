@@ -10,13 +10,25 @@
 # Load comments from: /tmp/{branch_name}/comments.json
 ```
 
-### Step 2: Claude Analysis & Fixes (CORE RESPONSIBILITY)
+### Step 2: Claude Analysis & Reply Generation (CORE RESPONSIBILITY)
 **Claude MUST**:
 1. **Read each comment content** from the JSON data
 2. **Analyze technical issues** raised in each comment
 3. **Implement actual fixes** using Edit/MultiEdit tools when code changes needed
 4. **Generate technical responses** addressing specific points raised
-5. **Verify changes** with git diff and commit with descriptive messages
+5. **Write reply JSON file** to `/tmp/{branch_name}/replies.json` with structure:
+   ```json
+   {
+     "replies": [
+       {
+         "comment_id": "comment_id_from_fetch",
+         "reply_text": "[AI responder] ✅ **Issue Fixed** (Commit: abc1234)\n\n> Original comment text...\n\n**Analysis**: ...\n**Fix Applied**: ...",
+         "in_reply_to_id": "parent_comment_id_if_threaded"
+       }
+     ]
+   }
+   ```
+6. **Verify changes** with git diff and commit with descriptive messages
 
 ### Step 3: Automated Posting (Python Execution)
 ```bash
@@ -25,8 +37,8 @@ OWNER=$(gh repo view --json owner --jq .owner.login)
 REPO=$(gh repo view --json name --jq .name)
 PR_NUMBER=$(gh pr view --json number --jq .number)
 
-# Python handles secure API posting with threading
-python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
+# Python reads replies.json and handles secure API posting with threading
+python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER" "/tmp/${branch_name}/replies.json"
 ```
 
 ## 🔧 CLAUDE'S TECHNICAL RESPONSIBILITIES
@@ -149,13 +161,21 @@ Before processing any comments:
 
 ```mermaid
 graph TD
-    A[/commentfetch loads JSON] --> B[Claude reads comments]
-    B --> C[Claude analyzes technical issues]
-    C --> D[Claude implements fixes]
-    D --> E[Claude generates responses]
-    E --> F[Python posts with threading]
-    F --> G[Verify coverage]
+    A["/commentfetch loads JSON"] --> B["Claude reads comments"]
+    B --> C["Claude analyzes technical issues"]
+    C --> D["Claude implements fixes"]
+    D --> E["Claude generates responses"]
+    E --> F["Claude writes /tmp/branch/replies.json"]
+    F --> G["Python reads replies.json"]
+    G --> H["Python posts with GitHub API threading"]
+    H --> I["Verify coverage"]
 ```
+
+### Data Flow Details
+1. **Input**: `/tmp/{branch}/comments.json` (from commentfetch)
+2. **Processing**: Claude analyzes and fixes issues in codebase
+3. **Output**: `/tmp/{branch}/replies.json` (structured reply data)
+4. **Posting**: Python script reads replies.json and posts via GitHub API
 
 ## 📊 SUCCESS CRITERIA
 
