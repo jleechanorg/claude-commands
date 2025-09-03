@@ -5,8 +5,12 @@ Test suite for PR Comment Formatter to ensure proper functionality.
 
 import json
 import os
+import sys
 import tempfile
 import unittest
+
+# Add scripts directory to path for pr_comment_formatter module
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts'))
 
 from pr_comment_formatter import (
     CommentStatus,
