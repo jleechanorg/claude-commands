@@ -26,8 +26,8 @@ SECURE_TEMP=$(mktemp -d)
 chmod 700 "$SECURE_TEMP"
 LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 
-# Source directory
-SOURCE_DIR="$HOME/.claude"
+# Source directory (home directory to include ~/.claude.json)
+SOURCE_DIR="$HOME"
 
 # Security: Hostname validation function
 validate_hostname() {
@@ -211,17 +211,18 @@ backup_to_destination() {
 
     # Perform selective rsync backup (only essential directories and files)
     if rsync -av \
-        --include='.claude.json' \
-        --include='.claude.json.backup*' \
-        --include='settings.json' \
-        --include='settings.json.backup*' \
-        --include='settings.local.json' \
-        --include='projects' \
-        --include='projects/**' \
-        --include='local' \
-        --include='local/**' \
-        --include='hooks' \
-        --include='hooks/**' \
+        --include='/.claude.json' \
+        --include='/.claude.json.backup*' \
+        --include='/.claude/' \
+        --include='/.claude/settings.json' \
+        --include='/.claude/settings.json.backup*' \
+        --include='/.claude/settings.local.json' \
+        --include='/.claude/projects' \
+        --include='/.claude/projects/**' \
+        --include='/.claude/local' \
+        --include='/.claude/local/**' \
+        --include='/.claude/hooks' \
+        --include='/.claude/hooks/**' \
         --exclude='*' \
         "$SOURCE_DIR/" "$dest_dir/" >/dev/null 2>&1; then
 
