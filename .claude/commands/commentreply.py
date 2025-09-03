@@ -183,8 +183,8 @@ def validate_comment_data(comment: Dict) -> bool:
     if not isinstance(comment, dict):
         return False
 
-    # Required fields
-    required_fields = ['id', 'user', 'body']
+    # Required fields (user field no longer required due to author field support)
+    required_fields = ['id', 'body']
     for field in required_fields:
         if field not in comment:
             return False

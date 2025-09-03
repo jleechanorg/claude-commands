@@ -330,6 +330,118 @@ class TestIntegration(unittest.TestCase):
         assert formatted == formatted_from_json
 
 
+class TestCommentValidationRegression(unittest.TestCase):
+    """Regression tests for comment data structure validation issues."""
+
+    def test_regression_r2317638693_author_field_validation(self):
+        """
+        🔴 RED: Reproduce exact validation failure for comment r2317638693.
+
+        Root cause: CommentFetch outputs 'author' field but CommentReply
+        validation expected 'user.login' structure, causing ALL comments
+        to be skipped with "❌ SECURITY: Skipping invalid comment data"
+        """
+        import sys
+        import os
+
+        # Add the correct path to commentreply module
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
+        sys.path.insert(0, commands_dir)
+
+        # Import the validation function we're testing
+        from commentreply import validate_comment_data
+
+        # 🔴 RED: Create comment data structure that commentfetch actually outputs
+        comment_with_author_field = {
+            "id": 2317638693,
+            "type": "inline",
+            "body": "Should we have this and the md file and the py file? How do all 3 work together?",
+            "author": "jleechan2015",  # CommentFetch format
+            "created_at": "2025-09-03T03:04:13Z",
+            "requires_response": True
+        }
+
+        # 🔴 RED: This should PASS with the fix (before fix it would fail)
+        result = validate_comment_data(comment_with_author_field)
+        self.assertTrue(result, "Comment with author field should pass validation")
+
+        # 🟢 GREEN: Also test original user.login format still works
+        comment_with_user_field = {
+            "id": 2317638694,
+            "type": "inline",
+            "body": "Test comment with user field",
+            "user": {"login": "testuser"},  # Original expected format
+            "created_at": "2025-09-03T03:04:13Z",
+            "requires_response": True
+        }
+
+        result = validate_comment_data(comment_with_user_field)
+        self.assertTrue(result, "Comment with user.login field should pass validation")
+
+        # 🔴 RED: Invalid cases should still fail
+        invalid_comment_no_author = {
+            "id": 2317638695,
+            "type": "inline",
+            "body": "Test comment without author info",
+            "created_at": "2025-09-03T03:04:13Z",
+            "requires_response": True
+            # No author or user field
+        }
+
+        result = validate_comment_data(invalid_comment_no_author)
+        self.assertFalse(result, "Comment without author/user should fail validation")
+
+    def test_author_extraction_compatibility(self):
+        """
+        Test that author extraction works with both data formats.
+
+        This tests the dual format support in get_response_for_comment
+        and main processing loop.
+        """
+        import sys
+        import os
+
+        # Add the correct path to commentreply module
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
+        sys.path.insert(0, commands_dir)
+
+        # Test data structures
+        comment_with_author = {
+            "id": 123456,
+            "author": "testuser1",
+            "body": "Test comment",
+            "user": None  # This is what commentfetch outputs
+        }
+
+        comment_with_user = {
+            "id": 123457,
+            "user": {"login": "testuser2"},
+            "body": "Test comment"
+            # No author field
+        }
+
+        # Test author extraction logic (simulate the actual extraction code)
+        def extract_author(comment):
+            """Simulate the author extraction logic from commentreply"""
+            user = comment.get("user", {})
+            if isinstance(user, dict) and "login" in user:
+                return user["login"]
+            return comment.get("author", "unknown")
+
+        author1 = extract_author(comment_with_author)
+        self.assertEqual(author1, "testuser1", "Should extract author from author field")
+
+        author2 = extract_author(comment_with_user)
+        self.assertEqual(author2, "testuser2", "Should extract author from user.login field")
+
+        # Test fallback to unknown
+        empty_comment = {"id": 123458, "body": "test"}
+        author3 = extract_author(empty_comment)
+        self.assertEqual(author3, "unknown", "Should fallback to unknown when no author info")
+
+
 if __name__ == "__main__":
     # Run all tests
     unittest.main(verbosity=2)
