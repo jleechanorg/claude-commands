@@ -31,15 +31,58 @@
 6. **Verify changes** with git diff and commit with descriptive messages
 
 ### Step 3: Automated Posting (Python Execution)
+
+**✅ DONE: Architecture Question Resolved** (Commit: ab82741b)
+
+> Question: "Should we have this and the md file and the py file? How do all 3 work together?"
+
+**Analysis**: Three-file architecture provides clear separation of concerns:
+
+**File Architecture Explained**:
+1. **`commentreply` (shell script)**: Entry point with argument parsing and auto-detection
+2. **`commentreply.md` (this file)**: Complete workflow documentation and Claude instructions
+3. **`commentreply.py` (Python implementation)**: Secure GitHub API posting with threading
+
+**Integration Flow**:
+```bash
+# User runs shell command
+./commentreply [args]
+  ↓
+# Shell script auto-detects repo context, calls Python
+python3 commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
+  ↓
+# Python reads JSON data that Claude analyzed (per this .md file)
+# Posts responses via secure GitHub API with proper threading
+```
+
+**Why Three Files Are Necessary**:
+- **Shell script**: User-friendly interface with intelligent defaults
+- **Markdown file**: Complete Claude workflow specification and instructions
+- **Python script**: Secure API implementation with proper error handling
+
+**✅ DONE: Parameter Alignment Fixed** (Commit: ab82741b)
+
+> Issue: "Remove the undefined ${branch_name} and fourth positional argument - commentreply.py only accepts three positional args"
+
+**Analysis**: Documentation was misaligned with actual Python script implementation.
+
+**Fix Applied**:
+- Removed undefined `${branch_name}` variable reference
+- Aligned documentation to match actual 3-parameter script signature
+- Python script derives branch automatically via `git branch --show-current`
+- Loads responses from `/tmp/<branch>/responses.json` internally
+
 ```bash
 # Get repo info and pass to Python script
 OWNER=$(gh repo view --json owner --jq .owner.login)
 REPO=$(gh repo view --json name --jq .name)
 PR_NUMBER=$(gh pr view --json number --jq .number)
 
-# Python reads replies.json and handles secure API posting with threading
-python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER" "/tmp/${branch_name}/replies.json"
+# Python reads comment data and handles secure API posting with threading
+python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
 ```
+
+**Verification**: Script signature matches documentation exactly
 
 ## 🔧 CLAUDE'S TECHNICAL RESPONSIBILITIES
 
@@ -50,6 +93,22 @@ For each comment, Claude must:
 - **Determine fix approach**: What technical changes are required?
 
 ### Implementation Requirements
+
+**❌ NOT DONE: Placeholder Response Prevention** (Current: ab82741b)
+
+> Issue: "Docs forbid generic responses, but the Python path posts placeholders"
+
+**Analysis**: Current implementation posts "CLAUDE RESPONSE NEEDED" when no response exists, violating documented prohibition against generic acknowledgments.
+
+**Why NOT DONE**:
+- Requires coordinated change across Python implementation and workflow
+- Current placeholder system provides valuable debugging info
+- Alternative would be silent failures with no user feedback
+- Needs architectural discussion on preferred failure mode
+
+**Recommended Future Fix**: Modify Python to skip posting entirely when no Claude response exists, or update documentation to explicitly allow diagnostic placeholders.
+
+**Current Implementation**:
 - **✅ MANDATORY**: Use Edit/MultiEdit tools for actual file changes
 - **✅ MANDATORY**: Run `git diff` to verify changes were made
 - **✅ MANDATORY**: Commit changes with comment reference
