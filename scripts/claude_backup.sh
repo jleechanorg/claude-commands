@@ -210,7 +210,13 @@ backup_to_destination() {
     fi
 
     # First, backup ~/.claude directory with selective rsync
-    if rsync -av \
+    local rsync_log="$SECURE_TEMP/rsync_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
+    local rsync_errors="$SECURE_TEMP/rsync_errors_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
+
+    # Run rsync with proper error logging and extended attributes support
+    # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
+    rsync -av \
+        --extended-attributes \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -221,22 +227,68 @@ backup_to_destination() {
         --include='hooks' \
         --include='hooks/**' \
         --exclude='*' \
-        "$SOURCE_DIR/" "$dest_dir/.claude/" >/dev/null 2>&1; then
+        "$SOURCE_DIR/" "$dest_dir/.claude/" > "$rsync_log" 2>"$rsync_errors"
+
+    local rsync_exit=$?
+
+    if [ $rsync_exit -eq 0 ]; then
+        # Complete success
+        backup_log "rsync completed successfully for .claude directory"
+    elif [ $rsync_exit -eq 23 ]; then
+        # Partial transfer due to errors - log specific failures
+        local failed_count=$(grep -c "failed:" "$rsync_errors" 2>/dev/null || echo "0")
+        backup_log "rsync partial transfer: $failed_count files failed"
+        backup_log "Failed files details:"
+        cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
+        add_result "WARNING" "$dest_name Rsync" "Partial transfer: $failed_count files failed (see log for details)"
+    elif [ $rsync_exit -ne 0 ]; then
+        # Complete failure
+        backup_log "rsync failed with exit code $rsync_exit"
+        backup_log "Error details:"
+        cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
+        add_result "ERROR" "$dest_name Backup" "rsync failed with exit code $rsync_exit (see log for details)"
+        return 1
+    fi
+
+    # Continue with second rsync for .claude.json files if first was successful or partial
+    if [ $rsync_exit -eq 0 ] || [ $rsync_exit -eq 23 ]; then
 
         # Second, backup ~/.claude.json files from home directory
-        if rsync -av \
+        local rsync_log2="$SECURE_TEMP/rsync_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
+        local rsync_errors2="$SECURE_TEMP/rsync_errors_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
+
+        rsync -av \
+            --extended-attributes \
             --include='.claude.json' \
             --include='.claude.json.backup*' \
             --exclude='*' \
-            "$HOME/" "$dest_dir/" >/dev/null 2>&1; then
-            local file_count=$(find "$dest_dir" -type f | wc -l)
-            add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
-            return 0
-        else
-            add_result "WARNING" "$dest_name Claude.json Backup" "Main .claude directory synced, but .claude.json files failed"
-            local file_count=$(find "$dest_dir" -type f | wc -l)
+            "$HOME/" "$dest_dir/" > "$rsync_log2" 2>"$rsync_errors2"
+
+        local rsync_exit2=$?
+        local file_count=$(find "$dest_dir" -type f | wc -l)
+
+        if [ $rsync_exit2 -eq 0 ]; then
+            backup_log "rsync completed successfully for .claude.json files"
+            if [ $rsync_exit -eq 0 ]; then
+                add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
+                return 0
+            else
+                add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files, some .claude directory files failed)"
+                return 23
+            fi
+        elif [ $rsync_exit2 -eq 23 ]; then
+            local failed_count2=$(grep -c "failed:" "$rsync_errors2" 2>/dev/null || echo "0")
+            backup_log "rsync partial transfer for .claude.json: $failed_count2 files failed"
+            cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
+            add_result "WARNING" "$dest_name Claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
             add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return 2  # Partial success exit code
+            return 23
+        else
+            backup_log "rsync failed for .claude.json files with exit code $rsync_exit2"
+            cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
+            add_result "WARNING" "$dest_name Claude.json Backup" "Main .claude directory synced, but .claude.json files failed"
+            add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
+            return 23
         fi
     else
         add_result "ERROR" "$dest_name Backup" "rsync failed to $dest_dir"
