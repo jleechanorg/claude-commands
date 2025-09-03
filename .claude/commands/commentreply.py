@@ -14,6 +14,8 @@ import subprocess
 import sys
 import os
 import tempfile
+import html
+import re
 from typing import Dict, List, Optional, Tuple
 
 def run_command(
@@ -84,6 +86,76 @@ def load_claude_responses(branch_name: str) -> Dict:
         print(f"❌ ERROR: Failed to load responses file: {e}")
         return {}
 
+def validate_comment_data(comment: Dict) -> bool:
+    """Validate comment data structure and content for security.
+
+    Args:
+        comment: Comment data dictionary
+
+    Returns:
+        True if comment data is valid and safe
+    """
+    if not isinstance(comment, dict):
+        return False
+
+    # Required fields
+    required_fields = ['id', 'user', 'body']
+    for field in required_fields:
+        if field not in comment:
+            return False
+
+    # Validate comment ID (must be numeric)
+    comment_id = comment.get('id')
+    if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
+        return False
+
+    # Validate user structure
+    user = comment.get('user')
+    if not isinstance(user, dict) or 'login' not in user:
+        return False
+
+    # Validate body content
+    body = comment.get('body')
+    if not isinstance(body, str):
+        return False
+
+    # Check for potentially dangerous content patterns
+    dangerous_patterns = [
+        r'<script[^>]*>.*?</script>',  # Script tags
+        r'javascript:',  # JavaScript URLs
+        r'data:text/html',  # Data URLs
+        r'vbscript:',  # VBScript
+        r'on\w+\s*=',  # Event handlers
+    ]
+
+    for pattern in dangerous_patterns:
+        if re.search(pattern, body, re.IGNORECASE | re.DOTALL):
+            print(f"⚠️ SECURITY: Potentially dangerous content detected in comment #{comment_id}")
+            return False
+
+    return True
+
+def sanitize_comment_content(content: str) -> str:
+    """Sanitize comment content for safe processing.
+
+    Args:
+        content: Raw comment content
+
+    Returns:
+        Sanitized content safe for processing
+    """
+    if not isinstance(content, str):
+        return str(content)
+
+    # HTML escape potentially dangerous characters
+    sanitized = html.escape(content)
+
+    # Limit length to prevent DoS
+    if len(sanitized) > 10000:  # 10KB limit
+        sanitized = sanitized[:10000] + "... [truncated]"
+
+    return sanitized
+
 def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: str) -> str:
     """
     Get Claude-generated response for a specific comment.
@@ -96,9 +168,14 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
     Returns:
         Claude-generated response text or placeholder if not found
     """
+    # SECURITY: Validate comment data first
+    if not validate_comment_data(comment):
+        print(f"⚠️ SECURITY: Invalid comment data structure, skipping")
+        return ""
+
     comment_id = str(comment.get("id"))
     author = comment.get("user", {}).get("login", "unknown")
-    body_snippet = comment.get("body", "")[:100]
+    body_snippet = sanitize_comment_content(comment.get("body", ""))[:100]
 
     # Look for Claude-generated response
     responses = responses_data.get("responses", [])
@@ -144,8 +221,16 @@ def create_threaded_reply(owner: str, repo: str, pr_number: str, comment: Dict, 
 
 def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: Dict, response_text: str) -> bool:
     """Create a reply to an issue comment (general PR discussion)"""
+    # SECURITY: Validate inputs
+    if not validate_comment_data(comment):
+        print(f"❌ SECURITY: Invalid comment data for issue comment reply")
+        return False
+
     comment_id = comment.get("id")
     print(f"📝 POSTING: Issue comment reply to #{comment_id}")
+
+    # SECURITY: Sanitize response text
+    response_text = sanitize_comment_content(response_text)
 
     # Determine correct anchor based on comment type
     ctype = (comment.get("type") or detect_comment_type(comment))
@@ -212,9 +297,17 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
     """Create a threaded reply to a review comment (code-specific)"""
     print(f"🧵 POSTING: Review comment threaded reply to #{comment_id}")
 
+    # SECURITY: Validate inputs to prevent injection
+    if not isinstance(comment_id, (int, str)) or not str(comment_id).isdigit():
+        print(f"❌ SECURITY: Invalid comment_id format: {comment_id}")
+        return False
+
     # SURGICAL FIX: Validate comment exists before attempting threading
     if comment is None:
         print(f"⚠️ WARNING: Comment object not provided for validation of #{comment_id}")
+
+    # SECURITY: Sanitize response text
+    response_text = sanitize_comment_content(response_text)
 
     # Prepare the API call data for review comment threading
     reply_data = {
@@ -260,7 +353,9 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
     else:
         if "422" in (stderr or ""):
             print(f"🔍 DEBUG 422: GitHub returned 422 for comment #{comment_id}")
-            print(f"🔍 DEBUG 422: Full stderr: {stderr}")
+            # SECURITY: Sanitize error output to prevent information disclosure
+            sanitized_stderr = (stderr or "")[:200] if stderr else "No error details"
+            print(f"🔍 DEBUG 422: Error summary: {sanitized_stderr}...")
 
             # Check for specific error patterns
             if "not found" in (stderr or "").lower() or "does not exist" in (stderr or "").lower():
@@ -269,11 +364,13 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
                 return False
 
             if comment:
-                print(f"🔍 DEBUG 422: Comment type: {detect_comment_type(comment)}")
-                print(f"🔍 DEBUG 422: Comment URL: {comment.get('html_url', 'N/A')}")
-                print(f"🔍 DEBUG 422: Has path: {bool(comment.get('path'))}")
-                print(f"🔍 DEBUG 422: Has position: {bool(comment.get('position'))}")
-                print(f"🔍 DEBUG 422: Has diff_hunk: {bool(comment.get('diff_hunk'))}")
+                # SECURITY: Only log safe diagnostic information
+                comment_type = detect_comment_type(comment)
+                has_path = bool(comment.get('path'))
+                has_position = bool(comment.get('position'))
+                has_diff_hunk = bool(comment.get('diff_hunk'))
+                print(f"🔍 DEBUG 422: Comment type: {comment_type}")
+                print(f"🔍 DEBUG 422: Has path: {has_path}, position: {has_position}, diff_hunk: {has_diff_hunk}")
 
                 # SURGICAL FIX: Fallback to issue comment when review threading fails
                 print(f"🔄 FALLBACK: Attempting issue comment fallback for review comment #{comment_id}")
@@ -406,9 +503,14 @@ def main():
     responses_data = load_claude_responses(branch_name)
 
     for i, comment in enumerate(all_comments, 1):
+        # SECURITY: Validate each comment before processing
+        if not validate_comment_data(comment):
+            print(f"[{i}/{len(all_comments)}] ❌ SECURITY: Skipping invalid comment data")
+            continue
+
         comment_id = comment.get("id")
         author = comment.get("user", {}).get("login", "unknown")
-        body_snippet = comment.get("body", "")[:50].replace("\n", " ")
+        body_snippet = sanitize_comment_content(comment.get("body", ""))[:50].replace("\n", " ")
 
         print(f"\n[{i}/{len(all_comments)}] Processing comment #{comment_id} by @{author}")
         print(f"   Content: \"{body_snippet}...\"")
@@ -420,6 +522,11 @@ def main():
         if not response_text or response_text.strip() == "":
             print(f"   ⏭️  SKIPPED: No response available for comment #{comment_id}")
             continue
+
+        # SECURITY: Final validation before API call
+        if len(response_text.strip()) > 65000:  # GitHub comment limit
+            print(f"   ⚠️ WARNING: Response too long for comment #{comment_id}, truncating")
+            response_text = response_text[:65000] + "\n\n[Response truncated due to length limit]"
 
         # Create threaded reply
         if create_threaded_reply(owner, repo, pr_number, comment, response_text):
