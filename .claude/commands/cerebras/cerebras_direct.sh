@@ -77,7 +77,20 @@ if [ -z "$PROMPT" ]; then
     echo "  --no-auto-context        Skip automatic context extraction"
     echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
     echo "  --light                  Use light mode (no system prompts and no security filtering)"
+    echo ""
+    echo "SECURITY WARNING: --light mode bypasses all security checks. Use with trusted prompts only."
     exit 1
+fi
+
+# Basic input validation - check for extremely long prompts that could cause issues
+if [ ${#PROMPT} -gt 100000 ]; then
+    echo "Error: Prompt too long (${#PROMPT} characters). Maximum 100,000 characters allowed." >&2
+    exit 1
+fi
+
+# Security warning for light mode
+if [ "$LIGHT_MODE" = true ]; then
+    echo "⚠️  WARNING: Light mode active - security filtering disabled" >&2
 fi
 
 # Validate API key
@@ -308,9 +321,14 @@ OUTPUT_FILE="${OUTPUT_DIR}/cerebras_output_${TIMESTAMP}.md"
 # Write content to file and also display
 echo "$CONTENT" > "$OUTPUT_FILE"
 
-# Show timing at the beginning with line count
+# Show timing at the beginning with line count and mode indicator
 echo ""
-echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+if [ "$LIGHT_MODE" = true ]; then
+    echo "⚡ CEREBRAS LIGHT MODE: ${ELAPSED_MS}ms (${LINE_COUNT} lines) ⚡"
+    echo "⚠️  Light Mode Active - No System Prompts or Security Filtering"
+else
+    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+fi
 echo ""
 echo "Output saved to: $OUTPUT_FILE"
 echo ""
