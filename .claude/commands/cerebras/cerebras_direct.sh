@@ -22,7 +22,7 @@ CURL_FAIL_FLAG="--fail"
 if CURL_VERSION=$(curl --version 2>/dev/null | head -n1 | sed 's/curl \([0-9]*\.[0-9]*\).*/\1/' 2>/dev/null) && [ -n "$CURL_VERSION" ]; then
     CURL_MAJOR=$(echo "$CURL_VERSION" | cut -d. -f1 2>/dev/null)
     CURL_MINOR=$(echo "$CURL_VERSION" | cut -d. -f2 2>/dev/null)
-    
+
     # Validate that we got numeric values before attempting comparison
     if [[ "$CURL_MAJOR" =~ ^[0-9]+$ ]] && [[ "$CURL_MINOR" =~ ^[0-9]+$ ]]; then
         # --fail-with-body requires curl 7.76.0+ (March 2021)
@@ -125,19 +125,19 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
     BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
     [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
     AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_auto_context_${BRANCH_NAME}_XXXXXX.txt" 2>/dev/null)"
-    
+
     # Validate temporary file creation (graceful degradation on failure)
     if [ -z "$AUTO_CONTEXT_FILE" ]; then
         # Continue without context extraction if mktemp fails (invisible operation)
         # No warning output - maintaining invisible operation for Claude Code CLI
         :
     fi
-    
+
     # Silent context extraction (invisible to Claude Code CLI)
     if [ -n "$AUTO_CONTEXT_FILE" ]; then
         # Find the extract_conversation_context.py script (SCRIPT_DIR already set above)
         EXTRACT_SCRIPT="$SCRIPT_DIR/extract_conversation_context.py"
-        
+
         if [ -f "$EXTRACT_SCRIPT" ]; then
             # Extract context using script's default token limit
             # Run from project root to ensure correct path resolution
@@ -154,7 +154,7 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
                 (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
                 # Continue silently regardless of extraction success - invisible operation maintained
             fi
-            
+
             # Use the auto-extracted context if successful
             if [ -s "$AUTO_CONTEXT_FILE" ]; then
                 CONTEXT_FILE="$AUTO_CONTEXT_FILE"
@@ -232,7 +232,7 @@ if [ "$CURL_EXIT" -ne 0 ]; then
   echo "API Error: curl failed with exit code $CURL_EXIT" >&2
   exit 3
 fi
-    
+
 # Extract HTTP status and body safely (no subshell whitespace issues)
 HTTP_STATUS="${HTTP_RESPONSE##*HTTPSTATUS:}"
 HTTP_BODY="${HTTP_RESPONSE%HTTPSTATUS:*}"
