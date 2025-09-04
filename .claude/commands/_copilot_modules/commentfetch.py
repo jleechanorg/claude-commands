@@ -20,7 +20,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from base import CopilotCommandBase
+try:
+    from .base import CopilotCommandBase
+except ImportError:
+    from base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
@@ -154,17 +157,18 @@ class CommentFetch(CopilotCommandBase):
         """Fetch Copilot suppressed comments if available."""
         self.log("Checking for Copilot comments...")
 
-        # Try to get Copilot-specific comments using jq filtering
+        # Try to get Copilot-specific comments using jq filtering with pagination
         cmd = [
             "gh",
             "api",
             f"repos/{self.repo}/pulls/{self.pr_number}/comments",
+            "--paginate",
             "--jq",
-            '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select(.body | contains("copilot"))',
+            '.[] | select(.user.login == "github-advanced-security[bot]" or .user.type == "Bot") | select((.body|ascii_downcase) | contains("copilot"))',
         ]
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, check=False)
             if result.returncode == 0 and result.stdout.strip():
                 # Parse JSONL output
                 comments = []
@@ -192,60 +196,81 @@ class CommentFetch(CopilotCommandBase):
                     )
 
                 return standardized
+        except subprocess.TimeoutExpired:
+            self.log("Could not fetch Copilot comments: timed out")
         except Exception as e:
             self.log(f"Could not fetch Copilot comments: {e}")
 
         return []
 
     def _requires_response(self, comment: Dict[str, Any]) -> bool:
-        """Include all comments for Claude to analyze.
+        """Filter out meta-comments to prevent recursive processing.
 
-        Claude will decide what needs responses, not Python pattern matching.
+        Excludes "CLAUDE RESPONSE NEEDED" meta-comments while including actual
+        technical review comments that need responses.
 
         Args:
             comment: Comment data
 
         Returns:
-            True (always - let Claude decide)
+            False for meta-comments, True for actual technical comments
         """
-        # Let Claude decide what needs responses
-        # No pattern matching, no keyword detection
+        body = str(comment.get("body") or "")
+        text = body.strip()
+
+        # Skip empty comments
+        if not text:
+            return False
+
+        # Skip meta-comments created by previous commentreply runs
+        if "CLAUDE RESPONSE NEEDED" in body and "No Claude-generated response found" in body:
+            return False
+
+        # Skip comments that are just quotes of other comments
+        lines = text.strip().split('\n')
+        non_empty_lines = [line for line in lines if line.strip()]
+        if (len(non_empty_lines) <= 5 and
+            all(line.strip().startswith("> ") for line in non_empty_lines if line.strip())):
+            return False
+
+        # Include actual technical comments that need responses
         return True
 
     def _get_ci_status(self) -> Dict[str, Any]:
         """Fetch GitHub CI status using /fixpr methodology.
-        
+
         Uses GitHub as authoritative source for CI status.
         Implements defensive programming patterns from /fixpr.
-        
+
         Returns:
             Dict with CI status information
         """
         try:
             # Use /fixpr methodology: GitHub is authoritative source
             cmd = [
-                'gh', 'pr', 'view', self.pr_number, 
+                'gh', 'pr', 'view', self.pr_number,
+                '--repo', self.repo,
                 '--json', 'statusCheckRollup,mergeable,mergeStateStatus'
             ]
-            
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+
+            result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=60)
             pr_data = json.loads(result.stdout)
-            
+
             # Defensive programming: statusCheckRollup is often a LIST
             status_checks = pr_data.get('statusCheckRollup', [])
             if not isinstance(status_checks, list):
                 status_checks = [status_checks] if status_checks else []
-            
+
             # Process checks with safe access patterns from /fixpr
             checks = []
             failing_checks = []
             pending_checks = []
             passing_checks = []
-            
+
             for check in status_checks:
                 if not isinstance(check, dict):
                     continue
-                    
+
                 # Prefer conclusion (for completed check runs). Fall back to state (contexts), then UNKNOWN.
                 status_value = (check.get('conclusion') or check.get('state') or 'UNKNOWN')
                 check_info = {
@@ -257,7 +282,7 @@ class CommentFetch(CopilotCommandBase):
                     'completed_at': check.get('completedAt', '')
                 }
                 checks.append(check_info)
-                
+
                 # Categorize for quick analysis with safe status normalization
                 status_upper = (status_value or 'UNKNOWN').upper()
                 # Treat failure-like outcomes as failing
@@ -269,7 +294,7 @@ class CommentFetch(CopilotCommandBase):
                 # Only SUCCESS (and optionally NEUTRAL/SKIPPED) should count as passing
                 elif status_upper in ['SUCCESS', 'NEUTRAL', 'SKIPPED']:
                     passing_checks.append(check_info)
-            
+
             # Overall CI state assessment
             overall_state = 'UNKNOWN'
             if failing_checks:
@@ -278,7 +303,7 @@ class CommentFetch(CopilotCommandBase):
                 overall_state = 'PENDING'
             elif passing_checks and not failing_checks and not pending_checks:
                 overall_state = 'PASSING'
-            
+
             return {
                 'overall_state': overall_state,
                 'mergeable': pr_data.get('mergeable', None),
@@ -292,9 +317,22 @@ class CommentFetch(CopilotCommandBase):
                 },
                 'failing_checks': failing_checks,
                 'pending_checks': pending_checks,
-                'fetched_at': datetime.now().isoformat()
+                'fetched_at': datetime.now(timezone.utc).isoformat()
             }
-            
+
+        except subprocess.TimeoutExpired:
+            self.log("Error fetching CI status: timed out")
+            return {
+                'overall_state': 'ERROR',
+                'error': "Failed to fetch CI status: timed out",
+                'checks': [],
+                'summary': {
+                    'total': 0,
+                    'passing': 0,
+                    'failing': 0,
+                    'pending': 0
+                }
+            }
         except subprocess.CalledProcessError as e:
             self.log(f"Error fetching CI status: {e}")
             return {
@@ -306,7 +344,7 @@ class CommentFetch(CopilotCommandBase):
         except json.JSONDecodeError as e:
             self.log(f"Error parsing CI status JSON: {e}")
             return {
-                'overall_state': 'ERROR', 
+                'overall_state': 'ERROR',
                 'error': f"Failed to parse CI status: {e}",
                 'checks': [],
                 'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
@@ -315,7 +353,7 @@ class CommentFetch(CopilotCommandBase):
             self.log(f"Unexpected error fetching CI status: {e}")
             return {
                 'overall_state': 'ERROR',
-                'error': f"Unexpected error: {e}", 
+                'error': f"Unexpected error: {e}",
                 'checks': [],
                 'summary': {'total': 0, 'passing': 0, 'failing': 0, 'pending': 0}
             }
@@ -335,7 +373,7 @@ class CommentFetch(CopilotCommandBase):
                 executor.submit(self._get_copilot_comments): "copilot",
                 executor.submit(self._get_ci_status): "ci_status",
             }
-            
+
             ci_status = None
 
             for future in as_completed(futures):
@@ -361,7 +399,7 @@ class CommentFetch(CopilotCommandBase):
 
         # Count comments needing responses
         # After filtering, all remaining comments are unresponded
-        unresponded_count = len(self.comments)
+        unresponded_count = sum(1 for c in self.comments if c.get("requires_response"))
 
         # Prepare data to save
         data = {
@@ -405,13 +443,15 @@ class CommentFetch(CopilotCommandBase):
             state = ci_status.get('overall_state', 'UNKNOWN')
             failing = len(ci_status.get('failing_checks', []))
             pending = len(ci_status.get('pending_checks', []))
-            if failing > 0:
+            if failing > 0 and pending > 0:
+                ci_summary = f", CI: {failing} failing, {pending} pending"
+            elif failing > 0:
                 ci_summary = f", CI: {failing} failing"
             elif pending > 0:
                 ci_summary = f", CI: {pending} pending"
             else:
                 ci_summary = f", CI: {state.lower()}"
-        
+
         result = {
             "success": True,
             "message": f"Fetched {len(self.comments)} comments ({unresponded_count} unresponded){ci_summary} - saved to {self.output_file}",

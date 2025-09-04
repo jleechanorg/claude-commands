@@ -44,10 +44,10 @@ Genesis Coder, Prime Mover,
 **🚀 DEFAULT FOR ALL CODING: Use Cerebras API directly for most coding tasks**
 
 **MANDATORY THRESHOLD RULE:**
-- **Small edits ≤10 delta lines**: Claude handles directly  
+- **Small edits ≤10 delta lines**: Claude handles directly
 - **Larger tasks >10 delta lines**: MUST use `/cerebras` command or direct Cerebras API
 - **All new features, functions, classes**: Use Cerebras
-- **All file creation**: Use Cerebras  
+- **All file creation**: Use Cerebras
 - **All refactoring implementation >10 delta lines**: Use Cerebras (after Claude analyzes and designs the refactoring)
 
 **WHY CEREBRAS FIRST:**
@@ -61,7 +61,7 @@ Genesis Coder, Prime Mover,
 Task Size        | Tool Choice      | Rationale
 ≤10 delta lines | Claude Direct    | Quick edits, context efficiency
 >10 delta lines | Cerebras API     | Speed advantage, quality generation
-New Files       | Cerebras API     | Template generation strength  
+New Files       | Cerebras API     | Template generation strength
 Complex Logic   | Cerebras API     | Algorithm implementation expertise
 ```
 
@@ -171,7 +171,7 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 🚨 **MANDATORY PRE-WRITE HARD STOP**: ⚠️ BEFORE ANY Write tool usage, MUST verify ALL 4 checks:
 1. "Does this violate NEW FILE CREATION PROTOCOL?" → If YES, STOP immediately
-2. "Have I searched ALL existing files first?" → If NO, search `.claude/hooks/`, `scripts/`, `utils/`, modules  
+2. "Have I searched ALL existing files first?" → If NO, search `.claude/hooks/`, `scripts/`, `utils/`, modules
 3. "Have I attempted integration into 3+ existing files?" → If NO, try integration first
 4. "Is this a path/reference problem, not missing file?" → If YES, fix references instead of creating file
 
@@ -190,7 +190,7 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - ❌ **FORBIDDEN**: Test files in root - ALL tests go in appropriate test directories
 - ❌ **FORBIDDEN**: Scripts in root - use `scripts/` directory for ALL scripts
 - ✅ **REQUIRED**: Python files → `mvp_site/` or module directories
-- ✅ **REQUIRED**: Shell scripts → `scripts/` directory  
+- ✅ **REQUIRED**: Shell scripts → `scripts/` directory
 - ✅ **REQUIRED**: Test files → `mvp_site/tests/` or module test directories
 - ✅ **REQUIRED**: Documentation → `docs/` or module-specific docs
 - **Pattern**: Root = Configuration only (deploy.sh, run_tests.sh, etc.)
@@ -358,7 +358,7 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 🚨 **PRE-IMPLEMENTATION DECISION FRAMEWORK:** ⚠️ MANDATORY - Prevent fake code at source
 - **🚪 DECISION GATE**: Before writing ANY function, ask: "Can I implement this fully right now?"
 - **✅ If YES**: Implement with working code immediately, no placeholders
-- **❌ If NO**: DON'T create the function - use orchestration/composition instead  
+- **❌ If NO**: DON'T create the function - use orchestration/composition instead
 - **🎯 Default Hierarchy**: Orchestration > Working Implementation > No Implementation > ❌ NEVER Placeholder
 - **🛡️ Prevention Rule**: Block yourself from creating placeholder functions
 - **🔄 Orchestration First**: Use existing commands (like /commentfetch) instead of reimplementing
@@ -372,7 +372,7 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 🚨 **NO UNNECESSARY EXTERNAL APIS:** Try direct implementation before adding dependencies
 
-🚨 **USE LLM CAPABILITIES:** 
+🚨 **USE LLM CAPABILITIES:**
 - ❌ NEVER suggest keyword matching, regex patterns, rule-based parsing
 - ✅ ALWAYS leverage LLM's natural language understanding
 
@@ -389,11 +389,11 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - ✅ ALWAYS test actual execution to verify pattern type
 - ❌ NEVER assume cross-command references are just documentation
 
-🚨 **NEVER SIMULATE INTELLIGENCE:** 
+🚨 **NEVER SIMULATE INTELLIGENCE:**
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
 - ✅ ALWAYS invoke actual Claude for genuine response generation
 
-🚨 **EVIDENCE-BASED APPROACH:** 
+🚨 **EVIDENCE-BASED APPROACH:**
 - ✅ Extract exact error messages/code snippets before analyzing
 - 🔍 All claims must trace to specific evidence
 
@@ -669,6 +669,17 @@ Task Request + Uncertain | Ask for clarification    | "analyze something" → As
 **PR Comments:** Address ALL sources. Status: ✅ RESOLVED | 🔄 ACKNOWLEDGED | 📝 CLARIFICATION | ❌ DECLINED
 **PR References:** Include full URL - "PR #123: https://github.com/user/repo/pull/123"
 
+🚨 **CRITICAL: COMMENT REPLY ZERO-SKIP PROTOCOL**: ⚠️ MANDATORY - Every Comment Gets Response
+- ❌ **NEVER SKIP COMMENTS**: Every single comment MUST receive either implementation OR explicit "NOT DONE" response
+- ❌ **NO SILENT SKIPPING**: Comments without responses indicate workflow failure, not system success
+- ✅ **IMPLEMENTATION RESPONSE**: If comment is reasonable/actionable, implement the requested change
+- ✅ **NOT DONE RESPONSE**: If comment cannot be implemented, respond "NOT DONE: [specific reason why]"
+- 🔄 **WORKFLOW**: 1) Read comment → 2) Analyze feasibility → 3) Either implement OR respond "NOT DONE: [reason]"
+- **EXAMPLE NOT DONE**: "NOT DONE: Architecture docs belong in separate documentation file"
+- **EXAMPLE NOT DONE**: "NOT DONE: Requires breaking API change that affects existing users"
+- **ANTI-PATTERN**: Concluding "system working correctly" when comments have no responses
+- **SUCCESS METRIC**: 100% comment response rate (implementation + NOT DONE explanations)
+
 ### PR Labeling
 **Auto-labeling** based on git diff vs origin/main:
 - **Type:** bug (fix/error), feature (add/new), improvement (optimize/enhance), infrastructure (yml/scripts)
@@ -679,7 +690,7 @@ Task Request + Uncertain | Ask for clarification    | "analyze something" → As
 ## Quick Reference
 
 - **Test:** `TESTING=true vpython mvp_site/test_file.py` (from root)
-- **All Tests:** `./run_tests.sh` (CI simulation by default)  
+- **All Tests:** `./run_tests.sh` (CI simulation by default)
 - **Local Mode:** `./run_tests.sh --no-ci-sim`
 - **Fake Code Check:** `/fake3` (before any commit - mandatory)
 - **New Branch:** `./integrate.sh`
@@ -722,7 +733,7 @@ git push
 
 ### AI Sprint Structure (1 Hour Sprint)
 **Phase 1 (15min):** Core functionality - 3-5 parallel agents
-**Phase 2 (15min):** Secondary features - 3-5 parallel agents  
+**Phase 2 (15min):** Secondary features - 3-5 parallel agents
 **Phase 3 (15min):** Polish & testing - 2-3 parallel agents
 **Phase 4 (15min):** Integration & deploy - 1 agent
 
@@ -753,7 +764,7 @@ git push
 
 **Context Health Levels:**
 - **Green (0-30%):** Continue with current approach
-- **Yellow (31-60%):** Apply optimization strategies  
+- **Yellow (31-60%):** Apply optimization strategies
 - **Orange (61-80%):** Implement efficiency measures
 - **Red (81%+):** Strategic checkpoint required
 
@@ -776,25 +787,25 @@ git push
 
 🔧 **Tool Selection Hierarchy** (Layer 1 - 80% Impact):
 1. **Serena MCP FIRST** - ALWAYS use `mcp__serena__*` for semantic operations before Read tool
-2. **Targeted Reads** - Use Read tool with `limit=100` parameter (max 100 lines per read)  
+2. **Targeted Reads** - Use Read tool with `limit=100` parameter (max 100 lines per read)
 3. **Grep Targeted** - Use `head_limit=10` parameter, pattern search before full file reads
 4. **Batch Operations** - MultiEdit for multiple changes, batch tool calls in single messages
 5. **Bash Fallback** - Only when other tools insufficient
 
 🎯 **Auto-Optimization Rules** (Apply Every Session):
 - **Git Batching**: Combine `git status`, `git branch`, `git diff` into single calls
-- **MCP Substitution**: `Grep` → `mcp__serena__search_for_pattern` for code searches  
+- **MCP Substitution**: `Grep` → `mcp__serena__search_for_pattern` for code searches
 - **Read Limits**: Auto-apply `limit=1000` for large files
 - **Session Init**: Use Serena MCP for first 3 codebase operations
 
 ⚡ **Session Longevity** (Layer 2 - 60% Impact):
 - **Auto-checkpoint** at 60% context usage (not 80%)
-- **Warning alerts** at 40% context usage  
+- **Warning alerts** at 40% context usage
 - **Semantic search** instead of loading multiple comparison files
 - **Streamlined responses** - count-only outputs, no verbose listings
 - **Remove --verbose flags** from all script executions
 
-🧠 **Workflow Intelligence** (Layer 3 - 40% Impact):  
+🧠 **Workflow Intelligence** (Layer 3 - 40% Impact):
 - **Predictive alerts** for context exhaustion scenarios
 - **Background monitoring** for continuous optimization
 - **Development velocity** optimized for 15-20+ minute sessions
