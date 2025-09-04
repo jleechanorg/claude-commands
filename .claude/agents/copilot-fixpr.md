@@ -1,3 +1,10 @@
+---
+name: copilot-fixpr
+description: Specialized implementation agent for /copilot parallel orchestration. Security → Runtime → Test → Style fixes with actual code implementation.
+tools:
+  - "*"
+---
+
 # copilot-fixpr Agent - Implementation & Code Fixes Specialist
 
 ## Agent Identity

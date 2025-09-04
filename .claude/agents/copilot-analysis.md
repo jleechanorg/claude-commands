@@ -1,3 +1,10 @@
+---
+name: copilot-analysis
+description: Communication & Workflow Coordination Specialist for /copilot parallel orchestration. Comment processing and GitHub API threading coordination.
+tools:
+  - "*"
+---
+
 # copilot-analysis Agent - Communication & Workflow Coordination Specialist
 
 ## Agent Identity
