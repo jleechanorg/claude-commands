@@ -12,11 +12,15 @@
 
 ### Automatic Guidelines Consultation Protocol
 
-**1. Memory MCP Integration** (MANDATORY):
-- **Command**: `mcp__memory-server__search_nodes` - Search for relevant guidelines and patterns from memory
+**1. Memory MCP Integration with Query Optimization** (MANDATORY):
+- **Enhanced Search**: Use Memory MCP query optimization engine for improved search effectiveness
+- **Command Pattern**: Load `scripts/memory_mcp_optimizer.py` and optimize search queries before Memory MCP calls
+- **Multi-Query Strategy**: Transform compound guideline queries into effective single-word searches
+- **Command**: `mcp__memory-server__search_nodes` with optimized queries - Search for relevant guidelines and patterns
 - **Command**: `mcp__memory-server__open_nodes` - Retrieve historical guidelines applications and outcomes
-- Extract learned patterns, successful strategies, and documented anti-patterns from memory graph
-- Identify context-specific guidelines and decision patterns from previous work
+- **Result Merging**: Combine and score results from multiple optimized searches for better relevance
+- Extract learned patterns, successful strategies, and documented anti-patterns from enhanced knowledge retrieval
+- Identify context-specific guidelines and decision patterns from improved search results
 
 **2. CLAUDE.md Reading** (MANDATORY):
 - Always read CLAUDE.md first to understand current rules and constraints
@@ -53,7 +57,7 @@
 ```bash
 # Called by enhanced commands for systematic consultation
 /plan [task]         → calls /guidelines → proceeds with planning
-/execute [task]      → calls /guidelines → proceeds with execution  
+/execute [task]      → calls /guidelines → proceeds with execution
 /review-enhanced     → calls /guidelines → proceeds with review
 /reviewdeep          → calls /guidelines → proceeds with deep analysis
 ```

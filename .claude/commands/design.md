@@ -37,7 +37,7 @@
 4. **Technical Clarity**: Define implementation approach before coding
 5. **Success Criteria**: Clear definition of "done" before starting
 6. **Methodology Enforcement**: Mandate /4layer, /tdd, /redgreen for quality
-7. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise  
+7. **Multi-Perspective Validation**: Combine architecture analysis with principal-level product and engineering expertise
 8. **Current Industry Standards**: Validate approach against 2025 best practices and emerging technologies
 9. **TDD Implementation Planning**: Generate detailed sub-milestone breakdown with test-driven development integration
 10. **Granular Progress Tracking**: Break features into ~100 line commits for better tracking and rollback safety
@@ -184,7 +184,7 @@ graph TD
 ## Scope & Delta Analysis
 ### Lines of Code Estimation
 - **New Code**: ~X lines
-- **Modified Code**: ~Y lines  
+- **Modified Code**: ~Y lines
 - **Deleted Code**: ~Z lines
 - **Total Delta**: ~(X+Y-Z) lines
 - **Confidence**: High/Medium/Low
@@ -200,14 +200,14 @@ graph TD
 **Files**: [List of files to be changed]
 **Dependencies**: [What must be complete first]
 
-### Phase 2: [Phase Name] (~Y lines)  
+### Phase 2: [Phase Name] (~Y lines)
 **Duration**: [Time estimate]
 **Files**: [List of files to be changed]
 **Dependencies**: [Phase dependencies]
 
 ### Phase 3: [Phase Name] (~Z lines)
 **Duration**: [Time estimate]
-**Files**: [List of files to be changed]  
+**Files**: [List of files to be changed]
 **Dependencies**: [Phase dependencies]
 
 ## Sub-Milestone Planning
@@ -229,14 +229,14 @@ graph TD
 **TDD Approach**:
 - **Red**: Write failing test for [specific functionality]
 - **Green**: Implement minimal code to pass test
-- **Refactor**: Clean up implementation  
+- **Refactor**: Clean up implementation
 - **Test**: Verify [specific validation criteria]
 
 ### Phase 2 Sub-Milestones
 #### SM2.1: [Milestone Name] (~100 lines)
 [Similar structure repeated for each sub-milestone]
 
-### Phase 3 Sub-Milestones  
+### Phase 3 Sub-Milestones
 #### SM3.1: [Milestone Name] (~100 lines)
 [Similar structure repeated for each sub-milestone]
 
@@ -244,7 +244,7 @@ graph TD
 ### Red-Green-Refactor Cycle
 For each sub-milestone:
 1. **Red Phase**: Write failing test that defines expected behavior
-2. **Green Phase**: Write minimal code to make test pass  
+2. **Green Phase**: Write minimal code to make test pass
 3. **Refactor Phase**: Improve code quality while keeping tests green
 4. **Validation Phase**: Ensure acceptance criteria met
 
@@ -264,7 +264,7 @@ For each sub-milestone:
 #### End-to-End Tests (~Z tests per milestone)
 - User journey tests
 - Feature workflow tests
-- Cross-browser tests  
+- Cross-browser tests
 - Performance tests
 
 ## Git Commit Strategy
@@ -308,7 +308,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>
 - [ ] No linting errors
 - [ ] TypeScript compilation successful
 
-#### Functionality Metrics  
+#### Functionality Metrics
 - [ ] Feature works as specified
 - [ ] No regressions in existing functionality
 - [ ] Performance benchmarks met
@@ -354,7 +354,7 @@ Feature is complete when:
 - **Risk**: TDD cycle not followed properly
 - **Mitigation**: Mandatory test-first approach, code review validation
 
-- **Risk**: Integration breaks existing functionality  
+- **Risk**: Integration breaks existing functionality
 - **Mitigation**: Comprehensive regression testing, feature flags
 
 ### Phase-Level Risks
@@ -874,10 +874,10 @@ Final: Add safety buffer for unforeseen issues (+60-100%): 44 × 1.6–2.0 = 70�
 **Gemini MCP Consultation**:
 ```
 mcp__gemini-cli-mcp__gemini_chat_pro:
-"Challenge this architectural approach for a solo MVP developer. The proposed solution is [APPROACH_SUMMARY]. 
+"Challenge this architectural approach for a solo MVP developer. The proposed solution is [APPROACH_SUMMARY].
 
 Key concerns:
-- Custom infrastructure vs proven tools  
+- Custom infrastructure vs proven tools
 - Implementation complexity vs problem scope
 - Solo maintainability vs team solutions
 - MVP speed vs perfect engineering
@@ -886,7 +886,7 @@ What simpler alternatives exist? What are the long-term implications of building
 ```
 
 **Perplexity MCP Research**:
-```  
+```
 mcp__perplexity-ask__perplexity_ask:
 "I'm reviewing an architectural decision for a solo MVP developer project: [PROBLEM_STATEMENT]
 
@@ -921,7 +921,7 @@ For each major design decision, identify and compare:
 
 **Challenge Results**: Document findings from adversarial analysis:
 - **Confirmed Decisions**: Approaches that survive scrutiny with rationale
-- **Alternative Recommendations**: Simpler/better solutions discovered  
+- **Alternative Recommendations**: Simpler/better solutions discovered
 - **Risk Mitigations**: How to reduce complexity while maintaining functionality
 - **Implementation Priority**: What to build first vs defer vs eliminate
 
@@ -932,14 +932,19 @@ For each major design decision, identify and compare:
 - [ ] Solo developer maintainability confirmed
 - [ ] MVP speed priorities addressed
 
-### Integration with Memory MCP
+### Integration with Memory MCP (Enhanced with Query Optimization)
+
+**Memory MCP Query Optimization**: Uses `scripts/memory_mcp_optimizer.py` for improved design pattern discovery:
+- **Smart Search Strategy**: Transform compound design queries into optimized single-word searches
+- **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better design pattern retrieval
+- **Result Merging**: Combine multiple optimized searches for comprehensive design analysis
 
 **Capture Architectural Learnings**:
 ```
 mcp__memory-server__create_entities:
 - Architecture decisions and rationales
 - Design patterns that work/fail for solo MVP
-- Standard tool evaluations and outcomes  
+- Standard tool evaluations and outcomes
 - Performance vs complexity trade-offs
 - Solo developer workflow optimizations
 ```

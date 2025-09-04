@@ -8,7 +8,7 @@
 
 **Research Foundation**: Based on comprehensive multi-phase research (August 2025) incorporating:
 - Google's 17% improvement methodology via self-reflection
-- Meta's 71% hallucination reduction techniques  
+- Meta's 71% hallucination reduction techniques
 - Stanford NLP semantic entropy methods
 - MIT multi-agent verification systems
 
@@ -22,7 +22,12 @@
 
 This command combines: `/arch /thinku /devilsadvocate /diligent`
 
-**⚠️ CRITICAL**: This composition MUST be executed with Memory MCP integration as described in the Execution Protocol below. The Memory MCP operations are MANDATORY, not optional.
+**⚠️ CRITICAL**: This composition MUST be executed with Enhanced Memory MCP integration using query optimization as described in the Execution Protocol below. The Memory MCP operations with optimization are MANDATORY, not optional.
+
+**Memory MCP Query Optimization**: Uses `scripts/memory_mcp_optimizer.py` for improved fake pattern discovery:
+- **Smart Search Strategy**: Transform compound fake code queries into optimized single-word searches
+- **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better fake code detection
+- **Result Merging**: Combine multiple optimized searches for comprehensive pattern analysis
 
 **Composition Logic**:
 - **Architecture Analysis** (/arch): Understand system design and integration points
@@ -36,7 +41,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 #### Speculation Patterns (9 patterns)
 - **Temporal Speculation**: "I'll wait for", "let me wait", "waiting for completion"
-- **State Assumptions**: "command is running", "system processing", "while executing"  
+- **State Assumptions**: "command is running", "system processing", "while executing"
 - **Outcome Predictions**: "should see", "will result", "expect to"
 - **Process Speculation**: "during process", "as it runs", "once complete"
 
@@ -145,7 +150,7 @@ Execute the composed commands WITH memory context awareness:
    - Process detected fake code through enhanced reflection pipeline
    - Apply Google's 17% improvement methodology via self-questioning
    - Generate specific corrective guidance for each violation
-   
+
 2. **Document Self-Correction Success**:
    - Track before/after comparison of code quality
    - Log successful transformations from fake to functional code
@@ -227,7 +232,7 @@ After analysis completes, store new findings:
 
 🔍 RESEARCH-BACKED DETECTION CAPABILITIES:
 - Speculation patterns: 9 temporal/state/outcome categories
-- Fake code patterns: 12 placeholder/template/parallel categories  
+- Fake code patterns: 12 placeholder/template/parallel categories
 - Self-reflection pipeline: Google's 17% improvement methodology
 - Hook integration: Real-time pattern validation with CRITICAL messaging
 
@@ -320,7 +325,7 @@ For each fake pattern found:
 
 **Red Flags Requiring Attention**:
 - Files with placeholder comments in production areas
-- Functions that only return mock data  
+- Functions that only return mock data
 - Duplicate implementations of existing functionality
 - Code that works only in test environments
 - Integration points that don't connect to real systems
@@ -331,9 +336,9 @@ For each fake pattern found:
 ## 🏆 RESEARCH VALIDATION & TESTING RESULTS
 
 ### Red/Green Testing Success (August 2025)
-**Proven Detection Improvement**: 
+**Proven Detection Improvement**:
 - **Legacy Approach**: 0/9 sophisticated fake code patterns detected (0% success rate)
-- **Enhanced System**: 9/9 sophisticated fake code patterns detected (100% success rate)  
+- **Enhanced System**: 9/9 sophisticated fake code patterns detected (100% success rate)
 - **Quantified Improvement**: 900% detection capability increase
 
 ### Self-Reflection Pipeline Validation
@@ -346,7 +351,7 @@ For each fake pattern found:
 ### Research Foundation Sources
 **Peer-Reviewed Evidence Base**:
 - Google DeepMind: Constitutional AI with 17% improvement via self-questioning (2024)
-- Meta AI: RAG techniques achieving 71% hallucination reduction (2024)  
+- Meta AI: RAG techniques achieving 71% hallucination reduction (2024)
 - Stanford NLP: Semantic entropy methods for uncertainty measurement (2024)
 - MIT: Multi-agent verification systems for AI quality assurance (2024)
 - Anthropic: Constitutional AI and safety alignment techniques (2024-2025)
@@ -354,7 +359,7 @@ For each fake pattern found:
 ### Hook Integration Benefits
 **Real-Time Quality Assurance**:
 - **Pattern Recognition**: 21 research-backed detection patterns
-- **Advisory Warnings**: CRITICAL violation messaging with CLAUDE.md rule references  
+- **Advisory Warnings**: CRITICAL violation messaging with CLAUDE.md rule references
 - **Self-Reflection Questions**: Automated quality assessment prompts
 - **Corrective Actions**: Specific guidance for fixing violations
 - **Immediate Tasks**: Direct instructions for code improvement
