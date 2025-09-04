@@ -1,8 +1,8 @@
 # /reviewdeep Command
 
-**Command Summary**: Comprehensive multi-perspective review through parallel execution with significant speed optimization (2.4x overall improvement)
+**Command Summary**: Comprehensive multi-perspective review through parallel execution with significant speed optimization (2.4x overall improvement) and **SOLO DEVELOPER SECURITY FOCUS**
 
-**Purpose**: Deep analysis combining code review, architectural assessment, and ultra thinking for complete evaluation
+**Purpose**: Deep analysis combining code review, architectural assessment, and ultra thinking for complete evaluation with practical security focus for solo developers (filters out enterprise paranoia, emphasizes real vulnerabilities)
 
 ## Usage
 ```
@@ -14,9 +14,9 @@
 
 ## Command Composition
 
-**`/reviewdeep` = Parallel execution of Technical Track (`/cerebras` analysis) + Strategic Track (`/arch` + Claude synthesis) + `/reviewe` + MCP integrations**
+**`/reviewdeep` = Parallel execution of Technical Track (`/cerebras` analysis) + Strategic Track (`/arch` + Claude synthesis) + `/reviewe` + MCP integrations + SOLO DEVELOPER SECURITY FILTERING**
 
-The command executes dual parallel review tracks by default with mandatory MCP integration for comprehensive analysis with significant speed improvement (2.4x overall). Speed is always prioritized.
+The command executes dual parallel review tracks by default with mandatory MCP integration for comprehensive analysis with significant speed improvement (2.4x overall). **Solo developer security focus**: Filters out enterprise paranoia, focuses on real exploitable vulnerabilities, and includes trusted source detection. Speed is always prioritized.
 
 ## Execution Flow
 
@@ -26,13 +26,15 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 /execute Perform enhanced parallel multi-perspective review:
 1. /guidelines                    # Centralized mistake prevention consultation
 2. PARALLEL EXECUTION:
-   Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target]
-                                  - Security vulnerability scanning
+   Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target] (SOLO DEV FOCUS)
+                                  - Security vulnerability scanning (real vulnerabilities only)
+                                  - Trusted source detection (GitHub API, package managers)
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
+                                  - Filter out enterprise paranoia (JSON schema validation for trusted APIs)
    Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis
                                   - System design and scalability analysis
-                                  - Integration patterns and dependencies  
+                                  - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
 3. /reviewe [target]             # Enhanced code review with security analysis
 4. Synthesis & PR guidelines     # Combine both tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
@@ -54,9 +56,10 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 
 **🚨 POSTS COMPREHENSIVE COMMENTS**
 - **Official Review**: Built-in Claude Code `/review` command provides baseline analysis
-- **Enhanced Analysis**: Multi-pass security analysis with code-review subagent
-- **Security Focus**: SQL injection, XSS, authentication flaws, data exposure
-- **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks  
+- **Enhanced Analysis**: Multi-pass security analysis with code-review subagent (SOLO DEV FOCUSED)
+- **Security Focus**: Real vulnerabilities for solo developers: command injection, credential exposure, path traversal, SQL injection, XSS
+- **Filtered Out**: Enterprise concerns like JSON schema validation for trusted APIs, theoretical attack vectors
+- **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks
 - **Performance Review**: N+1 queries, inefficient algorithms, memory leaks
 - **Context7 Integration**: Up-to-date API documentation and framework best practices
 - **ALWAYS POSTS** expert categorized comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
@@ -69,15 +72,16 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - Integration points and long-term maintainability
 - Structural soundness and design quality evaluation
 
-### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis 
-- **Security Analysis**: Vulnerability scanning, threat modeling, input validation
+### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis
+- **Security Analysis**: Practical vulnerability scanning (solo dev focus), trusted source detection, real threat assessment
 - **Architecture Analysis**: Design patterns, scalability concerns, structural integrity
 - **Performance Analysis**: Bottleneck identification, optimization opportunities, resource usage
+- **Solo Developer Context**: Filters enterprise paranoia, focuses on exploitable vulnerabilities
 - **Speed Advantage**: Technical analysis track achieves 4.4x improvement (33s vs 146s for technical review component)
 
 ### 4. **Technical Deep Track (Parallel)** - `/arch` + Independent Code-Review Subagent
 - **Architectural Assessment**: System design patterns and long-term maintainability
-- **Scalability Analysis**: Performance implications and optimization opportunities  
+- **Scalability Analysis**: Performance implications and optimization opportunities
 - **Integration Analysis**: Cross-system dependencies and technical compatibility
 - **Code Quality Assessment**: Technical debt, maintainability, and refactoring opportunities
 - **Independent Analysis**: Uses code-review subagent for objective, unbiased assessment
@@ -86,7 +90,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Context7 MCP**: Real-time API documentation and framework-specific expertise
 - **GitHub MCP**: Primary for PR, files, and review comment operations
 - **Developer Perspective**: Code quality, maintainability, performance, security vulnerabilities
-- **Architect Perspective**: System design, scalability, integration points, architectural debt  
+- **Architect Perspective**: System design, scalability, integration points, architectural debt
 - **Business Analyst Perspective**: Business value, user experience, cost-benefit, ROI analysis
 - **Framework Expertise**: Language-specific patterns and up-to-date best practices
 
@@ -137,6 +141,71 @@ MCP INTEGRATION (automatic within each track):
     ↓
 OUTPUT: Comprehensive multi-perspective analysis with significant speed improvement (2.4x overall)
 ```
+
+## 🛡️ Solo Developer Security Focus
+
+### **Trusted Source Detection & Context-Aware Analysis**
+
+The `/reviewdeep` command now implements intelligent context detection to distinguish between trusted and untrusted data sources, providing security analysis appropriate for solo developers:
+
+### **Trusted Sources (Reduced Enterprise Paranoia)**
+- **GitHub API responses** - Skip JSON schema validation for official GitHub API endpoints
+- **Package managers** - npm, PyPI, Maven, NuGet from official registries
+- **CDN providers** - cdnjs, unpkg, jsdelivr, and other established CDNs
+- **Official documentation** - Framework docs, language specifications
+- **Verified open source** - Projects with good reputation and security track record
+
+### **Untrusted Sources (Full Security Analysis)**
+- **User input** - Web forms, file uploads, command line arguments
+- **External APIs** - Third-party services without verification
+- **Dynamic code** - eval(), exec(), and code generation
+- **File system access** - User-controlled paths and file operations
+- **Database queries** - Dynamic SQL with user input
+
+### **Security Focus Areas (Solo Developer Priorities)**
+
+#### ✅ **ALWAYS ANALYZED** - Real Security Vulnerabilities
+1. **Command Injection** - Unsanitized user input in system commands, shell=True risks
+2. **Credential Exposure** - Hardcoded secrets, API keys in code, .env file issues
+3. **Path Traversal** - User-controlled file paths, directory traversal vulnerabilities
+4. **SQL Injection** - Dynamic queries without parameterization
+5. **XSS Vulnerabilities** - Unsanitized output in web applications
+6. **Authentication Flaws** - Session handling, password storage issues
+7. **CSRF Vulnerabilities** - Missing CSRF tokens in state-changing operations
+
+#### ❌ **FILTERED OUT** - Enterprise Paranoia (For Trusted Sources Only)
+1. **JSON Schema Validation** - For trusted APIs like GitHub, npm registry
+2. **Excessive Input Validation** - For verified package responses
+3. **Theoretical Attack Vectors** - Low-probability scenarios with negligible real-world risk
+4. **Complex Retry Patterns** - Over-engineered error handling for simple use cases
+5. **Enterprise Compliance** - SOX, HIPAA, PCI-DSS unless specifically requested
+6. **Over-Architected Security** - Complex patterns for simple solo developer needs
+
+### **Context Detection Logic**
+
+```markdown
+IF data_source IN trusted_sources:
+    SKIP enterprise_paranoia_checks
+    FOCUS ON implementation_vulnerabilities
+    VALIDATE integration_points_only
+ELSE:
+    APPLY full_security_analysis
+    REPORT all_vulnerability_categories
+    PROVIDE detailed_risk_assessment
+END
+```
+
+### **Solo Developer Configuration**
+
+**Default Behavior**: `--solo-dev-focus` (automatically applied)
+- Practical security analysis for solo developers
+- Trusted source detection enabled
+- Enterprise paranoia filtering active
+
+**Override Options**:
+- `--enterprise-mode` - Full enterprise-level analysis (disables filtering)
+- `--trust-level [strict|moderate|lenient]` - Adjust trusted source thresholds
+- `--include-theoretical` - Include low-probability theoretical risks
 
 ## What You Get
 
@@ -201,30 +270,36 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 ## Examples
 
 ```bash
-# Review current branch/PR (most common usage) - speed optimized
+# Review current branch/PR with solo developer security focus (most common usage)
 /reviewdeep
-# This executes: /guidelines → PARALLEL(/cerebras technical + /arch deep) → /reviewe → synthesis
+# This executes: /guidelines → PARALLEL(/cerebras technical + /arch deep) → /reviewe → synthesis + SOLO DEV FILTERING
 /reviewd
 
-# Review a specific PR with parallel analysis
+# Review a specific PR with solo developer context detection
 /reviewdeep 592
-# This executes: /guidelines → PARALLEL(/cerebras technical 592 + /arch deep 592) → /reviewe 592 → synthesis
+# Automatically detects trusted sources (GitHub API calls) and filters enterprise paranoia
 /reviewd #592
 
-# Review a file or feature with dual tracks
+# Review a file with context-aware security analysis
 /reviewdeep ".claude/commands/pr.py"
-# This executes: /guidelines → PARALLEL(/cerebras technical + /arch deep) ".claude/commands/pr.py" → /reviewe → synthesis
-/reviewd "velocity doubling implementation"
+# Analyzes real vulnerabilities, skips theoretical concerns for solo developers
+/reviewd "GitHub integration feature"
+
+# Override for enterprise-level analysis (when needed)
+/reviewdeep --enterprise-mode "security-critical-feature"
+# Disables trusted source filtering, applies full enterprise security checks
 ```
 
 ## When to Use
 
-- **Major architectural changes** - Need both code and design analysis
-- **High-risk implementations** - Require thorough multi-angle examination
+- **Major architectural changes** - Need both code and design analysis (with solo developer focus)
+- **High-risk implementations** - Require thorough multi-angle examination (real vulnerabilities only)
 - **Performance-critical code** - Need technical + strategic assessment
-- **Security-sensitive features** - Comprehensive vulnerability analysis
-- **Complex integrations** - Architectural + implementation concerns
-- **Before production deployment** - Complete readiness evaluation
+- **Security-sensitive features** - Practical vulnerability analysis (filters enterprise paranoia)
+- **Complex integrations** - Architectural + implementation concerns (trusted source detection)
+- **Before production deployment** - Complete readiness evaluation (solo developer appropriate)
+- **GitHub API integrations** - Automatically applies trusted source context
+- **Package dependency reviews** - Focuses on real security issues, not theoretical concerns
 
 ## Comparison with Individual Commands
 
@@ -232,33 +307,42 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 - **`/reviewe`**: Enhanced review (official + advanced analysis)
 - **`/arch`**: Architectural assessment only
 - **`/cerebras`**: Fast technical analysis (security, architecture, performance)
-- **`/reviewdeep`**: Parallel execution of technical + strategic tracks for comprehensive analysis with significant speed improvement
+- **`/reviewdeep`**: Parallel execution of technical + strategic tracks for comprehensive analysis with significant speed improvement + SOLO DEVELOPER SECURITY FOCUS (filters enterprise paranoia)
 
-## Benefits of Always-Parallel Execution
+## Benefits of Always-Parallel Execution + Solo Developer Security Focus
 
 - **Performance Improvement**: Technical analysis track achieves 4.4x speedup (33s vs 146s); full review execution reduced from 12+ minutes to 5-8 minutes
 - **Speed-First**: Prioritizes fast execution while maintaining comprehensive coverage
+- **Solo Developer Optimized**: Filters out enterprise paranoia, focuses on real exploitable vulnerabilities
+- **Context-Aware**: Automatically detects trusted sources (GitHub API, npm registry) and adjusts analysis accordingly
+- **Practical Security**: Emphasizes command injection, credential exposure, path traversal over theoretical concerns
 - **Comprehensive**: No blind spots - covers technical precision and deep technical analysis simultaneously
 - **Efficient**: Always leverages /cerebras's speed for technical analysis while maintaining independent code-review subagent's objective insights
-- **Flexible**: Individual commands can still be used separately when full analysis isn't needed
+- **Flexible**: Individual commands can still be used separately when full analysis isn't needed, enterprise mode available when needed
 - **Maintainable**: Parallel execution improves performance without breaking existing functionality
 - **AI-Enhanced**: Mandatory MCP integration provides expert-level analysis beyond traditional code review
-- **Optimal Resource Usage**: Maximizes AI capabilities through parallel processing
+- **Optimal Resource Usage**: Maximizes AI capabilities through parallel processing while reducing noise
 
 ## Review Principles & Philosophy
 
-### Core Principles (Applied During Analysis)
+### Core Principles (Applied During Analysis) - Solo Developer Focus
 - **Verify Before Modify**: Ensure bugs are reproduced and root causes understood before suggesting fixes
 - **Incremental and Isolated Changes**: Recommend small, atomic modifications that can be tested independently
 - **Test-Driven Resolution**: Suggest writing tests for bug scenarios before implementing fixes
-- **Defensive Validation**: Recommend input checks, error handling, and assertions to guard against invalid states
+- **Practical Security**: Focus on real vulnerabilities (command injection, credential exposure) over theoretical concerns
+- **Context-Aware Analysis**: Distinguish trusted sources (GitHub API, npm registry) from untrusted user input
+- **Solo Developer Appropriate**: Filter enterprise paranoia, focus on exploitable vulnerabilities
+- **Defensive Validation**: Recommend input checks for untrusted sources, skip excessive validation for trusted APIs
 - **Fail Fast, Fail Loud**: No silent fallbacks - errors should be explicit and actionable
 
-### Development Tenets (Beliefs That Guide Reviews)
+### Development Tenets (Beliefs That Guide Reviews) - Solo Developer Context
 - **Bugs Are Opportunities**: Each issue is a chance to enhance robustness, not just patch symptoms
 - **Prevention Over Cure**: Prioritize practices that avoid bugs (code reuse, proper abstractions)
-- **Simplicity Wins**: Simpler code is less error-prone - avoid over-engineering
+- **Simplicity Wins**: Simpler code is less error-prone - avoid over-engineering and enterprise paranoia
+- **Practical Security First**: Real vulnerabilities matter more than theoretical compliance concerns
+- **Trust Context Matters**: GitHub API responses don't need JSON schema validation, user input does need sanitization
 - **CI Parity Is Sacred**: All code must run deterministically in CI vs local environments
+- **Solo Developer Realism**: Balance security with development velocity appropriate for solo/small teams
 - **Continuous Learning**: Document patterns from failures to prevent recurrence
 
 ### Quality Goals (What Reviews Aim For)
@@ -283,7 +367,7 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 ### **Automatic Guidelines Creation**
 `/reviewdeep` automatically generates PR-specific guidelines based on review findings:
 
-**PR Context Detection**: 
+**PR Context Detection**:
 - **Primary**: Auto-detect PR number from current branch context via GitHub API
 - **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
 - **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
@@ -291,7 +375,7 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 - **Manual Override**: Accept explicit PR number via `/reviewdeep --pr 1286`
 - **Graceful Degradation**: Never fail /reviewdeep execution due to guidelines generation issues - log warning and proceed
 
-**File Location**: 
+**File Location**:
 - **With PR**: `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` (e.g., `docs/pr-guidelines/1286/guidelines.md`)
 - **Without PR**: `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-guidelines/feature-auth/guidelines.md`)
 
@@ -349,7 +433,7 @@ Generated guidelines file includes:
 
 ### 🚨 MANDATORY MCP Usage
 - **Context7 MCP**: ALWAYS required for up-to-date API documentation and framework expertise
-- **Gemini MCP**: ALWAYS required for multi-role AI analysis  
+- **Gemini MCP**: ALWAYS required for multi-role AI analysis
 - **Perplexity MCP**: ALWAYS required for research-based security and best practice insights
 - **No Fallback Mode**: All MCP integrations are mandatory, not optional
 - **Error Handling**: Proper timeout and retry logic for MCP calls
@@ -370,7 +454,7 @@ Generated guidelines file includes:
 
 **Technical Analysis Component**:
 - **Previous Sequential Technical**: 146 seconds (iterative technical analysis)
-- **New Parallel Technical**: 33 seconds (/cerebras fast technical analysis)  
+- **New Parallel Technical**: 33 seconds (/cerebras fast technical analysis)
 - **Technical Track Speedup**: 4.4x faster for technical analysis component
 
 **Full Review Execution**:
@@ -380,10 +464,10 @@ Generated guidelines file includes:
 - **Quality Maintained**: Comprehensive coverage through dual-track analysis
 
 ### **Optimization Strategy**
-**Technical Track (Fast)**: 
+**Technical Track (Fast)**:
 - Uses `/cerebras` for rapid technical analysis
 - Security vulnerability scanning
-- Architecture pattern evaluation  
+- Architecture pattern evaluation
 - Performance bottleneck identification
 - Execution time: 2-3 minutes
 
