@@ -13,8 +13,8 @@ jobs:
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
-        test-group: [unit-fast, integration-slow, commands]
-    
+        test-group: [all-tests, commands]
+
     steps:
     # Step 1: Get your code
     - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
         # Install all requirements files in the project
         # Core application requirements
         pip install -r mvp_site/requirements.txt
-        
+
         # Install additional requirements for MCP servers and testing
         find . -name "requirements.txt" -not -path "./venv/*" -not -path "./task-agent*" | while read req_file; do
           echo "Installing $req_file"
@@ -75,7 +75,7 @@ jobs:
 
         # Verify environment is correct
         echo "Current Python: $(which python3)"
-        echo "Virtual env: $VIRTUAL_ENV" 
+        echo "Virtual env: $VIRTUAL_ENV"
         python3 -c "import pydantic; print(f'✅ Pydantic {pydantic.__version__} available')"
 
         # Set CI environment variables for GitHub Actions
@@ -90,13 +90,9 @@ jobs:
         # Run specific test group based on matrix
         chmod +x run_tests.sh
         case "${{ matrix.test-group }}" in
-          "unit-fast")
-            echo "🚀 Running UNIT tests (fast, parallel execution)..."
-            ./run_tests.sh --unit --parallel
-            ;;
-          "integration-slow")
-            echo "🔗 Running INTEGRATION tests (comprehensive)..."
-            ./run_tests.sh --integration
+          "all-tests")
+            echo "🔗 Running ALL tests (comprehensive, eliminates unit/integration overlap)..."
+            ./run_tests.sh --integration --parallel
             ;;
           "commands")
             echo "⚙️  Running COMMAND utility tests..."
@@ -137,3 +133,4 @@ jobs:
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
+        
