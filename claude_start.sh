@@ -172,9 +172,43 @@ start_orchestration_background() {
     fi
 }
 
+# Function to check and setup tmux cleanup cron job
+check_tmux_cleanup_cron() {
+    echo -e "${BLUE}🔍 Verifying tmux session cleanup automation...${NC}"
+
+    # Check if cleanup cron job exists
+    if crontab -l 2>/dev/null | grep -q "cleanup_completed_agents.py"; then
+        echo -e "${GREEN}✅ tmux cleanup cron job already configured${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}⚠️  tmux cleanup cron job missing - adding it now${NC}"
+
+        # Get current directory for absolute path
+        SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+        # Add the cron job
+        (crontab -l 2>/dev/null; echo "*/15 * * * * python3 ${SCRIPT_DIR_ABS}/orchestration/cleanup_completed_agents.py >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+
+        # Verify it was added
+        if crontab -l 2>/dev/null | grep -q "cleanup_completed_agents.py"; then
+            echo -e "${GREEN}✅ tmux cleanup cron job added successfully${NC}"
+            echo -e "${BLUE}💡 Cleanup runs every 15 minutes to prevent infinite monitoring sessions${NC}"
+            return 0
+        else
+            echo -e "${YELLOW}⚠️  Failed to add tmux cleanup cron job - continuing without it${NC}"
+            echo -e "${YELLOW}💡 You can manually add it with: crontab -e${NC}"
+            return 1
+        fi
+    fi
+}
+
 # Function to check and start orchestration for non-worker modes
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
+
+    # First check tmux cleanup automation
+    check_tmux_cleanup_cron
+
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
     else

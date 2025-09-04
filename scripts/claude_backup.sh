@@ -29,6 +29,11 @@ LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 # Source directory
 SOURCE_DIR="$HOME/.claude"
 
+# Exit codes
+SUCCESS=0
+ERROR=1
+PARTIAL_SUCCESS=23
+
 # Security: Hostname validation function
 validate_hostname() {
     local host="$1"
@@ -271,24 +276,24 @@ backup_to_destination() {
             backup_log "rsync completed successfully for .claude.json files"
             if [ $rsync_exit -eq 0 ]; then
                 add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
-                return 0
+                return $SUCCESS
             else
                 add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files, some .claude directory files failed)"
-                return 23
+                return $PARTIAL_SUCCESS
             fi
         elif [ $rsync_exit2 -eq 23 ]; then
             local failed_count2=$(grep -c "failed:" "$rsync_errors2" 2>/dev/null || echo "0")
             backup_log "rsync partial transfer for .claude.json: $failed_count2 files failed"
             cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "WARNING" "$dest_name Claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
+            add_result "WARNING" "$dest_name .claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
             add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return 23
+            return $PARTIAL_SUCCESS
         else
             backup_log "rsync failed for .claude.json files with exit code $rsync_exit2"
             cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "WARNING" "$dest_name Claude.json Backup" "Main .claude directory synced, but .claude.json files failed"
-            add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return 23
+            add_result "ERROR" "$dest_name .claude.json Backup" "Complete failure of .claude.json backup (exit code $rsync_exit2)"
+            add_result "PARTIAL" "$dest_name Backup" "Main .claude directory synced, but .claude.json files completely failed"
+            return $ERROR
         fi
     else
         add_result "ERROR" "$dest_name Backup" "rsync failed to $dest_dir"

@@ -766,7 +766,7 @@ backup_with_error_detection() {
     local failed_files=0
 
     # Run rsync with detailed logging and capture specific errors
-    if rsync -av --log-file="$rsync_log" "$source/" "$dest/" 2>"$error_log"; then
+    if rsync -av "$source/" "$dest/" 2>"$error_log"; then
         # Check for partial failures (exit code 23)
         local rsync_exit=$?
         if [ $rsync_exit -eq 23 ]; then

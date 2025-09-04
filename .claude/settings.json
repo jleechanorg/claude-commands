@@ -234,18 +234,7 @@
         ]
       }
     ],
-    "Stop": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && exec \"$ROOT/.claude/hooks/git-header.sh\"; fi; exit 0'",
-            "description": "Display git status and branch information"
-          }
-        ]
-      }
-    ],
+
     "UserPromptSubmit": [
       {
         "matcher": "*",
@@ -264,5 +253,10 @@
     "BASH_DEFAULT_TIMEOUT_MS": "60000",
     "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   },
-  "verbose": false
+  "verbose": false,
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only; else echo \"Not in git repo\"; fi'",
+    "padding": 0
+  }
 }
