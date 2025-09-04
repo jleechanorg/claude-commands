@@ -74,7 +74,7 @@
 2025-08-10T01:10:36.3490079Z 🔴 RED TEST: Verify that successful campaign data is cached for offline viewing ... ok
 2025-08-10T01:10:36.3491075Z test_user_friendly_error_messages (__main__.AuthResilienceTest.test_user_friendly_error_messages)
 2025-08-10T01:10:36.3495262Z 🔴 RED TEST: Verify that user gets helpful error messages instead of generic failures ... ok
-2025-08-10T01:10:36.3495850Z 
+2025-08-10T01:10:36.3495850Z
 2025-08-10T01:10:36.3496032Z ============================================================
 2025-08-10T01:10:36.3496655Z 🧪 AUTHENTICATION RESILIENCE: RED/GREEN TEST SUITE
 2025-08-10T01:10:36.3497159Z ============================================================
@@ -88,15 +88,15 @@
 2025-08-10T01:10:36.3502401Z ✅ Offline campaign caching implementation found
 2025-08-10T01:10:36.3503035Z 🔴 RED TEST: Testing user-friendly error messaging
 2025-08-10T01:10:36.3503679Z ✅ User-friendly error messaging implementation found
-2025-08-10T01:10:36.3504081Z 
+2025-08-10T01:10:36.3504081Z
 2025-08-10T01:10:36.3504239Z ============================================================
 2025-08-10T01:10:36.3505190Z 🟢 GREEN STATE ACHIEVED: All resilience features implemented correctly!
 2025-08-10T01:10:36.3505847Z ✅ 5 tests passed
-2025-08-10T01:10:36.3506070Z 
-2025-08-10T01:10:36.3506443Z 
+2025-08-10T01:10:36.3506070Z
+2025-08-10T01:10:36.3506443Z
 2025-08-10T01:10:36.3506945Z ----------------------------------------------------------------------
 2025-08-10T01:10:36.3507641Z Ran 5 tests in 0.002s
-2025-08-10T01:10:36.3508048Z 
+2025-08-10T01:10:36.3508048Z
 2025-08-10T01:10:36.3508173Z OK
 2025-08-10T01:10:36.3509469Z 🎯 RESILIENCE FEATURES VALIDATED:
 2025-08-10T01:10:36.3509954Z    • JWT clock skew auto-retry ✅
@@ -109,15 +109,15 @@
 2025-08-10T01:10:36.3566056Z ----------------------------------------
 2025-08-10T01:10:36.3566673Z Running: tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py
 2025-08-10T01:10:36.4930034Z sss
-2025-08-10T01:10:36.4930368Z 
+2025-08-10T01:10:36.4930368Z
 2025-08-10T01:10:36.4930931Z ----------------------------------------------------------------------
 2025-08-10T01:10:36.4931858Z Ran 3 tests in 0.005s
-2025-08-10T01:10:36.4932083Z 
+2025-08-10T01:10:36.4932083Z
 2025-08-10T01:10:36.4932220Z OK (skipped=3)
 2025-08-10T01:10:36.4932974Z 🧪 Testing completion flow shows success message...
-2025-08-10T01:10:36.4935275Z 
+2025-08-10T01:10:36.4935275Z
 2025-08-10T01:10:36.4944436Z 🧪 Testing component unmount clears all timers...
-2025-08-10T01:10:36.4945157Z 
+2025-08-10T01:10:36.4945157Z
 2025-08-10T01:10:36.4945624Z 🧪 Testing error handling clears timers...
 2025-08-10T01:10:36.5122331Z ✅ PASS: tests/frontend_v2/test_campaign_creation_v2_memory_leaks.py
 2025-08-10T01:10:36.5123903Z ----------------------------------------
@@ -131,7 +131,7 @@
 2025-08-10T01:10:36.6686475Z ⚠️ Skipping server-dependent integration test in CI environment
 2025-08-10T01:10:36.6687093Z ✅ Test structure and imports validated successfully
 2025-08-10T01:10:36.6687895Z 💡 Integration test would run successfully with server available
-2025-08-10T01:10:36.6688317Z 
+2025-08-10T01:10:36.6688317Z
 2025-08-10T01:10:36.6688498Z ✅ TEST SUITE PASSED
 2025-08-10T01:10:36.6858793Z ✅ PASS: tests/integration/test_real_browser_settings_game_integration.py
 2025-08-10T01:10:36.6864023Z ----------------------------------------
@@ -139,7 +139,7 @@
 2025-08-10T01:10:36.8730583Z .........
 2025-08-10T01:10:36.8732449Z ----------------------------------------------------------------------
 2025-08-10T01:10:36.8734812Z Ran 9 tests in 0.001s
-2025-08-10T01:10:36.8735025Z 
+2025-08-10T01:10:36.8735025Z
 2025-08-10T01:10:36.8735142Z OK
 2025-08-10T01:10:36.8941462Z ✅ PASS: tests/test_age_field_validation.py
 2025-08-10T01:10:36.8942449Z ----------------------------------------
@@ -147,7 +147,7 @@
 2025-08-10T01:10:36.9425208Z ...
 2025-08-10T01:10:36.9427332Z ----------------------------------------------------------------------
 2025-08-10T01:10:36.9429718Z Ran 3 tests in 0.000s
-2025-08-10T01:10:36.9429967Z 
+2025-08-10T01:10:36.9429967Z
 2025-08-10T01:10:36.9430086Z OK
 2025-08-10T01:10:36.9494470Z ✅ PASS: tests/test_ai_content_simple.py
 2025-08-10T01:10:36.9495775Z ----------------------------------------
@@ -168,10 +168,10 @@
 2025-08-10T01:10:38.1020388Z 2025-08-10 01:10:38,100 - INFO - NarrativeSyncValidator delegated to EntityValidator: 2/2 found
 2025-08-10T01:10:38.1021839Z 2025-08-10 01:10:38,100 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:10:38.1023394Z 2025-08-10 01:10:38,100 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:10:38.1024245Z 2025-08-10 01:10:38,100 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:10:38.1024245Z 2025-08-10 01:10:38,100 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:10:38.1033342Z CRITICAL: Generate planning options ONLY for Test Hero in current location.
 2025-08-10T01:10:38.1034254Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:10:38.1034805Z 
+2025-08-10T01:10:38.1034805Z
 2025-08-10T01:10:38.1035025Z Generate ONLY a planning block using the st...
 2025-08-10T01:10:38.1035633Z 2025-08-10 01:10:38,100 - INFO - Initializing Gemini Client
 2025-08-10T01:10:38.1037012Z 2025-08-10 01:10:38,101 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block: CRITICAL: GEMINI_API_KEY environment variable not found!
@@ -190,7 +190,7 @@
 2025-08-10T01:10:38.1069408Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
 2025-08-10T01:10:38.1070662Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:10:38.1071521Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
-2025-08-10T01:10:38.1077379Z 
+2025-08-10T01:10:38.1077379Z
 2025-08-10T01:10:38.1078437Z 2025-08-10 01:10:38,102 - INFO - 🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception
 2025-08-10T01:10:38.1079745Z .2025-08-10 01:10:38,103 - INFO - Cache MISS for mechanics_system_instruction.md: loaded and cached 51025 characters (~12756 tokens)
 2025-08-10T01:10:38.1080884Z 2025-08-10 01:10:38,104 - INFO - Prompt scaffold is 125 chars (~31 tokens). Remaining budget for story: 2999875 chars (~749968 tokens)
@@ -205,7 +205,7 @@
 2025-08-10T01:10:38.1088308Z ...
 2025-08-10T01:10:38.1088647Z ----------------------------------------------------------------------
 2025-08-10T01:10:38.1089270Z Ran 5 tests in 0.014s
-2025-08-10T01:10:38.1089467Z 
+2025-08-10T01:10:38.1089467Z
 2025-08-10T01:10:38.1090085Z OK
 2025-08-10T01:10:38.2599288Z ✅ PASS: tests/test_always_json_mode.py
 2025-08-10T01:10:38.2600784Z ----------------------------------------
@@ -242,10 +242,10 @@
 2025-08-10T01:10:38.3027305Z Test that JavaScript API provides expected methods ... ok
 2025-08-10T01:10:38.3030430Z test_keyframe_animations_defined (__main__.TestAnimationFunctionality.test_keyframe_animations_defined)
 2025-08-10T01:10:38.3031217Z Test that essential keyframe animations are defined ... ok
-2025-08-10T01:10:38.3031621Z 
+2025-08-10T01:10:38.3031621Z
 2025-08-10T01:10:38.3031853Z ----------------------------------------------------------------------
 2025-08-10T01:10:38.3032334Z Ran 16 tests in 0.004s
-2025-08-10T01:10:38.3032540Z 
+2025-08-10T01:10:38.3032540Z
 2025-08-10T01:10:38.3032658Z OK
 2025-08-10T01:10:38.3033180Z 🧪 Running Animation System Tests...
 2025-08-10T01:10:38.3033916Z ✅ All animation tests passed!
@@ -256,7 +256,7 @@
 2025-08-10T01:10:38.6710084Z ssss
 2025-08-10T01:10:38.6711244Z ----------------------------------------------------------------------
 2025-08-10T01:10:38.6712501Z Ran 4 tests in 0.000s
-2025-08-10T01:10:38.6712730Z 
+2025-08-10T01:10:38.6712730Z
 2025-08-10T01:10:38.6712845Z OK (skipped=4)
 2025-08-10T01:10:38.7239908Z ✅ PASS: tests/test_api_backward_compatibility.py
 2025-08-10T01:10:38.7241357Z ----------------------------------------
@@ -265,7 +265,7 @@
 2025-08-10T01:10:39.0611684Z sssssssss
 2025-08-10T01:10:39.0612898Z ----------------------------------------------------------------------
 2025-08-10T01:10:39.0614236Z Ran 9 tests in 0.000s
-2025-08-10T01:10:39.0614442Z 
+2025-08-10T01:10:39.0614442Z
 2025-08-10T01:10:39.0614568Z OK (skipped=9)
 2025-08-10T01:10:39.1131912Z ✅ PASS: tests/test_api_response_format_consistency.py
 2025-08-10T01:10:39.1133523Z ----------------------------------------
@@ -288,9 +288,9 @@
 2025-08-10T01:10:40.4517541Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.4518597Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.4519040Z RuntimeError: no running event loop
-2025-08-10T01:10:40.4519353Z 
+2025-08-10T01:10:40.4519353Z
 2025-08-10T01:10:40.4519664Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.4520373Z 
+2025-08-10T01:10:40.4520373Z
 2025-08-10T01:10:40.4520534Z Traceback (most recent call last):
 2025-08-10T01:10:40.4521473Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.4522298Z     return func(*args, **kwargs)
@@ -337,9 +337,9 @@
 2025-08-10T01:10:40.4655048Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.4655891Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.4656317Z RuntimeError: no running event loop
-2025-08-10T01:10:40.4656603Z 
+2025-08-10T01:10:40.4656603Z
 2025-08-10T01:10:40.4656895Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.4657340Z 
+2025-08-10T01:10:40.4657340Z
 2025-08-10T01:10:40.4657486Z Traceback (most recent call last):
 2025-08-10T01:10:40.4658459Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.4659318Z     return func(*args, **kwargs)
@@ -385,9 +385,9 @@
 2025-08-10T01:10:40.4788311Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.4789243Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.4789676Z RuntimeError: no running event loop
-2025-08-10T01:10:40.4789973Z 
+2025-08-10T01:10:40.4789973Z
 2025-08-10T01:10:40.4790280Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.4790737Z 
+2025-08-10T01:10:40.4790737Z
 2025-08-10T01:10:40.4790898Z Traceback (most recent call last):
 2025-08-10T01:10:40.4791790Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.4792659Z     return func(*args, **kwargs)
@@ -433,9 +433,9 @@
 2025-08-10T01:10:40.4917671Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.4918649Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.4919283Z RuntimeError: no running event loop
-2025-08-10T01:10:40.4919578Z 
+2025-08-10T01:10:40.4919578Z
 2025-08-10T01:10:40.4919879Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.4920351Z 
+2025-08-10T01:10:40.4920351Z
 2025-08-10T01:10:40.4920519Z Traceback (most recent call last):
 2025-08-10T01:10:40.4921428Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.4922287Z     return func(*args, **kwargs)
@@ -485,9 +485,9 @@
 2025-08-10T01:10:40.5137389Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.5138426Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.5138877Z RuntimeError: no running event loop
-2025-08-10T01:10:40.5139185Z 
+2025-08-10T01:10:40.5139185Z
 2025-08-10T01:10:40.5139487Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.5139947Z 
+2025-08-10T01:10:40.5139947Z
 2025-08-10T01:10:40.5140109Z Traceback (most recent call last):
 2025-08-10T01:10:40.5140993Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.5141840Z     return func(*args, **kwargs)
@@ -539,9 +539,9 @@
 2025-08-10T01:10:40.5374729Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.5375656Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.5376089Z RuntimeError: no running event loop
-2025-08-10T01:10:40.5376387Z 
+2025-08-10T01:10:40.5376387Z
 2025-08-10T01:10:40.5376684Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.5377121Z 
+2025-08-10T01:10:40.5377121Z
 2025-08-10T01:10:40.5377268Z Traceback (most recent call last):
 2025-08-10T01:10:40.5378576Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:40.5379546Z     return func(*args, **kwargs)
@@ -583,9 +583,9 @@
 2025-08-10T01:10:40.5499410Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:40.5500128Z     asyncio.get_running_loop()
 2025-08-10T01:10:40.5500382Z RuntimeError: no running event loop
-2025-08-10T01:10:40.5500560Z 
+2025-08-10T01:10:40.5500560Z
 2025-08-10T01:10:40.5500732Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:40.5500995Z 
+2025-08-10T01:10:40.5500995Z
 2025-08-10T01:10:40.5501085Z Traceback (most recent call last):
 2025-08-10T01:10:40.5501689Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:10:40.5502250Z     db = get_db()
@@ -618,7 +618,7 @@
 2025-08-10T01:10:40.5529924Z .
 2025-08-10T01:10:40.5530281Z ----------------------------------------------------------------------
 2025-08-10T01:10:40.5530743Z Ran 9 tests in 1.103s
-2025-08-10T01:10:40.5531161Z 
+2025-08-10T01:10:40.5531161Z
 2025-08-10T01:10:40.5531284Z OK
 2025-08-10T01:10:40.7667276Z ✅ PASS: tests/test_api_routes.py
 2025-08-10T01:10:40.7668980Z ----------------------------------------
@@ -641,37 +641,37 @@
 2025-08-10T01:10:41.9969491Z test_translation_layer_field_conversion (__main__.TestArchitecturalBoundaryValidation.test_translation_layer_field_conversion)
 2025-08-10T01:10:41.9970776Z RED-GREEN: Validate the intentional field translation between layers. ... ok
 2025-08-10T01:10:41.9971576Z 🏗️ Architectural Boundary Field Format Validation
-2025-08-10T01:10:41.9972419Z 
+2025-08-10T01:10:41.9972419Z
 2025-08-10T01:10:41.9972692Z Testing field format consistency across all system boundaries
 2025-08-10T01:10:41.9974373Z ----------------------------------------------------------------------
 2025-08-10T01:10:41.9974854Z ================================================================================
 2025-08-10T01:10:41.9975480Z Ran 8 tests in 0.001s
-2025-08-10T01:10:41.9975691Z 
-2025-08-10T01:10:41.9975852Z 
+2025-08-10T01:10:41.9975691Z
+2025-08-10T01:10:41.9975852Z
 2025-08-10T01:10:41.9976116Z 🔍 Testing Cross-Boundary Field Consistency
 2025-08-10T01:10:41.9976659Z OK
 2025-08-10T01:10:42.0046671Z ✅ Cross-boundary field consistency: VALIDATED
-2025-08-10T01:10:42.0097443Z 
+2025-08-10T01:10:42.0097443Z
 2025-08-10T01:10:42.0098724Z 🔍 Testing Frontend → main.py Field Constants
 2025-08-10T01:10:42.0099601Z ✅ Frontend → main.py field constants: VALIDATED
-2025-08-10T01:10:42.0100164Z 
+2025-08-10T01:10:42.0100164Z
 2025-08-10T01:10:42.0100592Z 🟢 GREEN PHASE: Complete Flow Validation
 2025-08-10T01:10:42.0101296Z 🟢 GREEN TESTS CONFIRM: Complete flow works correctly
 2025-08-10T01:10:42.0103314Z    Frontend 'input' → MCP 'user_input' → Story 'text' ✅
-2025-08-10T01:10:42.0103823Z 
+2025-08-10T01:10:42.0103823Z
 2025-08-10T01:10:42.0104228Z 🔍 Testing main.py → MCP Protocol Field Constants
 2025-08-10T01:10:42.0104953Z ✅ main.py → MCP field constants: VALIDATED
-2025-08-10T01:10:42.0105398Z 
+2025-08-10T01:10:42.0105398Z
 2025-08-10T01:10:42.0105753Z 🔍 Testing MCP API Layer Field Constants
 2025-08-10T01:10:42.0106414Z ✅ MCP API field constants: VALIDATED
-2025-08-10T01:10:42.0106839Z 
+2025-08-10T01:10:42.0106839Z
 2025-08-10T01:10:42.0107197Z 🔴 RED PHASE: Field Mismatch Detection
 2025-08-10T01:10:42.0108157Z 🔴 RED TESTS CONFIRM: Wrong field names cause None extraction
-2025-08-10T01:10:42.0108946Z 
+2025-08-10T01:10:42.0108946Z
 2025-08-10T01:10:42.0109360Z 🔍 Testing Story Field Format Validation
 2025-08-10T01:10:42.0110036Z ✅ Story field format: VALIDATED
 2025-08-10T01:10:42.0110687Z    Story entries must use 'text' field (not 'story') ✅
-2025-08-10T01:10:42.0111202Z 
+2025-08-10T01:10:42.0111202Z
 2025-08-10T01:10:42.0111605Z 🔍 Testing Translation Layer Field Conversion
 2025-08-10T01:10:42.0112277Z ✅ Translation layer conversion: VALIDATED
 2025-08-10T01:10:42.0113548Z    Frontend field: 'input' → MCP field: 'user_input' ✅
@@ -686,7 +686,7 @@
 2025-08-10T01:10:42.4467045Z ..
 2025-08-10T01:10:42.4467451Z ----------------------------------------------------------------------
 2025-08-10T01:10:42.4468137Z Ran 20 tests in 0.132s
-2025-08-10T01:10:42.4468371Z 
+2025-08-10T01:10:42.4468371Z
 2025-08-10T01:10:42.4468486Z OK (skipped=7)
 2025-08-10T01:10:42.4770879Z ✅ PASS: tests/test_architectural_decisions.py
 2025-08-10T01:10:42.4772376Z ----------------------------------------
@@ -694,7 +694,7 @@
 2025-08-10T01:10:42.8407386Z ..
 2025-08-10T01:10:42.8409424Z ----------------------------------------------------------------------
 2025-08-10T01:10:42.8411729Z Ran 2 tests in 0.104s
-2025-08-10T01:10:42.8411948Z 
+2025-08-10T01:10:42.8411948Z
 2025-08-10T01:10:42.8412053Z OK
 2025-08-10T01:10:42.8788078Z ✅ PASS: tests/test_auth_mock_separation_redgreen.py
 2025-08-10T01:10:42.8788828Z ----------------------------------------
@@ -709,29 +709,29 @@
 2025-08-10T01:10:42.9303328Z Test that we can properly parse the character creation response. ... ok
 2025-08-10T01:10:42.9304453Z test_identify_root_cause (__main__.TestBackstoryCutoffBug.test_identify_root_cause)
 2025-08-10T01:10:42.9312343Z Identify where the truncation might be happening. ... ok
-2025-08-10T01:10:42.9312740Z 
+2025-08-10T01:10:42.9312740Z
 2025-08-10T01:10:42.9312948Z ----------------------------------------------------------------------
 2025-08-10T01:10:42.9313452Z Ran 5 tests in 0.004s
-2025-08-10T01:10:42.9313915Z 
+2025-08-10T01:10:42.9313915Z
 2025-08-10T01:10:42.9314044Z OK
-2025-08-10T01:10:42.9314193Z 
+2025-08-10T01:10:42.9314193Z
 2025-08-10T01:10:42.9314617Z 🟢 GREEN PHASE: Complete backstory test
 2025-08-10T01:10:42.9315076Z Found 4/4 expected phrases
 2025-08-10T01:10:42.9315467Z Complete narrative length: 2231
-2025-08-10T01:10:42.9315727Z 
+2025-08-10T01:10:42.9315727Z
 2025-08-10T01:10:42.9315999Z 🔴 RED PHASE: Confirmed backstory truncation
 2025-08-10T01:10:42.9316494Z Narrative length: 1657 characters
 2025-08-10T01:10:42.9317357Z Backstory ends with: ...ess, earning him the title of prodigy. His formative years were steeped in the Empress's doctrine of
-2025-08-10T01:10:42.9318289Z 
+2025-08-10T01:10:42.9318289Z
 2025-08-10T01:10:42.9318509Z 📊 BACKSTORY ANALYSIS:
 2025-08-10T01:10:42.9318883Z Full narrative length: 1657
 2025-08-10T01:10:42.9319282Z Backstory section length: 286
 2025-08-10T01:10:42.9319862Z Backstory ends with: 've years were steeped in the Empress's doctrine of'
 2025-08-10T01:10:42.9320495Z Truncation detected: True
-2025-08-10T01:10:42.9320738Z 
+2025-08-10T01:10:42.9320738Z
 2025-08-10T01:10:42.9321015Z ✅ JSON PARSING: Successfully parsed response
 2025-08-10T01:10:42.9321516Z Narrative field length: 1657
-2025-08-10T01:10:42.9321775Z 
+2025-08-10T01:10:42.9321775Z
 2025-08-10T01:10:42.9321976Z 🔍 ROOT CAUSE ANALYSIS:
 2025-08-10T01:10:42.9322344Z Raw JSON narrative length: 1657
 2025-08-10T01:10:42.9322764Z Extracted narrative length: 1657
@@ -743,7 +743,7 @@
 2025-08-10T01:10:42.9770766Z ....
 2025-08-10T01:10:42.9773010Z ----------------------------------------------------------------------
 2025-08-10T01:10:42.9773564Z Ran 4 tests in 0.002s
-2025-08-10T01:10:42.9774927Z 
+2025-08-10T01:10:42.9774927Z
 2025-08-10T01:10:42.9779461Z OK
 2025-08-10T01:10:42.9826729Z ✅ PASS: tests/test_banned_name_prevention_v2.py
 2025-08-10T01:10:42.9828269Z ----------------------------------------
@@ -751,7 +751,7 @@
 2025-08-10T01:10:43.0296162Z ........
 2025-08-10T01:10:43.0297205Z ----------------------------------------------------------------------
 2025-08-10T01:10:43.0298022Z Ran 8 tests in 0.001s
-2025-08-10T01:10:43.0298259Z 
+2025-08-10T01:10:43.0298259Z
 2025-08-10T01:10:43.0298393Z OK
 2025-08-10T01:10:43.0371170Z ✅ PASS: tests/test_banned_names_loading.py
 2025-08-10T01:10:43.0371950Z ----------------------------------------
@@ -759,7 +759,7 @@
 2025-08-10T01:10:43.0844330Z ...
 2025-08-10T01:10:43.0845133Z ----------------------------------------------------------------------
 2025-08-10T01:10:43.0845910Z Ran 3 tests in 0.002s
-2025-08-10T01:10:43.0846399Z 
+2025-08-10T01:10:43.0846399Z
 2025-08-10T01:10:43.0848101Z OK
 2025-08-10T01:10:43.0916945Z ✅ PASS: tests/test_banned_names_visibility_v2.py
 2025-08-10T01:10:43.0918454Z ----------------------------------------
@@ -770,7 +770,7 @@
 2025-08-10T01:10:44.2123475Z .
 2025-08-10T01:10:44.2123824Z ----------------------------------------------------------------------
 2025-08-10T01:10:44.2124297Z Ran 16 tests in 0.001s
-2025-08-10T01:10:44.2124504Z 
+2025-08-10T01:10:44.2124504Z
 2025-08-10T01:10:44.2124613Z OK
 2025-08-10T01:10:44.3975476Z ✅ PASS: tests/test_build_campaign_prompt.py
 2025-08-10T01:10:44.3976943Z ----------------------------------------
@@ -778,7 +778,7 @@
 2025-08-10T01:10:44.4353791Z ....
 2025-08-10T01:10:44.4355670Z ----------------------------------------------------------------------
 2025-08-10T01:10:44.4356183Z Ran 4 tests in 0.001s
-2025-08-10T01:10:44.4356404Z 
+2025-08-10T01:10:44.4356404Z
 2025-08-10T01:10:44.4356524Z OK
 2025-08-10T01:10:44.4412301Z ✅ PASS: tests/test_campaign_clicks.py
 2025-08-10T01:10:44.4413171Z ----------------------------------------
@@ -786,7 +786,7 @@
 2025-08-10T01:10:45.4392369Z .....
 2025-08-10T01:10:45.4393268Z ----------------------------------------------------------------------
 2025-08-10T01:10:45.4394954Z Ran 5 tests in 0.001s
-2025-08-10T01:10:45.4395173Z 
+2025-08-10T01:10:45.4395173Z
 2025-08-10T01:10:45.4395295Z OK
 2025-08-10T01:10:45.5748179Z ✅ PASS: tests/test_character_extraction_regex_bug.py
 2025-08-10T01:10:45.5749245Z ----------------------------------------
@@ -800,20 +800,20 @@
 2025-08-10T01:10:45.6218642Z Verify that dict format still works correctly (regression test) ... ok
 2025-08-10T01:10:45.6219887Z test_cleanup_with_complex_list_structure (__main__.TestCombatBugGreen.test_cleanup_with_complex_list_structure)
 2025-08-10T01:10:45.6221129Z Test with more complex list structure that AI might generate ... ok
-2025-08-10T01:10:45.6221729Z 
+2025-08-10T01:10:45.6221729Z
 2025-08-10T01:10:45.6222164Z ----------------------------------------------------------------------
 2025-08-10T01:10:45.6222705Z ======================================================================
 2025-08-10T01:10:45.6223600Z Ran 3 tests in 0.000s
-2025-08-10T01:10:45.6224011Z 
-2025-08-10T01:10:45.6224021Z 
+2025-08-10T01:10:45.6224011Z
+2025-08-10T01:10:45.6224021Z
 2025-08-10T01:10:45.6224756Z ✅ GREEN TEST: Attempting to call cleanup_defeated_enemies()...
 2025-08-10T01:10:45.6225526Z OK
 2025-08-10T01:10:45.6226127Z Expected: No errors, returns list of defeated enemies
 2025-08-10T01:10:45.6227083Z ✅ Successfully cleaned up defeated enemies: ['Dragon']
 2025-08-10T01:10:45.6228032Z ✅ Combatants normalized to dict format and Dragon removed
-2025-08-10T01:10:45.6228502Z 
+2025-08-10T01:10:45.6228502Z
 2025-08-10T01:10:45.6230604Z ✅ Dict format still works correctly (no regression)
-2025-08-10T01:10:45.6230988Z 
+2025-08-10T01:10:45.6230988Z
 2025-08-10T01:10:45.6231254Z ✅ Complex list structure handled correctly
 2025-08-10T01:10:45.6287700Z ✅ PASS: tests/test_combat_bug_green.py
 2025-08-10T01:10:45.6289220Z ----------------------------------------
@@ -1017,33 +1017,33 @@
 2025-08-10T01:10:46.7730374Z 2025-08-10 01:10:46,763 - INFO - COMBAT CLEANUP: Removed Goblin B from npc_data
 2025-08-10T01:10:46.7731109Z 2025-08-10 01:10:46,763 - INFO - AUTOMATIC CLEANUP: Defeated enemies removed: ['Goblin A', 'Goblin B']
 2025-08-10T01:10:46.7731699Z ok
-2025-08-10T01:10:46.7731831Z 
+2025-08-10T01:10:46.7731831Z
 2025-08-10T01:10:46.7732017Z ----------------------------------------------------------------------
 2025-08-10T01:10:46.7732453Z Ran 4 tests in 0.004s
-2025-08-10T01:10:46.7732638Z 
+2025-08-10T01:10:46.7732638Z
 2025-08-10T01:10:46.7732741Z OK
 2025-08-10T01:10:46.7733051Z Running comprehensive combat cleanup tests
 2025-08-10T01:10:46.7733543Z These tests verify the automatic cleanup system works correctly
 2025-08-10T01:10:46.7734039Z ======================================================================
-2025-08-10T01:10:46.7734322Z 
+2025-08-10T01:10:46.7734322Z
 2025-08-10T01:10:46.7734500Z Testing: Automatic cleanup via HP state updates
 2025-08-10T01:10:46.7734964Z Initial combatants: ['Hero', 'Orc Warrior', 'Goblin']
 2025-08-10T01:10:46.7735453Z Initial NPC data: ['Orc Warrior', 'Goblin', 'Merchant']
 2025-08-10T01:10:46.7736247Z AI proposed changes: {'combat_state': {'combatants': {'Orc Warrior': {'hp_current': 0, 'status': ['bloodied', 'unconscious']}}}}
 2025-08-10T01:10:46.7737030Z After automatic cleanup - Combatants: ['Hero', 'Goblin']
 2025-08-10T01:10:46.7737546Z After automatic cleanup - NPCs: ['Goblin', 'Merchant']
-2025-08-10T01:10:46.7738002Z 
+2025-08-10T01:10:46.7738002Z
 2025-08-10T01:10:46.7738204Z Testing: Cleanup without explicit combat state changes
 2025-08-10T01:10:46.7738662Z Before update - Troll HP: 0
 2025-08-10T01:10:46.7739051Z Before update - Combatants: ['Ranger', 'Troll']
 2025-08-10T01:10:46.7739478Z After update - Combatants: ['Ranger']
-2025-08-10T01:10:46.7739718Z 
+2025-08-10T01:10:46.7739718Z
 2025-08-10T01:10:46.7739887Z Testing: Combat end with pre-defeated enemies
 2025-08-10T01:10:46.7740413Z Before combat end - Combatants: ['Player', 'Dead Orc', 'Living Wolf']
 2025-08-10T01:10:46.7740893Z Dead Orc HP: 0
 2025-08-10T01:10:46.7741192Z After combat end - In combat: False
 2025-08-10T01:10:46.7741638Z After combat end - Combatants: ['Player', 'Living Wolf']
-2025-08-10T01:10:46.7741954Z 
+2025-08-10T01:10:46.7741954Z
 2025-08-10T01:10:46.7742095Z Testing: Multiple simultaneous defeats
 2025-08-10T01:10:46.7742622Z Before fireball - Combatants: ['Wizard', 'Goblin A', 'Goblin B', 'Orc Chief']
 2025-08-10T01:10:46.7743212Z After fireball - Combatants: ['Wizard', 'Orc Chief']
@@ -1078,63 +1078,63 @@
 2025-08-10T01:10:47.1532926Z Step 4: Additional validation with NarrativeSyncValidator ... /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/unittest/case.py:678: DeprecationWarning: It is deprecated to return a value that is not None from a test case (<bound method TestCompleteCombinedApproach.test_step4_narrative_sync_validation of <__main__.TestCompleteCombinedApproach testMethod=test_step4_narrative_sync_validation>>)
 2025-08-10T01:10:47.1536244Z   return self.run(*args, **kwds)
 2025-08-10T01:10:47.1536571Z ok
-2025-08-10T01:10:47.1536715Z 
+2025-08-10T01:10:47.1536715Z
 2025-08-10T01:10:47.1536910Z ----------------------------------------------------------------------
 2025-08-10T01:10:47.1537360Z Ran 6 tests in 0.005s
-2025-08-10T01:10:47.1537563Z 
+2025-08-10T01:10:47.1537563Z
 2025-08-10T01:10:47.1537669Z OK
 2025-08-10T01:10:47.1541406Z ======================================================================
-2025-08-10T01:10:47.1541751Z 
+2025-08-10T01:10:47.1541751Z
 2025-08-10T01:10:47.1542041Z 🚀 Complete Combined Approach Integration Test
 2025-08-10T01:10:47.1542473Z ============================================================
-2025-08-10T01:10:47.1542748Z 
+2025-08-10T01:10:47.1542748Z
 2025-08-10T01:10:47.1543286Z 🔧 Step 1: Creating structured generation prompt
 2025-08-10T01:10:47.1543860Z    ✅ Expected entities: ['Gideon', 'Sariel', 'Rowan']
 2025-08-10T01:10:47.1544388Z    ✅ Prompt injection created (836 chars)
-2025-08-10T01:10:47.1544657Z 
+2025-08-10T01:10:47.1544657Z
 2025-08-10T01:10:47.1544882Z 🔧 Step 2: Parsing structured JSON response
 2025-08-10T01:10:47.1545343Z    ✅ JSON parsed successfully
 2025-08-10T01:10:47.1545768Z    ✅ Narrative extracted (380 chars)
 2025-08-10T01:10:47.1546248Z    ✅ Entities found: ['Gideon', 'Sariel', 'Rowan']
-2025-08-10T01:10:47.1546559Z 
+2025-08-10T01:10:47.1546559Z
 2025-08-10T01:10:47.1546826Z 🔧 Step 3: Schema validation of structured response
 2025-08-10T01:10:47.1547505Z    ✅ Schema validation: True
 2025-08-10T01:10:47.1548124Z    ✅ Narrative validation: True
 2025-08-10T01:10:47.1548552Z    ✅ Coverage rate: 1.00
-2025-08-10T01:10:47.1548758Z 
+2025-08-10T01:10:47.1548758Z
 2025-08-10T01:10:47.1549002Z 🔧 Step 4: Additional narrative sync validation
 2025-08-10T01:10:47.1549474Z    ✅ All entities present: True
 2025-08-10T01:10:47.1549954Z    ✅ Entities found: ['Gideon', 'Sariel', 'Rowan']
 2025-08-10T01:10:47.1550452Z    ✅ Confidence: 1.00
-2025-08-10T01:10:47.1550647Z 
+2025-08-10T01:10:47.1550647Z
 2025-08-10T01:10:47.1550843Z 📊 Combined Approach Results:
 2025-08-10T01:10:47.1551306Z    🎯 Structured Generation: ✅ PASS
 2025-08-10T01:10:47.1551786Z    🎯 Response Parsing: ✅ PASS
 2025-08-10T01:10:47.1552278Z    🎯 Schema Validation: ✅ PASS (100% coverage)
 2025-08-10T01:10:47.1552852Z    🎯 Sync Validation: ✅ PASS (100% confidence)
 2025-08-10T01:10:47.1553370Z    🎯 Overall: ✅ 100% SUCCESS
-2025-08-10T01:10:47.1553610Z 
+2025-08-10T01:10:47.1553610Z
 2025-08-10T01:10:47.1553864Z 🎉 Combined Approach Implementation VERIFIED!
 2025-08-10T01:10:47.1554336Z    The Cassian Problem is SOLVED!
-2025-08-10T01:10:47.1554602Z 
+2025-08-10T01:10:47.1554602Z
 2025-08-10T01:10:47.1554806Z 🧪 Testing failure case handling
 2025-08-10T01:10:47.1555286Z    ✅ Graceful fallback for non-JSON response
 2025-08-10T01:10:47.1556005Z    ✅ Validation still detects missing entities: ['Gideon', 'Sariel', 'Rowan']
-2025-08-10T01:10:47.1556468Z 
+2025-08-10T01:10:47.1556468Z
 2025-08-10T01:10:47.1556741Z 🔧 Step 1: Creating structured generation prompt
 2025-08-10T01:10:47.1557353Z    ✅ Expected entities: ['Gideon', 'Sariel', 'Rowan']
 2025-08-10T01:10:47.1558056Z    ✅ Prompt injection created (836 chars)
-2025-08-10T01:10:47.1558355Z 
+2025-08-10T01:10:47.1558355Z
 2025-08-10T01:10:47.1558598Z 🔧 Step 2: Parsing structured JSON response
 2025-08-10T01:10:47.1559108Z    ✅ JSON parsed successfully
 2025-08-10T01:10:47.1559566Z    ✅ Narrative extracted (380 chars)
 2025-08-10T01:10:47.1560088Z    ✅ Entities found: ['Gideon', 'Sariel', 'Rowan']
-2025-08-10T01:10:47.1560416Z 
+2025-08-10T01:10:47.1560416Z
 2025-08-10T01:10:47.1560684Z 🔧 Step 3: Schema validation of structured response
 2025-08-10T01:10:47.1561230Z    ✅ Schema validation: True
 2025-08-10T01:10:47.1561672Z    ✅ Narrative validation: True
 2025-08-10T01:10:47.1562125Z    ✅ Coverage rate: 1.00
-2025-08-10T01:10:47.1562351Z 
+2025-08-10T01:10:47.1562351Z
 2025-08-10T01:10:47.1562613Z 🔧 Step 4: Additional narrative sync validation
 2025-08-10T01:10:47.1563133Z    ✅ All entities present: True
 2025-08-10T01:10:47.1563642Z    ✅ Entities found: ['Gideon', 'Sariel', 'Rowan']
@@ -1145,7 +1145,7 @@
 2025-08-10T01:10:47.2144321Z ...............
 2025-08-10T01:10:47.2145059Z ----------------------------------------------------------------------
 2025-08-10T01:10:47.2146286Z Ran 15 tests in 0.001s
-2025-08-10T01:10:47.2146753Z 
+2025-08-10T01:10:47.2146753Z
 2025-08-10T01:10:47.2146967Z OK
 2025-08-10T01:10:47.2199932Z ✅ PASS: tests/test_constants.py
 2025-08-10T01:10:47.2201155Z ----------------------------------------
@@ -1168,7 +1168,7 @@
 2025-08-10T01:10:48.2159827Z .
 2025-08-10T01:10:48.2160150Z ----------------------------------------------------------------------
 2025-08-10T01:10:48.2160596Z Ran 3 tests in 0.001s
-2025-08-10T01:10:48.2160796Z 
+2025-08-10T01:10:48.2160796Z
 2025-08-10T01:10:48.2160894Z OK
 2025-08-10T01:10:48.2161292Z \n--- Running Test: test_does_not_truncate_if_within_all_limits ---
 2025-08-10T01:10:48.2161812Z --- Test Finished Successfully ---
@@ -1218,7 +1218,7 @@
 2025-08-10T01:10:48.6181390Z .
 2025-08-10T01:10:48.6181718Z ----------------------------------------------------------------------
 2025-08-10T01:10:48.6182190Z Ran 11 tests in 0.002s
-2025-08-10T01:10:48.6182388Z 
+2025-08-10T01:10:48.6182388Z
 2025-08-10T01:10:48.6182489Z OK
 2025-08-10T01:10:48.6543242Z ✅ PASS: tests/test_data_integrity.py
 2025-08-10T01:10:48.6544692Z ----------------------------------------
@@ -1226,7 +1226,7 @@
 2025-08-10T01:10:48.7904249Z .........
 2025-08-10T01:10:48.7908765Z ----------------------------------------------------------------------
 2025-08-10T01:10:48.7909300Z Ran 9 tests in 0.004s
-2025-08-10T01:10:48.7909518Z 
+2025-08-10T01:10:48.7909518Z
 2025-08-10T01:10:48.7909627Z OK
 2025-08-10T01:10:48.8116638Z ✅ PASS: tests/test_decorators.py
 2025-08-10T01:10:48.8118231Z ----------------------------------------
@@ -1281,26 +1281,26 @@
 2025-08-10T01:10:49.0413200Z .
 2025-08-10T01:10:49.0413514Z ----------------------------------------------------------------------
 2025-08-10T01:10:49.0413952Z Ran 12 tests in 0.003s
-2025-08-10T01:10:49.0414145Z 
+2025-08-10T01:10:49.0414145Z
 2025-08-10T01:10:49.0414265Z OK
 2025-08-10T01:10:49.0703926Z ✅ PASS: tests/test_defensive_numeric_converter.py
 2025-08-10T01:10:49.0705412Z ----------------------------------------
 2025-08-10T01:10:49.0705875Z Running: tests/test_delete_fix.py
 2025-08-10T01:10:49.0808348Z === Testing __DELETE__ Token Processing ===
-2025-08-10T01:10:49.0809330Z 
+2025-08-10T01:10:49.0809330Z
 2025-08-10T01:10:49.0809717Z Test 1: Simple deletion
 2025-08-10T01:10:49.0812391Z Before: {'npc_data': {'Drake 1': {'name': 'Drake 1', 'type': 'enemy'}, 'Drake 2': {'name': 'Drake 2', 'type': 'enemy'}, 'Friendly NPC': {'name': 'Friend', 'type': 'ally'}}, 'other_data': 'should remain'}
 2025-08-10T01:10:49.0813791Z Removed 'Drake 1' from state.
 2025-08-10T01:10:49.0814205Z Removed 'Drake 2' from state.
 2025-08-10T01:10:49.0814870Z After: {'npc_data': {'Friendly NPC': {'name': 'Friend', 'type': 'ally'}}, 'other_data': 'should remain'}
 2025-08-10T01:10:49.0815691Z ✅ Test 1 passed!
-2025-08-10T01:10:49.0815903Z 
+2025-08-10T01:10:49.0815903Z
 2025-08-10T01:10:49.0816049Z Test 2: Top-level deletion
 2025-08-10T01:10:49.0816765Z Before: {'defeated_enemy': {'name': 'Orc', 'hp': 0}, 'alive_ally': {'name': 'Ranger', 'hp': 50}, 'world_data': {'location': 'forest'}}
 2025-08-10T01:10:49.0818116Z Removed 'defeated_enemy' from state.
 2025-08-10T01:10:49.0818749Z After: {'alive_ally': {'name': 'Ranger', 'hp': 50}, 'world_data': {'location': 'forest'}}
 2025-08-10T01:10:49.0819432Z ✅ Test 2 passed!
-2025-08-10T01:10:49.0819622Z 
+2025-08-10T01:10:49.0819622Z
 2025-08-10T01:10:49.0820024Z 🎉 All tests passed! __DELETE__ token processing works correctly.
 2025-08-10T01:10:49.0833969Z ✅ PASS: tests/test_delete_fix.py
 2025-08-10T01:10:49.0835249Z ----------------------------------------
@@ -1308,7 +1308,7 @@
 2025-08-10T01:10:49.1542593Z .....
 2025-08-10T01:10:49.1544354Z ----------------------------------------------------------------------
 2025-08-10T01:10:49.1546693Z Ran 5 tests in 0.004s
-2025-08-10T01:10:49.1546911Z 
+2025-08-10T01:10:49.1546911Z
 2025-08-10T01:10:49.1547027Z OK
 2025-08-10T01:10:49.1649236Z ✅ PASS: tests/test_delete_token_comprehensive.py
 2025-08-10T01:10:49.1651667Z ----------------------------------------
@@ -1316,7 +1316,7 @@
 2025-08-10T01:10:49.2824979Z ...
 2025-08-10T01:10:49.2825727Z ----------------------------------------------------------------------
 2025-08-10T01:10:49.2828463Z Ran 3 tests in 0.003s
-2025-08-10T01:10:49.2828697Z 
+2025-08-10T01:10:49.2828697Z
 2025-08-10T01:10:49.2828812Z OK
 2025-08-10T01:10:49.2983790Z ✅ PASS: tests/test_deployment_build.py
 2025-08-10T01:10:49.2985151Z ----------------------------------------
@@ -1327,22 +1327,22 @@
 2025-08-10T01:10:49.3133268Z Maximum recommended size: 1500 lines
 2025-08-10T01:10:49.3135069Z Warning threshold: 1000 lines
 2025-08-10T01:10:49.3135679Z Optimal size: 700 lines
-2025-08-10T01:10:49.3138001Z 
+2025-08-10T01:10:49.3138001Z
 2025-08-10T01:10:49.3138274Z 📏 File Size Analysis:
 2025-08-10T01:10:49.3138755Z --------------------------------------------------------------------------------
-2025-08-10T01:10:49.3139381Z File                                                  Lines      Chars Status         
+2025-08-10T01:10:49.3139381Z File                                                  Lines      Chars Status
 2025-08-10T01:10:49.3139986Z --------------------------------------------------------------------------------
-2025-08-10T01:10:49.3140830Z .cursor/rules/rules.mdc                                  65      2,823 ✨ OPTIMAL      
-2025-08-10T01:10:49.3141689Z .cursor/rules/lessons.mdc                              1432     85,037 ⚠️  WARNING    
-2025-08-10T01:10:49.3142631Z .cursor/rules/project_overview.md                       192      7,132 ✨ OPTIMAL      
-2025-08-10T01:10:49.3143651Z .cursor/rules/planning_protocols.md                     211      7,242 ✨ OPTIMAL      
-2025-08-10T01:10:49.3144656Z .cursor/rules/documentation_map.md                       86      3,489 ✨ OPTIMAL      
-2025-08-10T01:10:49.3145646Z .cursor/rules/quick_reference.md                         83      2,013 ✨ OPTIMAL      
-2025-08-10T01:10:49.3146630Z .cursor/rules/progress_tracking.md                      131      3,333 ✨ OPTIMAL      
-2025-08-10T01:10:49.3147480Z CLAUDE.md                                               997     57,726 ✅ OK           
+2025-08-10T01:10:49.3140830Z .cursor/rules/rules.mdc                                  65      2,823 ✨ OPTIMAL
+2025-08-10T01:10:49.3141689Z .cursor/rules/lessons.mdc                              1432     85,037 ⚠️  WARNING
+2025-08-10T01:10:49.3142631Z .cursor/rules/project_overview.md                       192      7,132 ✨ OPTIMAL
+2025-08-10T01:10:49.3143651Z .cursor/rules/planning_protocols.md                     211      7,242 ✨ OPTIMAL
+2025-08-10T01:10:49.3144656Z .cursor/rules/documentation_map.md                       86      3,489 ✨ OPTIMAL
+2025-08-10T01:10:49.3145646Z .cursor/rules/quick_reference.md                         83      2,013 ✨ OPTIMAL
+2025-08-10T01:10:49.3146630Z .cursor/rules/progress_tracking.md                      131      3,333 ✨ OPTIMAL
+2025-08-10T01:10:49.3147480Z CLAUDE.md                                               997     57,726 ✅ OK
 2025-08-10T01:10:49.3148253Z --------------------------------------------------------------------------------
 2025-08-10T01:10:49.3148850Z TOTAL                                                  3197 lines
-2025-08-10T01:10:49.3149192Z 
+2025-08-10T01:10:49.3149192Z
 2025-08-10T01:10:49.3149419Z ⏱️  Read Performance Test:
 2025-08-10T01:10:49.3150302Z --------------------------------------------------------------------------------
 2025-08-10T01:10:49.3151100Z .cursor/rules/rules.mdc                             0.000s ✅ Fast
@@ -1353,7 +1353,7 @@
 2025-08-10T01:10:49.3155262Z .cursor/rules/quick_reference.md                    0.000s ✅ Fast
 2025-08-10T01:10:49.3156035Z .cursor/rules/progress_tracking.md                  0.000s ✅ Fast
 2025-08-10T01:10:49.3156742Z CLAUDE.md                                           0.000s ✅ Fast
-2025-08-10T01:10:49.3157082Z 
+2025-08-10T01:10:49.3157082Z
 2025-08-10T01:10:49.3158936Z 🔄 API Chunking Simulation (2000 lines per chunk):
 2025-08-10T01:10:49.3159575Z --------------------------------------------------------------------------------
 2025-08-10T01:10:49.3160138Z .cursor/rules/rules.mdc: 1 chunks needed
@@ -1364,12 +1364,12 @@
 2025-08-10T01:10:49.3162731Z .cursor/rules/quick_reference.md: 1 chunks needed
 2025-08-10T01:10:49.3163233Z .cursor/rules/progress_tracking.md: 1 chunks needed
 2025-08-10T01:10:49.3163718Z CLAUDE.md: 1 chunks needed
-2025-08-10T01:10:49.3163963Z 
+2025-08-10T01:10:49.3163963Z
 2025-08-10T01:10:49.3164210Z 📋 Summary & Recommendations:
 2025-08-10T01:10:49.3164652Z ================================================================================
 2025-08-10T01:10:49.3165362Z ✅ All documentation files are within acceptable limits!
 2025-08-10T01:10:49.3165935Z    No timeout risks detected.
-2025-08-10T01:10:49.3166214Z 
+2025-08-10T01:10:49.3166214Z
 2025-08-10T01:10:49.3166418Z 💡 Best Practices:
 2025-08-10T01:10:49.3166902Z   - Keep documentation files under 1,000 lines for best performance
 2025-08-10T01:10:49.3167513Z   - Archive old content to separate files
@@ -1381,7 +1381,7 @@
 2025-08-10T01:10:49.3857305Z .....................
 2025-08-10T01:10:49.3860226Z ----------------------------------------------------------------------
 2025-08-10T01:10:49.3860761Z Ran 21 tests in 0.003s
-2025-08-10T01:10:49.3860974Z 
+2025-08-10T01:10:49.3860974Z
 2025-08-10T01:10:49.3861097Z OK
 2025-08-10T01:10:49.3964618Z ✅ PASS: tests/test_dual_pass_generator.py
 2025-08-10T01:10:49.3965909Z ----------------------------------------
@@ -1390,7 +1390,7 @@
 2025-08-10T01:10:50.4667038Z sssss
 2025-08-10T01:10:50.4669382Z ----------------------------------------------------------------------
 2025-08-10T01:10:50.4671841Z Ran 5 tests in 0.000s
-2025-08-10T01:10:50.4672066Z 
+2025-08-10T01:10:50.4672066Z
 2025-08-10T01:10:50.4672189Z OK (skipped=5)
 2025-08-10T01:10:50.6177402Z ✅ PASS: tests/test_end2end/test_continue_story_end2end.py
 2025-08-10T01:10:50.6179146Z ----------------------------------------
@@ -1399,7 +1399,7 @@
 2025-08-10T01:10:50.9595706Z sssss
 2025-08-10T01:10:50.9597523Z ----------------------------------------------------------------------
 2025-08-10T01:10:50.9600804Z Ran 5 tests in 0.000s
-2025-08-10T01:10:50.9601027Z 
+2025-08-10T01:10:50.9601027Z
 2025-08-10T01:10:50.9601153Z OK (skipped=5)
 2025-08-10T01:10:51.0109922Z ✅ PASS: tests/test_end2end/test_create_campaign_end2end.py
 2025-08-10T01:10:51.0111104Z ----------------------------------------
@@ -1408,7 +1408,7 @@
 2025-08-10T01:10:51.3587290Z ssssssssssssss
 2025-08-10T01:10:51.3588404Z ----------------------------------------------------------------------
 2025-08-10T01:10:51.3589319Z Ran 14 tests in 0.000s
-2025-08-10T01:10:51.3589858Z 
+2025-08-10T01:10:51.3589858Z
 2025-08-10T01:10:51.3590180Z OK (skipped=14)
 2025-08-10T01:10:51.4154015Z ✅ PASS: tests/test_end2end/test_debug_mode_end2end.py
 2025-08-10T01:10:51.4154994Z ----------------------------------------
@@ -1417,7 +1417,7 @@
 2025-08-10T01:10:51.7595406Z sssssssssssss
 2025-08-10T01:10:51.7596576Z ----------------------------------------------------------------------
 2025-08-10T01:10:51.7597457Z Ran 13 tests in 0.000s
-2025-08-10T01:10:51.7599097Z 
+2025-08-10T01:10:51.7599097Z
 2025-08-10T01:10:51.7599447Z OK (skipped=13)
 2025-08-10T01:10:51.8181017Z ✅ PASS: tests/test_end2end/test_mcp_error_handling_end2end.py
 2025-08-10T01:10:51.8182047Z ----------------------------------------
@@ -1444,9 +1444,9 @@
 2025-08-10T01:10:55.1491466Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.1492594Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.1493025Z RuntimeError: no running event loop
-2025-08-10T01:10:55.1493319Z 
+2025-08-10T01:10:55.1493319Z
 2025-08-10T01:10:55.1493623Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.1494077Z 
+2025-08-10T01:10:55.1494077Z
 2025-08-10T01:10:55.1494250Z Traceback (most recent call last):
 2025-08-10T01:10:55.1498321Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.1499208Z     return func(*args, **kwargs)
@@ -1501,9 +1501,9 @@
 2025-08-10T01:10:55.1675072Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.1675558Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.1675800Z RuntimeError: no running event loop
-2025-08-10T01:10:55.1676049Z 
+2025-08-10T01:10:55.1676049Z
 2025-08-10T01:10:55.1676223Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.1676494Z 
+2025-08-10T01:10:55.1676494Z
 2025-08-10T01:10:55.1676589Z Traceback (most recent call last):
 2025-08-10T01:10:55.1677095Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.1677982Z     return func(*args, **kwargs)
@@ -1545,9 +1545,9 @@
 2025-08-10T01:10:55.1720785Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.1721618Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.1722054Z RuntimeError: no running event loop
-2025-08-10T01:10:55.1722346Z 
+2025-08-10T01:10:55.1722346Z
 2025-08-10T01:10:55.1722644Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.1723297Z 
+2025-08-10T01:10:55.1723297Z
 2025-08-10T01:10:55.1723459Z Traceback (most recent call last):
 2025-08-10T01:10:55.1724337Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.1725202Z     return func(*args, **kwargs)
@@ -1602,9 +1602,9 @@
 2025-08-10T01:10:55.1920975Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.1921847Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.1922293Z RuntimeError: no running event loop
-2025-08-10T01:10:55.1922600Z 
+2025-08-10T01:10:55.1922600Z
 2025-08-10T01:10:55.1922909Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.1923388Z 
+2025-08-10T01:10:55.1923388Z
 2025-08-10T01:10:55.1923569Z Traceback (most recent call last):
 2025-08-10T01:10:55.1924097Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.1924572Z     return func(*args, **kwargs)
@@ -1655,9 +1655,9 @@
 2025-08-10T01:10:55.1978268Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.1979084Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.1979503Z RuntimeError: no running event loop
-2025-08-10T01:10:55.1979782Z 
+2025-08-10T01:10:55.1979782Z
 2025-08-10T01:10:55.1980071Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.1980512Z 
+2025-08-10T01:10:55.1980512Z
 2025-08-10T01:10:55.1980627Z Traceback (most recent call last):
 2025-08-10T01:10:55.1981225Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.1981744Z     return func(*args, **kwargs)
@@ -1708,9 +1708,9 @@
 2025-08-10T01:10:55.2058732Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.2059575Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.2060014Z RuntimeError: no running event loop
-2025-08-10T01:10:55.2060311Z 
+2025-08-10T01:10:55.2060311Z
 2025-08-10T01:10:55.2060619Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.2061074Z 
+2025-08-10T01:10:55.2061074Z
 2025-08-10T01:10:55.2061244Z Traceback (most recent call last):
 2025-08-10T01:10:55.2062124Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.2063003Z     return func(*args, **kwargs)
@@ -1761,9 +1761,9 @@
 2025-08-10T01:10:55.2521218Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.2522113Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.2522571Z RuntimeError: no running event loop
-2025-08-10T01:10:55.2522878Z 
+2025-08-10T01:10:55.2522878Z
 2025-08-10T01:10:55.2523208Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.2524147Z 
+2025-08-10T01:10:55.2524147Z
 2025-08-10T01:10:55.2524341Z Traceback (most recent call last):
 2025-08-10T01:10:55.2525279Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.2526199Z     return func(*args, **kwargs)
@@ -1797,9 +1797,9 @@
 2025-08-10T01:10:55.2557608Z --- END EXCEPTION ---
 2025-08-10T01:10:55.2559722Z 2025-08-10 01:10:55,251 - root - ERROR - 🔥🔴 Failed to get campaign state: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 2025-08-10T01:10:55.2561519Z 2025-08-10 01:10:55,252 - main - INFO - Received campaign creation request:
-2025-08-10T01:10:55.2562206Z 2025-08-10 01:10:55,252 - main - INFO -   Character: 
-2025-08-10T01:10:55.2562736Z 2025-08-10 01:10:55,252 - main - INFO -   Setting: 
-2025-08-10T01:10:55.2563278Z 2025-08-10 01:10:55,252 - main - INFO -   Description: 
+2025-08-10T01:10:55.2562206Z 2025-08-10 01:10:55,252 - main - INFO -   Character:
+2025-08-10T01:10:55.2562736Z 2025-08-10 01:10:55,252 - main - INFO -   Setting:
+2025-08-10T01:10:55.2563278Z 2025-08-10 01:10:55,252 - main - INFO -   Description:
 2025-08-10T01:10:55.2563898Z 2025-08-10 01:10:55,252 - main - INFO -   Custom options: []
 2025-08-10T01:10:55.2564557Z 2025-08-10 01:10:55,252 - main - INFO -   Selected prompts: []
 2025-08-10T01:10:55.2568816Z .2025-08-10 01:10:55,255 - root - INFO - File logging configured: /tmp/worldarchitect.ai/flask-server.log
@@ -1809,7 +1809,7 @@
 2025-08-10T01:10:55.2628817Z 2025-08-10 01:10:55,262 - main - INFO - Received campaign creation request:
 2025-08-10T01:10:55.2629925Z 2025-08-10 01:10:55,262 - main - INFO -   Character: Export Test Hero
 2025-08-10T01:10:55.2630546Z 2025-08-10 01:10:55,262 - main - INFO -   Setting: Export Test World
-2025-08-10T01:10:55.2631010Z 2025-08-10 01:10:55,262 - main - INFO -   Description: 
+2025-08-10T01:10:55.2631010Z 2025-08-10 01:10:55,262 - main - INFO -   Description:
 2025-08-10T01:10:55.2631362Z 2025-08-10 01:10:55,262 - main - INFO -   Custom options: []
 2025-08-10T01:10:55.2631717Z 2025-08-10 01:10:55,262 - main - INFO -   Selected prompts: []
 2025-08-10T01:10:55.2651256Z 2025-08-10 01:10:55,264 - root - ERROR - 🔥🔴 Failed to get user settings for user_422246: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -1824,9 +1824,9 @@
 2025-08-10T01:10:55.2762358Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.2763882Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.2764327Z RuntimeError: no running event loop
-2025-08-10T01:10:55.2764638Z 
+2025-08-10T01:10:55.2764638Z
 2025-08-10T01:10:55.2764947Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.2765425Z 
+2025-08-10T01:10:55.2765425Z
 2025-08-10T01:10:55.2765600Z Traceback (most recent call last):
 2025-08-10T01:10:55.2766544Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.2767453Z     return func(*args, **kwargs)
@@ -1881,9 +1881,9 @@
 2025-08-10T01:10:55.2913867Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.2914703Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.2915141Z RuntimeError: no running event loop
-2025-08-10T01:10:55.2915440Z 
+2025-08-10T01:10:55.2915440Z
 2025-08-10T01:10:55.2915744Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.2916228Z 
+2025-08-10T01:10:55.2916228Z
 2025-08-10T01:10:55.2916391Z Traceback (most recent call last):
 2025-08-10T01:10:55.2917272Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.2918351Z     return func(*args, **kwargs)
@@ -1923,7 +1923,7 @@
 2025-08-10T01:10:55.3002332Z 2025-08-10 01:10:55,300 - main - INFO - Received campaign creation request:
 2025-08-10T01:10:55.3005608Z 2025-08-10 01:10:55,300 - main - INFO -   Character: God Mode Test Hero
 2025-08-10T01:10:55.3006275Z 2025-08-10 01:10:55,300 - main - INFO -   Setting: God Mode Realm
-2025-08-10T01:10:55.3006852Z 2025-08-10 01:10:55,300 - main - INFO -   Description: 
+2025-08-10T01:10:55.3006852Z 2025-08-10 01:10:55,300 - main - INFO -   Description:
 2025-08-10T01:10:55.3007328Z 2025-08-10 01:10:55,300 - main - INFO -   Custom options: []
 2025-08-10T01:10:55.3007938Z 2025-08-10 01:10:55,300 - main - INFO -   Selected prompts: []
 2025-08-10T01:10:55.3030740Z 2025-08-10 01:10:55,302 - root - ERROR - 🔥🔴 Failed to get user settings for user_422246: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -1938,9 +1938,9 @@
 2025-08-10T01:10:55.3074766Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.3075613Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.3076047Z RuntimeError: no running event loop
-2025-08-10T01:10:55.3076348Z 
+2025-08-10T01:10:55.3076348Z
 2025-08-10T01:10:55.3076650Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.3077323Z 
+2025-08-10T01:10:55.3077323Z
 2025-08-10T01:10:55.3077486Z Traceback (most recent call last):
 2025-08-10T01:10:55.3078589Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.3079518Z     return func(*args, **kwargs)
@@ -1995,9 +1995,9 @@
 2025-08-10T01:10:55.3223845Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:10:55.3224676Z     asyncio.get_running_loop()
 2025-08-10T01:10:55.3225096Z RuntimeError: no running event loop
-2025-08-10T01:10:55.3225400Z 
+2025-08-10T01:10:55.3225400Z
 2025-08-10T01:10:55.3225699Z During handling of the above exception, another exception occurred:
-2025-08-10T01:10:55.3226144Z 
+2025-08-10T01:10:55.3226144Z
 2025-08-10T01:10:55.3226310Z Traceback (most recent call last):
 2025-08-10T01:10:55.3227160Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:10:55.3228194Z     return func(*args, **kwargs)
@@ -2039,7 +2039,7 @@
 2025-08-10T01:10:55.3367464Z .
 2025-08-10T01:10:55.3368417Z ----------------------------------------------------------------------
 2025-08-10T01:10:55.3369164Z Ran 10 tests in 3.183s
-2025-08-10T01:10:55.3371517Z 
+2025-08-10T01:10:55.3371517Z
 2025-08-10T01:10:55.3371657Z OK (skipped=1)
 2025-08-10T01:10:55.3373507Z Warning: Could not start MCP server for comprehensive tests: HTTPConnectionPool(host='localhost', port=8003): Max retries exceeded with url: / (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7f8796718d90>: Failed to establish a new connection: [Errno 111] Connection refused'))
 2025-08-10T01:10:55.3375330Z Falling back to mock-only testing
@@ -2050,7 +2050,7 @@
 2025-08-10T01:10:55.8938662Z sssssssss
 2025-08-10T01:10:55.8939769Z ----------------------------------------------------------------------
 2025-08-10T01:10:55.8941622Z Ran 9 tests in 0.000s
-2025-08-10T01:10:55.8943060Z 
+2025-08-10T01:10:55.8943060Z
 2025-08-10T01:10:55.8943318Z OK (skipped=9)
 2025-08-10T01:10:55.9491174Z ✅ PASS: tests/test_end2end/test_mcp_protocol_end2end.py
 2025-08-10T01:10:55.9494263Z ----------------------------------------
@@ -2135,7 +2135,7 @@
 2025-08-10T01:10:57.2812342Z .
 2025-08-10T01:10:57.2815352Z ----------------------------------------------------------------------
 2025-08-10T01:10:57.2815842Z Ran 5 tests in 0.269s
-2025-08-10T01:10:57.2816044Z 
+2025-08-10T01:10:57.2816044Z
 2025-08-10T01:10:57.2816167Z OK
 2025-08-10T01:10:57.2816686Z 🔵 Layer 4: Running end-to-end tests with MCP architecture
 2025-08-10T01:10:57.2817283Z 📝 NOTE: Tests MCP API gateway routing behavior
@@ -2259,7 +2259,7 @@
 2025-08-10T01:10:58.8691026Z ✅ Technical debt fixes applied successfully
 2025-08-10T01:10:58.8692298Z ----------------------------------------------------------------------
 2025-08-10T01:10:58.8692947Z Ran 12 tests in 0.337s
-2025-08-10T01:10:58.8693249Z 
+2025-08-10T01:10:58.8693249Z
 2025-08-10T01:10:58.8693506Z OK
 2025-08-10T01:10:59.0740297Z ✅ PASS: tests/test_end2end/test_settings_integration.py
 2025-08-10T01:10:59.0742278Z ----------------------------------------
@@ -2268,7 +2268,7 @@
 2025-08-10T01:10:59.4210048Z sssss
 2025-08-10T01:10:59.4211098Z ----------------------------------------------------------------------
 2025-08-10T01:10:59.4211842Z Ran 5 tests in 0.000s
-2025-08-10T01:10:59.4212229Z 
+2025-08-10T01:10:59.4212229Z
 2025-08-10T01:10:59.4212454Z OK (skipped=5)
 2025-08-10T01:10:59.4749877Z ✅ PASS: tests/test_end2end/test_visit_campaign_end2end.py
 2025-08-10T01:10:59.4752935Z ----------------------------------------
@@ -2276,7 +2276,7 @@
 2025-08-10T01:10:59.7018409Z .................
 2025-08-10T01:10:59.7020502Z ----------------------------------------------------------------------
 2025-08-10T01:10:59.7021001Z Ran 17 tests in 0.002s
-2025-08-10T01:10:59.7021200Z 
+2025-08-10T01:10:59.7021200Z
 2025-08-10T01:10:59.7021320Z OK
 2025-08-10T01:10:59.7324054Z ✅ PASS: tests/test_entities_pydantic_integration.py
 2025-08-10T01:10:59.7325516Z ----------------------------------------
@@ -2291,7 +2291,7 @@
 2025-08-10T01:10:59.9594048Z .
 2025-08-10T01:10:59.9594402Z ----------------------------------------------------------------------
 2025-08-10T01:10:59.9594885Z Ran 22 tests in 0.002s
-2025-08-10T01:10:59.9595088Z 
+2025-08-10T01:10:59.9595088Z
 2025-08-10T01:10:59.9595187Z OK
 2025-08-10T01:10:59.9880319Z ✅ PASS: tests/test_entity_classes.py
 2025-08-10T01:10:59.9881321Z ----------------------------------------
@@ -2299,7 +2299,7 @@
 2025-08-10T01:11:00.2138986Z .....
 2025-08-10T01:11:00.2141325Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.2141829Z Ran 5 tests in 0.001s
-2025-08-10T01:11:00.2142054Z 
+2025-08-10T01:11:00.2142054Z
 2025-08-10T01:11:00.2142172Z OK
 2025-08-10T01:11:00.2455485Z ✅ PASS: tests/test_entity_id_special_chars.py
 2025-08-10T01:11:00.2456917Z ----------------------------------------
@@ -2307,7 +2307,7 @@
 2025-08-10T01:11:00.2931877Z .........................
 2025-08-10T01:11:00.2932441Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.2933007Z Ran 25 tests in 0.002s
-2025-08-10T01:11:00.2933225Z 
+2025-08-10T01:11:00.2933225Z
 2025-08-10T01:11:00.2933804Z OK
 2025-08-10T01:11:00.3008279Z ✅ PASS: tests/test_entity_instructions.py
 2025-08-10T01:11:00.3009709Z ----------------------------------------
@@ -2315,7 +2315,7 @@
 2025-08-10T01:11:00.5245477Z .............
 2025-08-10T01:11:00.5246484Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.5248230Z Ran 13 tests in 0.004s
-2025-08-10T01:11:00.5248456Z 
+2025-08-10T01:11:00.5248456Z
 2025-08-10T01:11:00.5248570Z OK
 2025-08-10T01:11:00.5462489Z ✅ PASS: tests/test_entity_preloader.py
 2025-08-10T01:11:00.5464057Z ----------------------------------------
@@ -2362,30 +2362,30 @@
 2025-08-10T01:11:00.7351247Z Test ValidationResult supports both old and new interfaces ... ok
 2025-08-10T01:11:00.7352063Z test_validator_presence_detection (__main__.TestEntityTracking.test_validator_presence_detection)
 2025-08-10T01:11:00.7352935Z Test validator's presence detection logic (REFACTORED: uses EntityValidator) ... ok
-2025-08-10T01:11:00.7353406Z 
+2025-08-10T01:11:00.7353406Z
 2025-08-10T01:11:00.7353601Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.7354039Z Ran 21 tests in 0.007s
-2025-08-10T01:11:00.7354234Z 
+2025-08-10T01:11:00.7354234Z
 2025-08-10T01:11:00.7354340Z OK
 2025-08-10T01:11:00.7354953Z 🧪 Testing Entity Tracking Production Implementation
 2025-08-10T01:11:00.7355416Z ============================================================
-2025-08-10T01:11:00.7355681Z 
+2025-08-10T01:11:00.7355681Z
 2025-08-10T01:11:00.7355919Z 🔴 RED PHASE: Testing missing entity detection
 2025-08-10T01:11:00.7356497Z    ❌ DETECTED MISSING: ['Sariel', 'Rowan', 'Tavern Keeper']
 2025-08-10T01:11:00.7356975Z    ✅ FOUND: ['Gideon']
 2025-08-10T01:11:00.7357328Z    🔄 RETRY NEEDED: True
 2025-08-10T01:11:00.7357864Z    📝 SUGGESTIONS: 5 provided
 2025-08-10T01:11:00.7358357Z    🚫 FILTERED UNKNOWN: Unknown entities properly excluded
-2025-08-10T01:11:00.7358686Z 
+2025-08-10T01:11:00.7358686Z
 2025-08-10T01:11:00.7358926Z 🟢 GREEN PHASE: Testing complete entity handling
 2025-08-10T01:11:00.7359540Z    ✅ ALL ENTITIES FOUND: ['Gideon', 'Sariel', 'Rowan', 'Tavern Keeper']
 2025-08-10T01:11:00.7360065Z    📊 CONFIDENCE: 1.00
 2025-08-10T01:11:00.7360404Z    🎯 PASSED: True
 2025-08-10T01:11:00.7360894Z    🚫 UNKNOWN FILTERED: Still properly excluded in success case
-2025-08-10T01:11:00.7361259Z 
+2025-08-10T01:11:00.7361259Z
 2025-08-10T01:11:00.7361510Z 🔄 RETRY WORKFLOW: Testing retry suggestion system
 2025-08-10T01:11:00.7362409Z    📝 RETRY PROMPT GENERATED: Contains guidance for missing entities
-2025-08-10T01:11:00.7362790Z 
+2025-08-10T01:11:00.7362790Z
 2025-08-10T01:11:00.7363180Z ✅ RED-GREEN WORKFLOW COMPLETE: Missing entity detection and handling verified
 2025-08-10T01:11:00.7363779Z ✅ Integration test passed!
 2025-08-10T01:11:00.7364154Z    Expected entities: ['Gideon', 'Sariel', 'Rowan']
@@ -2397,7 +2397,7 @@
 2025-08-10T01:11:00.9342577Z ..........
 2025-08-10T01:11:00.9343553Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.9344366Z Ran 10 tests in 0.001s
-2025-08-10T01:11:00.9344834Z 
+2025-08-10T01:11:00.9344834Z
 2025-08-10T01:11:00.9345185Z OK
 2025-08-10T01:11:00.9566034Z ✅ PASS: tests/test_entity_tracking_generic.py
 2025-08-10T01:11:00.9567414Z ----------------------------------------
@@ -2405,7 +2405,7 @@
 2025-08-10T01:11:00.9935149Z ........
 2025-08-10T01:11:00.9935916Z ----------------------------------------------------------------------
 2025-08-10T01:11:00.9936726Z Ran 8 tests in 0.000s
-2025-08-10T01:11:00.9937285Z 
+2025-08-10T01:11:00.9937285Z
 2025-08-10T01:11:00.9937628Z OK
 2025-08-10T01:11:00.9991404Z ✅ PASS: tests/test_entity_utils.py
 2025-08-10T01:11:00.9992825Z ----------------------------------------
@@ -2415,7 +2415,7 @@
 2025-08-10T01:11:01.0670606Z ...............
 2025-08-10T01:11:01.0671280Z ----------------------------------------------------------------------
 2025-08-10T01:11:01.0672686Z Ran 17 tests in 0.004s
-2025-08-10T01:11:01.0673170Z 
+2025-08-10T01:11:01.0673170Z
 2025-08-10T01:11:01.0673404Z OK
 2025-08-10T01:11:01.0772032Z ✅ PASS: tests/test_entity_validator.py
 2025-08-10T01:11:01.0773317Z ----------------------------------------
@@ -2423,7 +2423,7 @@
 2025-08-10T01:11:01.1237195Z ..
 2025-08-10T01:11:01.1238355Z ----------------------------------------------------------------------
 2025-08-10T01:11:01.1239092Z Ran 2 tests in 0.000s
-2025-08-10T01:11:01.1240131Z 
+2025-08-10T01:11:01.1240131Z
 2025-08-10T01:11:01.1240264Z OK
 2025-08-10T01:11:01.1308899Z ✅ PASS: tests/test_extra_json_fields.py
 2025-08-10T01:11:01.1309709Z ----------------------------------------
@@ -2436,10 +2436,10 @@
 2025-08-10T01:11:01.1741418Z Test that fake Gemini generates realistic responses. ... ok
 2025-08-10T01:11:01.1743608Z test_fake_services_integration (__main__.TestFakeServicesSimple.test_fake_services_integration)
 2025-08-10T01:11:01.1750965Z Test that all fake services work together. ... ok
-2025-08-10T01:11:01.1751355Z 
+2025-08-10T01:11:01.1751355Z
 2025-08-10T01:11:01.1751588Z ----------------------------------------------------------------------
 2025-08-10T01:11:01.1752073Z Ran 4 tests in 0.002s
-2025-08-10T01:11:01.1752296Z 
+2025-08-10T01:11:01.1752296Z
 2025-08-10T01:11:01.1752405Z OK
 2025-08-10T01:11:01.1753248Z ✅ Integration test passed - all fake services working together
 2025-08-10T01:11:01.1753940Z Data size: 1092 characters
@@ -2450,7 +2450,7 @@
 2025-08-10T01:11:01.2300452Z ....
 2025-08-10T01:11:01.2301193Z ----------------------------------------------------------------------
 2025-08-10T01:11:01.2303640Z Ran 4 tests in 0.002s
-2025-08-10T01:11:01.2304117Z 
+2025-08-10T01:11:01.2304117Z
 2025-08-10T01:11:01.2304454Z OK
 2025-08-10T01:11:01.2371116Z ✅ PASS: tests/test_fallback_logic_json_bug.py
 2025-08-10T01:11:01.2372448Z ----------------------------------------
@@ -2488,10 +2488,10 @@
 2025-08-10T01:11:02.5256726Z 2025-08-10 01:11:02,524 - NarrativeSyncValidator - INFO - NarrativeSyncValidator delegated to EntityValidator: 0/1 found
 2025-08-10T01:11:02.5260967Z 2025-08-10 01:11:02,524 - root - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:02.5262277Z 2025-08-10 01:11:02,525 - root - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:02.5263229Z 2025-08-10 01:11:02,525 - root - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:02.5263229Z 2025-08-10 01:11:02,525 - root - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:02.5264064Z CRITICAL: Generate planning options ONLY for the character in current location.
 2025-08-10T01:11:02.5264948Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:02.5265459Z 
+2025-08-10T01:11:02.5265459Z
 2025-08-10T01:11:02.5265649Z Generate ONLY a planning block using th...
 2025-08-10T01:11:02.5266418Z 2025-08-10 01:11:02,525 - root - INFO - Calling Gemini API with prompt: Planning block generation...
 2025-08-10T01:11:02.5267386Z 2025-08-10 01:11:02,525 - root - INFO - Calling Gemini API: 116832 characters (~29208 tokens)
@@ -2605,10 +2605,10 @@
 2025-08-10T01:11:02.5468335Z 2025-08-10 01:11:02,543 - NarrativeSyncValidator - INFO - NarrativeSyncValidator delegated to EntityValidator: 0/1 found
 2025-08-10T01:11:02.5469912Z 2025-08-10 01:11:02,543 - root - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:02.5471172Z 2025-08-10 01:11:02,543 - root - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:02.5472135Z 2025-08-10 01:11:02,543 - root - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:02.5472135Z 2025-08-10 01:11:02,543 - root - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:02.5472937Z CRITICAL: Generate planning options ONLY for the character in current location.
 2025-08-10T01:11:02.5473837Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:02.5474347Z 
+2025-08-10T01:11:02.5474347Z
 2025-08-10T01:11:02.5474540Z Generate ONLY a planning block using th...
 2025-08-10T01:11:02.5475248Z 2025-08-10 01:11:02,543 - root - INFO - Calling Gemini API with prompt: Planning block generation...
 2025-08-10T01:11:02.5476154Z 2025-08-10 01:11:02,543 - root - INFO - Calling Gemini API: 116832 characters (~29208 tokens)
@@ -2700,28 +2700,28 @@
 2025-08-10T01:11:02.5543580Z ok
 2025-08-10T01:11:02.5544317Z test_red_phase_field_format_mismatch_detection (__main__.TestFieldFormatValidation.test_red_phase_field_format_mismatch_detection)
 2025-08-10T01:11:02.5545337Z RED PHASE: Temporarily test what happens with wrong field format ... ok
-2025-08-10T01:11:02.5545751Z 
+2025-08-10T01:11:02.5545751Z
 2025-08-10T01:11:02.5545941Z ----------------------------------------------------------------------
 2025-08-10T01:11:02.5546398Z Ran 2 tests in 1.249s
-2025-08-10T01:11:02.5546600Z 
+2025-08-10T01:11:02.5546600Z
 2025-08-10T01:11:02.5546702Z OK
 2025-08-10T01:11:02.5547064Z 🧪 Field Format Validation Test
 2025-08-10T01:11:02.5547617Z Testing consistency between world_logic.py and main.py translation layer
 2025-08-10T01:11:02.5548327Z ======================================================================
-2025-08-10T01:11:02.5548622Z 
+2025-08-10T01:11:02.5548622Z
 2025-08-10T01:11:02.5548878Z 🔍 Testing world_logic.py story entry creation...
 2025-08-10T01:11:02.5549484Z ✅ world_logic.py creates entries with correct 'text' field
 2025-08-10T01:11:02.5550260Z    Entry content: You find yourself in a mystical testing realm, surrounded by glowing validation runes....
-2025-08-10T01:11:02.5550831Z 
+2025-08-10T01:11:02.5550831Z
 2025-08-10T01:11:02.5551290Z 🔍 Testing main.py translation layer compatibility...
 2025-08-10T01:11:02.5551912Z ✅ main.py translation layer successfully extracts narrative
 2025-08-10T01:11:02.5552734Z    Narrative content: You find yourself in a mystical testing realm, surrounded by glowing validation runes....
-2025-08-10T01:11:02.5553322Z 
+2025-08-10T01:11:02.5553322Z
 2025-08-10T01:11:02.5553594Z 🟢 GREEN PHASE: Field format consistency test PASSED
 2025-08-10T01:11:02.5554169Z ✅ world_logic.py creates story entries with 'text' field
 2025-08-10T01:11:02.5554832Z ✅ main.py translation layer successfully processes 'text' field
 2025-08-10T01:11:02.5555449Z ✅ End-to-end narrative extraction works correctly
-2025-08-10T01:11:02.5555947Z 
+2025-08-10T01:11:02.5555947Z
 2025-08-10T01:11:02.5556210Z 🔴 RED PHASE: Testing field format mismatch detection
 2025-08-10T01:11:02.5556831Z 🔴 RED TEST CONFIRMED: 'story' field format causes empty narrative
 2025-08-10T01:11:02.5557452Z    Expected field: 'text', Actual field: 'story', Result: empty
@@ -2734,7 +2734,7 @@
 2025-08-10T01:11:02.8702942Z .....
 2025-08-10T01:11:02.8703546Z ----------------------------------------------------------------------
 2025-08-10T01:11:02.8704122Z Ran 11 tests in 0.006s
-2025-08-10T01:11:02.8704341Z 
+2025-08-10T01:11:02.8704341Z
 2025-08-10T01:11:02.8704469Z OK
 2025-08-10T01:11:02.8854701Z ✅ PASS: tests/test_file_cache.py
 2025-08-10T01:11:02.8856139Z ----------------------------------------
@@ -2852,7 +2852,7 @@
 2025-08-10T01:11:03.2419919Z ......
 2025-08-10T01:11:03.2423888Z ----------------------------------------------------------------------
 2025-08-10T01:11:03.2424721Z Ran 15 tests in 0.037s
-2025-08-10T01:11:03.2425155Z 
+2025-08-10T01:11:03.2425155Z
 2025-08-10T01:11:03.2425484Z OK
 2025-08-10T01:11:03.2906752Z ✅ PASS: tests/test_firestore_database_errors.py
 2025-08-10T01:11:03.2908586Z ----------------------------------------
@@ -2860,7 +2860,7 @@
 2025-08-10T01:11:03.5515294Z ..
 2025-08-10T01:11:03.5516823Z ----------------------------------------------------------------------
 2025-08-10T01:11:03.5517365Z Ran 2 tests in 0.001s
-2025-08-10T01:11:03.5517585Z 
+2025-08-10T01:11:03.5517585Z
 2025-08-10T01:11:03.5517901Z OK
 2025-08-10T01:11:03.5904574Z ✅ PASS: tests/test_firestore_empty_narrative_bug_redgreen.py
 2025-08-10T01:11:03.5908207Z ----------------------------------------
@@ -2899,10 +2899,10 @@
 2025-08-10T01:11:03.8598671Z Test _truncate_log_json with None ... ok
 2025-08-10T01:11:03.8599430Z test_truncate_log_json_small_data (__main__.TestFirestoreHelperFunctions.test_truncate_log_json_small_data)
 2025-08-10T01:11:03.8600282Z Test _truncate_log_json with data smaller than max_lines ... ok
-2025-08-10T01:11:03.8600665Z 
+2025-08-10T01:11:03.8600665Z
 2025-08-10T01:11:03.8600856Z ----------------------------------------------------------------------
 2025-08-10T01:11:03.8601306Z Ran 17 tests in 0.007s
-2025-08-10T01:11:03.8601496Z 
+2025-08-10T01:11:03.8601496Z
 2025-08-10T01:11:03.8601853Z OK
 2025-08-10T01:11:03.8999040Z ✅ PASS: tests/test_firestore_helper_functions_fixed.py
 2025-08-10T01:11:03.9000566Z ----------------------------------------
@@ -2941,10 +2941,10 @@
 2025-08-10T01:11:04.1668493Z Test process_mission_data adding a new mission ... ok
 2025-08-10T01:11:04.1669675Z test_process_mission_data_update_existing (__main__.TestMissionHandler.test_process_mission_data_update_existing)
 2025-08-10T01:11:04.1670603Z Test process_mission_data updating an existing mission ... ok
-2025-08-10T01:11:04.1670994Z 
+2025-08-10T01:11:04.1670994Z
 2025-08-10T01:11:04.1671197Z ----------------------------------------------------------------------
 2025-08-10T01:11:04.1671656Z Ran 17 tests in 0.006s
-2025-08-10T01:11:04.1671870Z 
+2025-08-10T01:11:04.1671870Z
 2025-08-10T01:11:04.1671983Z OK
 2025-08-10T01:11:04.2043298Z ✅ PASS: tests/test_firestore_mission_handler.py
 2025-08-10T01:11:04.2044773Z ----------------------------------------
@@ -2989,10 +2989,10 @@
 2025-08-10T01:11:04.4772631Z Test _handle_string_to_dict_update preserves dict structure ... ok
 2025-08-10T01:11:04.4773613Z test_update_state_with_changes_integration (__main__.TestFirestoreStateHelpers.test_update_state_with_changes_integration)
 2025-08-10T01:11:04.4774579Z Test update_state_with_changes with various scenarios ... ok
-2025-08-10T01:11:04.4774958Z 
+2025-08-10T01:11:04.4774958Z
 2025-08-10T01:11:04.4775160Z ----------------------------------------------------------------------
 2025-08-10T01:11:04.4775645Z Ran 20 tests in 0.011s
-2025-08-10T01:11:04.4775844Z 
+2025-08-10T01:11:04.4775844Z
 2025-08-10T01:11:04.4775969Z OK
 2025-08-10T01:11:04.5177104Z ✅ PASS: tests/test_firestore_state_helpers.py
 2025-08-10T01:11:04.5178815Z ----------------------------------------
@@ -3029,10 +3029,10 @@
 2025-08-10T01:11:05.7062765Z Test sequence_id calculation with edge cases. ... ok
 2025-08-10T01:11:05.7063915Z test_user_scene_number_edge_cases (__main__.TestMCPMigrationEdgeCases.test_user_scene_number_edge_cases)
 2025-08-10T01:11:05.7064923Z Test user_scene_number calculation with various actor distributions. ... ok
-2025-08-10T01:11:05.7065429Z 
+2025-08-10T01:11:05.7065429Z
 2025-08-10T01:11:05.7065648Z ----------------------------------------------------------------------
 2025-08-10T01:11:05.7066156Z Ran 14 tests in 0.927s
-2025-08-10T01:11:05.7066370Z 
+2025-08-10T01:11:05.7066370Z
 2025-08-10T01:11:05.7066491Z OK
 2025-08-10T01:11:05.9018273Z ✅ PASS: tests/test_firestore_state_helpers_edge_cases.py
 2025-08-10T01:11:05.9020213Z ----------------------------------------
@@ -3041,7 +3041,7 @@
 2025-08-10T01:11:06.1987336Z .
 2025-08-10T01:11:06.1988150Z ----------------------------------------------------------------------
 2025-08-10T01:11:06.1988976Z Ran 5 tests in 0.025s
-2025-08-10T01:11:06.1989443Z 
+2025-08-10T01:11:06.1989443Z
 2025-08-10T01:11:06.1990719Z OK
 2025-08-10T01:11:06.2382583Z ✅ PASS: tests/test_firestore_structured_fields.py
 2025-08-10T01:11:06.2383547Z ----------------------------------------
@@ -3054,7 +3054,7 @@
 2025-08-10T01:11:06.6073926Z .
 2025-08-10T01:11:06.6074662Z ----------------------------------------------------------------------
 2025-08-10T01:11:06.6075525Z Ran 2 tests in 0.326s
-2025-08-10T01:11:06.6076004Z 
+2025-08-10T01:11:06.6076004Z
 2025-08-10T01:11:06.6076318Z OK
 2025-08-10T01:11:06.6596889Z ✅ PASS: tests/test_flask_app_import.py
 2025-08-10T01:11:06.6598214Z ----------------------------------------
@@ -3490,7 +3490,7 @@
 2025-08-10T01:11:07.8046255Z .
 2025-08-10T01:11:07.8046572Z ----------------------------------------------------------------------
 2025-08-10T01:11:07.8047010Z Ran 51 tests in 0.012s
-2025-08-10T01:11:07.8047209Z 
+2025-08-10T01:11:07.8047209Z
 2025-08-10T01:11:07.8047310Z OK
 2025-08-10T01:11:07.9867384Z ✅ PASS: tests/test_game_state.py
 2025-08-10T01:11:07.9869178Z ----------------------------------------
@@ -3498,7 +3498,7 @@
 2025-08-10T01:11:08.0333059Z .......
 2025-08-10T01:11:08.0333545Z ----------------------------------------------------------------------
 2025-08-10T01:11:08.0334091Z Ran 7 tests in 0.000s
-2025-08-10T01:11:08.0334328Z 
+2025-08-10T01:11:08.0334328Z
 2025-08-10T01:11:08.0334451Z OK
 2025-08-10T01:11:08.0398808Z ✅ PASS: tests/test_game_state_division_by_zero.py
 2025-08-10T01:11:08.0400215Z ----------------------------------------
@@ -3506,7 +3506,7 @@
 2025-08-10T01:11:09.0324697Z .........
 2025-08-10T01:11:09.0326607Z ----------------------------------------------------------------------
 2025-08-10T01:11:09.0328544Z Ran 9 tests in 0.001s
-2025-08-10T01:11:09.0328764Z 
+2025-08-10T01:11:09.0328764Z
 2025-08-10T01:11:09.0328883Z OK
 2025-08-10T01:11:09.1645329Z ✅ PASS: tests/test_gemini_entity_sanitization.py
 2025-08-10T01:11:09.1647352Z ----------------------------------------
@@ -3548,10 +3548,10 @@
 2025-08-10T01:11:10.1776921Z 2025-08-10 01:11:10,175 - WARNING - ⚠️ Missing entities: ['Test Hero', 'Town Guard']
 2025-08-10T01:11:10.1778112Z 2025-08-10 01:11:10,175 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:10.1779058Z 2025-08-10 01:11:10,176 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:10.1779756Z 2025-08-10 01:11:10,176 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:10.1779756Z 2025-08-10 01:11:10,176 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:10.1780660Z CRITICAL: Generate planning options ONLY for Test Hero in Enchanted Forest.
 2025-08-10T01:11:10.1781428Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:10.1781889Z 
+2025-08-10T01:11:10.1781889Z
 2025-08-10T01:11:10.1782069Z Generate ONLY a planning block using the st...
 2025-08-10T01:11:10.1782848Z 2025-08-10 01:11:10,176 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Length: 47 chars
 2025-08-10T01:11:10.1784042Z 2025-08-10 01:11:10,176 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Content: {"narrative": "You continue your adventure..."}
@@ -3569,7 +3569,7 @@
 2025-08-10T01:11:10.1794848Z .
 2025-08-10T01:11:10.1795163Z ----------------------------------------------------------------------
 2025-08-10T01:11:10.1795604Z Ran 3 tests in 0.012s
-2025-08-10T01:11:10.1795796Z 
+2025-08-10T01:11:10.1795796Z
 2025-08-10T01:11:10.1795906Z OK
 2025-08-10T01:11:10.3581319Z ✅ PASS: tests/test_gemini_request_tdd.py
 2025-08-10T01:11:10.3582807Z ----------------------------------------
@@ -3603,10 +3603,10 @@
 2025-08-10T01:11:10.4106855Z Test that non-dict game_state raises ValidationError. ... ok
 2025-08-10T01:11:10.4108100Z test_wrong_story_history_type_raises_validation_error (__main__.TestGeminiRequestValidation.test_wrong_story_history_type_raises_validation_error)
 2025-08-10T01:11:10.4109243Z Test that non-list story_history raises ValidationError. ... ok
-2025-08-10T01:11:10.4109660Z 
+2025-08-10T01:11:10.4109660Z
 2025-08-10T01:11:10.4109880Z ----------------------------------------------------------------------
 2025-08-10T01:11:10.4110375Z Ran 14 tests in 0.003s
-2025-08-10T01:11:10.4110583Z 
+2025-08-10T01:11:10.4110583Z
 2025-08-10T01:11:10.4110693Z OK
 2025-08-10T01:11:10.4172735Z ✅ PASS: tests/test_gemini_request_validation.py
 2025-08-10T01:11:10.4178586Z ----------------------------------------
@@ -3637,7 +3637,7 @@
 2025-08-10T01:11:11.4365366Z ..
 2025-08-10T01:11:11.4365726Z ----------------------------------------------------------------------
 2025-08-10T01:11:11.4366186Z Ran 12 tests in 0.011s
-2025-08-10T01:11:11.4366412Z 
+2025-08-10T01:11:11.4366412Z
 2025-08-10T01:11:11.4366523Z OK
 2025-08-10T01:11:11.5714875Z ✅ PASS: tests/test_gemini_response.py
 2025-08-10T01:11:11.5718207Z ----------------------------------------
@@ -3649,9 +3649,9 @@
 2025-08-10T01:11:11.9288045Z   setup_file_logging()
 2025-08-10T01:11:11.9289271Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:11.9391365Z 2025-08-10 01:11:11,939 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:11.9392431Z 2025-08-10 01:11:11,939 - main - INFO -   Character: 
-2025-08-10T01:11:11.9393375Z 2025-08-10 01:11:11,939 - main - INFO -   Setting: 
-2025-08-10T01:11:11.9394349Z 2025-08-10 01:11:11,939 - main - INFO -   Description: 
+2025-08-10T01:11:11.9392431Z 2025-08-10 01:11:11,939 - main - INFO -   Character:
+2025-08-10T01:11:11.9393375Z 2025-08-10 01:11:11,939 - main - INFO -   Setting:
+2025-08-10T01:11:11.9394349Z 2025-08-10 01:11:11,939 - main - INFO -   Description:
 2025-08-10T01:11:11.9395407Z 2025-08-10 01:11:11,939 - main - INFO -   Custom options: []
 2025-08-10T01:11:11.9396473Z 2025-08-10 01:11:11,939 - main - INFO -   Selected prompts: []
 2025-08-10T01:11:12.1936009Z /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/pydantic/_internal/_config.py:323: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.11/migration/
@@ -3665,9 +3665,9 @@
 2025-08-10T01:11:12.9385246Z   setup_file_logging()
 2025-08-10T01:11:12.9385867Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:12.9448672Z 2025-08-10 01:11:12,944 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:12.9450984Z 2025-08-10 01:11:12,944 - main - INFO -   Character: 
-2025-08-10T01:11:12.9452970Z 2025-08-10 01:11:12,944 - main - INFO -   Setting: 
-2025-08-10T01:11:12.9453584Z 2025-08-10 01:11:12,944 - main - INFO -   Description: 
+2025-08-10T01:11:12.9450984Z 2025-08-10 01:11:12,944 - main - INFO -   Character:
+2025-08-10T01:11:12.9452970Z 2025-08-10 01:11:12,944 - main - INFO -   Setting:
+2025-08-10T01:11:12.9453584Z 2025-08-10 01:11:12,944 - main - INFO -   Description:
 2025-08-10T01:11:12.9454211Z 2025-08-10 01:11:12,944 - main - INFO -   Custom options: []
 2025-08-10T01:11:12.9454901Z 2025-08-10 01:11:12,945 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:12.9491174Z 2025-08-10 01:11:12,948 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3682,9 +3682,9 @@
 2025-08-10T01:11:12.9554029Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:12.9554501Z     asyncio.get_running_loop()
 2025-08-10T01:11:12.9554740Z RuntimeError: no running event loop
-2025-08-10T01:11:12.9554914Z 
+2025-08-10T01:11:12.9554914Z
 2025-08-10T01:11:12.9555094Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:12.9555355Z 
+2025-08-10T01:11:12.9555355Z
 2025-08-10T01:11:12.9555445Z Traceback (most recent call last):
 2025-08-10T01:11:12.9555946Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:12.9556420Z     return func(*args, **kwargs)
@@ -3718,9 +3718,9 @@
 2025-08-10T01:11:12.9575695Z --- END EXCEPTION ---
 2025-08-10T01:11:12.9577605Z 2025-08-10 01:11:12,953 - root - ERROR - 🔥🔴 Campaign creation failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 2025-08-10T01:11:12.9579791Z 2025-08-10 01:11:12,954 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:12.9580477Z 2025-08-10 01:11:12,954 - main - INFO -   Character: 
-2025-08-10T01:11:12.9581040Z 2025-08-10 01:11:12,954 - main - INFO -   Setting: 
-2025-08-10T01:11:12.9581533Z 2025-08-10 01:11:12,954 - main - INFO -   Description: 
+2025-08-10T01:11:12.9580477Z 2025-08-10 01:11:12,954 - main - INFO -   Character:
+2025-08-10T01:11:12.9581040Z 2025-08-10 01:11:12,954 - main - INFO -   Setting:
+2025-08-10T01:11:12.9581533Z 2025-08-10 01:11:12,954 - main - INFO -   Description:
 2025-08-10T01:11:12.9581875Z 2025-08-10 01:11:12,954 - main - INFO -   Custom options: []
 2025-08-10T01:11:12.9582300Z 2025-08-10 01:11:12,954 - main - INFO -   Selected prompts: ['narrative', 'character']
 2025-08-10T01:11:12.9583526Z 2025-08-10 01:11:12,957 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3735,9 +3735,9 @@
 2025-08-10T01:11:12.9618249Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:12.9619108Z     asyncio.get_running_loop()
 2025-08-10T01:11:12.9619606Z RuntimeError: no running event loop
-2025-08-10T01:11:12.9619889Z 
+2025-08-10T01:11:12.9619889Z
 2025-08-10T01:11:12.9620186Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:12.9620898Z 
+2025-08-10T01:11:12.9620898Z
 2025-08-10T01:11:12.9621064Z Traceback (most recent call last):
 2025-08-10T01:11:12.9622059Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:12.9622583Z     return func(*args, **kwargs)
@@ -3771,9 +3771,9 @@
 2025-08-10T01:11:12.9645423Z --- END EXCEPTION ---
 2025-08-10T01:11:12.9647129Z 2025-08-10 01:11:12,960 - root - ERROR - 🔥🔴 Campaign creation failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 2025-08-10T01:11:12.9648311Z 2025-08-10 01:11:12,961 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:12.9648698Z 2025-08-10 01:11:12,961 - main - INFO -   Character: 
-2025-08-10T01:11:12.9649004Z 2025-08-10 01:11:12,961 - main - INFO -   Setting: 
-2025-08-10T01:11:12.9649309Z 2025-08-10 01:11:12,961 - main - INFO -   Description: 
+2025-08-10T01:11:12.9648698Z 2025-08-10 01:11:12,961 - main - INFO -   Character:
+2025-08-10T01:11:12.9649004Z 2025-08-10 01:11:12,961 - main - INFO -   Setting:
+2025-08-10T01:11:12.9649309Z 2025-08-10 01:11:12,961 - main - INFO -   Description:
 2025-08-10T01:11:12.9649631Z 2025-08-10 01:11:12,961 - main - INFO -   Custom options: []
 2025-08-10T01:11:12.9649969Z 2025-08-10 01:11:12,961 - main - INFO -   Selected prompts: []
 2025-08-10T01:11:12.9651093Z 2025-08-10 01:11:12,963 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3788,9 +3788,9 @@
 2025-08-10T01:11:12.9684183Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:12.9685086Z     asyncio.get_running_loop()
 2025-08-10T01:11:12.9685550Z RuntimeError: no running event loop
-2025-08-10T01:11:12.9685880Z 
+2025-08-10T01:11:12.9685880Z
 2025-08-10T01:11:12.9686650Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:12.9687336Z 
+2025-08-10T01:11:12.9687336Z
 2025-08-10T01:11:12.9687507Z Traceback (most recent call last):
 2025-08-10T01:11:12.9688727Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:12.9689287Z     return func(*args, **kwargs)
@@ -3824,9 +3824,9 @@
 2025-08-10T01:11:12.9705741Z --- END EXCEPTION ---
 2025-08-10T01:11:12.9706775Z 2025-08-10 01:11:12,966 - root - ERROR - 🔥🔴 Campaign creation failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 2025-08-10T01:11:12.9707846Z 2025-08-10 01:11:12,968 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:12.9708213Z 2025-08-10 01:11:12,968 - main - INFO -   Character: 
-2025-08-10T01:11:12.9708510Z 2025-08-10 01:11:12,968 - main - INFO -   Setting: 
-2025-08-10T01:11:12.9708936Z 2025-08-10 01:11:12,968 - main - INFO -   Description: 
+2025-08-10T01:11:12.9708213Z 2025-08-10 01:11:12,968 - main - INFO -   Character:
+2025-08-10T01:11:12.9708510Z 2025-08-10 01:11:12,968 - main - INFO -   Setting:
+2025-08-10T01:11:12.9708936Z 2025-08-10 01:11:12,968 - main - INFO -   Description:
 2025-08-10T01:11:12.9709285Z 2025-08-10 01:11:12,968 - main - INFO -   Custom options: ['defaultWorld']
 2025-08-10T01:11:12.9709662Z 2025-08-10 01:11:12,968 - main - INFO -   Selected prompts: []
 2025-08-10T01:11:12.9717973Z 2025-08-10 01:11:12,971 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3841,9 +3841,9 @@
 2025-08-10T01:11:12.9766681Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:12.9767518Z     asyncio.get_running_loop()
 2025-08-10T01:11:12.9768232Z RuntimeError: no running event loop
-2025-08-10T01:11:12.9768552Z 
+2025-08-10T01:11:12.9768552Z
 2025-08-10T01:11:12.9768857Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:12.9769318Z 
+2025-08-10T01:11:12.9769318Z
 2025-08-10T01:11:12.9769481Z Traceback (most recent call last):
 2025-08-10T01:11:12.9770350Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:12.9771209Z     return func(*args, **kwargs)
@@ -3883,9 +3883,9 @@
 2025-08-10T01:11:12.9812289Z   setup_file_logging()
 2025-08-10T01:11:12.9812911Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:12.9853577Z 2025-08-10 01:11:12,985 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:12.9855585Z 2025-08-10 01:11:12,985 - main - INFO -   Character: 
-2025-08-10T01:11:12.9857161Z 2025-08-10 01:11:12,985 - main - INFO -   Setting: 
-2025-08-10T01:11:12.9858423Z 2025-08-10 01:11:12,985 - main - INFO -   Description: 
+2025-08-10T01:11:12.9855585Z 2025-08-10 01:11:12,985 - main - INFO -   Character:
+2025-08-10T01:11:12.9857161Z 2025-08-10 01:11:12,985 - main - INFO -   Setting:
+2025-08-10T01:11:12.9858423Z 2025-08-10 01:11:12,985 - main - INFO -   Description:
 2025-08-10T01:11:12.9860812Z 2025-08-10 01:11:12,985 - main - INFO -   Custom options: []
 2025-08-10T01:11:12.9864320Z 2025-08-10 01:11:12,986 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:12.9887567Z 2025-08-10 01:11:12,988 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3900,9 +3900,9 @@
 2025-08-10T01:11:12.9929156Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:12.9929970Z     asyncio.get_running_loop()
 2025-08-10T01:11:12.9930394Z RuntimeError: no running event loop
-2025-08-10T01:11:12.9930688Z 
+2025-08-10T01:11:12.9930688Z
 2025-08-10T01:11:12.9930990Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:12.9931449Z 
+2025-08-10T01:11:12.9931449Z
 2025-08-10T01:11:12.9931611Z Traceback (most recent call last):
 2025-08-10T01:11:12.9932479Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:12.9933357Z     return func(*args, **kwargs)
@@ -3942,9 +3942,9 @@
 2025-08-10T01:11:12.9974849Z   setup_file_logging()
 2025-08-10T01:11:12.9975463Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.0021944Z 2025-08-10 01:11:13,001 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0022647Z 2025-08-10 01:11:13,001 - main - INFO -   Character: 
-2025-08-10T01:11:13.0023086Z 2025-08-10 01:11:13,001 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0023415Z 2025-08-10 01:11:13,001 - main - INFO -   Description: 
+2025-08-10T01:11:13.0022647Z 2025-08-10 01:11:13,001 - main - INFO -   Character:
+2025-08-10T01:11:13.0023086Z 2025-08-10 01:11:13,001 - main - INFO -   Setting:
+2025-08-10T01:11:13.0023415Z 2025-08-10 01:11:13,001 - main - INFO -   Description:
 2025-08-10T01:11:13.0023842Z 2025-08-10 01:11:13,001 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0024214Z 2025-08-10 01:11:13,001 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0044781Z 2025-08-10 01:11:13,004 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -3959,9 +3959,9 @@
 2025-08-10T01:11:13.0136500Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0137635Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0138387Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0138711Z 
+2025-08-10T01:11:13.0138711Z
 2025-08-10T01:11:13.0139030Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0139508Z 
+2025-08-10T01:11:13.0139508Z
 2025-08-10T01:11:13.0139694Z Traceback (most recent call last):
 2025-08-10T01:11:13.0140651Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0141518Z     return func(*args, **kwargs)
@@ -4001,9 +4001,9 @@
 2025-08-10T01:11:13.0182341Z   setup_file_logging()
 2025-08-10T01:11:13.0182949Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.0202383Z 2025-08-10 01:11:13,019 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0205845Z 2025-08-10 01:11:13,020 - main - INFO -   Character: 
-2025-08-10T01:11:13.0206409Z 2025-08-10 01:11:13,020 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0206952Z 2025-08-10 01:11:13,020 - main - INFO -   Description: 
+2025-08-10T01:11:13.0205845Z 2025-08-10 01:11:13,020 - main - INFO -   Character:
+2025-08-10T01:11:13.0206409Z 2025-08-10 01:11:13,020 - main - INFO -   Setting:
+2025-08-10T01:11:13.0206952Z 2025-08-10 01:11:13,020 - main - INFO -   Description:
 2025-08-10T01:11:13.0207480Z 2025-08-10 01:11:13,020 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0208032Z 2025-08-10 01:11:13,020 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0231586Z 2025-08-10 01:11:13,022 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -4018,9 +4018,9 @@
 2025-08-10T01:11:13.0281724Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0282595Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0283297Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0283608Z 
+2025-08-10T01:11:13.0283608Z
 2025-08-10T01:11:13.0283924Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0284389Z 
+2025-08-10T01:11:13.0284389Z
 2025-08-10T01:11:13.0284557Z Traceback (most recent call last):
 2025-08-10T01:11:13.0290954Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0291888Z     return func(*args, **kwargs)
@@ -4060,9 +4060,9 @@
 2025-08-10T01:11:13.0333051Z   setup_file_logging()
 2025-08-10T01:11:13.0333647Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.0366801Z 2025-08-10 01:11:13,036 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0368368Z 2025-08-10 01:11:13,036 - main - INFO -   Character: 
-2025-08-10T01:11:13.0370374Z 2025-08-10 01:11:13,036 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0371844Z 2025-08-10 01:11:13,036 - main - INFO -   Description: 
+2025-08-10T01:11:13.0368368Z 2025-08-10 01:11:13,036 - main - INFO -   Character:
+2025-08-10T01:11:13.0370374Z 2025-08-10 01:11:13,036 - main - INFO -   Setting:
+2025-08-10T01:11:13.0371844Z 2025-08-10 01:11:13,036 - main - INFO -   Description:
 2025-08-10T01:11:13.0372312Z 2025-08-10 01:11:13,036 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0372698Z 2025-08-10 01:11:13,036 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0395473Z 2025-08-10 01:11:13,039 - root - ERROR - 🔥🔴 Failed to get user settings for user_591247: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -4077,9 +4077,9 @@
 2025-08-10T01:11:13.0438665Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0439483Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0439895Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0440175Z 
+2025-08-10T01:11:13.0440175Z
 2025-08-10T01:11:13.0440469Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0440901Z 
+2025-08-10T01:11:13.0440901Z
 2025-08-10T01:11:13.0441056Z Traceback (most recent call last):
 2025-08-10T01:11:13.0441888Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0442711Z     return func(*args, **kwargs)
@@ -4119,21 +4119,21 @@
 2025-08-10T01:11:13.0482145Z   setup_file_logging()
 2025-08-10T01:11:13.0482706Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.0545717Z 2025-08-10 01:11:13,054 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0547942Z 2025-08-10 01:11:13,054 - main - INFO -   Character: 
-2025-08-10T01:11:13.0549786Z 2025-08-10 01:11:13,054 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0551485Z 2025-08-10 01:11:13,054 - main - INFO -   Description: 
+2025-08-10T01:11:13.0547942Z 2025-08-10 01:11:13,054 - main - INFO -   Character:
+2025-08-10T01:11:13.0549786Z 2025-08-10 01:11:13,054 - main - INFO -   Setting:
+2025-08-10T01:11:13.0551485Z 2025-08-10 01:11:13,054 - main - INFO -   Description:
 2025-08-10T01:11:13.0553154Z 2025-08-10 01:11:13,055 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0554815Z 2025-08-10 01:11:13,055 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0563956Z 2025-08-10 01:11:13,056 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0566646Z 2025-08-10 01:11:13,056 - main - INFO -   Character: 
-2025-08-10T01:11:13.0571735Z 2025-08-10 01:11:13,057 - main - INFO -   Setting: 
+2025-08-10T01:11:13.0566646Z 2025-08-10 01:11:13,056 - main - INFO -   Character:
+2025-08-10T01:11:13.0571735Z 2025-08-10 01:11:13,057 - main - INFO -   Setting:
 2025-08-10T01:11:13.0577553Z 2025-08-10 01:11:13,057 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0578802Z 2025-08-10 01:11:13,057 - main - INFO -   Character: 
-2025-08-10T01:11:13.0580241Z 2025-08-10 01:11:13,057 - main - INFO -   Description: 
+2025-08-10T01:11:13.0578802Z 2025-08-10 01:11:13,057 - main - INFO -   Character:
+2025-08-10T01:11:13.0580241Z 2025-08-10 01:11:13,057 - main - INFO -   Description:
 2025-08-10T01:11:13.0582835Z 2025-08-10 01:11:13,057 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0584195Z 2025-08-10 01:11:13,058 - main - INFO -   Selected prompts: ['narrative']
-2025-08-10T01:11:13.0584581Z 2025-08-10 01:11:13,057 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0584898Z 2025-08-10 01:11:13,058 - main - INFO -   Description: 
+2025-08-10T01:11:13.0584581Z 2025-08-10 01:11:13,057 - main - INFO -   Setting:
+2025-08-10T01:11:13.0584898Z 2025-08-10 01:11:13,058 - main - INFO -   Description:
 2025-08-10T01:11:13.0585222Z 2025-08-10 01:11:13,058 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0585584Z 2025-08-10 01:11:13,058 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0597620Z 2025-08-10 01:11:13,059 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -4154,9 +4154,9 @@
 2025-08-10T01:11:13.0708407Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0708893Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0709139Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0709475Z 
+2025-08-10T01:11:13.0709475Z
 2025-08-10T01:11:13.0709643Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0709906Z 
+2025-08-10T01:11:13.0709906Z
 2025-08-10T01:11:13.0709997Z Traceback (most recent call last):
 2025-08-10T01:11:13.0710501Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0711215Z     return func(*args, **kwargs)
@@ -4198,9 +4198,9 @@
 2025-08-10T01:11:13.0754962Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0755821Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0756231Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0756549Z 
+2025-08-10T01:11:13.0756549Z
 2025-08-10T01:11:13.0756853Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0757325Z 
+2025-08-10T01:11:13.0757325Z
 2025-08-10T01:11:13.0757506Z Traceback (most recent call last):
 2025-08-10T01:11:13.0758609Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0759515Z     return func(*args, **kwargs)
@@ -4242,9 +4242,9 @@
 2025-08-10T01:11:13.0806685Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0807568Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0808333Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0808663Z 
+2025-08-10T01:11:13.0808663Z
 2025-08-10T01:11:13.0808996Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0809490Z 
+2025-08-10T01:11:13.0809490Z
 2025-08-10T01:11:13.0809671Z Traceback (most recent call last):
 2025-08-10T01:11:13.0810599Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0811479Z     return func(*args, **kwargs)
@@ -4284,9 +4284,9 @@
 2025-08-10T01:11:13.0852675Z   setup_file_logging()
 2025-08-10T01:11:13.0853259Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.0886555Z 2025-08-10 01:11:13,088 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.0887974Z 2025-08-10 01:11:13,088 - main - INFO -   Character: 
-2025-08-10T01:11:13.0889859Z 2025-08-10 01:11:13,088 - main - INFO -   Setting: 
-2025-08-10T01:11:13.0891257Z 2025-08-10 01:11:13,089 - main - INFO -   Description: 
+2025-08-10T01:11:13.0887974Z 2025-08-10 01:11:13,088 - main - INFO -   Character:
+2025-08-10T01:11:13.0889859Z 2025-08-10 01:11:13,088 - main - INFO -   Setting:
+2025-08-10T01:11:13.0891257Z 2025-08-10 01:11:13,089 - main - INFO -   Description:
 2025-08-10T01:11:13.0893149Z 2025-08-10 01:11:13,089 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.0894533Z 2025-08-10 01:11:13,089 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.0920819Z 2025-08-10 01:11:13,091 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -4301,9 +4301,9 @@
 2025-08-10T01:11:13.0963329Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.0964145Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.0964541Z RuntimeError: no running event loop
-2025-08-10T01:11:13.0964844Z 
+2025-08-10T01:11:13.0964844Z
 2025-08-10T01:11:13.0965163Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.0965618Z 
+2025-08-10T01:11:13.0965618Z
 2025-08-10T01:11:13.0965795Z Traceback (most recent call last):
 2025-08-10T01:11:13.0966765Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.0967644Z     return func(*args, **kwargs)
@@ -4343,9 +4343,9 @@
 2025-08-10T01:11:13.1008248Z   setup_file_logging()
 2025-08-10T01:11:13.1008848Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:13.1059057Z 2025-08-10 01:11:13,105 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:13.1062856Z 2025-08-10 01:11:13,105 - main - INFO -   Character: 
-2025-08-10T01:11:13.1063220Z 2025-08-10 01:11:13,105 - main - INFO -   Setting: 
-2025-08-10T01:11:13.1063551Z 2025-08-10 01:11:13,105 - main - INFO -   Description: 
+2025-08-10T01:11:13.1062856Z 2025-08-10 01:11:13,105 - main - INFO -   Character:
+2025-08-10T01:11:13.1063220Z 2025-08-10 01:11:13,105 - main - INFO -   Setting:
+2025-08-10T01:11:13.1063551Z 2025-08-10 01:11:13,105 - main - INFO -   Description:
 2025-08-10T01:11:13.1063979Z 2025-08-10 01:11:13,105 - main - INFO -   Custom options: []
 2025-08-10T01:11:13.1073935Z 2025-08-10 01:11:13,105 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:13.1085994Z 2025-08-10 01:11:13,108 - root - ERROR - 🔥🔴 Failed to get user settings for user_793045: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -4362,9 +4362,9 @@
 2025-08-10T01:11:13.1128718Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:13.1129565Z     asyncio.get_running_loop()
 2025-08-10T01:11:13.1129969Z RuntimeError: no running event loop
-2025-08-10T01:11:13.1130261Z 
+2025-08-10T01:11:13.1130261Z
 2025-08-10T01:11:13.1130548Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:13.1130989Z 
+2025-08-10T01:11:13.1130989Z
 2025-08-10T01:11:13.1131142Z Traceback (most recent call last):
 2025-08-10T01:11:13.1131951Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:13.1132740Z     return func(*args, **kwargs)
@@ -4398,10 +4398,10 @@
 2025-08-10T01:11:13.1158925Z --- END EXCEPTION ---
 2025-08-10T01:11:13.1160560Z 2025-08-10 01:11:13,111 - root - ERROR - 🔥🔴 Campaign creation failed: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
 2025-08-10T01:11:13.1161926Z ok
-2025-08-10T01:11:13.1162065Z 
+2025-08-10T01:11:13.1162065Z
 2025-08-10T01:11:13.1162269Z ----------------------------------------------------------------------
 2025-08-10T01:11:13.1162727Z Ran 9 tests in 1.186s
-2025-08-10T01:11:13.1162912Z 
+2025-08-10T01:11:13.1162912Z
 2025-08-10T01:11:13.1163018Z OK
 2025-08-10T01:11:13.3307225Z ✅ PASS: tests/test_gemini_response_integration.py
 2025-08-10T01:11:13.3308970Z ----------------------------------------
@@ -4410,7 +4410,7 @@
 2025-08-10T01:11:13.3816572Z .....
 2025-08-10T01:11:13.3817317Z ----------------------------------------------------------------------
 2025-08-10T01:11:13.3819350Z Ran 8 tests in 0.003s
-2025-08-10T01:11:13.3821346Z 
+2025-08-10T01:11:13.3821346Z
 2025-08-10T01:11:13.3821477Z OK
 2025-08-10T01:11:13.3889916Z ✅ PASS: tests/test_gemini_response_structured_fields.py
 2025-08-10T01:11:13.3891299Z ----------------------------------------
@@ -4420,7 +4420,7 @@
 2025-08-10T01:11:13.5113829Z .....
 2025-08-10T01:11:13.5116001Z ----------------------------------------------------------------------
 2025-08-10T01:11:13.5116497Z Ran 12 tests in 0.005s
-2025-08-10T01:11:13.5118054Z 
+2025-08-10T01:11:13.5118054Z
 2025-08-10T01:11:13.5120459Z OK
 2025-08-10T01:11:13.5272634Z ✅ PASS: tests/test_gemini_response_validation.py
 2025-08-10T01:11:13.5274950Z ----------------------------------------
@@ -4428,7 +4428,7 @@
 2025-08-10T01:11:14.5169540Z .....
 2025-08-10T01:11:14.5172006Z ----------------------------------------------------------------------
 2025-08-10T01:11:14.5178081Z Ran 5 tests in 0.000s
-2025-08-10T01:11:14.5178709Z 
+2025-08-10T01:11:14.5178709Z
 2025-08-10T01:11:14.5178826Z OK
 2025-08-10T01:11:14.6622921Z ✅ PASS: tests/test_gemini_token_management.py
 2025-08-10T01:11:14.6624429Z ----------------------------------------
@@ -4439,7 +4439,7 @@
 2025-08-10T01:11:15.0507406Z .
 2025-08-10T01:11:15.0510787Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.0511290Z Ran 1 test in 0.069s
-2025-08-10T01:11:15.0511484Z 
+2025-08-10T01:11:15.0511484Z
 2025-08-10T01:11:15.0511589Z OK
 2025-08-10T01:11:15.0511889Z \n--- Running PDF Generation Test ---
 2025-08-10T01:11:15.0512358Z --- PDF Generation Test Finished Successfully ---
@@ -4449,7 +4449,7 @@
 2025-08-10T01:11:15.1619490Z .......
 2025-08-10T01:11:15.1621526Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.1622074Z Ran 7 tests in 0.001s
-2025-08-10T01:11:15.1622303Z 
+2025-08-10T01:11:15.1622303Z
 2025-08-10T01:11:15.1622428Z OK
 2025-08-10T01:11:15.1689544Z ✅ PASS: tests/test_god_mode_json_display_red_green.py
 2025-08-10T01:11:15.1690569Z ----------------------------------------
@@ -4459,7 +4459,7 @@
 2025-08-10T01:11:15.2165775Z BUG DETECTED: Raw JSON would be logged instead of narrative
 2025-08-10T01:11:15.2166680Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.2168148Z Ran 4 tests in 0.001s
-2025-08-10T01:11:15.2168630Z 
+2025-08-10T01:11:15.2168630Z
 2025-08-10T01:11:15.2168899Z OK
 2025-08-10T01:11:15.2239749Z ✅ PASS: tests/test_god_mode_json_logging_bug.py
 2025-08-10T01:11:15.2241072Z ----------------------------------------
@@ -4467,7 +4467,7 @@
 2025-08-10T01:11:15.2718524Z .....
 2025-08-10T01:11:15.2719356Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.2720147Z Ran 5 tests in 0.001s
-2025-08-10T01:11:15.2721608Z 
+2025-08-10T01:11:15.2721608Z
 2025-08-10T01:11:15.2721874Z OK
 2025-08-10T01:11:15.2791338Z ✅ PASS: tests/test_god_mode_planning_blocks.py
 2025-08-10T01:11:15.2792692Z ----------------------------------------
@@ -4475,7 +4475,7 @@
 2025-08-10T01:11:15.5423252Z ..........
 2025-08-10T01:11:15.5424312Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.5425502Z Ran 10 tests in 0.005s
-2025-08-10T01:11:15.5425880Z 
+2025-08-10T01:11:15.5425880Z
 2025-08-10T01:11:15.5426140Z OK
 2025-08-10T01:11:15.5795278Z ✅ PASS: tests/test_god_mode_response_field.py
 2025-08-10T01:11:15.5796216Z ----------------------------------------
@@ -4504,7 +4504,7 @@
 2025-08-10T01:11:15.9589718Z .
 2025-08-10T01:11:15.9591636Z ----------------------------------------------------------------------
 2025-08-10T01:11:15.9592550Z Ran 4 tests in 0.042s
-2025-08-10T01:11:15.9593129Z 
+2025-08-10T01:11:15.9593129Z
 2025-08-10T01:11:15.9593656Z OK
 2025-08-10T01:11:16.0162662Z ✅ PASS: tests/test_granular_mock_control.py
 2025-08-10T01:11:16.0164341Z ----------------------------------------
@@ -4522,7 +4522,7 @@
 2025-08-10T01:11:16.2553124Z ....
 2025-08-10T01:11:16.2553462Z ----------------------------------------------------------------------
 2025-08-10T01:11:16.2553935Z Ran 13 tests in 0.001s
-2025-08-10T01:11:16.2554137Z 
+2025-08-10T01:11:16.2554137Z
 2025-08-10T01:11:16.2554255Z OK
 2025-08-10T01:11:16.2839362Z ✅ PASS: tests/test_hp_unknown_values.py
 2025-08-10T01:11:16.2840767Z ----------------------------------------
@@ -4531,7 +4531,7 @@
 2025-08-10T01:11:17.3357358Z ........
 2025-08-10T01:11:17.3359435Z ----------------------------------------------------------------------
 2025-08-10T01:11:17.3359931Z Ran 8 tests in 0.000s
-2025-08-10T01:11:17.3360136Z 
+2025-08-10T01:11:17.3360136Z
 2025-08-10T01:11:17.3360254Z OK
 2025-08-10T01:11:17.4951347Z ✅ PASS: tests/test_imports.py
 2025-08-10T01:11:17.4952733Z ----------------------------------------
@@ -4542,7 +4542,7 @@
 2025-08-10T01:11:17.5664842Z ...
 2025-08-10T01:11:17.5665940Z ----------------------------------------------------------------------
 2025-08-10T01:11:17.5667107Z Ran 10 tests in 0.006s
-2025-08-10T01:11:17.5667335Z 
+2025-08-10T01:11:17.5667335Z
 2025-08-10T01:11:17.5667446Z OK
 2025-08-10T01:11:17.5771625Z ✅ PASS: tests/test_incomplete_json_recovery.py
 2025-08-10T01:11:17.5772919Z ----------------------------------------
@@ -4550,7 +4550,7 @@
 2025-08-10T01:11:17.6814103Z ............
 2025-08-10T01:11:17.6815547Z ----------------------------------------------------------------------
 2025-08-10T01:11:17.6816042Z Ran 12 tests in 0.041s
-2025-08-10T01:11:17.6816251Z 
+2025-08-10T01:11:17.6816251Z
 2025-08-10T01:11:17.6816360Z OK
 2025-08-10T01:11:17.6932818Z ✅ PASS: tests/test_infrastructure.py
 2025-08-10T01:11:17.6934107Z ----------------------------------------
@@ -4566,15 +4566,15 @@
 2025-08-10T01:11:18.9238574Z Test that world_logic.py correctly expects 'user_input' field from MCP. ... ok
 2025-08-10T01:11:18.9239622Z test_red_phase_input_field_mismatch_detection (__main__.TestInputFieldTranslation.test_red_phase_input_field_mismatch_detection)
 2025-08-10T01:11:18.9240593Z RED PHASE: Test what would happen with wrong field names. ... ok
-2025-08-10T01:11:18.9240971Z 
+2025-08-10T01:11:18.9240971Z
 2025-08-10T01:11:18.9241171Z ----------------------------------------------------------------------
 2025-08-10T01:11:18.9241648Z Ran 5 tests in 0.000s
-2025-08-10T01:11:18.9241848Z 
+2025-08-10T01:11:18.9241848Z
 2025-08-10T01:11:18.9241954Z OK
 2025-08-10T01:11:18.9242753Z 🧪 Input Field Translation Validation Test
 2025-08-10T01:11:18.9244249Z Testing field translation across frontend → main.py → world_logic.py
 2025-08-10T01:11:18.9244832Z ================================================================================
-2025-08-10T01:11:18.9245127Z 
+2025-08-10T01:11:18.9245127Z
 2025-08-10T01:11:18.9245399Z 🔍 Testing end-to-end input field translation flow...
 2025-08-10T01:11:18.9246003Z    Frontend sends: {'input': 'I test the complete flow.', 'mode': 'character'}
 2025-08-10T01:11:18.9246644Z    main.py extracts: input = 'I test the complete flow.'
@@ -4585,7 +4585,7 @@
 2025-08-10T01:11:18.9251117Z ✅ Frontend → main.py: 'input' field extraction works correctly
 2025-08-10T01:11:18.9251798Z ✅ main.py → MCP: 'user_input' field translation works correctly
 2025-08-10T01:11:18.9252495Z ✅ MCP → world_logic.py: 'user_input' field extraction works correctly
-2025-08-10T01:11:18.9252882Z 
+2025-08-10T01:11:18.9252882Z
 2025-08-10T01:11:18.9253150Z 🔴 RED PHASE: Testing input field mismatch scenarios
 2025-08-10T01:11:18.9253746Z 🔴 If main.py used 'user_input' for frontend: None extracted
 2025-08-10T01:11:18.9254675Z 🔴 If main.py sent 'input' to MCP: None extracted by world_logic.py
@@ -4600,7 +4600,7 @@
 2025-08-10T01:11:19.1526708Z Testing parse_structured_response with raw JSON...
 2025-08-10T01:11:19.1527231Z Input (first 100 chars): {
 2025-08-10T01:11:19.1528204Z     "narrative": "[Mode: STORY MODE]\n[SESSION_HEADER]\nTimestamp: Year 11 New Peace, Kythorn Day ...
-2025-08-10T01:11:19.1528835Z 
+2025-08-10T01:11:19.1528835Z
 2025-08-10T01:11:19.1529129Z 🔍 Results:
 2025-08-10T01:11:19.1529471Z    response_text type: <class 'str'>
 2025-08-10T01:11:19.1529933Z    response_text starts with '{': False
@@ -4611,9 +4611,9 @@
 2025-08-10T01:11:19.1532374Z Status: Lvl 1 Unknown | HP: 0/0 (Temp: 0) | XP: 0/300 | Gold: 0gp
 2025-08-10T01:11:19.1532917Z Resources: HD: 0/0
 2025-08-10T01:11:19.1533263Z    structured_response exists: True
-2025-08-10T01:11:19.1533540Z 
+2025-08-10T01:11:19.1533540Z
 2025-08-10T01:11:19.1533906Z ✅ parse_structured_response correctly extracted narrative!
-2025-08-10T01:11:19.1534316Z 
+2025-08-10T01:11:19.1534316Z
 2025-08-10T01:11:19.1534574Z 🟢 parse_structured_response works correctly
 2025-08-10T01:11:19.1577003Z ✅ PASS: tests/test_json_bug_fix.py
 2025-08-10T01:11:19.1578493Z ----------------------------------------
@@ -4626,22 +4626,22 @@
 2025-08-10T01:11:19.1915371Z Test 1: Well-formed JSON
 2025-08-10T01:11:19.1915780Z   Result starts with '{': False
 2025-08-10T01:11:19.1919524Z   Result: You enter the dark cave......
-2025-08-10T01:11:19.1922323Z 
+2025-08-10T01:11:19.1922323Z
 2025-08-10T01:11:19.1922556Z Test 2: Malformed JSON without proper structure
 2025-08-10T01:11:19.1923053Z   Result starts with '{': True
 2025-08-10T01:11:19.1923545Z   Result: {"Some malformed JSON that would cause the bug...
 2025-08-10T01:11:19.1924251Z   ⚠️  EXPECTED: Malformed JSON returned as fallback
 2025-08-10T01:11:19.1925155Z   This is expected behavior for completely broken JSON
-2025-08-10T01:11:19.1925520Z 
+2025-08-10T01:11:19.1925520Z
 2025-08-10T01:11:19.1925709Z Test 3: JSON that triggers the temporary fix
 2025-08-10T01:11:19.1926158Z   Result: The story text that should be extracted
 2025-08-10T01:11:19.1926662Z   ✅ Narrative correctly extracted
-2025-08-10T01:11:19.1927191Z 
+2025-08-10T01:11:19.1927191Z
 2025-08-10T01:11:19.1927387Z Test 4: Full flow with GeminiResponse creation
 2025-08-10T01:11:19.1928217Z   narrative_text: You chose option 2. Let me create a character for ...
 2025-08-10T01:11:19.1928864Z   narrative_text starts with '{': False
 2025-08-10T01:11:19.1929512Z   ✅ Full flow works correctly - no JSON in narrative_text
-2025-08-10T01:11:19.1929901Z 
+2025-08-10T01:11:19.1929901Z
 2025-08-10T01:11:19.1930088Z ✅ TESTS PASSED!
 2025-08-10T01:11:19.1930453Z The JSON bug has been fixed successfully.
 2025-08-10T01:11:19.1930989Z Note: Malformed JSON fallback is expected behavior.
@@ -4654,17 +4654,17 @@
 2025-08-10T01:11:20.1951555Z ============================================================
 2025-08-10T01:11:20.1952031Z 1. Testing _get_text_from_response simulation...
 2025-08-10T01:11:20.1952511Z 2. Testing _process_structured_response...
-2025-08-10T01:11:20.1952802Z 
+2025-08-10T01:11:20.1952802Z
 2025-08-10T01:11:20.1953251Z 🔍 After _process_structured_response:
 2025-08-10T01:11:20.1953665Z    response_text type: <class 'str'>
 2025-08-10T01:11:20.1954068Z    response_text starts with '{': False
 2025-08-10T01:11:20.1954467Z    response_text[:100]: [Mode: STORY MODE]
 2025-08-10T01:11:20.1954873Z [CHARACTER CREATION - Step 2 of 7]
-2025-08-10T01:11:20.1955159Z 
+2025-08-10T01:11:20.1955159Z
 2025-08-10T01:11:20.1955328Z "Excellent choice, adventurer!" The voice tha
-2025-08-10T01:11:20.1955626Z 
+2025-08-10T01:11:20.1955626Z
 2025-08-10T01:11:20.1955906Z ✅ No bug found - response_text is clean narrative
-2025-08-10T01:11:20.1956334Z 
+2025-08-10T01:11:20.1956334Z
 2025-08-10T01:11:20.1956577Z 🟢 Could not reproduce bug with this scenario
 2025-08-10T01:11:20.3571677Z ✅ PASS: tests/test_json_bug_scenario.py
 2025-08-10T01:11:20.3573415Z ----------------------------------------
@@ -4676,32 +4676,32 @@
 2025-08-10T01:11:20.3912020Z   Starts with '{': False
 2025-08-10T01:11:20.3912405Z   First 100 chars: [Mode: STORY MODE]
 2025-08-10T01:11:20.3912889Z [CHARACTER CREATION - Step 2 of 7]
-2025-08-10T01:11:20.3913175Z 
+2025-08-10T01:11:20.3913175Z
 2025-08-10T01:11:20.3913367Z "Excellent choice, adventurer!" The voice tha
-2025-08-10T01:11:20.3913684Z 
+2025-08-10T01:11:20.3913684Z
 2025-08-10T01:11:20.3913833Z After appending state updates:
 2025-08-10T01:11:20.3914223Z   Length increased from 155 to 315
 2025-08-10T01:11:20.3914621Z   Still starts with '{': False
 2025-08-10T01:11:20.3915039Z   Contains 'STATE_UPDATES_PROPOSED': True
-2025-08-10T01:11:20.3915346Z 
+2025-08-10T01:11:20.3915346Z
 2025-08-10T01:11:20.3915549Z Conclusion: State updates don't cause the JSON bug
-2025-08-10T01:11:20.3915907Z 
+2025-08-10T01:11:20.3915907Z
 2025-08-10T01:11:20.3916064Z ============================================================
 2025-08-10T01:11:20.3916684Z Testing edge cases where parse_structured_response might return JSON
-2025-08-10T01:11:20.3917136Z 
+2025-08-10T01:11:20.3917136Z
 2025-08-10T01:11:20.3917402Z Test case 1: {"narrative": "Test story", "entities_mentioned": ...
 2025-08-10T01:11:20.3918129Z   Result starts with '{': False
 2025-08-10T01:11:20.3918509Z   Result: Test story
-2025-08-10T01:11:20.3919090Z 
+2025-08-10T01:11:20.3919090Z
 2025-08-10T01:11:20.3919322Z Test case 2: {"narrative": "Test story" "broken json here...
 2025-08-10T01:11:20.3919835Z   Result starts with '{': False
 2025-08-10T01:11:20.3920208Z   Result: Test story
-2025-08-10T01:11:20.3920413Z 
+2025-08-10T01:11:20.3920413Z
 2025-08-10T01:11:20.3920634Z Test case 3: {"Some weird text that starts with brace...
 2025-08-10T01:11:20.3921136Z   Result starts with '{': True
 2025-08-10T01:11:20.3921771Z   Result: {"Some weird text that starts with brace
 2025-08-10T01:11:20.3922432Z   🚨 FOUND IT! This input causes JSON to be returned!
-2025-08-10T01:11:20.3922775Z 
+2025-08-10T01:11:20.3922775Z
 2025-08-10T01:11:20.3923132Z 🔴 Found a case where parse_structured_response returns JSON!
 2025-08-10T01:11:20.3967547Z ✅ PASS: tests/test_json_bug_state_updates.py
 2025-08-10T01:11:20.3969148Z ----------------------------------------
@@ -4713,7 +4713,7 @@
 2025-08-10T01:11:20.4478096Z .......
 2025-08-10T01:11:20.4478723Z ----------------------------------------------------------------------
 2025-08-10T01:11:20.4479245Z Ran 14 tests in 0.003s
-2025-08-10T01:11:20.4480598Z 
+2025-08-10T01:11:20.4480598Z
 2025-08-10T01:11:20.4480832Z OK
 2025-08-10T01:11:20.4566252Z ✅ PASS: tests/test_json_cleanup_safety.py
 2025-08-10T01:11:20.4569340Z ----------------------------------------
@@ -4792,7 +4792,7 @@
 2025-08-10T01:11:20.5138742Z Test that old markdown state updates are handled gracefully ... WARNING:root:⚠️ 🔍 MALFORMED_JSON_DETECTED: Attempting field extraction from malformed JSON
 2025-08-10T01:11:20.5139965Z DEBUG:root:🔍 MALFORMED_JSON_CONTENT: Length: 212 chars
 2025-08-10T01:11:20.5140733Z DEBUG:root:🔍 MALFORMED_JSON_CONTENT: You swing your sword at the orc.
-2025-08-10T01:11:20.5141204Z 
+2025-08-10T01:11:20.5141204Z
 2025-08-10T01:11:20.5141367Z         [STATE_UPDATES_PROPOSED]
 2025-08-10T01:11:20.5141820Z         player_character_data: {"hp_current": "18"}
 2025-08-10T01:11:20.5142349Z         npc_data: {"orc_warrior": {"status": "wounded"}}
@@ -4806,10 +4806,10 @@
 2025-08-10T01:11:20.5148399Z ok
 2025-08-10T01:11:20.5149004Z test_state_updates_not_in_narrative (__main__.TestStateUpdateBugs.test_state_updates_not_in_narrative)
 2025-08-10T01:11:20.5149885Z Test that state updates don't leak into narrative text ... ok
-2025-08-10T01:11:20.5150287Z 
+2025-08-10T01:11:20.5150287Z
 2025-08-10T01:11:20.5150509Z ----------------------------------------------------------------------
 2025-08-10T01:11:20.5151009Z Ran 18 tests in 0.005s
-2025-08-10T01:11:20.5151243Z 
+2025-08-10T01:11:20.5151243Z
 2025-08-10T01:11:20.5151357Z OK
 2025-08-10T01:11:20.5186927Z ✅ PASS: tests/test_json_display_bugs.py
 2025-08-10T01:11:20.5188369Z ----------------------------------------
@@ -4821,7 +4821,7 @@
 2025-08-10T01:11:20.5684841Z ...
 2025-08-10T01:11:20.5685225Z ----------------------------------------------------------------------
 2025-08-10T01:11:20.5685730Z Ran 9 tests in 0.002s
-2025-08-10T01:11:20.5685952Z 
+2025-08-10T01:11:20.5685952Z
 2025-08-10T01:11:20.5686068Z OK
 2025-08-10T01:11:20.5757573Z ✅ PASS: tests/test_json_display_fix.py
 2025-08-10T01:11:20.5758745Z ----------------------------------------
@@ -4829,7 +4829,7 @@
 2025-08-10T01:11:20.6125533Z ..
 2025-08-10T01:11:20.6126350Z ----------------------------------------------------------------------
 2025-08-10T01:11:20.6127218Z Ran 2 tests in 0.000s
-2025-08-10T01:11:20.6128247Z 
+2025-08-10T01:11:20.6128247Z
 2025-08-10T01:11:20.6129109Z OK
 2025-08-10T01:11:20.6183681Z ✅ PASS: tests/test_json_mode_constants.py
 2025-08-10T01:11:20.6185023Z ----------------------------------------
@@ -4840,7 +4840,7 @@
 2025-08-10T01:11:21.6136275Z ..
 2025-08-10T01:11:21.6137335Z ----------------------------------------------------------------------
 2025-08-10T01:11:21.6139044Z Ran 6 tests in 0.001s
-2025-08-10T01:11:21.6139256Z 
+2025-08-10T01:11:21.6139256Z
 2025-08-10T01:11:21.6139369Z OK
 2025-08-10T01:11:21.7577387Z ✅ PASS: tests/test_json_mode_preference.py
 2025-08-10T01:11:21.7579073Z ----------------------------------------
@@ -4848,7 +4848,7 @@
 2025-08-10T01:11:21.8054188Z ...
 2025-08-10T01:11:21.8055299Z ----------------------------------------------------------------------
 2025-08-10T01:11:21.8055829Z Ran 3 tests in 0.001s
-2025-08-10T01:11:21.8056038Z 
+2025-08-10T01:11:21.8056038Z
 2025-08-10T01:11:21.8056164Z OK
 2025-08-10T01:11:21.8056741Z ✅ Empty state updates handled correctly
 2025-08-10T01:11:21.8057326Z ✅ JSON response with state updates properly converted
@@ -4864,7 +4864,7 @@
 2025-08-10T01:11:22.8621088Z ....
 2025-08-10T01:11:22.8622098Z ----------------------------------------------------------------------
 2025-08-10T01:11:22.8622809Z Ran 8 tests in 0.003s
-2025-08-10T01:11:22.8623236Z 
+2025-08-10T01:11:22.8623236Z
 2025-08-10T01:11:22.8623486Z OK
 2025-08-10T01:11:23.0242756Z ✅ PASS: tests/test_json_only_comprehensive.py
 2025-08-10T01:11:23.0245979Z ----------------------------------------
@@ -4910,7 +4910,7 @@
 2025-08-10T01:11:24.0716512Z ..
 2025-08-10T01:11:24.0717054Z ----------------------------------------------------------------------
 2025-08-10T01:11:24.0718084Z Ran 9 tests in 0.015s
-2025-08-10T01:11:24.0718474Z 
+2025-08-10T01:11:24.0718474Z
 2025-08-10T01:11:24.0718734Z OK
 2025-08-10T01:11:24.2204672Z ✅ PASS: tests/test_json_only_mode.py
 2025-08-10T01:11:24.2206110Z ----------------------------------------
@@ -4933,9 +4933,9 @@
 2025-08-10T01:11:25.5414675Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.5415469Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.5415894Z RuntimeError: no running event loop
-2025-08-10T01:11:25.5416178Z 
+2025-08-10T01:11:25.5416178Z
 2025-08-10T01:11:25.5416463Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.5416900Z 
+2025-08-10T01:11:25.5416900Z
 2025-08-10T01:11:25.5417077Z Traceback (most recent call last):
 2025-08-10T01:11:25.5418196Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.5418992Z     return func(*args, **kwargs)
@@ -4981,9 +4981,9 @@
 2025-08-10T01:11:25.5571226Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.5572108Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.5572537Z RuntimeError: no running event loop
-2025-08-10T01:11:25.5572823Z 
+2025-08-10T01:11:25.5572823Z
 2025-08-10T01:11:25.5573116Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.5573569Z 
+2025-08-10T01:11:25.5573569Z
 2025-08-10T01:11:25.5573722Z Traceback (most recent call last):
 2025-08-10T01:11:25.5574547Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.5575457Z     return func(*args, **kwargs)
@@ -5029,9 +5029,9 @@
 2025-08-10T01:11:25.5697399Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.5698600Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.5699067Z RuntimeError: no running event loop
-2025-08-10T01:11:25.5699379Z 
+2025-08-10T01:11:25.5699379Z
 2025-08-10T01:11:25.5699699Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.5700185Z 
+2025-08-10T01:11:25.5700185Z
 2025-08-10T01:11:25.5700360Z Traceback (most recent call last):
 2025-08-10T01:11:25.5701719Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.5702649Z     return func(*args, **kwargs)
@@ -5077,9 +5077,9 @@
 2025-08-10T01:11:25.5828545Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.5829453Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.5829912Z RuntimeError: no running event loop
-2025-08-10T01:11:25.5830223Z 
+2025-08-10T01:11:25.5830223Z
 2025-08-10T01:11:25.5830567Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.5831041Z 
+2025-08-10T01:11:25.5831041Z
 2025-08-10T01:11:25.5831212Z Traceback (most recent call last):
 2025-08-10T01:11:25.5832298Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.5833236Z     return func(*args, **kwargs)
@@ -5125,9 +5125,9 @@
 2025-08-10T01:11:25.5963458Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.5964307Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.5964741Z RuntimeError: no running event loop
-2025-08-10T01:11:25.5965035Z 
+2025-08-10T01:11:25.5965035Z
 2025-08-10T01:11:25.5965340Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.5965828Z 
+2025-08-10T01:11:25.5965828Z
 2025-08-10T01:11:25.5966008Z Traceback (most recent call last):
 2025-08-10T01:11:25.5966874Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.5967995Z     return func(*args, **kwargs)
@@ -5173,9 +5173,9 @@
 2025-08-10T01:11:25.6099807Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:25.6100561Z     asyncio.get_running_loop()
 2025-08-10T01:11:25.6100946Z RuntimeError: no running event loop
-2025-08-10T01:11:25.6101214Z 
+2025-08-10T01:11:25.6101214Z
 2025-08-10T01:11:25.6101491Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:25.6101934Z 
+2025-08-10T01:11:25.6101934Z
 2025-08-10T01:11:25.6102086Z Traceback (most recent call last):
 2025-08-10T01:11:25.6102862Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:25.6103627Z     return func(*args, **kwargs)
@@ -5211,7 +5211,7 @@
 2025-08-10T01:11:25.6134276Z .
 2025-08-10T01:11:25.6134609Z ----------------------------------------------------------------------
 2025-08-10T01:11:25.6135074Z Ran 6 tests in 1.053s
-2025-08-10T01:11:25.6135271Z 
+2025-08-10T01:11:25.6135271Z
 2025-08-10T01:11:25.6135374Z OK
 2025-08-10T01:11:25.8312493Z ✅ PASS: tests/test_json_state_updates_fix.py
 2025-08-10T01:11:25.8313933Z ----------------------------------------
@@ -5219,7 +5219,7 @@
 2025-08-10T01:11:25.8789666Z ........................................................
 2025-08-10T01:11:25.8791204Z ----------------------------------------------------------------------
 2025-08-10T01:11:25.8791713Z Ran 56 tests in 0.004s
-2025-08-10T01:11:25.8791934Z 
+2025-08-10T01:11:25.8791934Z
 2025-08-10T01:11:25.8792048Z OK
 2025-08-10T01:11:25.8853384Z ✅ PASS: tests/test_json_utils.py
 2025-08-10T01:11:25.8854588Z ----------------------------------------
@@ -5227,7 +5227,7 @@
 2025-08-10T01:11:25.9225803Z .....
 2025-08-10T01:11:25.9227047Z ----------------------------------------------------------------------
 2025-08-10T01:11:25.9227580Z Ran 5 tests in 0.001s
-2025-08-10T01:11:25.9228125Z 
+2025-08-10T01:11:25.9228125Z
 2025-08-10T01:11:25.9228245Z OK
 2025-08-10T01:11:25.9281076Z ✅ PASS: tests/test_loading_messages.py
 2025-08-10T01:11:25.9282641Z ----------------------------------------
@@ -5235,7 +5235,7 @@
 2025-08-10T01:11:25.9760171Z ....
 2025-08-10T01:11:25.9761564Z ----------------------------------------------------------------------
 2025-08-10T01:11:25.9762090Z Ran 4 tests in 0.001s
-2025-08-10T01:11:25.9762308Z 
+2025-08-10T01:11:25.9762308Z
 2025-08-10T01:11:25.9762419Z OK
 2025-08-10T01:11:25.9833024Z ✅ PASS: tests/test_luke_campaign_god_mode_json_bug.py
 2025-08-10T01:11:25.9834333Z ----------------------------------------
@@ -5243,7 +5243,7 @@
 2025-08-10T01:11:26.2095705Z ...
 2025-08-10T01:11:26.2097176Z ----------------------------------------------------------------------
 2025-08-10T01:11:26.2097688Z Ran 3 tests in 0.000s
-2025-08-10T01:11:26.2098094Z 
+2025-08-10T01:11:26.2098094Z
 2025-08-10T01:11:26.2098218Z OK
 2025-08-10T01:11:26.2433930Z ✅ PASS: tests/test_luke_campaign_jedi_master_gender_fix.py
 2025-08-10T01:11:26.2435396Z ----------------------------------------
@@ -5262,9 +5262,9 @@
 2025-08-10T01:11:27.4868326Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.4869129Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.4869540Z RuntimeError: no running event loop
-2025-08-10T01:11:27.4869833Z 
+2025-08-10T01:11:27.4869833Z
 2025-08-10T01:11:27.4870124Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.4870584Z 
+2025-08-10T01:11:27.4870584Z
 2025-08-10T01:11:27.4870737Z Traceback (most recent call last):
 2025-08-10T01:11:27.4871585Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.4872537Z     return func(*args, **kwargs)
@@ -5310,9 +5310,9 @@
 2025-08-10T01:11:27.5009706Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.5010534Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.5011211Z RuntimeError: no running event loop
-2025-08-10T01:11:27.5011512Z 
+2025-08-10T01:11:27.5011512Z
 2025-08-10T01:11:27.5011811Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.5012266Z 
+2025-08-10T01:11:27.5012266Z
 2025-08-10T01:11:27.5012427Z Traceback (most recent call last):
 2025-08-10T01:11:27.5013297Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.5014395Z     return func(*args, **kwargs)
@@ -5358,9 +5358,9 @@
 2025-08-10T01:11:27.5139299Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.5140153Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.5140577Z RuntimeError: no running event loop
-2025-08-10T01:11:27.5140871Z 
+2025-08-10T01:11:27.5140871Z
 2025-08-10T01:11:27.5141175Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.5141619Z 
+2025-08-10T01:11:27.5141619Z
 2025-08-10T01:11:27.5141780Z Traceback (most recent call last):
 2025-08-10T01:11:27.5142651Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.5143505Z     return func(*args, **kwargs)
@@ -5406,9 +5406,9 @@
 2025-08-10T01:11:27.5259702Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.5260587Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.5261051Z RuntimeError: no running event loop
-2025-08-10T01:11:27.5261393Z 
+2025-08-10T01:11:27.5261393Z
 2025-08-10T01:11:27.5261726Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.5262204Z 
+2025-08-10T01:11:27.5262204Z
 2025-08-10T01:11:27.5262379Z Traceback (most recent call last):
 2025-08-10T01:11:27.5263493Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.5264425Z     return func(*args, **kwargs)
@@ -5454,9 +5454,9 @@
 2025-08-10T01:11:27.5401486Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.5402352Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.5402792Z RuntimeError: no running event loop
-2025-08-10T01:11:27.5403084Z 
+2025-08-10T01:11:27.5403084Z
 2025-08-10T01:11:27.5403397Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.5403847Z 
+2025-08-10T01:11:27.5403847Z
 2025-08-10T01:11:27.5404015Z Traceback (most recent call last):
 2025-08-10T01:11:27.5404878Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.5405739Z     return func(*args, **kwargs)
@@ -5502,9 +5502,9 @@
 2025-08-10T01:11:27.5529199Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:27.5530021Z     asyncio.get_running_loop()
 2025-08-10T01:11:27.5530441Z RuntimeError: no running event loop
-2025-08-10T01:11:27.5530742Z 
+2025-08-10T01:11:27.5530742Z
 2025-08-10T01:11:27.5531040Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:27.5531504Z 
+2025-08-10T01:11:27.5531504Z
 2025-08-10T01:11:27.5531674Z Traceback (most recent call last):
 2025-08-10T01:11:27.5532576Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:27.5533514Z     return func(*args, **kwargs)
@@ -5541,7 +5541,7 @@
 2025-08-10T01:11:27.5580395Z .......
 2025-08-10T01:11:27.5580750Z ----------------------------------------------------------------------
 2025-08-10T01:11:27.5581221Z Ran 20 tests in 0.086s
-2025-08-10T01:11:27.5581443Z 
+2025-08-10T01:11:27.5581443Z
 2025-08-10T01:11:27.5581560Z OK
 2025-08-10T01:11:27.7798515Z ✅ PASS: tests/test_main.py
 2025-08-10T01:11:27.7799845Z ----------------------------------------
@@ -5564,9 +5564,9 @@
 2025-08-10T01:11:29.1012429Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1013203Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1013629Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1013903Z 
+2025-08-10T01:11:29.1013903Z
 2025-08-10T01:11:29.1014191Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1014616Z 
+2025-08-10T01:11:29.1014616Z
 2025-08-10T01:11:29.1014767Z Traceback (most recent call last):
 2025-08-10T01:11:29.1015606Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1016420Z     return func(*args, **kwargs)
@@ -5612,9 +5612,9 @@
 2025-08-10T01:11:29.1163717Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1164944Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1165381Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1165668Z 
+2025-08-10T01:11:29.1165668Z
 2025-08-10T01:11:29.1165972Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1166416Z 
+2025-08-10T01:11:29.1166416Z
 2025-08-10T01:11:29.1166580Z Traceback (most recent call last):
 2025-08-10T01:11:29.1167456Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1168548Z     return func(*args, **kwargs)
@@ -5661,9 +5661,9 @@
 2025-08-10T01:11:29.1321864Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1323795Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1324216Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1324505Z 
+2025-08-10T01:11:29.1324505Z
 2025-08-10T01:11:29.1324804Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1325638Z 
+2025-08-10T01:11:29.1325638Z
 2025-08-10T01:11:29.1325827Z Traceback (most recent call last):
 2025-08-10T01:11:29.1326760Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1327548Z     return func(*args, **kwargs)
@@ -5709,9 +5709,9 @@
 2025-08-10T01:11:29.1463637Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1464403Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1464817Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1465132Z 
+2025-08-10T01:11:29.1465132Z
 2025-08-10T01:11:29.1465483Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1465978Z 
+2025-08-10T01:11:29.1465978Z
 2025-08-10T01:11:29.1466146Z Traceback (most recent call last):
 2025-08-10T01:11:29.1466994Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1468146Z     return func(*args, **kwargs)
@@ -5757,9 +5757,9 @@
 2025-08-10T01:11:29.1596122Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1597270Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1597627Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1598047Z 
+2025-08-10T01:11:29.1598047Z
 2025-08-10T01:11:29.1598228Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1598502Z 
+2025-08-10T01:11:29.1598502Z
 2025-08-10T01:11:29.1598597Z Traceback (most recent call last):
 2025-08-10T01:11:29.1599345Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1599878Z     return func(*args, **kwargs)
@@ -5801,9 +5801,9 @@
 2025-08-10T01:11:29.1634444Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1635280Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1635670Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1635905Z 
+2025-08-10T01:11:29.1635905Z
 2025-08-10T01:11:29.1636745Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1637217Z 
+2025-08-10T01:11:29.1637217Z
 2025-08-10T01:11:29.1637382Z Traceback (most recent call last):
 2025-08-10T01:11:29.1638558Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1639421Z     return func(*args, **kwargs)
@@ -5849,9 +5849,9 @@
 2025-08-10T01:11:29.1785866Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.1786557Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.1786979Z RuntimeError: no running event loop
-2025-08-10T01:11:29.1787265Z 
+2025-08-10T01:11:29.1787265Z
 2025-08-10T01:11:29.1787561Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.1788273Z 
+2025-08-10T01:11:29.1788273Z
 2025-08-10T01:11:29.1788449Z Traceback (most recent call last):
 2025-08-10T01:11:29.1789433Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.1790268Z     return func(*args, **kwargs)
@@ -5901,9 +5901,9 @@
 2025-08-10T01:11:29.2007655Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:29.2008799Z     asyncio.get_running_loop()
 2025-08-10T01:11:29.2009244Z RuntimeError: no running event loop
-2025-08-10T01:11:29.2009535Z 
+2025-08-10T01:11:29.2009535Z
 2025-08-10T01:11:29.2009832Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:29.2010285Z 
+2025-08-10T01:11:29.2010285Z
 2025-08-10T01:11:29.2010446Z Traceback (most recent call last):
 2025-08-10T01:11:29.2011310Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:29.2012428Z     return func(*args, **kwargs)
@@ -5948,7 +5948,7 @@
 2025-08-10T01:11:29.2212985Z .
 2025-08-10T01:11:29.2215101Z ----------------------------------------------------------------------
 2025-08-10T01:11:29.2218108Z Ran 10 tests in 1.102s
-2025-08-10T01:11:29.2218359Z 
+2025-08-10T01:11:29.2218359Z
 2025-08-10T01:11:29.2218467Z OK
 2025-08-10T01:11:29.4691278Z ✅ PASS: tests/test_main_auth.py
 2025-08-10T01:11:29.4694764Z ----------------------------------------
@@ -5967,9 +5967,9 @@
 2025-08-10T01:11:30.7623838Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.7624641Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.7625134Z RuntimeError: no running event loop
-2025-08-10T01:11:30.7625419Z 
+2025-08-10T01:11:30.7625419Z
 2025-08-10T01:11:30.7625713Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.7626156Z 
+2025-08-10T01:11:30.7626156Z
 2025-08-10T01:11:30.7626312Z Traceback (most recent call last):
 2025-08-10T01:11:30.7627195Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.7631176Z     return func(*args, **kwargs)
@@ -6011,9 +6011,9 @@
 2025-08-10T01:11:30.7664601Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.7665062Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.7665299Z RuntimeError: no running event loop
-2025-08-10T01:11:30.7665463Z 
+2025-08-10T01:11:30.7665463Z
 2025-08-10T01:11:30.7665628Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.7665895Z 
+2025-08-10T01:11:30.7665895Z
 2025-08-10T01:11:30.7665984Z Traceback (most recent call last):
 2025-08-10T01:11:30.7666465Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.7666953Z     return func(*args, **kwargs)
@@ -6055,9 +6055,9 @@
 2025-08-10T01:11:30.7711014Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.7711853Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.7712224Z RuntimeError: no running event loop
-2025-08-10T01:11:30.7712482Z 
+2025-08-10T01:11:30.7712482Z
 2025-08-10T01:11:30.7712789Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.7721556Z 
+2025-08-10T01:11:30.7721556Z
 2025-08-10T01:11:30.7721739Z Traceback (most recent call last):
 2025-08-10T01:11:30.7722654Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.7723565Z     return func(*args, **kwargs)
@@ -6103,9 +6103,9 @@
 2025-08-10T01:11:30.7828018Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.7828913Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.7829392Z RuntimeError: no running event loop
-2025-08-10T01:11:30.7829709Z 
+2025-08-10T01:11:30.7829709Z
 2025-08-10T01:11:30.7830029Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.7830504Z 
+2025-08-10T01:11:30.7830504Z
 2025-08-10T01:11:30.7830672Z Traceback (most recent call last):
 2025-08-10T01:11:30.7831591Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.7832510Z     return func(*args, **kwargs)
@@ -6164,9 +6164,9 @@
 2025-08-10T01:11:30.8241432Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8242304Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8242743Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8243292Z 
+2025-08-10T01:11:30.8243292Z
 2025-08-10T01:11:30.8243590Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8244037Z 
+2025-08-10T01:11:30.8244037Z
 2025-08-10T01:11:30.8244184Z Traceback (most recent call last):
 2025-08-10T01:11:30.8244928Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8245771Z     return func(*args, **kwargs)
@@ -6206,7 +6206,7 @@
 2025-08-10T01:11:30.8334990Z 2025-08-10 01:11:30,833 - main - INFO - Received campaign creation request:
 2025-08-10T01:11:30.8336700Z 2025-08-10 01:11:30,833 - main - INFO -   Character: Test Hero
 2025-08-10T01:11:30.8337690Z 2025-08-10 01:11:30,833 - main - INFO -   Setting: Test World
-2025-08-10T01:11:30.8338699Z 2025-08-10 01:11:30,833 - main - INFO -   Description: 
+2025-08-10T01:11:30.8338699Z 2025-08-10 01:11:30,833 - main - INFO -   Description:
 2025-08-10T01:11:30.8339279Z 2025-08-10 01:11:30,833 - main - INFO -   Custom options: []
 2025-08-10T01:11:30.8340419Z 2025-08-10 01:11:30,833 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:30.8361242Z 2025-08-10 01:11:30,835 - root - ERROR - 🔥🔴 Failed to get user settings for user_035097: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -6221,9 +6221,9 @@
 2025-08-10T01:11:30.8411239Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8412064Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8412504Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8412791Z 
+2025-08-10T01:11:30.8412791Z
 2025-08-10T01:11:30.8413085Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8413519Z 
+2025-08-10T01:11:30.8413519Z
 2025-08-10T01:11:30.8413682Z Traceback (most recent call last):
 2025-08-10T01:11:30.8414528Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8415620Z     return func(*args, **kwargs)
@@ -6269,9 +6269,9 @@
 2025-08-10T01:11:30.8532903Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8534008Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8534431Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8534721Z 
+2025-08-10T01:11:30.8534721Z
 2025-08-10T01:11:30.8535010Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8535376Z 
+2025-08-10T01:11:30.8535376Z
 2025-08-10T01:11:30.8535505Z Traceback (most recent call last):
 2025-08-10T01:11:30.8536383Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8537330Z     return func(*args, **kwargs)
@@ -6317,9 +6317,9 @@
 2025-08-10T01:11:30.8658868Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8659768Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8660231Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8660539Z 
+2025-08-10T01:11:30.8660539Z
 2025-08-10T01:11:30.8660888Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8661363Z 
+2025-08-10T01:11:30.8661363Z
 2025-08-10T01:11:30.8661539Z Traceback (most recent call last):
 2025-08-10T01:11:30.8662455Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8663372Z     return func(*args, **kwargs)
@@ -6361,9 +6361,9 @@
 2025-08-10T01:11:30.8695604Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8696493Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8696947Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8697274Z 
+2025-08-10T01:11:30.8697274Z
 2025-08-10T01:11:30.8697600Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8698301Z 
+2025-08-10T01:11:30.8698301Z
 2025-08-10T01:11:30.8698481Z Traceback (most recent call last):
 2025-08-10T01:11:30.8699385Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8700307Z     return func(*args, **kwargs)
@@ -6405,9 +6405,9 @@
 2025-08-10T01:11:30.8733717Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8734538Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8734945Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8735230Z 
+2025-08-10T01:11:30.8735230Z
 2025-08-10T01:11:30.8735505Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8735863Z 
+2025-08-10T01:11:30.8735863Z
 2025-08-10T01:11:30.8735998Z Traceback (most recent call last):
 2025-08-10T01:11:30.8736821Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8737697Z     return func(*args, **kwargs)
@@ -6453,9 +6453,9 @@
 2025-08-10T01:11:30.8860848Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.8861642Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.8862061Z RuntimeError: no running event loop
-2025-08-10T01:11:30.8862346Z 
+2025-08-10T01:11:30.8862346Z
 2025-08-10T01:11:30.8862630Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.8863057Z 
+2025-08-10T01:11:30.8863057Z
 2025-08-10T01:11:30.8863192Z Traceback (most recent call last):
 2025-08-10T01:11:30.8864193Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.8865014Z     return func(*args, **kwargs)
@@ -6495,7 +6495,7 @@
 2025-08-10T01:11:30.8956341Z 2025-08-10 01:11:30,895 - main - INFO - Received campaign creation request:
 2025-08-10T01:11:30.8958327Z 2025-08-10 01:11:30,895 - main - INFO -   Character: State Test Hero
 2025-08-10T01:11:30.8959382Z 2025-08-10 01:11:30,895 - main - INFO -   Setting: State Test World
-2025-08-10T01:11:30.8960008Z 2025-08-10 01:11:30,895 - main - INFO -   Description: 
+2025-08-10T01:11:30.8960008Z 2025-08-10 01:11:30,895 - main - INFO -   Description:
 2025-08-10T01:11:30.8960606Z 2025-08-10 01:11:30,895 - main - INFO -   Custom options: []
 2025-08-10T01:11:30.8961300Z 2025-08-10 01:11:30,895 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:30.8982663Z 2025-08-10 01:11:30,898 - root - ERROR - 🔥🔴 Failed to get user settings for user_533315: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -6510,9 +6510,9 @@
 2025-08-10T01:11:30.9024617Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:30.9025359Z     asyncio.get_running_loop()
 2025-08-10T01:11:30.9025737Z RuntimeError: no running event loop
-2025-08-10T01:11:30.9025997Z 
+2025-08-10T01:11:30.9025997Z
 2025-08-10T01:11:30.9026263Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:30.9026670Z 
+2025-08-10T01:11:30.9026670Z
 2025-08-10T01:11:30.9026818Z Traceback (most recent call last):
 2025-08-10T01:11:30.9027605Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:30.9028569Z     return func(*args, **kwargs)
@@ -6548,7 +6548,7 @@
 2025-08-10T01:11:30.9058182Z .........
 2025-08-10T01:11:30.9058536Z ----------------------------------------------------------------------
 2025-08-10T01:11:30.9058990Z Ran 19 tests in 0.159s
-2025-08-10T01:11:30.9059190Z 
+2025-08-10T01:11:30.9059190Z
 2025-08-10T01:11:30.9059300Z OK
 2025-08-10T01:11:31.1464982Z ✅ PASS: tests/test_main_auth_state_phase2.py
 2025-08-10T01:11:31.1466489Z ----------------------------------------
@@ -6571,9 +6571,9 @@
 2025-08-10T01:11:32.5033676Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:32.5034485Z     asyncio.get_running_loop()
 2025-08-10T01:11:32.5034885Z RuntimeError: no running event loop
-2025-08-10T01:11:32.5035176Z 
+2025-08-10T01:11:32.5035176Z
 2025-08-10T01:11:32.5035476Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:32.5035919Z 
+2025-08-10T01:11:32.5035919Z
 2025-08-10T01:11:32.5036077Z Traceback (most recent call last):
 2025-08-10T01:11:32.5036941Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:32.5037982Z     return func(*args, **kwargs)
@@ -6623,9 +6623,9 @@
 2025-08-10T01:11:32.5276458Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:32.5277326Z     asyncio.get_running_loop()
 2025-08-10T01:11:32.5277946Z RuntimeError: no running event loop
-2025-08-10T01:11:32.5278259Z 
+2025-08-10T01:11:32.5278259Z
 2025-08-10T01:11:32.5278577Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:32.5279053Z 
+2025-08-10T01:11:32.5279053Z
 2025-08-10T01:11:32.5279222Z Traceback (most recent call last):
 2025-08-10T01:11:32.5280434Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:32.5281326Z     return func(*args, **kwargs)
@@ -6674,7 +6674,7 @@
 2025-08-10T01:11:32.5560408Z .
 2025-08-10T01:11:32.5562509Z ----------------------------------------------------------------------
 2025-08-10T01:11:32.5564550Z Ran 5 tests in 1.062s
-2025-08-10T01:11:32.5564768Z 
+2025-08-10T01:11:32.5564768Z
 2025-08-10T01:11:32.5564880Z OK
 2025-08-10T01:11:32.7909640Z ✅ PASS: tests/test_main_authentication_advanced.py
 2025-08-10T01:11:32.7910536Z ----------------------------------------
@@ -6700,10 +6700,10 @@
 2025-08-10T01:11:33.9244155Z Test unicode characters and emoji ... ok
 2025-08-10T01:11:33.9244783Z test_very_long_values (__main__.TestParseSetCommandErrorHandling.test_very_long_values)
 2025-08-10T01:11:33.9245867Z Test handling of very long values ... ok
-2025-08-10T01:11:33.9246152Z 
+2025-08-10T01:11:33.9246152Z
 2025-08-10T01:11:33.9246362Z ----------------------------------------------------------------------
 2025-08-10T01:11:33.9246834Z Ran 10 tests in 0.003s
-2025-08-10T01:11:33.9247024Z 
+2025-08-10T01:11:33.9247024Z
 2025-08-10T01:11:33.9247128Z OK
 2025-08-10T01:11:34.1108274Z ✅ PASS: tests/test_main_error_handling_final.py
 2025-08-10T01:11:34.1114023Z ----------------------------------------
@@ -6726,9 +6726,9 @@
 2025-08-10T01:11:35.4326203Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4327035Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4327484Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4327982Z 
+2025-08-10T01:11:35.4327982Z
 2025-08-10T01:11:35.4328330Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4328785Z 
+2025-08-10T01:11:35.4328785Z
 2025-08-10T01:11:35.4328961Z Traceback (most recent call last):
 2025-08-10T01:11:35.4329839Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4330680Z     return func(*args, **kwargs)
@@ -6774,9 +6774,9 @@
 2025-08-10T01:11:35.4482943Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4483987Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4484407Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4484695Z 
+2025-08-10T01:11:35.4484695Z
 2025-08-10T01:11:35.4485060Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4485549Z 
+2025-08-10T01:11:35.4485549Z
 2025-08-10T01:11:35.4485709Z Traceback (most recent call last):
 2025-08-10T01:11:35.4486568Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4487413Z     return func(*args, **kwargs)
@@ -6822,9 +6822,9 @@
 2025-08-10T01:11:35.4641218Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4641709Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4641977Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4642146Z 
+2025-08-10T01:11:35.4642146Z
 2025-08-10T01:11:35.4642325Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4642585Z 
+2025-08-10T01:11:35.4642585Z
 2025-08-10T01:11:35.4642678Z Traceback (most recent call last):
 2025-08-10T01:11:35.4643172Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4643660Z     return func(*args, **kwargs)
@@ -6866,9 +6866,9 @@
 2025-08-10T01:11:35.4676952Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4677543Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4678254Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4678572Z 
+2025-08-10T01:11:35.4678572Z
 2025-08-10T01:11:35.4678935Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4679212Z 
+2025-08-10T01:11:35.4679212Z
 2025-08-10T01:11:35.4679313Z Traceback (most recent call last):
 2025-08-10T01:11:35.4679807Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4680281Z     return func(*args, **kwargs)
@@ -6910,9 +6910,9 @@
 2025-08-10T01:11:35.4726703Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4727671Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4728354Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4728729Z 
+2025-08-10T01:11:35.4728729Z
 2025-08-10T01:11:35.4729155Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4729634Z 
+2025-08-10T01:11:35.4729634Z
 2025-08-10T01:11:35.4729891Z Traceback (most recent call last):
 2025-08-10T01:11:35.4730833Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4732605Z     return func(*args, **kwargs)
@@ -6958,9 +6958,9 @@
 2025-08-10T01:11:35.4847897Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4848812Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4849263Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4849575Z 
+2025-08-10T01:11:35.4849575Z
 2025-08-10T01:11:35.4849912Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4850392Z 
+2025-08-10T01:11:35.4850392Z
 2025-08-10T01:11:35.4850576Z Traceback (most recent call last):
 2025-08-10T01:11:35.4851496Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4852685Z     return func(*args, **kwargs)
@@ -7002,9 +7002,9 @@
 2025-08-10T01:11:35.4886103Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4886964Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4887412Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4888014Z 
+2025-08-10T01:11:35.4888014Z
 2025-08-10T01:11:35.4888343Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4888816Z 
+2025-08-10T01:11:35.4888816Z
 2025-08-10T01:11:35.4888994Z Traceback (most recent call last):
 2025-08-10T01:11:35.4889901Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4891061Z     return func(*args, **kwargs)
@@ -7046,9 +7046,9 @@
 2025-08-10T01:11:35.4924020Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4924903Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4925355Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4925698Z 
+2025-08-10T01:11:35.4925698Z
 2025-08-10T01:11:35.4926023Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4926511Z 
+2025-08-10T01:11:35.4926511Z
 2025-08-10T01:11:35.4926695Z Traceback (most recent call last):
 2025-08-10T01:11:35.4927623Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4928486Z     return func(*args, **kwargs)
@@ -7090,9 +7090,9 @@
 2025-08-10T01:11:35.4960592Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4961468Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4961935Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4962254Z 
+2025-08-10T01:11:35.4962254Z
 2025-08-10T01:11:35.4962571Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4963059Z 
+2025-08-10T01:11:35.4963059Z
 2025-08-10T01:11:35.4963234Z Traceback (most recent call last):
 2025-08-10T01:11:35.4964150Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.4964853Z     return func(*args, **kwargs)
@@ -7134,9 +7134,9 @@
 2025-08-10T01:11:35.4997279Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.4998370Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.4998819Z RuntimeError: no running event loop
-2025-08-10T01:11:35.4999136Z 
+2025-08-10T01:11:35.4999136Z
 2025-08-10T01:11:35.4999458Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.4999941Z 
+2025-08-10T01:11:35.4999941Z
 2025-08-10T01:11:35.5000123Z Traceback (most recent call last):
 2025-08-10T01:11:35.5001048Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5001993Z     return func(*args, **kwargs)
@@ -7178,9 +7178,9 @@
 2025-08-10T01:11:35.5039901Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5040784Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5041180Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5041445Z 
+2025-08-10T01:11:35.5041445Z
 2025-08-10T01:11:35.5042125Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5042630Z 
+2025-08-10T01:11:35.5042630Z
 2025-08-10T01:11:35.5042810Z Traceback (most recent call last):
 2025-08-10T01:11:35.5043455Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5044004Z     return func(*args, **kwargs)
@@ -7222,9 +7222,9 @@
 2025-08-10T01:11:35.5075216Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5076104Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5076563Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5076893Z 
+2025-08-10T01:11:35.5076893Z
 2025-08-10T01:11:35.5077212Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5077697Z 
+2025-08-10T01:11:35.5077697Z
 2025-08-10T01:11:35.5078145Z Traceback (most recent call last):
 2025-08-10T01:11:35.5079118Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5080293Z     return func(*args, **kwargs)
@@ -7266,9 +7266,9 @@
 2025-08-10T01:11:35.5114095Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5114881Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5115288Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5115581Z 
+2025-08-10T01:11:35.5115581Z
 2025-08-10T01:11:35.5115903Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5116378Z 
+2025-08-10T01:11:35.5116378Z
 2025-08-10T01:11:35.5116555Z Traceback (most recent call last):
 2025-08-10T01:11:35.5117471Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5118834Z     return func(*args, **kwargs)
@@ -7310,9 +7310,9 @@
 2025-08-10T01:11:35.5160354Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5161022Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5161388Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5161671Z 
+2025-08-10T01:11:35.5161671Z
 2025-08-10T01:11:35.5161961Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5162406Z 
+2025-08-10T01:11:35.5162406Z
 2025-08-10T01:11:35.5162564Z Traceback (most recent call last):
 2025-08-10T01:11:35.5163523Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5164346Z     return func(*args, **kwargs)
@@ -7358,9 +7358,9 @@
 2025-08-10T01:11:35.5304390Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5305275Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5305739Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5306057Z 
+2025-08-10T01:11:35.5306057Z
 2025-08-10T01:11:35.5306369Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5306852Z 
+2025-08-10T01:11:35.5306852Z
 2025-08-10T01:11:35.5307024Z Traceback (most recent call last):
 2025-08-10T01:11:35.5308148Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5309049Z     return func(*args, **kwargs)
@@ -7402,9 +7402,9 @@
 2025-08-10T01:11:35.5356671Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5357565Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5358245Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5358567Z 
+2025-08-10T01:11:35.5358567Z
 2025-08-10T01:11:35.5358886Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5359367Z 
+2025-08-10T01:11:35.5359367Z
 2025-08-10T01:11:35.5359538Z Traceback (most recent call last):
 2025-08-10T01:11:35.5360467Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5361406Z     return func(*args, **kwargs)
@@ -7446,9 +7446,9 @@
 2025-08-10T01:11:35.5395012Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5395937Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5396392Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5396701Z 
+2025-08-10T01:11:35.5396701Z
 2025-08-10T01:11:35.5397031Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5397485Z 
+2025-08-10T01:11:35.5397485Z
 2025-08-10T01:11:35.5397657Z Traceback (most recent call last):
 2025-08-10T01:11:35.5398788Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5399684Z     return func(*args, **kwargs)
@@ -7494,9 +7494,9 @@
 2025-08-10T01:11:35.5530237Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5531138Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5531559Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5531846Z 
+2025-08-10T01:11:35.5531846Z
 2025-08-10T01:11:35.5532101Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5532787Z 
+2025-08-10T01:11:35.5532787Z
 2025-08-10T01:11:35.5532954Z Traceback (most recent call last):
 2025-08-10T01:11:35.5533935Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5534795Z     return func(*args, **kwargs)
@@ -7542,9 +7542,9 @@
 2025-08-10T01:11:35.5663597Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5664535Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5664965Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5665252Z 
+2025-08-10T01:11:35.5665252Z
 2025-08-10T01:11:35.5665546Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5665997Z 
+2025-08-10T01:11:35.5665997Z
 2025-08-10T01:11:35.5666157Z Traceback (most recent call last):
 2025-08-10T01:11:35.5667026Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5668146Z     return func(*args, **kwargs)
@@ -7590,9 +7590,9 @@
 2025-08-10T01:11:35.5793632Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5794462Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5794894Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5795189Z 
+2025-08-10T01:11:35.5795189Z
 2025-08-10T01:11:35.5795495Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5795958Z 
+2025-08-10T01:11:35.5795958Z
 2025-08-10T01:11:35.5796116Z Traceback (most recent call last):
 2025-08-10T01:11:35.5796978Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5798097Z     return func(*args, **kwargs)
@@ -7638,9 +7638,9 @@
 2025-08-10T01:11:35.5919383Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.5920261Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.5920712Z RuntimeError: no running event loop
-2025-08-10T01:11:35.5921279Z 
+2025-08-10T01:11:35.5921279Z
 2025-08-10T01:11:35.5921771Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.5922260Z 
+2025-08-10T01:11:35.5922260Z
 2025-08-10T01:11:35.5922433Z Traceback (most recent call last):
 2025-08-10T01:11:35.5923351Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.5924220Z     return func(*args, **kwargs)
@@ -7686,9 +7686,9 @@
 2025-08-10T01:11:35.6049986Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6050838Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6051248Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6051530Z 
+2025-08-10T01:11:35.6051530Z
 2025-08-10T01:11:35.6051823Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6052272Z 
+2025-08-10T01:11:35.6052272Z
 2025-08-10T01:11:35.6052431Z Traceback (most recent call last):
 2025-08-10T01:11:35.6053286Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6054129Z     return func(*args, **kwargs)
@@ -7734,9 +7734,9 @@
 2025-08-10T01:11:35.6185662Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6186497Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6186921Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6187213Z 
+2025-08-10T01:11:35.6187213Z
 2025-08-10T01:11:35.6187506Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6188177Z 
+2025-08-10T01:11:35.6188177Z
 2025-08-10T01:11:35.6188343Z Traceback (most recent call last):
 2025-08-10T01:11:35.6189171Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6190038Z     return func(*args, **kwargs)
@@ -7782,9 +7782,9 @@
 2025-08-10T01:11:35.6320315Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6321131Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6321549Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6321847Z 
+2025-08-10T01:11:35.6321847Z
 2025-08-10T01:11:35.6322144Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6322612Z 
+2025-08-10T01:11:35.6322612Z
 2025-08-10T01:11:35.6322780Z Traceback (most recent call last):
 2025-08-10T01:11:35.6323651Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6324497Z     return func(*args, **kwargs)
@@ -7830,9 +7830,9 @@
 2025-08-10T01:11:35.6449176Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6450011Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6450711Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6451047Z 
+2025-08-10T01:11:35.6451047Z
 2025-08-10T01:11:35.6451352Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6451813Z 
+2025-08-10T01:11:35.6451813Z
 2025-08-10T01:11:35.6451973Z Traceback (most recent call last):
 2025-08-10T01:11:35.6452835Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6453706Z     return func(*args, **kwargs)
@@ -7878,9 +7878,9 @@
 2025-08-10T01:11:35.6580379Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6581290Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6581752Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6582068Z 
+2025-08-10T01:11:35.6582068Z
 2025-08-10T01:11:35.6582384Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6582876Z 
+2025-08-10T01:11:35.6582876Z
 2025-08-10T01:11:35.6583066Z Traceback (most recent call last):
 2025-08-10T01:11:35.6584000Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6584593Z     return func(*args, **kwargs)
@@ -7922,9 +7922,9 @@
 2025-08-10T01:11:35.6617266Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6618363Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6618816Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6619130Z 
+2025-08-10T01:11:35.6619130Z
 2025-08-10T01:11:35.6619451Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6619954Z 
+2025-08-10T01:11:35.6619954Z
 2025-08-10T01:11:35.6620128Z Traceback (most recent call last):
 2025-08-10T01:11:35.6621055Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6621722Z     return func(*args, **kwargs)
@@ -7966,9 +7966,9 @@
 2025-08-10T01:11:35.6654195Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6655043Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6655462Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6655723Z 
+2025-08-10T01:11:35.6655723Z
 2025-08-10T01:11:35.6656021Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6656481Z 
+2025-08-10T01:11:35.6656481Z
 2025-08-10T01:11:35.6656642Z Traceback (most recent call last):
 2025-08-10T01:11:35.6657612Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6658652Z     return func(*args, **kwargs)
@@ -8014,9 +8014,9 @@
 2025-08-10T01:11:35.6768885Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6769064Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6769245Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6769257Z 
+2025-08-10T01:11:35.6769257Z
 2025-08-10T01:11:35.6769576Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6769589Z 
+2025-08-10T01:11:35.6769589Z
 2025-08-10T01:11:35.6769904Z Traceback (most recent call last):
 2025-08-10T01:11:35.6770548Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6770958Z     return func(*args, **kwargs)
@@ -8062,9 +8062,9 @@
 2025-08-10T01:11:35.6881628Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6881817Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6881988Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6882001Z 
+2025-08-10T01:11:35.6882001Z
 2025-08-10T01:11:35.6882324Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.6882345Z 
+2025-08-10T01:11:35.6882345Z
 2025-08-10T01:11:35.6882527Z Traceback (most recent call last):
 2025-08-10T01:11:35.6883155Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.6883338Z     return func(*args, **kwargs)
@@ -8110,9 +8110,9 @@
 2025-08-10T01:11:35.6999283Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.6999462Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.6999638Z RuntimeError: no running event loop
-2025-08-10T01:11:35.6999666Z 
+2025-08-10T01:11:35.6999666Z
 2025-08-10T01:11:35.7000144Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.7000165Z 
+2025-08-10T01:11:35.7000165Z
 2025-08-10T01:11:35.7000343Z Traceback (most recent call last):
 2025-08-10T01:11:35.7000970Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.7001144Z     return func(*args, **kwargs)
@@ -8158,9 +8158,9 @@
 2025-08-10T01:11:35.7118168Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.7118377Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.7118554Z RuntimeError: no running event loop
-2025-08-10T01:11:35.7118566Z 
+2025-08-10T01:11:35.7118566Z
 2025-08-10T01:11:35.7118892Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.7118906Z 
+2025-08-10T01:11:35.7118906Z
 2025-08-10T01:11:35.7119071Z Traceback (most recent call last):
 2025-08-10T01:11:35.7120106Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.7120289Z     return func(*args, **kwargs)
@@ -8206,9 +8206,9 @@
 2025-08-10T01:11:35.7234537Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.7234731Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.7234903Z RuntimeError: no running event loop
-2025-08-10T01:11:35.7234915Z 
+2025-08-10T01:11:35.7234915Z
 2025-08-10T01:11:35.7235247Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.7235281Z 
+2025-08-10T01:11:35.7235281Z
 2025-08-10T01:11:35.7235612Z Traceback (most recent call last):
 2025-08-10T01:11:35.7236231Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.7236414Z     return func(*args, **kwargs)
@@ -8254,9 +8254,9 @@
 2025-08-10T01:11:35.7352643Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:35.7352820Z     asyncio.get_running_loop()
 2025-08-10T01:11:35.7353015Z RuntimeError: no running event loop
-2025-08-10T01:11:35.7353027Z 
+2025-08-10T01:11:35.7353027Z
 2025-08-10T01:11:35.7353351Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:35.7353364Z 
+2025-08-10T01:11:35.7353364Z
 2025-08-10T01:11:35.7353526Z Traceback (most recent call last):
 2025-08-10T01:11:35.7354290Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:35.7354463Z     return func(*args, **kwargs)
@@ -8292,7 +8292,7 @@
 2025-08-10T01:11:35.7369944Z .
 2025-08-10T01:11:35.7370146Z ----------------------------------------------------------------------
 2025-08-10T01:11:35.7370286Z Ran 20 tests in 1.284s
-2025-08-10T01:11:35.7370294Z 
+2025-08-10T01:11:35.7370294Z
 2025-08-10T01:11:35.7370392Z OK
 2025-08-10T01:11:35.7370734Z 🔵 Running god mode command tests through MCP architecture
 2025-08-10T01:11:35.7371073Z 📝 NOTE: Tests validate MCP gateway handling of god mode commands
@@ -8317,9 +8317,9 @@
 2025-08-10T01:11:37.2787876Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.2788792Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.2789215Z RuntimeError: no running event loop
-2025-08-10T01:11:37.2789514Z 
+2025-08-10T01:11:37.2789514Z
 2025-08-10T01:11:37.2789787Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.2790198Z 
+2025-08-10T01:11:37.2790198Z
 2025-08-10T01:11:37.2790355Z Traceback (most recent call last):
 2025-08-10T01:11:37.2791265Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.2792175Z     return func(*args, **kwargs)
@@ -8365,9 +8365,9 @@
 2025-08-10T01:11:37.2931560Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.2932383Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.2932804Z RuntimeError: no running event loop
-2025-08-10T01:11:37.2933090Z 
+2025-08-10T01:11:37.2933090Z
 2025-08-10T01:11:37.2933439Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.2933943Z 
+2025-08-10T01:11:37.2933943Z
 2025-08-10T01:11:37.2934105Z Traceback (most recent call last):
 2025-08-10T01:11:37.2935007Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.2935896Z     return func(*args, **kwargs)
@@ -8413,9 +8413,9 @@
 2025-08-10T01:11:37.3088861Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3089783Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3090547Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3090799Z 
+2025-08-10T01:11:37.3090799Z
 2025-08-10T01:11:37.3091094Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3091566Z 
+2025-08-10T01:11:37.3091566Z
 2025-08-10T01:11:37.3091748Z Traceback (most recent call last):
 2025-08-10T01:11:37.3092409Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3093019Z     return func(*args, **kwargs)
@@ -8457,9 +8457,9 @@
 2025-08-10T01:11:37.3124371Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3126536Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3126800Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3126978Z 
+2025-08-10T01:11:37.3126978Z
 2025-08-10T01:11:37.3127149Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3127403Z 
+2025-08-10T01:11:37.3127403Z
 2025-08-10T01:11:37.3127499Z Traceback (most recent call last):
 2025-08-10T01:11:37.3128351Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3129258Z     return func(*args, **kwargs)
@@ -8501,9 +8501,9 @@
 2025-08-10T01:11:37.3163420Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3164628Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3165078Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3165387Z 
+2025-08-10T01:11:37.3165387Z
 2025-08-10T01:11:37.3165690Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3166128Z 
+2025-08-10T01:11:37.3166128Z
 2025-08-10T01:11:37.3166320Z Traceback (most recent call last):
 2025-08-10T01:11:37.3167129Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3168169Z     return func(*args, **kwargs)
@@ -8549,9 +8549,9 @@
 2025-08-10T01:11:37.3292262Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3293189Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3293654Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3293957Z 
+2025-08-10T01:11:37.3293957Z
 2025-08-10T01:11:37.3294266Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3294703Z 
+2025-08-10T01:11:37.3294703Z
 2025-08-10T01:11:37.3294860Z Traceback (most recent call last):
 2025-08-10T01:11:37.3295717Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3296541Z     return func(*args, **kwargs)
@@ -8597,9 +8597,9 @@
 2025-08-10T01:11:37.3432130Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3433049Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3433500Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3433812Z 
+2025-08-10T01:11:37.3433812Z
 2025-08-10T01:11:37.3434136Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3434619Z 
+2025-08-10T01:11:37.3434619Z
 2025-08-10T01:11:37.3434796Z Traceback (most recent call last):
 2025-08-10T01:11:37.3435761Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3436736Z     return func(*args, **kwargs)
@@ -8641,9 +8641,9 @@
 2025-08-10T01:11:37.3474095Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3475023Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3475475Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3476068Z 
+2025-08-10T01:11:37.3476068Z
 2025-08-10T01:11:37.3476388Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3476876Z 
+2025-08-10T01:11:37.3476876Z
 2025-08-10T01:11:37.3477060Z Traceback (most recent call last):
 2025-08-10T01:11:37.3478240Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3479218Z     return func(*args, **kwargs)
@@ -8685,9 +8685,9 @@
 2025-08-10T01:11:37.3525345Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3526235Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3526901Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3527216Z 
+2025-08-10T01:11:37.3527216Z
 2025-08-10T01:11:37.3527521Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3528199Z 
+2025-08-10T01:11:37.3528199Z
 2025-08-10T01:11:37.3528375Z Traceback (most recent call last):
 2025-08-10T01:11:37.3529318Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3530255Z     return func(*args, **kwargs)
@@ -8733,9 +8733,9 @@
 2025-08-10T01:11:37.3643723Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3644635Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3645084Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3645400Z 
+2025-08-10T01:11:37.3645400Z
 2025-08-10T01:11:37.3645704Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3646171Z 
+2025-08-10T01:11:37.3646171Z
 2025-08-10T01:11:37.3646333Z Traceback (most recent call last):
 2025-08-10T01:11:37.3647177Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3648240Z     return func(*args, **kwargs)
@@ -8781,9 +8781,9 @@
 2025-08-10T01:11:37.3768870Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../main.py", line 314, in wrapper
 2025-08-10T01:11:37.3769941Z     asyncio.get_running_loop()
 2025-08-10T01:11:37.3770480Z RuntimeError: no running event loop
-2025-08-10T01:11:37.3770875Z 
+2025-08-10T01:11:37.3770875Z
 2025-08-10T01:11:37.3771239Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:37.3771670Z 
+2025-08-10T01:11:37.3771670Z
 2025-08-10T01:11:37.3771833Z Traceback (most recent call last):
 2025-08-10T01:11:37.3772928Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/../decorators.py", line 62, in wrapper
 2025-08-10T01:11:37.3773836Z     return func(*args, **kwargs)
@@ -8819,7 +8819,7 @@
 2025-08-10T01:11:37.3806983Z .
 2025-08-10T01:11:37.3807435Z ----------------------------------------------------------------------
 2025-08-10T01:11:37.3808144Z Ran 7 tests in 1.082s
-2025-08-10T01:11:37.3808440Z 
+2025-08-10T01:11:37.3808440Z
 2025-08-10T01:11:37.3808598Z OK
 2025-08-10T01:11:37.5981210Z ✅ PASS: tests/test_main_interaction_structured_fields.py
 2025-08-10T01:11:37.5982621Z ----------------------------------------
@@ -8842,9 +8842,9 @@
 2025-08-10T01:11:38.9128654Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9129482Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9129931Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9130223Z 
+2025-08-10T01:11:38.9130223Z
 2025-08-10T01:11:38.9130499Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9130960Z 
+2025-08-10T01:11:38.9130960Z
 2025-08-10T01:11:38.9131108Z Traceback (most recent call last):
 2025-08-10T01:11:38.9131928Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9132753Z     return func(*args, **kwargs)
@@ -8886,9 +8886,9 @@
 2025-08-10T01:11:38.9172328Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9173219Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9173650Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9173945Z 
+2025-08-10T01:11:38.9173945Z
 2025-08-10T01:11:38.9174240Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9174713Z 
+2025-08-10T01:11:38.9174713Z
 2025-08-10T01:11:38.9174869Z Traceback (most recent call last):
 2025-08-10T01:11:38.9175771Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9176680Z     return func(*args, **kwargs)
@@ -8930,9 +8930,9 @@
 2025-08-10T01:11:38.9215918Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9216788Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9217324Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9217652Z 
+2025-08-10T01:11:38.9217652Z
 2025-08-10T01:11:38.9218131Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9218622Z 
+2025-08-10T01:11:38.9218622Z
 2025-08-10T01:11:38.9218804Z Traceback (most recent call last):
 2025-08-10T01:11:38.9219722Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9220620Z     return func(*args, **kwargs)
@@ -8974,9 +8974,9 @@
 2025-08-10T01:11:38.9258572Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9259421Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9259842Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9260135Z 
+2025-08-10T01:11:38.9260135Z
 2025-08-10T01:11:38.9260417Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9260858Z 
+2025-08-10T01:11:38.9260858Z
 2025-08-10T01:11:38.9261232Z Traceback (most recent call last):
 2025-08-10T01:11:38.9262075Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9262886Z     return func(*args, **kwargs)
@@ -9018,9 +9018,9 @@
 2025-08-10T01:11:38.9301991Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9302795Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9303196Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9303482Z 
+2025-08-10T01:11:38.9303482Z
 2025-08-10T01:11:38.9303769Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9304432Z 
+2025-08-10T01:11:38.9304432Z
 2025-08-10T01:11:38.9304589Z Traceback (most recent call last):
 2025-08-10T01:11:38.9305434Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9306270Z     return func(*args, **kwargs)
@@ -9066,9 +9066,9 @@
 2025-08-10T01:11:38.9440453Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9441238Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9441507Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9441718Z 
+2025-08-10T01:11:38.9441718Z
 2025-08-10T01:11:38.9441896Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9442523Z 
+2025-08-10T01:11:38.9442523Z
 2025-08-10T01:11:38.9442711Z Traceback (most recent call last):
 2025-08-10T01:11:38.9443709Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9444620Z     return func(*args, **kwargs)
@@ -9110,9 +9110,9 @@
 2025-08-10T01:11:38.9483103Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9483997Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9484438Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9484763Z 
+2025-08-10T01:11:38.9484763Z
 2025-08-10T01:11:38.9485079Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9485552Z 
+2025-08-10T01:11:38.9485552Z
 2025-08-10T01:11:38.9485729Z Traceback (most recent call last):
 2025-08-10T01:11:38.9486653Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9487561Z     return func(*args, **kwargs)
@@ -9154,9 +9154,9 @@
 2025-08-10T01:11:38.9531557Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9532443Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9532880Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9533187Z 
+2025-08-10T01:11:38.9533187Z
 2025-08-10T01:11:38.9533500Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9534012Z 
+2025-08-10T01:11:38.9534012Z
 2025-08-10T01:11:38.9534183Z Traceback (most recent call last):
 2025-08-10T01:11:38.9535105Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9535972Z     return func(*args, **kwargs)
@@ -9203,9 +9203,9 @@
 2025-08-10T01:11:38.9652226Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9653346Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9653801Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9654158Z 
+2025-08-10T01:11:38.9654158Z
 2025-08-10T01:11:38.9654493Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9654978Z 
+2025-08-10T01:11:38.9654978Z
 2025-08-10T01:11:38.9655173Z Traceback (most recent call last):
 2025-08-10T01:11:38.9656098Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9656996Z     return func(*args, **kwargs)
@@ -9248,9 +9248,9 @@
 2025-08-10T01:11:38.9706477Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9708630Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9709090Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9709388Z 
+2025-08-10T01:11:38.9709388Z
 2025-08-10T01:11:38.9709702Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9710150Z 
+2025-08-10T01:11:38.9710150Z
 2025-08-10T01:11:38.9710315Z Traceback (most recent call last):
 2025-08-10T01:11:38.9711148Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9711970Z     return func(*args, **kwargs)
@@ -9300,9 +9300,9 @@
 2025-08-10T01:11:38.9946062Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:38.9946938Z     asyncio.get_running_loop()
 2025-08-10T01:11:38.9947359Z RuntimeError: no running event loop
-2025-08-10T01:11:38.9947657Z 
+2025-08-10T01:11:38.9947657Z
 2025-08-10T01:11:38.9948135Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:38.9948597Z 
+2025-08-10T01:11:38.9948597Z
 2025-08-10T01:11:38.9948762Z Traceback (most recent call last):
 2025-08-10T01:11:38.9949632Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:38.9950475Z     return func(*args, **kwargs)
@@ -9348,9 +9348,9 @@
 2025-08-10T01:11:39.0074237Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.0075065Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.0075495Z RuntimeError: no running event loop
-2025-08-10T01:11:39.0075791Z 
+2025-08-10T01:11:39.0075791Z
 2025-08-10T01:11:39.0076098Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0076765Z 
+2025-08-10T01:11:39.0076765Z
 2025-08-10T01:11:39.0076926Z Traceback (most recent call last):
 2025-08-10T01:11:39.0078004Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.0078889Z     return func(*args, **kwargs)
@@ -9396,9 +9396,9 @@
 2025-08-10T01:11:39.0199991Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.0200839Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.0201287Z RuntimeError: no running event loop
-2025-08-10T01:11:39.0201575Z 
+2025-08-10T01:11:39.0201575Z
 2025-08-10T01:11:39.0201869Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0202332Z 
+2025-08-10T01:11:39.0202332Z
 2025-08-10T01:11:39.0202490Z Traceback (most recent call last):
 2025-08-10T01:11:39.0203361Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.0204222Z     return func(*args, **kwargs)
@@ -9444,9 +9444,9 @@
 2025-08-10T01:11:39.0328927Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.0329780Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.0330204Z RuntimeError: no running event loop
-2025-08-10T01:11:39.0330494Z 
+2025-08-10T01:11:39.0330494Z
 2025-08-10T01:11:39.0330790Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0331244Z 
+2025-08-10T01:11:39.0331244Z
 2025-08-10T01:11:39.0331402Z Traceback (most recent call last):
 2025-08-10T01:11:39.0332259Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.0333121Z     return func(*args, **kwargs)
@@ -9496,9 +9496,9 @@
 2025-08-10T01:11:39.0544299Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.0545182Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.0545641Z RuntimeError: no running event loop
-2025-08-10T01:11:39.0545954Z 
+2025-08-10T01:11:39.0545954Z
 2025-08-10T01:11:39.0546350Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0547083Z 
+2025-08-10T01:11:39.0547083Z
 2025-08-10T01:11:39.0547249Z Traceback (most recent call last):
 2025-08-10T01:11:39.0548308Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.0549182Z     return func(*args, **kwargs)
@@ -9544,9 +9544,9 @@
 2025-08-10T01:11:39.0679853Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.0680644Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.0681057Z RuntimeError: no running event loop
-2025-08-10T01:11:39.0681362Z 
+2025-08-10T01:11:39.0681362Z
 2025-08-10T01:11:39.0681670Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0682143Z 
+2025-08-10T01:11:39.0682143Z
 2025-08-10T01:11:39.0682328Z Traceback (most recent call last):
 2025-08-10T01:11:39.0683245Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.0684106Z     return func(*args, **kwargs)
@@ -9605,9 +9605,9 @@
 2025-08-10T01:11:39.0984132Z   File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/json/decoder.py", line 355, in raw_decode
 2025-08-10T01:11:39.0985405Z     raise JSONDecodeError("Expecting value", s, err.value) from None
 2025-08-10T01:11:39.0986218Z json.decoder.JSONDecodeError: Expecting value: line 1 column 54 (char 53)
-2025-08-10T01:11:39.0986727Z 
+2025-08-10T01:11:39.0986727Z
 2025-08-10T01:11:39.0987036Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.0987486Z 
+2025-08-10T01:11:39.0987486Z
 2025-08-10T01:11:39.0987647Z Traceback (most recent call last):
 2025-08-10T01:11:39.0989270Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/flask/wrappers.py", line 130, in on_json_loading_failed
 2025-08-10T01:11:39.0990478Z     return super().on_json_loading_failed(e)
@@ -9615,9 +9615,9 @@
 2025-08-10T01:11:39.0992225Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/werkzeug/wrappers/request.py", line 645, in on_json_loading_failed
 2025-08-10T01:11:39.0993602Z     raise BadRequest(f"Failed to decode JSON object: {e}")
 2025-08-10T01:11:39.0994605Z werkzeug.exceptions.BadRequest: 400 Bad Request: Failed to decode JSON object: Expecting value: line 1 column 54 (char 53)
-2025-08-10T01:11:39.0995362Z 
+2025-08-10T01:11:39.0995362Z
 2025-08-10T01:11:39.0995659Z The above exception was the direct cause of the following exception:
-2025-08-10T01:11:39.0996116Z 
+2025-08-10T01:11:39.0996116Z
 2025-08-10T01:11:39.0996295Z Traceback (most recent call last):
 2025-08-10T01:11:39.0997237Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 518, in handle_interaction
 2025-08-10T01:11:39.0998503Z     data = request.get_json()
@@ -9628,7 +9628,7 @@
 2025-08-10T01:11:39.1002985Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/flask/wrappers.py", line 135, in on_json_loading_failed
 2025-08-10T01:11:39.1004239Z     raise BadRequest() from e
 2025-08-10T01:11:39.1005136Z werkzeug.exceptions.BadRequest: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
-2025-08-10T01:11:39.1005912Z 
+2025-08-10T01:11:39.1005912Z
 2025-08-10T01:11:39.1008020Z .2025-08-10 01:11:39,099 - root - INFO - File logging configured: /tmp/worldarchitect.ai/flask-server.log
 2025-08-10T01:11:39.1010171Z /home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py:194: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/worldarchitect.ai/flask-server.log' mode='a' encoding='UTF-8'>
 2025-08-10T01:11:39.1011987Z   setup_file_logging()
@@ -9646,9 +9646,9 @@
 2025-08-10T01:11:39.1185445Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1186619Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1187074Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1187389Z 
+2025-08-10T01:11:39.1187389Z
 2025-08-10T01:11:39.1187693Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1188337Z 
+2025-08-10T01:11:39.1188337Z
 2025-08-10T01:11:39.1188504Z Traceback (most recent call last):
 2025-08-10T01:11:39.1189419Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1190511Z     return func(*args, **kwargs)
@@ -9690,9 +9690,9 @@
 2025-08-10T01:11:39.1275758Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1276634Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1277082Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1277390Z 
+2025-08-10T01:11:39.1277390Z
 2025-08-10T01:11:39.1277976Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1278478Z 
+2025-08-10T01:11:39.1278478Z
 2025-08-10T01:11:39.1278654Z Traceback (most recent call last):
 2025-08-10T01:11:39.1279572Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1280452Z     return func(*args, **kwargs)
@@ -9736,9 +9736,9 @@
 2025-08-10T01:11:39.1355182Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1356112Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1356565Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1356881Z 
+2025-08-10T01:11:39.1356881Z
 2025-08-10T01:11:39.1357214Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1357695Z 
+2025-08-10T01:11:39.1357695Z
 2025-08-10T01:11:39.1358185Z Traceback (most recent call last):
 2025-08-10T01:11:39.1359420Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/werkzeug/wrappers/request.py", line 611, in get_json
 2025-08-10T01:11:39.1360693Z     rv = self.json_module.loads(data)
@@ -9756,9 +9756,9 @@
 2025-08-10T01:11:39.1369964Z     obj, end = self.scan_once(s, idx)
 2025-08-10T01:11:39.1370205Z                ^^^^^^^^^^^^^^^^^^^^^^
 2025-08-10T01:11:39.1370580Z json.decoder.JSONDecodeError: Expecting ',' delimiter: line 1 column 28 (char 27)
-2025-08-10T01:11:39.1370962Z 
+2025-08-10T01:11:39.1370962Z
 2025-08-10T01:11:39.1371141Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1371404Z 
+2025-08-10T01:11:39.1371404Z
 2025-08-10T01:11:39.1371681Z Traceback (most recent call last):
 2025-08-10T01:11:39.1372591Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/flask/wrappers.py", line 130, in on_json_loading_failed
 2025-08-10T01:11:39.1373440Z     return super().on_json_loading_failed(e)
@@ -9766,9 +9766,9 @@
 2025-08-10T01:11:39.1374627Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/werkzeug/wrappers/request.py", line 645, in on_json_loading_failed
 2025-08-10T01:11:39.1375387Z     raise BadRequest(f"Failed to decode JSON object: {e}")
 2025-08-10T01:11:39.1375960Z werkzeug.exceptions.BadRequest: 400 Bad Request: Failed to decode JSON object: Expecting ',' delimiter: line 1 column 28 (char 27)
-2025-08-10T01:11:39.1376395Z 
+2025-08-10T01:11:39.1376395Z
 2025-08-10T01:11:39.1376572Z The above exception was the direct cause of the following exception:
-2025-08-10T01:11:39.1376827Z 
+2025-08-10T01:11:39.1376827Z
 2025-08-10T01:11:39.1376918Z Traceback (most recent call last):
 2025-08-10T01:11:39.1377595Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 518, in handle_interaction
 2025-08-10T01:11:39.1378559Z     data = request.get_json()
@@ -9779,7 +9779,7 @@
 2025-08-10T01:11:39.1381033Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/flask/wrappers.py", line 135, in on_json_loading_failed
 2025-08-10T01:11:39.1381663Z     raise BadRequest() from e
 2025-08-10T01:11:39.1382144Z werkzeug.exceptions.BadRequest: 400 Bad Request: The browser (or proxy) sent a request that this server could not understand.
-2025-08-10T01:11:39.1382569Z 
+2025-08-10T01:11:39.1382569Z
 2025-08-10T01:11:39.1398076Z 2025-08-10 01:11:39,139 - decorators - ERROR - 🔥🔴 --- EXCEPTION IN: get_campaign_game_state ---
 2025-08-10T01:11:39.1399967Z Args: ('mcp-edge-test-user', 'mcp-edge-test-campaign')
 2025-08-10T01:11:39.1400530Z Kwargs: {}
@@ -9789,9 +9789,9 @@
 2025-08-10T01:11:39.1404279Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1405093Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1405494Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1405774Z 
+2025-08-10T01:11:39.1405774Z
 2025-08-10T01:11:39.1406084Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1406530Z 
+2025-08-10T01:11:39.1406530Z
 2025-08-10T01:11:39.1406685Z Traceback (most recent call last):
 2025-08-10T01:11:39.1407669Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1408801Z     return func(*args, **kwargs)
@@ -9837,9 +9837,9 @@
 2025-08-10T01:11:39.1609189Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1610032Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1610452Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1610762Z 
+2025-08-10T01:11:39.1610762Z
 2025-08-10T01:11:39.1611346Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1611792Z 
+2025-08-10T01:11:39.1611792Z
 2025-08-10T01:11:39.1611956Z Traceback (most recent call last):
 2025-08-10T01:11:39.1612802Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1613646Z     return func(*args, **kwargs)
@@ -9885,9 +9885,9 @@
 2025-08-10T01:11:39.1737288Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1738424Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1738892Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1739210Z 
+2025-08-10T01:11:39.1739210Z
 2025-08-10T01:11:39.1739532Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1740019Z 
+2025-08-10T01:11:39.1740019Z
 2025-08-10T01:11:39.1740206Z Traceback (most recent call last):
 2025-08-10T01:11:39.1740808Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1741330Z     return func(*args, **kwargs)
@@ -9929,9 +9929,9 @@
 2025-08-10T01:11:39.1773472Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1774364Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1774815Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1775143Z 
+2025-08-10T01:11:39.1775143Z
 2025-08-10T01:11:39.1775467Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1775960Z 
+2025-08-10T01:11:39.1775960Z
 2025-08-10T01:11:39.1776137Z Traceback (most recent call last):
 2025-08-10T01:11:39.1776748Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1777247Z     return func(*args, **kwargs)
@@ -9973,9 +9973,9 @@
 2025-08-10T01:11:39.1810036Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1810918Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1811375Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1811690Z 
+2025-08-10T01:11:39.1811690Z
 2025-08-10T01:11:39.1812026Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1812520Z 
+2025-08-10T01:11:39.1812520Z
 2025-08-10T01:11:39.1812701Z Traceback (most recent call last):
 2025-08-10T01:11:39.1813314Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1813816Z     return func(*args, **kwargs)
@@ -10017,9 +10017,9 @@
 2025-08-10T01:11:39.1846938Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1847992Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1848454Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1848900Z 
+2025-08-10T01:11:39.1848900Z
 2025-08-10T01:11:39.1849241Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1849739Z 
+2025-08-10T01:11:39.1849739Z
 2025-08-10T01:11:39.1849918Z Traceback (most recent call last):
 2025-08-10T01:11:39.1851138Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1851695Z     return func(*args, **kwargs)
@@ -10061,9 +10061,9 @@
 2025-08-10T01:11:39.1883240Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1884142Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1884595Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1884914Z 
+2025-08-10T01:11:39.1884914Z
 2025-08-10T01:11:39.1885237Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1885730Z 
+2025-08-10T01:11:39.1885730Z
 2025-08-10T01:11:39.1885904Z Traceback (most recent call last):
 2025-08-10T01:11:39.1886506Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1886991Z     return func(*args, **kwargs)
@@ -10105,9 +10105,9 @@
 2025-08-10T01:11:39.1919360Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1920251Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1920714Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1921027Z 
+2025-08-10T01:11:39.1921027Z
 2025-08-10T01:11:39.1921361Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1921846Z 
+2025-08-10T01:11:39.1921846Z
 2025-08-10T01:11:39.1922208Z Traceback (most recent call last):
 2025-08-10T01:11:39.1922739Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1923345Z     return func(*args, **kwargs)
@@ -10149,9 +10149,9 @@
 2025-08-10T01:11:39.1955528Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1956420Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1956878Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1957198Z 
+2025-08-10T01:11:39.1957198Z
 2025-08-10T01:11:39.1957526Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1958306Z 
+2025-08-10T01:11:39.1958306Z
 2025-08-10T01:11:39.1958487Z Traceback (most recent call last):
 2025-08-10T01:11:39.1959196Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1959700Z     return func(*args, **kwargs)
@@ -10193,9 +10193,9 @@
 2025-08-10T01:11:39.1991262Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.1992158Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.1992616Z RuntimeError: no running event loop
-2025-08-10T01:11:39.1992930Z 
+2025-08-10T01:11:39.1992930Z
 2025-08-10T01:11:39.1993256Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.1993744Z 
+2025-08-10T01:11:39.1993744Z
 2025-08-10T01:11:39.1993926Z Traceback (most recent call last):
 2025-08-10T01:11:39.1994523Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.1995111Z     return func(*args, **kwargs)
@@ -10237,9 +10237,9 @@
 2025-08-10T01:11:39.2024865Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.2025767Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.2026229Z RuntimeError: no running event loop
-2025-08-10T01:11:39.2026546Z 
+2025-08-10T01:11:39.2026546Z
 2025-08-10T01:11:39.2026868Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.2027346Z 
+2025-08-10T01:11:39.2027346Z
 2025-08-10T01:11:39.2027526Z Traceback (most recent call last):
 2025-08-10T01:11:39.2028646Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.2029555Z     return func(*args, **kwargs)
@@ -10281,9 +10281,9 @@
 2025-08-10T01:11:39.2065372Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.2067445Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.2068144Z RuntimeError: no running event loop
-2025-08-10T01:11:39.2069431Z 
+2025-08-10T01:11:39.2069431Z
 2025-08-10T01:11:39.2069784Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.2071043Z 
+2025-08-10T01:11:39.2071043Z
 2025-08-10T01:11:39.2071225Z Traceback (most recent call last):
 2025-08-10T01:11:39.2072213Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.2073081Z     return func(*args, **kwargs)
@@ -10329,9 +10329,9 @@
 2025-08-10T01:11:39.2221786Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:39.2222566Z     asyncio.get_running_loop()
 2025-08-10T01:11:39.2222960Z RuntimeError: no running event loop
-2025-08-10T01:11:39.2223257Z 
+2025-08-10T01:11:39.2223257Z
 2025-08-10T01:11:39.2223568Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:39.2224280Z 
+2025-08-10T01:11:39.2224280Z
 2025-08-10T01:11:39.2224431Z Traceback (most recent call last):
 2025-08-10T01:11:39.2225222Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:39.2225983Z     return func(*args, **kwargs)
@@ -10367,7 +10367,7 @@
 2025-08-10T01:11:39.2254970Z .
 2025-08-10T01:11:39.2255362Z ----------------------------------------------------------------------
 2025-08-10T01:11:39.2256541Z Ran 19 tests in 1.287s
-2025-08-10T01:11:39.2256750Z 
+2025-08-10T01:11:39.2256750Z
 2025-08-10T01:11:39.2256941Z OK
 2025-08-10T01:11:39.4384732Z ✅ PASS: tests/test_main_route_edge_cases.py
 2025-08-10T01:11:39.4385932Z ----------------------------------------
@@ -10377,7 +10377,7 @@
 2025-08-10T01:11:39.5981584Z .................
 2025-08-10T01:11:39.5983046Z ----------------------------------------------------------------------
 2025-08-10T01:11:39.5983560Z Ran 28 tests in 0.024s
-2025-08-10T01:11:39.5983769Z 
+2025-08-10T01:11:39.5983769Z
 2025-08-10T01:11:39.5983885Z OK
 2025-08-10T01:11:39.6238971Z ✅ PASS: tests/test_main_security_validation.py
 2025-08-10T01:11:39.6240436Z ----------------------------------------
@@ -10406,7 +10406,7 @@
 2025-08-10T01:11:40.9225144Z .....s.......
 2025-08-10T01:11:40.9227277Z ----------------------------------------------------------------------
 2025-08-10T01:11:40.9230421Z Ran 17 tests in 0.041s
-2025-08-10T01:11:40.9230644Z 
+2025-08-10T01:11:40.9230644Z
 2025-08-10T01:11:40.9238979Z OK (skipped=1)
 2025-08-10T01:11:41.1381147Z ✅ PASS: tests/test_main_state_helper.py
 2025-08-10T01:11:41.1382613Z ----------------------------------------
@@ -10414,7 +10414,7 @@
 2025-08-10T01:11:41.2046801Z .......
 2025-08-10T01:11:41.2047951Z ----------------------------------------------------------------------
 2025-08-10T01:11:41.2048684Z Ran 7 tests in 0.003s
-2025-08-10T01:11:41.2048910Z 
+2025-08-10T01:11:41.2048910Z
 2025-08-10T01:11:41.2049037Z OK
 2025-08-10T01:11:41.2157662Z ✅ PASS: tests/test_main_structured_response_building.py
 2025-08-10T01:11:41.2160106Z ----------------------------------------
@@ -10425,7 +10425,7 @@
 2025-08-10T01:11:41.2835288Z .
 2025-08-10T01:11:41.2835780Z ----------------------------------------------------------------------
 2025-08-10T01:11:41.2836336Z Ran 7 tests in 0.002s
-2025-08-10T01:11:41.2836551Z 
+2025-08-10T01:11:41.2836551Z
 2025-08-10T01:11:41.2836666Z OK
 2025-08-10T01:11:41.2935883Z ✅ PASS: tests/test_memory_integration.py
 2025-08-10T01:11:41.2937176Z ----------------------------------------
@@ -10433,7 +10433,7 @@
 2025-08-10T01:11:41.3103027Z ============================================================
 2025-08-10T01:11:41.3103819Z CAMPAIGNCREATIONV2 MEMORY LEAK FIXES VERIFICATION
 2025-08-10T01:11:41.3105579Z ============================================================
-2025-08-10T01:11:41.3105916Z 
+2025-08-10T01:11:41.3105916Z
 2025-08-10T01:11:41.3106288Z 🔍 Verifying component structure...
 2025-08-10T01:11:41.3106791Z ✅ useState imported correctly
 2025-08-10T01:11:41.3107254Z ✅ useEffect imported correctly
@@ -10450,9 +10450,9 @@
 2025-08-10T01:11:41.3116546Z ✅ 8. Completion message improved for better UX
 2025-08-10T01:11:41.3117269Z ✅ 9. Auto-retry timeout properly cleaned up before setting new one
 2025-08-10T01:11:41.3118206Z ✅ 10. Promise-based completion timeout with proper tracking
-2025-08-10T01:11:41.3118610Z 
+2025-08-10T01:11:41.3118610Z
 2025-08-10T01:11:41.3118885Z 🎉 All memory leak fixes verified successfully!
-2025-08-10T01:11:41.3119230Z 
+2025-08-10T01:11:41.3119230Z
 2025-08-10T01:11:41.3119395Z Summary of fixes implemented:
 2025-08-10T01:11:41.3119931Z - Added refs for all timer types (timeout, interval, completion)
 2025-08-10T01:11:41.3120520Z - Created clearAllTimers helper function
@@ -10461,7 +10461,7 @@
 2025-08-10T01:11:41.3122185Z - Improved completion flow to prevent component unmount interruption
 2025-08-10T01:11:41.3122884Z - Added auto-retry timeout cleanup before setting new one
 2025-08-10T01:11:41.3123504Z - Enhanced completion message for better user experience
-2025-08-10T01:11:41.3123876Z 
+2025-08-10T01:11:41.3123876Z
 2025-08-10T01:11:41.3124028Z ============================================================
 2025-08-10T01:11:41.3124664Z ✅ ALL TESTS PASSED - MEMORY LEAKS SUCCESSFULLY FIXED!
 2025-08-10T01:11:41.3125180Z ============================================================
@@ -10526,17 +10526,17 @@
 2025-08-10T01:11:41.3645965Z test_progressive_enhancement (__main__.TestMilestone4InteractiveFeatures.test_progressive_enhancement)
 2025-08-10T01:11:41.3647308Z Test that features use progressive enhancement ... ✅ Features use progressive enhancement and modern interface system
 2025-08-10T01:11:41.3648253Z ok
-2025-08-10T01:11:41.3648403Z 
+2025-08-10T01:11:41.3648403Z
 2025-08-10T01:11:41.3648613Z ----------------------------------------------------------------------
 2025-08-10T01:11:41.3649076Z Ran 18 tests in 0.009s
-2025-08-10T01:11:41.3649299Z 
+2025-08-10T01:11:41.3649299Z
 2025-08-10T01:11:41.3649409Z OK
-2025-08-10T01:11:41.3649564Z 
+2025-08-10T01:11:41.3649564Z
 2025-08-10T01:11:41.3649707Z ============================================================
 2025-08-10T01:11:41.3650208Z 🎯 MILESTONE 4 TEST SUMMARY
 2025-08-10T01:11:41.3650565Z ============================================================
 2025-08-10T01:11:41.3651030Z ✅ Passed: 18/18
-2025-08-10T01:11:41.3651226Z 
+2025-08-10T01:11:41.3651226Z
 2025-08-10T01:11:41.3651580Z 🎉 MILESTONE 4: INTERACTIVE FEATURES - ALL TESTS PASSED!
 2025-08-10T01:11:41.3652104Z 📋 Features Ready:
 2025-08-10T01:11:41.3652478Z    • Modern Interface System
@@ -10551,7 +10551,7 @@
 2025-08-10T01:11:41.6372575Z .........
 2025-08-10T01:11:41.6382484Z ----------------------------------------------------------------------
 2025-08-10T01:11:41.6383016Z Ran 9 tests in 0.003s
-2025-08-10T01:11:41.6383215Z 
+2025-08-10T01:11:41.6383215Z
 2025-08-10T01:11:41.6383327Z OK
 2025-08-10T01:11:41.6869661Z ✅ PASS: tests/test_mission_conversion_helpers.py
 2025-08-10T01:11:41.6871181Z ----------------------------------------
@@ -10561,7 +10561,7 @@
 2025-08-10T01:11:41.9476658Z .
 2025-08-10T01:11:41.9477176Z ----------------------------------------------------------------------
 2025-08-10T01:11:41.9478426Z Ran 3 tests in 0.001s
-2025-08-10T01:11:41.9483037Z 
+2025-08-10T01:11:41.9483037Z
 2025-08-10T01:11:41.9483600Z OK
 2025-08-10T01:11:41.9910193Z ✅ PASS: tests/test_mission_handling.py
 2025-08-10T01:11:41.9913967Z ----------------------------------------
@@ -10584,9 +10584,9 @@
 2025-08-10T01:11:43.3173476Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:43.3177092Z     asyncio.get_running_loop()
 2025-08-10T01:11:43.3177550Z RuntimeError: no running event loop
-2025-08-10T01:11:43.3180160Z 
+2025-08-10T01:11:43.3180160Z
 2025-08-10T01:11:43.3180492Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:43.3180935Z 
+2025-08-10T01:11:43.3180935Z
 2025-08-10T01:11:43.3181069Z Traceback (most recent call last):
 2025-08-10T01:11:43.3181829Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:43.3182690Z     return func(*args, **kwargs)
@@ -10624,9 +10624,9 @@
 2025-08-10T01:11:43.3226185Z   setup_file_logging()
 2025-08-10T01:11:43.3226784Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:43.3277649Z 2025-08-10 01:11:43,327 - main - INFO - Received campaign creation request:
-2025-08-10T01:11:43.3279597Z 2025-08-10 01:11:43,327 - main - INFO -   Character: 
-2025-08-10T01:11:43.3280189Z 2025-08-10 01:11:43,327 - main - INFO -   Setting: 
-2025-08-10T01:11:43.3280752Z 2025-08-10 01:11:43,327 - main - INFO -   Description: 
+2025-08-10T01:11:43.3279597Z 2025-08-10 01:11:43,327 - main - INFO -   Character:
+2025-08-10T01:11:43.3280189Z 2025-08-10 01:11:43,327 - main - INFO -   Setting:
+2025-08-10T01:11:43.3280752Z 2025-08-10 01:11:43,327 - main - INFO -   Description:
 2025-08-10T01:11:43.3281340Z 2025-08-10 01:11:43,327 - main - INFO -   Custom options: []
 2025-08-10T01:11:43.3282012Z 2025-08-10 01:11:43,327 - main - INFO -   Selected prompts: ['narrative']
 2025-08-10T01:11:43.3303614Z 2025-08-10 01:11:43,330 - root - ERROR - 🔥🔴 Failed to get user settings for user_085210: Your default credentials were not found. To set up Application Default Credentials, see https://cloud.google.com/docs/authentication/external/set-up-adc for more information.
@@ -10641,9 +10641,9 @@
 2025-08-10T01:11:43.3350193Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:43.3351005Z     asyncio.get_running_loop()
 2025-08-10T01:11:43.3351435Z RuntimeError: no running event loop
-2025-08-10T01:11:43.3351727Z 
+2025-08-10T01:11:43.3351727Z
 2025-08-10T01:11:43.3352031Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:43.3352476Z 
+2025-08-10T01:11:43.3352476Z
 2025-08-10T01:11:43.3352640Z Traceback (most recent call last):
 2025-08-10T01:11:43.3353439Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:43.3354265Z     return func(*args, **kwargs)
@@ -10695,7 +10695,7 @@
 2025-08-10T01:11:43.3674132Z .
 2025-08-10T01:11:43.3675207Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.3676512Z Ran 6 tests in 1.033s
-2025-08-10T01:11:43.3676732Z 
+2025-08-10T01:11:43.3676732Z
 2025-08-10T01:11:43.3676855Z OK (skipped=2)
 2025-08-10T01:11:43.5759205Z ✅ PASS: tests/test_mock_services.py
 2025-08-10T01:11:43.5760561Z ----------------------------------------
@@ -10712,19 +10712,19 @@
 2025-08-10T01:11:43.6201688Z RED PHASE: Demonstrate that a naive regex approach would fail. ... ok
 2025-08-10T01:11:43.6203509Z test_narrative_with_json_special_chars (__main__.TestNarrativeCutoffBug.test_narrative_with_json_special_chars)
 2025-08-10T01:11:43.6204427Z Test narratives containing JSON special characters. ... ok
-2025-08-10T01:11:43.6204818Z 
+2025-08-10T01:11:43.6204818Z
 2025-08-10T01:11:43.6205039Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.6205510Z Ran 6 tests in 0.003s
-2025-08-10T01:11:43.6205706Z 
+2025-08-10T01:11:43.6205706Z
 2025-08-10T01:11:43.6205811Z OK
-2025-08-10T01:11:43.6205961Z 
+2025-08-10T01:11:43.6205961Z
 2025-08-10T01:11:43.6207985Z Actual result: 'The wizard says, "The ancient tome reads: \'Beware the curse of the shadow realm, for it whispers \\"death\\" to all who enter.\' We must be careful."\n\nHe continues, "I\'ve studied these texts for years. The curse can only be broken by someone who truly understands the meaning of sacrifice."\n\nOptions:\n1. Ask about the curse\n2. "Tell me more about this \'sacrifice\' you mentioned"\n3. Leave immediately'
-2025-08-10T01:11:43.6210112Z 
+2025-08-10T01:11:43.6210112Z
 2025-08-10T01:11:43.6212105Z Expected result: 'The wizard says, "The ancient tome reads: \'Beware the curse of the shadow realm, for it whispers \\"death\\" to all who enter.\' We must be careful."\n\nHe continues, "I\'ve studied these texts for years. The curse can only be broken by someone who truly understands the meaning of sacrifice."\n\nOptions:\n1. Ask about the curse\n2. "Tell me more about this \'sacrifice\' you mentioned"\n3. Leave immediately'
-2025-08-10T01:11:43.6214259Z 
+2025-08-10T01:11:43.6214259Z
 2025-08-10T01:11:43.6214828Z 🟢 GREEN PHASE: Fixed extraction successfully got all 691 chars
 2025-08-10T01:11:43.6215609Z Narrative ends correctly with: ...g presence to get him to spill everything quickly.
-2025-08-10T01:11:43.6216126Z 
+2025-08-10T01:11:43.6216126Z
 2025-08-10T01:11:43.6216478Z 🔴 RED PHASE: Buggy extraction got only 177 chars instead of 691
 2025-08-10T01:11:43.6217103Z Cutoff happened at: ...proaches you, his eyes gleaming with urgency.\n\n\
 2025-08-10T01:11:43.6270116Z ✅ PASS: tests/test_narrative_cutoff_bug.py
@@ -10733,7 +10733,7 @@
 2025-08-10T01:11:43.6639337Z ...
 2025-08-10T01:11:43.6644787Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.6645322Z Ran 3 tests in 0.000s
-2025-08-10T01:11:43.6650361Z 
+2025-08-10T01:11:43.6650361Z
 2025-08-10T01:11:43.6650488Z OK
 2025-08-10T01:11:43.6695870Z ✅ PASS: tests/test_narrative_field_clean.py
 2025-08-10T01:11:43.6697172Z ----------------------------------------
@@ -10744,7 +10744,7 @@
 2025-08-10T01:11:43.7389335Z ..........
 2025-08-10T01:11:43.7390033Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.7392180Z Ran 16 tests in 0.004s
-2025-08-10T01:11:43.7392661Z 
+2025-08-10T01:11:43.7392661Z
 2025-08-10T01:11:43.7393807Z OK
 2025-08-10T01:11:43.7497263Z ✅ PASS: tests/test_narrative_response_error_handling.py
 2025-08-10T01:11:43.7499794Z ----------------------------------------
@@ -10755,7 +10755,7 @@
 2025-08-10T01:11:43.7993531Z .
 2025-08-10T01:11:43.7994955Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.7997281Z Ran 11 tests in 0.002s
-2025-08-10T01:11:43.7997559Z 
+2025-08-10T01:11:43.7997559Z
 2025-08-10T01:11:43.7997675Z OK
 2025-08-10T01:11:43.8064871Z ✅ PASS: tests/test_narrative_response_extraction.py
 2025-08-10T01:11:43.8066324Z ----------------------------------------
@@ -10774,7 +10774,7 @@
 2025-08-10T01:11:43.8566294Z .
 2025-08-10T01:11:43.8566966Z ----------------------------------------------------------------------
 2025-08-10T01:11:43.8567925Z Ran 14 tests in 0.004s
-2025-08-10T01:11:43.8569453Z 
+2025-08-10T01:11:43.8569453Z
 2025-08-10T01:11:43.8569703Z OK
 2025-08-10T01:11:43.8636232Z ✅ PASS: tests/test_narrative_response_legacy_fallback.py
 2025-08-10T01:11:43.8637625Z ----------------------------------------
@@ -10782,7 +10782,7 @@
 2025-08-10T01:11:44.1223882Z .....
 2025-08-10T01:11:44.1227044Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.1227557Z Ran 5 tests in 0.001s
-2025-08-10T01:11:44.1227959Z 
+2025-08-10T01:11:44.1227959Z
 2025-08-10T01:11:44.1228073Z OK
 2025-08-10T01:11:44.1620124Z ✅ PASS: tests/test_npc_data_handling.py
 2025-08-10T01:11:44.1620979Z ----------------------------------------
@@ -10790,7 +10790,7 @@
 2025-08-10T01:11:44.3861865Z .....
 2025-08-10T01:11:44.3862811Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.3865159Z Ran 5 tests in 0.001s
-2025-08-10T01:11:44.3866673Z 
+2025-08-10T01:11:44.3866673Z
 2025-08-10T01:11:44.3866942Z OK
 2025-08-10T01:11:44.4151771Z ✅ PASS: tests/test_npc_gender_consistency_red_green.py
 2025-08-10T01:11:44.4152733Z ----------------------------------------
@@ -10799,7 +10799,7 @@
 2025-08-10T01:11:44.4623026Z .
 2025-08-10T01:11:44.4623652Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.4624382Z Ran 5 tests in 0.000s
-2025-08-10T01:11:44.4624752Z 
+2025-08-10T01:11:44.4624752Z
 2025-08-10T01:11:44.4625124Z OK
 2025-08-10T01:11:44.4696057Z ✅ PASS: tests/test_null_narrative_bug_fix.py
 2025-08-10T01:11:44.4697690Z ----------------------------------------
@@ -10807,7 +10807,7 @@
 2025-08-10T01:11:44.5099799Z ...........
 2025-08-10T01:11:44.5101857Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.5102396Z Ran 11 tests in 0.001s
-2025-08-10T01:11:44.5102622Z 
+2025-08-10T01:11:44.5102622Z
 2025-08-10T01:11:44.5102739Z OK
 2025-08-10T01:11:44.5160899Z ✅ PASS: tests/test_numeric_field_converter.py
 2025-08-10T01:11:44.5162184Z ----------------------------------------
@@ -10824,7 +10824,7 @@
 2025-08-10T01:11:44.5870539Z .
 2025-08-10T01:11:44.5870864Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.5871320Z Ran 5 tests in 0.004s
-2025-08-10T01:11:44.5871516Z 
+2025-08-10T01:11:44.5871516Z
 2025-08-10T01:11:44.5871620Z OK
 2025-08-10T01:11:44.5977566Z ✅ PASS: tests/test_old_tag_detection.py
 2025-08-10T01:11:44.5979027Z ----------------------------------------
@@ -10832,7 +10832,7 @@
 2025-08-10T01:11:44.6644799Z .....
 2025-08-10T01:11:44.6645739Z ----------------------------------------------------------------------
 2025-08-10T01:11:44.6646556Z Ran 5 tests in 0.002s
-2025-08-10T01:11:44.6647081Z 
+2025-08-10T01:11:44.6647081Z
 2025-08-10T01:11:44.6647463Z OK
 2025-08-10T01:11:44.6751532Z ✅ PASS: tests/test_planning_block_analysis.py
 2025-08-10T01:11:44.6752934Z ----------------------------------------
@@ -10840,10 +10840,10 @@
 2025-08-10T01:11:45.6751085Z test_api_failure_fallback (__main__.TestPlanningBlockJSON.test_api_failure_fallback)
 2025-08-10T01:11:45.6759192Z Test fallback behavior when API fails ... 2025-08-10 01:11:45,675 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:45.6761226Z 2025-08-10 01:11:45,675 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:45.6762594Z 2025-08-10 01:11:45,675 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:45.6762594Z 2025-08-10 01:11:45,675 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:45.6764332Z CRITICAL: Generate planning options ONLY for Test Hero in Test Location.
 2025-08-10T01:11:45.6765592Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:45.6766105Z 
+2025-08-10T01:11:45.6766105Z
 2025-08-10T01:11:45.6766320Z The player just said: "I want to think about m...
 2025-08-10T01:11:45.6767302Z 2025-08-10 01:11:45,675 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block: API Error
 2025-08-10T01:11:45.6768633Z 2025-08-10 01:11:45,675 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Exception type: <class 'Exception'>
@@ -10861,7 +10861,7 @@
 2025-08-10T01:11:45.6796384Z   File "/opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/unittest/mock.py", line 1183, in _execute_mock_call
 2025-08-10T01:11:45.6797291Z     raise effect
 2025-08-10T01:11:45.6797644Z Exception: API Error
-2025-08-10T01:11:45.6798065Z 
+2025-08-10T01:11:45.6798065Z
 2025-08-10T01:11:45.6798193Z ok
 2025-08-10T01:11:45.6798782Z test_api_response_structure (__main__.TestPlanningBlockJSON.test_api_response_structure)
 2025-08-10T01:11:45.6799678Z Test that API response has planning block in correct field ... ok
@@ -10871,10 +10871,10 @@
 2025-08-10T01:11:45.6804705Z test_json_response_parsing (__main__.TestPlanningBlockJSON.test_json_response_parsing)
 2025-08-10T01:11:45.6807109Z Test that JSON responses from Gemini are parsed correctly ... 2025-08-10 01:11:45,679 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:45.6809423Z 2025-08-10 01:11:45,679 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:45.6812274Z 2025-08-10 01:11:45,679 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:45.6812274Z 2025-08-10 01:11:45,679 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:45.6813052Z CRITICAL: Generate planning options ONLY for Test Hero in Test Location.
 2025-08-10T01:11:45.6813940Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:45.6814496Z 
+2025-08-10T01:11:45.6814496Z
 2025-08-10T01:11:45.6814716Z The player just said: "I want to think about m...
 2025-08-10T01:11:45.6816088Z 2025-08-10 01:11:45,679 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Length: 266 chars
 2025-08-10T01:11:45.6817245Z 2025-08-10 01:11:45,679 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Content: {
@@ -10901,10 +10901,10 @@
 2025-08-10T01:11:45.6843842Z test_plain_text_response_handling (__main__.TestPlanningBlockJSON.test_plain_text_response_handling)
 2025-08-10T01:11:45.6845320Z Test that plain text responses still work correctly ... 2025-08-10 01:11:45,680 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:45.6846559Z 2025-08-10 01:11:45,680 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:45.6847281Z 2025-08-10 01:11:45,680 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:45.6847281Z 2025-08-10 01:11:45,680 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:45.6848055Z CRITICAL: Generate planning options ONLY for Test Hero in Test Location.
 2025-08-10T01:11:45.6848800Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:45.6849259Z 
+2025-08-10T01:11:45.6849259Z
 2025-08-10T01:11:45.6849448Z The player just said: "I want to think about m...
 2025-08-10T01:11:45.6850234Z 2025-08-10 01:11:45,680 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Length: 161 chars
 2025-08-10T01:11:45.6851331Z 2025-08-10 01:11:45,680 - INFO - 🔍 API_RESPONSE_DEBUG (PLANNING_BLOCK_RAW_RESPONSE): Content: What would you like to do next?
@@ -10928,22 +10928,22 @@
 2025-08-10T01:11:45.6865141Z ok
 2025-08-10T01:11:45.6865742Z test_planning_block_in_json_field_only (__main__.TestPlanningBlockJSON.test_planning_block_in_json_field_only)
 2025-08-10T01:11:45.6866673Z Test that planning blocks should only be in JSON field, not narrative ... ok
-2025-08-10T01:11:45.6867135Z 
+2025-08-10T01:11:45.6867135Z
 2025-08-10T01:11:45.6867333Z ----------------------------------------------------------------------
 2025-08-10T01:11:45.6867921Z Ran 7 tests in 0.008s
-2025-08-10T01:11:45.6868131Z 
+2025-08-10T01:11:45.6868131Z
 2025-08-10T01:11:45.6868229Z OK
 2025-08-10T01:11:45.8332785Z ✅ PASS: tests/test_planning_block_json.py
 2025-08-10T01:11:45.8334219Z ----------------------------------------
 2025-08-10T01:11:45.8334736Z Running: tests/test_planning_block_json_format.py
 2025-08-10T01:11:45.8810467Z ERROR:root:🔥🔴 ❌ STRING PLANNING BLOCKS NO LONGER SUPPORTED: String planning blocks are deprecated. Only JSON format is allowed. Received: The player must choose their approach:
-2025-08-10T01:11:45.8812543Z 
+2025-08-10T01:11:45.8812543Z
 2025-08-10T01:11:45.8812881Z 1. **Examine Door** - Look carefully for traps or mechanisms...
 2025-08-10T01:11:45.8829745Z .....WARNING:root:⚠️ Choice 'invalid_choice' missing required text or description, skipping
 2025-08-10T01:11:45.8832752Z ..
 2025-08-10T01:11:45.8833817Z ----------------------------------------------------------------------
 2025-08-10T01:11:45.8834996Z Ran 7 tests in 0.003s
-2025-08-10T01:11:45.8835231Z 
+2025-08-10T01:11:45.8835231Z
 2025-08-10T01:11:45.8835344Z OK
 2025-08-10T01:11:45.8903092Z ✅ PASS: tests/test_planning_block_json_format.py
 2025-08-10T01:11:45.8904384Z ----------------------------------------
@@ -10954,7 +10954,7 @@
 2025-08-10T01:11:45.9657521Z ...
 2025-08-10T01:11:45.9658995Z ----------------------------------------------------------------------
 2025-08-10T01:11:45.9659495Z Ran 11 tests in 0.028s
-2025-08-10T01:11:45.9659708Z 
+2025-08-10T01:11:45.9659708Z
 2025-08-10T01:11:45.9659815Z OK
 2025-08-10T01:11:45.9734951Z ✅ PASS: tests/test_planning_block_robustness.py
 2025-08-10T01:11:45.9736229Z ----------------------------------------
@@ -10962,7 +10962,7 @@
 2025-08-10T01:11:46.9660417Z .2025-08-10 01:11:46,965 - WARNING - ⚠️ 🔍 VALIDATION_INPUT: Response text is None, returning empty string
 2025-08-10T01:11:46.9662960Z 2025-08-10 01:11:46,966 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:46.9671839Z 2025-08-10 01:11:46,967 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:46.9674086Z 2025-08-10 01:11:46,967 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:46.9674086Z 2025-08-10 01:11:46,967 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:46.9675499Z CRITICAL: Generate planning options ONLY for the character in <MagicMock name='mock.world_data.get()' id='139797188490832'>.
 2025-08-10T01:11:46.9676662Z DO NOT reference other characters, campaigns, or unrelated narrative eleme...
 2025-08-10T01:11:46.9677440Z 2025-08-10 01:11:46,967 - INFO - Initializing Gemini Client
@@ -10982,14 +10982,14 @@
 2025-08-10T01:11:46.9694890Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
 2025-08-10T01:11:46.9696114Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:11:46.9696965Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
-2025-08-10T01:11:46.9697453Z 
+2025-08-10T01:11:46.9697453Z
 2025-08-10T01:11:46.9698511Z 2025-08-10 01:11:46,967 - INFO - 🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception
 2025-08-10T01:11:46.9838353Z .........2025-08-10 01:11:46,983 - WARNING - ⚠️ ⚠️ PLANNING_BLOCK_MISSING: Story mode response missing required planning block
 2025-08-10T01:11:46.9839807Z 2025-08-10 01:11:46,983 - INFO - 🔍 PLANNING_BLOCK_REGENERATION: Sending prompt to API
-2025-08-10T01:11:46.9840880Z 2025-08-10 01:11:46,983 - INFO - 🔍 PLANNING_BLOCK_PROMPT: 
+2025-08-10T01:11:46.9840880Z 2025-08-10 01:11:46,983 - INFO - 🔍 PLANNING_BLOCK_PROMPT:
 2025-08-10T01:11:46.9841863Z CRITICAL: Generate planning options ONLY for Test Hero in current location.
 2025-08-10T01:11:46.9842685Z DO NOT reference other characters, campaigns, or unrelated narrative elements.
-2025-08-10T01:11:46.9843192Z 
+2025-08-10T01:11:46.9843192Z
 2025-08-10T01:11:46.9843390Z Generate ONLY a planning block using the st...
 2025-08-10T01:11:46.9843985Z 2025-08-10 01:11:46,983 - INFO - Initializing Gemini Client
 2025-08-10T01:11:46.9845367Z 2025-08-10 01:11:46,983 - ERROR - 🔥🔴 🔍 PLANNING_BLOCK_EXCEPTION: Failed to generate planning block: CRITICAL: GEMINI_API_KEY environment variable not found!
@@ -11008,12 +11008,12 @@
 2025-08-10T01:11:46.9858872Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/gemini_service.py", line 240, in get_client
 2025-08-10T01:11:46.9859924Z     raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
 2025-08-10T01:11:46.9860650Z ValueError: CRITICAL: GEMINI_API_KEY environment variable not found!
-2025-08-10T01:11:46.9861081Z 
+2025-08-10T01:11:46.9861081Z
 2025-08-10T01:11:46.9861843Z 2025-08-10 01:11:46,984 - INFO - 🔍 FALLBACK_USED: Updated structured_response.planning_block with fallback JSON content due to exception
 2025-08-10T01:11:46.9863994Z .
 2025-08-10T01:11:46.9865478Z ----------------------------------------------------------------------
 2025-08-10T01:11:46.9866134Z Ran 11 tests in 0.023s
-2025-08-10T01:11:46.9867291Z 
+2025-08-10T01:11:46.9867291Z
 2025-08-10T01:11:46.9867414Z OK
 2025-08-10T01:11:47.1243881Z ✅ PASS: tests/test_planning_block_validation_integration.py
 2025-08-10T01:11:47.1245496Z ----------------------------------------
@@ -11021,29 +11021,29 @@
 2025-08-10T01:11:47.1608807Z ....
 2025-08-10T01:11:47.1609392Z ----------------------------------------------------------------------
 2025-08-10T01:11:47.1609923Z Ran 4 tests in 0.000s
-2025-08-10T01:11:47.1610145Z 
+2025-08-10T01:11:47.1610145Z
 2025-08-10T01:11:47.1610447Z OK
 2025-08-10T01:11:47.1667380Z ✅ PASS: tests/test_planning_blocks_ui.py
 2025-08-10T01:11:47.1669157Z ----------------------------------------
 2025-08-10T01:11:47.1669628Z Running: tests/test_pr_changes_runner.py
-2025-08-10T01:11:47.3349363Z 
+2025-08-10T01:11:47.3349363Z
 2025-08-10T01:11:47.3350438Z === Testing Debug Mode Default Change ===
 2025-08-10T01:11:47.3351518Z ✓ GameState defaults to debug_mode=True
 2025-08-10T01:11:47.3352202Z ✓ GameState can be set to debug_mode=False
 2025-08-10T01:11:47.3378838Z ✓ debug_mode is included in serialization
 2025-08-10T01:11:47.3379452Z ✓ debug_mode is preserved in deserialization
 2025-08-10T01:11:47.3380112Z ✓ debug_mode defaults to True when missing from deserialization
-2025-08-10T01:11:47.3380540Z 
+2025-08-10T01:11:47.3380540Z
 2025-08-10T01:11:47.3380696Z === Testing Entity Schema Constant ===
 2025-08-10T01:11:47.3381341Z ✓ Entity schema has been properly integrated into game_state instructions
-2025-08-10T01:11:47.3381780Z 
+2025-08-10T01:11:47.3381780Z
 2025-08-10T01:11:47.3381928Z === Testing Manifest Cache Exclusion ===
 2025-08-10T01:11:47.3382572Z ✓ Internal attributes starting with _ are excluded from serialization
-2025-08-10T01:11:47.3389756Z 
+2025-08-10T01:11:47.3389756Z
 2025-08-10T01:11:47.3393022Z === Testing Entity ID Format ===
 2025-08-10T01:11:47.3396709Z ✓ PC entity ID format correct: pc_test_hero_001
 2025-08-10T01:11:47.3400736Z ✓ NPC entity ID format correct: npc_guard_captain_001
-2025-08-10T01:11:47.3404163Z 
+2025-08-10T01:11:47.3404163Z
 2025-08-10T01:11:47.3407449Z === All PR Change Tests Passed! ===
 2025-08-10T01:11:47.3574145Z ✅ PASS: tests/test_pr_changes_runner.py
 2025-08-10T01:11:47.3576707Z ----------------------------------------
@@ -11052,7 +11052,7 @@
 2025-08-10T01:11:47.6974222Z ss
 2025-08-10T01:11:47.6974932Z ----------------------------------------------------------------------
 2025-08-10T01:11:47.6976776Z Ran 2 tests in 0.000s
-2025-08-10T01:11:47.6978365Z 
+2025-08-10T01:11:47.6978365Z
 2025-08-10T01:11:47.6979139Z OK (skipped=2)
 2025-08-10T01:11:47.7509267Z ✅ PASS: tests/test_production_parity.py
 2025-08-10T01:11:47.7514739Z ----------------------------------------
@@ -11060,7 +11060,7 @@
 2025-08-10T01:11:47.7883950Z ....
 2025-08-10T01:11:47.7887456Z ----------------------------------------------------------------------
 2025-08-10T01:11:47.7888954Z Ran 4 tests in 0.001s
-2025-08-10T01:11:47.7889180Z 
+2025-08-10T01:11:47.7889180Z
 2025-08-10T01:11:47.7889306Z OK
 2025-08-10T01:11:47.7940095Z ✅ PASS: tests/test_prompt_mission_examples.py
 2025-08-10T01:11:47.7941099Z ----------------------------------------
@@ -11068,7 +11068,7 @@
 2025-08-10T01:11:47.8307467Z ....
 2025-08-10T01:11:47.8309436Z ----------------------------------------------------------------------
 2025-08-10T01:11:47.8310844Z Ran 4 tests in 0.001s
-2025-08-10T01:11:47.8311079Z 
+2025-08-10T01:11:47.8311079Z
 2025-08-10T01:11:47.8311202Z OK
 2025-08-10T01:11:47.8365651Z ✅ PASS: tests/test_prompt_npc_examples.py
 2025-08-10T01:11:47.8367009Z ----------------------------------------
@@ -11088,7 +11088,7 @@
 2025-08-10T01:11:48.8999080Z .
 2025-08-10T01:11:48.8999414Z ----------------------------------------------------------------------
 2025-08-10T01:11:48.8999866Z Ran 4 tests in 0.020s
-2025-08-10T01:11:48.9000068Z 
+2025-08-10T01:11:48.9000068Z
 2025-08-10T01:11:48.9000172Z OK
 2025-08-10T01:11:48.9000560Z ✓ Conditional prompts: 3/3 properly referenced
 2025-08-10T01:11:49.0545464Z ✅ PASS: tests/test_prompts.py
@@ -11125,10 +11125,10 @@
 2025-08-10T01:11:50.1718568Z ok
 2025-08-10T01:11:50.1719272Z test_build_campaign_prompt_with_all_inputs (__main__.TestRandomCampaignGeneration.test_build_campaign_prompt_with_all_inputs)
 2025-08-10T01:11:50.1720258Z Test normal campaign prompt building with all inputs provided. ... ok
-2025-08-10T01:11:50.1720873Z 
+2025-08-10T01:11:50.1720873Z
 2025-08-10T01:11:50.1721078Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.1721548Z Ran 8 tests in 0.002s
-2025-08-10T01:11:50.1721739Z 
+2025-08-10T01:11:50.1721739Z
 2025-08-10T01:11:50.1721842Z OK
 2025-08-10T01:11:50.1722335Z Testing that _build_campaign_prompt uses RANDOM_CHARACTERS and RANDOM_SETTINGS arrays
 2025-08-10T01:11:50.1722995Z ================================================================================
@@ -11138,7 +11138,7 @@
 2025-08-10T01:11:50.3999382Z ..
 2025-08-10T01:11:50.4000979Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.4001531Z Ran 2 tests in 0.000s
-2025-08-10T01:11:50.4001761Z 
+2025-08-10T01:11:50.4001761Z
 2025-08-10T01:11:50.4001881Z OK
 2025-08-10T01:11:50.4069308Z ✅ PASS: tests/test_raw_json_display_bug_reproduction.py
 2025-08-10T01:11:50.4070370Z ----------------------------------------
@@ -11163,16 +11163,16 @@
 2025-08-10T01:11:50.5384775Z 🔴 RED TEST: Settings button should exist beside "Create Campaign" ... ok
 2025-08-10T01:11:50.5385651Z test_sign_out_functionality_exists_red (__main__.ReactV2CriticalIssuesTDD.test_sign_out_functionality_exists_red)
 2025-08-10T01:11:50.5386591Z 🔴 RED TEST: Sign out functionality should be accessible ... ok
-2025-08-10T01:11:50.5386936Z 
+2025-08-10T01:11:50.5386936Z
 2025-08-10T01:11:50.5396544Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.5397109Z Ran 10 tests in 0.005s
-2025-08-10T01:11:50.5397338Z 
+2025-08-10T01:11:50.5397338Z
 2025-08-10T01:11:50.5397452Z OK
-2025-08-10T01:11:50.5397607Z 
+2025-08-10T01:11:50.5397607Z
 2025-08-10T01:11:50.5398228Z ======================================================================
 2025-08-10T01:11:50.5398867Z 🧪 REACT V2 CRITICAL ISSUES: TDD RED/GREEN TEST SUITE
 2025-08-10T01:11:50.5399341Z ======================================================================
-2025-08-10T01:11:50.5399633Z 
+2025-08-10T01:11:50.5399633Z
 2025-08-10T01:11:50.5399801Z 🎯 TESTING STRATEGY:
 2025-08-10T01:11:50.5400295Z    🔴 RED TESTS: Should FAIL initially, driving implementation
 2025-08-10T01:11:50.5400948Z    🟢 GREEN TESTS: Should PASS after fixes are implemented
@@ -11204,11 +11204,11 @@
 2025-08-10T01:11:50.5417553Z ✅ Settings button found in campaigns page
 2025-08-10T01:11:50.5418264Z 🔴 RED TEST: Testing for sign-out functionality
 2025-08-10T01:11:50.5418770Z ✅ Sign-out functionality found
-2025-08-10T01:11:50.5419021Z 
+2025-08-10T01:11:50.5419021Z
 2025-08-10T01:11:50.5419171Z ======================================================================
 2025-08-10T01:11:50.5419732Z 🟢 GREEN STATE ACHIEVED: All React V2 critical issues fixed!
 2025-08-10T01:11:50.5420209Z ✅ 10 tests passed
-2025-08-10T01:11:50.5420377Z 
+2025-08-10T01:11:50.5420377Z
 2025-08-10T01:11:50.5420524Z 🎯 VERIFIED FIXES:
 2025-08-10T01:11:50.5420877Z    • Hardcoded character names removed ✅
 2025-08-10T01:11:50.5421295Z    • Text clutter eliminated ✅
@@ -11216,7 +11216,7 @@
 2025-08-10T01:11:50.5422149Z    • Settings functionality added ✅
 2025-08-10T01:11:50.5422902Z    • Sign-out feature accessible ✅
 2025-08-10T01:11:50.5423408Z    • User input preserved throughout workflow ✅
-2025-08-10T01:11:50.5423719Z 
+2025-08-10T01:11:50.5423719Z
 2025-08-10T01:11:50.5423928Z 🚀 REACT V2 READY FOR PRODUCTION!
 2025-08-10T01:11:50.5424318Z ======================================================================
 2025-08-10T01:11:50.5552255Z ✅ PASS: tests/test_react_v2_tdd_critical_issues.py
@@ -11235,11 +11235,11 @@
 2025-08-10T01:11:50.6819398Z test_no_mock_service_in_production_path (__main__.RealAPIIntegrationTest.test_no_mock_service_in_production_path)
 2025-08-10T01:11:50.6820542Z 🟢 GREEN TEST: Verify mock service is not in production import path ... ok
 2025-08-10T01:11:50.6821794Z test_real_api_service_export_green (__main__.RealAPIIntegrationTest.test_real_api_service_export_green)
-2025-08-10T01:11:50.6822434Z 
+2025-08-10T01:11:50.6822434Z
 2025-08-10T01:11:50.6822920Z 🟢 GREEN TEST: Verify that services/index.ts exports real API service ... ok
 2025-08-10T01:11:50.6823508Z ============================================================
 2025-08-10T01:11:50.6824372Z 🧪 REAL API INTEGRATION: RED/GREEN TEST SUITE
-2025-08-10T01:11:50.6824801Z 
+2025-08-10T01:11:50.6824801Z
 2025-08-10T01:11:50.6824973Z ======================================================================
 2025-08-10T01:11:50.6825818Z FAIL: test_api_service_no_test_bypass_green (__main__.RealAPIIntegrationTest.test_api_service_no_test_bypass_green)
 2025-08-10T01:11:50.6826791Z 🟢 GREEN TEST: Verify that api.service.ts has test mode disabled
@@ -11249,10 +11249,10 @@
 2025-08-10T01:11:50.6830289Z     assert "this.testAuthBypass = null;" in content
 2025-08-10T01:11:50.6830729Z            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 2025-08-10T01:11:50.6831106Z AssertionError
-2025-08-10T01:11:50.6831275Z 
+2025-08-10T01:11:50.6831275Z
 2025-08-10T01:11:50.6831478Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.6831943Z Ran 7 tests in 0.002s
-2025-08-10T01:11:50.6832158Z 
+2025-08-10T01:11:50.6832158Z
 2025-08-10T01:11:50.6832307Z FAILED (failures=1, skipped=3)
 2025-08-10T01:11:50.6832667Z ============================================================
 2025-08-10T01:11:50.6833459Z 🟢 GREEN TEST: Verifying test mode is disabled in API service
@@ -11265,12 +11265,12 @@
 2025-08-10T01:11:50.6839438Z ✅ CampaignCreationPage uses real API service
 2025-08-10T01:11:50.6839957Z 🟢 GREEN TEST: Verifying real API service export
 2025-08-10T01:11:50.6840486Z ✅ Services index correctly exports real API service
-2025-08-10T01:11:50.6840802Z 
+2025-08-10T01:11:50.6840802Z
 2025-08-10T01:11:50.6841160Z ============================================================
 2025-08-10T01:11:50.6841676Z 🔴 RED STATE: Real API integration not working!
 2025-08-10T01:11:50.6842131Z ❌ 1 test failures
 2025-08-10T01:11:50.6842452Z ❌ 0 test errors
-2025-08-10T01:11:50.6842608Z 
+2025-08-10T01:11:50.6842608Z
 2025-08-10T01:11:50.6842747Z 🔍 FAILURES:
 2025-08-10T01:11:50.6843688Z    • test_api_service_no_test_bypass_green (__main__.RealAPIIntegrationTest.test_api_service_no_test_bypass_green): Traceback (most recent call last):
 2025-08-10T01:11:50.6845305Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/test_real_api_integration.py", line 99, in test_api_service_no_test_bypass_green
@@ -11285,7 +11285,7 @@
 2025-08-10T01:11:50.7472737Z \nTesting exact user JSON structure...
 2025-08-10T01:11:50.7474490Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.7475050Z Ran 2 tests in 0.000s
-2025-08-10T01:11:50.7475260Z 
+2025-08-10T01:11:50.7475260Z
 2025-08-10T01:11:50.7475374Z OK
 2025-08-10T01:11:50.7476788Z Input length: 5399
 2025-08-10T01:11:50.7478291Z Input preview: {
@@ -11293,57 +11293,57 @@
 2025-08-10T01:11:50.7481604Z \nResult length: 4239
 2025-08-10T01:11:50.7481981Z Result preview: [Mode: STORY MODE]
 2025-08-10T01:11:50.7482429Z [CHARACTER CREATION - Step 2 of 7]
-2025-08-10T01:11:50.7482712Z 
+2025-08-10T01:11:50.7482712Z
 2025-08-10T01:11:50.7483446Z "Understood," the voice echoes, a comforting presence as you consider your newfound destiny. "Allow me to craft an identity that truly reflects t...
 2025-08-10T01:11:50.7544572Z ✅ PASS: tests/test_real_json_bug_reproduction.py
 2025-08-10T01:11:50.7545836Z ----------------------------------------
 2025-08-10T01:11:50.7546340Z Running: tests/test_red_green_demonstration.py
 2025-08-10T01:11:50.8169344Z GeminiResponse Integration Bug Fix - TDD Demonstration
 2025-08-10T01:11:50.8171010Z ============================================================
-2025-08-10T01:11:50.8171327Z 
+2025-08-10T01:11:50.8171327Z
 2025-08-10T01:11:50.8171745Z 🧪 TEST-DRIVEN DEVELOPMENT CYCLE
 2025-08-10T01:11:50.8172155Z ============================================================
-2025-08-10T01:11:50.8172449Z 
+2025-08-10T01:11:50.8172449Z
 2025-08-10T01:11:50.8172665Z 1. 🔴 RED: Write failing test
 2025-08-10T01:11:50.8173203Z    • Test expects GeminiResponse integration to work
 2025-08-10T01:11:50.8173874Z    • Test fails because firestore can't encode GeminiResponse
 2025-08-10T01:11:50.8174619Z    • Error: 'GeminiResponse' object has no attribute 'encode'
-2025-08-10T01:11:50.8175013Z 
+2025-08-10T01:11:50.8175013Z
 2025-08-10T01:11:50.8175230Z 2. 🟢 GREEN: Make test pass
 2025-08-10T01:11:50.8175741Z    • Extract .narrative_text from GeminiResponse
 2025-08-10T01:11:50.8176333Z    • Pass string to firestore instead of object
 2025-08-10T01:11:50.8176840Z    • Test now passes
-2025-08-10T01:11:50.8177431Z 
+2025-08-10T01:11:50.8177431Z
 2025-08-10T01:11:50.8177640Z 3. 🔄 REFACTOR: Clean up
 2025-08-10T01:11:50.8178985Z    • Update all test mocks to return GeminiResponse
 2025-08-10T01:11:50.8179558Z    • Ensure consistent interface
 2025-08-10T01:11:50.8180045Z    • Maintain backward compatibility
-2025-08-10T01:11:50.8180330Z 
+2025-08-10T01:11:50.8180330Z
 2025-08-10T01:11:50.8180553Z 🔴 RED PHASE: Demonstrating the bug
 2025-08-10T01:11:50.8180981Z ==================================================
 2025-08-10T01:11:50.8181543Z ✅ get_initial_story() returns: GeminiResponse
 2025-08-10T01:11:50.8182380Z ✅ GeminiResponse.narrative_text: 'Your adventure begins in a bustling tavern......'
-2025-08-10T01:11:50.8183194Z 
+2025-08-10T01:11:50.8183194Z
 2025-08-10T01:11:50.8183568Z ❌ BEFORE FIX: firestore_service.add_story_entry() tries to call:
 2025-08-10T01:11:50.8184122Z    text.encode('utf-8')
 2025-08-10T01:11:50.8184494Z    where text = gemini_response_object
-2025-08-10T01:11:50.8184787Z 
+2025-08-10T01:11:50.8184787Z
 2025-08-10T01:11:50.8185201Z    ❌ AttributeError: 'GeminiResponse' object has no attribute 'encode'
 2025-08-10T01:11:50.8185856Z    ❌ Campaign creation fails!
-2025-08-10T01:11:50.8186096Z 
+2025-08-10T01:11:50.8186096Z
 2025-08-10T01:11:50.8186318Z 🟢 GREEN PHASE: Demonstrating the fix
 2025-08-10T01:11:50.8186716Z ==================================================
 2025-08-10T01:11:50.8187246Z ✅ get_initial_story() returns: GeminiResponse
-2025-08-10T01:11:50.8187567Z 
+2025-08-10T01:11:50.8187567Z
 2025-08-10T01:11:50.8188079Z ✅ AFTER FIX: main.py extracts narrative_text:
 2025-08-10T01:11:50.8188666Z    opening_story_response = gemini_service.get_initial_story(...)
 2025-08-10T01:11:50.8189359Z    create_campaign(..., opening_story_response.narrative_text, ...)
-2025-08-10T01:11:50.8189753Z 
+2025-08-10T01:11:50.8189753Z
 2025-08-10T01:11:50.8189959Z ✅ Extracted narrative_text: str
 2025-08-10T01:11:50.8190456Z ✅ Content: 'Your adventure begins in a bustling tavern......'
 2025-08-10T01:11:50.8190981Z ✅ Successfully encoded: 45 bytes
 2025-08-10T01:11:50.8191456Z ✅ Campaign creation succeeds!
-2025-08-10T01:11:50.8191721Z 
+2025-08-10T01:11:50.8191721Z
 2025-08-10T01:11:50.8191934Z 🔄 REFACTOR PHASE: Clean architecture
 2025-08-10T01:11:50.8192333Z ==================================================
 2025-08-10T01:11:50.8192817Z ✅ Clean separation of concerns:
@@ -11351,18 +11351,18 @@
 2025-08-10T01:11:50.8194003Z    • .narrative_text: Clean narrative for users
 2025-08-10T01:11:50.8194619Z    • .structured_response: State updates and entities
 2025-08-10T01:11:50.8195208Z    • .debug_tags_present: Debug monitoring
-2025-08-10T01:11:50.8195528Z 
+2025-08-10T01:11:50.8195528Z
 2025-08-10T01:11:50.8195756Z ✅ Backward compatibility maintained:
 2025-08-10T01:11:50.8196282Z    • All existing functionality preserved
 2025-08-10T01:11:50.8196807Z    • Tests updated to use new interface
 2025-08-10T01:11:50.8197304Z    • No breaking changes
-2025-08-10T01:11:50.8197532Z 
+2025-08-10T01:11:50.8197532Z
 2025-08-10T01:11:50.8197909Z ✅ Benefits achieved:
 2025-08-10T01:11:50.8198374Z    • Type safety with GeminiResponse objects
 2025-08-10T01:11:50.8198910Z    • Clear interface between services
 2025-08-10T01:11:50.8199414Z    • Debug monitoring capabilities
 2025-08-10T01:11:50.8199931Z    • Consistent JSON response handling
-2025-08-10T01:11:50.8200234Z 
+2025-08-10T01:11:50.8200234Z
 2025-08-10T01:11:50.8200437Z 🎉 SUMMARY: TDD cycle complete!
 2025-08-10T01:11:50.8200894Z    • Bug identified and reproduced (RED)
 2025-08-10T01:11:50.8201397Z    • Fix implemented and tested (GREEN)
@@ -11385,11 +11385,11 @@
 2025-08-10T01:11:50.8730730Z ============================================================
 2025-08-10T01:11:50.8732374Z RED/GREEN TESTING: JSON Display Bug Fix
 2025-08-10T01:11:50.8733621Z ============================================================
-2025-08-10T01:11:50.8733959Z 
+2025-08-10T01:11:50.8733959Z
 2025-08-10T01:11:50.8734185Z This demonstrates how the bug manifested (red state)
 2025-08-10T01:11:50.8734714Z and how the fix resolves it (green state).
-2025-08-10T01:11:50.8735031Z 
-2025-08-10T01:11:50.8735039Z 
+2025-08-10T01:11:50.8735031Z
+2025-08-10T01:11:50.8735039Z
 2025-08-10T01:11:50.8735196Z === GREEN STATE TEST: Complete Fix ===
 2025-08-10T01:11:50.8735768Z   ✓ Plain JSON: Clean narrative extracted
 2025-08-10T01:11:50.8736360Z   ✓ Markdown-wrapped: Clean narrative extracted
@@ -11397,27 +11397,27 @@
 2025-08-10T01:11:50.8737508Z   ✓ Escaped chars: Clean narrative extracted
 2025-08-10T01:11:50.8738390Z   ✓ Malformed: Clean narrative extracted
 2025-08-10T01:11:50.8738938Z   ✓ Invalid field: Clean narrative extracted
-2025-08-10T01:11:50.8739255Z 
+2025-08-10T01:11:50.8739255Z
 2025-08-10T01:11:50.8739554Z ✓ GREEN: All test cases pass - users never see JSON!
-2025-08-10T01:11:50.8739922Z 
+2025-08-10T01:11:50.8739922Z
 2025-08-10T01:11:50.8740090Z === RED STATE TEST: Escaped Characters ===
 2025-08-10T01:11:50.8740719Z Returned narrative: 'She said "Hello!"\nNew line here\nAnother line'...
 2025-08-10T01:11:50.8741436Z ✓ GREEN: Escape sequences properly converted
-2025-08-10T01:11:50.8741747Z 
+2025-08-10T01:11:50.8741747Z
 2025-08-10T01:11:50.8741916Z === RED STATE TEST: Markdown-wrapped JSON ===
 2025-08-10T01:11:50.8742582Z Returned narrative: [Mode: DM MODE] Understanding confirmed. Processing user request....
 2025-08-10T01:11:50.8743386Z ✓ GREEN: Markdown unwrapped, JSON parsed correctly
-2025-08-10T01:11:50.8743732Z 
+2025-08-10T01:11:50.8743732Z
 2025-08-10T01:11:50.8743878Z === RED STATE TEST: Partial JSON ===
 2025-08-10T01:11:50.8744293Z Returned narrative: The story continues...
 2025-08-10T01:11:50.8744783Z ✓ GREEN: Narrative extracted from partial JSON
-2025-08-10T01:11:50.8745060Z 
+2025-08-10T01:11:50.8745060Z
 2025-08-10T01:11:50.8745211Z === RED STATE TEST: Raw JSON Bug ===
 2025-08-10T01:11:50.8745970Z Returned narrative: Scene #14: [Mode: DM MODE] The party continues their journey through the mystical forest....
 2025-08-10T01:11:50.8746899Z ✓ GREEN: JSON properly parsed, narrative extracted
-2025-08-10T01:11:50.8747271Z 
+2025-08-10T01:11:50.8747271Z
 2025-08-10T01:11:50.8747449Z === SIMULATING RED STATE (Bug Behavior) ===
-2025-08-10T01:11:50.8747922Z 
+2025-08-10T01:11:50.8747922Z
 2025-08-10T01:11:50.8748070Z BUG OUTPUT (what users saw):
 2025-08-10T01:11:50.8748443Z ```json
 2025-08-10T01:11:50.8748710Z {
@@ -11427,19 +11427,19 @@
 2025-08-10T01:11:50.8750786Z   "state_updates": {}
 2025-08-10T01:11:50.8751111Z }
 2025-08-10T01:11:50.8751378Z ```
-2025-08-10T01:11:50.8751525Z 
-2025-08-10T01:11:50.8751532Z 
+2025-08-10T01:11:50.8751525Z
+2025-08-10T01:11:50.8751532Z
 2025-08-10T01:11:50.8751690Z FIXED OUTPUT (what users see now):
 2025-08-10T01:11:50.8752240Z [Mode: DM MODE] Understanding confirmed. Processing user request.
-2025-08-10T01:11:50.8752652Z 
+2025-08-10T01:11:50.8752652Z
 2025-08-10T01:11:50.8752886Z ✓ Bug fixed: Users only see narrative text!
-2025-08-10T01:11:50.8753183Z 
+2025-08-10T01:11:50.8753183Z
 2025-08-10T01:11:50.8753334Z ============================================================
 2025-08-10T01:11:50.8753986Z SUMMARY:
 2025-08-10T01:11:50.8754271Z Tests run: 6
 2025-08-10T01:11:50.8754568Z Failures: 0
 2025-08-10T01:11:50.8754844Z Errors: 0
-2025-08-10T01:11:50.8755015Z 
+2025-08-10T01:11:50.8755015Z
 2025-08-10T01:11:50.8755286Z ✅ All tests GREEN - JSON display bug is FIXED!
 2025-08-10T01:11:50.8755840Z Users will never see raw JSON in their game interface.
 2025-08-10T01:11:50.8756323Z ============================================================
@@ -11447,10 +11447,10 @@
 2025-08-10T01:11:50.8758639Z RED TEST: Demonstrates the bug where raw JSON is shown to users ... ok
 2025-08-10T01:11:50.8759448Z test_simulate_red_state (__main__.TestRedGreenJSONFix.test_simulate_red_state)
 2025-08-10T01:11:50.8760253Z SIMULATION: What the bug looked like before the fix ... ok
-2025-08-10T01:11:50.8760748Z 
+2025-08-10T01:11:50.8760748Z
 2025-08-10T01:11:50.8761036Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.8761502Z Ran 6 tests in 0.002s
-2025-08-10T01:11:50.8761717Z 
+2025-08-10T01:11:50.8761717Z
 2025-08-10T01:11:50.8803789Z OK
 2025-08-10T01:11:50.8804273Z ✅ PASS: tests/test_red_green_json_fix.py
 2025-08-10T01:11:50.8805490Z ----------------------------------------
@@ -11462,7 +11462,7 @@
 2025-08-10T01:11:50.9502073Z ..
 2025-08-10T01:11:50.9502458Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.9502941Z Ran 21 tests in 0.005s
-2025-08-10T01:11:50.9503154Z 
+2025-08-10T01:11:50.9503154Z
 2025-08-10T01:11:50.9503289Z OK
 2025-08-10T01:11:50.9604840Z ✅ PASS: tests/test_robust_json_parser.py
 2025-08-10T01:11:50.9606048Z ----------------------------------------
@@ -11471,7 +11471,7 @@
 2025-08-10T01:11:50.9988453Z ✓ User scene numbers correctly increment only for AI responses
 2025-08-10T01:11:50.9989586Z ----------------------------------------------------------------------
 2025-08-10T01:11:50.9990113Z Ran 1 test in 0.000s
-2025-08-10T01:11:50.9990330Z 
+2025-08-10T01:11:50.9990330Z
 2025-08-10T01:11:50.9990452Z OK
 2025-08-10T01:11:50.9990860Z ✓ Sequence IDs increment for all entries
 2025-08-10T01:11:50.9992534Z ✓ This fixes the increment-by-2 display issue
@@ -11482,7 +11482,7 @@
 2025-08-10T01:11:51.0526217Z .....
 2025-08-10T01:11:51.0527308Z ----------------------------------------------------------------------
 2025-08-10T01:11:51.0528704Z Ran 5 tests in 0.002s
-2025-08-10T01:11:51.0528942Z 
+2025-08-10T01:11:51.0528942Z
 2025-08-10T01:11:51.0529058Z OK
 2025-08-10T01:11:51.0596277Z ✅ PASS: tests/test_scene_prefix_json_bug.py
 2025-08-10T01:11:51.0597506Z ----------------------------------------
@@ -11516,9 +11516,9 @@
 2025-08-10T01:11:52.4017023Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:52.4018031Z     asyncio.get_running_loop()
 2025-08-10T01:11:52.4018443Z RuntimeError: no running event loop
-2025-08-10T01:11:52.4018728Z 
+2025-08-10T01:11:52.4018728Z
 2025-08-10T01:11:52.4019016Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:52.4019684Z 
+2025-08-10T01:11:52.4019684Z
 2025-08-10T01:11:52.4019839Z Traceback (most recent call last):
 2025-08-10T01:11:52.4020598Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:52.4021165Z     db = get_db()
@@ -11551,7 +11551,7 @@
 2025-08-10T01:11:52.4049750Z .
 2025-08-10T01:11:52.4050115Z ----------------------------------------------------------------------
 2025-08-10T01:11:52.4050582Z Ran 4 tests in 1.008s
-2025-08-10T01:11:52.4050771Z 
+2025-08-10T01:11:52.4050771Z
 2025-08-10T01:11:52.4050877Z OK
 2025-08-10T01:11:52.6137074Z ✅ PASS: tests/test_settings_api.py
 2025-08-10T01:11:52.6138690Z ----------------------------------------
@@ -11578,9 +11578,9 @@
 2025-08-10T01:11:53.9295611Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:53.9296454Z     asyncio.get_running_loop()
 2025-08-10T01:11:53.9296864Z RuntimeError: no running event loop
-2025-08-10T01:11:53.9297155Z 
+2025-08-10T01:11:53.9297155Z
 2025-08-10T01:11:53.9297443Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:53.9297898Z 
+2025-08-10T01:11:53.9297898Z
 2025-08-10T01:11:53.9298250Z Traceback (most recent call last):
 2025-08-10T01:11:53.9298863Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:53.9299405Z     db = get_db()
@@ -11645,10 +11645,10 @@
 2025-08-10T01:11:53.9832896Z   setup_file_logging()
 2025-08-10T01:11:53.9833509Z ResourceWarning: Enable tracemalloc to get the object allocation traceback
 2025-08-10T01:11:53.9896496Z ok
-2025-08-10T01:11:53.9898762Z 
+2025-08-10T01:11:53.9898762Z
 2025-08-10T01:11:53.9899810Z ----------------------------------------------------------------------
 2025-08-10T01:11:53.9900952Z Ran 7 tests in 1.044s
-2025-08-10T01:11:53.9902628Z 
+2025-08-10T01:11:53.9902628Z
 2025-08-10T01:11:53.9902901Z OK
 2025-08-10T01:11:54.1927155Z ✅ PASS: tests/test_settings_auth_bypass.py
 2025-08-10T01:11:54.1929831Z ----------------------------------------
@@ -11680,9 +11680,9 @@
 2025-08-10T01:11:55.4966070Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.4966877Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.4967315Z RuntimeError: no running event loop
-2025-08-10T01:11:55.4967614Z 
+2025-08-10T01:11:55.4967614Z
 2025-08-10T01:11:55.4968135Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.4968582Z 
+2025-08-10T01:11:55.4968582Z
 2025-08-10T01:11:55.4968733Z Traceback (most recent call last):
 2025-08-10T01:11:55.4969574Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/decorators.py", line 62, in wrapper
 2025-08-10T01:11:55.4970375Z     return func(*args, **kwargs)
@@ -11724,9 +11724,9 @@
 2025-08-10T01:11:55.5094579Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5095223Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5095699Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5096098Z 
+2025-08-10T01:11:55.5096098Z
 2025-08-10T01:11:55.5096410Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5096757Z 
+2025-08-10T01:11:55.5096757Z
 2025-08-10T01:11:55.5096858Z Traceback (most recent call last):
 2025-08-10T01:11:55.5097436Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5098278Z     db = get_db()
@@ -11761,9 +11761,9 @@
 2025-08-10T01:11:55.5153606Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5154306Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5155137Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5155506Z 
+2025-08-10T01:11:55.5155506Z
 2025-08-10T01:11:55.5155828Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5156111Z 
+2025-08-10T01:11:55.5156111Z
 2025-08-10T01:11:55.5156217Z Traceback (most recent call last):
 2025-08-10T01:11:55.5156820Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5157355Z     db = get_db()
@@ -11798,9 +11798,9 @@
 2025-08-10T01:11:55.5210569Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5211678Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5212155Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5212474Z 
+2025-08-10T01:11:55.5212474Z
 2025-08-10T01:11:55.5212846Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5213113Z 
+2025-08-10T01:11:55.5213113Z
 2025-08-10T01:11:55.5213218Z Traceback (most recent call last):
 2025-08-10T01:11:55.5213815Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5214355Z     db = get_db()
@@ -11839,9 +11839,9 @@
 2025-08-10T01:11:55.5345927Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5346768Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5347230Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5347536Z 
+2025-08-10T01:11:55.5347536Z
 2025-08-10T01:11:55.5348129Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5348410Z 
+2025-08-10T01:11:55.5348410Z
 2025-08-10T01:11:55.5348506Z Traceback (most recent call last):
 2025-08-10T01:11:55.5349104Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5349631Z     db = get_db()
@@ -11884,9 +11884,9 @@
 2025-08-10T01:11:55.5600317Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5601055Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5601547Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5601884Z 
+2025-08-10T01:11:55.5601884Z
 2025-08-10T01:11:55.5602287Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5602568Z 
+2025-08-10T01:11:55.5602568Z
 2025-08-10T01:11:55.5602668Z Traceback (most recent call last):
 2025-08-10T01:11:55.5603507Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5604170Z     db = get_db()
@@ -11921,9 +11921,9 @@
 2025-08-10T01:11:55.5653664Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5654641Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5655143Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5655465Z 
+2025-08-10T01:11:55.5655465Z
 2025-08-10T01:11:55.5655841Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5656108Z 
+2025-08-10T01:11:55.5656108Z
 2025-08-10T01:11:55.5656200Z Traceback (most recent call last):
 2025-08-10T01:11:55.5657020Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5657678Z     db = get_db()
@@ -11958,9 +11958,9 @@
 2025-08-10T01:11:55.5709350Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.5710118Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.5710602Z RuntimeError: no running event loop
-2025-08-10T01:11:55.5710920Z 
+2025-08-10T01:11:55.5710920Z
 2025-08-10T01:11:55.5711289Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.5711562Z 
+2025-08-10T01:11:55.5711562Z
 2025-08-10T01:11:55.5711658Z Traceback (most recent call last):
 2025-08-10T01:11:55.5712243Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.5712772Z     db = get_db()
@@ -12013,9 +12013,9 @@
 2025-08-10T01:11:55.6150117Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py", line 314, in wrapper
 2025-08-10T01:11:55.6151105Z     asyncio.get_running_loop()
 2025-08-10T01:11:55.6151741Z RuntimeError: no running event loop
-2025-08-10T01:11:55.6152052Z 
+2025-08-10T01:11:55.6152052Z
 2025-08-10T01:11:55.6152424Z During handling of the above exception, another exception occurred:
-2025-08-10T01:11:55.6152694Z 
+2025-08-10T01:11:55.6152694Z
 2025-08-10T01:11:55.6152798Z Traceback (most recent call last):
 2025-08-10T01:11:55.6153593Z   File "/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/firestore_service.py", line 1082, in update_user_settings
 2025-08-10T01:11:55.6154243Z     db = get_db()
@@ -12048,7 +12048,7 @@
 2025-08-10T01:11:55.6186959Z .
 2025-08-10T01:11:55.6187308Z ----------------------------------------------------------------------
 2025-08-10T01:11:55.6187940Z Ran 9 tests in 1.089s
-2025-08-10T01:11:55.6188150Z 
+2025-08-10T01:11:55.6188150Z
 2025-08-10T01:11:55.6188441Z OK
 2025-08-10T01:11:55.6188938Z 🔵 Running browser tests for settings with MCP architecture
 2025-08-10T01:11:55.6189555Z 📝 NOTE: Tests HTTP endpoints through MCP API gateway
@@ -12061,14 +12061,14 @@
 2025-08-10T01:11:55.8644832Z .
 2025-08-10T01:11:55.8647214Z ----------------------------------------------------------------------
 2025-08-10T01:11:55.8647941Z Ran 2 tests in 0.001s
-2025-08-10T01:11:55.8648164Z 
+2025-08-10T01:11:55.8648164Z
 2025-08-10T01:11:55.8648285Z OK
 2025-08-10T01:11:55.8648613Z \n=== Testing Character Creation JSON Parsing ===
 2025-08-10T01:11:55.8649089Z Input JSON length: 1062
 2025-08-10T01:11:55.8649553Z ✅ Parsing succeeded!
 2025-08-10T01:11:55.8649910Z Result text length: 456
 2025-08-10T01:11:55.8650335Z Result preview: [CHARACTER CREATION - Step 1 of 7]
-2025-08-10T01:11:55.8650698Z 
+2025-08-10T01:11:55.8650698Z
 2025-08-10T01:11:55.8651009Z Welcome, adventurer! Before we begin your journey, we need to cr...
 2025-08-10T01:11:55.8651621Z Contains JSON artifacts: False
 2025-08-10T01:11:55.8652060Z \n=== Testing Malformed JSON Handling ===
@@ -12099,10 +12099,10 @@
 2025-08-10T01:11:55.9224853Z Test that state updates don't leak into narrative text ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
 2025-08-10T01:11:55.9226378Z test_state_update_debug_logging (__main__.TestStateUpdatePersistence.test_state_update_debug_logging)
 2025-08-10T01:11:55.9228154Z Test that state updates are logged for debugging ... skipped 'Integration tests require refactoring for current API - see state_updates validation in narrative_response_schema.py'
-2025-08-10T01:11:55.9229053Z 
+2025-08-10T01:11:55.9229053Z
 2025-08-10T01:11:55.9229290Z ----------------------------------------------------------------------
 2025-08-10T01:11:55.9229801Z Ran 11 tests in 0.001s
-2025-08-10T01:11:55.9230031Z 
+2025-08-10T01:11:55.9230031Z
 2025-08-10T01:11:55.9230161Z OK (skipped=11)
 2025-08-10T01:11:55.9271720Z ✅ PASS: tests/test_state_update_integration.py
 2025-08-10T01:11:55.9272986Z ----------------------------------------
@@ -12110,7 +12110,7 @@
 2025-08-10T01:11:55.9744564Z .....
 2025-08-10T01:11:55.9745955Z ----------------------------------------------------------------------
 2025-08-10T01:11:55.9746479Z Ran 5 tests in 0.000s
-2025-08-10T01:11:55.9746702Z 
+2025-08-10T01:11:55.9746702Z
 2025-08-10T01:11:55.9746818Z OK
 2025-08-10T01:11:55.9817617Z ✅ PASS: tests/test_state_updates_json_parsing.py
 2025-08-10T01:11:55.9819122Z ----------------------------------------
@@ -12144,13 +12144,13 @@
 2025-08-10T01:11:56.0986175Z Test extraction when GeminiResponse has no structured_response. ... ok
 2025-08-10T01:11:56.0988419Z test_extract_structured_fields_with_none_values (__main__.TestStructuredFieldsUtils.test_extract_structured_fields_with_none_values)
 2025-08-10T01:11:56.0993196Z Test extraction when structured response has None values. ... ok
-2025-08-10T01:11:56.0994973Z 
+2025-08-10T01:11:56.0994973Z
 2025-08-10T01:11:56.0995179Z Running Structured Fields Utils Tests
 2025-08-10T01:11:56.0995888Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.0996393Z ==================================================
 2025-08-10T01:11:56.0996971Z Ran 8 tests in 0.006s
-2025-08-10T01:11:56.0997175Z 
-2025-08-10T01:11:56.0997327Z 
+2025-08-10T01:11:56.0997175Z
+2025-08-10T01:11:56.0997327Z
 2025-08-10T01:11:56.0997908Z ✅ All 8 tests passed!
 2025-08-10T01:11:56.0998398Z OK
 2025-08-10T01:11:56.1108209Z ✅ PASS: tests/test_structured_fields_utils.py
@@ -12176,10 +12176,10 @@
 2025-08-10T01:11:56.2933773Z Test entity coverage validation with missing entities ... ok
 2025-08-10T01:11:56.2934636Z test_validate_entity_coverage_perfect (__main__.TestStructuredGeneration.test_validate_entity_coverage_perfect)
 2025-08-10T01:11:56.2935496Z Test entity coverage validation with perfect coverage ... ok
-2025-08-10T01:11:56.2935863Z 
+2025-08-10T01:11:56.2935863Z
 2025-08-10T01:11:56.2936070Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.2936547Z Ran 9 tests in 0.003s
-2025-08-10T01:11:56.2936732Z 
+2025-08-10T01:11:56.2936732Z
 2025-08-10T01:11:56.2936843Z OK
 2025-08-10T01:11:56.2937299Z 🧪 Testing Structured Generation Implementation
 2025-08-10T01:11:56.2937915Z ============================================================
@@ -12190,19 +12190,19 @@
 2025-08-10T01:11:56.3801470Z ........
 2025-08-10T01:11:56.3803004Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.3803548Z Ran 8 tests in 0.001s
-2025-08-10T01:11:56.3803775Z 
+2025-08-10T01:11:56.3803775Z
 2025-08-10T01:11:56.3803897Z OK
 2025-08-10T01:11:56.3910106Z ✅ PASS: tests/test_structured_response_extraction.py
 2025-08-10T01:11:56.3911519Z ----------------------------------------
 2025-08-10T01:11:56.3911996Z Running: tests/test_syntax.py
 2025-08-10T01:11:56.4347031Z ..
-2025-08-10T01:11:56.4347317Z 
+2025-08-10T01:11:56.4347317Z
 2025-08-10T01:11:56.4347541Z --- Attempting to import gemini_service.py ---
 2025-08-10T01:11:56.4354388Z Setting dummy GEMINI_API_KEY for import test...
 2025-08-10T01:11:56.4354970Z SUCCESS: gemini_service.py was imported without a syntax error.
 2025-08-10T01:11:56.4355580Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.4356125Z Ran 2 tests in 0.007s
-2025-08-10T01:11:56.4356355Z 
+2025-08-10T01:11:56.4356355Z
 2025-08-10T01:11:56.4356465Z OK
 2025-08-10T01:11:56.4413538Z ✅ PASS: tests/test_syntax.py
 2025-08-10T01:11:56.4414787Z ----------------------------------------
@@ -12216,14 +12216,14 @@
 2025-08-10T01:11:56.6318870Z test_main_module_syntax (__main__.TestComprehensiveSyntax.test_main_module_syntax)
 2025-08-10T01:11:56.9230793Z Test that main.py has valid syntax and can load its dependencies. ... 2025-08-10 01:11:56,922 - root - INFO - File logging configured: /tmp/worldarchitect.ai/flask-server.log
 2025-08-10T01:11:56.9296166Z ok
-2025-08-10T01:11:56.9298220Z 
+2025-08-10T01:11:56.9298220Z
 2025-08-10T01:11:56.9298471Z ----------------------------------------------------------------------
 2025-08-10T01:11:56.9299001Z Ran 4 tests in 0.365s
-2025-08-10T01:11:56.9299206Z 
+2025-08-10T01:11:56.9299206Z
 2025-08-10T01:11:56.9299658Z OK
 2025-08-10T01:11:56.9299935Z === Comprehensive Syntax Testing ===
 2025-08-10T01:11:56.9300400Z This test would have caught the f-string syntax error.
-2025-08-10T01:11:56.9300749Z 
+2025-08-10T01:11:56.9300749Z
 2025-08-10T01:11:56.9300918Z --- Quick syntax check for all Python files ---
 2025-08-10T01:11:56.9301613Z ✓ debug_mode_parser.py: Syntax OK
 2025-08-10T01:11:56.9302078Z ✓ structured_fields_utils.py: Syntax OK
@@ -12266,7 +12266,7 @@
 2025-08-10T01:11:56.9322160Z ✓ main.py: Syntax OK
 2025-08-10T01:11:56.9322537Z ✓ debug_json_response.py: Syntax OK
 2025-08-10T01:11:56.9322959Z ✓ __init__.py: Syntax OK
-2025-08-10T01:11:56.9323169Z 
+2025-08-10T01:11:56.9323169Z
 2025-08-10T01:11:56.9323327Z --- Running comprehensive test suite ---
 2025-08-10T01:11:56.9853620Z ✅ PASS: tests/test_syntax_comprehensive.py
 2025-08-10T01:11:56.9855150Z ----------------------------------------
@@ -12309,14 +12309,14 @@
 2025-08-10T01:11:57.9988549Z Test that state transition rules are clearly defined ... ok
 2025-08-10T01:11:57.9989789Z test_waiting_state_definition (__main__.TestThinkBlockStateManagement.test_waiting_state_definition)
 2025-08-10T01:11:57.9994875Z Test that planning block state is defined ... ok
-2025-08-10T01:11:57.9995272Z 
+2025-08-10T01:11:57.9995272Z
 2025-08-10T01:11:57.9995762Z ----------------------------------------------------------------------
 2025-08-10T01:11:57.9996447Z Ran 19 tests in 0.018s
-2025-08-10T01:11:57.9996693Z 
+2025-08-10T01:11:57.9996693Z
 2025-08-10T01:11:57.9997331Z Running Think Block Protocol Tests...
 2025-08-10T01:11:57.9998150Z ==================================================
 2025-08-10T01:11:57.9998590Z OK (skipped=1)
-2025-08-10T01:11:57.9998882Z 
+2025-08-10T01:11:57.9998882Z
 2025-08-10T01:11:57.9999322Z ✅ All think block tests passed!
 2025-08-10T01:11:58.1575453Z ✅ PASS: tests/test_think_block_protocol.py
 2025-08-10T01:11:58.1576944Z ----------------------------------------
@@ -12324,7 +12324,7 @@
 2025-08-10T01:11:58.2044136Z .........
 2025-08-10T01:11:58.2044937Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.2045759Z Ran 9 tests in 0.001s
-2025-08-10T01:11:58.2048684Z 
+2025-08-10T01:11:58.2048684Z
 2025-08-10T01:11:58.2048824Z OK
 2025-08-10T01:11:58.2118792Z ✅ PASS: tests/test_time_consolidation.py
 2025-08-10T01:11:58.2119577Z ----------------------------------------
@@ -12332,7 +12332,7 @@
 2025-08-10T01:11:58.2605582Z .......
 2025-08-10T01:11:58.2606539Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.2608365Z Ran 7 tests in 0.002s
-2025-08-10T01:11:58.2608592Z 
+2025-08-10T01:11:58.2608592Z
 2025-08-10T01:11:58.2608706Z OK
 2025-08-10T01:11:58.2684986Z ✅ PASS: tests/test_time_pressure.py
 2025-08-10T01:11:58.2686603Z ----------------------------------------
@@ -12344,7 +12344,7 @@
 2025-08-10T01:11:58.4263206Z ................
 2025-08-10T01:11:58.4263998Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.4264802Z Ran 21 tests in 0.024s
-2025-08-10T01:11:58.4265301Z 
+2025-08-10T01:11:58.4265301Z
 2025-08-10T01:11:58.4266746Z OK
 2025-08-10T01:11:58.4518894Z ✅ PASS: tests/test_token_utils.py
 2025-08-10T01:11:58.4519829Z ----------------------------------------
@@ -12352,7 +12352,7 @@
 2025-08-10T01:11:58.5000474Z ...
 2025-08-10T01:11:58.5001468Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.5003176Z Ran 3 tests in 0.001s
-2025-08-10T01:11:58.5004440Z 
+2025-08-10T01:11:58.5004440Z
 2025-08-10T01:11:58.5004575Z OK
 2025-08-10T01:11:58.5071131Z ✅ PASS: tests/test_unknown_entity_filtering.py
 2025-08-10T01:11:58.5072703Z ----------------------------------------
@@ -12361,31 +12361,31 @@
 2025-08-10T01:11:58.5538566Z Complete demonstration of the fix ... ok
 2025-08-10T01:11:58.5540394Z test_real_entities_still_validated (__main__.TestUnknownEntityFixSummary.test_real_entities_still_validated)
 2025-08-10T01:11:58.5546303Z Ensure real entities are still properly validated ... ok
-2025-08-10T01:11:58.5546787Z 
-2025-08-10T01:11:58.5548135Z 
+2025-08-10T01:11:58.5546787Z
+2025-08-10T01:11:58.5548135Z
 2025-08-10T01:11:58.5548614Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.5550199Z Ran 2 tests in 0.001s
-2025-08-10T01:11:58.5550437Z 
+2025-08-10T01:11:58.5550437Z
 2025-08-10T01:11:58.5550552Z OK
 2025-08-10T01:11:58.5551468Z === Unknown Entity Fix Demonstration ===
-2025-08-10T01:11:58.5552569Z 
+2025-08-10T01:11:58.5552569Z
 2025-08-10T01:11:58.5553882Z 1. THE PROBLEM:
 2025-08-10T01:11:58.5554746Z    Expected entities: ['Sir Galahad', 'Unknown']
 2025-08-10T01:11:58.5556446Z    Narrative: 'The brave knight Sir Galahad enters the mysterious chamber.'
 2025-08-10T01:11:58.5558442Z    Without fix: 'Unknown' would be flagged as missing
-2025-08-10T01:11:58.5558811Z 
+2025-08-10T01:11:58.5558811Z
 2025-08-10T01:11:58.5558939Z 2. THE FIX:
 2025-08-10T01:11:58.5559258Z    Entity validator filters out 'Unknown'
 2025-08-10T01:11:58.5559681Z    Missing entities: []
 2025-08-10T01:11:58.5560015Z    Retry needed: False
-2025-08-10T01:11:58.5560230Z 
+2025-08-10T01:11:58.5560230Z
 2025-08-10T01:11:58.5560344Z 3. THE RESULT:
 2025-08-10T01:11:58.5560699Z    Dual-pass generator also filters 'Unknown'
 2025-08-10T01:11:58.5561159Z    Second pass needed: False
 2025-08-10T01:11:58.5561532Z    Success on first pass: True
-2025-08-10T01:11:58.5561788Z 
+2025-08-10T01:11:58.5561788Z
 2025-08-10T01:11:58.5562204Z ✅ Fix verified: No unnecessary dual-pass for 'Unknown' entity!
-2025-08-10T01:11:58.5562559Z 
+2025-08-10T01:11:58.5562559Z
 2025-08-10T01:11:58.5562789Z ✅ Real entity validation still works correctly!
 2025-08-10T01:11:58.5618664Z ✅ PASS: tests/test_unknown_entity_fix_summary.py
 2025-08-10T01:11:58.5620430Z ----------------------------------------
@@ -12395,17 +12395,17 @@
 2025-08-10T01:11:58.6105867Z .
 2025-08-10T01:11:58.6106708Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.6107195Z Ran 4 tests in 0.002s
-2025-08-10T01:11:58.6107404Z 
+2025-08-10T01:11:58.6107404Z
 2025-08-10T01:11:58.6107515Z OK
 2025-08-10T01:11:58.6182781Z ✅ PASS: tests/test_user_scenario_fix_validation.py
 2025-08-10T01:11:58.6184356Z ----------------------------------------
 2025-08-10T01:11:58.6184889Z Running: tests/test_v1_vs_v2_campaign_comparison.py
 2025-08-10T01:11:58.7526654Z setUpClass (__main__.V1VsV2CampaignComparisonTest) ... skipped 'V1 server not available for testing'
 2025-08-10T01:11:58.7529145Z 🔬 V1 vs V2 Campaign Creation Comparison Test Suite
-2025-08-10T01:11:58.7530092Z 
+2025-08-10T01:11:58.7530092Z
 2025-08-10T01:11:58.7530340Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.7530826Z Ran 0 tests in 0.003s
-2025-08-10T01:11:58.7531031Z 
+2025-08-10T01:11:58.7531031Z
 2025-08-10T01:11:58.7531148Z OK (skipped=1)
 2025-08-10T01:11:58.7532123Z ============================================================
 2025-08-10T01:11:58.7533936Z 📁 Evidence directories created in: docs/v1_vs_v2_comparison
@@ -12421,7 +12421,7 @@
 2025-08-10T01:11:58.7830222Z ----------------------------------------
 2025-08-10T01:11:58.7830715Z Running: tests/test_v2_planning_blocks.py
 2025-08-10T01:11:58.8003441Z Testing V2 Planning Blocks Implementation
-2025-08-10T01:11:58.8004829Z 
+2025-08-10T01:11:58.8004829Z
 2025-08-10T01:11:58.8005183Z ==================================================
 2025-08-10T01:11:58.8006362Z ✅ Planning block data structure is correct
 2025-08-10T01:11:58.8008569Z ✅ API response with planning block is valid
@@ -12431,23 +12431,23 @@
 2025-08-10T01:11:58.8013261Z   - PlanningBlockData
 2025-08-10T01:11:58.8014275Z   - Updated InteractionResponse with planning_block field
 2025-08-10T01:11:58.8016046Z   - Extended StoryEntry with 'planning' type
-2025-08-10T01:11:58.8016351Z 
+2025-08-10T01:11:58.8016351Z
 2025-08-10T01:11:58.8016567Z 🧩 React components:
 2025-08-10T01:11:58.8016959Z   - PlanningBlock.tsx component created
 2025-08-10T01:11:58.8017495Z   - GameView.tsx updated to render planning blocks
 2025-08-10T01:11:58.8018268Z   - api.service.ts updated to parse planning_block JSON
-2025-08-10T01:11:58.8018659Z 
+2025-08-10T01:11:58.8018659Z
 2025-08-10T01:11:58.8018858Z 🎨 Rendering logic:
 2025-08-10T01:11:58.8019251Z   - Planning blocks render with V2 theme colors
 2025-08-10T01:11:58.8019770Z   - Choice selection triggers handleSubmit
 2025-08-10T01:11:58.8020232Z   - Custom action option available
 2025-08-10T01:11:58.8020686Z   - Risk level badges display correctly
-2025-08-10T01:11:58.8020990Z 
+2025-08-10T01:11:58.8020990Z
 2025-08-10T01:11:58.8021248Z ✅ All components integrated successfully
-2025-08-10T01:11:58.8021870Z 
+2025-08-10T01:11:58.8021870Z
 2025-08-10T01:11:58.8022019Z ==================================================
 2025-08-10T01:11:58.8022555Z ✅ All V2 planning block tests passed!
-2025-08-10T01:11:58.8022861Z 
+2025-08-10T01:11:58.8022861Z
 2025-08-10T01:11:58.8023007Z Implementation Summary:
 2025-08-10T01:11:58.8023449Z 1. Created PlanningBlock.tsx component with V2 styling
 2025-08-10T01:11:58.8024005Z 2. Extended api.types.ts with planning block types
@@ -12462,7 +12462,7 @@
 2025-08-10T01:11:58.9832413Z ...
 2025-08-10T01:11:58.9833804Z ----------------------------------------------------------------------
 2025-08-10T01:11:58.9834308Z Ran 4 tests in 0.006s
-2025-08-10T01:11:58.9834520Z 
+2025-08-10T01:11:58.9834520Z
 2025-08-10T01:11:58.9834627Z OK
 2025-08-10T01:11:58.9834985Z Pydantic: Handled invalid data gracefully
 2025-08-10T01:11:58.9836546Z Pydantic validation: 100 iterations in 0.005s (20130 ops/sec)
@@ -12497,10 +12497,10 @@
 2025-08-10T01:11:59.1372907Z Test cache functionality verification - focuses on behavior not timing. ... ok
 2025-08-10T01:11:59.1374164Z test_world_content_loading_with_cache_integration (__main__.TestWorldLoaderEnd2EndCache.test_world_content_loading_with_cache_integration)
 2025-08-10T01:11:59.1375355Z Test full world content loading with cache integration - PASSING TEST. ... ok
-2025-08-10T01:11:59.1375913Z 
+2025-08-10T01:11:59.1375913Z
 2025-08-10T01:11:59.1376167Z ----------------------------------------------------------------------
 2025-08-10T01:11:59.1376636Z Ran 12 tests in 0.012s
-2025-08-10T01:11:59.1376829Z 
+2025-08-10T01:11:59.1376829Z
 2025-08-10T01:11:59.1376938Z OK
 2025-08-10T01:11:59.1538979Z ✅ PASS: tests/test_world_loader.py
 2025-08-10T01:11:59.1542449Z ----------------------------------------
@@ -12508,7 +12508,7 @@
 2025-08-10T01:11:59.2030680Z .......
 2025-08-10T01:11:59.2033105Z ----------------------------------------------------------------------
 2025-08-10T01:11:59.2035595Z Ran 7 tests in 0.002s
-2025-08-10T01:11:59.2037919Z 
+2025-08-10T01:11:59.2037919Z
 2025-08-10T01:11:59.2040003Z OK
 2025-08-10T01:11:59.2103641Z ✅ PASS: tests/test_world_loader_e2e.py
 2025-08-10T01:11:59.2106239Z ----------------------------------------
@@ -12567,7 +12567,7 @@
 2025-08-10T01:12:05.0103308Z .....
 2025-08-10T01:12:05.0104971Z ----------------------------------------------------------------------
 2025-08-10T01:12:05.0105735Z Ran 10 tests in 4.562s
-2025-08-10T01:12:05.0107964Z 
+2025-08-10T01:12:05.0107964Z
 2025-08-10T01:12:05.0108114Z OK
 2025-08-10T01:12:06.1467626Z ✅ PASS: tests/test_world_logic_structure.py
 2025-08-10T01:12:06.1470396Z ----------------------------------------
@@ -12576,13 +12576,13 @@
 2025-08-10T01:12:28.9968407Z Reproduce the complete user workflow that leads to persistent spinner ... /opt/hostedtoolcache/Python/3.11.13/x64/lib/python3.11/unittest/case.py:678: DeprecationWarning: It is deprecated to return a value that is not None from a test case (<bound method CampaignWizardResetReproductionTest.test_campaign_wizard_reset_issue_reproduction of <__main__.CampaignWizardResetReproductionTest testMethod=test_campaign_wizard_reset_issue_reproduction>>)
 2025-08-10T01:12:28.9974516Z   return self.run(*args, **kwds)
 2025-08-10T01:12:28.9974893Z ok
-2025-08-10T01:12:29.5224525Z 
+2025-08-10T01:12:29.5224525Z
 2025-08-10T01:12:29.5225428Z ----------------------------------------------------------------------
-2025-08-10T01:12:29.5225979Z 
+2025-08-10T01:12:29.5225979Z
 2025-08-10T01:12:29.5226753Z 🧪 REPRODUCING CAMPAIGN WIZARD RESET ISSUE
 2025-08-10T01:12:29.5227588Z 📱 Step 1: Loading application...
 2025-08-10T01:12:29.5229770Z Ran 1 test in 23.180s
-2025-08-10T01:12:29.5230029Z 
+2025-08-10T01:12:29.5230029Z
 2025-08-10T01:12:29.5230160Z OK
 2025-08-10T01:12:29.5232327Z 🎮 Step 2: Simulating first campaign creation...
 2025-08-10T01:12:29.5233692Z 🚀 Step 3: Clicking 'Begin Adventure' to create first campaign...
@@ -12596,7 +12596,7 @@
 2025-08-10T01:12:29.5238202Z    ✅ No persistent spinner found
 2025-08-10T01:12:29.5238670Z 🔬 Step 8: Analyzing DOM state for debugging...
 2025-08-10T01:12:29.5239109Z    Campaign wizard container contents:
-2025-08-10T01:12:29.5239471Z    
+2025-08-10T01:12:29.5239471Z
 2025-08-10T01:12:29.5239754Z                             <div class="wizard-content">
 2025-08-10T01:12:29.5240221Z                                 <h3>Campaign Creation Wizard</h3>
 2025-08-10T01:12:29.5240719Z                                 <div class="wizard-step">Step 1: Basic Detai...
@@ -12608,7 +12608,7 @@
 2025-08-10T01:12:29.5325336Z sys:1: ResourceWarning: unclosed <socket.socket fd=3, family=2, type=1, proto=0, laddr=('0.0.0.0', 39513)>
 2025-08-10T01:12:29.5471741Z ✅ PASS: tests/wizard/test_campaign_wizard_reset_reproduction.py
 2025-08-10T01:12:29.5473906Z ----------------------------------------
-2025-08-10T01:12:29.5474491Z 
+2025-08-10T01:12:29.5474491Z
 2025-08-10T01:12:29.5474682Z ========================================
 2025-08-10T01:12:29.5475202Z ❌ 1/178 TESTS FAILED
 2025-08-10T01:12:29.5486563Z ##[error]Process completed with exit code 1.
