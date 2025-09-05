@@ -87,8 +87,7 @@ CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
 
 # Request Headers
 HEADER_AUTH = "Authorization"
-HEADER_TEST_BYPASS = "X-Test-Bypass-Auth"
-HEADER_TEST_USER_ID = "X-Test-User-ID"
+# Testing mode headers removed - authentication now always uses real Firebase
 
 # Logging Configuration (using centralized logging_util)
 # LOG_DIRECTORY moved to logging_util.get_log_directory() for consistency
@@ -243,29 +242,14 @@ def create_app() -> Flask:
     if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
         app.config["TESTING"] = True
 
-    # Initialize Firebase only if not using mock or in testing mode
-    from firebase_utils import should_skip_firebase_init
-
-    if not firebase_admin._apps and not should_skip_firebase_init():
+    # Initialize Firebase - always enabled (testing mode removed)
+    if not firebase_admin._apps:
         firebase_admin.initialize_app()
 
     def check_token(f):
         @wraps(f)
         def wrap(*args: Any, **kwargs: Any) -> Response:
-            # Check for auth skip mode (for testing with real services)
-            auth_skip_enabled = (
-                app.config.get("TESTING") or os.getenv("AUTH_SKIP_MODE") == "true"
-            )
-            if (
-                auth_skip_enabled
-                and request.headers.get(HEADER_TEST_BYPASS, "").lower() == "true"
-            ):
-                # Require user ID header when using test bypass
-                test_user_id = request.headers.get(HEADER_TEST_USER_ID)
-                if not test_user_id:
-                    return jsonify({KEY_MESSAGE: "Test user ID required"}), 401
-                kwargs["user_id"] = test_user_id
-                return f(*args, **kwargs)
+            # Authentication now always uses real Firebase (testing mode removed)
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
