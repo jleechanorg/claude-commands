@@ -878,6 +878,7 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
+    // Use existing token (no force refresh) for auth headers
     const token = await this.getCompensatedToken(false);
     return {
       'Authorization': `Bearer ${token}`,
