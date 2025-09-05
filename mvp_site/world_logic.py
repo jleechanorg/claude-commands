@@ -39,12 +39,15 @@ from firestore_service import (
 from game_state import GameState
 
 # Initialize Firebase if not already initialized (testing mode removed)
-if not firebase_admin._apps:
+try:
+    firebase_admin.get_app()
+except ValueError:
     try:
         firebase_admin.initialize_app()
         logging_util.info("Firebase initialized successfully in world_logic.py")
     except Exception as e:
-        logging_util.error(f"Failed to initialize Firebase: {e}")
+        logging_util.critical(f"Failed to initialize Firebase: {e}")
+        raise
 
 # --- Constants ---
 KEY_ERROR = "error"

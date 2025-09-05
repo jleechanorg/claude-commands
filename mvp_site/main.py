@@ -243,7 +243,9 @@ def create_app() -> Flask:
         app.config["TESTING"] = True
 
     # Initialize Firebase - always enabled (testing mode removed)
-    if not firebase_admin._apps:
+    try:
+        firebase_admin.get_app()
+    except ValueError:
         firebase_admin.initialize_app()
 
     def check_token(f):
