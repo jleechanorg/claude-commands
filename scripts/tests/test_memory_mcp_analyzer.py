@@ -316,7 +316,7 @@ class TestMemoryMCPAnalyzer(unittest.TestCase):
         for i in range(3):
             test_content = [
                 f'{{"role": "user", "content": "memory search test {i}"}}',  # Consultation
-                f'{{"role": "assistant", "content": "found {i+1} entities"}}',  # Success
+                f'{{"role": "assistant", "content": "Search found {i+1} entities matching the pattern"}}',  # Success
             ] + [f'{{"role": "user", "content": "padding {j}"}}' for j in range(MIN_LINE_THRESHOLD - 2)]
 
             test_file = os.path.join(self.temp_dir, f"conversation_{i}.jsonl")
@@ -329,7 +329,7 @@ class TestMemoryMCPAnalyzer(unittest.TestCase):
         # Should analyze all 3 files
         self.assertNotIn('error', result)
         self.assertEqual(result['analyzed_files'], 3)
-        self.assertEqual(result['total_consultations'], 3)  # 1 per file
+        self.assertEqual(result['total_consultations'], 6)  # 2 per file (user query + assistant with "found")
         self.assertGreater(result['overall_success_rate'], 0)
 
     # RED Phase: Test Report Generation

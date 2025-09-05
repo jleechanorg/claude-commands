@@ -316,8 +316,8 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
     @patch('memory_mcp_optimizer.logging_util')
     def test_expand_concepts_handles_exceptions(self, mock_logging):
         """Test that expand_concepts handles exceptions gracefully."""
-        # Mock dict operations to raise an exception
-        with patch.object(self.optimizer, 'domain_mappings', side_effect=Exception("Test exception")):
+        # Mock dict.fromkeys to raise an exception during deduplication
+        with patch('builtins.dict.fromkeys', side_effect=Exception("Test exception")):
             result = self.optimizer.expand_concepts(['test'])
 
             # Should return original concepts on error
