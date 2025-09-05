@@ -479,8 +479,6 @@ class TestSecurityTokenMatrix(unittest.TestCase):
                 self._simulated_wait_time = wait_time
             else:
                 # Actually wait in real implementation (shortened for testing)
-                import time
-
                 time.sleep(min(wait_time / 1000.0, 0.1))  # Cap at 100ms for testing
 
         # Get token with appropriate refresh setting

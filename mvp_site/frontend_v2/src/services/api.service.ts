@@ -42,38 +42,14 @@ class ApiService {
   /**
    * Authentication bypass for development mode
    */
-  private testAuthBypass: { enabled: boolean; userId: string } | null = null;
+  // SECURITY FIX: Test authentication bypass removed per security review
+  // private testAuthBypass: { enabled: boolean; userId: string } | null = null;
 
   constructor() {
     // SECURITY: Only enable test mode authentication bypass in non-production environments
     // This prevents authentication bypass in production builds via URL manipulation
-    if (import.meta.env.MODE !== 'production') {
-      // Enable test mode authentication bypass only when explicitly requested via URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const isTestMode = urlParams.get('test_mode') === 'true';
-
-      if (isTestMode) {
-        const testUserId = urlParams.get('test_user_id') || 'test-user-123';
-        this.testAuthBypass = {
-          enabled: true,
-          userId: testUserId
-        };
-
-        if (import.meta.env?.DEV) {
-          devLog('🧪 Test authentication bypass enabled for user:', testUserId);
-        }
-      } else {
-        this.testAuthBypass = null;
-      }
-    } else {
-      // SECURITY: In production, test authentication bypass is completely disabled
-      this.testAuthBypass = null;
-
-      // Only log in development mode to avoid production console noise
-      if (import.meta.env?.DEV) {
-        devLog('🔒 Test authentication bypass disabled in production mode');
-      }
-    }
+    // SECURITY FIX: Test authentication bypass removed per security review
+    // Use proper test doubles/mocks in test suite instead of runtime authentication bypass
 
     // Clean up expired cache entries periodically
     setInterval(() => this.cleanupCache(), 10 * 60 * 1000); // Every 10 minutes
@@ -106,11 +82,23 @@ class ApiService {
         const roundTripTime = clientTimeAfter - clientTimeBefore;
 
         // Estimate server time at the moment we made the request
-        const estimatedServerTime = data.server_timestamp_ms + (roundTripTime / 2);
-        const clientTimeAtRequest = clientTimeBefore + (roundTripTime / 2);
+        // Server timestamp was captured at server, so we subtract half RTT to estimate when request was sent
+        const estimatedServerTime = data.server_timestamp_ms - (roundTripTime / 2);
+        const clientTimeAtRequest = clientTimeBefore;
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
-        this.clockSkewOffset = clientTimeAtRequest - estimatedServerTime;
+        const calculatedSkew = clientTimeAtRequest - estimatedServerTime;
+        
+        // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
+        const MAX_ACCEPTABLE_SKEW = 3600000;
+        if (Math.abs(calculatedSkew) > MAX_ACCEPTABLE_SKEW) {
+          if (import.meta.env?.DEV) {
+            devWarn(`⚠️ Detected extreme clock skew (${calculatedSkew}ms), ignoring`);
+          }
+          return;
+        }
+        
+        this.clockSkewOffset = calculatedSkew;
         this.clockSkewDetected = true;
 
         if (import.meta.env?.DEV) {
@@ -172,6 +160,15 @@ class ApiService {
       const serverTime = errorData.server_time_ms;
       const clientTime = Date.now();
       const detectedSkew = clientTime - serverTime;
+      
+      // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
+      const MAX_ACCEPTABLE_SKEW = 3600000;
+      if (Math.abs(detectedSkew) > MAX_ACCEPTABLE_SKEW) {
+        if (import.meta.env?.DEV) {
+          devWarn(`⚠️ Detected extreme clock skew (${detectedSkew}ms), ignoring`);
+        }
+        return;
+      }
 
       // Update our clock skew offset with the server's measurement
       this.clockSkewOffset = detectedSkew;
@@ -237,14 +234,16 @@ class ApiService {
     // Build headers based on auth mode
     let headers: Record<string, string>;
 
-    if (this.testAuthBypass?.enabled) {
-      // Test mode headers
-      headers = {
-        'X-Test-Bypass-Auth': 'true',
-        'X-Test-User-ID': this.testAuthBypass.userId,
-        'Content-Type': 'application/json',
-      };
-    } else {
+    // SECURITY FIX: Test authentication bypass removed
+    // if (this.testAuthBypass?.enabled) {
+    //   // Test mode headers
+    //   headers = {
+    //     'X-Test-Bypass-Auth': 'true',
+    //     'X-Test-User-ID': this.testAuthBypass.userId,
+    //     'Content-Type': 'application/json',
+    //   };
+    // } else {
+    {
       // Normal Firebase authentication
       const user = auth.currentUser;
       if (!user) {
