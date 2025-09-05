@@ -76,9 +76,8 @@ if [ -z "$PROMPT" ]; then
     echo "  --context-file           Include conversation context from file"
     echo "  --no-auto-context        Skip automatic context extraction"
     echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
-    echo "  --light                  Use light mode (no system prompts and no security filtering)"
+    echo "  --light                  Use light mode (no system prompts for faster generation)"
     echo ""
-    echo "SECURITY WARNING: --light mode bypasses all security checks. Use with trusted prompts only."
     exit 1
 fi
 
@@ -88,17 +87,7 @@ if [ ${#PROMPT} -gt 100000 ]; then
     exit 1
 fi
 
-# Security confirmation for light mode
-if [ "$LIGHT_MODE" = true ]; then
-    echo "🚨 CRITICAL: Light mode disables ALL security filtering" >&2
-    echo "⚠️  This bypasses protection against harmful AI output" >&2
-    echo "Continue? [y/N]" >&2
-    read -r confirmation
-    if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
-        echo "Light mode cancelled for security." >&2
-        exit 1
-    fi
-fi
+# Light mode - no security confirmation needed for solo developer
 
 # Validate API key
 API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
@@ -332,7 +321,7 @@ echo "$CONTENT" > "$OUTPUT_FILE"
 echo ""
 if [ "$LIGHT_MODE" = true ]; then
     echo "⚡ CEREBRAS LIGHT MODE: ${ELAPSED_MS}ms (${LINE_COUNT} lines) ⚡"
-    echo "⚠️  Light Mode Active - No System Prompts or Security Filtering"
+    echo "⚡ Light Mode Active - No System Prompts"
 else
     echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
 fi

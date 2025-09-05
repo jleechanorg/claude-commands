@@ -807,7 +807,7 @@ class TestInvisibleContextExtraction(unittest.TestCase):
         # Should show usage message with --light flag
         output = (result.stdout or "") + (result.stderr or "")
         self.assertIn("--light", output)
-        self.assertIn("Use light mode (no system prompts and no security filtering)", output)
+        self.assertIn("Use light mode (no system prompts for faster generation)", output)
 
 
 if __name__ == '__main__':
