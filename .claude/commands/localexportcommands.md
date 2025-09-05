@@ -71,17 +71,34 @@ export_component() {
     if [ -e "$source_path" ]; then
         echo "📋 Updating $component..."
 
-        # Remove existing component before copying (but preserve other directories)
-        if [ -e "$target_path" ]; then
-            rm -rf "$target_path"
-        fi
+        # Path safety check - prevent dangerous operations
+        case "$target_path" in
+            "$HOME/.claude"|"$HOME/.claude/"|"")
+                echo "❌ ERROR: Refusing dangerous target path: $target_path"
+                return 1
+                ;;
+        esac
 
-        # Copy new component
-        if [ -d "$source_path" ]; then
-            mkdir -p "$target_path"
-            cp -r "$source_path/." "$target_path"
+        # Safer, metadata-preserving update with rsync or cp -a fallback
+        if command -v rsync >/dev/null 2>&1; then
+            # Use rsync for atomic, permission-preserving updates
+            if [ -d "$source_path" ]; then
+                mkdir -p "$target_path"
+                rsync -a --delete "$source_path/" "$target_path/"
+            else
+                rsync -a "$source_path" "$target_path"
+            fi
         else
-            cp "$source_path" "$target_path"
+            # Fallback without rsync: preserve attributes with cp -a
+            if [ -e "$target_path" ]; then
+                rm -rf "$target_path"
+            fi
+            if [ -d "$source_path" ]; then
+                mkdir -p "$target_path"
+                cp -a "$source_path/." "$target_path"
+            else
+                cp -a "$source_path" "$target_path"
+            fi
         fi
         echo "   ✅ $component updated successfully"
         return 0
