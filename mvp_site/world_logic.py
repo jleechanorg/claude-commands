@@ -15,7 +15,6 @@ import collections
 import datetime
 import json
 import os
-import random
 import tempfile
 import uuid
 from typing import Any
@@ -27,8 +26,8 @@ import firebase_admin
 import logging_util
 import structured_fields_utils
 from custom_types import CampaignId, UserId
-from debug_hybrid_system import clean_json_artifacts, process_story_for_display, convert_json_escape_sequences
-from prompt_utils import _convert_and_format_field, _build_campaign_prompt as _build_campaign_prompt_impl
+from debug_hybrid_system import clean_json_artifacts, process_story_for_display
+from prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 
 import firestore_service
 import gemini_service
@@ -224,7 +223,6 @@ def _strip_game_state_fields(
 
 
 # Helper function moved to prompt_utils.py to eliminate duplication
-
 
 
 def _build_campaign_prompt(
