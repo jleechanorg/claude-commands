@@ -9,17 +9,14 @@ Copies the project's .claude folder structure to your local ~/.claude directory,
 
 ## What Gets Exported
 
-This command copies the entire project .claude structure to ~/.claude:
+This command copies ONLY standard Claude Code directories to ~/.claude:
 
-- **Commands** (.claude/commands/) → ~/.claude/commands/
-- **Hooks** (.claude/hooks/) → ~/.claude/hooks/
-- **Agents** (.claude/agents/) → ~/.claude/agents/
-- **Settings** (.claude/settings.json) → ~/.claude/settings.json
-- **Schemas** (.claude/schemas/) → ~/.claude/schemas/
-- **Templates** (.claude/templates/) → ~/.claude/templates/
-- **Scripts** (.claude/scripts/) → ~/.claude/scripts/
-- **Framework** (.claude/framework/) → ~/.claude/framework/
-- **Other directories and files** as needed
+- **Commands** (.claude/commands/) → ~/.claude/commands/ - Slash commands
+- **Hooks** (.claude/hooks/) → ~/.claude/hooks/ - Lifecycle hooks
+- **Agents** (.claude/agents/) → ~/.claude/agents/ - Subagents
+- **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
+
+**🚨 EXCLUDED**: Project-specific directories (schemas, templates, scripts, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 ## Implementation
 
@@ -36,20 +33,13 @@ if [ ! -d ".claude" ]; then
 fi
 
 # Define exportable components list (extracted for maintainability)
-# This list determines what gets backed up and exported
+# This list contains ONLY standard Claude Code directories, not project-specific custom ones
+# Based on official Claude Code documentation and standard directory structure
 EXPORTABLE_COMPONENTS=(
-    "commands"
-    "hooks"
-    "agents"
-    "settings.json"
-    "schemas"
-    "templates"
-    "scripts"
-    "framework"
-    "guides"
-    "learnings"
-    "memory_templates"
-    "research"
+    "commands"      # Slash commands (.md files) - STANDARD
+    "hooks"         # Lifecycle hooks - STANDARD
+    "agents"        # Subagents/specialized AI assistants - STANDARD
+    "settings.json" # Configuration file - STANDARD
 )
 
 # Create backup of existing ~/.claude components (selective backup strategy)
