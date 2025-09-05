@@ -47,16 +47,27 @@ def get_repo_info():
     if not remote_url:
         return None, None
     
-    # Parse GitHub URL
+    # Parse GitHub URL (support https, ssh, ssh://)
     if "github.com" in remote_url:
-        # Handle both SSH and HTTPS formats
-        url_part = remote_url.replace("git@github.com:", "").replace("https://github.com/", "")
-        if url_part.endswith(".git"):
-            url_part = url_part[:-4]
-        
-        parts = url_part.split("/")
-        if len(parts) >= 2:
-            return parts[0], parts[1]
+        try:
+            # ssh form: git@github.com:owner/repo(.git)
+            if remote_url.startswith("git@github.com:"):
+                url_part = remote_url.split(":", 1)[1]
+            else:
+                # https/ssh:// forms
+                from urllib.parse import urlparse
+                parsed = urlparse(remote_url)
+                if parsed.hostname == "github.com":
+                    url_part = parsed.path.lstrip("/")
+                else:
+                    url_part = remote_url
+            if url_part.endswith(".git"):
+                url_part = url_part[:-4]
+            parts = [p for p in url_part.split("/") if p]
+            if len(parts) >= 2:
+                return parts[0], parts[1]
+        except Exception:
+            pass
     
     return None, None
 
@@ -67,7 +78,7 @@ def get_pr_number():
         return None
     
     # Try to find PR for current branch
-    pr_data = run_command(["gh", "pr", "list", "--head", branch, "--json", "number"])
+    pr_data = run_command(["gh", "pr", "list", "--head", branch, "--state", "open", "--limit", "1", "--json", "number"])
     if pr_data:
         try:
             prs = json.loads(pr_data)

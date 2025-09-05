@@ -20,13 +20,13 @@ fi
 ```
 
 ## 🎯 Purpose
-Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches copilot-fixpr and copilot-analysis agents by default for comprehensive coverage and quality assurance.
+Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches copilot-fixpr and copilot-handle-comments agents by default for comprehensive coverage and quality assurance.
 
 ## ⚡ **PERFORMANCE ARCHITECTURE: Mandatory Parallel Agent Orchestration**
 
 🚨 **CRITICAL REQUIREMENT**: /copilot ALWAYS uses parallel agents - NO EXCEPTIONS
 
-- **MANDATORY**: Launch `copilot-fixpr` and `copilot-analysis` agents in parallel for EVERY execution
+- **MANDATORY**: Launch `copilot-fixpr` and `copilot-handle-comments` agents in parallel for EVERY execution
 - **NO DIRECT EXECUTION**: /copilot must NEVER handle tasks directly - always delegate to specialized agents
 - **PARALLEL PROCESSING**: Both agents work simultaneously for maximum efficiency
 - **EXPERTISE DISTRIBUTION**: Each agent handles its specialized domain (fixes vs analysis)
@@ -56,24 +56,24 @@ Launch specialized agent for technical implementation and security analysis:
 - Verify implementations are properly coded and tested
 - Focus on code quality, performance optimization, and technical accuracy
 
-**🚀 Launch copilot-analysis Agent**:
-Launch specialized agent for comment processing and communication coordination:
-- Process all PR comments and verify 100% coverage achievement
-- Generate technical responses with proper GitHub API threading
-- Coordinate communication workflow and quality assessment
-- Focus on comment coverage verification and threading API success
+**🚀 Launch copilot-handle-comments Agent**:
+Launch specialized agent for complete comment-driven development workflow:
+- Execute /commentfetch to gather all PR comments and issues
+- Fix identified code issues directly using Edit/MultiEdit tools
+- Execute /commentreply to respond with implementation details
+- Execute /commentcheck to verify 100% coverage achievement
 
-**Coordination Setup**: Both agents work in parallel on shared GitHub PR data with specialized tool usage (Edit/MultiEdit for fixpr, GitHub MCP for analysis)
+**Coordination Setup**: Both agents work in parallel on shared GitHub PR data with specialized tool usage (Edit/MultiEdit for both agents, GitHub MCP for communication)
 
 ### Phase 2: Agent Coordination & Integration
 **Integration of parallel agent results**:
 
 **Agent Result Collection**:
 - copilot-fixpr provides: Technical analysis, code fixes, security recommendations, implementation verification
-- copilot-analysis provides: Comment coverage verification, threading API results, communication quality assessment
+- copilot-handle-comments provides: Comment processing, code issue fixes, response generation, coverage verification
 - Both agents maintain: Specialized tool usage boundaries and shared data coordination
 
-**Quality Integration**: Combine technical fixes from copilot-fixpr with communication strategies from copilot-analysis for comprehensive PR processing
+**Quality Integration**: Combine technical fixes from copilot-fixpr with comment-driven development from copilot-handle-comments for comprehensive PR processing
 
 ### Phase 3: Verification & Completion (AUTOMATIC)
 **Results verified by agent coordination**:
@@ -103,26 +103,32 @@ COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 
 # Coverage verification and warnings (automatic)
-# Define repository variables
-OWNER=$(gh repo view --json owner -q .owner.login)
-REPO=$(gh repo view --json name -q .name)
-PR_NUMBER=$(gh pr view --json number -q .number)
+# Resolve repo/PR once; prefer nameWithOwner to avoid manual owner parsing
+REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
+PR_NUMBER="${PR_NUMBER:-$(gh pr view --json number -q .number)}"
 
-# Get comments with proper pagination handling
-TOTAL_COMMENTS=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq length)
-THREADED_REPLIES=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
-ORIGINAL_COMMENTS=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+# Aggregate all pages, then compute counts
+REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq -s 'add // []')"
+REV_ORIGINAL="$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<"$REV_JSON")"
+REV_REPLIES="$(jq -r  '[.[] | select(.in_reply_to_id != null)] | length' <<<"$REV_JSON")"
+ISSUE_COMMENTS="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq -s 'map(length) | add // 0')" || ISSUE_COMMENTS=0
 
-if [ "$ORIGINAL_COMMENTS" -gt 0 ]; then
-    COVERAGE_PERCENT=$(( (THREADED_REPLIES * 100) / ORIGINAL_COMMENTS ))
-    if [ "$COVERAGE_PERCENT" -lt 100 ]; then
-        echo "🚨 WARNING: INCOMPLETE COMMENT COVERAGE: $COVERAGE_PERCENT%"
-        echo "Expected: 100% | Actual: $COVERAGE_PERCENT% | Missing: $((ORIGINAL_COMMENTS - THREADED_REPLIES)) responses"
-    fi
+# Threadable coverage (review comments); issue comments tracked separately
+ORIGINAL_COMMENTS="${REV_ORIGINAL:-0}"
+THREADED_REPLIES="${REV_REPLIES:-0}"
+
+if [ "${ORIGINAL_COMMENTS:-0}" -gt 0 ]; then
+  COVERAGE_PERCENT=$(( THREADED_REPLIES * 100 / ORIGINAL_COMMENTS ))
+  if [ "$COVERAGE_PERCENT" -lt 100 ]; then
+    missing=$(( ORIGINAL_COMMENTS - THREADED_REPLIES ))
+    [ "$missing" -lt 0 ] && missing=0
+    echo "🚨 WARNING: INCOMPLETE REVIEW-COMMENT COVERAGE: ${COVERAGE_PERCENT}% (missing: ${missing})"
+  fi
 fi
+echo "ℹ️ Issue comments (not threadable): ${ISSUE_COMMENTS:-0} tracked separately."
 
-if [ $COPILOT_DURATION -gt 180 ]; then
-    echo "⚠️ PERFORMANCE: Duration exceeded 3m target: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s"
+if [ "${COPILOT_DURATION:-0}" -gt 180 ]; then
+  echo "⚠️ PERFORMANCE: Duration exceeded 3m target: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s"
 fi
 
 # Pattern capture and learning
@@ -135,25 +141,25 @@ fi
 - **PRIMARY**: Security vulnerability detection and code implementation
 - **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis
 - **FOCUS**: Actual code changes with File Justification Protocol compliance
-- **BOUNDARY**: Never handles GitHub comment responses - delegates to copilot-analysis
+- **BOUNDARY**: Never handles GitHub comment responses - delegates to copilot-handle-comments
 
-### copilot-analysis Responsibilities:
-- **PRIMARY**: Comment processing and GitHub workflow coordination
-- **TOOLS**: GitHub MCP for PR operations, slash command orchestration
-- **FOCUS**: 100% comment coverage verification and reviewer communication
-- **BOUNDARY**: Never handles code implementation - delegates to copilot-fixpr
+### copilot-handle-comments Responsibilities:
+- **PRIMARY**: Complete comment-driven workflow - /commentfetch, FIX ISSUES, /commentreply, /commentcheck
+- **TOOLS**: GitHub MCP, Edit/MultiEdit for code changes, slash command orchestration
+- **FOCUS**: Code fixes AND comment responses - full-stack responsibility
+- **BOUNDARY**: Self-contained workflow - no delegation needed
 
 ### Coordination Protocol:
 - **SHARED DATA**: Both agents work on same GitHub PR analysis simultaneously
 - **PARALLEL EXECUTION**: Independent operation with coordination capability
 - **VERIFICATION**: Both implementation coverage AND communication coverage required
-- **INTEGRATION**: copilot-analysis incorporates copilot-fixpr implementation details into responses
+- **INTEGRATION**: copilot-handle-comments makes code changes directly and includes implementation details in responses
 
 ## 🎯 **SUCCESS CRITERIA**
 
 ### **DUAL VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
 1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr
-2. **Communication Coverage**: 100% comment response rate with proper threading from copilot-analysis
+2. **Communication Coverage**: 100% comment response rate with proper threading from copilot-handle-comments
 
 ### **QUALITY GATES**:
 - ✅ **File Justification Protocol**: All code changes properly documented and justified
@@ -166,7 +172,7 @@ fi
 - ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
-- ❌ **Communication Overreach**: copilot-fixpr posting reviews OR copilot-analysis implementing code
+- ❌ **Communication Overreach**: copilot-fixpr posting reviews OR unauthorized code changes outside agent boundaries
 - ❌ **Timing Failures**: Execution time >3 minutes without performance alerts
 
 ## ⚡ **PARALLEL EXECUTION OPTIMIZATION**
