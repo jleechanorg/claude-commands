@@ -47,8 +47,8 @@ def get_repo_info():
     if not remote_url:
         return None, None
     
-    # Parse GitHub URL (support https, ssh, ssh://)
-    if "github.com" in remote_url:
+    # Parse GitHub URL (support https, ssh, ssh://) with input validation
+    if "github.com" in remote_url and len(remote_url) < 1000:  # Prevent excessively long URLs
         try:
             # ssh form: git@github.com:owner/repo(.git)
             if remote_url.startswith("git@github.com:"):
@@ -60,12 +60,19 @@ def get_repo_info():
                 if parsed.hostname == "github.com":
                     url_part = parsed.path.lstrip("/")
                 else:
-                    url_part = remote_url
+                    return None, None
+            
             if url_part.endswith(".git"):
                 url_part = url_part[:-4]
-            parts = [p for p in url_part.split("/") if p]
+            
+            # Validate path components to prevent path traversal
+            parts = [p for p in url_part.split("/") if p and not p.startswith(".") and "/" not in p]
             if len(parts) >= 2:
-                return parts[0], parts[1]
+                owner, repo = parts[0], parts[1]
+                # Validate owner/repo format (alphanumeric, dash, underscore, dot)
+                if (owner.replace("-", "").replace("_", "").replace(".", "").isalnum() and
+                    repo.replace("-", "").replace("_", "").replace(".", "").isalnum()):
+                    return owner, repo
         except Exception:
             pass
     
@@ -82,9 +89,11 @@ def get_pr_number():
     if pr_data:
         try:
             prs = json.loads(pr_data)
-            if prs and len(prs) > 0:
-                return prs[0].get("number")
-        except json.JSONDecodeError:
+            if isinstance(prs, list) and len(prs) > 0 and isinstance(prs[0], dict):
+                pr_number = prs[0].get("number")
+                if isinstance(pr_number, (int, str)) and str(pr_number).isdigit():
+                    return int(pr_number)
+        except (json.JSONDecodeError, ValueError, TypeError):
             pass
     
     return None
@@ -144,8 +153,15 @@ def get_recent_commits(branch='main', limit=3):
         if commits_data:
             try:
                 commits = json.loads(commits_data)
-                return commits if isinstance(commits, list) else []
-            except json.JSONDecodeError:
+                if isinstance(commits, list):
+                    # Validate commit structure
+                    valid_commits = []
+                    for commit in commits:
+                        if isinstance(commit, dict) and commit.get("sha"):
+                            valid_commits.append(commit)
+                    return valid_commits
+                return []
+            except (json.JSONDecodeError, ValueError, TypeError):
                 pass
 
     # Fallback to git log

@@ -104,18 +104,28 @@ COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 
 # Coverage verification and warnings (automatic)
 # Resolve repo/PR once; prefer nameWithOwner to avoid manual owner parsing
-REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner)}"
-PR_NUMBER="${PR_NUMBER:-$(gh pr view --json number -q .number)}"
+REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)}"
+PR_NUMBER="${PR_NUMBER:-$(gh pr view --json number -q .number 2>/dev/null)}"
+
+# Input validation to prevent injection attacks
+if [[ ! "$REPO" =~ ^[a-zA-Z0-9._/-]+$ ]] || [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+    echo "🚨 SECURITY ERROR: Invalid repository or PR number format"
+    exit 1
+fi
 
 # Aggregate all pages, then compute counts
-REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate | jq -s 'add // []')"
+REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'add // []' 2>/dev/null)"
 REV_ORIGINAL="$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<"$REV_JSON")"
 REV_REPLIES="$(jq -r  '[.[] | select(.in_reply_to_id != null)] | length' <<<"$REV_JSON")"
-ISSUE_COMMENTS="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate | jq -s 'map(length) | add // 0')" || ISSUE_COMMENTS=0
+ISSUE_COMMENTS="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'map(length) | add // 0' 2>/dev/null)" || ISSUE_COMMENTS=0
 
 # Threadable coverage (review comments); issue comments tracked separately
 ORIGINAL_COMMENTS="${REV_ORIGINAL:-0}"
 THREADED_REPLIES="${REV_REPLIES:-0}"
+
+# Validate numeric values to prevent arithmetic errors
+if [[ ! "$ORIGINAL_COMMENTS" =~ ^[0-9]+$ ]]; then ORIGINAL_COMMENTS=0; fi
+if [[ ! "$THREADED_REPLIES" =~ ^[0-9]+$ ]]; then THREADED_REPLIES=0; fi
 
 if [ "${ORIGINAL_COMMENTS:-0}" -gt 0 ]; then
   COVERAGE_PERCENT=$(( THREADED_REPLIES * 100 / ORIGINAL_COMMENTS ))
