@@ -81,11 +81,6 @@ if [ -z "$PROMPT" ]; then
     exit 1
 fi
 
-# Basic input validation - check for extremely long prompts that could cause issues
-if [ ${#PROMPT} -gt 100000 ]; then
-    echo "Error: Prompt too long (${#PROMPT} characters). Maximum 100,000 characters allowed." >&2
-    exit 1
-fi
 
 # Light mode - no security confirmation needed for solo developer
 
