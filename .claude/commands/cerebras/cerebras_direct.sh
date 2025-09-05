@@ -252,17 +252,23 @@ else
     ]"
 fi
 
+# Build request body with jq -n for safer JSON construction
+MAX_TOKENS=${CEREBRAS_MAX_TOKENS:-1000000}
+MODEL="${CEREBRAS_MODEL:-qwen-3-coder-480b}"
+TEMPERATURE="${CEREBRAS_TEMPERATURE:-0.1}"
+
+REQUEST_BODY="$(jq -n \
+  --arg model "$MODEL" \
+  --argjson messages "$MESSAGES" \
+  --argjson max_tokens "$MAX_TOKENS" \
+  --argjson temperature "$TEMPERATURE" \
+  '{model:$model, messages:$messages, max_tokens:$max_tokens, temperature:$temperature, stream:false}')"
+
 HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"qwen-3-coder-480b\",
-    \"messages\": $MESSAGES,
-    \"max_tokens\": 1000000,
-    \"temperature\": 0.1,
-    \"stream\": false
-  }") || CURL_EXIT=$?
+  -d "$REQUEST_BODY") || CURL_EXIT=$?
 
 # On transport or HTTP-level failures, emit the raw body (if any) and standardize exit code
 if [ "$CURL_EXIT" -ne 0 ]; then
