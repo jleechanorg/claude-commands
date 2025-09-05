@@ -28,13 +28,13 @@ def run_command(cmd, capture_output=True, shell=False):
 
         result = subprocess.run(
             cmd,
-            shell=False,
+            shell=False,  # intentionally forced; shell param kept for API compatibility
             capture_output=capture_output,
             text=True,
             timeout=30
         )
         return result.stdout.strip() if result.returncode == 0 else None
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError, ValueError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError) as e:
         # ValueError can be raised by shlex.split() for invalid shell syntax
         return None
 
@@ -94,8 +94,12 @@ def get_git_status():
     if status['upstream']:
         ahead_behind = run_command(["git", "rev-list", "--left-right", "--count", f"{status['upstream']}...HEAD"])
         if ahead_behind:
-            behind, ahead = ahead_behind.split('\t')
-            status['ahead_behind'] = {'ahead': int(ahead), 'behind': int(behind)}
+            parts = ahead_behind.strip().split()
+            if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
+                behind, ahead = parts[0], parts[1]
+                status['ahead_behind'] = {'ahead': int(ahead), 'behind': int(behind)}
+            else:
+                status['ahead_behind'] = {'ahead': 0, 'behind': 0}
     
     # Get file status
     git_status_output = run_command(["git", "status", "--porcelain"])
@@ -136,7 +140,7 @@ def get_recent_commits(branch='main', limit=3):
     # Fallback to git log
     git_commits = run_command([
         "git", "log", f"origin/{branch}",
-        "--oneline", f"-n", str(limit),
+        "-n", str(limit),
         "--pretty=format:%H|%an|%ad|%s",
         "--date=iso"
     ])
