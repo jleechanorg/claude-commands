@@ -16,6 +16,7 @@ import json
 import subprocess
 import sys
 import os
+import shlex
 from datetime import datetime
 
 def run_command(cmd, capture_output=True, shell=False):
@@ -23,7 +24,7 @@ def run_command(cmd, capture_output=True, shell=False):
     try:
         # Convert string command to list for shell=False security
         if isinstance(cmd, str):
-            cmd = cmd.split()
+            cmd = shlex.split(cmd)
 
         result = subprocess.run(
             cmd,
@@ -33,7 +34,8 @@ def run_command(cmd, capture_output=True, shell=False):
             timeout=30
         )
         return result.stdout.strip() if result.returncode == 0 else None
-    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError):
+    except (subprocess.TimeoutExpired, subprocess.CalledProcessError, FileNotFoundError, ValueError) as e:
+        # ValueError can be raised by shlex.split() for invalid shell syntax
         return None
 
 # call_github_mcp function removed - replaced with orchestration via gstatus.md

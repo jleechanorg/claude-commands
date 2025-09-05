@@ -167,9 +167,15 @@ COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 
 # Coverage verification with warnings
-TOTAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq length)
-THREADED_REPLIES=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
-ORIGINAL_COMMENTS=$(gh api "repos/OWNER/REPO/pulls/PR/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
+# Define repository variables dynamically
+OWNER=$(gh repo view --json owner -q .owner.login)
+REPO=$(gh repo view --json name -q .name)
+PR_NUMBER=$(gh pr view --json number -q .number)
+
+# Get comments with proper pagination handling
+TOTAL_COMMENTS=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq length)
+THREADED_REPLIES=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq '[.[] | select(.in_reply_to_id != null)] | length')
+ORIGINAL_COMMENTS=$(gh api "repos/${OWNER}/${REPO}/pulls/${PR_NUMBER}/comments" --paginate | jq '[.[] | select(.in_reply_to_id == null)] | length')
 
 if [ "$ORIGINAL_COMMENTS" -gt 0 ]; then
     COVERAGE_PERCENT=$(( (THREADED_REPLIES * 100) / ORIGINAL_COMMENTS ))
