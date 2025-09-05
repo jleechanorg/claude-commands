@@ -34,7 +34,7 @@
 
 ### Phase 1: Context Gathering & Memory-Enhanced Validation
 1. **Memory MCP Search with Query Optimization**: Enhanced query memory for architectural patterns using optimization engine
-   - **Query Optimization**: Uses `scripts/memory_mcp_optimizer.py` for improved architectural pattern discovery
+   - **Query Optimization**: Uses universal composition with `/memory search` for improved architectural pattern discovery
    - **Smart Search Strategy**: Transform compound architecture queries into optimized single-word searches
    - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better architectural insights
    - **Result Merging**: Combine multiple optimized searches for comprehensive architecture analysis

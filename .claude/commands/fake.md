@@ -24,10 +24,10 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
 **⚠️ CRITICAL**: This composition MUST be executed with Enhanced Memory MCP integration using query optimization as described in the Execution Protocol below. The Memory MCP operations with optimization are MANDATORY, not optional.
 
-**Memory MCP Query Optimization**: Uses `scripts/memory_mcp_optimizer.py` for improved fake pattern discovery:
-- **Smart Search Strategy**: Transform compound fake code queries into optimized single-word searches
+**Memory MCP Query Optimization**: Uses universal composition with `/memory search` for improved fake pattern discovery:
+- **Universal Composition**: Use `/memory search "fake code patterns"` for automatic query optimization
 - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better fake code detection
-- **Result Merging**: Combine multiple optimized searches for comprehensive pattern analysis
+- **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
 
 **Composition Logic**:
 - **Architecture Analysis** (/arch): Understand system design and integration points
@@ -102,7 +102,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
    search_results = []
    for opt_query in optimized_queries:
-       result = mcp__memory-server__search_nodes(query=opt_query)
+       result = /memory search opt_query
        if result.get('entities'):
            search_results.append(result)
 
@@ -122,7 +122,7 @@ This command combines: `/arch /thinku /devilsadvocate /diligent`
 
    branch_results = []
    for opt_query in branch_optimized:
-       result = mcp__memory-server__search_nodes(query=opt_query)
+       result = /memory search opt_query
        if result.get('entities'):
            branch_results.append(result)
 

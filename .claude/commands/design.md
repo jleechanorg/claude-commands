@@ -934,7 +934,7 @@ For each major design decision, identify and compare:
 
 ### Integration with Memory MCP (Enhanced with Query Optimization)
 
-**Memory MCP Query Optimization**: Uses `scripts/memory_mcp_optimizer.py` for improved design pattern discovery:
+**Memory MCP Query Optimization**: Uses universal composition with `/memory search` for improved design pattern discovery:
 - **Smart Search Strategy**: Transform compound design queries into optimized single-word searches
 - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better design pattern retrieval
 - **Result Merging**: Combine multiple optimized searches for comprehensive design analysis

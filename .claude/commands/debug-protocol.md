@@ -126,7 +126,7 @@ Systematic comparison results:
 
 **📚 Memory MCP Integration with Query Optimization**: Capture walkthrough patterns with enhanced search effectiveness:
 
-**Query Optimization Enhancement**: Uses `scripts/memory_mcp_optimizer.py` for improved debug pattern discovery:
+**Query Optimization Enhancement**: Uses universal composition with `/memory search` for improved debug pattern discovery:
 - **Smart Search Strategy**: Transform compound debug queries into optimized single-word searches
 - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better debugging insights
 - **Result Merging**: Combine multiple optimized searches for comprehensive debug analysis
@@ -350,7 +350,7 @@ Automatically captures debugging insights using Memory MCP:
 
    search_results = []
    for opt_query in optimized_queries:
-       result = mcp__memory-server__search_nodes(query=opt_query)
+       result = /memory search opt_query
        if result.get('entities'):
            search_results.append(result)
 
@@ -424,7 +424,7 @@ try:
     # Execute multiple optimized searches
     search_results = []
     for opt_query in optimized_queries:
-        result = mcp__memory-server__search_nodes(query=opt_query)
+        result = /memory search opt_query
         if result.get('entities'):
             search_results.append(result)
 
@@ -442,7 +442,7 @@ except Exception as e:
     log("Memory MCP optimization search failed: " + str(e))
     # Fallback to direct search if optimization fails
     try:
-        fallback_result = mcp__memory-server__search_nodes(query=debug_query)
+        fallback_result = /memory search debug_query
         if fallback_result:
             log("📚 Found debugging context via fallback search")
     except Exception as fallback_error:

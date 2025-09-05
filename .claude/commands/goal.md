@@ -21,11 +21,11 @@ When defining a new goal, the system:
    - **Benefits**: Direct processing, persistent storage, standardized format
 
 2. **Memory MCP Integration with Query Optimization**: Search and integrate with persistent knowledge using enhanced effectiveness
-   - **Query Optimization**: Use `scripts/memory_mcp_optimizer.py` for improved goal pattern discovery
-   - **Smart Search Strategy**: Transform compound goal queries into optimized single-word searches
-   - **Command**: `mcp__memory-server__search_nodes` with optimized queries - Search for related goals and patterns
-   - **Command**: `mcp__memory-server__open_nodes` - Retrieve historical goal contexts and learnings
-   - **Result Merging**: Combine multiple optimized searches for comprehensive goal pattern analysis
+   - **Universal Composition**: Use `/memory search` for automatic query optimization and improved goal pattern discovery
+   - **Smart Search Strategy**: Leverage `/memory` command's automatic compound query transformation
+   - **Command**: `/memory search "related goals and patterns"` - Search with built-in optimization
+   - **Command**: `/memory recall "historical goal contexts"` - Retrieve specific goal learnings
+   - **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
    - Extract similar goal patterns and success strategies from enhanced memory retrieval
    - Identify anti-patterns and failure modes from improved search results
    - **Performance Enhancement**: Improve goal pattern discovery from ~30% to 70%+ success rate
@@ -81,8 +81,8 @@ Auto-generated criteria:
 
 ### Validation Process
 1. **Memory Context Retrieval**: Load relevant validation patterns and historical data
-   - **Command**: `mcp__memory-server__search_nodes` - Find similar validation scenarios and outcomes
-   - **Command**: `mcp__memory-server__open_nodes` - Retrieve validation methods and success patterns
+   - **Command**: `/memory search "validation scenarios and outcomes"` - Find similar patterns with optimization
+   - **Command**: `/memory recall "validation methods and success patterns"` - Retrieve specific validation contexts
    - Apply learned validation strategies from successful goal completions
    - Identify common validation failure points and mitigation strategies
 

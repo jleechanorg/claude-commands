@@ -14,11 +14,11 @@
 
 **1. Memory MCP Integration with Query Optimization** (MANDATORY):
 - **Enhanced Search**: Use Memory MCP query optimization engine for improved search effectiveness
-- **Command Pattern**: Load `scripts/memory_mcp_optimizer.py` and optimize search queries before Memory MCP calls
-- **Multi-Query Strategy**: Transform compound guideline queries into effective single-word searches
-- **Command**: `mcp__memory-server__search_nodes` with optimized queries - Search for relevant guidelines and patterns
-- **Command**: `mcp__memory-server__open_nodes` - Retrieve historical guidelines applications and outcomes
-- **Result Merging**: Combine and score results from multiple optimized searches for better relevance
+- **Universal Composition**: Use `/memory search "[guidelines query]"` for optimized query processing
+- **Multi-Query Strategy**: Leverage `/memory` command's automatic compound query transformation
+- **Command**: `/memory search "relevant guidelines and patterns"` - Search with automatic optimization
+- **Command**: `/memory recall "historical guidelines applications"` - Retrieve specific guideline contexts
+- **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
 - Extract learned patterns, successful strategies, and documented anti-patterns from enhanced knowledge retrieval
 - Identify context-specific guidelines and decision patterns from improved search results
 
@@ -202,7 +202,7 @@
 - **Memory MCP Connection**: Full persistent knowledge graph integration
   - **Command**: `mcp__memory-server__create_entities` - Store guideline patterns as structured entities
   - **Command**: `mcp__memory-server__create_relations` - Link patterns to contexts, outcomes, and effectiveness
-  - **Command**: `mcp__memory-server__search_nodes` - Query for relevant patterns during consultation
+  - **Command**: `/memory search "[relevant patterns]"` - Query with automatic optimization during consultation
 - **Evidence Collection**: Document specific incidents with PR references and structured metadata
 - **Continuous Improvement**: Update guidelines based on execution outcomes with persistent learning
 - **Cross-PR Learning**: Apply patterns learned in one PR to future work through memory graph analysis
