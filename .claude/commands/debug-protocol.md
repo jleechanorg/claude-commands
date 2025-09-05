@@ -333,10 +333,31 @@ Automatically captures debugging insights using Memory MCP:
 
 **Enhanced Memory MCP Implementation Steps:**
 
-1. **Enhanced Search & Context**:
+1. **Load Memory MCP Optimizer**:
+   ```python
+   from scripts.memory_mcp_optimizer import MemoryMCPOptimizer
+   optimizer = MemoryMCPOptimizer()
+   ```
+
+2. **Enhanced Search & Context with Optimization**:
    - Extract specific technical terms (error messages, file names, stack traces)
-   - Search: `mcp__memory-server__search_nodes("technical_terms")`
-   - Log: "🔍 Searching memory..." → Report "📚 Found X relevant memories"
+   - Transform compound debug queries into optimized single-word searches
+   - Execute multiple optimized searches for comprehensive pattern discovery
+   ```python
+   # Example: Transform compound debug query
+   debug_query = "TypeError Express.js middleware debugging authentication errors"
+   optimized_queries = optimizer.optimize_query(debug_query)
+
+   search_results = []
+   for opt_query in optimized_queries:
+       result = mcp__memory-server__search_nodes(query=opt_query)
+       if result.get('entities'):
+           search_results.append(result)
+
+   merged_debug_context = optimizer.merge_results(search_results)
+   scored_context = optimizer.score_results(merged_debug_context, debug_query)
+   ```
+   - Log: "🔍 Searching memory with optimization..." → Report "📚 Found X relevant memories (Y% relevance)"
    - Integrate found context naturally into debugging analysis
 
 2. **Quality-Enhanced Entity Creation**:
@@ -390,19 +411,42 @@ Automatically captures debugging insights using Memory MCP:
 
 **Enhanced Function Call Integration**:
 ```
-# Enhanced debugging session search
+# Enhanced debugging session search with query optimization
 # This error handling pattern demonstrates graceful degradation when Memory MCP is unavailable.
 try:
-    memory_results = mcp__memory-server__search_nodes(
-        # Example: query="TypeError Express.js middleware debugging"
-        query="[error_type] [technology_stack] [debugging_pattern]"
-    )
-    if memory_results:
-        # Using language-agnostic string concatenation for clarity
-        log("📚 Found " + str(len(memory_results)) + " relevant debugging memories")
-        # Integrate memory context into debugging analysis
+    from scripts.memory_mcp_optimizer import MemoryMCPOptimizer
+    optimizer = MemoryMCPOptimizer()
+
+    # Transform compound debug query for better results
+    debug_query = "[error_type] [technology_stack] [debugging_pattern]"
+    optimized_queries = optimizer.optimize_query(debug_query)
+
+    # Execute multiple optimized searches
+    search_results = []
+    for opt_query in optimized_queries:
+        result = mcp__memory-server__search_nodes(query=opt_query)
+        if result.get('entities'):
+            search_results.append(result)
+
+    if search_results:
+        # Merge and score results for relevance
+        merged_results = optimizer.merge_results(search_results)
+        scored_results = optimizer.score_results(merged_results, debug_query)
+
+        log("📚 Found " + str(len(scored_results.get('entities', []))) + " relevant debugging memories")
+        # Integrate optimized memory context into debugging analysis
+
+        # Learn from successful pattern transformations
+        optimizer.learn_patterns(debug_query, optimized_queries, scored_results)
 except Exception as e:
-    log("Memory MCP search failed: " + str(e))
+    log("Memory MCP optimization search failed: " + str(e))
+    # Fallback to direct search if optimization fails
+    try:
+        fallback_result = mcp__memory-server__search_nodes(query=debug_query)
+        if fallback_result:
+            log("📚 Found debugging context via fallback search")
+    except Exception as fallback_error:
+        log("Memory MCP fallback search failed: " + str(fallback_error))
 
 # Create comprehensive debug session entity
 try:
