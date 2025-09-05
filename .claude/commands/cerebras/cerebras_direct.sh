@@ -88,9 +88,16 @@ if [ ${#PROMPT} -gt 100000 ]; then
     exit 1
 fi
 
-# Security warning for light mode
+# Security confirmation for light mode
 if [ "$LIGHT_MODE" = true ]; then
-    echo "⚠️  WARNING: Light mode active - security filtering disabled" >&2
+    echo "🚨 CRITICAL: Light mode disables ALL security filtering" >&2
+    echo "⚠️  This bypasses protection against harmful AI output" >&2
+    echo "Continue? [y/N]" >&2
+    read -r confirmation
+    if [[ ! "$confirmation" =~ ^[Yy]$ ]]; then
+        echo "Light mode cancelled for security." >&2
+        exit 1
+    fi
 fi
 
 # Validate API key
