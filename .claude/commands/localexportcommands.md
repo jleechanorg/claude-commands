@@ -35,14 +35,33 @@ if [ ! -d ".claude" ]; then
     exit 1
 fi
 
-# Create backup of existing ~/.claude/commands, ~/.claude/hooks, ~/.claude/agents only
+# Define exportable components list (extracted for maintainability)
+# This list determines what gets backed up and exported
+EXPORTABLE_COMPONENTS=(
+    "commands"
+    "hooks"
+    "agents"
+    "settings.json"
+    "schemas"
+    "templates"
+    "scripts"
+    "framework"
+    "guides"
+    "learnings"
+    "memory_templates"
+    "research"
+)
+
+# Create backup of existing ~/.claude components (selective backup strategy)
 backup_timestamp="$(date +%Y%m%d_%H%M%S)"
 if [ -d "$HOME/.claude" ]; then
     echo "📦 Creating selective backup of existing ~/.claude configuration..."
-    for component in commands hooks agents settings.json schemas templates scripts framework guides learnings memory_templates research; do
+    # Create backup directory once before processing components
+    backup_dir="$HOME/.claude.backup.$backup_timestamp"
+    mkdir -p "$backup_dir"
+
+    for component in "${EXPORTABLE_COMPONENTS[@]}"; do
         if [ -e "$HOME/.claude/$component" ]; then
-            backup_dir="$HOME/.claude.backup.$backup_timestamp"
-            mkdir -p "$backup_dir"
             cp -r "$HOME/.claude/$component" "$backup_dir/"
             echo "   📋 Backed up $component"
         fi
@@ -86,21 +105,8 @@ export_component() {
 exported_count=0
 total_components=0
 
-# Export all major components
-components=(
-    "commands"
-    "hooks"
-    "agents"
-    "settings.json"
-    "schemas"
-    "templates"
-    "scripts"
-    "framework"
-    "guides"
-    "learnings"
-    "memory_templates"
-    "research"
-)
+# Use the predefined components list for export
+components=("${EXPORTABLE_COMPONENTS[@]}")
 
 echo ""
 echo "📦 Exporting components..."
