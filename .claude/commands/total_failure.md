@@ -66,7 +66,7 @@ Commands that enforce Total Failure Protocol:
 
 This Total Failure Protocol is the foundational success criteria for all operations. Commands reference this document rather than duplicating the language.
 
-**Reference Format:**
+**Reference Format (for use in other files):**
 ```markdown
-🚨 **TOTAL FAILURE PROTOCOL**: Apply [Total Failure Protocol](total_failure.md) - 100% working or TOTAL FAILURE
+🚨 **TOTAL FAILURE PROTOCOL**: Apply [Total Failure Protocol](.claude/commands/total_failure.md) - 100% working or TOTAL FAILURE
 ```
