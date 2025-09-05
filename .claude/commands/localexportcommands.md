@@ -1,6 +1,6 @@
 # /localexportcommands - Export Project Claude Configuration Locally
 
-Copies the project's .claude folder structure to your local ~/.claude directory, making commands and configurations available system-wide.
+Copies the project's .claude folder structure to your local ~/.claude directory, making commands and configurations available system-wide. **PRESERVES** existing conversation history and other critical data.
 
 ## Usage
 ```bash
@@ -12,7 +12,7 @@ Copies the project's .claude folder structure to your local ~/.claude directory,
 This command copies the entire project .claude structure to ~/.claude:
 
 - **Commands** (.claude/commands/) → ~/.claude/commands/
-- **Hooks** (.claude/hooks/) → ~/.claude/hooks/ 
+- **Hooks** (.claude/hooks/) → ~/.claude/hooks/
 - **Agents** (.claude/agents/) → ~/.claude/agents/
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json
 - **Schemas** (.claude/schemas/) → ~/.claude/schemas/
@@ -35,31 +35,46 @@ if [ ! -d ".claude" ]; then
     exit 1
 fi
 
-# Create backup of existing ~/.claude if it exists
+# Create backup of existing ~/.claude/commands, ~/.claude/hooks, ~/.claude/agents only
+backup_timestamp="$(date +%Y%m%d_%H%M%S)"
 if [ -d "$HOME/.claude" ]; then
-    backup_name="$HOME/.claude.backup.$(date +%Y%m%d_%H%M%S)"
-    echo "📦 Backing up existing ~/.claude to $backup_name"
-    mv "$HOME/.claude" "$backup_name"
+    echo "📦 Creating selective backup of existing ~/.claude configuration..."
+    for component in commands hooks agents settings.json schemas templates scripts framework guides learnings memory_templates research; do
+        if [ -e "$HOME/.claude/$component" ]; then
+            backup_dir="$HOME/.claude.backup.$backup_timestamp"
+            mkdir -p "$backup_dir"
+            cp -r "$HOME/.claude/$component" "$backup_dir/"
+            echo "   📋 Backed up $component"
+        fi
+    done
 fi
 
-# Create target directory
-echo "📁 Creating ~/.claude directory..."
+# Create target directory (preserve existing structure)
+echo "📁 Ensuring ~/.claude directory exists..."
 mkdir -p "$HOME/.claude"
 
-# Export function for individual components
+# Export function for individual components (selective update only)
 export_component() {
     local component=$1
     local source_path=".claude/$component"
     local target_path="$HOME/.claude/$component"
-    
+
     if [ -e "$source_path" ]; then
-        echo "📋 Copying $component..."
+        echo "📋 Updating $component..."
+
+        # Remove existing component before copying (but preserve other directories)
+        if [ -e "$target_path" ]; then
+            rm -rf "$target_path"
+        fi
+
+        # Copy new component
         if [ -d "$source_path" ]; then
+            mkdir -p "$target_path"
             cp -r "$source_path/." "$target_path"
         else
             cp "$source_path" "$target_path"
         fi
-        echo "   ✅ $component exported successfully"
+        echo "   ✅ $component updated successfully"
         return 0
     else
         echo "   ⚠️  $component not found, skipping"
@@ -74,7 +89,7 @@ total_components=0
 # Export all major components
 components=(
     "commands"
-    "hooks" 
+    "hooks"
     "agents"
     "settings.json"
     "schemas"
@@ -163,17 +178,20 @@ echo "🎉 Local export completed successfully!"
 ## Benefits
 
 - **System-Wide Availability**: Commands work across all Claude Code projects
-- **Consistent Environment**: Same tools and configurations everywhere  
+- **Consistent Environment**: Same tools and configurations everywhere
 - **Easy Updates**: Re-run to sync latest project changes
-- **Safe Operation**: Creates backups before overwriting
-- **Comprehensive Coverage**: Exports all relevant .claude components
+- **Safe Operation**: Creates selective backups of only updated components
+- **Conversation History Preservation**: Never touches existing projects/ directory or conversation data
+- **Comprehensive Coverage**: Updates all relevant .claude components while preserving critical data
 
 ## Safety Features
 
-- Creates timestamped backup of existing ~/.claude
+- **🚨 CONVERSATION HISTORY PROTECTION**: Never touches ~/.claude/projects/ directory
+- Creates timestamped backup of only components being updated
 - Validates source directory before starting
 - Individual component copying (partial failures don't break everything)
 - Preserves file permissions and executable status
+- Selective update approach protects critical user data
 - Comprehensive feedback and validation
 
 ## Use Cases
@@ -187,7 +205,8 @@ echo "🎉 Local export completed successfully!"
 ## Notes
 
 - Run from project root containing .claude directory
-- Safe to run multiple times (creates new backups)
+- Safe to run multiple times (creates new selective backups)
 - Hooks automatically made executable after copy
 - Settings.json merged/replaced based on content
 - Commands adapt automatically to current project context
+- **🚨 IMPORTANT**: This version preserves conversation history - previous versions destroyed ~/.claude/projects/
