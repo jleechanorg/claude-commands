@@ -67,8 +67,13 @@ class MemoryMCPOptimizer:
             List of individual words/concepts from the query
         """
         try:
-            # Normalize the query: lowercase, remove special characters
-            normalized_query = re.sub(r'[^a-zA-Z0-9\s]', '', compound_query.lower())
+            # Handle None input
+            if compound_query is None:
+                logging_util.error("Query cannot be None")
+                return []
+
+            # Normalize the query: lowercase, replace special characters with spaces
+            normalized_query = re.sub(r'[^a-zA-Z0-9\s]', ' ', compound_query.lower())
 
             # Split into words and remove empty strings
             words = [word.strip() for word in normalized_query.split() if word.strip()]
@@ -130,9 +135,9 @@ class MemoryMCPOptimizer:
             # Keep original words first, then add semantic expansions up to reasonable limit
             optimized_terms = []
 
-            # Add original words first
+            # Add original words first (up to MAX_TERMS limit)
             for word in words:
-                if word not in optimized_terms:
+                if word not in optimized_terms and len(optimized_terms) < MAX_TERMS:
                     optimized_terms.append(word)
 
             # Add expanded terms strategically (avoid over-expansion)

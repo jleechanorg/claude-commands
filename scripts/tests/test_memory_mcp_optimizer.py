@@ -300,11 +300,11 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
         self.assertEqual(self.optimizer.successful_patterns[pattern_key]['entities_found'], 4)  # 2 entities × 2 calls
 
     # RED Phase: Test Error Handling
-    @patch('scripts.memory_mcp_optimizer.logging_util')
+    @patch('memory_mcp_optimizer.logging_util')
     def test_transform_query_handles_exceptions(self, mock_logging):
         """Test that transform_query handles exceptions gracefully."""
         # Mock re.sub to raise an exception
-        with patch('re.sub', side_effect=Exception("Test exception")):
+        with patch('memory_mcp_optimizer.re.sub', side_effect=Exception("Test exception")):
             result = self.optimizer.transform_query("test query")
 
             # Should return empty list on error
@@ -313,7 +313,7 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
             # Should log error
             mock_logging.error.assert_called()
 
-    @patch('scripts.memory_mcp_optimizer.logging_util')
+    @patch('memory_mcp_optimizer.logging_util')
     def test_expand_concepts_handles_exceptions(self, mock_logging):
         """Test that expand_concepts handles exceptions gracefully."""
         # Mock dict operations to raise an exception
@@ -326,7 +326,7 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
             # Should log error
             mock_logging.error.assert_called()
 
-    @patch('scripts.memory_mcp_optimizer.logging_util')
+    @patch('memory_mcp_optimizer.logging_util')
     def test_merge_results_handles_exceptions(self, mock_logging):
         """Test that merge_results handles exceptions gracefully."""
         # Create malformed search results
@@ -338,7 +338,7 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
         self.assertEqual(result, {'entities': [], 'relationships': []})
         mock_logging.error.assert_called()
 
-    @patch('scripts.memory_mcp_optimizer.logging_util')
+    @patch('memory_mcp_optimizer.logging_util')
     def test_score_results_handles_exceptions(self, mock_logging):
         """Test that score_results handles exceptions gracefully."""
         # Create results that will cause scoring errors
@@ -416,8 +416,9 @@ class TestMemoryMCPOptimizer(unittest.TestCase):
     # REFACTOR Phase: Test Edge Cases
     def test_optimize_query_with_none_input(self):
         """Test optimization with None input."""
-        with self.assertRaises((TypeError, AttributeError)):
-            self.optimizer.optimize_query(None)
+        result = self.optimizer.optimize_query(None)
+        # Should handle None gracefully and return empty list
+        self.assertEqual(result, [])
 
     def test_domain_mappings_completeness(self):
         """Test that domain mappings are comprehensive for key terms."""
@@ -443,7 +444,7 @@ class TestMemoryMCPOptimizerCLI(unittest.TestCase):
     """Test suite for Memory MCP Optimizer CLI functionality."""
 
     @patch('sys.argv', ['memory_mcp_optimizer.py', '--test'])
-    @patch('scripts.memory_mcp_optimizer.MemoryMCPOptimizer')
+    @patch('memory_mcp_optimizer.MemoryMCPOptimizer')
     def test_main_test_mode(self, mock_optimizer_class):
         """Test main function in test mode."""
         mock_optimizer = MagicMock()
@@ -461,7 +462,7 @@ class TestMemoryMCPOptimizerCLI(unittest.TestCase):
             pass  # Normal exit is fine
 
     @patch('sys.argv', ['memory_mcp_optimizer.py', 'single query test'])
-    @patch('scripts.memory_mcp_optimizer.MemoryMCPOptimizer')
+    @patch('memory_mcp_optimizer.MemoryMCPOptimizer')
     def test_main_single_query_mode(self, mock_optimizer_class):
         """Test main function with single query."""
         mock_optimizer = MagicMock()

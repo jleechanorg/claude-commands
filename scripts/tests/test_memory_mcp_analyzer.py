@@ -6,7 +6,7 @@ Based on PR requirements:
 - Test UTF-8 encoding handling
 - Test line count tracking for proper metrics calculation
 - Test project logger usage instead of print statements
-- Test robust _is_empty_result to handle non-string content
+- Test robust _is_successful_result to handle non-string content
 - Test consultation_frequency calculation
 """
 
@@ -157,77 +157,77 @@ class TestMemoryMCPAnalyzer(unittest.TestCase):
         # Should have used logger methods
         self.assertTrue(mock_logger.debug.called or mock_logger.info.called)
 
-    # RED Phase: Test Robust _is_empty_result Method
-    def test_is_empty_result_handles_non_string_content(self):
-        """Test that _is_empty_result robustly handles non-string content."""
+    # RED Phase: Test Robust _is_successful_result Method
+    def test_is_successful_result_handles_non_string_content(self):
+        """Test that _is_successful_result robustly handles non-string content."""
         # Test with None
-        result = self.analyzer._is_empty_result(None)
+        result = self.analyzer._is_successful_result(None)
         self.assertFalse(result)  # None converts to empty string, should be considered empty
 
         # Test with integer
-        result = self.analyzer._is_empty_result(42)
+        result = self.analyzer._is_successful_result(42)
         self.assertFalse(result)  # Number doesn't contain empty indicators
 
         # Test with list
-        result = self.analyzer._is_empty_result(['found', 'entities'])
-        self.assertFalse(result)  # List with content should not be empty
+        result = self.analyzer._is_successful_result(['found', 'entities'])
+        self.assertTrue(result)  # List converted to string contains 'found', 'entities'
 
         # Test with dict
-        result = self.analyzer._is_empty_result({'entities': []})
-        self.assertTrue(result)  # Contains '[]' which is an empty indicator
+        result = self.analyzer._is_successful_result({'entities': []})
+        self.assertFalse(result)  # Contains '[]' which is an empty indicator
 
-    def test_is_empty_result_detects_empty_indicators(self):
-        """Test that _is_empty_result correctly identifies empty result indicators."""
+    def test_is_successful_result_detects_empty_indicators(self):
+        """Test that _is_successful_result correctly identifies empty result indicators."""
         # Test each empty indicator
         for indicator in EMPTY_RESULT_INDICATORS:
             content = f"Search completed but {indicator} were returned"
-            result = self.analyzer._is_empty_result(content)
-            self.assertTrue(result, f"Should detect empty indicator: {indicator}")
+            result = self.analyzer._is_successful_result(content)
+            self.assertFalse(result, f"Should detect empty indicator: {indicator}")
 
-    def test_is_empty_result_detects_success_indicators(self):
-        """Test that _is_empty_result correctly identifies success indicators."""
+    def test_is_successful_result_detects_success_indicators(self):
+        """Test that _is_successful_result correctly identifies success indicators."""
         for indicator in SUCCESS_INDICATORS:
             content = f"Search {indicator} multiple relevant patterns"
-            result = self.analyzer._is_empty_result(content)
-            self.assertFalse(result, f"Should detect success indicator: {indicator}")
+            result = self.analyzer._is_successful_result(content)
+            self.assertTrue(result, f"Should detect success indicator: {indicator}")
 
-    def test_is_empty_result_entity_count_parsing(self):
-        """Test that _is_empty_result correctly parses entity counts."""
+    def test_is_successful_result_entity_count_parsing(self):
+        """Test that _is_successful_result correctly parses entity counts."""
         # Test positive entity count
         content = "Search found 5 entities matching the pattern"
-        result = self.analyzer._is_empty_result(content)
-        self.assertFalse(result)  # 5 entities > 0, should be successful
+        result = self.analyzer._is_successful_result(content)
+        self.assertTrue(result)  # 5 entities > 0, should be successful
 
         # Test zero entity count
         content = "Search found 0 entities matching the pattern"
-        result = self.analyzer._is_empty_result(content)
-        self.assertTrue(result)  # 0 entities should be empty
+        result = self.analyzer._is_successful_result(content)
+        self.assertFalse(result)  # 0 entities should be unsuccessful
 
         # Test malformed count
         content = "Search found abc entities"  # Non-numeric
-        result = self.analyzer._is_empty_result(content)
-        self.assertFalse(result)  # Should default to success indicators check
+        result = self.analyzer._is_successful_result(content)
+        self.assertTrue(result)  # Should default to success indicators check (contains 'found')
 
-    def test_is_empty_result_json_structure_detection(self):
-        """Test that _is_empty_result correctly identifies JSON structures."""
+    def test_is_successful_result_json_structure_detection(self):
+        """Test that _is_successful_result correctly identifies JSON structures."""
         # Test non-empty entities array
         content = '{"entities": [{"name": "test_entity"}], "relationships": []}'
-        result = self.analyzer._is_empty_result(content)
-        self.assertFalse(result)  # Has entities, should be successful
+        result = self.analyzer._is_successful_result(content)
+        self.assertTrue(result)  # Has entities, should be successful
 
         # Test empty entities array
         content = '{"entities": [], "relationships": []}'
-        result = self.analyzer._is_empty_result(content)
-        self.assertTrue(result)  # Empty entities array should be empty
+        result = self.analyzer._is_successful_result(content)
+        self.assertFalse(result)  # Empty entities array should be unsuccessful
 
         # Test malformed JSON
         content = '{"entities": [broken json'
-        result = self.analyzer._is_empty_result(content)
+        result = self.analyzer._is_successful_result(content)
         self.assertFalse(result)  # Should fall back to success indicators
 
     @patch('scripts.analyze_memory_mcp_effectiveness.logging_util')
-    def test_is_empty_result_error_handling(self, mock_logging_util):
-        """Test that _is_empty_result handles errors gracefully."""
+    def test_is_successful_result_error_handling(self, mock_logging_util):
+        """Test that _is_successful_result handles errors gracefully."""
         mock_logger = MagicMock()
         mock_logging_util.getLogger.return_value = mock_logger
 
@@ -235,9 +235,9 @@ class TestMemoryMCPAnalyzer(unittest.TestCase):
 
         # Mock re.search to raise an exception
         with patch('re.search', side_effect=Exception("Test regex error")):
-            result = analyzer._is_empty_result("test content")
+            result = analyzer._is_successful_result("test content")
 
-            # Should default to False (not empty) and log warning
+            # Should default to False (not successful) and log warning
             self.assertFalse(result)
             mock_logger.warning.assert_called()
 
