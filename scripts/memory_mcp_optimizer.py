@@ -9,14 +9,23 @@ Based on investigation showing:
 - Goal: Improve success rate from ~30% to 70%+
 """
 
-import logging
-from typing import List, Dict, Any, Optional
+import argparse
+import sys
+import os
+from typing import List, Dict, Any
 import re
-from collections import Counter
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Add mvp_site to path for logging_util import
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))
+import logging_util
+
+# Use project logging utility
+logger = logging_util.getLogger(__name__)
+
+# Constants for magic numbers
+MAX_TERMS = 6  # Maximum number of optimized terms to prevent over-expansion
+MIN_RELEVANCE_SCORE = 0.0  # Minimum relevance score for results
+DEFAULT_EXPANSION_LIMIT = 4  # Default limit for semantic expansion per concept
 
 class MemoryMCPOptimizer:
     """
@@ -24,7 +33,7 @@ class MemoryMCPOptimizer:
     into effective single-word queries to improve search success rates.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Domain concept mappings for semantic expansion
         self.domain_mappings = {
             'search': ['search', 'query', 'lookup', 'find'],
@@ -52,10 +61,10 @@ class MemoryMCPOptimizer:
         Split compound phrases into constituent concepts.
 
         Args:
-            compound_query (str): The compound search query to transform
+            compound_query: The compound search query to transform
 
         Returns:
-            List[str]: List of individual words/concepts from the query
+            List of individual words/concepts from the query
         """
         try:
             # Normalize the query: lowercase, remove special characters
@@ -64,10 +73,10 @@ class MemoryMCPOptimizer:
             # Split into words and remove empty strings
             words = [word.strip() for word in normalized_query.split() if word.strip()]
 
-            logger.info(f"Transformed compound query '{compound_query}' into words: {words}")
+            logging_util.info(f"Transformed compound query '{compound_query}' into words: {words}")
             return words
         except Exception as e:
-            logger.error(f"Error transforming query '{compound_query}': {str(e)}")
+            logging_util.error(f"Error transforming query '{compound_query}': {str(e)}")
             return []
 
     def expand_concepts(self, concepts: List[str]) -> List[str]:
@@ -75,10 +84,10 @@ class MemoryMCPOptimizer:
         Map concepts to domain-specific single words using semantic expansion.
 
         Args:
-            concepts (List[str]): List of concepts to expand
+            concepts: List of concepts to expand
 
         Returns:
-            List[str]: Expanded list of domain-specific search terms
+            Expanded list of domain-specific search terms
         """
         try:
             expanded_terms = []
@@ -94,10 +103,10 @@ class MemoryMCPOptimizer:
             # Remove duplicates while preserving order
             unique_terms = list(dict.fromkeys(expanded_terms))
 
-            logger.info(f"Expanded concepts {concepts} into terms: {unique_terms}")
+            logging_util.info(f"Expanded concepts {concepts} into terms: {unique_terms}")
             return unique_terms
         except Exception as e:
-            logger.error(f"Error expanding concepts {concepts}: {str(e)}")
+            logging_util.error(f"Error expanding concepts {concepts}: {str(e)}")
             return concepts
 
     def optimize_query(self, compound_query: str) -> List[str]:
@@ -105,10 +114,10 @@ class MemoryMCPOptimizer:
         Complete optimization pipeline: transform compound query into optimized single-word queries.
 
         Args:
-            compound_query (str): Original compound search query
+            compound_query: Original compound search query
 
         Returns:
-            List[str]: Optimized single-word queries for best results
+            Optimized single-word queries for best results
         """
         try:
             # Step 1: Transform compound query into words
@@ -128,14 +137,14 @@ class MemoryMCPOptimizer:
 
             # Add expanded terms strategically (avoid over-expansion)
             for term in expanded_terms:
-                if term not in optimized_terms and len(optimized_terms) < 6:  # Limit to 6 terms max
+                if term not in optimized_terms and len(optimized_terms) < MAX_TERMS:
                     optimized_terms.append(term)
 
-            logger.info(f"Optimized '{compound_query}' into final terms: {optimized_terms}")
+            logging_util.info(f"Optimized '{compound_query}' into final terms: {optimized_terms}")
             return optimized_terms
 
         except Exception as e:
-            logger.error(f"Error optimizing query '{compound_query}': {str(e)}")
+            logging_util.error(f"Error optimizing query '{compound_query}': {str(e)}")
             return [compound_query]  # Fallback to original
 
     def merge_results(self, search_results: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -143,10 +152,10 @@ class MemoryMCPOptimizer:
         Merge results from multiple single-word searches.
 
         Args:
-            search_results (List[Dict[str, Any]]): List of search result dictionaries
+            search_results: List of search result dictionaries
 
         Returns:
-            Dict[str, Any]: Merged search results with deduplication
+            Merged search results with deduplication
         """
         try:
             merged_entities = []
@@ -177,10 +186,10 @@ class MemoryMCPOptimizer:
                 'relationships': merged_relationships
             }
 
-            logger.info(f"Merged {len(search_results)} search results into {len(merged_entities)} entities and {len(merged_relationships)} relationships")
+            logging_util.info(f"Merged {len(search_results)} search results into {len(merged_entities)} entities and {len(merged_relationships)} relationships")
             return merged_result
         except Exception as e:
-            logger.error(f"Error merging search results: {str(e)}")
+            logging_util.error(f"Error merging search results: {str(e)}")
             return {'entities': [], 'relationships': []}
 
     def score_results(self, results: Dict[str, Any], original_query: str) -> Dict[str, Any]:
@@ -188,11 +197,11 @@ class MemoryMCPOptimizer:
         Score and rank results by relevance to original compound query.
 
         Args:
-            results (Dict[str, Any]): Merged search results
-            original_query (str): Original compound query for relevance scoring
+            results: Merged search results
+            original_query: Original compound query for relevance scoring
 
         Returns:
-            Dict[str, Any]: Results with relevance scores added
+            Results with relevance scores added
         """
         try:
             original_words = set(self.transform_query(original_query))
@@ -221,11 +230,11 @@ class MemoryMCPOptimizer:
             scored_results = results.copy()
             scored_results['entities'] = scored_entities
 
-            logger.info(f"Scored {len(scored_entities)} entities for relevance to '{original_query}'")
+            logging_util.info(f"Scored {len(scored_entities)} entities for relevance to '{original_query}'")
             return scored_results
 
         except Exception as e:
-            logger.error(f"Error scoring results for query '{original_query}': {str(e)}")
+            logging_util.error(f"Error scoring results for query '{original_query}': {str(e)}")
             return results
 
     def learn_patterns(self, original_query: str, optimized_terms: List[str], search_results: Dict[str, Any]) -> None:
@@ -233,9 +242,9 @@ class MemoryMCPOptimizer:
         Track successful query transformations for improvement.
 
         Args:
-            original_query (str): The original compound query
-            optimized_terms (List[str]): The terms used in optimized search
-            search_results (Dict[str, Any]): Results from the search
+            original_query: The original compound query
+            optimized_terms: The terms used in optimized search
+            search_results: Results from the search
         """
         try:
             # Count how many entities were found
@@ -255,39 +264,84 @@ class MemoryMCPOptimizer:
                 self.successful_patterns[pattern_key]['entities_found'] += entity_count
                 self.successful_patterns[pattern_key]['original_queries'].append(original_query)
 
-                logger.info(f"Learned successful pattern: '{original_query}' -> {optimized_terms} (found {entity_count} entities)")
+                logging_util.info(f"Learned successful pattern: '{original_query}' -> {optimized_terms} (found {entity_count} entities)")
             else:
-                logger.info(f"No entities found for query '{original_query}', pattern not recorded")
+                logging_util.info(f"No entities found for query '{original_query}', pattern not recorded")
         except Exception as e:
-            logger.error(f"Error learning patterns for query '{original_query}': {str(e)}")
+            logging_util.error(f"Error learning patterns for query '{original_query}': {str(e)}")
 
-def main():
-    """Example usage and testing of the Memory MCP Optimizer"""
+def main() -> None:
+    """Real CLI for Memory MCP Optimizer with argparse"""
+    parser = argparse.ArgumentParser(
+        description='Memory MCP Query Optimizer - Transform compound queries into optimized single-word searches'
+    )
+    parser.add_argument(
+        'query',
+        nargs='?',
+        help='Query to optimize (if not provided, runs test mode)'
+    )
+    parser.add_argument(
+        '--test',
+        action='store_true',
+        help='Run test mode with predefined queries'
+    )
+    parser.add_argument(
+        '--verbose',
+        action='store_true',
+        help='Enable verbose logging output'
+    )
+
+    args = parser.parse_args()
+
+    if args.verbose:
+        logging_util.getLogger().setLevel(logging_util.DEBUG)
+
     optimizer = MemoryMCPOptimizer()
 
-    # Test queries based on investigation findings
-    test_queries = [
-        "search effectiveness empty results query patterns",
-        "Memory MCP search empty results",
-        "Memory MCP tool call effectiveness",
-        "workflow debugging pattern analysis",
-        "investigation memory optimization"
-    ]
+    if args.test or not args.query:
+        # Test mode with real optimization patterns
+        test_queries = [
+            "search effectiveness empty results query patterns",
+            "Memory MCP search empty results",
+            "Memory MCP tool call effectiveness",
+            "workflow debugging pattern analysis",
+            "investigation memory optimization"
+        ]
 
-    print("🔍 Memory MCP Query Optimizer Testing")
-    print("=" * 50)
+        print("🔍 Memory MCP Query Optimizer Testing")
+        print("=" * 50)
 
-    for query in test_queries:
-        print(f"\n📊 Testing query: '{query}'")
-        optimized = optimizer.optimize_query(query)
-        print(f"✅ Optimized terms: {optimized}")
+        for query in test_queries:
+            print(f"\n📊 Testing query: '{query}'")
+            optimized = optimizer.optimize_query(query)
+            print(f"✅ Optimized terms: {optimized}")
 
-        # Simulate learning (in real usage, this would come from actual Memory MCP results)
-        simulated_results = {'entities': [{'name': f'Result for {term}', 'relevance_score': 0.8}] for term in optimized[:2]}
-        optimizer.learn_patterns(query, optimized, simulated_results)
+            # For testing, create realistic results structure
+            test_results = {
+                'entities': [{
+                    'name': f'entity_{i}',
+                    'entityType': 'test_result',
+                    'observations': [f'Test observation for {term}']
+                } for i, term in enumerate(optimized[:2])]
+            }
+            optimizer.learn_patterns(query, optimized, test_results)
 
-    print(f"\n📈 Learned patterns: {len(optimizer.successful_patterns)}")
-    print("🚀 Memory MCP Query Optimizer ready for integration!")
+        print(f"\n📈 Learned patterns: {len(optimizer.successful_patterns)}")
+        print("🚀 Memory MCP Query Optimizer ready for integration!")
+    else:
+        # Single query optimization mode
+        print(f"🔍 Optimizing query: '{args.query}'")
+        optimized_terms = optimizer.optimize_query(args.query)
+        print(f"✅ Optimized terms: {optimized_terms}")
+
+        # Output in JSON format for scripting integration
+        import json
+        result = {
+            'original_query': args.query,
+            'optimized_terms': optimized_terms,
+            'term_count': len(optimized_terms)
+        }
+        print(f"📊 JSON Result: {json.dumps(result, indent=2)}")
 
 if __name__ == "__main__":
     main()

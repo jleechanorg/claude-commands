@@ -58,26 +58,15 @@ When `/memory` is invoked, execute the following workflow based on the action:
 
 ## 🛠️ Query Optimization Integration
 
-**Core Enhancement**: All search operations use the Memory MCP Query Optimization Engine:
+**Core Enhancement**: All search operations use automatic query optimization:
 
-```python
-# Pseudo-code for search optimization
-from scripts.memory_mcp_optimizer import MemoryMCPOptimizer
+- **Automatic Query Transformation**: Compound phrases automatically split into effective single-word searches
+- **Multi-Query Execution**: Multiple optimized searches executed in parallel for comprehensive coverage
+- **Result Merging**: Results from multiple searches combined and deduplicated
+- **Relevance Scoring**: Results ranked by relevance to original query intent
+- **Pattern Learning**: Successful query transformations captured for continuous improvement
 
-optimizer = MemoryMCPOptimizer()
-optimized_queries = optimizer.optimize_query(user_query)
-
-# Execute multiple optimized searches
-search_results = []
-for opt_query in optimized_queries:
-    result = mcp__memory-server__search_nodes(query=opt_query)
-    if result.get('entities'):
-        search_results.append(result)
-
-# Merge and score results
-merged = optimizer.merge_results(search_results)
-scored = optimizer.score_results(merged, user_query)
-```
+**Universal Composition**: All optimization handled transparently through `/memory search` command composition.
 
 ## 📊 Performance Features
 

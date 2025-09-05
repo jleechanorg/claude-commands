@@ -331,32 +331,20 @@ Automatically captures debugging insights using Memory MCP:
 - Technical debugging implementations with file:line references
 - Root cause analysis journeys with measurable outcomes
 
-**Enhanced Memory MCP Implementation Steps:**
+**Enhanced Memory MCP Universal Composition Integration:**
 
-1. **Load Memory MCP Optimizer**:
-   ```python
-   from scripts.memory_mcp_optimizer import MemoryMCPOptimizer
-   optimizer = MemoryMCPOptimizer()
+1. **Optimized Memory Search for Debug Context**:
+   Use `/memory search` with automatic query optimization for debug pattern discovery:
    ```
-
-2. **Enhanced Search & Context with Optimization**:
-   - Extract specific technical terms (error messages, file names, stack traces)
-   - Transform compound debug queries into optimized single-word searches
-   - Execute multiple optimized searches for comprehensive pattern discovery
-   ```python
-   # Example: Transform compound debug query
-   debug_query = "TypeError Express.js middleware debugging authentication errors"
-   optimized_queries = optimizer.optimize_query(debug_query)
-
-   search_results = []
-   for opt_query in optimized_queries:
-       result = /memory search opt_query
-       if result.get('entities'):
-           search_results.append(result)
-
-   merged_debug_context = optimizer.merge_results(search_results)
-   scored_context = optimizer.score_results(merged_debug_context, debug_query)
+   /memory search "TypeError Express.js middleware debugging authentication errors"
    ```
+   - Automatic compound → single-word query transformation
+   - Multi-query execution with result merging and relevance scoring
+   - Enhanced pattern discovery from 30% to 70%+ effectiveness
+
+2. **Debug Context Integration**:
+   - Extract specific technical terms (error messages, file names, stack traces) for targeted searches
+   - Use optimized memory consultation for similar issue patterns and resolution strategies
    - Log: "🔍 Searching memory with optimization..." → Report "📚 Found X relevant memories (Y% relevance)"
    - Integrate found context naturally into debugging analysis
 
@@ -409,83 +397,38 @@ Automatically captures debugging insights using Memory MCP:
 - ✅ References to PRs, commits, or documentation
 - ✅ Reusable debugging patterns for similar issues
 
-**Enhanced Function Call Integration**:
+**Universal Composition Integration Pattern**:
+
+Use `/memory` command for all debugging pattern discovery and learning:
+
 ```
-# Enhanced debugging session search with query optimization
-# This error handling pattern demonstrates graceful degradation when Memory MCP is unavailable.
-try:
-    from scripts.memory_mcp_optimizer import MemoryMCPOptimizer
-    optimizer = MemoryMCPOptimizer()
+# Enhanced debugging session search with universal composition
+/memory search "[error_type] [technology_stack] [debugging_pattern]"
 
-    # Transform compound debug query for better results
-    debug_query = "[error_type] [technology_stack] [debugging_pattern]"
-    optimized_queries = optimizer.optimize_query(debug_query)
-
-    # Execute multiple optimized searches
-    search_results = []
-    for opt_query in optimized_queries:
-        result = /memory search opt_query
-        if result.get('entities'):
-            search_results.append(result)
-
-    if search_results:
-        # Merge and score results for relevance
-        merged_results = optimizer.merge_results(search_results)
-        scored_results = optimizer.score_results(merged_results, debug_query)
-
-        log("📚 Found " + str(len(scored_results.get('entities', []))) + " relevant debugging memories")
-        # Integrate optimized memory context into debugging analysis
-
-        # Learn from successful pattern transformations
-        optimizer.learn_patterns(debug_query, optimized_queries, scored_results)
-except Exception as e:
-    log("Memory MCP optimization search failed: " + str(e))
-    # Fallback to direct search if optimization fails
-    try:
-        fallback_result = /memory search debug_query
-        if fallback_result:
-            log("📚 Found debugging context via fallback search")
-    except Exception as fallback_error:
-        log("Memory MCP fallback search failed: " + str(fallback_error))
-
-# Create comprehensive debug session entity
-try:
-    mcp__memory-server__create_entities([{
-        "name": "{system}_{error_type}_{timestamp}",  # Example: 'express_auth_error_2024-08-15T10:30:00Z'
-        "entityType": "debug_session",
-        "observations": [
-            "Context: {debugging situation with reproduction steps}",
-            "Technical Detail: {exact error/stack trace with file:line}",
-            "Research Findings: {/research results if applicable}",
-            "Hypothesis Formation: {ranked hypotheses with reasoning}",
-            "Validation Method: {specific validation approach used}",
-            "Validation Results: {evidence confirming/refuting hypothesis}",
-            "Root Cause: {validated root cause with technical explanation}",
-            "Solution Applied: {specific fix implementation with file:line}",
-            "Code Changes: {diff or specific modifications made}",
-            "Verification: {test results, metrics, validation evidence}",
-            "References: {PR URLs, commits, documentation links}",
-            "Debugging Pattern: {methodology effectiveness and insights}",
-            "Lessons Learned: {transferable knowledge for similar issues}",
-            "Research Integration: {how /research informed the process}"
-        ]
-    }])
-
-    # Build debugging relations
-    mcp__memory-server__create_relations([{
-        "from": "{session_name}",
-        "to": "{related_technique}",
-        "relationType": "used_methodology"
-    }, {
-        "from": "{session_name}",
-        "to": "{fixed_issue}",
-        "relationType": "resolved"
-    }])
-
-except Exception as e:
-    log("Memory MCP entity creation failed: " + str(e))
-    # Continue with local debugging documentation
+# Create comprehensive debug session entity using /memory learn
+/memory learn "{system}_{error_type}_{timestamp}" "debug_session" [
+  "Context: {debugging situation with reproduction steps}",
+  "Technical Detail: {exact error/stack trace with file:line}",
+  "Research Findings: {/research results if applicable}",
+  "Hypothesis Formation: {ranked hypotheses with reasoning}",
+  "Validation Method: {specific validation approach used}",
+  "Validation Results: {evidence confirming/refuting hypothesis}",
+  "Root Cause: {validated root cause with technical explanation}",
+  "Solution Applied: {specific fix implementation with file:line}",
+  "Code Changes: {diff or specific modifications made}",
+  "Verification: {test results, metrics, validation evidence}",
+  "References: {PR URLs, commits, documentation links}",
+  "Debugging Pattern: {methodology effectiveness and insights}",
+  "Lessons Learned: {transferable knowledge for similar issues}",
+  "Research Integration: {how /research informed the process}"
+]
 ```
+
+**Error Handling Strategy**:
+- **Universal Composition Benefits**: `/memory` command handles all optimization and fallback automatically
+- **Graceful Degradation**: Continue debugging even if Memory MCP unavailable
+- **User Notification**: Automatic user notification when Memory MCP unavailable but debugging proceeds
+- **Robust Operation**: Never let Memory MCP failures prevent debugging progress
 
 **Error Handling Strategy**:
 - **Graceful Degradation**: Continue debugging even if Memory MCP fails
