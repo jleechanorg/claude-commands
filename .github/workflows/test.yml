@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
-        test-group: [all-tests, commands]
+        test-group: [all-tests, commands, import-validation-delta]
 
     steps:
     # Step 1: Get your code
@@ -119,6 +119,27 @@ jobs:
               [ $failed_count -eq 0 ] || exit 1
             fi
             ;;
+          "import-validation-delta")
+            echo "🔍 Running DELTA IMPORT validation checks..."
+            echo "Checking only files changed in this PR for inline imports and try/except patterns..."
+
+            # Use delta validation - only check files changed vs main branch
+            python3 scripts/validate_imports.py --diff-only origin/main..HEAD
+
+            if [ $? -eq 0 ]; then
+              echo "✅ Delta import validation: All checks passed"
+            else
+              echo "❌ Delta import validation: Found violations in changed files"
+              echo ""
+              echo "Import violations must be fixed before merging:"
+              echo "  IMP001: No try/except around imports - imports should be at module level"
+              echo "  IMP002: No inline imports - imports must be at top of file"
+              echo ""
+              echo "Only files changed in this PR need to be fixed (delta validation)."
+              echo "Please move all imports to the top of their respective files."
+              exit 1
+            fi
+            ;;
         esac
 
     # Step 6: Upload test results (optional)
@@ -133,4 +154,3 @@ jobs:
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
-        
