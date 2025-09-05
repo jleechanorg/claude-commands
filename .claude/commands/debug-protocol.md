@@ -128,7 +128,7 @@ Systematic comparison results:
 ```
 mcp__memory-server__create_entities([{
   "name": "debug_walkthrough_[system]_[timestamp]",
-  "entityType": "debug_walkthrough_pattern", 
+  "entityType": "debug_walkthrough_pattern",
   "observations": [
     "Context: [debugging situation requiring walkthrough]",
     "Components Compared: [specific functions/modules analyzed]",
@@ -248,18 +248,12 @@ Create a precise, testable plan to validate the top hypothesis without changing 
 
 ## 🚨 STRICT PROTOCOLS & BEHAVIORAL CONSTRAINTS 🚨
 
-### ⚡ ZERO TOLERANCE FOR PREMATURE SUCCESS
-**ABSOLUTE RULE: NO CELEBRATIONS UNTIL ORIGINAL PROBLEM IS 100% SOLVED**
-- ❌ NO "partial success" acknowledgments
+### 🚨 TOTAL FAILURE PROTOCOL ENFORCEMENT
+**MANDATORY**: Apply [Total Failure Protocol](total_failure.md) before declaring any debugging results.
+
+**DEBUGGING-SPECIFIC APPLICATIONS:**
 - ❌ NO "framework is working" statements until the SPECIFIC bug is detected
 - ❌ NO "debugging protocol worked" claims until the ORIGINAL ISSUE is resolved
-- ❌ NO stopping early with "this tells us valuable information" - THAT IS FAILURE
-- ❌ NO claiming progress until the exact issue is resolved
-
-### 🎯 BRUTAL SUCCESS CRITERIA
-**ONLY SUCCESS:** The exact production issue reported is completely resolved
-- **ANYTHING LESS IS FAILURE:** No exceptions, no excuses, no partial credit
-- **BE RUTHLESSLY HONEST:** If the original problem isn't solved, the debugging failed
 - **BUILD MUST WORK:** If code doesn't compile or tests fail, it's complete failure
 
 ### ⚡ RELENTLESS DEBUGGING RULES
