@@ -51,14 +51,14 @@ class ApiService {
       // Enable test mode authentication bypass only when explicitly requested via URL
       const urlParams = new URLSearchParams(window.location.search);
       const isTestMode = urlParams.get('test_mode') === 'true';
-      
+
       if (isTestMode) {
         const testUserId = urlParams.get('test_user_id') || 'test-user-123';
         this.testAuthBypass = {
           enabled: true,
           userId: testUserId
         };
-        
+
         if (import.meta.env?.DEV) {
           devLog('🧪 Test authentication bypass enabled for user:', testUserId);
         }
@@ -68,7 +68,7 @@ class ApiService {
     } else {
       // SECURITY: In production, test authentication bypass is completely disabled
       this.testAuthBypass = null;
-      
+
       // Only log in development mode to avoid production console noise
       if (import.meta.env?.DEV) {
         devLog('🔒 Test authentication bypass disabled in production mode');
@@ -99,20 +99,20 @@ class ApiService {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const clientTimeAfter = Date.now();
         const roundTripTime = clientTimeAfter - clientTimeBefore;
-        
+
         // Estimate server time at the moment we made the request
         const estimatedServerTime = data.server_timestamp_ms + (roundTripTime / 2);
         const clientTimeAtRequest = clientTimeBefore + (roundTripTime / 2);
-        
+
         // Calculate clock skew (positive means client is ahead, negative means behind)
         this.clockSkewOffset = clientTimeAtRequest - estimatedServerTime;
         this.clockSkewDetected = true;
-        
+
         if (import.meta.env?.DEV) {
           devLog(`🕐 Clock skew detected: ${this.clockSkewOffset}ms (client ${this.clockSkewOffset > 0 ? 'ahead' : 'behind'})`);
           devLog(`   Round trip time: ${roundTripTime}ms`);
@@ -146,7 +146,7 @@ class ApiService {
     }
 
     const token = await user.getIdToken(forceRefresh);
-    
+
     // Validate token structure
     if (!token || typeof token !== 'string') {
       throw new Error('Authentication token is not a valid string');
@@ -172,11 +172,11 @@ class ApiService {
       const serverTime = errorData.server_time_ms;
       const clientTime = Date.now();
       const detectedSkew = clientTime - serverTime;
-      
+
       // Update our clock skew offset with the server's measurement
       this.clockSkewOffset = detectedSkew;
       this.clockSkewDetected = true;
-      
+
       if (import.meta.env?.DEV) {
         devLog(`🔄 Updated clock skew from server error: ${detectedSkew}ms`);
         devLog(`   Server reported time: ${new Date(serverTime).toISOString()}`);
@@ -296,7 +296,7 @@ class ApiService {
           if (response.status === 401) {
             await this.handleClockSkewError(errorData);
           }
-          
+
           const delay = this.calculateRetryDelay(retryCount, response.status);
 
           if (import.meta.env?.DEV) {
@@ -503,7 +503,7 @@ class ApiService {
     if (status === 401) {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
-      
+
       // Add additional delay if we've detected significant clock skew
       if (this.clockSkewDetected && Math.abs(this.clockSkewOffset) > 1000) {
         delay += Math.abs(this.clockSkewOffset);
@@ -878,7 +878,7 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    const token = await user.getIdToken();
+    const token = await this.getCompensatedToken(false);
     return {
       'Authorization': `Bearer ${token}`,
     };
