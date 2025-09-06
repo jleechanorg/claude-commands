@@ -56,9 +56,9 @@ const headerToken = await this.getCompensatedToken(false); // Use cached when ap
 def test_basic_authentication():
     token = self.mock_service.get_token()
     assert token is not None
-    
+
 def test_token_refresh():
-    token = self.mock_service.get_token(refresh=True)  
+    token = self.mock_service.get_token(refresh=True)
     assert token is not None
 ```
 
@@ -76,15 +76,15 @@ def test_matrix_1_clock_skew_scenarios(self):
     """Test all clock skew timing scenarios"""
     scenarios = [
         (False, 0),      # No skew detected
-        (True, -2000),   # Client behind 2 seconds  
+        (True, -2000),   # Client behind 2 seconds
         (True, -5000),   # Client behind 5 seconds
         (True, 2000),    # Client ahead 2 seconds
     ]
-    
+
 def test_matrix_2_force_refresh_combinations(self):
     """Test all combinations of skew × refresh states"""
     # 6 combinations covering all authentication scenarios
-    
+
 def test_matrix_3_token_validation_edge_cases(self):
     """Test malformed tokens, null tokens, invalid JWT structure"""
     # Error condition validation for security boundary testing
@@ -104,10 +104,10 @@ private async getCompensatedToken(forceRefresh = false): Promise<string> {
     // Always make network call to check time
     const timeResponse = await fetch('/api/time');
     const serverTime = await timeResponse.json();
-    
-    // Always wait regardless of clock state  
+
+    // Always wait regardless of clock state
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
+
     return await user.getIdToken(forceRefresh);
 }
 ```
@@ -128,14 +128,14 @@ private async getCompensatedToken(forceRefresh = false): Promise<string> {
         const waitTime = Math.abs(this.clockSkewOffset) + 500; // Minimal necessary delay
         await new Promise(resolve => setTimeout(resolve, waitTime));
     }
-    
+
     // Cached offset used for all requests
     return await user.getIdToken(forceRefresh);
 }
 ```
 
 **Performance Benefits**:
-- <1ms overhead per request when clocks are synchronized  
+- <1ms overhead per request when clocks are synchronized
 - One-time network cost for timing detection during initialization
 - Compensation only applied when necessary (client behind)
 - Scales efficiently under high authentication volume
@@ -150,18 +150,18 @@ async initialize() {
 }
 
 private async handleClockSkewError(errorData: any) {
-    this.clockSkewOffset = clientTime - serverTime;  // Reactive: Learn from failures  
+    this.clockSkewOffset = clientTime - serverTime;  // Reactive: Learn from failures
 }
 ```
 
-### Comprehensive Error Handling Pattern  
+### Comprehensive Error Handling Pattern
 ```typescript
 // Pattern: Progressive Token Validation
 if (!token || typeof token !== 'string') {
     throw new Error('Authentication token is not a valid string');
 }
 if (tokenParts.length !== 3) {
-    throw new Error('Authentication token is not a valid JWT format');  
+    throw new Error('Authentication token is not a valid JWT format');
 }
 if (tokenParts.some(part => !part)) {
     throw new Error('Authentication token has invalid JWT structure');
@@ -190,7 +190,7 @@ def _assert_timing_behavior(self, start_time, end_time, should_wait):
 ### Security Enhancement Quality Gates
 1. **Authentication Centralization**: All token requests must flow through single compensation method
 2. **Comprehensive Edge Case Testing**: Security fixes require matrix testing covering all failure modes
-3. **Performance Validation**: Security enhancements must have <1ms overhead per request  
+3. **Performance Validation**: Security enhancements must have <1ms overhead per request
 4. **Graceful Degradation**: Security features must not break functionality when enhancement fails
 
 ### Testing Requirements for Security Changes
@@ -199,7 +199,7 @@ def _assert_timing_behavior(self, start_time, end_time, should_wait):
 3. **Error Boundary Testing**: Validate all error conditions with malformed inputs
 4. **Helper Method Pattern**: Use clean test helper methods for scenario setup
 
-### Code Quality Standards  
+### Code Quality Standards
 1. **Environment-Aware Logging**: Rich debugging in development, silent operation in production
 2. **Single Responsibility**: Clock skew detection, compensation, and token validation in separate methods
 3. **Type Safety**: Runtime validation for all security-critical inputs
@@ -218,19 +218,19 @@ def _assert_timing_behavior(self, start_time, end_time, should_wait):
 **Use**: Proactive detection + reactive compensation strategy
 **Benefit**: Self-healing authentication that learns from failures
 
-### Security TDD Matrix Pattern  
+### Security TDD Matrix Pattern
 **When**: Implementing security fixes or authentication changes
 **Use**: Comprehensive scenario matrix testing with helper methods
 **Benefit**: Complete confidence in security fix under all conditions
 
 ### Performance-Conscious Security Pattern
-**When**: Adding security features to high-traffic authentication flows  
+**When**: Adding security features to high-traffic authentication flows
 **Use**: Conditional overhead with caching and one-time initialization costs
 **Benefit**: Security enhancement without performance degradation
 
 ---
 
-**Created**: 2025-09-05  
-**PR Context**: #1547 - Security Fix: Consistent token handling with clock skew compensation  
-**Commit SHA**: 5249bae7 - Added comprehensive TDD matrix tests for security token fix  
+**Created**: 2025-09-05
+**PR Context**: #1547 - Security Fix: Consistent token handling with clock skew compensation
+**Commit SHA**: 5249bae7 - Added comprehensive TDD matrix tests for security token fix
 **Files**: mvp_site/frontend_v2/src/services/api.service.ts:882, mvp_site/tests/test_v2_frontend_verification.py
