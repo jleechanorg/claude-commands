@@ -530,7 +530,10 @@ test_uvx_command_detection() {
     OLD_PATH="$PATH"
 
     # Test 1: uvx command available
-    echo '#!/bin/bash\necho "uvx available"' > "$TEST_DIR/bin/uvx"
+    cat > "$TEST_DIR/bin/uvx" <<'EOF'
+#!/bin/bash
+echo "uvx available"
+EOF
     chmod +x "$TEST_DIR/bin/uvx"
     export PATH="$TEST_DIR/bin:$PATH"
 
@@ -565,25 +568,29 @@ test_mcp_global_installation_logic() {
     mkdir -p "$TEST_DIR/bin"
 
     # Mock uvx command that simulates successful global installation
-    echo '#!/bin/bash
-if [ "$1" = "--from" ] && [ "$2" = "./mcp_servers/slash_commands" ] && [ "$3" = "claude-slash-commands-mcp" ]; then
+    cat > "$TEST_DIR/bin/uvx" <<'EOF'
+#!/bin/bash
+if [ "$1" = "--from" ] && { [ "$2" = "./mcp_servers/slash_commands" ] || [[ "$2" == file://*"/mcp_servers/slash_commands" ]]; } && [ "$3" = "claude-slash-commands-mcp" ]; then
     echo "Successfully installed claude-slash-commands-mcp"
     exit 0
 else
     echo "uvx: command not recognized"
     exit 1
-fi' > "$TEST_DIR/bin/uvx"
+fi
+EOF
     chmod +x "$TEST_DIR/bin/uvx"
 
     # Mock claude command that simulates successful MCP add
-    echo '#!/bin/bash
+    cat > "$TEST_DIR/bin/claude" <<'EOF'
+#!/bin/bash
 if [ "$1" = "mcp" ] && [ "$2" = "add" ] && [ "$3" = "--scope" ] && [ "$4" = "user" ] && [ "$5" = "claude-slash-commands" ] && [ "$6" = "claude-slash-commands-mcp" ]; then
     echo "Successfully added MCP server claude-slash-commands"
     exit 0
 else
     echo "claude: command failed"
     exit 1
-fi' > "$TEST_DIR/bin/claude"
+fi
+EOF
     chmod +x "$TEST_DIR/bin/claude"
 
     OLD_PATH="$PATH"
@@ -615,20 +622,24 @@ test_installation_fallback_logic() {
     mkdir -p "$TEST_DIR/bin"
 
     # Mock uvx command that simulates failure
-    echo '#!/bin/bash
+    cat > "$TEST_DIR/bin/uvx" <<'EOF'
+#!/bin/bash
 echo "uvx: installation failed"
-exit 1' > "$TEST_DIR/bin/uvx"
+exit 1
+EOF
     chmod +x "$TEST_DIR/bin/uvx"
 
     # Mock python command for local fallback
-    echo '#!/bin/bash
-if [ "$1" = "-m" ] && [ "$2" = "pip" ] && [ "$3" = "install" ] && [ "$4" = "-e" ] && [[ "$5" == *"mcp_servers/slash_commands"* ]]; then
+    cat > "$TEST_DIR/bin/python3" <<'EOF'
+#!/bin/bash
+if [[ "$1" == "-m" ]] && [[ "$2" == "pip" ]] && [[ "$3" == "install" ]] && [[ "$4" == "-e" ]] && [[ "$5" == *"mcp_servers/slash_commands"* ]]; then
     echo "Successfully installed local package"
     exit 0
 else
     echo "python: unknown command"
     exit 1
-fi' > "$TEST_DIR/bin/python3"
+fi
+EOF
     chmod +x "$TEST_DIR/bin/python3"
 
     OLD_PATH="$PATH"

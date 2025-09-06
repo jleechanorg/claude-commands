@@ -1301,14 +1301,14 @@ else
         log_with_timestamp "Attempting global uvx installation for slash commands MCP server"
 
         # Check if the package is already installed globally
-        if uvx --help claude-slash-commands-mcp >/dev/null 2>&1; then
+        if command -v claude-slash-commands-mcp >/dev/null 2>&1; then
             echo -e "${GREEN}  ✅ Global claude-slash-commands MCP server already installed${NC}"
             log_with_timestamp "Global claude-slash-commands MCP server already installed"
         else
             echo -e "${BLUE}  📥 Installing claude-slash-commands MCP server globally with uvx...${NC}"
             # For now, we'll use the current repository structure
             # TODO: Replace with actual GitHub repository when published
-            if uvx --from "file://$SCRIPT_DIR/mcp_servers/slash_commands" claude-slash-commands-mcp --help >/dev/null 2>&1; then
+            if uvx --from "file://$SCRIPT_DIR/mcp_servers/slash_commands" claude-slash-commands-mcp >/dev/null 2>&1; then
                 echo -e "${GREEN}  ✅ Successfully installed claude-slash-commands MCP server globally${NC}"
                 log_with_timestamp "Successfully installed claude-slash-commands MCP server globally"
             else
@@ -1355,8 +1355,34 @@ else
             echo -e "${BLUE}  🔧 Using local slash commands MCP server installation...${NC}"
             log_with_timestamp "Using local installation approach"
 
-            # Add the server with environment variables using local Python
-            add_output=$(claude mcp add --scope user "claude-slash-commands" "$SCRIPT_DIR/vpython" "$SLASH_COMMANDS_PATH/server.py" \
+            # Dynamically select a valid Python interpreter
+            PY_INTERPRETER=""
+            if [ -x "$SCRIPT_DIR/vpython" ]; then
+                PY_INTERPRETER="$SCRIPT_DIR/vpython"
+                echo -e "${BLUE}  🐍 Using project vpython: $PY_INTERPRETER${NC}"
+            elif [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
+                PY_INTERPRETER="$SCRIPT_DIR/venv/bin/python"
+                echo -e "${BLUE}  🐍 Using project venv: $PY_INTERPRETER${NC}"
+            elif [ -x "$PROJECT_ROOT/venv/bin/python" ]; then
+                PY_INTERPRETER="$PROJECT_ROOT/venv/bin/python"
+                echo -e "${BLUE}  🐍 Using project root venv: $PY_INTERPRETER${NC}"
+            elif command -v python3 >/dev/null 2>&1; then
+                PY_INTERPRETER="$(command -v python3)"
+                echo -e "${BLUE}  🐍 Using system python3: $PY_INTERPRETER${NC}"
+            elif command -v python >/dev/null 2>&1; then
+                PY_INTERPRETER="$(command -v python)"
+                echo -e "${BLUE}  🐍 Using system python: $PY_INTERPRETER${NC}"
+            else
+                echo -e "${RED}  ❌ No Python interpreter found${NC}"
+                echo -e "${RED}     Available options: vpython, venv/bin/python, python3, python${NC}"
+                log_with_timestamp "ERROR: No Python interpreter found for slash commands server"
+                INSTALL_RESULTS["claude-slash-commands"]="PYTHON_NOT_FOUND"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                return 1
+            fi
+
+            # Add the server with environment variables using selected Python interpreter
+            add_output=$(claude mcp add --scope user "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" \
                 --env "CEREBRAS_API_KEY=$CEREBRAS_API_KEY" \
                 --env "GEMINI_API_KEY=$GEMINI_API_KEY" \
                 --env "GITHUB_TOKEN=$GITHUB_TOKEN" \
