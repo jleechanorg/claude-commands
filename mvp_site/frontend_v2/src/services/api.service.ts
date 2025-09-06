@@ -107,6 +107,14 @@ class ApiService {
           devLog(`   Server time: ${new Date(data.server_timestamp_ms).toISOString()}`);
           devLog(`   Client time: ${new Date(clientTimeAtRequest).toISOString()}`);
         }
+      } else if (response.status === 404) {
+        // Server doesn't expose time endpoint; skip skew detection
+        if (import.meta.env?.DEV) devWarn('⚠️ /time endpoint not available; skipping skew detection');
+        return;
+      } else {
+        const body = await response.text().catch(() => '');
+        if (import.meta.env?.DEV) devWarn(`⚠️ /time returned ${response.status} ${response.statusText}`, body);
+        return;
       }
     } catch (error) {
       if (import.meta.env?.DEV) {
@@ -126,7 +134,8 @@ class ApiService {
 
     // If we have detected clock skew and client is behind, wait before token generation
     if (this.clockSkewDetected && this.clockSkewOffset < 0) {
-      const waitTime = Math.abs(this.clockSkewOffset) + 500; // Add 500ms buffer
+      const MAX_COMPENSATION_WAIT_MS = 10_000; // 10s cap
+      const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, MAX_COMPENSATION_WAIT_MS);
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
       }
@@ -503,11 +512,13 @@ class ApiService {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
 
-      // Add additional delay if we've detected significant clock skew
-      if (this.clockSkewDetected && Math.abs(this.clockSkewOffset) > 1000) {
-        delay += Math.abs(this.clockSkewOffset);
+      // Add additional delay only if client is behind and cap the addition
+      if (this.clockSkewDetected && this.clockSkewOffset < -1000) {
+        const MAX_EXTRA_SKEW_DELAY = 10_000;
+        const extraDelay = Math.min(Math.abs(this.clockSkewOffset), MAX_EXTRA_SKEW_DELAY);
+        delay += extraDelay;
         if (import.meta.env?.DEV) {
-          console.log(`⏱️ Adding ${Math.abs(this.clockSkewOffset)}ms delay for clock skew compensation`);
+          devLog(`⏱️ Adding ${extraDelay}ms delay for clock skew compensation`);
         }
       }
     }
