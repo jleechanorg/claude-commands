@@ -88,7 +88,7 @@ class ApiService {
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
         const calculatedSkew = clientTimeAtRequest - estimatedServerTime;
-        
+
         // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
         const MAX_ACCEPTABLE_SKEW = 3600000;
         if (Math.abs(calculatedSkew) > MAX_ACCEPTABLE_SKEW) {
@@ -97,7 +97,7 @@ class ApiService {
           }
           return;
         }
-        
+
         this.clockSkewOffset = calculatedSkew;
         this.clockSkewDetected = true;
 
@@ -160,7 +160,7 @@ class ApiService {
       const serverTime = errorData.server_time_ms;
       const clientTime = Date.now();
       const detectedSkew = clientTime - serverTime;
-      
+
       // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
       const MAX_ACCEPTABLE_SKEW = 3600000;
       if (Math.abs(detectedSkew) > MAX_ACCEPTABLE_SKEW) {
@@ -548,15 +548,6 @@ class ApiService {
    * Get the current authenticated user
    */
   async getCurrentUser(): Promise<User | null> {
-    if (this.testAuthBypass?.enabled) {
-      // Return test user
-      return {
-        uid: this.testAuthBypass.userId,
-        email: `${this.testAuthBypass.userId}@test.com`,
-        displayName: 'Test User'
-      };
-    }
-
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
       return null;
@@ -574,10 +565,6 @@ class ApiService {
    * Sign in with Google (Firebase)
    */
   async login(): Promise<User> {
-    if (this.testAuthBypass?.enabled) {
-      throw new Error('Cannot login in test mode');
-    }
-
     const result = await signInWithPopup(auth, googleProvider);
 
     return {
@@ -592,10 +579,6 @@ class ApiService {
    * Sign out
    */
   async logout(): Promise<void> {
-    if (this.testAuthBypass?.enabled) {
-      throw new Error('Cannot logout in test mode');
-    }
-
     await signOut(auth);
   }
 
@@ -865,13 +848,6 @@ class ApiService {
    * Helper method to get auth headers for non-JSON requests
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
-    if (this.testAuthBypass?.enabled) {
-      return {
-        'X-Test-Bypass-Auth': 'true',
-        'X-Test-User-ID': this.testAuthBypass.userId,
-      };
-    }
-
     const user = auth.currentUser;
     if (!user) {
       throw new Error('User not authenticated');
@@ -888,10 +864,6 @@ class ApiService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    if (this.testAuthBypass?.enabled) {
-      return true;
-    }
-
     return auth.currentUser !== null;
   }
 
@@ -899,19 +871,7 @@ class ApiService {
    * Listen to auth state changes
    */
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    if (this.testAuthBypass?.enabled) {
-      // Call immediately with test user
-      callback({
-        uid: this.testAuthBypass.userId,
-        email: `${this.testAuthBypass.userId}@test.com`,
-        displayName: 'Test User'
-      });
-
-      // Return empty unsubscribe function
-      return () => {};
-    }
-
-    // Normal Firebase auth state listener
+    // Firebase auth state listener
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         callback({
