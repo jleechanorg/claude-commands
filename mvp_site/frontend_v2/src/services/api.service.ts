@@ -123,10 +123,10 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // If we have detected clock skew and client is behind, wait before token generation
-    if (this.clockSkewDetected && this.clockSkewOffset < 0) {
+    // If we have detected clock skew and client is ahead, wait before token generation
+    if (this.clockSkewDetected && this.clockSkewOffset > 0) {
       const MAX_COMPENSATION_WAIT_MS = 10_000; // 10s cap
-      const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, MAX_COMPENSATION_WAIT_MS);
+      const waitTime = Math.min(this.clockSkewOffset + 500, MAX_COMPENSATION_WAIT_MS);
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
       }
@@ -494,13 +494,13 @@ class ApiService {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
 
-      // Add additional delay only if client is behind and cap the addition
-      if (this.clockSkewDetected && this.clockSkewOffset < -1000) {
+      // Add additional delay only if client is ahead and cap the addition
+      if (this.clockSkewDetected && this.clockSkewOffset > 1000) {
         const MAX_EXTRA_SKEW_DELAY = 10_000;
-        const extraDelay = Math.min(Math.abs(this.clockSkewOffset), MAX_EXTRA_SKEW_DELAY);
+        const extraDelay = Math.min(this.clockSkewOffset, MAX_EXTRA_SKEW_DELAY);
         delay += extraDelay;
         if (import.meta.env?.DEV) {
-          devLog(`⏱️ Adding ${extraDelay}ms delay for clock skew compensation`);
+          devLog(`⏱️ Adding ${extraDelay}ms delay for clock skew compensation (client ahead)`);
         }
       }
     }
