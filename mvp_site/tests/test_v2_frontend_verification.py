@@ -547,6 +547,54 @@ class TestSecurityTokenMatrix(unittest.TestCase):
 
         return token
 
+    def test_clock_skew_mathematical_direction_fix(self):
+        """Test mathematical fix: Wait when client AHEAD (> 0), not behind (< 0)"""
+        api_service_path = (
+            self.project_root
+            / "mvp_site"
+            / "frontend_v2"
+            / "src"
+            / "services"
+            / "api.service.ts"
+        )
+
+        with open(api_service_path, encoding="utf-8") as f:
+            content = f.read()
+
+        # CRITICAL: Verify mathematical fix - wait when client AHEAD
+        self.assertIn(
+            "if (this.clockSkewDetected && this.clockSkewOffset > 0)",
+            content,
+            "CRITICAL FIX MISSING: Should wait when clockSkewOffset > 0 (client ahead)",
+        )
+
+        # Verify the incorrect logic is NOT present
+        self.assertNotIn(
+            "if (this.clockSkewDetected && this.clockSkewOffset < 0)",
+            content,
+            "OLD BUG PRESENT: Must not wait when clockSkewOffset < 0 (client behind)",
+        )
+
+        # Verify retry delay logic also uses correct direction
+        self.assertIn(
+            "if (this.clockSkewDetected && this.clockSkewOffset > 1000)",
+            content,
+            "RETRY FIX MISSING: Should add delay when clockSkewOffset > 1000 (client ahead)",
+        )
+
+        # Verify comment reflects correct understanding
+        self.assertIn(
+            "client is ahead, wait before token generation",
+            content,
+            "COMMENT FIX MISSING: Comment should indicate waiting when client ahead",
+        )
+
+        print("✅ Clock skew mathematical direction fix verified")
+        print("   ✅ Waits when client ahead (clockSkewOffset > 0)")
+        print("   ✅ No wait when client behind (clockSkewOffset < 0)")
+        print("   ✅ Retry delay uses correct direction (> 1000)")
+        print("   ✅ Comments reflect correct logic")
+
 
 if __name__ == "__main__":
     print("✅ V2 Frontend Verification Tests")
