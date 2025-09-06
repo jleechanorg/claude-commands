@@ -1319,8 +1319,23 @@ else
 
         # Try to configure Claude MCP to use the global command
         echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use global slash commands server...${NC}"
+        
+        # First try direct command approach (current method)
         add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
         add_exit_code=$?
+
+        # If direct approach fails, try add-json approach (CodeRabbit suggestion)
+        if [ $add_exit_code -ne 0 ]; then
+            echo -e "${BLUE}  🔄 Trying add-json approach for enhanced reliability...${NC}"
+            add_output=$(claude mcp add-json --scope user "claude-slash-commands" \
+                "{\"command\":\"uvx\",\"args\":[\"--from\",\"file://$SCRIPT_DIR/mcp_servers/slash_commands\",\"claude-slash-commands-mcp\"]}" 2>&1)
+            add_exit_code=$?
+            
+            if [ $add_exit_code -eq 0 ]; then
+                echo -e "${GREEN}  ✅ Successfully configured with add-json approach${NC}"
+                log_with_timestamp "Successfully configured slash commands MCP server using add-json approach"
+            fi
+        fi
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured Claude MCP with global slash commands server${NC}"

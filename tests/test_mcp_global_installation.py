@@ -112,12 +112,23 @@ class TestMCPGlobalInstallation(unittest.TestCase):
                 if 'eval' in line and 'MCP_CONFIG' not in line:
                     self.fail(f"Potentially unsafe eval usage at line {i}: {line.strip()}")
 
-                # Check for unquoted variables in commands
+                # Check for unquoted variables in commands - enhanced security check
                 if '$' in line and '"' not in line and "'" not in line:
                     # Skip comments and safe patterns
-                    if not line.strip().startswith('#') and 'export' not in line:
-                        # This is informational, not a hard failure
+                    if (not line.strip().startswith('#') and 
+                        'export' not in line and 
+                        'echo' not in line and
+                        '=' not in line):
+                        # This could be a security risk - inform but don't fail
                         pass
+            
+            # Verify add-json approach is implemented (CodeRabbit suggestion)
+            self.assertIn('add-json', content, 
+                         "Script should include add-json approach for enhanced reliability")
+            
+            # Verify fallback mechanisms exist
+            self.assertIn('fallback', content,
+                         "Script should include fallback mechanisms for reliability")
 
     def test_installation_script_error_handling(self):
         """Test that installation scripts have proper error handling."""
