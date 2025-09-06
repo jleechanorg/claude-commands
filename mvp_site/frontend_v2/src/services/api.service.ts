@@ -39,17 +39,8 @@ class ApiService {
   private clockSkewOffset = 0; // Detected clock skew in milliseconds
   private clockSkewDetected = false;
 
-  /**
-   * Authentication bypass for development mode
-   */
-  // SECURITY FIX: Test authentication bypass removed per security review
-  // private testAuthBypass: { enabled: boolean; userId: string } | null = null;
 
   constructor() {
-    // SECURITY: Only enable test mode authentication bypass in non-production environments
-    // This prevents authentication bypass in production builds via URL manipulation
-    // SECURITY FIX: Test authentication bypass removed per security review
-    // Use proper test doubles/mocks in test suite instead of runtime authentication bypass
 
     // Clean up expired cache entries periodically
     setInterval(() => this.cleanupCache(), 10 * 60 * 1000); // Every 10 minutes
@@ -243,15 +234,6 @@ class ApiService {
     // Build headers based on auth mode
     let headers: Record<string, string>;
 
-    // SECURITY FIX: Test authentication bypass removed
-    // if (this.testAuthBypass?.enabled) {
-    //   // Test mode headers
-    //   headers = {
-    //     'X-Test-Bypass-Auth': 'true',
-    //     'X-Test-User-ID': this.testAuthBypass.userId,
-    //     'Content-Type': 'application/json',
-    //   };
-    // } else {
     {
       // Normal Firebase authentication
       const user = auth.currentUser;
