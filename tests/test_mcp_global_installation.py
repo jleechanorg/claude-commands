@@ -50,7 +50,7 @@ class TestMCPGlobalInstallation(unittest.TestCase):
             with patch('subprocess.run') as mock_run:
                 # Mock successful interpreter check
                 mock_run.return_value = MagicMock(returncode=0,
-                                                stdout=b'Python 3.11.0\n')
+                                                stdout='Python 3.11.0\n')
 
                 result = subprocess.run([interpreter, '--version'],
                                       shell=False,
