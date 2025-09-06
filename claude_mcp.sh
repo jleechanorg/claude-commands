@@ -1363,9 +1363,6 @@ else
             elif [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
                 PY_INTERPRETER="$SCRIPT_DIR/venv/bin/python"
                 echo -e "${BLUE}  🐍 Using project venv: $PY_INTERPRETER${NC}"
-            elif [ -x "$PROJECT_ROOT/venv/bin/python" ]; then
-                PY_INTERPRETER="$PROJECT_ROOT/venv/bin/python"
-                echo -e "${BLUE}  🐍 Using project root venv: $PY_INTERPRETER${NC}"
             elif command -v python3 >/dev/null 2>&1; then
                 PY_INTERPRETER="$(command -v python3)"
                 echo -e "${BLUE}  🐍 Using system python3: $PY_INTERPRETER${NC}"
