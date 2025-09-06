@@ -6,6 +6,7 @@ These tests verify that the API gateway properly handles settings requests.
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 # Setup path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,9 +23,18 @@ class TestSettingsAPI(unittest.TestCase):
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
         self.test_user_id = "test-user-123"
+        
+        # Use stable test UID and stub Firebase verification
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+        
+        # Test headers with Authorization token
         self.headers = {
-            "X-Test-Bypass-Auth": "true",
-            "X-Test-User-ID": self.test_user_id,
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
     def test_settings_page_route_works(self):

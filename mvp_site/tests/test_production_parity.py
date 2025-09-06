@@ -63,16 +63,24 @@ class TestProductionParity(unittest.TestCase):
 
         # Test data
         self.test_user_id = "production-parity-test-user"
+        
+        # Use stable test UID and stub Firebase verification
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
+        self._auth_patcher.start()
+        
         self.test_headers = {
-            "X-Test-Bypass-Auth": "true",
-            "X-Test-User-ID": self.test_user_id,
             "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
     def tearDown(self):
         """Restore original environment."""
         # Stop Firebase mock patcher to ensure proper test isolation
         self.firebase_patcher.stop()
+        # Stop auth patcher
+        self._auth_patcher.stop()
         # No additional environment cleanup needed - direct calls are default
 
     def test_campaigns_list_response_format_compatibility(self):

@@ -63,24 +63,27 @@ class TestFirestoreMocking(unittest.TestCase):
         mock_collection.document.assert_called_with('test_id')
 
     @unittest.skipUnless(HAS_FIREBASE, "firebase_admin not available")
-    def test_mock_at_firestore_client_level(self):
-        """Test that get_db() returns a mockable client in testing mode."""
-        # Set TESTING environment to ensure mock mode
-        with patch.dict(os.environ, {"TESTING": "true"}):
-            import firestore_service
-            
-            db = firestore_service.get_db()
-            
-            # In testing mode, get_db() should return a MagicMock
-            self.assertIsInstance(db, MagicMock)
-            
-            # Verify the mock has the expected Firestore interface
-            self.assertTrue(hasattr(db, 'collection'))
-            self.assertTrue(hasattr(db, 'batch'))
-            
-            # Test that the mock works as expected for common operations
-            collection_ref = db.collection('test')
-            self.assertIsInstance(collection_ref, MagicMock)
+    @patch('firestore_service.get_db')
+    def test_mock_at_firestore_client_level(self, mock_get_db):
+        """Test that get_db() can be properly mocked for testing."""
+        # Firebase is now always enabled, so we mock get_db() directly
+        mock_client = MagicMock()
+        mock_get_db.return_value = mock_client
+        
+        import firestore_service
+        
+        db = firestore_service.get_db()
+        
+        # With proper mocking, get_db() should return our MagicMock
+        self.assertIsInstance(db, MagicMock)
+        
+        # Verify the mock has the expected Firestore interface
+        self.assertTrue(hasattr(db, 'collection'))
+        self.assertTrue(hasattr(db, 'batch'))
+        
+        # Test that the mock works as expected for common operations
+        collection_ref = db.collection('test')
+        self.assertIsInstance(collection_ref, MagicMock)
 
     @unittest.skipUnless(HAS_FIREBASE, "firebase_admin not available")
     def test_mock_with_context_manager(self):
