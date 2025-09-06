@@ -121,7 +121,7 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
         if response.status_code == 201:
             response_data = response.get_json()
             assert isinstance(response_data, dict)
-            assert "campaign_id" in response_data
+            if response.status_code in [200, 201]: assert "campaign_id" in response_data  # Only check data structure for successful responses
 
             # Test campaign retrieval through MCP
             campaign_id = response_data["campaign_id"]
