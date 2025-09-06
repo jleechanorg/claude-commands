@@ -127,18 +127,13 @@ jobs:
             echo "Current branch: $(git branch --show-current)"
             echo "Current commit: $(git rev-parse HEAD)"
 
-            # Ensure base branch is fetched (needed on PRs and forks)
-            git fetch --no-tags --prune --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+            # Ensure base branch is fetched with full history (needed for merge-base)
+            git fetch --no-tags --prune --depth=0 origin +refs/heads/main:refs/remotes/origin/main
             echo "Available refs: $(git branch -a | grep main)"
 
-            # For PRs, use the PR head vs main comparison
-            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
-              DIFF_SPEC="origin/main..HEAD"
-              echo "Using PR diff spec: $DIFF_SPEC"
-            else
-              DIFF_SPEC="origin/main...HEAD"
-              echo "Using push diff spec: $DIFF_SPEC"
-            fi
+            # Use merge-base diff for all scenarios (more reliable)
+            DIFF_SPEC="origin/main...HEAD"
+            echo "Using merge-base diff spec: $DIFF_SPEC"
 
             python3 scripts/validate_imports.py --diff-only "$DIFF_SPEC"
 
