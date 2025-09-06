@@ -123,8 +123,24 @@ jobs:
             echo "🔍 Running DELTA IMPORT validation checks..."
             echo "Checking only files changed in this PR for inline imports and try/except patterns..."
 
-            # Use delta validation - only check files changed vs main branch
-            python3 scripts/validate_imports.py --diff-only origin/main..HEAD
+            # Debug git state
+            echo "Current branch: $(git branch --show-current)"
+            echo "Current commit: $(git rev-parse HEAD)"
+
+            # Ensure base branch is fetched (needed on PRs and forks)
+            git fetch --no-tags --prune --depth=1 origin +refs/heads/main:refs/remotes/origin/main
+            echo "Available refs: $(git branch -a | grep main)"
+
+            # For PRs, use the PR head vs main comparison
+            if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+              DIFF_SPEC="origin/main..HEAD"
+              echo "Using PR diff spec: $DIFF_SPEC"
+            else
+              DIFF_SPEC="origin/main...HEAD"
+              echo "Using push diff spec: $DIFF_SPEC"
+            fi
+
+            python3 scripts/validate_imports.py --diff-only "$DIFF_SPEC"
 
             if [ $? -eq 0 ]; then
               echo "✅ Delta import validation: All checks passed"

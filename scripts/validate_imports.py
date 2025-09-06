@@ -100,17 +100,23 @@ class ImportValidator(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Mark non-import code."""
-        self.non_import_seen = True  # Functions always mark end of import section
+        # Functions always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Mark non-import code."""
-        self.non_import_seen = True  # Classes always mark end of import section
+        # Classes always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         """Mark non-import code."""
-        self.non_import_seen = True  # Assignments always mark end of import section
+        # Assignments always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
@@ -158,7 +164,7 @@ def validate_file(file_path: Path) -> list[ImportViolation]:
         ]
 
 
-def get_changed_python_files(diff_spec: str = "main..HEAD") -> list[Path]:
+def get_changed_python_files(diff_spec: str = "origin/main...HEAD") -> list[Path]:
     """Get Python files changed in git diff."""
     try:
         # Get list of changed files
@@ -172,7 +178,7 @@ def get_changed_python_files(diff_spec: str = "main..HEAD") -> list[Path]:
 
         changed_files = []
         for line in result.stdout.strip().split('\n'):
-            if line.endswith('.py') and line:
+            if line and line.endswith('.py'):
                 file_path = Path(line)
                 if file_path.exists():
                     changed_files.append(file_path)
@@ -180,11 +186,10 @@ def get_changed_python_files(diff_spec: str = "main..HEAD") -> list[Path]:
         return changed_files
 
     except subprocess.CalledProcessError as e:
-        print(f"Error running git diff: {e}")
-        return []
+        err = (e.stderr or "").strip()
+        raise RuntimeError(f"git diff failed for spec '{diff_spec}': {err}") from e
     except Exception as e:
-        print(f"Error getting changed files: {e}")
-        return []
+        raise RuntimeError(f"Error getting changed files for '{diff_spec}': {e}") from e
 
 
 def validate_directory(directory: Path) -> list[ImportViolation]:
@@ -202,7 +207,7 @@ def validate_directory(directory: Path) -> list[ImportViolation]:
     return violations
 
 
-def validate_changed_files(diff_spec: str = "main..HEAD") -> list[ImportViolation]:
+def validate_changed_files(diff_spec: str = "origin/main...HEAD") -> list[ImportViolation]:
     """Validate only Python files changed in git diff."""
     violations = []
     changed_files = get_changed_python_files(diff_spec)
@@ -227,7 +232,7 @@ def main():
     """Main validation function."""
     # Handle --diff-only flag
     if len(sys.argv) > 1 and sys.argv[1] == "--diff-only":
-        diff_spec = sys.argv[2] if len(sys.argv) > 2 else "main..HEAD"
+        diff_spec = sys.argv[2] if len(sys.argv) > 2 else "origin/main...HEAD"
         print(f"🔍 Validating imports in changed files: {diff_spec}")
         print("=" * 50)
         violations = validate_changed_files(diff_spec)
