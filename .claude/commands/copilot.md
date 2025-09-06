@@ -22,20 +22,20 @@ fi
 ## 🎯 Purpose
 Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches copilot-fixpr and copilot-handle-comments agents by default for comprehensive coverage and quality assurance.
 
-## ⚡ **PERFORMANCE ARCHITECTURE: Mandatory Parallel Agent Orchestration**
+## ⚡ **PERFORMANCE ARCHITECTURE: Hybrid Orchestrator with Selective Task Agents**
 
-🚨 **CRITICAL REQUIREMENT**: /copilot ALWAYS uses parallel agents - NO EXCEPTIONS
+🚨 **OPTIMIZED HYBRID PATTERN**: /copilot uses direct execution + selective task agents for maximum reliability
 
-- **MANDATORY**: Launch `copilot-fixpr` and `copilot-handle-comments` agents in parallel for EVERY execution
-- **NO DIRECT EXECUTION**: /copilot must NEVER handle tasks directly - always delegate to specialized agents
-- **PARALLEL PROCESSING**: Both agents work simultaneously for maximum efficiency
-- **EXPERTISE DISTRIBUTION**: Each agent handles its specialized domain (fixes vs analysis)
-- **30 recent comments focus** - Process only actionable recent feedback
-- **Expected time**: **2-3 minutes** with proper parallel agent coordination
+- **DIRECT ORCHESTRATION**: Handle comment analysis, GitHub operations, and coordination directly
+- **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
+- **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
+- **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
+- **30 recent comments focus** - Process only actionable recent feedback  
+- **Expected time**: **2-3 minutes** with reliable hybrid coordination
 
-## 🚀 Core Workflow - Parallel Agent Orchestration
+## 🚀 Core Workflow - Hybrid Orchestrator Pattern
 
-**IMPLEMENTATION**: Launch two specialized agents in parallel for optimal performance and expertise distribution
+**IMPLEMENTATION**: Direct orchestration with selective task agent for file operations
 
 **INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
 ```bash
@@ -46,34 +46,34 @@ Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches 
 COPILOT_START_TIME=$(date +%s)
 ```
 
-### Phase 1: Parallel Agent Launch (DEFAULT BEHAVIOR)
-**ALWAYS launch parallel agents for optimal coverage and quality**:
+### Phase 1: Hybrid Coordination Launch
+**Direct orchestration with selective task agent for maximum reliability**:
 
-**🚀 Launch copilot-fixpr Agent**:
-Launch specialized agent for technical implementation and security analysis:
+**🎯 Direct Comment Analysis**:
+Execute comment processing workflow directly for reliable GitHub operations:
+- Execute /commentfetch to gather all PR comments and issues
+- Analyze actionable issues and categorize by type (security, runtime, tests, style)
+- Process issue responses and plan implementation strategy
+- Handle all GitHub API operations directly (proven to work)
+
+**🚀 Parallel copilot-fixpr Agent Launch**:
+Launch specialized agent for file modifications in parallel:
 - Analyze current GitHub PR status and identify potential improvements
 - Review code changes for security vulnerabilities and quality issues
-- Verify implementations are properly coded and tested
+- Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol
 - Focus on code quality, performance optimization, and technical accuracy
 
-**🚀 Launch copilot-handle-comments Agent**:
-Launch specialized agent for complete comment-driven development workflow:
-- Execute /commentfetch to gather all PR comments and issues
-- Fix identified code issues directly using Edit/MultiEdit tools
-- Execute /commentreply to respond with implementation details
-- Execute /commentcheck to verify 100% coverage achievement
+**Coordination Protocol**: Direct orchestrator manages workflow while agent handles file operations in parallel
 
-**Coordination Setup**: Both agents work in parallel on shared GitHub PR data with specialized tool usage (Edit/MultiEdit for both agents, GitHub MCP for communication)
-
-### Phase 2: Agent Coordination & Integration
-**Integration of parallel agent results**:
+### Phase 2: Hybrid Integration & Response Generation
+**Direct orchestration with agent result integration**:
 
 **Agent Result Collection**:
-- copilot-fixpr provides: Technical analysis, code fixes, security recommendations, implementation verification
-- copilot-handle-comments provides: Comment processing, code issue fixes, response generation, coverage verification
-- Both agents maintain: Specialized tool usage boundaries and shared data coordination
+- copilot-fixpr provides: Technical analysis, actual file fixes, security implementations, code changes with justification
+- Direct orchestrator handles: Comment processing, response generation, GitHub API operations, coverage tracking
+- Coordination maintains: File operation delegation while ensuring reliable communication workflow
 
-**Quality Integration**: Combine technical fixes from copilot-fixpr with comment-driven development from copilot-handle-comments for comprehensive PR processing
+**Response Generation**: Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 
 ### Phase 3: Verification & Completion (AUTOMATIC)
 **Results verified by agent coordination**:
@@ -145,31 +145,31 @@ fi
 /guidelines
 ```
 
-## 🔧 **AGENT SPECIALIZATION BOUNDARIES**
+## 🔧 **HYBRID ORCHESTRATION BOUNDARIES**
 
-### copilot-fixpr Responsibilities:
+### copilot-fixpr Agent Responsibilities:
 - **PRIMARY**: Security vulnerability detection and code implementation
 - **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis
 - **FOCUS**: Actual code changes with File Justification Protocol compliance
-- **BOUNDARY**: Never handles GitHub comment responses - delegates to copilot-handle-comments
+- **BOUNDARY**: File operations only - never handles GitHub comment responses
 
-### copilot-handle-comments Responsibilities:
-- **PRIMARY**: Complete comment-driven workflow - /commentfetch, FIX ISSUES, /commentreply, /commentcheck
-- **TOOLS**: GitHub MCP, Edit/MultiEdit for code changes, slash command orchestration
-- **FOCUS**: Code fixes AND comment responses - full-stack responsibility
-- **BOUNDARY**: Self-contained workflow - no delegation needed
+### Direct Orchestrator Responsibilities:
+- **PRIMARY**: Comment processing, GitHub operations, workflow coordination
+- **TOOLS**: /commentfetch, /commentreply, GitHub MCP for API operations
+- **FOCUS**: Communication workflow and agent coordination
+- **BOUNDARY**: Delegates file operations to copilot-fixpr agent
 
 ### Coordination Protocol:
-- **SHARED DATA**: Both agents work on same GitHub PR analysis simultaneously
-- **PARALLEL EXECUTION**: Independent operation with coordination capability
-- **VERIFICATION**: Both implementation coverage AND communication coverage required
-- **INTEGRATION**: copilot-handle-comments makes code changes directly and includes implementation details in responses
+- **HYBRID EXECUTION**: Direct orchestrator coordinates while agent handles file operations
+- **PROVEN RELIABILITY**: Uses only components verified to work correctly
+- **IMPLEMENTATION FOCUS**: Agent makes actual file changes, orchestrator handles responses
+- **SIMPLIFIED WORKFLOW**: Eliminates broken components for 100% working system
 
 ## 🎯 **SUCCESS CRITERIA**
 
-### **DUAL VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
-1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr
-2. **Communication Coverage**: 100% comment response rate with proper threading from copilot-handle-comments
+### **HYBRID VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
+1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr agent
+2. **Communication Coverage**: 100% comment response rate with direct orchestrator /commentreply execution
 
 ### **QUALITY GATES**:
 - ✅ **File Justification Protocol**: All code changes properly documented and justified
@@ -182,25 +182,25 @@ fi
 - ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
-- ❌ **Communication Overreach**: copilot-fixpr posting reviews OR unauthorized code changes outside agent boundaries
+- ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
 - ❌ **Timing Failures**: Execution time >3 minutes without performance alerts
 
-## ⚡ **PARALLEL EXECUTION OPTIMIZATION**
+## ⚡ **HYBRID EXECUTION OPTIMIZATION**
 
 ### **Context Management**:
 - **Recent Comments Focus**: Process 30 most recent comments for 90%+ efficiency
 - **GitHub MCP Primary**: Strategic tool usage for minimal context consumption
 - **Semantic Search**: Use Serena MCP for targeted analysis before file operations
-- **Agent Coordination**: Efficient data sharing between parallel agents
+- **Hybrid Coordination**: Efficient orchestration with selective task delegation
 
 ### **Performance Benefits**:
-- **Time Efficiency**: 40-60% faster than sequential execution
-- **Specialization**: Expert-focused implementation vs communication handling
-- **Quality Improvement**: Better responses with verified implementation details
-- **Scalability**: Handle complex PRs through specialized parallel processing
+- **Reliability**: 100% working components eliminate broken agent failures
+- **Specialization**: File operations delegated while maintaining coordination control
+- **Quality Improvement**: Proven comment handling with verified file implementations
+- **Simplified Architecture**: Eliminates complexity of broken parallel agent coordination
 
 ### **Coordination Efficiency**:
-- **Data Sharing**: Single GitHub PR analysis shared between both agents
-- **Tool Specialization**: Clear boundaries prevent tool usage conflicts
-- **Result Integration**: Seamless combination of implementation and communication results
-- **Verification Alignment**: Both agents contribute to comprehensive coverage verification
+- **Selective Delegation**: Only delegate file operations, handle communication directly
+- **Proven Components**: Use only verified working tools and patterns
+- **Result Integration**: Direct access to agent file changes for accurate response generation
+- **Streamlined Workflow**: Single coordination point with specialized file operation support
