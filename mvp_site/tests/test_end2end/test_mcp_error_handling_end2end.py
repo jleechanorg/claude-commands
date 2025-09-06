@@ -29,7 +29,7 @@ def has_firebase_credentials():
     return False
 
 
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 
 from tests.fake_firestore import FakeFirestoreClient
 
@@ -47,8 +47,7 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         self.test_user_id = "mcp-error-test-user"
         self.test_campaign_id = "mcp-error-test-campaign"
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "Content-Type": "application/json"
         }
 
     @patch("firestore_service.get_db")

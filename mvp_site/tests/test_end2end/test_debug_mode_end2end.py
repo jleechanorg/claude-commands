@@ -28,7 +28,7 @@ def has_firebase_credentials():
     # End2end tests should always use mocked services, not real credentials
     return False
 
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
 
 # Import JSON input schema components
@@ -50,8 +50,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         self.test_user_id = "debug-test-user-123"
         self.test_campaign_id = "debug-test-campaign-456"
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "Content-Type": "application/json"
         }
 
         # Set up fake Firestore and Gemini (shared across tests)

@@ -34,10 +34,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
         
-        # Test headers
+        # Test headers (testing mode removed - no longer using bypass headers)
         self.test_headers = {
-            main.HEADER_TEST_BYPASS: "true",
-            main.HEADER_TEST_USER_ID: "test-user-123"
+            "Content-Type": "application/json"
         }
 
     @patch("firestore_service.get_db")

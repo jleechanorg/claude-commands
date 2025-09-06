@@ -27,7 +27,7 @@ def has_firebase_credentials():
     # End2end tests should always use mocked services, not real credentials
     return False
 
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 
 from game_state import GameState
 from tests.fake_firestore import FakeFirestoreClient
@@ -57,8 +57,7 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
 
         # Test headers for bypassing auth in test mode
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "Content-Type": "application/json"
         }
 
         # Mock campaign data

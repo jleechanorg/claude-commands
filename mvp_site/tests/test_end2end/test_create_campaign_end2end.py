@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 
 
 class TestCreateCampaignEnd2End(unittest.TestCase):
@@ -34,10 +34,9 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
         
-        # Test headers
+        # Test headers (testing mode removed - no longer using bypass headers)
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: "test-user-123"
+            "Content-Type": "application/json"
         }
 
     @patch("firestore_service.get_db")

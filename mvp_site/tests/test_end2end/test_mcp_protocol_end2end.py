@@ -27,7 +27,7 @@ except ImportError:
 
 from datetime import UTC, datetime
 
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+from main import create_app
 
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse, FakeTokenCount
 from tests.test_common import has_firebase_credentials
@@ -49,8 +49,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         self.test_user_id = f"mcp-protocol-test-user-{timestamp}"
         self.test_campaign_id = f"mcp-protocol-test-campaign-{timestamp}"
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "Content-Type": "application/json"
         }
 
         # Mock campaign data for testing
@@ -357,8 +356,7 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
 
         # Test with invalid user ID
         invalid_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: "invalid-user-id",
+            "Content-Type": "application/json"
         }
         response = self.client.get("/api/campaigns", headers=invalid_headers)
         assert response.status_code in [200, 401, 403, 404, 500]
