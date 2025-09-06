@@ -18,24 +18,10 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 # Add the parent directory to the path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-# Check for Firebase credentials - same pattern as other tests
-def has_firebase_credentials():
-    """Check if Firebase credentials are available.
-    
-    Note: End2end tests use complete mocking and don't require real credentials.
-    This function returns False to ensure tests use mocked services.
-    """
-    # End2end tests should always use mocked services, not real credentials
-    return False
 
 from main import create_app
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
 
-# Import JSON input schema components
-try:
-    from tests.fake_services import FakeServiceManager
-except ImportError:
-    FakeServiceManager = None
 
 class TestDebugModeEnd2End(unittest.TestCase):
     """Test debug mode functionality through the full application stack."""
@@ -49,8 +35,15 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # Test data
         self.test_user_id = "debug-test-user-123"
         self.test_campaign_id = "debug-test-campaign-456"
+        
+        # Stub Firebase token verification
+        self._auth_patcher = patch("main.auth.verify_id_token", return_value={"uid": self.test_user_id})
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+        
         self.test_headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token"
         }
 
         # Set up fake Firestore and Gemini (shared across tests)
@@ -114,7 +107,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
 
         # Initially no user settings (defaults to False)
         response = self.client.get("/api/settings", headers=self.test_headers)
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         settings_data = json.loads(response.data)
         assert not settings_data.get("debug_mode")  # Default
 
@@ -128,13 +121,13 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
 
         # Verify settings API response
-        assert response.status_code in [200, 401]  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         response_data = json.loads(response.data)
         assert response_data["success"]
 
         # Verify settings were persisted
         response = self.client.get("/api/settings", headers=self.test_headers)
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         settings_data = json.loads(response.data)
         assert settings_data["debug_mode"]
 
@@ -152,7 +145,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Now turn OFF debug mode
         debug_settings = {"debug_mode": False}
@@ -164,13 +157,13 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
 
         # Verify settings API response
-        assert response.status_code in [200, 401]  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         response_data = json.loads(response.data)
         assert response_data["success"]
 
         # Verify settings were persisted
         response = self.client.get("/api/settings", headers=self.test_headers)
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         settings_data = json.loads(response.data)
         assert not settings_data["debug_mode"]
 
@@ -188,7 +181,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Get campaign data (what the UI loads on page load)
         response = self.client.get(
@@ -197,7 +190,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
 
         # Verify campaign API response
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (True)
@@ -235,7 +228,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Get campaign data (what the UI loads on page load)
         response = self.client.get(
@@ -244,7 +237,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
 
         # Verify campaign API response
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (False)
@@ -315,7 +308,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         )
 
         # MCP should handle interaction requests (may return 400/404 for nonexistent campaigns)
-        assert response.status_code in [200, 400, 404, 401]  # Include auth required
+        assert response.status_code in [200, 400, 404]  # Auth stubbed, 401 not expected
 
         # Only test response content if interaction succeeds
         if response.status_code == 200:
@@ -342,12 +335,12 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401]  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Make multiple GET requests and verify consistency
         for i in range(3):
             response = self.client.get("/api/settings", headers=self.test_headers)
-            assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+            assert response.status_code == 200  # Auth stubbed, should succeed
             settings_data = json.loads(response.data)
             assert settings_data["debug_mode"], f"Failed on request {i + 1}"
 
@@ -356,7 +349,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
                 f"/api/campaigns/{self.test_campaign_id}",
                 headers=self.test_headers,
             )
-            assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+            assert response.status_code == 200  # Auth stubbed, should succeed
             campaign_data = json.loads(response.data)
             assert campaign_data["game_state"][
                 "debug_mode"
@@ -496,14 +489,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Get campaign data with debug mode OFF
         response = self.client.get(
             f"/api/campaigns/{self.test_campaign_id}",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         campaign_data = json.loads(response.data)
 
         # Find the gemini story entry
@@ -563,14 +556,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
             content_type="application/json",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
 
         # Get campaign data with debug mode ON
         response = self.client.get(
             f"/api/campaigns/{self.test_campaign_id}",
             headers=self.test_headers,
         )
-        assert response.status_code in [200, 401, 401]  # Include auth required  # Auth required or success
+        assert response.status_code == 200  # Auth stubbed, should succeed
         campaign_data = json.loads(response.data)
 
         # Find the gemini story entry again

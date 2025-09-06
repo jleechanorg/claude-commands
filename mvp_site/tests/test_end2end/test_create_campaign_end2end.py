@@ -34,9 +34,16 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         self.app.config['TESTING'] = True
         self.client = self.app.test_client()
         
-        # Test headers (testing mode removed - no longer using bypass headers)
+        # Use a stable test UID and stub Firebase verification
+        self.test_user_id = "test-user-123"
+        self._auth_patcher = patch("main.auth.verify_id_token", return_value={"uid": self.test_user_id})
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+        
+        # Test headers with Authorization token
         self.test_headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token"
         }
 
     @patch("firestore_service.get_db")
@@ -83,7 +90,7 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         
         # Verify response
         # With testing mode removed, expect 401 (auth required) or 201 if properly mocked
-        self.assertIn(response.status_code, [201, 401])
+        self.assertEqual(response.status_code, 201)  # Auth stubbed, should succeed
         data = json.loads(response.data)
         if response.status_code == 200: self.assertTrue(data.get('success'))  # Only check success for successful responses
         self.assertIn('campaign_id', data)
