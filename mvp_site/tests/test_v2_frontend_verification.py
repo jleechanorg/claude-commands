@@ -253,10 +253,15 @@ class TestSecurityTokenMatrix(unittest.TestCase):
         """Set up mock environment for security token testing."""
         self.mock_user = Mock()
         self.mock_auth = Mock()
+        # Default to an authenticated user; individual tests can override to None
+        self.mock_auth.currentUser = self.mock_user
 
         # Mock API service instance with default state
         self.api_service = Mock()
         self._reset_api_service_state()
+
+        # Project root for file path verification
+        self.project_root = Path(__file__).parent.parent.parent
 
     def _reset_api_service_state(self):
         """Helper to reset API service to default state between tests."""
@@ -442,18 +447,56 @@ class TestSecurityTokenMatrix(unittest.TestCase):
         self.assertIn("User not authenticated", str(context.exception))
 
     def test_security_fix_integration(self):
-        """Verify the security fix at api.service.ts:882 uses getCompensatedToken"""
-        # RED: This test documents the actual security fix implementation
-        # The fix changed from: const token = await user.getIdToken();
-        # The fix changed to: const token = await this.getCompensatedToken(false);
+        """Verify the security fix at api.service.ts uses getCompensatedToken"""
+        # Automated verification: Check that the API service uses getCompensatedToken
+        api_service_path = (
+            self.project_root
+            / "mvp_site"
+            / "frontend_v2"
+            / "src"
+            / "services"
+            / "api.service.ts"
+        )
 
-        print("\n🔒 SECURITY FIX VERIFICATION:")
-        print("Line 882: const token = await this.getCompensatedToken(false);")
-        print("Comment: // Use existing token (no force refresh) for auth headers")
-        print("This ensures consistent token handling with clock skew compensation")
+        self.assertTrue(
+            api_service_path.exists(),
+            f"API service file not found at {api_service_path}",
+        )
 
-        # This test always passes - it documents the fix
-        self.assertTrue(True, "Security fix documented and verified")
+        with open(api_service_path, encoding="utf-8") as f:
+            content = f.read()
+
+        # Assert the security fix is implemented: uses getCompensatedToken
+        self.assertIn(
+            "this.getCompensatedToken(",
+            content,
+            "Security fix missing: api.service.ts should use this.getCompensatedToken()",
+        )
+
+        # Verify the critical security fix: getAuthHeaders uses getCompensatedToken
+        # This was the key security fix to use centralized token handling
+        self.assertIn(
+            "this.getCompensatedToken(false)",
+            content,
+            "Security fix missing: Should contain 'this.getCompensatedToken(false)' call",
+        )
+
+        # Verify both patterns exist in the same file - this confirms the fix
+        getauth_exists = "getAuthHeaders" in content
+        getcomp_exists = "getCompensatedToken" in content
+        self.assertTrue(
+            getauth_exists and getcomp_exists,
+            f"Security components missing: getAuthHeaders={getauth_exists}, getCompensatedToken={getcomp_exists}",
+        )
+
+        # Verify the specific auth headers method fix
+        self.assertIn(
+            "getAuthHeaders",
+            content,
+            "getAuthHeaders method should exist in api.service.ts",
+        )
+
+        print("✅ Automated security fix verification passed")
 
     def _call_get_compensated_token(self, force_refresh=False):
         """
@@ -469,7 +512,7 @@ class TestSecurityTokenMatrix(unittest.TestCase):
         ):
             raise ValueError("User not authenticated")
 
-        user = self.mock_user
+        user = self.mock_auth.currentUser
 
         # Apply clock skew compensation (simulate waiting if client is behind)
         if self.api_service.clockSkewDetected and self.api_service.clockSkewOffset < 0:
