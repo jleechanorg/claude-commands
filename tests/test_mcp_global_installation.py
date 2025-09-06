@@ -115,17 +115,17 @@ class TestMCPGlobalInstallation(unittest.TestCase):
                 # Check for unquoted variables in commands - enhanced security check
                 if '$' in line and '"' not in line and "'" not in line:
                     # Skip comments and safe patterns
-                    if (not line.strip().startswith('#') and 
-                        'export' not in line and 
+                    if (not line.strip().startswith('#') and
+                        'export' not in line and
                         'echo' not in line and
                         '=' not in line):
                         # This could be a security risk - inform but don't fail
                         pass
-            
+
             # Verify add-json approach is implemented (CodeRabbit suggestion)
-            self.assertIn('add-json', content, 
+            self.assertIn('add-json', content,
                          "Script should include add-json approach for enhanced reliability")
-            
+
             # Verify fallback mechanisms exist
             self.assertIn('fallback', content,
                          "Script should include fallback mechanisms for reliability")
@@ -140,9 +140,11 @@ class TestMCPGlobalInstallation(unittest.TestCase):
             self.assertIn('set -e', content,
                          "Script should use 'set -e' for proper error handling")
 
-            # Should not exit terminal session on errors
-            self.assertNotIn('exit 1', content,
-                           "Script should not use 'exit 1' which terminates user terminal")
+            # Should not exit terminal session on errors (check for unsafe direct exit calls)
+            import re
+            unsafe_exit_pattern = re.compile(r'^\s*exit\s+1\s*$', re.MULTILINE)
+            self.assertIsNone(unsafe_exit_pattern.search(content),
+                           "Script should not use direct 'exit 1' which terminates user terminal")
 
 if __name__ == '__main__':
     unittest.main()

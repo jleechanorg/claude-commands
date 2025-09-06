@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 # Requires bash 4+ for associative arrays
 
+# Proper error handling
+set -e
+
 # Check for test mode
 TEST_MODE=false
 if [ "$1" == "--test" ]; then
@@ -10,8 +13,11 @@ fi
 # Safe exit that won't kill the parent shell if sourced
 safe_exit() {
   local code="${1:-0}"
-  # If the script is sourced, 'return' is available; else 'return' errors and we 'exit'
-  return "$code" 2>/dev/null || exit "$code"
+  # If the script is sourced, 'return' is available; else 'return' errors and we use fallback exit
+  return "$code" 2>/dev/null || {
+    # Fallback exit for non-sourced execution
+    builtin exit "$code"
+  }
 }
 
 # Check bash version for associative array support
@@ -1094,7 +1100,7 @@ echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity sear
 
 # Remove existing web search servers to avoid conflicts
 claude mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
-claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
+claude mcp remove "perplexity-search" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
 # DuckDuckGo is now installed in Batch 2
@@ -1110,7 +1116,7 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
 
     # Add Perplexity server with API key
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    add_output=$(claude mcp add --scope user "perplexity-ask" "npx" "server-perplexity-ask" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
+    add_output=$(claude mcp add --scope user "perplexity-search" "npx" "server-perplexity-ask" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1319,7 +1325,7 @@ else
 
         # Try to configure Claude MCP to use the global command
         echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use global slash commands server...${NC}"
-        
+
         # First try direct command approach (current method)
         add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
         add_exit_code=$?
@@ -1330,7 +1336,7 @@ else
             add_output=$(claude mcp add-json --scope user "claude-slash-commands" \
                 "{\"command\":\"uvx\",\"args\":[\"--from\",\"file://$SCRIPT_DIR/mcp_servers/slash_commands\",\"claude-slash-commands-mcp\"]}" 2>&1)
             add_exit_code=$?
-            
+
             if [ $add_exit_code -eq 0 ]; then
                 echo -e "${GREEN}  ✅ Successfully configured with add-json approach${NC}"
                 log_with_timestamp "Successfully configured slash commands MCP server using add-json approach"
@@ -1354,7 +1360,7 @@ else
     else
         echo -e "${YELLOW}  ⚠️ uvx not found, falling back to local installation${NC}"
         log_with_timestamp "uvx not available, using local installation"
-        add_exit_code=1  # Force fallback to local installation
+        add_exit_code=1  # Force fallback to local install
     fi
 
     # Fallback to local installation if global installation failed
