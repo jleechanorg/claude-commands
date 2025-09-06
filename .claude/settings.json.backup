@@ -1,0 +1,262 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(python:*)",
+      "Bash(python3:*)",
+      "Bash(vpython:*)",
+      "Bash(TESTING=true python:*)",
+      "Bash(TESTING=true python3:*)",
+      "Bash(TESTING=true vpython:*)",
+      "Bash(./run_tests.sh)",
+      "Bash(../run_tests.sh)",
+      "Bash(find:*)",
+      "Bash(echo:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(mv:*)",
+      "Bash(mkdir:*)",
+      "Bash(ls:*)",
+      "Bash(rm:*)",
+      "Bash(cp:*)",
+      "Bash(chmod:*)",
+      "Bash(sed:*)",
+      "Bash(realpath:*)",
+      "Bash(timeout:*)",
+      "Bash(source:*)",
+      "Bash(true)",
+      "Bash(xdg-open:*)",
+      "Bash(pip install:*)",
+      "mcp__ide__getDiagnostics",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(for branch in:*)",
+      "Bash(do)",
+      "Bash(done)",
+      "Bash(__NEW_LINE__:*)",
+      "Bash(claude --version)",
+      "Bash(/permissions add read write execute coverage testing)",
+      "Bash(/dev/null)",
+      "Bash(gcloud meta list-files-for-upload:*)",
+      "Bash(gcloud builds submit:*)",
+      "Bash(gcloud topic:*)",
+      "Bash(./deploy.sh:*)",
+      "Bash(cat:*)",
+      "Bash(../vpython test_deployment_build.py -v)",
+      "Bash(../vpython test_world_loader.py -v)",
+      "Bash(../vpython test_world_loader_integration.py -v)",
+
+      "Bash(npm:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run dev:*)",
+      "Bash(npm run start:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run format:*)",
+      "Bash(npm ci)",
+      "Bash(npm update:*)",
+      "Bash(npm audit:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npx:*)",
+
+      "Bash(yarn:*)",
+      "Bash(yarn install)",
+      "Bash(yarn add:*)",
+      "Bash(yarn run:*)",
+      "Bash(yarn test:*)",
+      "Bash(yarn build:*)",
+      "Bash(yarn dev:*)",
+      "Bash(yarn start:*)",
+      "Bash(pnpm:*)",
+      "Bash(pnpm install)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm test:*)",
+      "Bash(bun:*)",
+      "Bash(bun install)",
+      "Bash(bun run:*)",
+      "Bash(bun test:*)",
+
+      "Bash(make:*)",
+      "Bash(make clean)",
+      "Bash(make build)",
+      "Bash(make test)",
+      "Bash(webpack:*)",
+      "Bash(vite:*)",
+      "Bash(tsc:*)",
+      "Bash(babel:*)",
+      "Bash(rollup:*)",
+      "Bash(esbuild:*)",
+
+      "Bash(eslint:*)",
+      "Bash(prettier:*)",
+      "Bash(husky:*)",
+      "Bash(lint-staged:*)",
+      "Bash(pre-commit:*)",
+      "Bash(black:*)",
+      "Bash(flake8:*)",
+      "Bash(mypy:*)",
+      "Bash(isort:*)",
+
+      "Bash(docker:*)",
+      "Bash(docker build:*)",
+      "Bash(docker run:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker images:*)",
+      "Bash(docker-compose:*)",
+      "Bash(docker compose:*)",
+      "Bash(docker compose up:*)",
+      "Bash(docker compose down:*)",
+
+      "Bash(curl:*)",
+      "Bash(wget:*)",
+      "Bash(ssh:*)",
+      "Bash(scp:*)",
+      "Bash(rsync:*)",
+
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(awk:*)",
+      "Bash(cut:*)",
+      "Bash(tr:*)",
+      "Bash(diff:*)",
+      "Bash(patch:*)",
+      "Bash(tar:*)",
+      "Bash(zip:*)",
+      "Bash(unzip:*)",
+      "Bash(gzip:*)",
+      "Bash(gunzip:*)",
+
+      "Bash(ps:*)",
+      "Bash(top)",
+      "Bash(htop)",
+      "Bash(kill:*)",
+      "Bash(killall:*)",
+      "Bash(jobs)",
+      "Bash(nohup:*)",
+      "Bash(bg)",
+      "Bash(fg)",
+      "Bash(which:*)",
+      "Bash(whereis:*)",
+      "Bash(type:*)",
+      "Bash(env)",
+      "Bash(export:*)",
+      "Bash(alias:*)",
+      "Bash(history)",
+
+      "Bash(pwd)",
+      "Bash(whoami)",
+      "Bash(id)",
+      "Bash(date)",
+      "Bash(uptime)",
+      "Bash(df:*)",
+      "Bash(du:*)",
+      "Bash(free)",
+      "Bash(uname:*)",
+
+      "Bash(jq:*)",
+      "Bash(yq:*)",
+      "Bash(xmllint:*)",
+
+      "Bash(mocha:*)",
+      "Bash(pytest:*)",
+      "Bash(coverage:*)",
+      "Bash(nyc:*)",
+
+      "Bash(git-lfs:*)",
+      "Bash(git lfs:*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\"; fi; exit 0'",
+            "description": "Optimize tool selection before command execution"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/context_monitor.py\" ] && python3 \"$ROOT/.claude/hooks/context_monitor.py\"; fi; exit 0'",
+            "description": "Monitor context usage and provide real-time warnings"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\" ] && exec \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\"; fi; exit 0'",
+            "description": "Debug: Test PostToolUse hook triggering for all tools"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit *)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; exit 0'",
+            "description": "Auto-sync commits to remote after git commit operations"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if [ -n \"$CLAUDE_HOOK_NESTED\" ]; then exit 0; fi; export CLAUDE_HOOK_NESTED=1; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\"; fi; exit 0'",
+            "description": "AGGRESSIVE fake code detection with strong warnings"
+          }
+        ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/command_output_trimmer.py\" ] && python3 \"$ROOT/.claude/hooks/command_output_trimmer.py\"; fi; exit 0'",
+            "description": "Compress slash command outputs to reduce token consumption by 50-70%"
+          }
+        ]
+      }
+    ],
+
+    "UserPromptSubmit": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; printf %s\\n \"$*\"; exit 0' --",
+            "description": "Universal command composition for slash command combinations"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "5000",
+    "BASH_DEFAULT_TIMEOUT_MS": "60000",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
+  "verbose": false,
+  "statusLine": {
+    "type": "command",
+    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only; else echo \"Not in git repo\"; fi'",
+    "padding": 0
+  }
+}
