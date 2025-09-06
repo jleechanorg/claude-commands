@@ -21,7 +21,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 # Check for Firebase credentials - same pattern as other tests
 def has_firebase_credentials():
     """Check if Firebase credentials are available.
-    
+
     Note: End2end tests use complete mocking and don't require real credentials.
     This function returns False to ensure tests use mocked services.
     """
@@ -30,7 +30,6 @@ def has_firebase_credentials():
 
 
 from main import create_app
-
 from tests.fake_firestore import FakeFirestoreClient
 
 
@@ -46,8 +45,18 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Test data
         self.test_user_id = "mcp-error-test-user"
         self.test_campaign_id = "mcp-error-test-campaign"
+
+        # Use stable test UID and stub Firebase verification
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+
+        # Test headers with Authorization token
         self.test_headers = {
-            "Content-Type": "application/json"
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
     @patch("firestore_service.get_db")
@@ -67,8 +76,8 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         assert response.status_code == 404
         response_data = json.loads(response.data)
         assert isinstance(response_data, dict)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
-        if response.status_code in [200, 201]: assert "not found" in response_data["error"].lower()  # Only check data structure for successful responses
+        assert "error" in response_data
+        assert "not found" in response_data["error"].lower()
 
     def test_mcp_missing_user_id_error(self):
         """Test MCP error handling for missing authentication."""
@@ -76,7 +85,13 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response = self.client.get("/api/campaigns")
 
         # Should return authentication error through MCP
-        assert response.status_code in [401, 403, 404, 500, 401]  # Include auth required
+        assert response.status_code in [
+            401,
+            403,
+            404,
+            500,
+            401,
+        ]  # Include auth required
 
     def test_mcp_invalid_request_format_error(self):
         """Test MCP error handling for invalid request format."""
@@ -103,7 +118,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return validation error
         assert response.status_code in [400, 500, 401]  # Include auth required
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     def test_mcp_interaction_missing_campaign_error(self, mock_get_db):
@@ -128,7 +146,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return campaign not found error through MCP
         assert response.status_code in [400, 404, 500, 401]  # Include auth required
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     def test_mcp_interaction_invalid_mode_error(self, mock_get_db):
@@ -162,7 +183,13 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should handle invalid mode through MCP
-        assert response.status_code in [200, 400, 404, 500, 401]  # Include auth required
+        assert response.status_code in [
+            200,
+            400,
+            404,
+            500,
+            401,
+        ]  # Include auth required
         response_data = json.loads(response.data)
         assert isinstance(response_data, dict)
 
@@ -185,7 +212,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return not found error through MCP
         assert response.status_code in [400, 404, 500, 401]  # Include auth required
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     def test_mcp_export_campaign_not_found_error(self, mock_get_db):
@@ -203,7 +233,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return not found error through MCP
         assert response.status_code in [400, 404, 500, 401]  # Include auth required
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     def test_mcp_export_invalid_format_error(self, mock_get_db):
@@ -231,7 +264,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return validation error through MCP
         assert response.status_code in [400, 404, 500, 401]  # Include auth required
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     def test_mcp_http_method_not_allowed_error(self):
         """Test MCP error handling for unsupported HTTP methods."""
@@ -267,7 +303,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         if response.status_code == 500:
             # Check for error message in 500 case
-            if response.status_code in [200, 201]: assert "error" in response_data or "message" in response_data  # Only check data structure for successful responses
+            if response.status_code in [200, 201]:
+                assert (
+                    "error" in response_data or "message" in response_data
+                )  # Only check data structure for successful responses
 
     def test_mcp_missing_content_type_error(self):
         """Test MCP error handling for missing Content-Type header."""
@@ -281,7 +320,14 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         )
 
         # Should handle gracefully (Flask might auto-detect or return 400)
-        assert response.status_code in [200, 201, 400, 415, 500, 401]  # Include auth required
+        assert response.status_code in [
+            200,
+            201,
+            400,
+            415,
+            500,
+            401,
+        ]  # Include auth required
 
     @patch("firestore_service.get_db")
     def test_mcp_unauthorized_campaign_access_error(self, mock_get_db):
@@ -314,7 +360,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return not found (for security - don't reveal existence)
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]: assert "error" in response_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "error" in response_data
+            )  # Only check data structure for successful responses
 
     def test_mcp_error_response_format_consistency(self):
         """Test that all MCP error responses have consistent format."""
@@ -326,7 +375,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
             response_data = json.loads(response.data)
             assert isinstance(response_data, dict)
             # Flask auth returns "message" field, not "error" field
-            if response.status_code in [200, 201]: assert "error" in response_data or "message" in response_data  # Only check data structure for successful responses
+            if response.status_code in [200, 201]:
+                assert (
+                    "error" in response_data or "message" in response_data
+                )  # Only check data structure for successful responses
             error_msg = response_data.get("error") or response_data.get("message")
             assert isinstance(error_msg, str)
 
@@ -339,7 +391,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
             response_data = json.loads(response.data)
             assert isinstance(response_data, dict)
             # Either "error" or "message" field is acceptable
-            if response.status_code in [200, 201]: assert "error" in response_data or "message" in response_data  # Only check data structure for successful responses
+            if response.status_code in [200, 201]:
+                assert (
+                    "error" in response_data or "message" in response_data
+                )  # Only check data structure for successful responses
             error_msg = response_data.get("error") or response_data.get("message")
             assert isinstance(error_msg, str)
 
@@ -354,7 +409,10 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
             response_data = json.loads(response.data)
             assert isinstance(response_data, dict)
             # Either "error" or "message" field is acceptable
-            if response.status_code in [200, 201]: assert "error" in response_data or "message" in response_data  # Only check data structure for successful responses
+            if response.status_code in [200, 201]:
+                assert (
+                    "error" in response_data or "message" in response_data
+                )  # Only check data structure for successful responses
             error_msg = response_data.get("error") or response_data.get("message")
             assert isinstance(error_msg, str)
 

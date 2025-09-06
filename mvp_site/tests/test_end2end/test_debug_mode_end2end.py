@@ -35,15 +35,17 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # Test data
         self.test_user_id = "debug-test-user-123"
         self.test_campaign_id = "debug-test-campaign-456"
-        
+
         # Stub Firebase token verification
-        self._auth_patcher = patch("main.auth.verify_id_token", return_value={"uid": self.test_user_id})
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
-        
+
         self.test_headers = {
             "Content-Type": "application/json",
-            "Authorization": "Bearer test-id-token"
+            "Authorization": "Bearer test-id-token",
         }
 
         # Set up fake Firestore and Gemini (shared across tests)
@@ -172,7 +174,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         """Test Case 3: UI receives correct state when debug mode is ON."""
         # Use the same fake Firestore instance from setUp
         mock_get_db.return_value = self.fake_firestore
-        
+
         # Turn ON debug mode in settings
         debug_settings = {"debug_mode": True}
         response = self.client.post(
@@ -194,11 +196,17 @@ class TestDebugModeEnd2End(unittest.TestCase):
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (True)
-        if response.status_code in [200, 201]: assert "game_state" in campaign_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "game_state" in campaign_data
+            )  # Only check data structure for successful responses
         assert campaign_data["game_state"]["debug_mode"]
 
         # Verify story entries include debug content when debug mode is on
-        if response.status_code in [200, 201]: assert "story" in campaign_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "story" in campaign_data
+            )  # Only check data structure for successful responses
         story_entries = campaign_data["story"]
         assert len(story_entries) > 0
 
@@ -211,8 +219,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
 
         assert gemini_entry is not None
         # With debug mode ON, debug fields should be preserved
-        if response.status_code in [200, 201]: assert "debug_info" in gemini_entry  # Only check data structure for successful responses
-        if response.status_code in [200, 201]: assert "planning_block" in gemini_entry  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "debug_info" in gemini_entry
+            )  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "planning_block" in gemini_entry
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     def test_ui_state_debug_mode_off(self, mock_get_db):
@@ -241,11 +255,17 @@ class TestDebugModeEnd2End(unittest.TestCase):
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (False)
-        if response.status_code in [200, 201]: assert "game_state" in campaign_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "game_state" in campaign_data
+            )  # Only check data structure for successful responses
         assert not campaign_data["game_state"]["debug_mode"]
 
         # Verify story entries have debug content stripped when debug mode is off
-        if response.status_code in [200, 201]: assert "story" in campaign_data  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "story" in campaign_data
+            )  # Only check data structure for successful responses
         story_entries = campaign_data["story"]
         assert len(story_entries) > 0
 
@@ -259,7 +279,10 @@ class TestDebugModeEnd2End(unittest.TestCase):
         assert gemini_entry is not None
         # With debug mode OFF, only debug fields should be removed (planning_block remains as it's a gameplay feature)
         assert "debug_info" not in gemini_entry
-        if response.status_code in [200, 201]: assert "planning_block" in gemini_entry  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "planning_block" in gemini_entry
+            )  # Only check data structure for successful responses
 
     @patch("firestore_service.get_db")
     @patch("google.genai.Client")
@@ -359,87 +382,93 @@ class TestDebugModeEnd2End(unittest.TestCase):
         """Test JSON input validation in debug mode context."""
         # Test actual JSON validation logic for debug mode
         import json
-        
+
         # Test valid debug request structure
         debug_request = {
             "message_type": "debug_story_continuation",
             "user_action": "cast fireball",
             "debug_mode": True,
-            "campaign_id": "debug_test_campaign"
+            "campaign_id": "debug_test_campaign",
         }
-        
+
         # Test that request can be serialized and deserialized properly
         json_string = json.dumps(debug_request)
         parsed_request = json.loads(json_string)
-        
+
         # Verify structure is preserved
         self.assertEqual(parsed_request["message_type"], "debug_story_continuation")
         self.assertEqual(parsed_request["user_action"], "cast fireball")
         self.assertTrue(parsed_request["debug_mode"])
-        
+
         # Test debug response validation
         debug_response = {
             "narrative": "You cast a fireball spell!",
             "debug_info": {
                 "llm_model": "gemini-2.5-flash",
                 "processing_time": 1.23,
-                "token_count": 150
-            }
+                "token_count": 150,
+            },
         }
-        
+
         # Verify debug response structure
         self.assertIn("narrative", debug_response)
         self.assertIsInstance(debug_response["debug_info"], dict)
         self.assertIn("llm_model", debug_response["debug_info"])
-        self.assertIsInstance(debug_response["debug_info"]["processing_time"], (int, float))
+        self.assertIsInstance(
+            debug_response["debug_info"]["processing_time"], (int, float)
+        )
 
     def test_json_input_validation_debug_mode_toggling(self):
         """Test JSON input validation when debug mode is toggled."""
         # Test request structure with debug mode toggling
         import json
-        
+
         # Test request with debug mode enabled
         debug_enabled_request = {
             "message_type": "story_continuation",
-            "user_action": "investigate door", 
-            "debug_mode": True
+            "user_action": "investigate door",
+            "debug_mode": True,
         }
-        
+
         # Test request with debug mode disabled
         debug_disabled_request = {
-            "message_type": "story_continuation", 
+            "message_type": "story_continuation",
             "user_action": "investigate door",
-            "debug_mode": False
+            "debug_mode": False,
         }
-        
+
         # Both should be valid JSON structures
         debug_enabled_json = json.dumps(debug_enabled_request)
         debug_disabled_json = json.dumps(debug_disabled_request)
-        
+
         # Parse back to verify structure preservation
         parsed_enabled = json.loads(debug_enabled_json)
         parsed_disabled = json.loads(debug_disabled_json)
-        
+
         # Verify debug mode flag is preserved correctly
         self.assertTrue(parsed_enabled["debug_mode"])
         self.assertFalse(parsed_disabled["debug_mode"])
-        
+
         # Verify same action is preserved in both cases
         self.assertEqual(parsed_enabled["user_action"], parsed_disabled["user_action"])
-        self.assertEqual(parsed_enabled["message_type"], parsed_disabled["message_type"])
+        self.assertEqual(
+            parsed_enabled["message_type"], parsed_disabled["message_type"]
+        )
 
         # Legacy JsonInputBuilder and JsonInputValidator removed - using GeminiRequest validation
         # Test that both debug modes would be valid for GeminiRequest
         debug_on_valid = True  # GeminiRequest handles debug mode internally
-        debug_off_valid = True # GeminiRequest handles normal mode internally
-        
-        self.assertTrue(debug_on_valid, "Debug mode ON should be valid with GeminiRequest")
-        self.assertTrue(debug_off_valid, "Debug mode OFF should be valid with GeminiRequest")
+        debug_off_valid = True  # GeminiRequest handles normal mode internally
+
+        self.assertTrue(
+            debug_on_valid, "Debug mode ON should be valid with GeminiRequest"
+        )
+        self.assertTrue(
+            debug_off_valid, "Debug mode OFF should be valid with GeminiRequest"
+        )
 
     @patch("firestore_service.get_db")
-    def test_backend_strips_game_state_fields_when_debug_off(
-        self, mock_get_db
-    ):
+    def test_backend_strips_game_state_fields_when_debug_off(self, mock_get_db):
         """Test that backend strips game state fields (entities, state_updates, debug_info) when debug mode is OFF."""
         # Use the same fake Firestore instance from setUp
         mock_get_db.return_value = self.fake_firestore
@@ -595,8 +624,14 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # Verify the content of game state fields that should only appear in debug mode
         assert latest_entry["entities_mentioned"] == ["Dragon", "Knight", "Castle"]
         assert len(latest_entry["entities"]) == 2
-        if response.status_code in [200, 201]: assert "player_character_data" in latest_entry["state_updates"]  # Only check data structure for successful responses
-        if response.status_code in [200, 201]: assert "dm_notes" in latest_entry["debug_info"]  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "player_character_data" in latest_entry["state_updates"]
+            )  # Only check data structure for successful responses
+        if response.status_code in [200, 201]:
+            assert (
+                "dm_notes" in latest_entry["debug_info"]
+            )  # Only check data structure for successful responses
 
     def test_debug_mode_filtering_unit_integration(self):
         """Restored from test_debug_filtering_unit.py - integration test for debug filtering"""
@@ -810,7 +845,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
         ), "state_changes should always be present for internal tracking"
 
         # Verify that the sequence ID was still tracked internally
-        if response.status_code in [200, 201]: assert "custom_campaign_state" in unified_response["state_changes"]  # Only check data structure for successful responses
+        assert (
+            "custom_campaign_state" in unified_response["state_changes"]
+        )  # Check data structure
         assert (
             unified_response["state_changes"]["custom_campaign_state"][
                 "last_story_mode_sequence_id"
@@ -937,7 +974,9 @@ class TestDebugModeEnd2End(unittest.TestCase):
         ), "state_updates should be added in character mode when debug_mode=True (standard debug behavior)"
 
         # state_changes should be updated with sequence info
-        if response.status_code in [200, 201]: assert "custom_campaign_state" in unified_response["state_changes"]  # Only check data structure for successful responses
+        assert (
+            "custom_campaign_state" in unified_response["state_changes"]
+        )  # Check data structure
         assert (
             unified_response["state_changes"]["custom_campaign_state"][
                 "last_story_mode_sequence_id"
@@ -990,21 +1029,21 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # CRITICAL ASSERTIONS: Both original data AND sequence tracking should be present
 
         # Verify original Gemini state changes are preserved
-        if response.status_code in [200, 201]: assert "player_character_data" in merged_state_changes  # Only check data structure for successful responses
+        assert "player_character_data" in merged_state_changes
         assert merged_state_changes["player_character_data"]["hp_current"] == 25
         assert merged_state_changes["player_character_data"]["level"] == 3
 
-        if response.status_code in [200, 201]: assert "world_data" in merged_state_changes  # Only check data structure for successful responses
+        assert "world_data" in merged_state_changes
         assert merged_state_changes["world_data"]["gold"] == 100
         assert merged_state_changes["world_data"]["location"] == "tavern"
 
-        if response.status_code in [200, 201]: assert "npc_data" in merged_state_changes  # Only check data structure for successful responses
+        assert "npc_data" in merged_state_changes
         assert (
             merged_state_changes["npc_data"]["innkeeper"]["disposition"] == "friendly"
         )
 
         # Verify sequence tracking was added
-        if response.status_code in [200, 201]: assert "custom_campaign_state" in merged_state_changes  # Only check data structure for successful responses
+        assert "custom_campaign_state" in merged_state_changes
         assert (
             merged_state_changes["custom_campaign_state"]["last_story_mode_sequence_id"]
             == sequence_id
@@ -1017,6 +1056,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
 
         # This test would FAIL if we incorrectly used unified_response.get("state_changes", {})
         # because unified_response doesn't contain the original Gemini state changes
+
 
 if __name__ == "__main__":
     unittest.main()
