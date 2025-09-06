@@ -871,12 +871,15 @@ install_ios_simulator_mcp() {
     # Clone the repository with security improvements
     echo -e "${BLUE}  🔄 Cloning ios-simulator-mcp repository...${NC}"
     if [ -n "$TIMEOUT_CMD" ]; then
-        clone_cmd="$TIMEOUT_CMD 60 git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git \"$TEMP_DIR/ios-simulator-mcp\""
-    else
-        clone_cmd="git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git \"$TEMP_DIR/ios-simulator-mcp\""
-    fi
-
-    if ! eval "$clone_cmd" >/dev/null 2>&1; then
+        if ! "$TIMEOUT_CMD" 60 git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git "$TEMP_DIR/ios-simulator-mcp" >/dev/null 2>&1; then
+            echo -e "${RED}  ❌ Failed to clone ios-simulator-mcp repository (timeout)${NC}"
+            log_with_timestamp "Failed to clone ios-simulator-mcp repository (timeout)"
+            rm -rf "$TEMP_DIR"
+            INSTALL_RESULTS["$name"]="CLONE_TIMEOUT"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            return 1
+        fi
+    elif ! git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git "$TEMP_DIR/ios-simulator-mcp" >/dev/null 2>&1; then
         echo -e "${RED}  ❌ Failed to clone ios-simulator-mcp repository${NC}"
         log_with_timestamp "Failed to clone ios-simulator-mcp repository"
         rm -rf "$TEMP_DIR"
