@@ -77,7 +77,7 @@ update_stats() {
     local stat_type="$1"
     local name="$2"
     local result="$3"
-    
+
     # Use flock for atomic updates when available
     if [ "$USE_FLOCK" = true ]; then
         {
@@ -147,7 +147,7 @@ NPX_PATH=$(which npx 2>/dev/null)
 # Windows/Git Bash specific path detection
 if [ -z "$NODE_PATH" ] && { [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ] || [ "$MACHINE" = "Cygwin" ]; }; then
     echo -e "${BLUE}🔍 Checking Windows-specific Node.js locations...${NC}"
-    
+
     # Common Windows Node.js installation paths
     for potential_node in \
         "/c/Program Files/nodejs/node.exe" \
@@ -160,7 +160,7 @@ if [ -z "$NODE_PATH" ] && { [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ] |
             break
         fi
     done
-    
+
     # Find npx alongside node
     if [ -n "$NODE_PATH" ]; then
         NODE_DIR=$(dirname "$NODE_PATH")
@@ -314,7 +314,7 @@ display_step() {
 check_server_parallel() {
     local name="$1"
     local check_file="/tmp/mcp_check_$name.status"
-    
+
     {
         if claude mcp list 2>/dev/null | grep -q "^$name:.*✓ Connected"; then
             echo "CONNECTED" > "$check_file"
@@ -322,18 +322,18 @@ check_server_parallel() {
             echo "DISCONNECTED" > "$check_file"
         fi
     } &
-    
+
     PARALLEL_PIDS["$name"]=$!
 }
 
 # Function to wait for parallel checks and collect results
 collect_parallel_results() {
     local timeout_seconds=10
-    
+
     for name in "${!PARALLEL_PIDS[@]}"; do
         local pid=${PARALLEL_PIDS["$name"]}
         local check_file="/tmp/mcp_check_$name.status"
-        
+
         # Each process gets individual timeout calculation
         local process_start_time=$(date +%s)
         local elapsed=0
@@ -341,11 +341,11 @@ collect_parallel_results() {
             sleep 0.1
             elapsed=$(( $(date +%s) - process_start_time ))
         done
-        
+
         # Kill if still running
         kill "$pid" 2>/dev/null || true
         wait "$pid" 2>/dev/null || true
-        
+
         # Read result
         if [ -f "$check_file" ]; then
             PARALLEL_RESULTS["$name"]=$(cat "$check_file")
@@ -354,7 +354,7 @@ collect_parallel_results() {
             PARALLEL_RESULTS["$name"]="TIMEOUT"
         fi
     done
-    
+
     # Clear PID tracking (reinitialize associative array correctly)
     unset PARALLEL_PIDS
     declare -A PARALLEL_PIDS
@@ -554,10 +554,10 @@ if EXISTING_SERVERS=$(claude mcp list 2>&1); then
 
     if [ "$EXISTING_COUNT" -gt 0 ]; then
         echo -e "${BLUE}📋 Running parallel health checks on existing servers...${NC}"
-        
+
         # Extract server names and start parallel health checks
         SERVER_NAMES=($(echo "$EXISTING_SERVERS" | grep -E "^[a-zA-Z].*:" | cut -d':' -f1))
-        
+
         # Start parallel health checks (limited to MAX_PARALLEL_JOBS)
         check_count=0
         for server_name in "${SERVER_NAMES[@]}"; do
@@ -569,10 +569,10 @@ if EXISTING_SERVERS=$(claude mcp list 2>&1); then
             check_server_parallel "$server_name"
             check_count=$((check_count + 1))
         done
-        
+
         # Wait for remaining checks to complete
         collect_parallel_results
-        
+
         # Display results
         echo -e "${BLUE}📋 Server health status:${NC}"
         for server_name in "${SERVER_NAMES[@]}"; do
@@ -592,7 +592,7 @@ if EXISTING_SERVERS=$(claude mcp list 2>&1); then
                     ;;
             esac
         done
-        
+
         echo "$EXISTING_SERVERS" >> "$LOG_FILE"
     fi
 else
@@ -637,10 +637,10 @@ declare -A BATCH_3=()
 install_batch_parallel() {
     local -n batch_ref=$1
     local batch_name="$2"
-    
+
     echo -e "${BLUE}🚀 Installing $batch_name in parallel...${NC}"
     log_with_timestamp "Starting parallel installation of $batch_name"
-    
+
     # Start installations in parallel
     for server_name in "${!batch_ref[@]}"; do
         local package="${batch_ref[$server_name]}"
@@ -652,19 +652,19 @@ install_batch_parallel() {
                 echo "FAILED" > "$result_file"
             fi
         } &
-        
+
         PARALLEL_PIDS["$server_name"]=$!
         log_with_timestamp "Started parallel installation of $server_name (PID: ${PARALLEL_PIDS[$server_name]})"
     done
-    
+
     # Wait for all installations to complete
     echo -e "${BLUE}  ⏳ Waiting for $batch_name installations to complete...${NC}"
-    
+
     for server_name in "${!batch_ref[@]}"; do
         local pid="${PARALLEL_PIDS[$server_name]}"
         local result_file="/tmp/install_${server_name}.result"
         local log_file="/tmp/install_${server_name}.log"
-        
+
         # Wait for this installation
         if wait "$pid"; then
             local result="$(cat "$result_file" 2>/dev/null || echo "UNKNOWN")"
@@ -683,15 +683,15 @@ install_batch_parallel() {
             echo -e "${RED}  ✗ $server_name process failed${NC}"
             log_with_timestamp "Parallel installation PROCESS_FAILED: $server_name"
         fi
-        
+
         # Cleanup temp files
         rm -f "$result_file" "$log_file"
     done
-    
+
     # Clear parallel tracking (reinitialize associative array correctly)
     unset PARALLEL_PIDS
     declare -A PARALLEL_PIDS
-    
+
     echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
 }
 
@@ -701,7 +701,7 @@ install_playwright_mcp() {
         echo -e "${YELLOW}  ⚠️ Playwright MCP server disabled (set PLAYWRIGHT_ENABLED=true to enable)${NC}"
         return 0
     fi
-    
+
     echo -e "${BLUE}  🎭 Installing Playwright MCP server...${NC}"
     add_mcp_server "playwright-mcp" "@playwright/mcp"
 }
@@ -729,24 +729,24 @@ install_react_mcp() {
     # Get the absolute path to the react-mcp directory
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     REACT_MCP_PATH="$SCRIPT_DIR/react-mcp/index.js"
-    
+
     # Check if react-mcp directory exists
     if [ -f "$REACT_MCP_PATH" ]; then
         echo -e "${GREEN}  ✅ Found React MCP server at: $REACT_MCP_PATH${NC}"
         log_with_timestamp "Found React MCP server at: $REACT_MCP_PATH"
-        
+
         # Ensure dependencies are installed
         if [ -f "${SCRIPT_DIR}/react-mcp/package.json" ]; then
             if [ ! -d "${SCRIPT_DIR}/react-mcp/node_modules" ]; then
                 echo -e "${BLUE}  📦 Installing react-mcp dependencies...${NC}"
-                
+
                 if [ -f "${SCRIPT_DIR}/react-mcp/package-lock.json" ]; then
                     dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" ci 2>&1)
                 else
                     echo -e "${YELLOW}  ⚠️ No package-lock.json found, using npm install instead${NC}"
                     dep_output=$(npm --prefix "${SCRIPT_DIR}/react-mcp" install 2>&1)
                 fi
-                
+
                 if [ $? -ne 0 ]; then
                     echo -e "${RED}  ❌ Failed to install react-mcp dependencies${NC}"
                     log_error_details "npm dependency installation (react-mcp)" "react-mcp" "$dep_output"
@@ -757,7 +757,7 @@ install_react_mcp() {
                 echo -e "${GREEN}  ✅ Dependencies installed for react-mcp${NC}"
             fi
         fi
-        
+
         # Remove existing react-mcp server to reconfigure
         claude mcp remove "react-mcp" >/dev/null 2>&1 || true
 
@@ -794,7 +794,7 @@ install_ios_simulator_mcp() {
         echo -e "${YELLOW}  ⚠️ iOS Simulator MCP server disabled (set IOS_SIMULATOR_ENABLED=true to enable)${NC}"
         return 0
     fi
-    
+
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
     local name="ios-simulator-mcp"
     local TEMP_DIR
@@ -803,10 +803,10 @@ install_ios_simulator_mcp() {
     local add_output
     local add_exit_code
     local clone_cmd
-    
+
     echo -e "${BLUE}📱 Setting up iOS Simulator MCP Server...${NC}"
     log_with_timestamp "Setting up iOS Simulator MCP Server with special handling"
-    
+
     # Check if server already exists
     if server_already_exists "$name"; then
         echo -e "${GREEN}  ✅ Server $name already exists, skipping installation${NC}"
@@ -815,7 +815,7 @@ install_ios_simulator_mcp() {
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
         return 0
     fi
-    
+
     # Check for macOS environment (iOS Simulator requires macOS)
     if [ "$MACHINE" != "Mac" ]; then
         echo -e "${YELLOW}  ⚠️ iOS Simulator MCP server requires macOS, skipping on $MACHINE${NC}"
@@ -832,7 +832,7 @@ install_ios_simulator_mcp() {
         # Don't count as failure - this is expected behavior on non-Mac platforms
         return 0
     fi
-    
+
     # Check for Xcode command line tools
     echo -e "${BLUE}  🔍 Checking for Xcode command line tools...${NC}"
     if ! command -v xcrun >/dev/null 2>&1; then
@@ -845,7 +845,7 @@ install_ios_simulator_mcp() {
     else
         echo -e "${GREEN}  ✅ Xcode command line tools found${NC}"
     fi
-    
+
     # Check if iOS Simulator is available
     echo -e "${BLUE}  🔍 Checking iOS Simulator availability...${NC}"
     if ! xcrun simctl list devices >/dev/null 2>&1; then
@@ -854,14 +854,14 @@ install_ios_simulator_mcp() {
     else
         echo -e "${GREEN}  ✅ iOS Simulator is available${NC}"
     fi
-    
+
     # Install ios-simulator-mcp using git since it's not on npm
     echo -e "${BLUE}  📦 Installing ios-simulator-mcp from GitHub repository...${NC}"
-    
+
     # Create temporary directory for installation
     TEMP_DIR=$(mktemp -d)
     echo -e "${BLUE}  📁 Using temporary directory: $TEMP_DIR${NC}"
-    
+
     # Clone the repository with security improvements
     echo -e "${BLUE}  🔄 Cloning ios-simulator-mcp repository...${NC}"
     if [ -n "$TIMEOUT_CMD" ]; then
@@ -869,7 +869,7 @@ install_ios_simulator_mcp() {
     else
         clone_cmd="git clone --depth=1 --single-branch https://github.com/joshuayoes/ios-simulator-mcp.git \"$TEMP_DIR/ios-simulator-mcp\""
     fi
-    
+
     if ! eval "$clone_cmd" >/dev/null 2>&1; then
         echo -e "${RED}  ❌ Failed to clone ios-simulator-mcp repository${NC}"
         log_with_timestamp "Failed to clone ios-simulator-mcp repository"
@@ -878,7 +878,7 @@ install_ios_simulator_mcp() {
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         return 1
     fi
-    
+
     # Verify repository integrity
     if [ ! -f "$TEMP_DIR/ios-simulator-mcp/package.json" ]; then
         echo -e "${RED}  ❌ Repository integrity check failed - missing package.json${NC}"
@@ -888,7 +888,7 @@ install_ios_simulator_mcp() {
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         return 1
     fi
-    
+
     # Install dependencies in the cloned repository
     echo -e "${BLUE}  📦 Installing dependencies...${NC}"
     if ! npm --prefix "$TEMP_DIR/ios-simulator-mcp" install >/dev/null 2>&1; then
@@ -899,7 +899,7 @@ install_ios_simulator_mcp() {
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         return 1
     fi
-    
+
     # Move to permanent location in ~/.mcp/servers/
     # Use robust home directory detection for cross-platform compatibility
     if [ -n "$HOME" ]; then
@@ -914,7 +914,7 @@ install_ios_simulator_mcp() {
     fi
     mkdir -p "$MCP_SERVERS_DIR"
     IOS_MCP_PATH="$MCP_SERVERS_DIR/ios-simulator-mcp"
-    
+
     # Remove existing installation if present
     if [ -d "$IOS_MCP_PATH" ]; then
         # Validate path before removal for safety
@@ -929,7 +929,7 @@ install_ios_simulator_mcp() {
                 ;;
         esac
     fi
-    
+
     # Move to permanent location
     echo -e "${BLUE}  📦 Installing to permanent location: $IOS_MCP_PATH${NC}"
     if ! mv "$TEMP_DIR/ios-simulator-mcp" "$IOS_MCP_PATH"; then
@@ -940,20 +940,20 @@ install_ios_simulator_mcp() {
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         return 1
     fi
-    
+
     # Cleanup temporary directory
     rm -rf "$TEMP_DIR"
-    
+
     # Add server to Claude MCP configuration
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to Claude configuration...${NC}"
-    
+
     # Remove existing server if present
     claude mcp remove "$name" >/dev/null 2>&1 || true
-    
+
     # Add server using node to run the index.js file
     add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" 2>&1)
     add_exit_code=$?
-    
+
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
@@ -980,7 +980,7 @@ install_github_mcp() {
         echo -e "${YELLOW}  ⚠️ GitHub MCP server disabled (set GITHUB_MCP_ENABLED=true to enable)${NC}"
         return 0
     fi
-    
+
     echo -e "${BLUE}  🔧 Setting up github-server (NEW Official Remote HTTP Server)...${NC}"
     log_with_timestamp "Setting up GitHub MCP server with environment guard"
 
@@ -1185,12 +1185,12 @@ else
     # Get the absolute path to the WorldArchitect project
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     WORLDARCHITECT_MCP_PATH="$SCRIPT_DIR/mvp_site/mcp_api.py"
-    
+
     # Check if mcp_api.py exists
     if [ -f "$WORLDARCHITECT_MCP_PATH" ]; then
         echo -e "${GREEN}  ✅ Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH${NC}"
         log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
-        
+
         # Remove existing worldarchitect server to reconfigure
         claude mcp remove "worldarchitect" >/dev/null 2>&1 || true
 
@@ -1283,61 +1283,96 @@ fi
 display_step "Setting up Slash Commands MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  🚀 Configuring Slash Commands MCP server for WorldArchitect.AI...${NC}"
-log_with_timestamp "Setting up MCP server: slash-commands (local Python server)"
+log_with_timestamp "Setting up MCP server: slash-commands (global uvx installation with local fallback)"
 
 # Check if server already exists
 if server_already_exists "claude-slash-commands"; then
-    echo -e "${GREEN}  ✅ Server slash-commands already exists, skipping installation${NC}"
-    log_with_timestamp "Server slash-commands already exists, skipping"
+    echo -e "${GREEN}  ✅ Server claude-slash-commands already exists, skipping installation${NC}"
+    log_with_timestamp "Server claude-slash-commands already exists, skipping"
     INSTALL_RESULTS["claude-slash-commands"]="ALREADY_EXISTS"
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
-    # Get the path to the MCP server
-    SLASH_COMMANDS_PATH="$SCRIPT_DIR/mcp_servers/slash_commands"
-    
-               if [ ! -f "$SLASH_COMMANDS_PATH/server.py" ]; then
-               echo -e "${RED}  ❌ Slash Commands MCP server not found at: $SLASH_COMMANDS_PATH/server.py${NC}"
-               log_with_timestamp "ERROR: Slash Commands MCP server not found at $SLASH_COMMANDS_PATH/server.py"
-        INSTALL_RESULTS["claude-slash-commands"]="PACKAGE_NOT_FOUND"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    else
-        # Remove existing server to reconfigure
-        claude mcp remove "claude-slash-commands" >/dev/null 2>&1 || true
-        
-        # Add the server using Python
-        echo -e "${BLUE}  🔗 Adding Slash Commands MCP server...${NC}"
-        log_with_timestamp "Attempting to add Slash Commands MCP server"
-        
-        # Check for Python 3
-        if command -v python3 >/dev/null 2>&1; then
-            PYTHON_CMD="python3"
-        elif command -v python >/dev/null 2>&1; then
-            PYTHON_CMD="python"
+    # Remove existing server to reconfigure
+    claude mcp remove "claude-slash-commands" >/dev/null 2>&1 || true
+
+    # Try to use global uvx installation first
+    if command -v uvx >/dev/null 2>&1; then
+        echo -e "${BLUE}  📦 Attempting global uvx installation...${NC}"
+        log_with_timestamp "Attempting global uvx installation for slash commands MCP server"
+
+        # Check if the package is already installed globally
+        if uvx --help claude-slash-commands-mcp >/dev/null 2>&1; then
+            echo -e "${GREEN}  ✅ Global claude-slash-commands MCP server already installed${NC}"
+            log_with_timestamp "Global claude-slash-commands MCP server already installed"
         else
-            echo -e "${RED}  ❌ Python not found, cannot add Slash Commands MCP server${NC}"
-            log_with_timestamp "ERROR: Python not found"
-            INSTALL_RESULTS["claude-slash-commands"]="DEPENDENCY_MISSING"
-            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            echo -e "${BLUE}  📥 Installing claude-slash-commands MCP server globally with uvx...${NC}"
+            # For now, we'll use the current repository structure
+            # TODO: Replace with actual GitHub repository when published
+            if uvx --from "file://$SCRIPT_DIR/mcp_servers/slash_commands" claude-slash-commands-mcp --help >/dev/null 2>&1; then
+                echo -e "${GREEN}  ✅ Successfully installed claude-slash-commands MCP server globally${NC}"
+                log_with_timestamp "Successfully installed claude-slash-commands MCP server globally"
+            else
+                echo -e "${YELLOW}  ⚠️ Failed to install claude-slash-commands MCP server with uvx, falling back to local${NC}"
+                log_with_timestamp "uvx installation failed, falling back to local installation"
+            fi
         fi
-        
-        if [ -n "$PYTHON_CMD" ]; then
-                                               # Add the server with environment variables using FIXED FastMCP server with all 29 tools
-                add_output=$(claude mcp add --scope user "claude-slash-commands" "$SCRIPT_DIR/vpython" "$SLASH_COMMANDS_PATH/server.py" \
+
+        # Try to configure Claude MCP to use the global command
+        echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use global slash commands server...${NC}"
+        add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
+        add_exit_code=$?
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully configured Claude MCP with global slash commands server${NC}"
+            echo -e "${BLUE}  📋 Server info:${NC}"
+            echo -e "     • Global installation via uvx"
+            echo -e "     • 29 tools available (cerebras_generate, converge_to_goal, etc.)"
+            echo -e "     • Worktree-independent operation"
+            echo -e "     • High-speed Cerebras code generation (19.6x faster)"
+            log_with_timestamp "Successfully configured Claude MCP with global slash commands server"
+            INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${YELLOW}  ⚠️ Failed to configure Claude MCP with global server, falling back to local installation${NC}"
+            log_with_timestamp "Global configuration failed: $add_output"
+        fi
+    else
+        echo -e "${YELLOW}  ⚠️ uvx not found, falling back to local installation${NC}"
+        log_with_timestamp "uvx not available, using local installation"
+        add_exit_code=1  # Force fallback to local installation
+    fi
+
+    # Fallback to local installation if global installation failed
+    if [ $add_exit_code -ne 0 ]; then
+        SLASH_COMMANDS_PATH="$SCRIPT_DIR/mcp_servers/slash_commands"
+
+        if [ ! -f "$SLASH_COMMANDS_PATH/server.py" ]; then
+            echo -e "${RED}  ❌ Slash Commands MCP server not found at: $SLASH_COMMANDS_PATH/server.py${NC}"
+            log_with_timestamp "ERROR: Slash Commands MCP server not found at $SLASH_COMMANDS_PATH/server.py"
+            INSTALL_RESULTS["claude-slash-commands"]="PACKAGE_NOT_FOUND"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        else
+            echo -e "${BLUE}  🔧 Using local slash commands MCP server installation...${NC}"
+            log_with_timestamp "Using local installation approach"
+
+            # Add the server with environment variables using local Python
+            add_output=$(claude mcp add --scope user "claude-slash-commands" "$SCRIPT_DIR/vpython" "$SLASH_COMMANDS_PATH/server.py" \
                 --env "CEREBRAS_API_KEY=$CEREBRAS_API_KEY" \
                 --env "GEMINI_API_KEY=$GEMINI_API_KEY" \
                 --env "GITHUB_TOKEN=$GITHUB_TOKEN" \
                 --env "PROJECT_ROOT=$SCRIPT_DIR" \
                 --env "PYTHONPATH=$SLASH_COMMANDS_PATH" 2>&1)
             add_exit_code=$?
-            
+
             if [ $add_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully configured Slash Commands MCP server${NC}"
+                echo -e "${GREEN}  ✅ Successfully configured Slash Commands MCP server (local)${NC}"
                 echo -e "${BLUE}  📋 Server info:${NC}"
+                echo -e "     • Local installation (fallback mode)"
                 echo -e "     • 29 tools available (cerebras_generate, converge_to_goal, etc.)"
                 echo -e "     • Thin proxy pattern for slash command execution"
                 echo -e "     • High-speed Cerebras code generation (19.6x faster)"
-                                       log_with_timestamp "Successfully added Slash Commands MCP server"
-                       INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
+                log_with_timestamp "Successfully added Slash Commands MCP server (local)"
+                INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
                 SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
             else
                 echo -e "${RED}  ❌ Failed to add Slash Commands MCP server${NC}"
@@ -1399,9 +1434,9 @@ done
 verify_backup_system() {
     local backup_status="healthy"
     local issues_found=0
-    
+
     echo -e "\n${BLUE}🔍 Verifying Claude backup system...${NC}"
-    
+
     # Check if backup cron job is configured
     if crontab -l 2>/dev/null | grep -q "claude_backup"; then
         echo -e "${GREEN}  ✅ Backup cron job is configured${NC}"
@@ -1413,7 +1448,7 @@ verify_backup_system() {
         backup_status="warning"
         ((issues_found++))
     fi
-    
+
     # Check if backup script exists and is executable in portable location
     local backup_script="$HOME/.local/bin/claude_backup.sh"
     if [[ -x "$backup_script" ]]; then
@@ -1429,7 +1464,7 @@ verify_backup_system() {
         backup_status="error"
         ((issues_found++))
     fi
-    
+
     # Check if backup destination is accessible
     local claude_dir="$HOME/.claude"
     if [[ -d "$claude_dir" ]]; then
@@ -1441,12 +1476,12 @@ verify_backup_system() {
         backup_status="warning"
         ((issues_found++))
     fi
-    
+
     # Check recent backup activity
     # Security: Check consistent shared backup log directory
     local backup_log_dir="${TMPDIR:-/tmp}/claude_backup_logs"
     local backup_log=""
-    
+
     # Look for latest backup log in shared secure directory
     if [[ -d "$backup_log_dir" ]]; then
         # Find the most recent backup log file
@@ -1468,13 +1503,13 @@ verify_backup_system() {
             fi
         fi
     fi
-    
+
     # Fallback to legacy insecure location if shared directory not found
     if [[ -z "$backup_log" && -f "/tmp/claude_backup_cron.log" ]]; then
         backup_log="/tmp/claude_backup_cron.log"
         echo -e "${YELLOW}  ⚠️ Using insecure legacy log location: /tmp/claude_backup_cron.log${NC}"
     fi
-    
+
     if [[ -n "$backup_log" && -f "$backup_log" ]]; then
         local last_backup_time=$(stat -c %Y "$backup_log" 2>/dev/null || stat -f %m "$backup_log" 2>/dev/null)
         local current_time=$(date +%s)
@@ -1484,7 +1519,7 @@ verify_backup_system() {
             echo -e "${YELLOW}  ⚠️ Unable to compute hours since last backup (stat parse issue)${NC}"
             hours_since_backup=9999
         fi
-        
+
         if [[ $hours_since_backup -le 6 ]]; then
             echo -e "${GREEN}  ✅ Recent backup activity (${hours_since_backup}h ago)${NC}"
         else
@@ -1500,7 +1535,7 @@ verify_backup_system() {
         backup_status="warning"
         ((issues_found++))
     fi
-    
+
     # Summary
     case "$backup_status" in
         "healthy")
@@ -1513,7 +1548,7 @@ verify_backup_system() {
             echo -e "${RED}  ❌ Backup system has $issues_found errors${NC}"
             ;;
     esac
-    
+
     return $issues_found
 }
 
