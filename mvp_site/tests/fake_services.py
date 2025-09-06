@@ -27,8 +27,9 @@ except ImportError:
     from fake_auth import FakeFirebaseAuth, FakeUserRecord
     from fake_firestore import FakeFirestoreClient
     from fake_gemini import create_fake_gemini_client
-# Import constants and functions from main at module level to avoid inline imports
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
+# Import functions from main at module level to avoid inline imports  
+# Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
+from main import create_app
 
 with suppress(ImportError):
     # Legacy json_input_schema imports removed - using GeminiRequest now
@@ -392,7 +393,8 @@ def create_test_app():
 
 def get_test_headers(user_id: str = "test-user-123") -> dict[str, str]:
     """Get test headers for bypassing authentication."""
-    return {HEADER_TEST_BYPASS: "true", HEADER_TEST_USER_ID: user_id}
+    # Testing mode removed - return empty headers (real authentication now required)
+    return {}
 
 
 # Example usage patterns for migration from mocks documented in README
