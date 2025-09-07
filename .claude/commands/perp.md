@@ -87,7 +87,7 @@ This command combines four powerful search capabilities:
 2. Execute all four searches in parallel:
    - `WebSearch(query=user_query)`
    - `mcp__ddg-search__web-search(query=user_query)`
-   - `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: user_query}])`
+   - `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: user_query, model: "sonar-pro"}])`
    - Gemini MCP with fallback:
      - Try `mcp__gemini-cli-mcp__gemini_chat_pro(message=user_query)`
      - If quota exceeded, fallback to `mcp__gemini-cli-mcp__gemini_chat_flash(message=user_query)`
