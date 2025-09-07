@@ -8,6 +8,9 @@ import pytest
 import time
 import json
 import subprocess
+import sys
+import os
+import re
 from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
 from typing import Dict, Any, List
@@ -15,14 +18,9 @@ import threading
 import random
 from datetime import datetime
 import tempfile
-import os
 
-# Import the module we're testing (from parent directory)
-import sys
-import os
-import re
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
-from memory_backup_crdt import (
+# Import from parent directory (this test file is in scripts/tests/)
+from ..memory_backup_crdt import (
     MemoryBackupCRDT,
     CRDTMetadata,
     crdt_merge,

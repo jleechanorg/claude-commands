@@ -10,13 +10,7 @@ from datetime import datetime
 from typing import Dict, List, Any
 import sys
 import os
-from scripts.memory_backup_crdt import _parse_timestamp
-
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-# Import the modules we're testing
-from scripts.memory_backup_crdt import crdt_merge, MemoryBackupCRDT
+from memory_backup_crdt import crdt_merge, MemoryBackupCRDT, _parse_timestamp
 
 
 class TestCRDTMathematicalProperties:

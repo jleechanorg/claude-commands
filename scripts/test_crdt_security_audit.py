@@ -14,8 +14,6 @@ import subprocess
 from pathlib import Path
 from datetime import datetime, timezone
 import time
-
-sys.path.append(os.path.dirname(__file__))
 from memory_backup_crdt import (
     crdt_merge,
     MemoryBackupCRDT,

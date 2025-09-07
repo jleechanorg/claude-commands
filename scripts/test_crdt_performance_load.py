@@ -16,8 +16,6 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any, Tuple
 import psutil
-
-sys.path.append(os.path.dirname(__file__))
 from memory_backup_crdt import (
     crdt_merge,
     MemoryBackupCRDT,
