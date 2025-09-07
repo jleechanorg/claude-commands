@@ -1,207 +1,273 @@
-# PR #1559 Guidelines - Enhanced Subagents with Gemini CLI and Codex CLI
+# PR #1559 Guidelines - feat: Add Gemini CLI and Codex CLI subagents for enhanced code review
 
-**PR**: #1559 - feat: Add Gemini CLI and Codex CLI subagents for enhanced code review
+**PR**: #1559 - [feat: Add Gemini CLI and Codex CLI subagents for enhanced code review](https://github.com/jleechanorg/worldarchitect.ai/pull/1559)
 **Created**: September 7, 2025
-**Purpose**: Specific guidelines for external AI consultation agent development and integration
+**Purpose**: Guidelines for external AI consultation agent integration patterns
 
 ## Scope
-- This document contains PR-specific deltas, evidence, and decisions for PR #1559.
+- This document contains PR-specific patterns, evidence, and decisions for PR #1559.
 - Canonical, reusable protocols are defined in docs/pr-guidelines/base-guidelines.md.
 
 ## 🎯 PR-Specific Principles
 
-### **External AI Integration Security-First**
-- All external CLI commands must follow subprocess security patterns: shell=False, timeout=300s (configurable)
-- Solo developer focus: Filter enterprise paranoia but maintain real security protections
-- Context-aware security: Distinguish trusted sources (GitHub API) from untrusted user input
+### 1. **Plugin Architecture for AI Integration**
+External AI tools should be integrated using a plugin/agent architecture that maintains system stability even when external dependencies fail.
 
-### **Agent Orchestration Architecture** 
-- Capability-based agent selection over hardcoded mappings
-- External AI consultation as enhancement, not replacement for Claude analysis
-- Fail-safe degradation when external tools unavailable
+### 2. **Security-First External Tool Integration**
+All external CLI tools must use sandboxing, timeout controls, and graceful error handling to prevent system compromise or resource exhaustion.
+
+### 3. **Solo Developer Extensibility**
+AI consultation patterns should be easily extensible by solo developers without complex infrastructure requirements.
+
+### 4. **Parallel Execution with Fallback**
+External consultations should run in parallel for efficiency while maintaining system functionality when individual consultants fail.
 
 ## 🚫 PR-Specific Anti-Patterns
 
-### ❌ **Inadequate Timeout Handling for External Tools**
-**Problem Found**: Original 30-second timeouts too short for AI consultations
+### ❌ **Unsafe External CLI Integration**
 ```bash
-# INADEQUATE - Too short for realistic AI consultations
-timeout 30s gemini -p "complex analysis prompt"
-# Often fails with timeout, frustrating user experience
-```
-**Risk**: Frequent timeouts, poor user experience, unreliable external consultations
-
-### ✅ **Realistic Timeout Management**
-```bash
-# PRACTICAL - 5-minute timeout with explicit error handling
-if timeout 300s gemini -p "complex analysis prompt"; then
-    echo "✅ Gemini consultation completed successfully"
-else
-    exit_code=$?
-    case $exit_code in
-        124) echo "⏰ TIMEOUT: 5-minute limit exceeded" ;;
-        127) echo "🚫 TOOL MISSING: gemini not installed" ;;
-        *) echo "💥 ERROR: Command failed ($exit_code)" ;;
-    esac
-    echo "⚠️ Proceeding without external analysis"
+# WRONG - No sandboxing, no timeout, poor error handling
+gemini "analyze this code: $USER_INPUT"
+result=$(codex analyze)
+if [ $? -ne 0 ]; then
+    exit 1  # Breaks entire workflow
 fi
 ```
 
-### ❌ **Missing Error Handling for External Dependencies**
-**Pattern**: Assuming external CLI tools are always available and functional
+**Problems:**
+- No sandbox isolation for external tools
+- No timeout controls for external API calls
+- User input directly interpolated into commands
+- Hard failure breaks entire review workflow
+- No consideration for missing external tools
+
+### ✅ **Secure External CLI Integration Pattern**
 ```bash
-# FRAGILE - No error handling
-gemini -p "prompt"
-codex exec "analysis"
+# RIGHT - Proper sandboxing, timeout, graceful error handling
+if timeout 300s gemini -p "You are a senior software engineer conducting analysis.
+Do not write code - provide analysis only.
+[structured prompt with redacted context]"; then
+    echo "✅ Gemini consultation completed successfully"
+else
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ GEMINI CONSULTATION TIMEOUT: External consultation exceeded 5-minute limit"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 GEMINI CLI NOT FOUND: gemini command not available on system"
+    else
+        echo "💥 GEMINI CONSULTATION ERROR: Command failed with exit code $exit_code"
+    fi
+    echo "⚠️ Proceeding without external Gemini analysis"
+fi
 ```
 
-### ✅ **Resilient External Tool Integration**
-```python
-def resilient_external_call(tool_cmd: list, fallback_msg: str) -> str:
-    try:
-        result = subprocess.run(
-            tool_cmd, 
-            shell=False, 
-            timeout=30,
-            capture_output=True, 
-            text=True, 
-            check=True
-        )
-        return result.stdout
-    except subprocess.TimeoutExpired:
-        return f"{fallback_msg} (timeout)"
-    except subprocess.CalledProcessError as e:
-        return f"{fallback_msg} (error: {e})"
-    except FileNotFoundError:
-        return f"{fallback_msg} (tool not found)"
+**Correct Patterns:**
+- Explicit timeout controls (300s) prevent indefinite hangs
+- Detailed error code handling with user-friendly messages  
+- Graceful degradation - workflow continues despite external failures
+- Structured prompts with clear instructions and context boundaries
+- Sandbox enforcement for tools that support it
+
+### ❌ **Hardcoded Configuration in Agent Logic**
+```markdown
+# WRONG - Hardcoded timeouts and command flags in agent definitions
+timeout 300s gemini -p "analysis prompt"
+timeout 300s codex exec --sandbox read-only "analysis prompt"
 ```
 
-### ❌ **Hardcoded Agent Selection Patterns**
-**Anti-Pattern**: Static mapping of tasks to agents
-```python
-# INFLEXIBLE - Hardcoded mappings
-if "gemini" in user_request:
-    return "gemini-consultant"
-if "codex" in user_request:
-    return "codex-consultant"
+**Problems:**
+- Timeout values not configurable per environment
+- Command flags scattered across multiple agent definitions
+- No way to adjust resource limits without editing agent files
+- Difficult to tune performance based on actual usage patterns
+
+### ✅ **Externalized Configuration Pattern**
+```markdown
+# RIGHT - Configuration externalization for maintenance
+timeout ${GEMINI_TIMEOUT:-300}s gemini -p "analysis prompt"
+timeout ${CODEX_TIMEOUT:-300}s codex exec --sandbox read-only "analysis prompt"
 ```
 
-### ✅ **Capability-Based Agent Selection**
-```python
-# FLEXIBLE - Capability scoring system
-def score_agent_capabilities(request: str, agents: List[Agent]) -> Agent:
-    scores = {}
-    for agent in agents:
-        scores[agent] = agent.score_capability_match(request)
-    return max(scores, key=scores.get)
+**Benefits:**
+- Environment-specific timeout configuration
+- Easy performance tuning without code changes
+- Consistent configuration management across agents
+- Solo developer can optimize based on their infrastructure
+
+### ❌ **Duplicated Error Handling Logic**
+```bash
+# WRONG - Identical error handling in multiple agents
+# gemini-consultant.md
+if timeout 300s gemini -p "$prompt"; then
+    echo "✅ Gemini consultation completed"
+else
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ TIMEOUT"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 NOT FOUND"
+    fi
+fi
+
+# codex-consultant.md  
+if timeout 300s codex exec --sandbox read-only "$prompt"; then
+    echo "✅ Codex consultation completed"
+else
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ TIMEOUT"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 NOT FOUND"
+    fi
+fi
+```
+
+### ✅ **Centralized Error Handling Pattern**
+```bash
+# RIGHT - Shared error handling function
+handle_external_tool_error() {
+    local tool_name="$1"
+    local exit_code="$2"
+    
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ ${tool_name^^} CONSULTATION TIMEOUT: External consultation exceeded limit"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 ${tool_name^^} CLI NOT FOUND: ${tool_name} command not available"
+    else
+        echo "💥 ${tool_name^^} CONSULTATION ERROR: Command failed with exit code $exit_code"
+    fi
+    echo "⚠️ Proceeding without external ${tool_name} analysis"
+}
+
+# Usage in agents
+if timeout 300s gemini -p "$prompt"; then
+    echo "✅ Gemini consultation completed successfully"
+else
+    handle_external_tool_error "gemini" $?
+fi
 ```
 
 ## 📋 Implementation Patterns for This PR
 
-### **External AI Consultation Integration**
-1. **Mandatory Context Gathering**: Always read PR details, changed files, dependencies before external consultation
-2. **Comprehensive Prompt Engineering**: Use structured prompts with complete code context
-3. **Response Integration**: Synthesize external AI responses into comprehensive review output
-4. **Fallback Mechanisms**: Continue analysis even if external tools fail
+### 1. **Agent-Based Consultation Architecture**
+- Create self-contained agent definitions in `.claude/agents/`
+- Each agent has single responsibility (Gemini: multi-dimensional, Codex: deep analysis)
+- Agents integrate into existing command workflows without breaking changes
+- Plugin pattern enables future AI consultant additions
 
-### **Security Implementation Standards**
-1. **Subprocess Discipline**: Never use shell=True with external commands
-2. **Input Validation**: Sanitize all user-controlled content before external tool calls
-3. **Timeout Protection**: 30-second maximum for all external CLI operations
-4. **Credential Security**: Validate API keys exist before usage, no hardcoded secrets
+### 2. **Comprehensive Context Gathering Protocol**
+```markdown
+### 1. Gather Complete Context
+**MANDATORY Context Collection**:
+- **Read PR Description**: Use GitHub MCP to get full PR details
+- **Read Changed Files**: Examine all modified, added, deleted files  
+- **Read Related Files**: Identify and read dependent/imported files
+- **Read Configuration**: Check relevant configs, requirements, etc.
+- **Read Tests**: Review existing and new test files
+- **Read Documentation**: Check README, API docs, inline documentation
+```
 
-### **Agent Architecture Patterns**
-1. **Single Responsibility**: Each agent focused on specific external tool integration
-2. **Standardized Interface**: Consistent bash command execution patterns across agents
-3. **Error Resilience**: Graceful degradation when external dependencies unavailable
-4. **Context Preservation**: Maintain Claude's analysis capabilities as primary, external AI as enhancement
+**Benefits:**
+- Consistent context gathering across all AI consultants
+- Comprehensive understanding enables better analysis
+- Structured approach prevents missing critical context
+- Template ensures all consultants have necessary information
+
+### 3. **Multi-Stage Analysis Framework**
+```markdown
+## Multi-Stage Analysis Framework:
+
+### Stage 1 - Deep Logic Analysis:
+- Control flow validation and edge case identification
+- Data flow tracking and state management verification
+- Boundary condition analysis and error handling assessment
+
+### Stage 2 - Security Vulnerability Analysis:  
+- OWASP Top 10 vulnerability patterns
+- Input validation and sanitization gaps
+- Authentication and authorization flow verification
+
+### Stage 3 - Performance and Resource Analysis:
+- Algorithmic complexity assessment (time/space)
+- Memory leak and resource cleanup validation
+- Database query efficiency and N+1 problem detection
+
+### Stage 4 - Architectural Quality Review:
+- SOLID principles adherence verification
+- Design pattern implementation assessment
+- Module coupling and cohesion analysis
+```
+
+**Benefits:**
+- Systematic analysis approach ensures comprehensive coverage
+- Structured stages prevent missing critical analysis dimensions
+- Consistent methodology across different AI consultants
+- Professional-grade review depth matching industry standards
 
 ## 🔧 Specific Implementation Guidelines
 
-### **External Command Security Checklist**
-- [ ] Use subprocess.run() with shell=False
-- [ ] Set timeout=30 for all external commands  
-- [ ] Validate and sanitize all user inputs
-- [ ] Handle FileNotFoundError, TimeoutExpired, CalledProcessError
-- [ ] Never pass user input directly to shell commands
+### 1. **External Tool Security Checklist**
+✅ **MANDATORY Before Integration:**
+- [ ] Sandbox enforcement for all CLI tools (prefer read-only)
+- [ ] Timeout controls to prevent resource exhaustion  
+- [ ] Graceful error handling that doesn't break parent workflow
+- [ ] Input sanitization and secret redaction in prompts
+- [ ] Static command construction (no dynamic interpolation)
+- [ ] Clear, actionable error messages without information leakage
 
-### **Agent Development Standards**
-- [ ] Read complete PR context before external consultation
-- [ ] Use structured prompts with full code context
-- [ ] Implement capability-based selection over hardcoded mappings
-- [ ] Provide fallback responses when external tools fail
-- [ ] Integrate external responses into comprehensive analysis
+### 2. **Agent Definition Standards**
+✅ **Required Sections:**
+- [ ] Clear agent description with usage examples
+- [ ] CRITICAL REQUIREMENT section mandating CLI tool usage
+- [ ] Comprehensive context gathering protocol
+- [ ] Multi-stage analysis framework
+- [ ] Proper error handling template with timeout
+- [ ] Integration notes for workflow composition
 
-### **Production Readiness Requirements**
-- [ ] Timeout protection for all external CLI calls
-- [ ] Comprehensive exception handling for subprocess operations
-- [ ] Resource cleanup for failed external processes  
-- [ ] Health checks for external tool availability
-- [ ] Audit logging for external command executions
+### 3. **Performance Optimization Guidelines**
+✅ **Resource Management:**
+- [ ] Parallel execution where appropriate (Track B integration)
+- [ ] Configurable timeout values with reasonable defaults
+- [ ] Context gathering efficiency (avoid redundant reads)
+- [ ] Resource cleanup in error scenarios
+- [ ] Benchmarking considerations for timeout tuning
 
-## 🚨 **Critical Improvements Implemented**
+### 4. **Solo Developer Maintenance Requirements**
+✅ **Maintainability Standards:**
+- [ ] Self-contained agent definitions in markdown
+- [ ] Clear troubleshooting guidance in error messages
+- [ ] No complex code dependencies requiring specialized knowledge
+- [ ] Comprehensive documentation with usage examples
+- [ ] Extensible patterns for future AI consultant additions
 
-### **✅ Realistic Timeout Management**
-**Files**: .claude/agents/gemini-consultant.md, .claude/agents/codex-consultant.md
-**Enhancement**: 30s → 300s timeout increase with explicit error handling
-**Impact**: Reliable external AI consultations with clear user feedback
-**Implementation**: Comprehensive bash error detection with visual status indicators
+## 📚 Key Lessons Learned
 
-### **✅ Explicit Error Reporting**  
-**Enhancement**: No silent failures - every error explicitly communicated
-**Impact**: Clear user understanding of what happened and why
-**Implementation**: Exit code detection (124=timeout, 127=not found) with contextual messaging
+### 1. **External Dependencies Need Graceful Degradation**
+**Evidence**: Codex consultation failed with 404 errors during review, but system continued successfully.
+**Learning**: Always design external integrations to fail gracefully without compromising core functionality.
+**Pattern**: `⚠️ Proceeding without external [tool] analysis` messaging pattern works well.
 
-### **✅ Graceful Degradation**
-**Enhancement**: "Proceeding without external analysis" continuation patterns
-**Impact**: System reliability - external tool failures don't crash review workflows  
-**Implementation**: Error handling that enables continued operation
+### 2. **Security Through Sandboxing is Essential**
+**Evidence**: `codex exec --sandbox read-only` prevents file system modifications.
+**Learning**: External AI tools must be constrained to analysis-only operations for security.
+**Pattern**: Always investigate and use sandbox options for external CLI tools.
 
-## 🎯 **Quality Gates for Similar PRs**
+### 3. **Plugin Architecture Scales Well**
+**Evidence**: Two different AI consultants integrated cleanly into existing workflow.
+**Learning**: Agent-based patterns make it easy to add new AI consultants without system changes.
+**Pattern**: `.claude/agents/[tool]-consultant.md` convention works well for organization.
 
-### **Pre-Merge Security Validation**
-1. **Subprocess Security Audit**: Verify all external commands use shell=False, timeout=30
-2. **Input Validation Review**: Confirm user input sanitization before external tool calls
-3. **Error Handling Coverage**: Check comprehensive exception handling for external dependencies
-4. **Credential Security**: Validate secure API key management practices
+### 4. **Comprehensive Context Gathering Improves Quality**
+**Evidence**: Both agents use detailed context collection protocols for better analysis.
+**Learning**: AI consultants need complete context to provide valuable insights.
+**Pattern**: Mandatory context collection with structured prompts ensures consistency.
 
-### **Performance Validation**
-1. **Timeout Compliance**: Verify 30-second maximum for external operations
-2. **Resource Cleanup**: Confirm proper cleanup of external processes
-3. **Concurrent Execution**: Consider parallel analysis for multiple files
-4. **Fallback Testing**: Validate graceful degradation when external tools fail
-
-### **Integration Testing Requirements**
-1. **External Tool Availability**: Test behavior when CLI tools missing
-2. **Network Failure Simulation**: Verify resilience to external service failures
-3. **Large Input Handling**: Test with large prompts and code contexts
-4. **Concurrent Usage**: Validate behavior under multiple simultaneous requests
-
-## 🔄 **Updated Analysis Results** 
-
-### **Production Readiness Assessment**
-The practical improvements transform these agents from fragile prototypes into **production-ready components**:
-
-**✅ Ready for Deployment:**
-- Comprehensive error handling with user-friendly messaging
-- Realistic timeout management (5-minute AI consultations)  
-- Graceful failure recovery in all scenarios
-- Clear user experience with visual status indicators
-
-**🔧 Optional Enhancements:**
-- Shared error handling library (reduce 40+ line duplication)
-- Progress indicators during long consultations
-- External timeout configuration
-- Rate limiting for parallel execution API protection
-
-### **Solo Developer Context Success**
-The balance between practical improvements and security paranoia filtering has been successfully achieved:
-- Maintained `--sandbox read-only` for actual security needs
-- Avoided excessive input validation for trusted solo developer usage
-- Focused on real reliability issues (timeouts, tool availability) over theoretical concerns
+### 5. **Error Handling Code Should Be Centralized**
+**Evidence**: Nearly identical error handling logic in both agent definitions.
+**Learning**: DRY principle applies to error handling patterns across agents.  
+**Pattern**: Extract common error handling into shared functions/templates.
 
 ---
-**Status**: Updated with practical improvements - Production Ready
-**Last Updated**: September 7, 2025 (Updated)
-**Evidence Sources**: Cerebras technical analysis, architectural assessment, enhanced code review, practical implementation
-**Context**: Solo developer practical improvements over security paranoia - **DEPLOYMENT READY**
+**Status**: Active guidelines based on PR #1559 implementation
+**Last Updated**: September 7, 2025
+**Next Review**: After production usage feedback
