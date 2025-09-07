@@ -66,9 +66,11 @@ class UnifiedOrchestration:
             # Get all task-agent tmux sessions
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
+                shell=False,
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                timeout=30
             )
             if result.returncode != 0:
                 return
@@ -80,8 +82,13 @@ class UnifiedOrchestration:
             for session in agent_sessions:
                 if self._is_session_completed(session):
                     try:
-                        subprocess.run(["tmux", "kill-session", "-t", session],
-                                     check=False, capture_output=True)
+                        subprocess.run(
+                            ["tmux", "kill-session", "-t", session],
+                            shell=False,
+                            check=False,
+                            capture_output=True,
+                            timeout=30
+                        )
                         cleaned_sessions += 1
                     except (subprocess.SubprocessError, OSError):
                         pass
@@ -97,9 +104,11 @@ class UnifiedOrchestration:
         try:
             result = subprocess.run(
                 ["tmux", "capture-pane", "-t", session_name, "-p"],
+                shell=False,
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                timeout=30
             )
             if result.returncode != 0:
                 return True  # Session might be dead already
@@ -128,7 +137,12 @@ class UnifiedOrchestration:
         for name, command in dependencies.items():
             try:
                 result = subprocess.run(
-                    ["which", command], check=False, capture_output=True, text=True
+                    ["which", command],
+                    shell=False,
+                    check=False,
+                    capture_output=True,
+                    text=True,
+                    timeout=30
                 )
                 if result.returncode != 0:
                     missing.append(name)
@@ -178,9 +192,11 @@ class UnifiedOrchestration:
                     "--json",
                     "number,title,headRefName,createdAt",
                 ],
+                shell=False,
                 capture_output=True,
                 text=True,
                 check=True,
+                timeout=30
             )
             prs = json.loads(result.stdout)
 
@@ -213,7 +229,12 @@ class UnifiedOrchestration:
         """Continue work on existing agent branch."""
         try:
             # Check out the existing branch
-            subprocess.run(["git", "checkout", existing_agent["branch"]], check=True)
+            subprocess.run(
+                ["git", "checkout", existing_agent["branch"]],
+                shell=False,
+                timeout=30,
+                check=True
+            )
             print(f"✅ Switched to existing branch: {existing_agent['branch']}")
 
             # Create new agent session on existing branch
@@ -338,10 +359,12 @@ class UnifiedOrchestration:
                                     "--json",
                                     "number,url,title,state",
                                 ],
+                                shell=False,
                                 check=False,
                                 cwd=workspace_path,
                                 capture_output=True,
                                 text=True,
+                                timeout=30
                             )
 
                             if result.returncode == 0 and result.stdout.strip():
