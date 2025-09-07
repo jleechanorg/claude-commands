@@ -2,7 +2,7 @@
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`
 
-**Purpose**: Conduct focused architecture and design reviews for solo MVP development using dual-perspective analysis with Gemini MCP and Claude.
+**Purpose**: Conduct focused architecture and design reviews for solo MVP development using tri-perspective analysis with Gemini MCP, Perplexity (GPT-5), and Claude.
 
 ## Solo MVP Development Context
 
@@ -17,9 +17,10 @@
 **Default Thinking Mode**: Architecture reviews use sequential thinking (4-6 thoughts) by default.
 **Ultra-Think Upgrade**: When combined with `/thinku`, automatically upgrades to deep analysis (12+ thoughts).
 
-**Dual-Perspective Analysis**:
+**Tri-Perspective Analysis**:
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
 2. **Gemini Perspective**: Performance optimization, scalability concerns, alternative approaches, industry best practices
+3. **Perplexity (GPT-5) Perspective**: Latest architectural patterns, cutting-edge best practices, modern framework recommendations, state-of-the-art security approaches
 
 ## Scope Options
 
@@ -50,26 +51,33 @@
 4. **Documentation Review**: Check existing architecture docs against memory patterns
 5. **Dependencies Analysis**: Review external dependencies with memory context
 
-### Phase 2: Claude Primary, Gemini Consultant (MVP Focus)
-Claude leads analysis with MVP priorities:
+### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Perplexity GPT-5)
+**Execute in parallel for maximum speed:**
+
+**Track A - Claude Analysis (MVP Pragmatism):**
 - **Structural Analysis**: Simple organization, clear module boundaries
 - **Design Patterns**: Avoid over-engineering, use simple patterns that work
 - **Maintainability**: Code clarity for single developer, minimal documentation
 - **Technical Debt**: Only flag debt that blocks current features
 - **MVP Principles**: Ship fast, iterate quickly, avoid premature optimization
-- **Gemini Input**: Performance red flags and simpler alternatives
 
-### Phase 3: Gemini Primary, Claude Consultant (MVP Reality Check)
-Gemini leads with optimization focus, Claude provides MVP grounding:
+**Track B - Gemini Analysis (Performance & Alternatives):**
 - **Performance Review**: Only critical bottlenecks, not micro-optimizations
 - **Alternative Approaches**: Simpler patterns and proven technologies
 - **Industry Standards**: What's actually used in production MVPs
 - **Risk Assessment**: Focus on user-facing failures, not edge cases
 - **Innovation Opportunities**: Avoid shiny objects, stick to proven solutions
-- **Claude Input**: "Too complex for MVP", "Ship first, optimize later"
 
-### Phase 4: Joint Evaluation & MVP-Focused Recommendations
-Both perspectives focus on MVP shipping priorities:
+**Track C - Perplexity GPT-5 Analysis (Cutting-Edge Insights):**
+- **Implementation**: `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: architecture_query, model: "gpt-5"}])`
+- **Latest Patterns**: Modern architectural patterns from 2024-2025
+- **Security Standards**: Most recent security best practices and vulnerabilities
+- **Framework Evolution**: Latest updates in frameworks and tools
+- **Performance Optimization**: State-of-the-art optimization techniques
+- **Future-Proofing**: Architectural decisions that prepare for scaling
+
+### Phase 3: Tri-Perspective Synthesis & MVP-Focused Recommendations
+All three AI perspectives synthesized for MVP shipping priorities:
 - **MVP ROI**: Time to ship vs feature value for users
 - **Complexity Assessment**: Can one developer maintain this?
 - **Ship vs Perfect**: Balance "good enough" vs "done right"

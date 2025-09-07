@@ -36,12 +36,18 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - System design and scalability analysis
                                   - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
+   Track C (AI Research):         Perplexity MCP comprehensive review [target] (gpt-5 model)
+                                  - OWASP security standards and latest vulnerability research
+                                  - Industry best practices and proven approaches
+                                  - Performance optimization and benchmarking insights
+                                  - Emerging security patterns and prevention techniques
+                                  - Real-world code review expertise from security communities
 3. /reviewe [target]             # Enhanced code review with security analysis
-4. Synthesis & PR guidelines     # Combine both tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
+4. Synthesis & PR guidelines     # Combine all three tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
 ```
 
 The `/execute` delegation ensures optimal execution with:
-- **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/cerebras) and independent code-review analysis for significant speed improvement
+- **Always-Parallel Review Tracks**: Default simultaneous execution of technical (/cerebras), architectural (/arch), and AI research (Perplexity) analysis for significant speed improvement
 - **Guidelines Generation**: Automatically creates `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` with PR-specific mistake prevention patterns
 - **Guidelines Integration**: Consults existing `docs/pr-guidelines/base-guidelines.md` (general patterns) and generates PR-specific guidelines
 - **Anti-Pattern Application**: Analyzes review findings to document new mistake patterns and solutions
@@ -119,10 +125,14 @@ PARALLEL EXECUTION (Speed Optimized):
     │   ├─ Security vulnerability scanning
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
-    └─ Track B (Technical - Deep): /arch + Independent code-review subagent
-        ├─ System design and scalability assessment
-        ├─ Integration patterns and dependencies
-        └─ Code quality and maintainability analysis
+    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent
+    │   ├─ System design and scalability assessment
+    │   ├─ Integration patterns and dependencies
+    │   └─ Code quality and maintainability analysis
+    └─ Track C (AI Research): Perplexity MCP review (gpt-5)
+        ├─ OWASP security standards and vulnerability research
+        ├─ Industry best practices and optimization insights
+        └─ Emerging security patterns and prevention techniques
     ↓
 EXECUTE: /reviewe [target]
     ├─ Runs official /review → Native Claude Code review
