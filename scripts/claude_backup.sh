@@ -55,8 +55,8 @@ validate_path() {
         return 1
     fi
 
-    # Check for null bytes
-    if [[ "$path" =~ $'\x00' ]]; then
+    # Check for null bytes (simplified check to avoid false positives)
+    if [[ "$path" == *$'\0'* ]]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
     fi
@@ -111,7 +111,24 @@ get_clean_hostname() {
 # Initialize backup destination - called lazily to prevent sourcing issues
 init_destination() {
     DEVICE_NAME="$(get_clean_hostname)" || return 1
-    DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    
+    # Platform-specific default backup directories
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations, fallback to Documents
+        if [ -d "$HOME/Dropbox" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Dropbox/claude_backup_$DEVICE_NAME"
+        elif [ -d "$HOME/Documents" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Documents/claude_backup_$DEVICE_NAME"
+        else
+            DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+    fi
 
     if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
         # Parameter provided and it's not a flag - append device suffix
@@ -337,7 +354,8 @@ Log File: $LOG_FILE
 
 TROUBLESHOOTING:
 ===============
-- Verify macOS CloudStorage path: ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (macOS): ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (Linux): ls -la "$HOME/Dropbox" or "$HOME/Documents"
 - Verify rsync installation: which rsync
 - Check source directory: ls -la $SOURCE_DIR
 - Review full log: cat $LOG_FILE
@@ -443,7 +461,8 @@ EMAIL SETUP (for failure alerts):
 
 BACKUP TARGETS:
     Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (macOS): ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (Linux): ~/Dropbox/claude_backup_HOSTNAME or ~/Documents/claude_backup_HOSTNAME
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:
