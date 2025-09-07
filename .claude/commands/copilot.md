@@ -20,7 +20,7 @@ fi
 ```
 
 ## 🎯 Purpose
-Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Launches copilot-fixpr and copilot-handle-comments agents by default for comprehensive coverage and quality assurance.
+Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Uses hybrid orchestrator with copilot-fixpr agent by default for comprehensive coverage and quality assurance.
 
 ## ⚡ **PERFORMANCE ARCHITECTURE: Hybrid Orchestrator with Selective Task Agents**
 
