@@ -25,11 +25,11 @@ Use the Read tool to examine any files needed for context
 
 ### 2. Craft Detailed Prompts
 Create comprehensive, well-structured prompts that:
-- Clearly explain the context and background
-- Specify that Gemini should provide guidance only, not code implementation
-- Include relevant technical details and constraints
-- Ask specific, actionable questions
-- Request analysis, recommendations, or expert opinions
+- **Focus on correctness verification**: Does the code actually work as intended?
+- **PR goal alignment**: Do the changes fulfill the stated PR objectives?
+- **Bug detection**: Are there potential runtime errors, edge cases, or logical flaws?
+- Include relevant code snippets and PR context
+- Ask specific questions about implementation accuracy and completeness
 
 ### 3. MANDATORY: Execute Gemini Consultation
 Use bash to run the gemini CLI tool with your crafted prompt:
@@ -42,27 +42,32 @@ After receiving Gemini's response, provide a brief summary if needed
 
 ## Prompt Template
 
-Always begin your prompt to Gemini with: **"Please provide guidance and analysis only - do not write code or start implementation."**
+Always begin your prompt to Gemini with: **"Please analyze for correctness, PR goal alignment, and potential bugs only - do not write code or start implementation."**
 
 ## Example Execution
 
 ```bash
-gemini -p "Please provide guidance and analysis only - do not write code or start implementation. 
+gemini -p "Please analyze for correctness, PR goal alignment, and potential bugs only - do not write code or start implementation.
 
-Context: I'm building a Python Flask application with authentication requirements.
+Context: PR aims to implement user authentication system.
 
-Question: What are the pros and cons of using JWT tokens vs session-based authentication for this use case? Consider security, scalability, and implementation complexity.
+Code to analyze:
+[include relevant code snippets]
 
-Project details: [include relevant context here]"
+Questions:
+1. Does this implementation correctly fulfill the PR goals?
+2. Are there any logical errors or edge cases that could cause bugs?
+3. Is the authentication flow implemented correctly and securely?
+4. Do the changes match what was promised in the PR description?"
 ```
 
 ## Key Characteristics
 
-- ✅ **External Consultation**: Leverages different AI model perspective
-- ✅ **Guidance Focus**: Explicitly requests analysis, not implementation
-- ✅ **Context Aware**: Includes relevant project details
-- ✅ **No Code Generation**: Focuses on advice and recommendations
-- ✅ **Structured Queries**: Well-formed prompts for better responses
+- ✅ **Correctness Verification**: External validation of implementation accuracy
+- ✅ **PR Goal Validation**: Ensures changes fulfill stated objectives
+- ✅ **Bug Detection Focus**: Identifies potential runtime errors and edge cases
+- ✅ **Logic Analysis**: Reviews complex algorithms and business logic
+- ✅ **Requirements Checking**: Verifies completeness against PR description
 
 ## IMPORTANT EXECUTION NOTES
 
@@ -82,8 +87,8 @@ This agent is designed to work in parallel with other review agents:
 ## Usage Context
 
 Perfect for:
-- Getting external AI perspective on technical decisions
-- Architecture advice and design patterns
-- Code review from different AI model perspective
-- Breaking through analysis paralysis
-- Validating approaches with external opinion
+- **Correctness Validation**: External verification of code logic and implementation accuracy
+- **PR Goal Alignment**: Ensuring changes match stated PR objectives and requirements
+- **Bug Detection**: Alternative perspective on potential runtime errors and edge cases
+- **Requirements Verification**: Validating that implementation fulfills intended functionality
+- **Logic Review**: Cross-checking complex algorithms and business logic for correctness

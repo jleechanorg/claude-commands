@@ -25,11 +25,11 @@ Use the Read tool to examine any files needed for context
 
 ### 2. Craft Detailed Prompts
 Create comprehensive, well-structured prompts that:
-- Clearly explain the context and background
-- Specify that Codex should provide analysis and guidance only, not implementation
-- Include relevant code snippets or file contents
-- Ask specific, actionable questions about code structure, patterns, or behavior
-- Request analysis, recommendations, or explanations
+- **Focus on correctness analysis**: Does the code logic work as intended?
+- **PR goal alignment**: Do the changes achieve the stated PR objectives?
+- **Bug detection**: Are there logical errors, edge cases, or potential failures?
+- Include relevant code snippets and PR description context
+- Ask specific questions about implementation accuracy and completeness
 
 ### 3. MANDATORY: Execute Codex Consultation
 Use bash to run the codex CLI tool with your crafted prompt:
@@ -43,34 +43,33 @@ After receiving Codex's response, provide a brief summary if needed
 
 ## Prompt Template
 
-Always begin your prompt to Codex with: **"Please provide code analysis and guidance only - do not write new code or start implementation."**
+Always begin your prompt to Codex with: **"Please analyze for correctness, PR goal alignment, and potential bugs only - do not write new code or start implementation."**
 
 ## Example Execution
 
 ```bash
-codex exec --sandbox read-only "Please provide code analysis and guidance only - do not write new code or start implementation.
+codex exec --sandbox read-only "Please analyze for correctness, PR goal alignment, and potential bugs only - do not write new code or start implementation.
 
-Context: I'm analyzing a TypeScript utility file for prompt processing.
+Context: PR aims to implement user authentication system.
 
 Code to analyze:
 [include relevant code here]
 
 Questions:
-1. How does this code structure work?
-2. What are the key patterns being used?
-3. Are there any potential issues or improvements?
-4. How does this fit into a larger architecture?
-
-Please focus on explaining the existing code rather than suggesting rewrites."
+1. Does this implementation correctly achieve the PR goals?
+2. Are there any logical errors or edge cases that could cause bugs?
+3. Is the code logic sound and will it work as intended?
+4. Are there any potential runtime failures or error scenarios not handled?
+5. Does the implementation fully satisfy the requirements stated in the PR?"
 ```
 
 ## Key Characteristics
 
-- ✅ **Code-Focused Analysis**: Specialized in deep code understanding
-- ✅ **Architectural Insights**: Provides structural analysis and patterns
+- ✅ **Correctness Analysis**: Deep validation of code logic and implementation
+- ✅ **Bug Detection**: Identifies logical errors and potential runtime failures
+- ✅ **PR Goal Verification**: Ensures changes fulfill stated objectives
+- ✅ **Edge Case Analysis**: Finds boundary conditions and error scenarios
 - ✅ **Safety First**: Uses read-only sandbox for analysis tasks
-- ✅ **No Implementation**: Focuses on understanding existing code
-- ✅ **Alternative Perspective**: Different AI model for fresh insights
 
 ## Safety Configuration
 
@@ -97,13 +96,12 @@ This agent is designed to work in parallel with other review agents:
 ## Usage Context
 
 Perfect for:
-- Deep code understanding and analysis
-- Architectural analysis and pattern recognition
-- Code explanation and documentation
-- Breaking through analysis paralysis when Claude gets stuck
-- Alternative perspective on complex code problems
-- File structure and organization analysis
-- When you need a fresh AI perspective on existing code
+- **Correctness Validation**: Deep analysis of code logic and implementation accuracy
+- **Bug Detection**: Identifying logical errors, edge cases, and potential runtime failures
+- **PR Goal Verification**: Ensuring implementation matches stated PR objectives
+- **Logic Flow Analysis**: Validating complex algorithms and business logic correctness
+- **Edge Case Detection**: Finding boundary conditions and error scenarios
+- **Implementation Completeness**: Verifying all requirements are properly addressed
 
 ## When to Use This Agent
 

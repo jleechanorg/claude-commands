@@ -36,8 +36,8 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - System design and scalability analysis
                                   - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
-                                  - External AI perspectives (Gemini CLI consultation)
-                                  - Deep code analysis insights (Codex CLI consultation)
+                                  - Correctness validation (Gemini CLI consultation)
+                                  - Bug detection analysis (Codex CLI consultation)
    Track C (AI Research):         Perplexity MCP comprehensive review [target] (gpt-5 model)
                                   - OWASP security standards and latest vulnerability research
                                   - Industry best practices and proven approaches
@@ -93,8 +93,8 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Integration Analysis**: Cross-system dependencies and technical compatibility
 - **Code Quality Assessment**: Technical debt, maintainability, and refactoring opportunities
 - **Independent Analysis**: Uses code-review subagent for objective, unbiased assessment
-- **External AI Perspectives**: gemini-consultant agent for alternative technical opinions and architecture guidance
-- **Deep Code Analysis**: codex-consultant agent for complex code understanding and pattern analysis
+- **Correctness Validation**: gemini-consultant agent for external verification of implementation accuracy and PR goal alignment
+- **Bug Detection Analysis**: codex-consultant agent for deep analysis of logical errors, edge cases, and potential runtime failures
 
 ### 5. **Context7 + GitHub + Gemini MCP Integration** - Expert Knowledge Analysis (ALWAYS REQUIRED)
 - **Context7 MCP**: Real-time API documentation and framework-specific expertise
@@ -133,8 +133,8 @@ PARALLEL EXECUTION (Speed Optimized):
     │   ├─ System design and scalability assessment
     │   ├─ Integration patterns and dependencies
     │   ├─ Code quality and maintainability analysis
-    │   ├─ External AI perspectives (Gemini CLI consultation)
-    │   └─ Deep code analysis insights (Codex CLI consultation)
+    │   ├─ Correctness validation (Gemini CLI consultation)
+    │   └─ Bug detection analysis (Codex CLI consultation)
     └─ Track C (AI Research): Perplexity MCP review (gpt-5)
         ├─ OWASP security standards and vulnerability research
         ├─ Industry best practices and optimization insights
