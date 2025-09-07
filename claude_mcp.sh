@@ -1436,6 +1436,17 @@ fi
 display_step "Setting up Slash Commands MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 setup_slash_commands_server
+
+# Final verification and results
+echo -e "\n${BLUE}✅ Verifying final installation...${NC}"
+MCP_LIST=$(claude mcp list 2>/dev/null)
+ACTUAL_SERVERS=$(echo "$MCP_LIST" | grep -E "^[a-zA-Z].*:" | wc -l)
+
+echo -e "\n${GREEN}📋 Installation Results Summary:${NC}"
+echo -e "${GREEN}=================================${NC}"
+echo -e "${BLUE}Total servers attempted: $TOTAL_SERVERS${NC}"
+echo -e "${GREEN}Successful installations: $SUCCESSFUL_INSTALLS${NC}"
+echo -e "${RED}Failed installations: $FAILED_INSTALLS${NC}"
 echo -e "${BLUE}Currently active servers: $ACTUAL_SERVERS${NC}"
 
 echo -e "\n${BLUE}📊 Detailed Results:${NC}"
