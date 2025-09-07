@@ -58,8 +58,8 @@ validate_path() {
     # Check for null bytes.
     # Previous approach used a regex to detect null bytes, but this could
     # incorrectly flag valid paths containing certain escape sequences or binary data,
-    # resulting in false positives. This direct check is more reliable and maintainable.
-    if [[ "$path" == *$'\0'* ]]; then
+    # resulting in false positives. This approach uses byte length comparison for reliability.
+    if [ "${#path}" -ne "$(printf '%s' "$path" | wc -c)" ]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
     fi
