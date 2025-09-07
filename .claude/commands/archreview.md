@@ -33,9 +33,13 @@
 ## Review Process
 
 ### Phase 1: Context Gathering & Memory-Enhanced Validation
-1. **Memory MCP Search**: Query memory for relevant architectural patterns and decisions before analysis
+1. **Memory MCP Search with Query Optimization**: Enhanced query memory for architectural patterns using optimization engine
+   - **Query Optimization**: Uses universal composition with `/memory search` for improved architectural pattern discovery
+   - **Smart Search Strategy**: Transform compound architecture queries into optimized single-word searches
+   - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better architectural insights
+   - **Result Merging**: Combine multiple optimized searches for comprehensive architecture analysis
    - Search for: architecture decisions, design patterns, performance insights, solo developer patterns
-   - Extract context from previous similar architectural challenges and solutions
+   - Extract context from enhanced search results for better architectural analysis
    - Log findings: "📚 Found X relevant architectural memories"
 2. **PR Content Validation** (if reviewing a PR/branch):
    - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files

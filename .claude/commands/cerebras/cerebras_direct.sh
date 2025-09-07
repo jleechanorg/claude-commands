@@ -37,6 +37,7 @@ PROMPT=""
 CONTEXT_FILE=""
 DISABLE_AUTO_CONTEXT=false
 SKIP_CODEGEN_SYS_PROMPT=false
+LIGHT_MODE=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -56,6 +57,10 @@ while [[ $# -gt 0 ]]; do
             SKIP_CODEGEN_SYS_PROMPT=true
             shift
             ;;
+        --light)
+            LIGHT_MODE=true
+            shift
+            ;;
         *)
             PROMPT="$PROMPT $1"
             shift
@@ -67,12 +72,17 @@ done
 PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 
 if [ -z "$PROMPT" ]; then
-    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] <prompt>"
+    echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] [--light] <prompt>"
     echo "  --context-file           Include conversation context from file"
     echo "  --no-auto-context        Skip automatic context extraction"
     echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
+    echo "  --light                  Use light mode (no system prompts for faster generation)"
+    echo ""
     exit 1
 fi
+
+
+# Light mode - no security confirmation needed for solo developer
 
 # Validate API key
 API_KEY="${CEREBRAS_API_KEY:-${OPENAI_API_KEY:-}}"
@@ -169,7 +179,9 @@ if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
 fi
 
 # Claude Code system prompt for consistency - can be overridden
-if [ "$SKIP_CODEGEN_SYS_PROMPT" = true ]; then
+if [ "$LIGHT_MODE" = true ]; then
+    SYSTEM_PROMPT=""
+elif [ "$SKIP_CODEGEN_SYS_PROMPT" = true ]; then
     SYSTEM_PROMPT="You are an expert technical writer and software architect. Generate comprehensive, detailed documentation with complete sections and no placeholder content. Focus on thorough analysis, specific implementation details, and production-ready specifications."
 else
     SYSTEM_PROMPT="You are an expert software engineer and code generator. Generate high-quality, production-ready code.
@@ -192,17 +204,33 @@ fi
 
 # User task
 if [ -n "$CONVERSATION_CONTEXT" ]; then
-    USER_PROMPT="$CONVERSATION_CONTEXT
+    if [ -n "$SYSTEM_PROMPT" ]; then
+        USER_PROMPT="$CONVERSATION_CONTEXT
 
 ---
 
 Task: $PROMPT
 
 Generate the code following the above guidelines with full awareness of the conversation context above."
+    else
+        USER_PROMPT="$CONVERSATION_CONTEXT
+
+---
+
+Task: $PROMPT
+
+Generate the code with full awareness of the conversation context above."
+    fi
 else
-    USER_PROMPT="Task: $PROMPT
+    if [ -n "$SYSTEM_PROMPT" ]; then
+        USER_PROMPT="Task: $PROMPT
 
 Generate the code following the above guidelines."
+    else
+        USER_PROMPT="Task: $PROMPT
+
+Generate the code."
+    fi
 fi
 
 # Start timing
@@ -211,20 +239,36 @@ START_TIME=$(date +%s%N)
 # Direct API call to Cerebras with error handling and timeouts
 # Prevent set -e from aborting on curl errors so we can map them explicitly
 CURL_EXIT=0
+
+# Prepare messages array - include system prompt only if it's not empty
+if [ -n "$SYSTEM_PROMPT" ]; then
+    MESSAGES="[
+      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ]"
+else
+    MESSAGES="[
+      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
+    ]"
+fi
+
+# Build request body with jq -n for safer JSON construction
+MAX_TOKENS=${CEREBRAS_MAX_TOKENS:-1000000}
+MODEL="${CEREBRAS_MODEL:-qwen-3-coder-480b}"
+TEMPERATURE="${CEREBRAS_TEMPERATURE:-0.1}"
+
+REQUEST_BODY="$(jq -n \
+  --arg model "$MODEL" \
+  --argjson messages "$MESSAGES" \
+  --argjson max_tokens "$MAX_TOKENS" \
+  --argjson temperature "$TEMPERATURE" \
+  '{model:$model, messages:$messages, max_tokens:$max_tokens, temperature:$temperature, stream:false}')"
+
 HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
-  -d "{
-    \"model\": \"qwen-3-coder-480b\",
-    \"messages\": [
-      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
-      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-    ],
-    \"max_tokens\": 1000000,
-    \"temperature\": 0.1,
-    \"stream\": false
-  }") || CURL_EXIT=$?
+  -d "$REQUEST_BODY") || CURL_EXIT=$?
 
 # On transport or HTTP-level failures, emit the raw body (if any) and standardize exit code
 if [ "$CURL_EXIT" -ne 0 ]; then
@@ -274,9 +318,14 @@ OUTPUT_FILE="${OUTPUT_DIR}/cerebras_output_${TIMESTAMP}.md"
 # Write content to file and also display
 echo "$CONTENT" > "$OUTPUT_FILE"
 
-# Show timing at the beginning with line count
+# Show timing at the beginning with line count and mode indicator
 echo ""
-echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+if [ "$LIGHT_MODE" = true ]; then
+    echo "⚡ CEREBRAS LIGHT MODE: ${ELAPSED_MS}ms (${LINE_COUNT} lines) ⚡"
+    echo "⚡ Light Mode Active - No System Prompts"
+else
+    echo "🚀🚀🚀 CEREBRAS GENERATED IN ${ELAPSED_MS}ms (${LINE_COUNT} lines) 🚀🚀🚀"
+fi
 echo ""
 echo "Output saved to: $OUTPUT_FILE"
 echo ""
