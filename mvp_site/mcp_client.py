@@ -365,8 +365,6 @@ class MCPClient:
                         raise MCPClientError("Invalid export format", error_code=400)
                     else:
                         # Create a temporary file for successful mock export
-                        import tempfile
-                        import os
                         temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=f'.{export_format}', delete=False)
                         temp_file.write("Mock campaign export content for testing")
                         temp_file.close()
