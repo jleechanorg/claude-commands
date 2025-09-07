@@ -41,10 +41,12 @@ Create comprehensive prompts following BugBot and Snyk/DeepCode methodologies:
 
 ### 3. MANDATORY: Execute Codex Consultation
 Use bash to run the codex CLI tool with your crafted prompt:
-- Format: `codex exec --sandbox read-only "Your detailed prompt with context"`
+- Format: `timeout 300s codex exec --sandbox read-only "Your detailed prompt with context"`
 - Always use `--sandbox read-only` for safety when doing analysis
 - Always include the instruction that Codex should provide guidance only, not implementation
 - Ensure the prompt includes file contents when relevant
+- **EXPLICIT ERROR REPORTING**: Never fail silently - always report timeouts, command failures, or missing tools
+- Provide clear fallback messages when external consultation fails
 
 ### 4. Present Results
 After receiving Codex's response, provide a brief summary if needed
@@ -68,7 +70,10 @@ Focus on production-critical issues that could impact system stability.
 ## Comprehensive Analysis Template
 
 ```bash
-codex exec --sandbox read-only "You are an expert code analyst conducting multi-stage deep code analysis.
+# Execute codex consultation with explicit error handling
+echo "🤖 Starting Codex CLI consultation..."
+
+if timeout 300s codex exec --sandbox read-only "You are an expert code analyst conducting multi-stage deep code analysis.
 Analyze for bugs, security vulnerabilities, architectural issues, and performance problems.
 Do not write code - provide analysis only.
 
@@ -109,7 +114,22 @@ PR Objectives: [Key requirements and goals]
 - Module coupling and cohesion analysis
 - Technical debt and maintainability evaluation
 
-Please provide detailed findings for each stage with specific line references and remediation suggestions."
+Please provide detailed findings for each stage with specific line references and remediation suggestions."; then
+    echo "✅ Codex consultation completed successfully"
+else
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ CODEX CONSULTATION TIMEOUT: External consultation exceeded 5-minute limit"
+        echo "❌ Codex agent failed to provide analysis due to timeout"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 CODEX CLI NOT FOUND: codex command not available on system"
+        echo "❌ Codex agent failed - external tool missing"
+    else
+        echo "💥 CODEX CONSULTATION ERROR: Command failed with exit code $exit_code"
+        echo "❌ Codex agent failed with unexpected error"
+    fi
+    echo "⚠️  Proceeding without external Codex analysis"
+fi
 ```
 
 ## Key Characteristics

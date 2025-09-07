@@ -43,9 +43,11 @@ Create detailed prompts following best practices from CodeRabbit, GitHub Copilot
 
 ### 3. MANDATORY: Execute Gemini Consultation
 Use bash to run the gemini CLI tool with your crafted prompt:
-- Format: `gemini -p "Your detailed prompt with context"`
+- Format: `timeout 300s gemini -p "Your detailed prompt with context"`
 - Always include the instruction that Gemini should provide guidance only, not implementation
 - Ensure the prompt includes file contents when relevant
+- **EXPLICIT ERROR REPORTING**: Never fail silently - always report timeouts, command failures, or missing tools
+- Provide clear fallback messages when external consultation fails
 
 ### 4. Present Results
 After receiving Gemini's response, provide a brief summary if needed
@@ -69,7 +71,10 @@ Analyze the code across multiple dimensions with focus on correctness, architect
 ## Enhanced Analysis Template
 
 ```bash
-gemini -p "You are a senior software engineer conducting comprehensive code analysis. 
+# Execute gemini consultation with explicit error handling
+echo "🤖 Starting Gemini CLI consultation..."
+
+if timeout 300s gemini -p "You are a senior software engineer conducting comprehensive code analysis. 
 Analyze for correctness, architectural soundness, security, performance, and PR goal alignment.
 Do not write code - provide analysis only.
 
@@ -92,7 +97,22 @@ PR Objectives: [Key goals and requirements]
 5. **PR Goal Alignment**: Requirements fulfillment, completeness verification
 6. **Code Quality**: Maintainability, complexity, technical debt assessment
 
-Please provide detailed analysis across all dimensions."
+Please provide detailed analysis across all dimensions."; then
+    echo "✅ Gemini consultation completed successfully"
+else
+    exit_code=$?
+    if [ $exit_code -eq 124 ]; then
+        echo "⏰ GEMINI CONSULTATION TIMEOUT: External consultation exceeded 5-minute limit"
+        echo "❌ Gemini agent failed to provide analysis due to timeout"
+    elif [ $exit_code -eq 127 ]; then
+        echo "🚫 GEMINI CLI NOT FOUND: gemini command not available on system"
+        echo "❌ Gemini agent failed - external tool missing"
+    else
+        echo "💥 GEMINI CONSULTATION ERROR: Command failed with exit code $exit_code"
+        echo "❌ Gemini agent failed with unexpected error"
+    fi
+    echo "⚠️  Proceeding without external Gemini analysis"
+fi
 ```
 
 ## Key Characteristics
