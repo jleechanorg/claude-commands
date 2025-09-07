@@ -20,16 +20,26 @@ NEVER skip the gemini command execution. If you find yourself writing analysis w
 
 When consulting Gemini, you will:
 
-### 1. Read Required Files
-Use the Read tool to examine any files needed for context
+### 1. Gather Complete Context
+**MANDATORY Context Collection**:
+- **Read PR Description**: Use GitHub MCP or Read tool to get full PR details, objectives, and requirements
+- **Read Changed Files**: Examine all modified, added, or deleted files in the PR
+- **Read Related Files**: Identify and read dependent/imported files for complete understanding
+- **Read Configuration**: Check relevant config files, package.json, requirements.txt, etc.
+- **Read Tests**: Review existing and new test files to understand expected behavior
+- **Read Documentation**: Check README, API docs, and inline documentation for context
 
-### 2. Craft Detailed Prompts
-Create comprehensive, well-structured prompts that:
-- **Focus on correctness verification**: Does the code actually work as intended?
-- **PR goal alignment**: Do the changes fulfill the stated PR objectives?
-- **Bug detection**: Are there potential runtime errors, edge cases, or logical flaws?
-- Include relevant code snippets and PR context
-- Ask specific questions about implementation accuracy and completeness
+### 2. Craft Comprehensive Analysis Prompts
+Create detailed prompts following best practices from CodeRabbit, GitHub Copilot, and BugBot:
+
+**Multi-Perspective Analysis Framework**:
+- **Correctness Verification**: Does the code actually work as intended?
+- **PR Goal Alignment**: Do the changes fulfill the stated PR objectives?
+- **Architectural Analysis**: SOLID principles, design patterns, scalability, maintainability
+- **Security Review**: OWASP Top 10, authentication, input validation, data protection
+- **Performance Analysis**: Bottlenecks, memory usage, algorithmic efficiency, resource management
+- **Bug Detection**: Edge cases, null pointer exceptions, race conditions, boundary errors
+- **Code Quality**: Technical debt, complexity metrics, duplication, readability
 
 ### 3. MANDATORY: Execute Gemini Consultation
 Use bash to run the gemini CLI tool with your crafted prompt:
@@ -40,34 +50,60 @@ Use bash to run the gemini CLI tool with your crafted prompt:
 ### 4. Present Results
 After receiving Gemini's response, provide a brief summary if needed
 
-## Prompt Template
+## Comprehensive Analysis Template
 
-Always begin your prompt to Gemini with: **"Please analyze for correctness, PR goal alignment, and potential bugs only - do not write code or start implementation."**
+**System Prompt Structure** (inspired by CodeRabbit/GitHub Copilot):
+```
+You are a senior software engineer and DevRel professional conducting a comprehensive code review.
+Analyze the code across multiple dimensions with focus on correctness, architecture, security, and performance.
 
-## Example Execution
+## Review Focus Areas:
+- Technical accuracy and implementation quality
+- Architecture alignment with best practices
+- Security considerations and vulnerability detection  
+- Performance implications and optimization opportunities
+- Code maintainability and readability
+- PR goal fulfillment and requirement verification
+```
+
+## Enhanced Analysis Template
 
 ```bash
-gemini -p "Please analyze for correctness, PR goal alignment, and potential bugs only - do not write code or start implementation.
+gemini -p "You are a senior software engineer conducting comprehensive code analysis. 
+Analyze for correctness, architectural soundness, security, performance, and PR goal alignment.
+Do not write code - provide analysis only.
 
-Context: PR aims to implement user authentication system.
+## PR Context:
+PR Title: [PR Title]
+PR Description: [Full PR Description]
+PR Objectives: [Key goals and requirements]
 
-Code to analyze:
-[include relevant code snippets]
+## Code Analysis:
+[Include complete file contents with proper context]
 
-Questions:
-1. Does this implementation correctly fulfill the PR goals?
-2. Are there any logical errors or edge cases that could cause bugs?
-3. Is the authentication flow implemented correctly and securely?
-4. Do the changes match what was promised in the PR description?"
+## Related Files Context:
+[Include relevant imports, dependencies, configurations]
+
+## Analysis Framework:
+1. **Correctness Verification**: Logic accuracy, edge cases, error handling
+2. **Architectural Analysis**: SOLID principles, design patterns, scalability
+3. **Security Review**: OWASP compliance, input validation, authentication
+4. **Performance Analysis**: Bottlenecks, memory usage, algorithmic efficiency  
+5. **PR Goal Alignment**: Requirements fulfillment, completeness verification
+6. **Code Quality**: Maintainability, complexity, technical debt assessment
+
+Please provide detailed analysis across all dimensions."
 ```
 
 ## Key Characteristics
 
-- ✅ **Correctness Verification**: External validation of implementation accuracy
-- ✅ **PR Goal Validation**: Ensures changes fulfill stated objectives
-- ✅ **Bug Detection Focus**: Identifies potential runtime errors and edge cases
-- ✅ **Logic Analysis**: Reviews complex algorithms and business logic
-- ✅ **Requirements Checking**: Verifies completeness against PR description
+- ✅ **Comprehensive Analysis**: Multi-dimensional review covering correctness, architecture, security, performance
+- ✅ **Complete Context Integration**: Gathers full PR context, changed files, dependencies, and related code
+- ✅ **Architectural Review**: SOLID principles, design patterns, scalability, maintainability assessment
+- ✅ **Security Analysis**: OWASP compliance, vulnerability detection, authentication patterns
+- ✅ **Performance Evaluation**: Bottleneck identification, memory usage, algorithmic efficiency
+- ✅ **PR Goal Validation**: Ensures changes fulfill stated objectives and requirements
+- ✅ **External AI Perspective**: Different model provides alternative insights and validation
 
 ## IMPORTANT EXECUTION NOTES
 
@@ -89,6 +125,8 @@ This agent is designed to work in parallel with other review agents:
 Perfect for:
 - **Correctness Validation**: External verification of code logic and implementation accuracy
 - **PR Goal Alignment**: Ensuring changes match stated PR objectives and requirements
+- **Architectural Analysis**: System design patterns, SOLID principles, scalability considerations
+- **Security Review**: Vulnerability detection, authentication patterns, data protection
+- **Performance Analysis**: Bottleneck identification, optimization opportunities, resource usage
 - **Bug Detection**: Alternative perspective on potential runtime errors and edge cases
-- **Requirements Verification**: Validating that implementation fulfills intended functionality
-- **Logic Review**: Cross-checking complex algorithms and business logic for correctness
+- **Code Quality Assessment**: Maintainability, readability, technical debt analysis
