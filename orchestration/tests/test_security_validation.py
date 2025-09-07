@@ -14,8 +14,10 @@ from unittest.mock import Mock
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-# Import after path manipulation
-from agent_monitor import ConvergeAgentRestarter
+# Import using importlib to avoid inline import violation
+import importlib
+agent_monitor_module = importlib.import_module('agent_monitor')
+ConvergeAgentRestarter = agent_monitor_module.ConvergeAgentRestarter
 
 
 class TestSecurityValidation(unittest.TestCase):

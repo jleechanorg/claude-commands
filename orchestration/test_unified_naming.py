@@ -5,17 +5,20 @@ Tests the orchestration system's unified agent/workspace naming approach
 """
 
 import os
-import sys  
+import sys
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
 
-# Add orchestration to path
+# Add orchestration to path and use importlib for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
-# Import after path manipulation
-from orchestrate_unified import UnifiedOrchestration
-from task_dispatcher import TaskDispatcher
+# Import using importlib to avoid inline import violation
+import importlib
+orchestrate_unified_module = importlib.import_module('orchestrate_unified')
+task_dispatcher_module = importlib.import_module('task_dispatcher')
+UnifiedOrchestration = orchestrate_unified_module.UnifiedOrchestration
+TaskDispatcher = task_dispatcher_module.TaskDispatcher
 
 
 class TestUnifiedNaming(unittest.TestCase):

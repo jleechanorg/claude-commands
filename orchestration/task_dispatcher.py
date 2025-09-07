@@ -14,22 +14,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Import A2A components with fallback
-try:
-    from a2a_integration import TaskPool, get_a2a_status
-    from a2a_monitor import get_monitor
-    A2A_AVAILABLE = True
-except ImportError:
-    A2A_AVAILABLE = False
+# Import A2A components
+from a2a_integration import TaskPool, get_a2a_status
+from a2a_monitor import get_monitor
+# Import shared constants
+from constants import AGENT_SESSION_TIMEOUT_SECONDS, TIMESTAMP_MODULO, DEFAULT_MAX_CONCURRENT_AGENTS
 
-# Import shared constants with defaults
-try:
-    from constants import AGENT_SESSION_TIMEOUT_SECONDS, TIMESTAMP_MODULO, DEFAULT_MAX_CONCURRENT_AGENTS
-except ImportError:
-    # Use defaults if constants not available
-    AGENT_SESSION_TIMEOUT_SECONDS = 3600
-    TIMESTAMP_MODULO = 1000
-    DEFAULT_MAX_CONCURRENT_AGENTS = 5
+A2A_AVAILABLE = True
 
 # Constraint system removed - using simple safety rules only
 
