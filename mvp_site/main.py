@@ -47,6 +47,7 @@ import datetime
 import json
 import logging
 import os
+import re
 import subprocess
 import sys
 import traceback
@@ -1078,8 +1079,6 @@ if __name__ == "__main__":
                 Parse port number from environment variable that may contain descriptive text.
                 Handles cases like: "ℹ️ Port 8081 in use, trying 8082...\n8082"
                 """
-                import re
-
                 default_port = 8081
 
                 if not port_string or not isinstance(port_string, str):

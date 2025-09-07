@@ -5,7 +5,7 @@ Automatically enhances LLM responses with relevant memory context.
 
 import re
 import time
-from datetime import UTC
+from datetime import UTC, datetime
 from typing import Any
 
 import logging_util
@@ -129,8 +129,6 @@ class MemoryIntegration:
                 "last_seen"
             )
             if entity_timestamp:
-                from datetime import datetime
-
                 try:
                     # Parse timestamp (handle multiple formats)
                     if isinstance(entity_timestamp, str):
