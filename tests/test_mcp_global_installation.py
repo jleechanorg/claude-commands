@@ -3,6 +3,7 @@ import subprocess
 import os
 import tempfile
 import shutil
+import re
 from unittest.mock import patch, MagicMock
 
 class TestMCPGlobalInstallation(unittest.TestCase):
@@ -141,7 +142,6 @@ class TestMCPGlobalInstallation(unittest.TestCase):
                          "Script should use 'set -e' for proper error handling")
 
             # Should not exit terminal session on errors (check for unsafe direct exit calls)
-            import re
             unsafe_exit_pattern = re.compile(r'^\s*exit\s+1\s*$', re.MULTILINE)
             self.assertIsNone(unsafe_exit_pattern.search(content),
                            "Script should not use direct 'exit 1' which terminates user terminal")
