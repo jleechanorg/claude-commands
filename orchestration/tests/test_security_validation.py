@@ -14,6 +14,7 @@ from unittest.mock import Mock
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
+# Import after path manipulation
 from agent_monitor import ConvergeAgentRestarter
 
 

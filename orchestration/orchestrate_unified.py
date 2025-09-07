@@ -10,6 +10,7 @@ import os
 import subprocess
 import sys
 import time
+from datetime import datetime, timedelta
 
 # Add orchestration directory to path
 sys.path.insert(0, os.path.dirname(__file__))
@@ -201,8 +202,6 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            from datetime import datetime, timedelta
-
             datetime.now() - timedelta(hours=1)
 
             for pr in prs:

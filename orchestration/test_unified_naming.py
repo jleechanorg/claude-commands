@@ -4,17 +4,18 @@ TDD Tests for Unified Naming System
 Tests the orchestration system's unified agent/workspace naming approach
 """
 
-import unittest
-import tempfile
 import os
-import sys
+import sys  
+import tempfile
+import unittest
 from unittest.mock import patch, MagicMock
 
 # Add orchestration to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-from task_dispatcher import TaskDispatcher
+# Import after path manipulation
 from orchestrate_unified import UnifiedOrchestration
+from task_dispatcher import TaskDispatcher
 
 
 class TestUnifiedNaming(unittest.TestCase):

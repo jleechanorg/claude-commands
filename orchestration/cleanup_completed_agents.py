@@ -6,6 +6,7 @@ This script identifies and cleans up completed tmux agents that are sitting idle
 Agents are considered completed if they have completion markers in their logs.
 """
 
+import argparse
 import os
 import subprocess
 import json
@@ -15,10 +16,10 @@ from typing import List, Dict, Set, Any
 
 # Import shared constants
 try:
-    from .constants import IDLE_MINUTES_THRESHOLD
-except ImportError:
-    # Fallback for direct execution
     from constants import IDLE_MINUTES_THRESHOLD
+except ImportError:
+    # Use default if constants not available
+    IDLE_MINUTES_THRESHOLD = 30
 
 
 def get_tmux_sessions() -> List[str]:
@@ -320,7 +321,6 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
 
 def main():
     """Main entry point."""
-    import argparse
 
     parser = argparse.ArgumentParser(description="Cleanup completed tmux agents")
     parser.add_argument(
