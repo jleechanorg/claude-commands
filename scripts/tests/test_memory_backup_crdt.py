@@ -20,7 +20,8 @@ from datetime import datetime
 import tempfile
 
 # Import from parent directory (this test file is in scripts/tests/)
-from ..memory_backup_crdt import (
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+from memory_backup_crdt import (
     MemoryBackupCRDT,
     CRDTMetadata,
     crdt_merge,
