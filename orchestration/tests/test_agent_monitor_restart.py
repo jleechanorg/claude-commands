@@ -42,7 +42,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
         """Test converge agent detection with converge_state.json marker"""
         # Create workspace with converge marker
         agent_name = "task-agent-test-1"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create converge state file
@@ -56,7 +56,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_is_converge_agent_with_progress_log_marker(self):
         """Test converge agent detection with convergence_progress.log marker"""
         agent_name = "task-agent-test-2"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create progress log file
@@ -70,7 +70,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_is_converge_agent_with_converge_marker(self):
         """Test converge agent detection with .converge_marker"""
         agent_name = "task-agent-test-3"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create converge marker file
@@ -84,7 +84,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_is_converge_agent_without_markers(self):
         """Test non-converge agent detection (no markers present)"""
         agent_name = "task-agent-regular"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # No converge markers
@@ -101,7 +101,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_detect_stuck_agent_recent_activity(self):
         """Test that agents with recent activity are not considered stuck"""
         agent_name = "task-agent-converge"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create converge marker
@@ -157,7 +157,7 @@ class TestConvergeAgentRestarter(unittest.TestCase):
     def test_get_original_command_from_file(self):
         """Test extracting original command from workspace file"""
         agent_name = "task-agent-test"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create command file
@@ -308,8 +308,8 @@ class TestEndToEndIntegration(unittest.TestCase):
         """Test complete workflow from detection to restart"""
         agent_name = "task-agent-converge-e2e"
         
-        # Create converge agent workspace
-        workspace_path = f"agent_workspace_{agent_name}"
+        # Create converge agent workspace (matching agent_monitor.py path structure)
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create converge marker

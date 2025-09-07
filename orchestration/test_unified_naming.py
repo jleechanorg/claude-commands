@@ -14,6 +14,7 @@ from unittest.mock import patch, MagicMock
 sys.path.insert(0, os.path.dirname(__file__))
 
 from task_dispatcher import TaskDispatcher
+from orchestrate_unified import UnifiedOrchestration
 
 
 class TestUnifiedNaming(unittest.TestCase):
@@ -108,7 +109,6 @@ class TestWorkspaceConfiguration(unittest.TestCase):
 
     def test_regression_workspace_directory_placement(self):
         """Test that workspace directories are created in orchestration/agent_workspaces/ not project root"""
-        from orchestrate_unified import UnifiedOrchestration
 
         # Create mock agent data
         mock_agents = [{"name": "test-agent-regression"}]

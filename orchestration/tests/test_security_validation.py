@@ -135,7 +135,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_get_original_command_injection_content_protection(self):
         """Test protection against command injection in file content"""
         agent_name = "task-agent-test"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create command file with malicious content
@@ -169,7 +169,7 @@ class TestSecurityValidation(unittest.TestCase):
     def test_get_original_command_safe_content_allowed(self):
         """Test that safe command content is allowed through"""
         agent_name = "task-agent-safe"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         command_file = f"{workspace_path}/original_command.txt"
@@ -185,7 +185,7 @@ class TestSecurityValidation(unittest.TestCase):
         """Test that absolute path validation works correctly"""
         # This test ensures the path traversal protection at the filesystem level
         agent_name = "task-agent-valid"
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         os.makedirs(workspace_path, exist_ok=True)
         
         # Create legitimate command file
