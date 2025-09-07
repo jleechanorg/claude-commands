@@ -66,20 +66,20 @@ class TestMCPGlobalInstallation(unittest.TestCase):
     def test_mcp_server_installation_dry_run(self):
         """Test MCP server installation process (dry run)."""
         with patch('subprocess.run') as mock_run:
-            # Mock uvx install command
+            # Mock uvx command matching actual script pattern
             mock_run.return_value = MagicMock(returncode=0)
 
-            # Test uvx installation
-            cmd = ['uvx', 'install', '--editable', '.']
+            # Test uvx --from command pattern used in actual script
+            cmd = ['uvx', '--from', 'file://./mcp_servers/slash_commands', 'claude-slash-commands-mcp']
             result = subprocess.run(cmd,
                                   shell=False,
-                                  timeout=300,
+                                  timeout=120,
                                   capture_output=True)
 
             self.assertEqual(result.returncode, 0)
             mock_run.assert_called_once_with(cmd,
                                            shell=False,
-                                           timeout=300,
+                                           timeout=120,
                                            capture_output=True)
 
     def test_pyproject_toml_validity(self):
