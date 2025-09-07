@@ -11,6 +11,8 @@ For full documentation and usage, see: [debug-protocol.md](debug-protocol.md)
 
 Apply comprehensive forensic debugging methodology for complex issues requiring systematic evidence gathering, hypothesis validation, and documented root cause analysis.
 
+🚨 **TOTAL FAILURE PROTOCOL**: Enforces [Total Failure Protocol](total_failure.md) - 100% issue resolution or TOTAL FAILURE.
+
 **Use `/debugp` (or `/debug-protocol`) for:**
 - Complex production issues requiring forensic analysis
 - Critical bugs where thoroughness is essential

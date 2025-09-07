@@ -1,7 +1,11 @@
-# Red-Green Refactor Command (Alias)
+---
+alias: /rg
+for: /redgreen
+title: Red–Code–Green Debug Command (Alias)
+---
+# Red–Code–Green Debug Command (Alias)
 
-**Alias for**: `/tdd`
+**Alias for**: `/redgreen`
+**Usage**: `/rg` or `/redgreen`
 
-**Usage**: `/rg` or `/tdd`
-
-See [tdd.md](./tdd.md) for full documentation.
+See [redgreen.md](./redgreen.md) for full documentation.

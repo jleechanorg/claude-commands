@@ -32,11 +32,11 @@ if [[ $hook_status -ne 0 ]]; then
     echo "Warning: Hook returned non-zero status: $hook_status"
 fi
 
-if [[ "$actual_output" == "/think about these comments"* ]]; then
-    echo -e "${GREEN}✓${NC} Test 1: Simple PR text handled correctly"
+if [[ "$actual_output" == "🔍 Detected slash commands:/think"* ]]; then
+    echo -e "${GREEN}✓${NC} Test 1: Simple PR text handled correctly with composition"
 else
     echo -e "${RED}✗${NC} Test 1: Simple PR text failed"
-    echo "Expected: /think about these comments..."
+    echo "Expected: 🔍 Detected slash commands:/think..."
     echo "Actual: $actual_output"
     exit 1
 fi
