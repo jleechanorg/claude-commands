@@ -23,7 +23,7 @@ workspace_path = os.path.join(os.getcwd(), f"agent_workspace_{agent['name']}")
 # WRONG: Only updating creation logic but not discovery
 def create_workspace():
     path = os.path.join("orchestration", "agent_workspaces", name)
-    
+
 def find_workspaces():
     # Still looking in old location
     workspaces = glob.glob("agent_workspace_*")  # INCONSISTENT!
@@ -76,15 +76,15 @@ def monitor_workspace(agent_name):
 def test_regression_workspace_directory_placement(self):
     """Test that workspace directories are created in orchestration/agent_workspaces/ not project root"""
     mock_agents = [{"name": "test-agent-regression"}]
-    
+
     for agent in mock_agents:
         orchestration_dir = os.path.join(os.getcwd(), "orchestration", "agent_workspaces")
         workspace_path = os.path.join(orchestration_dir, f"agent_workspace_{agent['name']}")
-        
+
         # Verify path is NOT in project root
         project_root_workspace = os.path.join(os.getcwd(), f"agent_workspace_{agent['name']}")
         self.assertNotEqual(workspace_path, project_root_workspace)
-        
+
         # Verify path IS in orchestration directory
         self.assertTrue("orchestration/agent_workspaces" in workspace_path)
 ```
@@ -121,7 +121,7 @@ def test_regression_workspace_directory_placement(self):
 
 Before merging similar changes:
 - [ ] All workspace path references updated consistently
-- [ ] Regression test added to prevent architectural violations  
+- [ ] Regression test added to prevent architectural violations
 - [ ] Directory creation is idempotent and safe
 - [ ] Agent name validation prevents path traversal
 - [ ] Project root remains clean of runtime artifacts
@@ -132,6 +132,6 @@ This PR addresses workspace pollution where orchestration agents were creating d
 
 **Key Files**:
 - `orchestration/orchestrate_unified.py:285-287` - Main workspace path construction
-- `orchestration/task_dispatcher.py:211-216` - Workspace discovery patterns  
+- `orchestration/task_dispatcher.py:211-216` - Workspace discovery patterns
 - `orchestration/agent_monitor.py:46,161,238,429` - Workspace monitoring references
 - `orchestration/test_unified_naming.py:109-135` - Regression test protection
