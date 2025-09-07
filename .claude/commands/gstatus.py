@@ -66,12 +66,18 @@ def get_repo_info():
                 url_part = url_part[:-4]
             
             # Validate path components to prevent path traversal
-            parts = [p for p in url_part.split("/") if p and not p.startswith(".") and "/" not in p]
+            parts = [p for p in url_part.split("/") if p and "/" not in p]
             if len(parts) >= 2:
                 owner, repo = parts[0], parts[1]
-                # Validate owner/repo format (alphanumeric, dash, underscore, dot)
-                if (owner.replace("-", "").replace("_", "").replace(".", "").isalnum() and
-                    repo.replace("-", "").replace("_", "").replace(".", "").isalnum()):
+                # Validate owner/repo format with proper GitHub username/repo rules
+                # GitHub allows: alphanumeric, dash, underscore, dot (including repos starting with dots)
+                # But prevent injection by direct character validation
+                import re
+                github_name_pattern = re.compile(r'^[a-zA-Z0-9._-]+$')
+                if (len(owner) <= 39 and len(repo) <= 100 and  # GitHub limits
+                    github_name_pattern.match(owner) and 
+                    github_name_pattern.match(repo) and
+                    owner not in ['..', '.'] and repo not in ['..', '.']):  # Prevent path traversal
                     return owner, repo
         except Exception:
             pass
@@ -110,16 +116,24 @@ def get_git_status():
         'conflicts': []
     }
     
-    # Get ahead/behind status
+    # Get ahead/behind status - handle both spaces and tabs between counts
     if status['upstream']:
         ahead_behind = run_command(["git", "rev-list", "--left-right", "--count", f"{status['upstream']}...HEAD"])
         if ahead_behind:
+            # Split on any whitespace (spaces, tabs) - some Git versions use different separators
             parts = ahead_behind.strip().split()
             if len(parts) == 2 and parts[0].isdigit() and parts[1].isdigit():
                 behind, ahead = parts[0], parts[1]
                 status['ahead_behind'] = {'ahead': int(ahead), 'behind': int(behind)}
             else:
-                status['ahead_behind'] = {'ahead': 0, 'behind': 0}
+                # Fallback: try parsing with regex for more robust parsing
+                import re
+                match = re.match(r'(\d+)\s+(\d+)', ahead_behind.strip())
+                if match:
+                    behind, ahead = match.groups()
+                    status['ahead_behind'] = {'ahead': int(ahead), 'behind': int(behind)}
+                else:
+                    status['ahead_behind'] = {'ahead': 0, 'behind': 0}
     
     # Get file status
     git_status_output = run_command(["git", "status", "--porcelain"])

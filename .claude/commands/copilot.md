@@ -113,26 +113,27 @@ if [[ ! "$REPO" =~ ^[a-zA-Z0-9._/-]+$ ]] || [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; th
     exit 1
 fi
 
-# Aggregate all pages, then compute counts
+# Aggregate all pages, then compute counts with correct coverage math
 REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'add // []' 2>/dev/null)"
 REV_ORIGINAL="$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<"$REV_JSON")"
-REV_REPLIES="$(jq -r  '[.[] | select(.in_reply_to_id != null)] | length' <<<"$REV_JSON")"
+# Count unique original comments that have replies (not raw reply count)
+UNIQUE_REPLIED_ORIGINALS="$(jq -r '[.[] | select(.in_reply_to_id != null) | .in_reply_to_id] | unique | length' <<<"$REV_JSON")"
 ISSUE_COMMENTS="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'map(length) | add // 0' 2>/dev/null)" || ISSUE_COMMENTS=0
 
 # Threadable coverage (review comments); issue comments tracked separately
 ORIGINAL_COMMENTS="${REV_ORIGINAL:-0}"
-THREADED_REPLIES="${REV_REPLIES:-0}"
+REPLIED_ORIGINALS="${UNIQUE_REPLIED_ORIGINALS:-0}"
 
 # Validate numeric values to prevent arithmetic errors
 if [[ ! "$ORIGINAL_COMMENTS" =~ ^[0-9]+$ ]]; then ORIGINAL_COMMENTS=0; fi
-if [[ ! "$THREADED_REPLIES" =~ ^[0-9]+$ ]]; then THREADED_REPLIES=0; fi
+if [[ ! "$REPLIED_ORIGINALS" =~ ^[0-9]+$ ]]; then REPLIED_ORIGINALS=0; fi
 
 if [ "${ORIGINAL_COMMENTS:-0}" -gt 0 ]; then
-  COVERAGE_PERCENT=$(( THREADED_REPLIES * 100 / ORIGINAL_COMMENTS ))
+  COVERAGE_PERCENT=$(( REPLIED_ORIGINALS * 100 / ORIGINAL_COMMENTS ))
   if [ "$COVERAGE_PERCENT" -lt 100 ]; then
-    missing=$(( ORIGINAL_COMMENTS - THREADED_REPLIES ))
+    missing=$(( ORIGINAL_COMMENTS - REPLIED_ORIGINALS ))
     [ "$missing" -lt 0 ] && missing=0
-    echo "🚨 WARNING: INCOMPLETE REVIEW-COMMENT COVERAGE: ${COVERAGE_PERCENT}% (missing: ${missing})"
+    echo "🚨 WARNING: INCOMPLETE REVIEW-COMMENT COVERAGE: ${COVERAGE_PERCENT}% (${REPLIED_ORIGINALS}/${ORIGINAL_COMMENTS} originals replied, missing: ${missing})"
   fi
 fi
 echo "ℹ️ Issue comments (not threadable): ${ISSUE_COMMENTS:-0} tracked separately."
