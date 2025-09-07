@@ -1,9 +1,7 @@
 #!/bin/bash
-"""
-Integration Test Script for Command Output Trimmer Hook
-
-Tests the hook with realistic command outputs and measures compression effectiveness.
-"""
+# Integration Test Script for Command Output Trimmer Hook
+#
+# Tests the hook with realistic command outputs and measures compression effectiveness.
 
 set -e
 

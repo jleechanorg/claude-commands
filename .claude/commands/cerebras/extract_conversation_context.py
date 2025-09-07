@@ -14,7 +14,7 @@ import sys
 import re
 
 # Module-level constant to avoid duplication
-DEFAULT_MAX_TOKENS = 20000
+DEFAULT_MAX_TOKENS = 260000
 
 _SECRET_PATTERNS = [
     re.compile(r'\bsk-[A-Za-z0-9]{20,}\b'),           # common API key prefix
