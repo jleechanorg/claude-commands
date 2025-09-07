@@ -32,10 +32,12 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
                                   - Filter out enterprise paranoia (JSON schema validation for trusted APIs)
-   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis
+   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis + gemini-consultant + codex-consultant
                                   - System design and scalability analysis
                                   - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
+                                  - External AI perspectives (Gemini CLI consultation)
+                                  - Deep code analysis insights (Codex CLI consultation)
    Track C (AI Research):         Perplexity MCP comprehensive review [target] (gpt-5 model)
                                   - OWASP security standards and latest vulnerability research
                                   - Industry best practices and proven approaches
@@ -85,12 +87,14 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Solo Developer Context**: Filters enterprise paranoia, focuses on exploitable vulnerabilities
 - **Speed Advantage**: Technical analysis track achieves 4.4x improvement (33s vs 146s for technical review component)
 
-### 4. **Technical Deep Track (Parallel)** - `/arch` + Independent Code-Review Subagent
+### 4. **Technical Deep Track (Parallel)** - `/arch` + Independent Code-Review Subagent + External AI Consultation
 - **Architectural Assessment**: System design patterns and long-term maintainability
 - **Scalability Analysis**: Performance implications and optimization opportunities
 - **Integration Analysis**: Cross-system dependencies and technical compatibility
 - **Code Quality Assessment**: Technical debt, maintainability, and refactoring opportunities
 - **Independent Analysis**: Uses code-review subagent for objective, unbiased assessment
+- **External AI Perspectives**: gemini-consultant agent for alternative technical opinions and architecture guidance
+- **Deep Code Analysis**: codex-consultant agent for complex code understanding and pattern analysis
 
 ### 5. **Context7 + GitHub + Gemini MCP Integration** - Expert Knowledge Analysis (ALWAYS REQUIRED)
 - **Context7 MCP**: Real-time API documentation and framework-specific expertise
@@ -125,10 +129,12 @@ PARALLEL EXECUTION (Speed Optimized):
     │   ├─ Security vulnerability scanning
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
-    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent
+    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + codex-consultant
     │   ├─ System design and scalability assessment
     │   ├─ Integration patterns and dependencies
-    │   └─ Code quality and maintainability analysis
+    │   ├─ Code quality and maintainability analysis
+    │   ├─ External AI perspectives (Gemini CLI consultation)
+    │   └─ Deep code analysis insights (Codex CLI consultation)
     └─ Track C (AI Research): Perplexity MCP review (gpt-5)
         ├─ OWASP security standards and vulnerability research
         ├─ Industry best practices and optimization insights
