@@ -58,6 +58,7 @@ import constants
 
 # Firebase imports
 import firebase_admin
+import firebase_utils
 import logging_util
 from custom_types import CampaignId, UserId
 from firebase_admin import auth
@@ -78,6 +79,8 @@ from flask_cors import CORS
 
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
+
+import firestore_service
 
 # Import JSON serializer for Firestore compatibility
 from firestore_service import json_default_serializer
@@ -245,9 +248,7 @@ def create_app() -> Flask:
         app.config["TESTING"] = True
 
     # Initialize Firebase only if not using mock or in testing mode
-    from firebase_utils import should_skip_firebase_init
-
-    if not firebase_admin._apps and not should_skip_firebase_init():
+    if not firebase_admin._apps and not firebase_utils.should_skip_firebase_init():
         firebase_admin.initialize_app()
 
     def check_token(f):
@@ -383,8 +384,6 @@ def create_app() -> Flask:
 
             # In testing mode, call legacy logic directly to work with mocked Firestore
             if app.config.get("TESTING"):
-                import firestore_service
-
                 campaign_data, story = firestore_service.get_campaign_by_id(
                     user_id, campaign_id
                 )
@@ -403,8 +402,6 @@ def create_app() -> Flask:
                     game_state.debug_mode = debug_mode
 
                 # Process story entries based on debug mode
-                import world_logic
-
                 if debug_mode:
                     processed_story = story
                 else:
@@ -544,8 +541,6 @@ def create_app() -> Flask:
 
             # In testing mode, call legacy logic directly to work with mocked services
             if app.config.get("TESTING"):
-                import world_logic
-
                 result = await world_logic.update_campaign_unified(request_data)
             else:
                 result = await get_mcp_client().call_tool(
@@ -822,8 +817,6 @@ def create_app() -> Flask:
 
                 # In testing mode, call legacy logic directly to work with mocked Firestore
                 if app.config.get("TESTING"):
-                    import firestore_service
-
                     settings = firestore_service.get_user_settings(user_id)
                     # Handle case where settings is None (user doesn't exist yet)
                     if settings is None:
@@ -875,8 +868,6 @@ def create_app() -> Flask:
 
                 # In testing mode, call legacy logic directly to work with mocked Firestore
                 if app.config.get("TESTING"):
-                    import firestore_service
-
                     firestore_service.update_user_settings(user_id, filtered_data)
                     result = {"success": True}
                 else:
