@@ -24,9 +24,9 @@ class TestSettingsAPI(unittest.TestCase):
         self.client = self.app.test_client()
         self.test_user_id = "test-user-123"
         
-        # Use stable test UID and stub Firebase verification
+        # Use stable test UID and stub Firebase verification - patch fully-qualified target
         self._auth_patcher = patch(
-            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token", return_value={"uid": self.test_user_id}
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
