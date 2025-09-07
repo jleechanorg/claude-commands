@@ -55,7 +55,10 @@ validate_path() {
         return 1
     fi
 
-    # Check for null bytes (simplified check to avoid false positives)
+    # Check for null bytes.
+    # Previous approach used a regex to detect null bytes, but this could
+    # incorrectly flag valid paths containing certain escape sequences or binary data,
+    # resulting in false positives. This direct check is more reliable and maintainable.
     if [[ "$path" == *$'\0'* ]]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
@@ -116,7 +119,7 @@ init_destination() {
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Use CloudStorage Dropbox path
         DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
-    elif [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+    elif [[ "$OSTYPE" == "linux"* ]]; then
         # Linux/Ubuntu: Try common Dropbox locations, fallback to Documents
         if [ -d "$HOME/Dropbox" ]; then
             DEFAULT_BACKUP_DIR="$HOME/Dropbox/claude_backup_$DEVICE_NAME"
