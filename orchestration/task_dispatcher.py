@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import time
+from pathlib import Path
 from typing import Any
 
 # Import A2A components
@@ -231,7 +232,7 @@ class TaskDispatcher:
     def _generate_unique_name(self, base_name: str, task_description: str = "", role_suffix: str = "") -> str:
         """Generate meaningful agent name based on task content with collision detection."""
         import re
-        
+
         # Extract meaningful components from task description
         task_suffix = ""
         if task_description:
@@ -241,7 +242,7 @@ class TaskDispatcher:
                 task_suffix = f"pr{pr_match.group(1)}"
             else:
                 # Extract key action words for general tasks
-                action_words = re.findall(r'\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b', 
+                action_words = re.findall(r'\b(?:implement|create|build|fix|test|deploy|analyze|review|update|add|remove|refactor|optimize)\b',
                                         task_description.lower())
                 if action_words:
                     # Use first action word + key object words
@@ -249,7 +250,7 @@ class TaskDispatcher:
                     # Extract key nouns/objects after cleaning
                     clean_desc = re.sub(r'[^a-zA-Z0-9\s]', '', task_description.lower())
                     words = [word for word in clean_desc.split() if word not in ['the', 'and', 'or', 'for', 'with', 'in', 'on', 'at', 'to', 'from', 'by', 'of', 'a', 'an']]
-                    
+
                     # Skip action word and take next meaningful words
                     content_words = [w for w in words if w != action][:2]
                     if content_words:
@@ -265,18 +266,18 @@ class TaskDispatcher:
                         task_suffix = '-'.join(word[:6] for word in words)
                     else:
                         task_suffix = "task"
-        
+
         # Limit task_suffix length for readability
         if len(task_suffix) > 20:
             task_suffix = task_suffix[:20]
-        
+
         # Use microsecond precision for uniqueness only as fallback
         timestamp = int(time.time() * 1000000) % 10000  # 4 digits for brevity
-        
+
         # Get existing agents
         existing = self._check_existing_agents()
         existing.update(self.active_agents)
-        
+
         # Build candidate name
         if task_suffix:
             if role_suffix:
@@ -289,7 +290,7 @@ class TaskDispatcher:
                 candidate = f"{base_name}-{role_suffix}-{timestamp}"
             else:
                 candidate = f"{base_name}-{timestamp}"
-        
+
         # If collision, add timestamp suffix
         original_candidate = candidate
         counter = 1
@@ -302,37 +303,37 @@ class TaskDispatcher:
             else:
                 candidate = f"{original_candidate}-{counter}"
                 counter += 1
-        
+
         self.active_agents.add(candidate)
         return candidate
 
     def _extract_workspace_config(self, task_description: str):
         """Extract workspace configuration from task description if present.
-        
+
         Looks for patterns like:
         - --workspace-name tmux-pr123
         - --workspace-root /path/to/.worktrees
         """
         import re
-        
+
         workspace_config = {}
-        
+
         # Extract workspace name
         workspace_name_match = re.search(r'--workspace-name\s+([^\s]+)', task_description)
         if workspace_name_match:
             workspace_config["workspace_name"] = workspace_name_match.group(1)
-        
+
         # Extract workspace root
         workspace_root_match = re.search(r'--workspace-root\s+([^\s]+)', task_description)
         if workspace_root_match:
             workspace_config["workspace_root"] = workspace_root_match.group(1)
-        
+
         # Extract PR number from workspace name if it follows tmux-pr pattern
         if "workspace_name" in workspace_config:
             pr_match = re.search(r'tmux-pr(\d+)', workspace_config["workspace_name"])
             if pr_match:
                 workspace_config["pr_number"] = pr_match.group(1)
-        
+
         return workspace_config if workspace_config else None
 
     def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
@@ -639,17 +640,154 @@ Complete the task, then use /pr to create a new pull request."""
             "capabilities": capabilities,
             "prompt": prompt,
         }
-        
+
         # Add PR context if updating existing PR
         if mode == "update":
             agent_spec["pr_context"] = {"mode": mode, "pr_number": pr_number}
-        
+
         # Add workspace configuration if specified
         if workspace_config:
             agent_spec["workspace_config"] = workspace_config
             print(f"🏗️ Custom workspace config: {workspace_config}")
-        
+
         return [agent_spec]
+
+    def _extract_repository_name(self):
+        """Extract repository name from git remote origin URL or fallback to directory name."""
+        try:
+            # Get the remote origin URL
+            result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30,
+                shell=False
+            )
+            remote_url = result.stdout.strip()
+
+            # Parse SSH format: git@github.com:user/repo.git → repo
+            ssh_pattern = r"git@[^:]+:([^/]+)/([^/]+)\.git"
+            ssh_match = re.match(ssh_pattern, remote_url)
+            if ssh_match:
+                return ssh_match.group(2)
+
+            # Parse HTTPS format: https://github.com/user/repo.git → repo
+            https_pattern = r"https://[^/]+/([^/]+)/([^/]+)\.git"
+            https_match = re.match(https_pattern, remote_url)
+            if https_match:
+                return https_match.group(2)
+
+            # If we can't parse the URL, fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+        except subprocess.CalledProcessError:
+            # If there's no remote origin, fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+        except subprocess.TimeoutExpired:
+            print("Timeout while extracting repository name")
+            raise Exception("not a git repository")
+        except Exception as e:
+            print(f"Error extracting repository name: {e}")
+            # Fallback to current directory name
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
+
+    def _expand_path(self, path):
+        """Expand ~ and resolve paths."""
+        try:
+            expanded_path = os.path.expanduser(path)
+            resolved_path = os.path.realpath(expanded_path)
+            return resolved_path
+        except Exception as e:
+            print(f"Error expanding path {path}: {e}")
+            raise
+
+    def _get_worktree_base_path(self):
+        """Calculate ~/projects/orch_{repo_name}/ base path."""
+        try:
+            repo_name = self._extract_repository_name()
+            base_path = os.path.join("~", "projects", f"orch_{repo_name}")
+            return self._expand_path(base_path)
+        except Exception as e:
+            print(f"Error getting worktree base path: {e}")
+            raise
+
+    def _ensure_directory_exists(self, path):
+        """Create directories with proper error handling."""
+        try:
+            expanded_path = self._expand_path(path)
+            Path(expanded_path).mkdir(parents=True, exist_ok=True)
+            return expanded_path
+        except PermissionError as e:
+            print(f"Permission denied creating directory {path}: {e}")
+            raise
+        except Exception as e:
+            print(f"Error creating directory {path}: {e}")
+            raise
+
+    def _calculate_agent_directory(self, agent_spec):
+        """Calculate final agent directory path based on configuration."""
+        try:
+            # Get workspace configuration if it exists
+            workspace_config = agent_spec.get('workspace_config', {})
+
+            # Check if custom workspace_root is specified
+            if 'workspace_root' in workspace_config:
+                workspace_root = workspace_config['workspace_root']
+                # If workspace_name is also specified, use it
+                if 'workspace_name' in workspace_config:
+                    agent_dir = os.path.join(workspace_root, workspace_config['workspace_name'])
+                else:
+                    agent_name = agent_spec.get('name', 'agent')
+                    agent_dir = os.path.join(workspace_root, agent_name)
+                return self._expand_path(agent_dir)
+
+            # Check if custom workspace_name is specified
+            if 'workspace_name' in workspace_config:
+                base_path = self._get_worktree_base_path()
+                self._ensure_directory_exists(base_path)
+                agent_dir = os.path.join(base_path, workspace_config['workspace_name'])
+                return self._expand_path(agent_dir)
+
+            # Default case: ~/projects/orch_{repo_name}/{agent_name}
+            base_path = self._get_worktree_base_path()
+            self._ensure_directory_exists(base_path)
+            agent_name = agent_spec.get('name', 'agent')
+            agent_dir = os.path.join(base_path, agent_name)
+            return self._expand_path(agent_dir)
+
+        except Exception as e:
+            print(f"Error calculating agent directory: {e}")
+            raise
+
+    def _create_worktree_at_location(self, agent_spec, branch_name):
+        """Create git worktree at the calculated location."""
+        try:
+            agent_dir = self._calculate_agent_directory(agent_spec)
+
+            # Ensure parent directory exists
+            parent_dir = os.path.dirname(agent_dir)
+            self._ensure_directory_exists(parent_dir)
+
+            # Create the worktree
+            result = subprocess.run(
+                ["git", "worktree", "add", "-b", branch_name, agent_dir, "main"],
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=30,
+                shell=False
+            )
+
+            return agent_dir, result
+        except subprocess.TimeoutExpired:
+            print("Timeout while creating worktree")
+            raise
+        except Exception as e:
+            print(f"Error creating worktree at location: {e}")
+            raise
 
     def create_dynamic_agent(self, agent_spec: dict) -> bool:
         """Create agent with enhanced Redis coordination and worktree management."""
@@ -659,7 +797,7 @@ Complete the task, then use /pr to create a new pull request."""
         agent_type = agent_spec.get("type", "general")
         capabilities = agent_spec.get("capabilities", [])
         workspace_config = agent_spec.get("workspace_config", {})
-        
+
         # Handle workspace name alignment - if workspace config specifies a name, use it
         if workspace_config and workspace_config.get("workspace_name"):
             agent_name = workspace_config["workspace_name"]
@@ -694,40 +832,29 @@ Complete the task, then use /pr to create a new pull request."""
             if not claude_path:
                 return False
 
-            # Create worktree for agent with configurable naming and location
-            current_dir = os.getcwd()
-            
-            # Support custom workspace naming via agent_spec
-            workspace_config = agent_spec.get("workspace_config", {})
-            custom_workspace_name = workspace_config.get("workspace_name")
-            custom_workspace_root = workspace_config.get("workspace_root")
-            
-            if custom_workspace_name:
-                # Use custom naming format (e.g., tmux-pr1234)
-                workspace_name = custom_workspace_name
-                if custom_workspace_root:
-                    # Use external worktree directory (e.g., .worktrees/)
-                    os.makedirs(custom_workspace_root, exist_ok=True)
-                    agent_dir = os.path.join(custom_workspace_root, workspace_name)
-                else:
-                    # Use custom name in current directory
-                    agent_dir = os.path.join(current_dir, workspace_name)
-                
-                # Update agent name to match workspace for consistency
-                agent_name = workspace_name
-            else:
-                # Default orchestration pattern - agent name matches workspace
-                agent_dir = os.path.join(current_dir, agent_name)
-            
-            branch_name = f"{agent_name}-work"
+            # Create worktree for agent using new location logic
+            try:
+                branch_name = f"{agent_name}-work"
+                agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
 
-            # Always create fresh branch from main (equivalent to /nb)
-            # This prevents inheriting unrelated changes from current branch
-            subprocess.run(
-                ["git", "worktree", "add", "-b", branch_name, agent_dir, "main"],
-                check=False,
-                capture_output=True,
-            )
+                # Update agent_name if workspace_name was specified for consistency
+                workspace_config = agent_spec.get("workspace_config", {})
+                if workspace_config.get("workspace_name"):
+                    agent_name = workspace_config["workspace_name"]
+
+                print(f"🏗️ Created worktree at: {agent_dir}")
+
+                if git_result.returncode != 0:
+                    print(f"⚠️ Git worktree creation warning: {git_result.stderr}")
+                    if "already exists" in git_result.stderr:
+                        print(f"📁 Using existing worktree at {agent_dir}")
+                    else:
+                        print(f"❌ Git worktree failed: {git_result.stderr}")
+                        return False
+
+            except Exception as e:
+                print(f"❌ Failed to create worktree: {e}")
+                return False
 
             # Create result collection file
             result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
