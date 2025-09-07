@@ -163,11 +163,12 @@ timeout 300s codex exec --sandbox read-only "..."
 handle_external_consultation() {
     local tool_name="$1"
     local timeout_duration="${2:-300s}"
-    local command="$3"
+    shift 2
+    local -a cmd=( "$@" )
     
     echo "🤖 Starting ${tool_name} CLI consultation..."
     
-    if timeout "$timeout_duration" $command; then
+    if timeout "$timeout_duration" "${cmd[@]}"; then
         echo "✅ ${tool_name} consultation completed successfully"
         return 0
     else
@@ -193,7 +194,7 @@ handle_external_consultation() {
 
 # Usage in agents:
 source .claude/lib/external-consultation.sh
-handle_external_consultation "gemini" "300s" "gemini -p \"$prompt\""
+handle_external_consultation "gemini" "300s" gemini -p "$prompt"
 ```
 
 **Benefits:**
@@ -228,7 +229,7 @@ attempt_consultation() {
     local attempt=1
     
     while [ $attempt -le $max_attempts ]; do
-        if handle_external_consultation "gemini" "300s" "gemini -p \"$prompt\""; then
+        if handle_external_consultation "gemini" "300s" gemini -p "$prompt"; then
             return 0
         fi
         

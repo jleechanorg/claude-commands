@@ -11,7 +11,7 @@
 ## 🎯 PR-Specific Principles
 
 ### **External AI Integration Security-First**
-- All external CLI commands must follow subprocess security patterns: shell=False, timeout=30
+- All external CLI commands must follow subprocess security patterns: shell=False, timeout=300s (configurable)
 - Solo developer focus: Filter enterprise paranoia but maintain real security protections
 - Context-aware security: Distinguish trusted sources (GitHub API) from untrusted user input
 
