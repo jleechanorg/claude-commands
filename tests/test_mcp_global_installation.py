@@ -24,12 +24,12 @@ class TestMCPGlobalInstallation(unittest.TestCase):
         # Test uvx available
         with patch('subprocess.run') as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
-            result = subprocess.run(['which', 'uvx'],
+            result = subprocess.run(['command', '-v', 'uvx'],
                                   shell=False,
                                   timeout=30,
                                   capture_output=True)
             self.assertEqual(result.returncode, 0)
-            mock_run.assert_called_once_with(['which', 'uvx'],
+            mock_run.assert_called_once_with(['command', '-v', 'uvx'],
                                            shell=False,
                                            timeout=30,
                                            capture_output=True)
@@ -37,7 +37,7 @@ class TestMCPGlobalInstallation(unittest.TestCase):
         # Test uvx not available
         with patch('subprocess.run') as mock_run:
             mock_run.return_value = MagicMock(returncode=1)
-            result = subprocess.run(['which', 'uvx'],
+            result = subprocess.run(['command', '-v', 'uvx'],
                                   shell=False,
                                   timeout=30,
                                   capture_output=True)
@@ -137,9 +137,9 @@ class TestMCPGlobalInstallation(unittest.TestCase):
             with open('claude_mcp.sh', 'r') as f:
                 content = f.read()
 
-            # Should have set -e for error handling
-            self.assertIn('set -e', content,
-                         "Script should use 'set -e' for proper error handling")
+            # Should use safe_exit function instead of set -e (which conflicts with graceful error handling)
+            self.assertIn('safe_exit', content,
+                         "Script should use safe_exit function for graceful error handling")
 
             # Should not exit terminal session on errors (check for unsafe direct exit calls)
             unsafe_exit_pattern = re.compile(r'^\s*exit\s+1\s*$', re.MULTILINE)

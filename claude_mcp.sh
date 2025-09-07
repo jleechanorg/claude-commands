@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Requires bash 4+ for associative arrays
 
-# Proper error handling
-set -e
+# Proper error handling - using safe_exit function instead of global set -e
+# Note: set -e conflicts with safe_exit and graceful error handling patterns
 
 # Check for test mode
 TEST_MODE=false
