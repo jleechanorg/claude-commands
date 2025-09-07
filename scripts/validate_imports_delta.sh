@@ -15,7 +15,7 @@ echo "Current branch: $(git branch --show-current)"
 echo "Current commit: $(git rev-parse HEAD)"
 
 # Ensure base branch is fetched with full history (needed for merge-base)
-git fetch --no-tags --prune --unshallow origin +refs/heads/main:refs/remotes/origin/main
+git fetch --no-tags --prune origin +refs/heads/main:refs/remotes/origin/main 2>/dev/null || true
 echo "Available refs: $(git branch -a | grep main)"
 
 # Use merge-base diff for all scenarios (more reliable)
