@@ -16,8 +16,10 @@ import json
 import subprocess
 import sys
 import os
+import re
 import shlex
 from datetime import datetime
+from urllib.parse import urlparse
 
 def run_command(cmd, capture_output=True, shell=False):
     """Run shell command and return result - SECURE: shell=False by default"""
@@ -55,7 +57,6 @@ def get_repo_info():
                 url_part = remote_url.split(":", 1)[1]
             else:
                 # https/ssh:// forms
-                from urllib.parse import urlparse
                 parsed = urlparse(remote_url)
                 if parsed.hostname == "github.com":
                     url_part = parsed.path.lstrip("/")
@@ -72,7 +73,6 @@ def get_repo_info():
                 # Validate owner/repo format with proper GitHub username/repo rules
                 # GitHub allows: alphanumeric, dash, underscore, dot (including repos starting with dots)
                 # But prevent injection by direct character validation
-                import re
                 github_name_pattern = re.compile(r'^[a-zA-Z0-9._-]+$')
                 if (len(owner) <= 39 and len(repo) <= 100 and  # GitHub limits
                     github_name_pattern.match(owner) and 
@@ -127,7 +127,6 @@ def get_git_status():
                 status['ahead_behind'] = {'ahead': int(ahead), 'behind': int(behind)}
             else:
                 # Fallback: try parsing with regex for more robust parsing
-                import re
                 match = re.match(r'(\d+)\s+(\d+)', ahead_behind.strip())
                 if match:
                     behind, ahead = match.groups()
