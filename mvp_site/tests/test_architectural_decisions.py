@@ -124,8 +124,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
         assert info["pydantic_available"] == "true"
 
         # Verify no environment variable dependency
-        import os
-
         old_env = os.environ.get("USE_PYDANTIC")
         try:
             # Set environment variable to false - should not affect anything

@@ -10,6 +10,7 @@ The issue appears to be in how we extract or process the narrative field
 from the AI response during character creation.
 """
 
+import json
 import os
 import sys
 import unittest
@@ -160,8 +161,6 @@ His coming of age was marked by the Ceremony of the Silver Blade, where he swore
         extracted = extract_field_value(raw_json, "narrative")
 
         # 2. Check if the issue is in the original JSON
-        import json
-
         try:
             parsed = json.loads(raw_json)
             json_narrative = parsed.get("narrative", "")

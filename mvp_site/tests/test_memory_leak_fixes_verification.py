@@ -9,7 +9,6 @@ import re
 def test_memory_leak_fixes():
     """Test that all memory leak fixes are properly implemented"""
     # Use absolute path from project root
-    import os
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     component_path = os.path.join(project_root, "mvp_site", "frontend_v2", "src", "components", "CampaignCreationV2.tsx")
     
@@ -111,7 +110,6 @@ def test_memory_leak_fixes():
 def test_component_structure():
     """Test basic component structure"""
     # Use absolute path from project root
-    import os
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     component_path = os.path.join(project_root, "mvp_site", "frontend_v2", "src", "components", "CampaignCreationV2.tsx")
     
