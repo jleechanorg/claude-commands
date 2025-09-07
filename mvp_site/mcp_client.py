@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Union
 
+import firestore_service
 import logging_util
 import requests
 from flask import Request, Response
@@ -289,7 +290,6 @@ class MCPClient:
                     # In test mode, also check FakeFirestore for campaigns set up by tests
                     if not campaign_exists and user_id:
                         try:
-                            import firestore_service
                             db = firestore_service.get_db()
                             campaign_ref = db.collection("users").document(user_id).collection("campaigns").document(campaign_id)
                             campaign_doc = campaign_ref.get()
@@ -347,7 +347,6 @@ class MCPClient:
                         raise MCPClientError("Missing required campaign fields", error_code=400)
                     else:
                         # Generate a mock campaign ID for testing and track it
-                        import uuid
                         campaign_id = str(uuid.uuid4())
                         mock_campaigns.add(campaign_id)
                         logger.info(f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}")

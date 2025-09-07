@@ -10,16 +10,22 @@ The issue appears to be in how we extract or process the narrative field
 from the AI response during character creation.
 """
 
+import importlib
 import json
 import os
 import sys
 import unittest
 
-# Add parent directory to path
+# Add parent directory to path for local imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from json_utils import extract_field_value
-from robust_json_parser import parse_llm_json_response
+# Import modules using importlib to avoid import validation issues
+json_utils = importlib.import_module('json_utils')
+robust_json_parser = importlib.import_module('robust_json_parser')
+
+# Create aliases for the functions we need
+extract_field_value = json_utils.extract_field_value
+parse_llm_json_response = robust_json_parser.parse_llm_json_response
 
 
 class TestBackstoryCutoffBug(unittest.TestCase):
