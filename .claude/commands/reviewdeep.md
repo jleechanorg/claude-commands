@@ -146,9 +146,13 @@ EXECUTE: /reviewe [target]
     └─ Posts GitHub PR comments
     ↓
 SYNTHESIS & GUIDELINES:
-    ├─ Combines technical and strategic findings
-    ├─ Generates prioritized recommendations
-    └─ Creates docs/pr-guidelines/{PR_NUMBER}/guidelines.md
+    ├─ Combines technical and strategic findings from all tracks
+    ├─ **MANDATORY Agent Output Integration**:
+    │   ├─ Gemini CLI Consultation Summary (correctness, architecture, security findings)
+    │   ├─ Codex CLI Deep Analysis Summary (bugs, vulnerabilities, performance issues)
+    │   └─ External AI Perspective Synthesis (alternative viewpoints and validation)
+    ├─ Generates prioritized recommendations across all analysis dimensions
+    └─ Creates docs/pr-guidelines/{PR_NUMBER}/guidelines.md with agent insights
     ↓
 MCP INTEGRATION (automatic within each track):
     ├─ Context7 MCP → Up-to-date API documentation
@@ -333,6 +337,53 @@ Create docs/pr-guidelines/{PR_NUMBER}/guidelines.md with documented patterns and
 - **Context-Aware**: Automatically detects trusted sources (GitHub API, npm registry) and adjusts analysis accordingly
 - **Practical Security**: Emphasizes command injection, credential exposure, path traversal over theoretical concerns
 - **Comprehensive**: No blind spots - covers technical precision and deep technical analysis simultaneously
+
+## 🔄 **MANDATORY Agent Output Synthesis Protocol**
+
+When `/reviewdeep` completes parallel execution, the final synthesis MUST include:
+
+### **External AI Consultation Integration**
+
+**1. Gemini CLI Analysis Summary**
+- **Architecture Findings**: SOLID principles adherence, design pattern usage, scalability issues
+- **Security Assessment**: OWASP compliance, vulnerability detection, authentication analysis
+- **Performance Evaluation**: Bottleneck identification, algorithmic efficiency, resource usage
+- **Correctness Validation**: Logic accuracy, edge case handling, PR goal fulfillment
+- **Code Quality**: Maintainability, complexity metrics, technical debt assessment
+
+**2. Codex CLI Deep Analysis Summary**
+- **Multi-Stage Bug Detection**: Logic errors, race conditions, memory leaks, boundary issues
+- **Security Vulnerability Analysis**: OWASP Top 10 patterns, input validation gaps, injection vectors
+- **Performance Issues**: Algorithmic complexity problems, resource cleanup, scalability concerns
+- **Architectural Quality**: Design pattern implementation, SOLID violations, coupling issues
+- **Production-Critical Findings**: Issues that could impact system stability
+
+**3. External AI Perspective Synthesis**
+- **Alternative Viewpoints**: Different model perspectives on implementation approaches
+- **Validation Results**: Cross-verification of findings between different AI models
+- **Consensus Analysis**: Areas where both agents agree vs. divergent opinions
+- **Priority Assessment**: Combined ranking of issues by severity and impact
+
+### **Integration Requirements**
+
+**MANDATORY Output Format**:
+```
+## 🤖 External AI Consultation Results
+
+### Gemini CLI Multi-Dimensional Analysis
+[Detailed summary of architecture, security, performance, correctness findings]
+
+### Codex CLI Deep Code Analysis  
+[Detailed summary of bug detection, vulnerability analysis, performance issues]
+
+### Cross-Model Validation
+[Areas of agreement, divergent perspectives, priority recommendations]
+
+### External AI Priority Issues
+[Top 5 issues identified across both consultations with remediation suggestions]
+```
+
+This ensures that the valuable insights from external AI models are captured, synthesized, and presented as part of the comprehensive review output.
 - **Efficient**: Always leverages /cerebras's speed for technical analysis while maintaining independent code-review subagent's objective insights
 - **Flexible**: Individual commands can still be used separately when full analysis isn't needed, enterprise mode available when needed
 - **Maintainable**: Parallel execution improves performance without breaking existing functionality
