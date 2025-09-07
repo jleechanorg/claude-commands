@@ -7,27 +7,28 @@ actually implemented as designed. They prevent the "test name vs reality"
 problem and ensure architectural consistency.
 """
 
+import ast
+import importlib
 import os
 import shutil
 import sys
 import tempfile
 import unittest
 
-try:
-    import pytest
-except ImportError:
-    pytest = None  # Make pytest optional for CI environments
+# Third-party imports
+import pytest  # Required for tests
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_architectural_decisions.py'))))
+# Set up import paths and import modules
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".claude", "commands"))
 
-# Add .claude/commands to path for arch module import
-claude_commands_path = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_architectural_decisions.py')))),
-    ".claude",
-    "commands",
-)
-sys.path.insert(0, claude_commands_path)
+# Import using importlib to avoid import order issues
+entities_pydantic = importlib.import_module('schemas.entities_pydantic')
+NPC = entities_pydantic.NPC
+HealthStatus = entities_pydantic.HealthStatus
+DefensiveNumericConverter = importlib.import_module('schemas.defensive_numeric_converter').DefensiveNumericConverter
+entity_tracking = importlib.import_module('entity_tracking')
+arch = importlib.import_module('arch')
 
 
 class TestArchitecturalDecisions(unittest.TestCase):
@@ -35,9 +36,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_001_pydantic_validation_is_used(self):
         """ADT-001: Entity validation uses Pydantic implementation for robust data validation"""
-        # Import and verify we're using the pydantic module
-        from schemas import entities_pydantic
-
         # Verify we're using Pydantic
         assert "pydantic" in str(
             entities_pydantic.SceneManifest.__module__
@@ -70,8 +68,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_003_entity_tracking_imports_pydantic_module(self):
         """ADT-003: entity_tracking.py imports from Pydantic module"""
-        import entity_tracking
-
         # Check what module is actually imported
         manifest_module = entity_tracking.SceneManifest.__module__
         assert (
@@ -83,8 +79,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_004_pydantic_validation_actually_rejects_bad_data(self):
         """ADT-004: Pydantic validation actually rejects invalid data"""
-        from schemas.entities_pydantic import NPC, HealthStatus
-
         # Test that gender validation works for NPCs (Luke campaign fix)
         with pytest.raises(Exception) as context:
             NPC(
@@ -100,7 +94,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_005_defensive_numeric_conversion_works(self):
         """ADT-005: DefensiveNumericConverter handles 'unknown' values gracefully"""
-        from schemas.defensive_numeric_converter import DefensiveNumericConverter
 
         # Test conversion of 'unknown' values
         result = DefensiveNumericConverter.convert_value("hp", "unknown")
@@ -116,7 +109,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
 
     def test_adt_006_no_environment_variable_switching(self):
         """ADT-006: No environment variable switching - Pydantic is always used"""
-        import entity_tracking
 
         # Verify that validation type is always Pydantic regardless of environment
         info = entity_tracking.get_validation_info()
@@ -132,8 +124,6 @@ class TestArchitecturalDecisions(unittest.TestCase):
             # Force reimport
             if "entity_tracking" in sys.modules:
                 del sys.modules["entity_tracking"]
-
-            import entity_tracking
 
             # Should still be Pydantic
             assert entity_tracking.VALIDATION_TYPE == "Pydantic"
@@ -151,7 +141,6 @@ class TestASTAnalysisEngine(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures with temporary directory and test files"""
         # Import arch module for testing
-        import arch
 
         self.arch = arch
 
@@ -177,7 +166,6 @@ def complex_function(x, y, z):
             if z > 0:
                 for i in range(10):
                     if i % 2 == 0:
-                        try:
                             result = x / y
                         except ZeroDivisionError:
                             result = 0
@@ -286,7 +274,6 @@ def broken_function(:
 
     def test_adt_011_calculate_cyclomatic_complexity_simple(self):
         """ADT-011: Cyclomatic complexity calculation for simple code"""
-        import ast
         
         simple_code = "def hello():\n    return 'world'"
         # Parse AST and calculate actual cyclomatic complexity
@@ -307,7 +294,6 @@ def broken_function(:
 
     def test_adt_012_calculate_cyclomatic_complexity_complex(self):
         """ADT-012: Cyclomatic complexity calculation for complex code"""
-        import ast
         
         complex_code = "def complex_func(x):\n    if x > 0:\n        return 'positive'\n    else:\n        return 'negative'"
         # Parse AST and calculate actual cyclomatic complexity
@@ -328,7 +314,6 @@ def broken_function(:
 
     def test_adt_013_extract_functions_with_complexity(self):
         """ADT-013: Function extraction with complexity analysis"""
-        import ast
         
         code = "def func1():\n    pass\n\ndef func2(x):\n    if x:\n        return True"
         # Parse AST and extract actual functions with complexity
@@ -360,7 +345,6 @@ def broken_function(:
 
     def test_adt_014_extract_import_dependencies(self):
         """ADT-014: Import dependency extraction"""
-        import ast
         
         code = "import os\nfrom sys import path\nimport json"
         # Parse AST and extract actual imports
@@ -386,7 +370,6 @@ def broken_function(:
 
     def test_adt_015_extract_classes_with_methods(self):
         """ADT-015: Class and method extraction"""
-        import ast
         
         code = "class TestClass:\n    def method1(self):\n        pass\n    def method2(self):\n        return True"
         # Parse AST and extract actual classes with methods
@@ -414,7 +397,6 @@ def broken_function(:
 
     def test_adt_016_find_architectural_issues_high_complexity(self):
         """ADT-016: High complexity issue detection"""
-        import ast
         
         # Test code with known complexity issues
         code_with_issues = """
@@ -465,7 +447,6 @@ def simple_func():
 
     def test_adt_017_generate_evidence_based_insights(self):
         """ADT-017: Evidence-based insights generation"""
-        import ast
         
         # Test code with various quality issues
         test_code = """
