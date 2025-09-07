@@ -43,7 +43,7 @@ class ConvergeAgentRestarter:
 
     def is_converge_agent(self, agent_name: str) -> bool:
         """Check if agent is a converge agent based on workspace analysis"""
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
 
         # Check for converge-specific indicators
         indicators = [
@@ -158,7 +158,7 @@ class ConvergeAgentRestarter:
 
         # Check various possible workspace locations
         workspace_paths = [
-            f"agent_workspace_{agent_name}",
+            os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}"),
             os.path.expanduser(f"~/projects/worldarchitect.ai/worktree_human/{agent_name}")
         ]
 
@@ -235,7 +235,7 @@ class ConvergeAgentRestarter:
             return self._get_fallback_command(agent_name)
 
         # Construct safe workspace path
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
         command_file = os.path.join(workspace_path, "original_command.txt")
 
         # Verify path is within expected workspace
@@ -426,7 +426,7 @@ class AgentMonitor:
                 "last_modified": None,
             }
 
-        workspace_path = f"agent_workspace_{agent_name}"
+        workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent_name}")
 
         workspace_info = {
             "workspace_exists": os.path.exists(workspace_path),

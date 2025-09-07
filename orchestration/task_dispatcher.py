@@ -207,9 +207,12 @@ class TaskDispatcher:
 
         # Check worktrees
         try:
-            workspaces = glob.glob("agent_workspace_*")
+            # Look for workspaces in the orchestration directory
+            workspace_pattern = os.path.join("orchestration", "agent_workspaces", "agent_workspace_*")
+            workspaces = glob.glob(workspace_pattern)
             for ws in workspaces:
-                agent_name = ws.replace("agent_workspace_", "")
+                ws_name = os.path.basename(ws)
+                agent_name = ws_name.replace("agent_workspace_", "")
                 existing.add(agent_name)
         except Exception as e:
             # Log specific error for debugging

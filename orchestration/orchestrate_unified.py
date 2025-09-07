@@ -281,9 +281,10 @@ class UnifiedOrchestration:
 
             print("\n📂 Agent working directories:")
             for agent in created_agents:
-                workspace_path = os.path.join(
-                    os.getcwd(), f"agent_workspace_{agent['name']}"
-                )
+                # Create workspaces in dedicated orchestration directory to avoid polluting project root
+                orchestration_dir = os.path.join(os.getcwd(), "orchestration", "agent_workspaces")
+                os.makedirs(orchestration_dir, exist_ok=True)
+                workspace_path = os.path.join(orchestration_dir, f"agent_workspace_{agent['name']}")
                 print(f"   {workspace_path}")
 
             print("\n📋 Monitor agent logs:")
@@ -314,7 +315,7 @@ class UnifiedOrchestration:
                     continue  # Already found PR for this agent
 
                 # Check agent workspace for PR
-                workspace_path = f"agent_workspace_{agent['name']}"
+                workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent['name']}")
                 if os.path.exists(workspace_path):
                     # Try multiple possible branch patterns
                     branch_patterns = [
