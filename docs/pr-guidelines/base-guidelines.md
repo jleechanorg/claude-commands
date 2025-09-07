@@ -1,8 +1,8 @@
 # AI Development Guidelines - Mistake Prevention System
 
-**Version**: 1.0  
-**Created**: August 13, 2025  
-**Purpose**: Prevent recurring mistakes in AI-assisted development through systematic guidelines  
+**Version**: 1.0
+**Created**: August 13, 2025
+**Purpose**: Prevent recurring mistakes in AI-assisted development through systematic guidelines
 
 ## Scope & De-duplication
 - This document is the canonical reference for mistake-prevention protocols. Do not duplicate its systematic protocols elsewhere; instead, link to this document to prevent drift.
@@ -15,7 +15,7 @@
 
 ### 1. **Evidence-Based Development**
 - ALWAYS verify current state before making changes
-- Extract exact error messages and code snippets before analyzing  
+- Extract exact error messages and code snippets before analyzing
 - Show actual output before suggesting fixes
 - Reference specific line numbers in all analysis
 - Never assume file contents from filenames or process names
@@ -45,7 +45,7 @@
 ### 1. **Composition Over Duplication**
 **Belief**: Reuse and orchestrate existing functionality rather than reimplementing
 
-**Practice**: 
+**Practice**:
 - Use existing `/commentreply`, `/pushl`, `/fixpr` commands vs duplicating logic
 - Enhance existing systems before building parallel new ones
 - Trust LLM capabilities for natural language understanding vs building parsers
@@ -72,7 +72,7 @@
 **Trust Hierarchy**:
 1. Configuration files and system state
 2. Logical analysis based on architecture
-3. User direct evidence and observations  
+3. User direct evidence and observations
 4. Agent/tool findings (require validation)
 
 ---
@@ -85,7 +85,7 @@
 - No hardcoded response patterns claiming to be "LLM-native"
 - All code must provide real, functional value
 
-### 2. **Context Optimization** 
+### 2. **Context Optimization**
 - Keep context usage under 60% for sustainable operations
 - Use Serena MCP semantic tools before reading entire files
 - Implement targeted operations with proper filtering
@@ -130,7 +130,7 @@
 - **Pattern recognition**: Universal composition vs embedded implementation
 - **Evidence-based**: Use actual execution results to determine pattern
 
-### **Converge Autonomy Violations** 
+### **Converge Autonomy Violations**
 
 #### ❌ **CRITICAL: Progress Celebration Syndrome**
 ```bash
@@ -248,7 +248,7 @@ try:
 except ImportError:
     HAS_NUMPY = False  # WRONG - Hides dependency issues
 
-# WRONG - Conditional imports in function scope  
+# WRONG - Conditional imports in function scope
 def analyze():
     if USE_ADVANCED:
         import scipy  # WRONG - Import at function level
@@ -339,14 +339,14 @@ def review_code(pr_files):
 # RIGHT - Always post review comments
 def review_code(pr_number):
     analysis = analyze_files(get_pr_files(pr_number))
-    
+
     # Post inline comments
     for issue in analysis.issues:
         github_api.post_review_comment(
-            pr_number, issue.file, issue.line, 
+            pr_number, issue.file, issue.line,
             f"[AI reviewer] {issue.severity} {issue.message}"
         )
-    
+
     # Post summary comment
     github_api.post_pr_comment(pr_number, analysis.summary)
     return analysis
@@ -372,18 +372,18 @@ if result.returncode != 0:
 ```python
 # RIGHT - Safe subprocess calls
 subprocess.run(
-    ["git", "fetch"], 
-    shell=False, 
-    timeout=30, 
+    ["git", "fetch"],
+    shell=False,
+    timeout=30,
     check=True
 )
 
 # RIGHT - Explicit error handling
 try:
     result = subprocess.run(
-        ["git", "status"], 
-        capture_output=True, 
-        text=True, 
+        ["git", "status"],
+        capture_output=True,
+        text=True,
         timeout=10,
         check=True
     )
@@ -401,33 +401,33 @@ except subprocess.CalledProcessError as e:
 ## 📚 Historical Mistake Analysis
 
 ### **PR #1285 - Terminal Exit Issue**
-**Problem**: create_worktree.sh used `exit 1` which terminated user's terminal session  
-**Solution**: Changed to graceful navigation with return codes  
-**Learning**: Scripts must preserve user's terminal session control  
+**Problem**: create_worktree.sh used `exit 1` which terminated user's terminal session
+**Solution**: Changed to graceful navigation with return codes
+**Learning**: Scripts must preserve user's terminal session control
 **Pattern**: Use graceful error handling vs terminal exit
 
-### **PR #1283 - Payload Size Limits**  
-**Problem**: Hardcoded 100KB limit caused failures with complex game states (105KB)  
-**Solution**: Increased to 10MB with proper headroom analysis  
-**Learning**: Size limits should account for real-world data growth  
+### **PR #1283 - Payload Size Limits**
+**Problem**: Hardcoded 100KB limit caused failures with complex game states (105KB)
+**Solution**: Increased to 10MB with proper headroom analysis
+**Learning**: Size limits should account for real-world data growth
 **Pattern**: Set limits with generous headroom based on actual usage
 
 ### **PR #1282 - Documentation Compression**
-**Problem**: CLAUDE.md became too large (64K chars) affecting readability  
-**Solution**: Systematic compression to 40K chars while preserving functionality  
-**Learning**: Documentation size impacts usability and must be managed  
+**Problem**: CLAUDE.md became too large (64K chars) affecting readability
+**Solution**: Systematic compression to 40K chars while preserving functionality
+**Learning**: Documentation size impacts usability and must be managed
 **Pattern**: Compress without losing critical information
 
 ### **PR #1277 - Command Documentation Clarity**
-**Problem**: /reviewdeep documentation unclear about actual execution vs conceptual composition  
-**Solution**: Explicit execution flow documentation with step-by-step protocols  
-**Learning**: Command documentation must clearly state what gets executed  
+**Problem**: /reviewdeep documentation unclear about actual execution vs conceptual composition
+**Solution**: Explicit execution flow documentation with step-by-step protocols
+**Learning**: Command documentation must clearly state what gets executed
 **Pattern**: Document actual behavior, not conceptual models
 
 ### **PR #1275 - Inconsistent Comment Attribution**
-**Problem**: Review commands used different comment author tags ([Code Reviewer] vs [AI reviewer])  
-**Solution**: Standardized all commands to use [AI reviewer] tag  
-**Learning**: Consistent attribution across related commands improves user experience  
+**Problem**: Review commands used different comment author tags ([Code Reviewer] vs [AI reviewer])
+**Solution**: Standardized all commands to use [AI reviewer] tag
+**Learning**: Consistent attribution across related commands improves user experience
 **Pattern**: Standardize related functionality for consistency
 
 ---
@@ -436,7 +436,7 @@ except subprocess.CalledProcessError as e:
 
 ### **Context Consumption**
 - Reading entire large files instead of using Serena MCP semantic tools
-- Not using targeted operations with proper filtering  
+- Not using targeted operations with proper filtering
 - Missing strategic checkpoints in large operations
 - Failing to batch parallel tool calls
 
@@ -450,6 +450,36 @@ except subprocess.CalledProcessError as e:
 - Using Bash commands for file analysis instead of Read tool
 - Using individual commands instead of appropriate composition commands
 - Not leveraging existing specialized commands before building new ones
+
+### **Helper Function Extraction for Code >100 Delta Lines** {#helper-functions}
+
+**Core Principle**: When adding new code >100 delta lines, extract into helper functions to maintain readability and reusability.
+
+**Extraction Rules**:
+- **Threshold**: Code blocks >100 delta lines MUST be extracted into helper functions/scripts
+- **Location**: Place helper functions in `scripts/` directory for shell scripts, or appropriate module directory for Python
+- **Naming**: Use descriptive names that clearly indicate the function's purpose
+- **Documentation**: Include header comments with purpose, usage, and parameters
+
+**Examples**:
+```bash
+# WRONG - 100+ lines inline in workflow file
+"import-validation-delta")
+  echo "Running validation..."
+  # 30+ lines of bash code here...
+  ;;
+
+# RIGHT - Extract to helper script
+"import-validation-delta")
+  ./scripts/validate_imports_delta.sh
+  ;;
+```
+
+**Benefits**:
+- Improved workflow file readability
+- Reusable logic across multiple contexts
+- Easier testing and maintenance of complex logic
+- Better separation of concerns
 
 ### **Tool Selection Criteria & Validation** {#tool-selection}
 
@@ -475,7 +505,7 @@ except subprocess.CalledProcessError as e:
 
 ### **Before Making Changes**
 1. **Verify Current State**: Read actual files, check configuration, examine system state
-2. **Check Existing Solutions**: Search for existing implementations before creating new ones  
+2. **Check Existing Solutions**: Search for existing implementations before creating new ones
 3. **Plan Systematically**: Use TodoWrite for complex tasks, break into atomic steps
 4. **Consider Context**: Monitor context usage, optimize for resource efficiency
 
@@ -501,7 +531,7 @@ except subprocess.CalledProcessError as e:
 - All subprocess calls include timeouts and proper error handling
 - No file operations assume contents without verification
 
-### **Integration Quality Indicators**  
+### **Integration Quality Indicators**
 - All review commands post actual GitHub comments
 - Configuration files accurately reflect system behavior
 - End-to-end workflows complete successfully
@@ -519,7 +549,7 @@ except subprocess.CalledProcessError as e:
 
 ### **Learning Process**
 1. **Document Mistakes**: Add new patterns to this document immediately when discovered
-2. **Update Anti-Patterns**: Include specific examples from actual incidents  
+2. **Update Anti-Patterns**: Include specific examples from actual incidents
 3. **Enhance Guidelines**: Refine principles based on recurring issue patterns
 4. **Share Knowledge**: Use Memory MCP to persist learnings across sessions
 
