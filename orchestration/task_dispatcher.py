@@ -687,7 +687,9 @@ Complete the task, then use /pr to create a new pull request."""
             return os.path.basename(current_dir)
         except subprocess.TimeoutExpired:
             print("Timeout while extracting repository name")
-            raise Exception("not a git repository")
+            # Fallback to current directory name like other errors
+            current_dir = os.getcwd()
+            return os.path.basename(current_dir)
         except Exception as e:
             print(f"Error extracting repository name: {e}")
             # Fallback to current directory name
