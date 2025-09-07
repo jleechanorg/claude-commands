@@ -231,7 +231,6 @@ class TaskDispatcher:
 
     def _generate_unique_name(self, base_name: str, task_description: str = "", role_suffix: str = "") -> str:
         """Generate meaningful agent name based on task content with collision detection."""
-        import re
 
         # Extract meaningful components from task description
         task_suffix = ""
@@ -314,7 +313,6 @@ class TaskDispatcher:
         - --workspace-name tmux-pr123
         - --workspace-root /path/to/.worktrees
         """
-        import re
 
         workspace_config = {}
 

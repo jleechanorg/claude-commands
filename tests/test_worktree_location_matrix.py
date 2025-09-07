@@ -16,12 +16,8 @@ import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock, call
 
-# Import the module we're testing (will fail initially)
-try:
-    from orchestration.task_dispatcher import TaskDispatcher
-except ImportError:
-    # Module doesn't exist yet - this is expected in RED phase
-    TaskDispatcher = None
+# Import the module we're testing
+from orchestration.task_dispatcher import TaskDispatcher
 
 
 class TestWorktreeLocationMatrix(unittest.TestCase):
