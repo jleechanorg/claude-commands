@@ -507,6 +507,36 @@ except subprocess.CalledProcessError as e:
 - Using individual commands instead of appropriate composition commands
 - Not leveraging existing specialized commands before building new ones
 
+### **Helper Function Extraction for Code >100 Delta Lines** {#helper-functions}
+
+**Core Principle**: When adding new code >100 delta lines, extract into helper functions to maintain readability and reusability.
+
+**Extraction Rules**:
+- **Threshold**: Code blocks >100 delta lines MUST be extracted into helper functions/scripts
+- **Location**: Place helper functions in `scripts/` directory for shell scripts, or appropriate module directory for Python
+- **Naming**: Use descriptive names that clearly indicate the function's purpose
+- **Documentation**: Include header comments with purpose, usage, and parameters
+
+**Examples**:
+```bash
+# WRONG - 100+ lines inline in workflow file
+"import-validation-delta")
+  echo "Running validation..."
+  # 30+ lines of bash code here...
+  ;;
+
+# RIGHT - Extract to helper script
+"import-validation-delta")
+  ./scripts/validate_imports_delta.sh
+  ;;
+```
+
+**Benefits**:
+- Improved workflow file readability
+- Reusable logic across multiple contexts
+- Easier testing and maintenance of complex logic
+- Better separation of concerns
+
 ### **Tool Selection Criteria & Validation** {#tool-selection}
 
 **Selection Hierarchy** (apply top-down):

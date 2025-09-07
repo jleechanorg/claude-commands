@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
-        test-group: [all-tests, commands]
+        test-group: [all-tests, commands, import-validation-delta]
 
     steps:
     # Step 1: Get your code
@@ -119,6 +119,9 @@ jobs:
               [ $failed_count -eq 0 ] || exit 1
             fi
             ;;
+          "import-validation-delta")
+            ./scripts/validate_imports_delta.sh
+            ;;
         esac
 
     # Step 6: Upload test results (optional)
@@ -133,4 +136,3 @@ jobs:
           mvp_site/*.log
         retention-days: 30
         if-no-files-found: warn
-        
