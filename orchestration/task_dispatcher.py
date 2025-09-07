@@ -667,16 +667,16 @@ Complete the task, then use /pr to create a new pull request."""
             remote_url = result.stdout.strip()
 
             # Parse SSH format: git@github.com:user/repo.git → repo
-            ssh_pattern = r"git@[^:]+:([^/]+)/([^/]+)\.git"
+            ssh_pattern = r"git@[^:]+:(?P<user>[^/]+)/(?P<repo>[^/]+)\.git"
             ssh_match = re.match(ssh_pattern, remote_url)
             if ssh_match:
-                return ssh_match.group(2)
+                return ssh_match.group("repo")
 
             # Parse HTTPS format: https://github.com/user/repo.git → repo
-            https_pattern = r"https://[^/]+/([^/]+)/([^/]+)\.git"
+            https_pattern = r"https://[^/]+/(?P<user>[^/]+)/(?P<repo>[^/]+)\.git"
             https_match = re.match(https_pattern, remote_url)
             if https_match:
-                return https_match.group(2)
+                return https_match.group("repo")
 
             # If we can't parse the URL, fallback to current directory name
             current_dir = os.getcwd()

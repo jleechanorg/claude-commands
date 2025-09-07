@@ -516,9 +516,18 @@ class TestWorktreeLocationMatrix(unittest.TestCase):
 
             self.assertTrue(len(worktree_calls) > 0, "Expected git worktree add to be called")
 
-            # Verify the directory path in the call
-            worktree_call = worktree_calls[0][0][0]  # First positional argument (command list)
-            self.assertIn(expected_dir, worktree_call)
+            # Verify the directory path in the call with defensive bounds checking
+            # Defensive checks to avoid IndexError
+            if (
+                isinstance(worktree_calls[0], (list, tuple)) and
+                len(worktree_calls[0]) > 0 and
+                isinstance(worktree_calls[0][0], (list, tuple)) and
+                len(worktree_calls[0][0]) > 0
+            ):
+                worktree_call = worktree_calls[0][0][0]  # First positional argument (command list)
+                self.assertIn(expected_dir, worktree_call)
+            else:
+                self.fail("Unexpected call structure in worktree_calls[0]")
 
 
 if __name__ == "__main__":
