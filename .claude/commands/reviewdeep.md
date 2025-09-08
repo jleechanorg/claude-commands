@@ -29,6 +29,7 @@ The command executes dual parallel review tracks by default with mandatory MCP i
    Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target] (SOLO DEV FOCUS)
                                   - Security vulnerability scanning (real vulnerabilities only)
                                   - Trusted source detection (GitHub API, package managers)
+                                  - Functional bugs and performance issues
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
                                   - Filter out enterprise paranoia (JSON schema validation for trusted APIs)
@@ -65,7 +66,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 **🚨 POSTS COMPREHENSIVE COMMENTS**
 - **Official Review**: Built-in Claude Code `/review` command provides baseline analysis
 - **Enhanced Analysis**: Multi-pass security analysis with code-review subagent (SOLO DEV FOCUSED)
-- **Security Focus**: Real vulnerabilities for solo developers: command injection, credential exposure, path traversal, SQL injection, XSS
+- **Security Focus**: Real vulnerabilities for solo developers: command injection, credential exposure, path traversal, SQL injection, XSS, authentication flaws, data exposure
 - **Filtered Out**: Enterprise concerns like JSON schema validation for trusted APIs, theoretical attack vectors
 - **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks
 - **Performance Review**: N+1 queries, inefficient algorithms, memory leaks
@@ -81,7 +82,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - Structural soundness and design quality evaluation
 
 ### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis
-- **Security Analysis**: Practical vulnerability scanning (solo dev focus), trusted source detection, real threat assessment
+- **Security Analysis**: Practical vulnerability scanning (solo dev focus), trusted source detection, real threat assessment, input validation
 - **Architecture Analysis**: Design patterns, scalability concerns, structural integrity
 - **Performance Analysis**: Bottleneck identification, optimization opportunities, resource usage
 - **Solo Developer Context**: Filters enterprise paranoia, focuses on exploitable vulnerabilities
@@ -126,7 +127,7 @@ EXECUTE: /guidelines
     ↓
 PARALLEL EXECUTION (Speed Optimized):
     ├─ Track A (Technical - Fast): /cerebras analysis
-    │   ├─ Security vulnerability scanning
+    │   ├─ Solo developer focus: Functional bugs, hangs, and real vulnerabilities only
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
     ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + codex-consultant
@@ -261,7 +262,7 @@ Step 1: Execute guidelines consultation
 
 Step 2: PARALLEL EXECUTION (Speed Optimized):
 Track A (Technical - Fast): /cerebras comprehensive technical analysis [target]
-  - Security vulnerability assessment
+  - Solo developer functional issue assessment
   - Architecture pattern evaluation
   - Performance bottleneck analysis
 Track B (Technical - Deep): /arch [target] + Independent code-review subagent
@@ -373,7 +374,7 @@ When `/reviewdeep` completes parallel execution, the final synthesis MUST includ
 ### Gemini CLI Multi-Dimensional Analysis
 [Detailed summary of architecture, security, performance, correctness findings]
 
-### Codex CLI Deep Code Analysis  
+### Codex CLI Deep Code Analysis
 [Detailed summary of bug detection, vulnerability analysis, performance issues]
 
 ### Cross-Model Validation
@@ -533,7 +534,7 @@ Generated guidelines file includes:
 ### **Optimization Strategy**
 **Technical Track (Fast)**:
 - Uses `/cerebras` for rapid technical analysis
-- Security vulnerability scanning
+- Solo developer focus: Functional bugs, hangs, real vulnerabilities, and security scanning
 - Architecture pattern evaluation
 - Performance bottleneck identification
 - Execution time: 2-3 minutes

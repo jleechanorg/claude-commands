@@ -114,7 +114,7 @@ get_clean_hostname() {
 # Initialize backup destination - called lazily to prevent sourcing issues
 init_destination() {
     DEVICE_NAME="$(get_clean_hostname)" || return 1
-    
+
     # Platform-specific default backup directories
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Use CloudStorage Dropbox path
