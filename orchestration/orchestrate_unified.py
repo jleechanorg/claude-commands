@@ -12,7 +12,20 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-from .task_dispatcher import TaskDispatcher
+# CI-compatible import pattern
+if 'GITHUB_ACTIONS' in os.environ or 'CI' in os.environ:
+    # CI environment - use absolute imports with path setup
+    import sys
+    current_dir = os.path.dirname(__file__)
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    from task_dispatcher import TaskDispatcher
+else:
+    # Local development - try relative first, fallback to absolute
+    try:
+        from .task_dispatcher import TaskDispatcher
+    except ImportError:
+        from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
 

@@ -14,7 +14,20 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-from .constants import IDLE_MINUTES_THRESHOLD
+# CI-compatible import pattern
+if 'GITHUB_ACTIONS' in os.environ or 'CI' in os.environ:
+    # CI environment - use absolute imports with path setup
+    import sys
+    current_dir = os.path.dirname(__file__)
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    from constants import IDLE_MINUTES_THRESHOLD
+else:
+    # Local development - try relative first, fallback to absolute
+    try:
+        from .constants import IDLE_MINUTES_THRESHOLD
+    except ImportError:
+        from constants import IDLE_MINUTES_THRESHOLD
 
 
 def get_tmux_sessions() -> List[str]:

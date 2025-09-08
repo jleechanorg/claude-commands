@@ -8,12 +8,26 @@ and provides system status reporting.
 
 import json
 import logging
+import os
 import threading
 import time
 from pathlib import Path
 from typing import Any
 
-from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
+# CI-compatible import pattern
+if 'GITHUB_ACTIONS' in os.environ or 'CI' in os.environ:
+    # CI environment - use absolute imports with path setup
+    import sys
+    current_dir = os.path.dirname(__file__)
+    if current_dir not in sys.path:
+        sys.path.insert(0, current_dir)
+    from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
+else:
+    # Local development - try relative first, fallback to absolute
+    try:
+        from .a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
+    except ImportError:
+        from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
 
 logger = logging.getLogger(__name__)
 

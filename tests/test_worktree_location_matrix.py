@@ -11,10 +11,14 @@ All tests are designed to FAIL initially (RED phase) and pass after implementati
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import MagicMock, call, patch
+
+# Add project root to Python path for orchestration imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import the module we're testing
 from orchestration.task_dispatcher import TaskDispatcher
