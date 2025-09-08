@@ -4,29 +4,27 @@ Comprehensive test suite for CRDT-based memory backup system.
 Tests parallel backups, conflict resolution, and Git integration.
 """
 
-import pytest
-import time
+# Standard library imports first
 import json
+import os
+import random
+import re
 import subprocess
 import sys
-import os
-import re
-from unittest.mock import MagicMock, patch, mock_open
+import tempfile
+import threading
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Any, List
-import threading
-import random
-from datetime import datetime
-import tempfile
+from unittest.mock import MagicMock, patch, mock_open
 
-# Import from parent directory (this test file is in scripts/tests/)
+# Third-party imports
+import pytest
+
+# Local imports - set up path before importing from parent directory
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from memory_backup_crdt import (
-    MemoryBackupCRDT,
-    CRDTMetadata,
-    crdt_merge,
-    GitIntegration
-)
+from memory_backup_crdt import MemoryBackupCRDT, CRDTMetadata, crdt_merge, GitIntegration
 
 
 @pytest.fixture
