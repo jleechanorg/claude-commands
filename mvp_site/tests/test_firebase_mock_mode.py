@@ -21,9 +21,9 @@ if tests_dir not in sys.path:
 class TestFirebaseMockMode(unittest.TestCase):
     """Test Firebase initialization with MOCK_SERVICES_MODE."""
 
-    def test_main_skips_firebase_with_mock_mode(self):
+    def test_main_initializes_firebase_regardless_of_mock_mode(self):
         """
-        Test that main.py skips Firebase initialization when MOCK_SERVICES_MODE=true.
+        Test that main.py initializes Firebase regardless of MOCK_SERVICES_MODE (testing mode removed).
         """
         # Save original environment
         original_testing = os.environ.get("TESTING")
@@ -35,10 +35,11 @@ class TestFirebaseMockMode(unittest.TestCase):
                 del os.environ["TESTING"]
             os.environ["MOCK_SERVICES_MODE"] = "true"
 
-            # Mock firebase_admin to prevent import errors
+            # Mock firebase_admin to control init path
             mock_firebase = MagicMock()
-            mock_firebase._apps = []
-            mock_firebase.initialize_app = MagicMock()
+            mock_firebase.auth = MagicMock()
+            mock_firebase.get_app = MagicMock(side_effect=ValueError("No Firebase app"))
+            mock_firebase.initialize_app = MagicMock(return_value=MagicMock(name="app"))
 
             # Add proper path setup for importing main module
             test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -60,26 +61,36 @@ class TestFirebaseMockMode(unittest.TestCase):
 
             mock_modules = {
                 "firebase_admin": mock_firebase,
-                "firebase_admin.auth": MagicMock(),
                 "logging_util": mock_logging_util,
+                "mvp_site.logging_util": mock_logging_util,
+                # Fallbacks for package imports:
                 "constants": MagicMock(),
                 "custom_types": MagicMock(),
                 "mcp_client": MagicMock(),
                 "firestore_service": MagicMock(),
-                # firebase_utils removed - testing mode eliminated
+                "mvp_site.constants": MagicMock(),
+                "mvp_site.custom_types": MagicMock(),
+                "mvp_site.mcp_client": MagicMock(),
+                "mvp_site.firestore_service": MagicMock(),
             }
 
             # firebase_utils removed - Firebase now always initializes
 
             with patch.dict("sys.modules", mock_modules):
                 # Clear any cached imports
-                if "main" in sys.modules:
-                    del sys.modules["main"]
+                import importlib
 
-                # Import main - this should check MOCK_SERVICES_MODE and skip Firebase init
+                for mod in ("mvp_site.main", "main"):
+                    if mod in sys.modules:
+                        del sys.modules[mod]
+                importlib.invalidate_caches()
 
-                # Verify Firebase was NOT initialized (because MOCK_SERVICES_MODE is set)
-                mock_firebase.initialize_app.assert_not_called()
+                # Import main - should initialize Firebase regardless of MOCK_SERVICES_MODE
+                importlib.import_module("main")
+
+                # Verify Firebase WAS initialized (testing mode removed)
+                # May be called multiple times if multiple modules initialize Firebase
+                mock_firebase.initialize_app.assert_called()
 
         finally:
             # Restore environment
@@ -97,9 +108,9 @@ class TestFirebaseMockMode(unittest.TestCase):
             if "main" in sys.modules:
                 del sys.modules["main"]
 
-    def test_world_logic_skips_firebase_with_mock_mode(self):
+    def test_world_logic_initializes_firebase_regardless_of_mock_mode(self):
         """
-        Test that world_logic.py skips Firebase initialization when MOCK_SERVICES_MODE=true.
+        Test that world_logic.py initializes Firebase regardless of MOCK_SERVICES_MODE (testing mode removed).
         """
         # Save original environment
         original_testing = os.environ.get("TESTING")
@@ -111,10 +122,11 @@ class TestFirebaseMockMode(unittest.TestCase):
                 del os.environ["TESTING"]
             os.environ["MOCK_SERVICES_MODE"] = "true"
 
-            # Mock all dependencies to prevent import errors
+            # Mock firebase_admin to control init path
             mock_firebase = MagicMock()
-            mock_firebase._apps = []
-            mock_firebase.initialize_app = MagicMock()
+            mock_firebase.auth = MagicMock()
+            mock_firebase.get_app = MagicMock(side_effect=ValueError("No Firebase app"))
+            mock_firebase.initialize_app = MagicMock(return_value=MagicMock(name="app"))
 
             # Add proper path setup
             test_dir = os.path.dirname(os.path.abspath(__file__))
@@ -135,30 +147,44 @@ class TestFirebaseMockMode(unittest.TestCase):
 
             mocks = {
                 "firebase_admin": mock_firebase,
-                "firebase_admin.auth": MagicMock(),
-                "constants": MagicMock(),
-                "document_generator": MagicMock(),
                 "logging_util": mock_logging_util,
-                "structured_fields_utils": MagicMock(),
+                "mvp_site.logging_util": mock_logging_util,
+                # Fallbacks for package imports:
+                "constants": MagicMock(),
+                "mvp_site.constants": MagicMock(),
                 "custom_types": MagicMock(),
+                "mvp_site.custom_types": MagicMock(),
+                "document_generator": MagicMock(),
+                "mvp_site.document_generator": MagicMock(),
+                "structured_fields_utils": MagicMock(),
+                "mvp_site.structured_fields_utils": MagicMock(),
                 "debug_hybrid_system": MagicMock(),
+                "mvp_site.debug_hybrid_system": MagicMock(),
                 "firestore_service": MagicMock(),
+                "mvp_site.firestore_service": MagicMock(),
                 "gemini_service": MagicMock(),
+                "mvp_site.gemini_service": MagicMock(),
                 "game_state": MagicMock(),
-                # firebase_utils removed - testing mode eliminated
+                "mvp_site.game_state": MagicMock(),
             }
 
             # firebase_utils removed - Firebase now always initializes
 
             with patch.dict("sys.modules", mocks):
                 # Clear any cached imports
-                if "world_logic" in sys.modules:
-                    del sys.modules["world_logic"]
+                import importlib
 
-                # Import world_logic - this should check MOCK_SERVICES_MODE and skip Firebase init
+                for mod in ("mvp_site.world_logic", "world_logic"):
+                    if mod in sys.modules:
+                        del sys.modules[mod]
+                importlib.invalidate_caches()
 
-                # Verify Firebase was NOT initialized (because MOCK_SERVICES_MODE is set)
-                mock_firebase.initialize_app.assert_not_called()
+                # Import world_logic - should initialize Firebase regardless of MOCK_SERVICES_MODE
+                importlib.import_module("world_logic")
+
+                # Verify Firebase WAS initialized (testing mode removed)
+                # May be called multiple times if multiple modules initialize Firebase
+                mock_firebase.initialize_app.assert_called()
 
         finally:
             # Restore environment

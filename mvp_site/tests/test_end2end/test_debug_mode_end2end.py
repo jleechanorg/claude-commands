@@ -361,7 +361,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
     def test_json_input_validation_in_debug_context(self):
         """Test JSON input validation in debug mode context."""
         # Test actual JSON validation logic for debug mode
-        import json
+        # json already imported at module top
 
         # Test valid debug request structure
         debug_request = {
@@ -401,7 +401,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
     def test_json_input_validation_debug_mode_toggling(self):
         """Test JSON input validation when debug mode is toggled."""
         # Test request structure with debug mode toggling
-        import json
+        # json already imported at module top
 
         # Test request with debug mode enabled
         debug_enabled_request = {
