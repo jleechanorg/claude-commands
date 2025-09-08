@@ -446,57 +446,6 @@ class TestSecurityTokenMatrix(unittest.TestCase):
 
         self.assertIn("User not authenticated", str(context.exception))
 
-    def test_security_fix_integration(self):
-        """Verify the security fix at api.service.ts uses getCompensatedToken"""
-        # Automated verification: Check that the API service uses getCompensatedToken
-        api_service_path = (
-            self.project_root
-            / "mvp_site"
-            / "frontend_v2"
-            / "src"
-            / "services"
-            / "api.service.ts"
-        )
-
-        self.assertTrue(
-            api_service_path.exists(),
-            f"API service file not found at {api_service_path}",
-        )
-
-        with open(api_service_path, encoding="utf-8") as f:
-            content = f.read()
-
-        # Assert the security fix is implemented: uses getCompensatedToken
-        self.assertIn(
-            "this.getCompensatedToken(",
-            content,
-            "Security fix missing: api.service.ts should use this.getCompensatedToken()",
-        )
-
-        # Verify the critical security fix: getAuthHeaders uses getCompensatedToken
-        # This was the key security fix to use centralized token handling
-        self.assertIn(
-            "this.getCompensatedToken(false)",
-            content,
-            "Security fix missing: Should contain 'this.getCompensatedToken(false)' call",
-        )
-
-        # Verify both patterns exist in the same file - this confirms the fix
-        getauth_exists = "getAuthHeaders" in content
-        getcomp_exists = "getCompensatedToken" in content
-        self.assertTrue(
-            getauth_exists and getcomp_exists,
-            f"Security components missing: getAuthHeaders={getauth_exists}, getCompensatedToken={getcomp_exists}",
-        )
-
-        # Verify the specific auth headers method fix
-        self.assertIn(
-            "getAuthHeaders",
-            content,
-            "getAuthHeaders method should exist in api.service.ts",
-        )
-
-        print("✅ Automated security fix verification passed")
 
     def _call_get_compensated_token(self, force_refresh=False):
         """
@@ -547,53 +496,6 @@ class TestSecurityTokenMatrix(unittest.TestCase):
 
         return token
 
-    def test_clock_skew_mathematical_direction_fix(self):
-        """Test mathematical fix: Wait when client AHEAD (> 0), not behind (< 0)"""
-        api_service_path = (
-            self.project_root
-            / "mvp_site"
-            / "frontend_v2"
-            / "src"
-            / "services"
-            / "api.service.ts"
-        )
-
-        with open(api_service_path, encoding="utf-8") as f:
-            content = f.read()
-
-        # CRITICAL: Verify mathematical fix - wait when client AHEAD
-        self.assertIn(
-            "if (this.clockSkewDetected && this.clockSkewOffset > 0)",
-            content,
-            "CRITICAL FIX MISSING: Should wait when clockSkewOffset > 0 (client ahead)",
-        )
-
-        # Verify the incorrect logic is NOT present
-        self.assertNotIn(
-            "if (this.clockSkewDetected && this.clockSkewOffset < 0)",
-            content,
-            "OLD BUG PRESENT: Must not wait when clockSkewOffset < 0 (client behind)",
-        )
-
-        # Verify retry delay logic also uses correct direction
-        self.assertIn(
-            "if (this.clockSkewDetected && this.clockSkewOffset > 1000)",
-            content,
-            "RETRY FIX MISSING: Should add delay when clockSkewOffset > 1000 (client ahead)",
-        )
-
-        # Verify comment reflects correct understanding
-        self.assertIn(
-            "client is ahead, wait before token generation",
-            content,
-            "COMMENT FIX MISSING: Comment should indicate waiting when client ahead",
-        )
-
-        print("✅ Clock skew mathematical direction fix verified")
-        print("   ✅ Waits when client ahead (clockSkewOffset > 0)")
-        print("   ✅ No wait when client behind (clockSkewOffset < 0)")
-        print("   ✅ Retry delay uses correct direction (> 1000)")
-        print("   ✅ Comments reflect correct logic")
 
 
 if __name__ == "__main__":

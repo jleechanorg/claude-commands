@@ -33,7 +33,7 @@ class TestMCPInteractionStructuredFields(unittest.TestCase):
 
         # Use stable test UID and stub Firebase verification - patch fully-qualified target
         self._auth_patcher = patch(
-            "mvp_site.main.auth.verify_id_token",
+            "firebase_admin.auth.verify_id_token",
             return_value={"uid": self.test_user_id},
         )
         self._auth_patcher.start()
