@@ -30,6 +30,7 @@ def has_firebase_credentials():
 
 
 from main import create_app
+
 from tests.fake_firestore import FakeFirestoreClient
 
 
@@ -303,10 +304,9 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         response_data = json.loads(response.data)
         if response.status_code == 500:
             # Check for error message in 500 case
-            if response.status_code in [200, 201]:
-                assert (
-                    "error" in response_data or "message" in response_data
-                )  # Only check data structure for successful responses
+            assert (
+                "error" in response_data or "message" in response_data
+            )  # Check data structure for 500 responses
 
     def test_mcp_missing_content_type_error(self):
         """Test MCP error handling for missing Content-Type header."""
@@ -360,10 +360,8 @@ class TestMCPErrorHandlingEnd2End(unittest.TestCase):
         # Should return not found (for security - don't reveal existence)
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]:
-            assert (
-                "error" in response_data
-            )  # Only check data structure for successful responses
+        # Check data structure for 404 responses
+        assert "error" in response_data or "message" in response_data
 
     def test_mcp_error_response_format_consistency(self):
         """Test that all MCP error responses have consistent format."""

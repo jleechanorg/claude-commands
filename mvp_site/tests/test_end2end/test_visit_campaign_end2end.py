@@ -30,9 +30,9 @@ def has_firebase_credentials():
 
 
 from main import create_app
-from tests.fake_firestore import FakeFirestoreClient
 
 from game_state import GameState
+from tests.fake_firestore import FakeFirestoreClient
 
 # Import JSON input schema components
 try:
@@ -250,10 +250,8 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         # Assert not found
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]:
-            assert (
-                "error" in response_data
-            )  # Only check data structure for successful responses
+        # Check data structure for 404 responses
+        assert "error" in response_data or "message" in response_data
 
     @patch("firestore_service.get_db")
     def test_visit_campaign_unauthorized(self, mock_get_db):
@@ -284,10 +282,8 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         # Assert forbidden (shows as 404 for security)
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        if response.status_code in [200, 201]:
-            assert (
-                "error" in response_data
-            )  # Only check data structure for successful responses
+        # Check data structure for 404 responses
+        assert "error" in response_data or "message" in response_data
 
     def test_json_input_validation_in_campaign_context(self):
         """Test JSON input validation in campaign visit context."""

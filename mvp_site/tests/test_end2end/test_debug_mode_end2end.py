@@ -20,6 +20,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 
 
 from main import create_app
+
 from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
 
 
@@ -196,17 +197,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (True)
-        if response.status_code in [200, 201]:
-            assert (
-                "game_state" in campaign_data
-            )  # Only check data structure for successful responses
+        assert "game_state" in campaign_data
         assert campaign_data["game_state"]["debug_mode"]
 
         # Verify story entries include debug content when debug mode is on
-        if response.status_code in [200, 201]:
-            assert (
-                "story" in campaign_data
-            )  # Only check data structure for successful responses
+        assert "story" in campaign_data
         story_entries = campaign_data["story"]
         assert len(story_entries) > 0
 
@@ -219,14 +214,8 @@ class TestDebugModeEnd2End(unittest.TestCase):
 
         assert gemini_entry is not None
         # With debug mode ON, debug fields should be preserved
-        if response.status_code in [200, 201]:
-            assert (
-                "debug_info" in gemini_entry
-            )  # Only check data structure for successful responses
-        if response.status_code in [200, 201]:
-            assert (
-                "planning_block" in gemini_entry
-            )  # Only check data structure for successful responses
+        assert "debug_info" in gemini_entry
+        assert "planning_block" in gemini_entry
 
     @patch("firestore_service.get_db")
     def test_ui_state_debug_mode_off(self, mock_get_db):
@@ -255,17 +244,11 @@ class TestDebugModeEnd2End(unittest.TestCase):
         campaign_data = json.loads(response.data)
 
         # CRITICAL: game_state.debug_mode should reflect user settings (False)
-        if response.status_code in [200, 201]:
-            assert (
-                "game_state" in campaign_data
-            )  # Only check data structure for successful responses
+        assert "game_state" in campaign_data
         assert not campaign_data["game_state"]["debug_mode"]
 
         # Verify story entries have debug content stripped when debug mode is off
-        if response.status_code in [200, 201]:
-            assert (
-                "story" in campaign_data
-            )  # Only check data structure for successful responses
+        assert "story" in campaign_data
         story_entries = campaign_data["story"]
         assert len(story_entries) > 0
 
@@ -279,10 +262,7 @@ class TestDebugModeEnd2End(unittest.TestCase):
         assert gemini_entry is not None
         # With debug mode OFF, only debug fields should be removed (planning_block remains as it's a gameplay feature)
         assert "debug_info" not in gemini_entry
-        if response.status_code in [200, 201]:
-            assert (
-                "planning_block" in gemini_entry
-            )  # Only check data structure for successful responses
+        assert "planning_block" in gemini_entry
 
     @patch("firestore_service.get_db")
     @patch("google.genai.Client")
@@ -624,14 +604,8 @@ class TestDebugModeEnd2End(unittest.TestCase):
         # Verify the content of game state fields that should only appear in debug mode
         assert latest_entry["entities_mentioned"] == ["Dragon", "Knight", "Castle"]
         assert len(latest_entry["entities"]) == 2
-        if response.status_code in [200, 201]:
-            assert (
-                "player_character_data" in latest_entry["state_updates"]
-            )  # Only check data structure for successful responses
-        if response.status_code in [200, 201]:
-            assert (
-                "dm_notes" in latest_entry["debug_info"]
-            )  # Only check data structure for successful responses
+        assert "player_character_data" in latest_entry["state_updates"]
+        assert "dm_notes" in latest_entry["debug_info"]
 
     def test_debug_mode_filtering_unit_integration(self):
         """Restored from test_debug_filtering_unit.py - integration test for debug filtering"""
