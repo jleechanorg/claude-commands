@@ -15,40 +15,19 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Import dependencies with CI environment compatibility
-# CI requires different import patterns than local development
-if 'GITHUB_ACTIONS' in os.environ or 'CI' in os.environ:
-    # CI environment - use absolute imports only
-    import sys
-    current_dir = os.path.dirname(__file__)
-    if current_dir not in sys.path:
-        sys.path.insert(0, current_dir)
+# Add current directory to path for both local and CI execution
+current_dir = os.path.dirname(__file__)
+if current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
 
-    from a2a_integration import TaskPool, get_a2a_status
-    from a2a_monitor import get_monitor
-    from constants import (
-        AGENT_SESSION_TIMEOUT_SECONDS,
-        DEFAULT_MAX_CONCURRENT_AGENTS,
-        TIMESTAMP_MODULO,
-    )
-else:
-    # Local development - try relative imports first, fallback to absolute
-    try:
-        from .a2a_integration import TaskPool, get_a2a_status
-        from .a2a_monitor import get_monitor
-        from .constants import (
-            AGENT_SESSION_TIMEOUT_SECONDS,
-            DEFAULT_MAX_CONCURRENT_AGENTS,
-            TIMESTAMP_MODULO,
-        )
-    except ImportError:
-        from a2a_integration import TaskPool, get_a2a_status
-        from a2a_monitor import get_monitor
-        from constants import (
-            AGENT_SESSION_TIMEOUT_SECONDS,
-            DEFAULT_MAX_CONCURRENT_AGENTS,
-            TIMESTAMP_MODULO,
-        )
+# Import using absolute path (works in all environments)
+from a2a_integration import TaskPool, get_a2a_status
+from a2a_monitor import get_monitor
+from constants import (
+    AGENT_SESSION_TIMEOUT_SECONDS,
+    DEFAULT_MAX_CONCURRENT_AGENTS,
+    TIMESTAMP_MODULO,
+)
 
 A2A_AVAILABLE = True
 
