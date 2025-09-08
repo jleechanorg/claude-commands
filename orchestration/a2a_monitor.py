@@ -6,11 +6,10 @@ Monitors A2A system health, cleans up stale registrations,
 and provides system status reporting.
 """
 
-import os
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
 import json
 import logging
+import os
+import sys
 import threading
 import time
 from pathlib import Path

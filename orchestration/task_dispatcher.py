@@ -4,14 +4,13 @@ A2A-Enhanced Task Dispatcher for Multi-Agent Orchestration
 Handles dynamic agent creation with Agent-to-Agent communication support
 """
 
-import os
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
 import glob
 import json
+import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any

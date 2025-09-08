@@ -4,12 +4,11 @@ Unified Orchestration System - LLM-Driven with File-based Coordination
 Pure file-based A2A protocol without Redis dependencies
 """
 
-import os
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
 import glob
 import json
+import os
 import subprocess
+import sys
 import time
 from datetime import datetime, timedelta
 from task_dispatcher import TaskDispatcher

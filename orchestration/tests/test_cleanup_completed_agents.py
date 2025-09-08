@@ -5,16 +5,15 @@ Tests all key functions with mocking for subprocess calls and file operations.
 """
 
 import os
-import sys
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+import pytest
 import subprocess
+import sys
 import tempfile
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, mock_open, patch
-import pytest
 
-from cleanup_completed_agents import (
+from orchestration.cleanup_completed_agents import (
     check_agent_completion,
     check_session_timeout,
     cleanup_agent_session,

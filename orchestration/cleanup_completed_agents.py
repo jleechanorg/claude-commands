@@ -6,12 +6,11 @@ This script identifies and cleans up completed tmux agents that are sitting idle
 Agents are considered completed if they have completion markers in their logs.
 """
 
-import os
-import sys
-sys.path.insert(0, os.path.dirname(__file__))
 import argparse
 import json
+import os
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Set
