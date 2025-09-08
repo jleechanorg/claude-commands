@@ -157,16 +157,9 @@ if command -v gnome-terminal &> /dev/null; then
 elif command -v xterm &> /dev/null; then
     xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --dual --host 127.0.0.1 --port $MCP_PORT" &
 else
-    # Fallback: run in background
+    # Fallback: run in background with dual transport (stdio + HTTP) using named pipe
     echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"
-    (
-        cd "$PROJECT_ROOT" || exit 1
-        if [ -z "$VIRTUAL_ENV" ] && [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
-            source "$PROJECT_ROOT/venv/bin/activate"
-        fi
-        source "$PROJECT_ROOT/scripts/start_mcp_production.sh"
-        python mvp_site/mcp_api.py --dual --host 127.0.0.1 --port $MCP_PORT
-    ) &
+    "$PROJECT_ROOT/scripts/mcp_dual_background.sh" --host 127.0.0.1 --port $MCP_PORT &
     MCP_PID=$!
     echo "${EMOJI_INFO} MCP server started in background (PID: $MCP_PID, Port: $MCP_PORT)"
 fi

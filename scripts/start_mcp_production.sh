@@ -11,4 +11,4 @@ setup_mcp_production_env
 
 echo "Starting MCP server in production mode (dual transport: stdio + HTTP)..." >&2
 
-exec venv/bin/python mvp_site/mcp_api.py "$@"
+exec venv/bin/python mvp_site/mcp_api.py --dual "$@"
