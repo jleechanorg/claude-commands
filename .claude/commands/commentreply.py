@@ -134,14 +134,11 @@ def load_comments_with_staleness_check(branch_name: str, owner: str, repo: str, 
         print(f"⚠️ SECURITY: Path traversal attempt blocked: {comments_file}")
         sys.exit(1)
 
-    # Check cache staleness (if older than 5 minutes, fetch fresh data)
+    # COPILOT: Always fetch fresh data - no cache for PR processing
     if os.path.exists(comments_file):
         cache_age_minutes = (time.time() - os.path.getmtime(comments_file)) / 60
-        if cache_age_minutes > 5.0:
-            print(f"⚠️  STALE CACHE: {cache_age_minutes:.1f}min old - fetching fresh comments")
-            fetch_fresh_comments(owner, repo, pr_number, comments_file)
-        else:
-            print(f"✅ FRESH CACHE: {cache_age_minutes:.1f}min old - using cached comments")
+        print(f"🔄 COPILOT MODE: Ignoring {cache_age_minutes:.1f}min cache - fetching fresh comments")
+        fetch_fresh_comments(owner, repo, pr_number, comments_file)
     else:
         print(f"📥 NO CACHE: Fetching fresh comments for {owner}/{repo}#{pr_number}")
         fetch_fresh_comments(owner, repo, pr_number, comments_file)

@@ -580,7 +580,7 @@ def run_server():
     # Fallback to HTTP-only mode
     # Configure centralized logging
     setup_mcp_logging()
-    
+
     logging_util.info(
         f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)"
     )
@@ -674,7 +674,10 @@ def run_server():
                     try:
                         result_data = json.loads(result[0].text)
                     except json.JSONDecodeError:
-                        result_data = {"error": "Tool returned non-JSON payload", "raw": result[0].text}
+                        result_data = {
+                            "error": "Tool returned non-JSON payload",
+                            "raw": result[0].text,
+                        }
                 else:
                     result_data = {"error": "No result returned"}
 

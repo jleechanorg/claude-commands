@@ -85,6 +85,12 @@ import firestore_service
 # Import JSON serializer for Firestore compatibility
 from firestore_service import json_default_serializer
 
+# Additional imports for conditional logic (moved from inline to meet import validation)
+import re
+import firebase_utils  # For should_skip_firebase_init
+import firestore_service  # For testing mode conditional logic
+import world_logic  # For MCP fallback logic
+
 # --- CONSTANTS ---
 # API Configuration
 CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
