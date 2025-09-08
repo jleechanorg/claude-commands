@@ -27,12 +27,12 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 1. /guidelines                    # Centralized mistake prevention consultation
 2. PARALLEL EXECUTION:
    Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target]
-                                  - Security vulnerability scanning
+                                  - Solo Developer Focus: Functional bugs and performance issues only
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
    Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis
                                   - System design and scalability analysis
-                                  - Integration patterns and dependencies  
+                                  - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
 3. /reviewe [target]             # Enhanced code review with security analysis
 4. Synthesis & PR guidelines     # Combine both tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
@@ -56,7 +56,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Official Review**: Built-in Claude Code `/review` command provides baseline analysis
 - **Enhanced Analysis**: Multi-pass security analysis with code-review subagent
 - **Security Focus**: SQL injection, XSS, authentication flaws, data exposure
-- **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks  
+- **Bug Detection**: Runtime errors, null pointers, race conditions, resource leaks
 - **Performance Review**: N+1 queries, inefficient algorithms, memory leaks
 - **Context7 Integration**: Up-to-date API documentation and framework best practices
 - **ALWAYS POSTS** expert categorized comments (🔴 Critical, 🟡 Important, 🔵 Suggestion, 🟢 Nitpick)
@@ -69,7 +69,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - Integration points and long-term maintainability
 - Structural soundness and design quality evaluation
 
-### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis 
+### 3. **Technical Track (Parallel)** - `/cerebras` Fast Analysis
 - **Security Analysis**: Vulnerability scanning, threat modeling, input validation
 - **Architecture Analysis**: Design patterns, scalability concerns, structural integrity
 - **Performance Analysis**: Bottleneck identification, optimization opportunities, resource usage
@@ -77,7 +77,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 
 ### 4. **Technical Deep Track (Parallel)** - `/arch` + Independent Code-Review Subagent
 - **Architectural Assessment**: System design patterns and long-term maintainability
-- **Scalability Analysis**: Performance implications and optimization opportunities  
+- **Scalability Analysis**: Performance implications and optimization opportunities
 - **Integration Analysis**: Cross-system dependencies and technical compatibility
 - **Code Quality Assessment**: Technical debt, maintainability, and refactoring opportunities
 - **Independent Analysis**: Uses code-review subagent for objective, unbiased assessment
@@ -86,7 +86,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Context7 MCP**: Real-time API documentation and framework-specific expertise
 - **GitHub MCP**: Primary for PR, files, and review comment operations
 - **Developer Perspective**: Code quality, maintainability, performance, security vulnerabilities
-- **Architect Perspective**: System design, scalability, integration points, architectural debt  
+- **Architect Perspective**: System design, scalability, integration points, architectural debt
 - **Business Analyst Perspective**: Business value, user experience, cost-benefit, ROI analysis
 - **Framework Expertise**: Language-specific patterns and up-to-date best practices
 
@@ -112,7 +112,7 @@ EXECUTE: /guidelines
     ↓
 PARALLEL EXECUTION (Speed Optimized):
     ├─ Track A (Technical - Fast): /cerebras analysis
-    │   ├─ Security vulnerability scanning
+    │   ├─ Solo developer focus: Functional bugs and hangs only
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
     └─ Track B (Technical - Deep): /arch + Independent code-review subagent
@@ -172,7 +172,7 @@ Step 1: Execute guidelines consultation
 
 Step 2: PARALLEL EXECUTION (Speed Optimized):
 Track A (Technical - Fast): /cerebras comprehensive technical analysis [target]
-  - Security vulnerability assessment
+  - Solo developer functional issue assessment
   - Architecture pattern evaluation
   - Performance bottleneck analysis
 Track B (Technical - Deep): /arch [target] + Independent code-review subagent
@@ -283,7 +283,7 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 ### **Automatic Guidelines Creation**
 `/reviewdeep` automatically generates PR-specific guidelines based on review findings:
 
-**PR Context Detection**: 
+**PR Context Detection**:
 - **Primary**: Auto-detect PR number from current branch context via GitHub API
 - **Fallback 1**: Extract from branch name patterns (e.g., `pr-1286-feature`, `fix-1286-bug`)
 - **Fallback 2**: If no PR context, create branch-specific guidelines in `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md`
@@ -291,7 +291,7 @@ Building on the code-level checks from `/reviewe`, this phase analyzes system-wi
 - **Manual Override**: Accept explicit PR number via `/reviewdeep --pr 1286`
 - **Graceful Degradation**: Never fail /reviewdeep execution due to guidelines generation issues - log warning and proceed
 
-**File Location**: 
+**File Location**:
 - **With PR**: `docs/pr-guidelines/{PR_NUMBER}/guidelines.md` (e.g., `docs/pr-guidelines/1286/guidelines.md`)
 - **Without PR**: `docs/branch-guidelines/{BRANCH_NAME}/guidelines.md` (e.g., `docs/branch-guidelines/feature-auth/guidelines.md`)
 
@@ -349,7 +349,7 @@ Generated guidelines file includes:
 
 ### 🚨 MANDATORY MCP Usage
 - **Context7 MCP**: ALWAYS required for up-to-date API documentation and framework expertise
-- **Gemini MCP**: ALWAYS required for multi-role AI analysis  
+- **Gemini MCP**: ALWAYS required for multi-role AI analysis
 - **Perplexity MCP**: ALWAYS required for research-based security and best practice insights
 - **No Fallback Mode**: All MCP integrations are mandatory, not optional
 - **Error Handling**: Proper timeout and retry logic for MCP calls
@@ -370,7 +370,7 @@ Generated guidelines file includes:
 
 **Technical Analysis Component**:
 - **Previous Sequential Technical**: 146 seconds (iterative technical analysis)
-- **New Parallel Technical**: 33 seconds (/cerebras fast technical analysis)  
+- **New Parallel Technical**: 33 seconds (/cerebras fast technical analysis)
 - **Technical Track Speedup**: 4.4x faster for technical analysis component
 
 **Full Review Execution**:
@@ -380,10 +380,10 @@ Generated guidelines file includes:
 - **Quality Maintained**: Comprehensive coverage through dual-track analysis
 
 ### **Optimization Strategy**
-**Technical Track (Fast)**: 
+**Technical Track (Fast)**:
 - Uses `/cerebras` for rapid technical analysis
-- Security vulnerability scanning
-- Architecture pattern evaluation  
+- Solo developer functional bug detection
+- Architecture pattern evaluation
 - Performance bottleneck identification
 - Execution time: 2-3 minutes
 
