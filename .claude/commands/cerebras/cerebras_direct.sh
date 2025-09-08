@@ -74,14 +74,9 @@ PROMPT=$(echo "$PROMPT" | sed 's/^ *//')
 if [ -z "$PROMPT" ]; then
     echo "Usage: cerebras_direct.sh [--context-file FILE] [--no-auto-context] [--skip-codegen-sys-prompt] [--light] <prompt>"
     echo "  --context-file           Include conversation context from file"
-    echo "  --no-auto-context        Skip automatic context extraction (recommended for debugging)"
+    echo "  --no-auto-context        Skip automatic context extraction"
     echo "  --skip-codegen-sys-prompt Use documentation-focused system prompt instead of code generation"
     echo "  --light                  Use light mode (no system prompts for faster generation)"
-    echo ""
-    echo "⚠️  CONTEXT CONTAMINATION WARNING:"
-    echo "    If Cerebras returns wrapper messages like '[Used mcp__*_tool]' instead of code,"
-    echo "    use --no-auto-context to prevent conversation context contamination."
-    echo "    See: docs/cerebras-context-contamination-issue.md"
     echo ""
     exit 1
 fi
