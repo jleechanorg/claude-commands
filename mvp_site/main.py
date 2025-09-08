@@ -274,11 +274,11 @@ def create_app() -> Flask:
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
-                auth_header = request.headers[HEADER_AUTH]
-                # Validate Bearer scheme
-                if not auth_header.startswith("Bearer "):
+                auth_header = request.headers.get(HEADER_AUTH, "")
+                parts = auth_header.split()
+                if len(parts) != 2 or parts[0].lower() != "bearer":
                     raise ValueError("Invalid authorization scheme")
-                id_token = auth_header[7:]  # Remove 'Bearer ' prefix
+                id_token = parts[1].strip()
                 if not id_token:
                     raise ValueError("Empty token")
                 # Firebase token verification using Admin SDK with clock skew tolerance

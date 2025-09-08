@@ -1,6 +1,9 @@
 #!/bin/bash
 # MCP Dual Transport Background Wrapper
-# Provides persistent stdin for dual-mode MCP server in background execution
+# Purpose: Run MCP (stdio + HTTP) in background with persistent stdin.
+# Usage: scripts/mcp_dual_background.sh --host 127.0.0.1 --port 8001 [--other flags]
+set -Eeuo pipefail
+trap 'echo "ERROR: mcp_dual_background.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
@@ -12,7 +15,9 @@ setup_mcp_production_env
 echo "Starting MCP server in production mode (dual transport: stdio + HTTP)..." >&2
 
 # Create a named pipe for persistent stdin
-PIPE_FILE="/tmp/mcp_stdin_$$"
+branch="${GITHUB_REF_NAME:-local}"
+PIPE_FILE="$(mktemp -u "/tmp/mcp_stdin_${branch}_XXXX")"
+umask 077
 mkfifo "$PIPE_FILE"
 
 # Keep the pipe open in the background

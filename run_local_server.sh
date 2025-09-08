@@ -153,9 +153,9 @@ if [ $? -ne 0 ]; then
 fi
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --dual --host 127.0.0.1 --port $MCP_PORT; exec bash"
+    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --dual --host 127.0.0.1 --port $MCP_PORT" &
+    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
 else
     # Fallback: run in background with dual transport (stdio + HTTP) using named pipe
     echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"

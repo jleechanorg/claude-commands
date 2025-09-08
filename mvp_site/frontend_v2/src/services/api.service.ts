@@ -78,8 +78,8 @@ class ApiService {
         const roundTripTime = clientTimeAfter - clientTimeBefore;
 
         // Estimate server time at the moment we made the request
-        // Server time was captured when response was generated, so add half RTT to get time at request
-        const estimatedServerTime = data.server_timestamp_ms + (roundTripTime / 2);
+        // Server time was captured at response; subtract half RTT to approximate server time at request send
+        const estimatedServerTime = data.server_timestamp_ms - (roundTripTime / 2);
         const clientTimeAtRequest = clientTimeBefore;
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
@@ -109,8 +109,8 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // If we have detected clock skew and client is behind, wait before token generation
-    if (this.clockSkewDetected && this.clockSkewOffset < 0) {
+    // If client is ahead, wait before token generation
+    if (this.clockSkewDetected && this.clockSkewOffset > 0) {
       const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, 10000); // Add 500ms buffer, cap at 10s
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
