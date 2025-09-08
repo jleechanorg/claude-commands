@@ -47,6 +47,8 @@ import datetime
 import json
 import logging
 import os
+
+# Additional imports for conditional logic (moved from inline to meet import validation)
 import re
 import subprocess
 import sys
@@ -58,8 +60,9 @@ import constants
 
 # Firebase imports
 import firebase_admin
-import firebase_utils
+import firebase_utils  # For should_skip_firebase_init
 import logging_util
+import world_logic  # For MCP fallback logic
 from custom_types import CampaignId, UserId
 from firebase_admin import auth
 
@@ -80,16 +83,10 @@ from flask_cors import CORS
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
-import firestore_service
+import firestore_service  # For testing mode conditional logic
 
 # Import JSON serializer for Firestore compatibility
 from firestore_service import json_default_serializer
-
-# Additional imports for conditional logic (moved from inline to meet import validation)
-import re
-import firebase_utils  # For should_skip_firebase_init
-import firestore_service  # For testing mode conditional logic
-import world_logic  # For MCP fallback logic
 
 # --- CONSTANTS ---
 # API Configuration
