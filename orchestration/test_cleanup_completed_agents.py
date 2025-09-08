@@ -12,7 +12,8 @@ import time
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from cleanup_completed_agents import (
+from .cleanup_completed_agents import (
+    IDLE_MINUTES_THRESHOLD,
     check_agent_completion,
     cleanup_agent_session,
     cleanup_completed_agents,
@@ -204,7 +205,6 @@ class TestConstants(unittest.TestCase):
 
     def test_idle_threshold_import(self):
         """Test that IDLE_MINUTES_THRESHOLD is properly imported."""
-        from cleanup_completed_agents import IDLE_MINUTES_THRESHOLD
         self.assertIsInstance(IDLE_MINUTES_THRESHOLD, int)
         self.assertGreater(IDLE_MINUTES_THRESHOLD, 0)
 

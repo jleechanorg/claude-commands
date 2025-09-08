@@ -10,10 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-# Add orchestration to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-from task_dispatcher import TaskDispatcher
+from .task_dispatcher import TaskDispatcher
 
 
 class TestCollisionBugFix(unittest.TestCase):
