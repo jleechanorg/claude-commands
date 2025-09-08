@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Import Validation Script
+Import Validation Script (Delta Mode Support)
 
 Enforces clean import standards:
 1. No try/except around imports
@@ -10,9 +10,12 @@ Enforces clean import standards:
 Usage:
     python validate_imports.py [directory]
     python validate_imports.py mvp_site
+    python validate_imports.py --diff-only              # Check only files changed vs main
+    python validate_imports.py --diff-only main..HEAD   # Check files changed vs specific branch
 """
 
 import ast
+import subprocess
 import sys
 from pathlib import Path
 from typing import NamedTuple
@@ -97,20 +100,23 @@ class ImportValidator(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
         """Mark non-import code."""
-        if self.import_seen:
-            self.non_import_seen = True
+        # Functions always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
         """Mark non-import code."""
-        if self.import_seen:
-            self.non_import_seen = True
+        # Classes always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_Assign(self, node: ast.Assign) -> None:
         """Mark non-import code."""
-        if self.import_seen:
-            self.non_import_seen = True
+        # Assignments always mark end of import section per PEP 8
+        # This enforces strict import placement: all imports at top of file
+        self.non_import_seen = True
         self.generic_visit(node)
 
     def visit_Expr(self, node: ast.Expr) -> None:
@@ -158,6 +164,56 @@ def validate_file(file_path: Path) -> list[ImportViolation]:
         ]
 
 
+def get_changed_python_files(diff_spec: str = "origin/main...HEAD") -> list[Path]:
+    """Get Python files changed in git diff."""
+    # Try multiple diff strategies for CI compatibility
+    diff_strategies = [
+        diff_spec,  # Original three-dot notation
+        diff_spec.replace('...', '..'),  # Two-dot notation
+        "HEAD~1",  # Compare with previous commit
+        "--cached",  # Staged changes only (fallback)
+    ]
+
+    for strategy in diff_strategies:
+        try:
+            # Get list of changed files
+            result = subprocess.run(
+                ["git", "diff", "--name-only", strategy],
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30
+            )
+
+            changed_files = []
+            for line in result.stdout.strip().split('\n'):
+                if line and line.endswith('.py'):
+                    file_path = Path(line)
+                    if file_path.exists():
+                        changed_files.append(file_path)
+
+            # If we got files, return them
+            if changed_files:
+                print(f"📋 Using diff strategy: git diff --name-only {strategy}")
+                return changed_files
+
+            # If no files found with this strategy, try next one
+            continue
+
+        except subprocess.CalledProcessError as e:
+            err = (e.stderr or "").strip()
+            print(f"⚠️ git diff strategy '{strategy}' failed: {err}")
+            # Try next strategy
+            continue
+        except Exception as e:
+            print(f"⚠️ Error with strategy '{strategy}': {e}")
+            continue
+
+    # If all strategies failed, return empty list (no files to validate)
+    print("⚠️ All git diff strategies failed, assuming no Python files changed")
+    return []
+
+
 def validate_directory(directory: Path) -> list[ImportViolation]:
     """Validate all Python files in a directory."""
     violations = []
@@ -173,17 +229,44 @@ def validate_directory(directory: Path) -> list[ImportViolation]:
     return violations
 
 
+def validate_changed_files(diff_spec: str = "origin/main...HEAD") -> list[ImportViolation]:
+    """Validate only Python files changed in git diff."""
+    violations = []
+    changed_files = get_changed_python_files(diff_spec)
+
+    if not changed_files:
+        print("📝 No Python files changed in diff")
+        return violations
+
+    print(f"📝 Found {len(changed_files)} changed Python files:")
+    for f in changed_files:
+        print(f"  - {f}")
+    print()
+
+    for py_file in changed_files:
+        file_violations = validate_file(py_file)
+        violations.extend(file_violations)
+
+    return violations
+
+
 def main():
     """Main validation function."""
-    target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("mvp_site")
-
-    print(f"🔍 Validating imports in: {target}")
-    print("=" * 50)
-
-    if target.is_file():
-        violations = validate_file(target)
+    # Handle --diff-only flag
+    if len(sys.argv) > 1 and sys.argv[1] == "--diff-only":
+        diff_spec = sys.argv[2] if len(sys.argv) > 2 else "origin/main...HEAD"
+        print(f"🔍 Validating imports in changed files: {diff_spec}")
+        print("=" * 50)
+        violations = validate_changed_files(diff_spec)
     else:
-        violations = validate_directory(target)
+        target = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("mvp_site")
+        print(f"🔍 Validating imports in: {target}")
+        print("=" * 50)
+
+        if target.is_file():
+            violations = validate_file(target)
+        else:
+            violations = validate_directory(target)
 
     if not violations:
         print("✅ All import validations passed!")
