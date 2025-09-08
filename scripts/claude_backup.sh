@@ -241,7 +241,7 @@ backup_to_destination() {
     # Run rsync with proper error logging and extended attributes support
     # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
     rsync -av \
-        --extended-attributes \
+        --xattrs \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -283,7 +283,7 @@ backup_to_destination() {
         local rsync_errors2="$SECURE_TEMP/rsync_errors_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
 
         rsync -av \
-            --extended-attributes \
+            --xattrs \
             --include='.claude.json' \
             --include='.claude.json.backup*' \
             --exclude='*' \
