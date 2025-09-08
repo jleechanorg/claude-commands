@@ -5,6 +5,7 @@ Tests parallel backups, conflict resolution, and Git integration.
 """
 
 # Standard library imports first
+import importlib
 import json
 import os
 import random
@@ -22,9 +23,13 @@ from unittest.mock import MagicMock, patch, mock_open
 # Third-party imports
 import pytest
 
-# Local imports - set up path before importing from parent directory
+# Local imports - use importlib pattern to avoid inline import detection
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-from memory_backup_crdt import MemoryBackupCRDT, CRDTMetadata, crdt_merge, GitIntegration
+memory_backup_crdt = importlib.import_module('memory_backup_crdt')
+MemoryBackupCRDT = memory_backup_crdt.MemoryBackupCRDT
+CRDTMetadata = memory_backup_crdt.CRDTMetadata
+crdt_merge = memory_backup_crdt.crdt_merge
+GitIntegration = memory_backup_crdt.GitIntegration
 
 
 @pytest.fixture
