@@ -210,8 +210,23 @@ def create_app() -> Flask:
                 "_mcp_server_url",
                 os.environ.get("MCP_SERVER_URL", "http://localhost:8000"),
             )
+            # Import world_logic module for direct calls when skip_http=True
+            world_logic_module = None
+            if skip_http_mode:
+                try:
+                    import world_logic
+
+                    world_logic_module = world_logic
+                except ImportError as e:
+                    logging_util.error(
+                        f"Failed to import world_logic for direct MCP calls: {e}"
+                    )
+
             app._mcp_client = MCPClient(
-                mcp_server_url, timeout=300, skip_http=skip_http_mode
+                mcp_server_url,
+                timeout=300,
+                skip_http=skip_http_mode,
+                world_logic_module=world_logic_module,
             )
         return app._mcp_client
 

@@ -28,12 +28,13 @@ class TestMCPInteractionStructuredFields(unittest.TestCase):
         self.app = create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
-        
+
         self.test_user_id = "mcp-structured-fields-test-user"
-        
+
         # Use stable test UID and stub Firebase verification - patch fully-qualified target
         self._auth_patcher = patch(
-            "mvp_site.main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)

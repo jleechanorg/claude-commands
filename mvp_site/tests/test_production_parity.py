@@ -46,13 +46,14 @@ class TestProductionParity(unittest.TestCase):
 
     def setUp(self):
         """Set up test client for production parity testing."""
-        
+
         # Mock Firebase to prevent initialization errors
         self.firebase_patcher = patch("firestore_service.get_db")
         self.mock_get_db = self.firebase_patcher.start()
-        
+
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
+
         fake_firestore = FakeFirestoreClient()
         self.mock_get_db.return_value = fake_firestore
         # Direct calls are now the default - no MCP server setup needed
@@ -63,13 +64,14 @@ class TestProductionParity(unittest.TestCase):
 
         # Test data
         self.test_user_id = "production-parity-test-user"
-        
+
         # Use stable test UID and stub Firebase verification - patch fully-qualified target
         self._auth_patcher = patch(
-            "mvp_site.main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
         )
         self._auth_patcher.start()
-        
+
         self.test_headers = {
             "Content-Type": "application/json",
             "Authorization": "Bearer test-id-token",
@@ -95,7 +97,9 @@ class TestProductionParity(unittest.TestCase):
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
         # Should succeed with proper authentication headers - tighten assertion
-        assert response.status_code == 200, f"Should return success with auth headers, got {response.status_code}"
+        assert (
+            response.status_code == 200
+        ), f"Should return success with auth headers, got {response.status_code}"
 
         response_data = response.get_json()
 
@@ -137,7 +141,9 @@ class TestProductionParity(unittest.TestCase):
 
         response = direct_client.get("/api/campaigns", headers=self.test_headers)
 
-        assert response.status_code == 200, f"Direct calls mode should return success, got {response.status_code}"
+        assert (
+            response.status_code == 200
+        ), f"Direct calls mode should return success, got {response.status_code}"
 
         response_data = response.get_json()
 
@@ -166,9 +172,7 @@ class TestProductionParity(unittest.TestCase):
             for _ in campaigns:
                 pass  # Simulate forEach iteration
         except TypeError as e:
-            self.fail(
-                f"Frontend forEach would fail: {e}. Response: {response_data}"
-            )
+            self.fail(f"Frontend forEach would fail: {e}. Response: {response_data}")
 
         # No environment cleanup needed - direct calls are default
 
