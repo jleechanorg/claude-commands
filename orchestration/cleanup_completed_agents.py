@@ -9,7 +9,6 @@ Agents are considered completed if they have completion markers in their logs.
 import os
 import sys
 sys.path.insert(0, os.path.dirname(__file__))
-
 import argparse
 import json
 import subprocess
