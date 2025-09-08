@@ -172,42 +172,107 @@ start_orchestration_background() {
     fi
 }
 
-# Function to check and setup tmux cleanup cron job
-check_tmux_cleanup_cron() {
-    echo -e "${BLUE}🔍 Verifying tmux session cleanup automation...${NC}"
+# Function to setup all required cron jobs with Linux/Ubuntu compatibility
+setup_cron_jobs() {
+    echo -e "${BLUE}🔍 Verifying cron job configuration...${NC}"
 
-    # Check if cleanup cron job exists
-    if crontab -l 2>/dev/null | grep -q "cleanup_completed_agents.py"; then
-        echo -e "${GREEN}✅ tmux cleanup cron job already configured${NC}"
-        return 0
-    else
-        echo -e "${YELLOW}⚠️  tmux cleanup cron job missing - adding it now${NC}"
+    # Ensure wrapper scripts directory exists
+    mkdir -p "$HOME/.local/bin"
 
-        # Get current directory for absolute path
-        SCRIPT_DIR_ABS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local cron_entries_added=0
+    local current_crontab=$(crontab -l 2>/dev/null || echo "")
 
-        # Add the cron job
-        (crontab -l 2>/dev/null; echo "*/15 * * * * python3 ${SCRIPT_DIR_ABS}/orchestration/cleanup_completed_agents.py >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+    # 1. Claude Backup Cron (every 4 hours) - Cross-platform paths
+    if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
+        echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
 
-        # Verify it was added
-        if crontab -l 2>/dev/null | grep -q "cleanup_completed_agents.py"; then
-            echo -e "${GREEN}✅ tmux cleanup cron job added successfully${NC}"
-            echo -e "${BLUE}💡 Cleanup runs every 15 minutes to prevent infinite monitoring sessions${NC}"
-            return 0
+        # Create wrapper for claude backup with Linux/Ubuntu compatibility
+        cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Claude backup wrapper with Linux/Ubuntu compatibility
+if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations
+        if [ -d "$HOME/Dropbox" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Documents"
         else
-            echo -e "${YELLOW}⚠️  Failed to add tmux cleanup cron job - continuing without it${NC}"
-            echo -e "${YELLOW}💡 You can manually add it with: crontab -e${NC}"
-            return 1
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
         fi
+    else
+        # Other systems: fallback to home directory
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
     fi
+else
+    echo "$(date): claude_backup_cron.sh not found" >> /tmp/backup_errors.log
+fi
+EOF
+        chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
+
+        # Add to cron
+        (echo "$current_crontab"; echo '0 */4 * * * "$HOME/.local/bin/claude_backup_wrapper.sh" 2>&1') | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 2. TMux Cleanup (every 15 minutes) - Worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
+        echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
+
+        # Create tmux cleanup wrapper that works across worktrees
+        cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Find any available WorldArchitect worktree with orchestration
+for worktree in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
+    if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
+        cd "$worktree" && python3 orchestration/cleanup_completed_agents.py
+        exit $?
+    fi
+done
+# Fallback: if no worktree found, log the issue
+echo "$(date): No WorldArchitect worktree with orchestration found" >> /tmp/tmux_cleanup.log
+exit 1
+EOF
+        chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
+
+        # Add to cron
+        current_crontab=$(crontab -l 2>/dev/null || echo "")
+        (echo "$current_crontab"; echo "*/15 * * * * \$HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 3. Agent Monitor Disabled (remove problematic hardcoded entries)
+    echo -e "${BLUE}💡 Agent monitor disabled to prevent resource conflicts${NC}"
+
+    # Remove any existing agent monitor cron entries with hardcoded paths
+    current_crontab=$(crontab -l 2>/dev/null || echo "")
+    if echo "$current_crontab" | grep -q "agent_monitor.py"; then
+        echo -e "${YELLOW}⚠️  Removing existing agent monitor cron entries (hardcoded paths)${NC}"
+        # Filter out agent monitor entries
+        echo "$current_crontab" | grep -v "agent_monitor.py" | crontab -
+    fi
+
+    # Display results
+    if [ $cron_entries_added -gt 0 ]; then
+        echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) with Linux/Ubuntu compatibility${NC}"
+    else
+        echo -e "${GREEN}✅ All required cron jobs already configured${NC}"
+    fi
+
+    echo -e "${BLUE}📋 Current cron configuration:${NC}"
+    crontab -l 2>/dev/null | grep -E "(claude_backup|tmux_cleanup|cleanup_completed_agents)" || echo "  (no matching entries)"
 }
 
 # Function to check and start orchestration for non-worker modes
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
 
-    # First check tmux cleanup automation
-    check_tmux_cleanup_cron
+    # First check comprehensive cron setup
+    setup_cron_jobs
 
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
