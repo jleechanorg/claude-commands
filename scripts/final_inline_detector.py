@@ -74,20 +74,31 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
     def visit_Import(self, node):
         if self.in_function:
             for alias in node.names:
+                # Determine base complexity, but force 'COMPLEX' if the import uses an alias
+                complexity = self._get_complexity(alias.name)
+                if alias.asname:
+                    complexity = 'COMPLEX'
+                
                 self.inline_imports.append({
                     'file': self.filepath,
                     'line': node.lineno,
                     'type': 'import',
                     'module': alias.name,
+                    'asname': alias.asname,
                     'depth': self.function_depth,
                     'priority': self._get_priority(alias.name),
-                    'complexity': self._get_complexity(alias.name)
+                    'complexity': complexity
                 })
     
     def visit_ImportFrom(self, node):
         if self.in_function:
             module = node.module or ''
             for alias in node.names:
+                # Determine base complexity, but force 'COMPLEX' if the import uses an alias
+                complexity = self._get_complexity(module or alias.name)
+                if alias.asname:
+                    complexity = 'COMPLEX'
+                    
                 self.inline_imports.append({
                     'file': self.filepath,
                     'line': node.lineno,
@@ -95,9 +106,10 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
                     'module': f"{module}.{alias.name}" if module else alias.name,
                     'from_module': module,
                     'import_name': alias.name,
+                    'asname': alias.asname,
                     'depth': self.function_depth,
                     'priority': self._get_priority(module or alias.name),
-                    'complexity': self._get_complexity(module or alias.name)
+                    'complexity': complexity
                 })
     
     def _get_priority(self, module_name: str) -> str:
@@ -150,6 +162,25 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
             return 'MEDIUM'
 
 
+def get_top_level_imports(source_code: str) -> set:
+    """Use AST to get all top-level import statements."""
+    try:
+        tree = ast.parse(source_code)
+    except Exception:
+        return set()
+    imports = set()
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.add(f"import {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            # Handle relative imports
+            module = node.module if node.module else ""
+            for alias in node.names:
+                imports.add(f"from {module} import {alias.name}")
+    return imports
+
+
 def fix_simple_imports(imports: List[Dict]) -> int:
     """Fix SIMPLE priority imports that can be safely moved."""
     fixed_count = 0
@@ -199,10 +230,11 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                     insert_pos = i
                     break
         
-        # Add missing imports
+        # Add missing imports using AST-based detection
+        existing_imports = get_top_level_imports(content)
         new_imports = []
         for import_line in sorted(imports_to_add):
-            if import_line not in content:
+            if import_line not in existing_imports:
                 new_imports.append(import_line)
         
         if new_imports:
@@ -217,11 +249,12 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
             for imp in imports:
                 line_num = imp['line'] - 1  # Convert to 0-based
                 if 0 <= line_num < len(lines):
-                    line = lines[line_num].strip()
-                    if imp['type'] == 'import' and line.startswith('import '):
-                        lines[line_num] = '        # Moved import to top-level'
-                    elif imp['type'] == 'from_import' and line.startswith('from '):
-                        lines[line_num] = '        # Moved import to top-level'
+                    line = lines[line_num]
+                    original_indent = line[:len(line) - len(line.lstrip())]
+                    if imp['type'] == 'import' and line.strip().startswith('import '):
+                        lines[line_num] = f"{original_indent}# Moved import to top-level"
+                    elif imp['type'] == 'from_import' and line.strip().startswith('from '):
+                        lines[line_num] = f"{original_indent}# Moved import to top-level"
             
             new_content = '\n'.join(lines)
             

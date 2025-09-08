@@ -117,15 +117,17 @@ class MemoryIntegration:
             score += 0.2
 
         # Observation relevance
-        observations = entity.get("observations", [])
-        obs_text = " ".join(observations).lower()
+        observations = entity.get("observations") or []
+        if not isinstance(observations, list):
+            observations = [observations]
+        obs_text = " ".join(map(str, observations)).lower()
         matches = sum(1 for term in query_lower.split() if term in obs_text)
         score += min(0.3, matches * 0.05)
 
         # Recency bonus based on entity timestamps
         try:
             # Check if entity has timestamp information
-            entity_timestamp = entity_data.get("timestamp") or entity_data.get(
+            entity_timestamp = entity.get("timestamp") or entity.get(
                 "last_seen"
             )
             if entity_timestamp:
@@ -138,6 +140,10 @@ class MemoryIntegration:
                         )
                     else:
                         timestamp = entity_timestamp
+                        
+                    # Ensure timezone-aware (assume UTC if naive)
+                    if getattr(timestamp, "tzinfo", None) is None:
+                        timestamp = timestamp.replace(tzinfo=UTC)
 
                     # Calculate recency bonus (entities seen within last 24 hours get bonus)
                     now = datetime.now(UTC)

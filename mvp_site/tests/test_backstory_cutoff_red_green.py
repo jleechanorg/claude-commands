@@ -108,6 +108,9 @@ His coming of age was marked by the Ceremony of the Silver Blade, where he swore
         extracted_narrative = extract_field_value(
             self.character_creation_response, "narrative"
         )
+        self.assertIsNotNone(extracted_narrative, "Should extract narrative field")
+        if extracted_narrative is None:
+            self.fail("extract_field_value returned None")
 
         # Find the backstory section
         backstory_start = extracted_narrative.find("**Backstory:**")
