@@ -48,11 +48,7 @@ from firestore_service import json_default_serializer
 # Initialize MCP server
 server = Server("world-logic")
 
-# Global constants from main.py
 KEY_ERROR = "error"
-KEY_PROMPT = "prompt"
-KEY_SELECTED_PROMPTS = "selected_prompts"
-KEY_USER_INPUT = "user_input"
 
 
 @server.list_tools()
@@ -206,23 +202,20 @@ async def handle_list_tools() -> list[Tool]:
 async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextContent]:  # noqa: PLR0911
     """Handle MCP tool calls for D&D game mechanics."""
     try:
-        if name == "create_campaign":
-            return await _create_campaign_tool(arguments)
-        if name == "get_campaign_state":
-            return await _get_campaign_state_tool(arguments)
-        if name == "process_action":
-            return await _process_action_tool(arguments)
-        if name == "update_campaign":
-            return await _update_campaign_tool(arguments)
-        if name == "export_campaign":
-            return await _export_campaign_tool(arguments)
-        if name == "get_campaigns_list":
-            return await _get_campaigns_list_tool(arguments)
-        if name == "get_user_settings":
-            return await _get_user_settings_tool(arguments)
-        if name == "update_user_settings":
-            return await _update_user_settings_tool(arguments)
-        raise ValueError(f"Unknown tool: {name}")
+        dispatch = {
+            "create_campaign": _create_campaign_tool,
+            "get_campaign_state": _get_campaign_state_tool,
+            "process_action": _process_action_tool,
+            "update_campaign": _update_campaign_tool,
+            "export_campaign": _export_campaign_tool,
+            "get_campaigns_list": _get_campaigns_list_tool,
+            "get_user_settings": _get_user_settings_tool,
+            "update_user_settings": _update_user_settings_tool,
+        }
+        handler = dispatch.get(name)
+        if not handler:
+            raise ValueError(f"Unknown tool: {name}")
+        return await handler(arguments)
 
     except Exception as e:
         logging_util.error(f"Tool {name} failed: {e}")
@@ -585,12 +578,12 @@ def run_server():
             return
 
     # Fallback to HTTP-only mode
+    # Configure centralized logging
+    setup_mcp_logging()
+    
     logging_util.info(
         f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)"
     )
-
-    # Configure centralized logging
-    setup_mcp_logging()
 
     # Run HTTP server with JSON-RPC support
     from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -611,8 +604,13 @@ def run_server():
                 try:
                     # Parse JSON-RPC request
                     content_length = int(self.headers.get("Content-Length", 0))
+                    if content_length <= 0:
+                        raise ValueError("Empty request body")
                     post_data = self.rfile.read(content_length)
-                    request_data = json.loads(post_data.decode("utf-8"))
+                    try:
+                        request_data = json.loads(post_data.decode("utf-8"))
+                    except json.JSONDecodeError as je:
+                        raise ValueError(f"Invalid JSON: {je}") from je
 
                     # Handle JSON-RPC request
                     response_data = self._handle_jsonrpc(request_data)
@@ -647,7 +645,7 @@ def run_server():
                         else None,
                     }
                     response_json = json.dumps(error_response)
-                    self.send_response(500)
+                    self.send_response(200)
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
                     self.wfile.write(response_json.encode("utf-8"))
@@ -673,7 +671,10 @@ def run_server():
 
                 # Extract text content from result
                 if result and len(result) > 0 and hasattr(result[0], "text"):
-                    result_data = json.loads(result[0].text)
+                    try:
+                        result_data = json.loads(result[0].text)
+                    except json.JSONDecodeError:
+                        result_data = {"error": "Tool returned non-JSON payload", "raw": result[0].text}
                 else:
                     result_data = {"error": "No result returned"}
 
