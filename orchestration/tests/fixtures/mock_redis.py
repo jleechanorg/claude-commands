@@ -1,6 +1,7 @@
 """Mock fixtures for Redis operations in orchestration tests."""
 
 import json
+from contextlib import contextmanager
 from datetime import datetime
 from unittest.mock import patch
 
@@ -185,8 +186,6 @@ class MockMessageBroker:
         """Assert that an agent was registered."""
         assert agent_id in self.registered_agents, f"Agent {agent_id} not registered"
 
-
-from contextlib import contextmanager
 
 
 @contextmanager

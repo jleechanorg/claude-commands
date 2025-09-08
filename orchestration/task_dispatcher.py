@@ -15,16 +15,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-# Add orchestration directory to path for imports when imported from other locations
-orchestration_dir = os.path.dirname(os.path.abspath(__file__))
-if orchestration_dir not in sys.path:
-    sys.path.insert(0, orchestration_dir)
-
-# Import A2A components at module level - fail fast if missing (CLAUDE.md compliance)
-from a2a_integration import TaskPool, get_a2a_status
-from a2a_monitor import get_monitor
-# Import shared constants at module level - fail fast if missing (CLAUDE.md compliance)
-from constants import AGENT_SESSION_TIMEOUT_SECONDS, TIMESTAMP_MODULO, DEFAULT_MAX_CONCURRENT_AGENTS
+from .a2a_integration import TaskPool, get_a2a_status
+from .a2a_monitor import get_monitor
+from .constants import (
+    AGENT_SESSION_TIMEOUT_SECONDS,
+    DEFAULT_MAX_CONCURRENT_AGENTS,
+    TIMESTAMP_MODULO,
+)
 
 A2A_AVAILABLE = True
 

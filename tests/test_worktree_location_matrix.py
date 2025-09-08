@@ -8,13 +8,13 @@ functionality that creates worktrees under ~/projects/orch_{repo_name}/.
 All tests are designed to FAIL initially (RED phase) and pass after implementation.
 """
 
-import unittest
-import tempfile
 import os
-import subprocess
 import shutil
+import subprocess
+import tempfile
+import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import MagicMock, call, patch
 
 # Import the module we're testing
 from orchestration.task_dispatcher import TaskDispatcher

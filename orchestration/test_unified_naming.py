@@ -8,13 +8,14 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Add orchestration to path and use importlib for imports
 sys.path.insert(0, os.path.dirname(__file__))
 
 # Import using importlib to avoid inline import violation
 import importlib
+
 orchestrate_unified_module = importlib.import_module('orchestrate_unified')
 task_dispatcher_module = importlib.import_module('task_dispatcher')
 UnifiedOrchestration = orchestrate_unified_module.UnifiedOrchestration

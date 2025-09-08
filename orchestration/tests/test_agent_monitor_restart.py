@@ -4,21 +4,22 @@ Test Suite for Agent Monitor Restart Capabilities
 Red-Green TDD implementation for converge agent restart functionality
 """
 
-import os
-import sys
-import unittest
-import tempfile
-import shutil
 import json
+import os
+import shutil
+import sys
+import tempfile
+import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 # Import using importlib to avoid inline import violation
 import importlib
+
 agent_monitor_module = importlib.import_module('agent_monitor')
 ConvergeAgentRestarter = agent_monitor_module.ConvergeAgentRestarter
 AgentMonitor = agent_monitor_module.AgentMonitor

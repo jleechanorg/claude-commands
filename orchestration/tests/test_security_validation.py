@@ -4,18 +4,18 @@ Security Test Suite for Agent Monitor Security Fixes
 Tests command injection and path traversal vulnerability fixes
 """
 
+import importlib
 import os
-import sys
-import unittest
-import tempfile
 import shutil
+import sys
+import tempfile
+import unittest
 from unittest.mock import Mock
 
 # Add orchestration directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-# Import using importlib to avoid inline import violation
-import importlib
+# Import agent monitor module
 agent_monitor_module = importlib.import_module('agent_monitor')
 ConvergeAgentRestarter = agent_monitor_module.ConvergeAgentRestarter
 

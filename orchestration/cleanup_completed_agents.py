@@ -7,19 +7,14 @@ Agents are considered completed if they have completion markers in their logs.
 """
 
 import argparse
+import json
 import os
 import subprocess
-import json
 import time
 from pathlib import Path
-from typing import List, Dict, Set, Any
+from typing import Any, Dict, List, Set
 
-# Import shared constants
-try:
-    from constants import IDLE_MINUTES_THRESHOLD
-except ImportError:
-    # Use default if constants not available
-    IDLE_MINUTES_THRESHOLD = 30
+from .constants import IDLE_MINUTES_THRESHOLD
 
 
 def get_tmux_sessions() -> List[str]:

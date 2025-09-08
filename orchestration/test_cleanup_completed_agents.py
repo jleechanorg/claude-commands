@@ -5,19 +5,19 @@ Test suite for cleanup_completed_agents.py
 Following TDD methodology - tests written before/during implementation.
 """
 
-import unittest
-import tempfile
-import os
 import json
+import os
+import tempfile
 import time
-from unittest.mock import patch, MagicMock, mock_open
+import unittest
+from unittest.mock import MagicMock, mock_open, patch
 
 from cleanup_completed_agents import (
-    get_tmux_sessions,
-    get_task_agent_sessions,
     check_agent_completion,
     cleanup_agent_session,
-    cleanup_completed_agents
+    cleanup_completed_agents,
+    get_task_agent_sessions,
+    get_tmux_sessions,
 )
 
 
