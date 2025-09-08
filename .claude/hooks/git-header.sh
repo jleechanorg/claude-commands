@@ -270,13 +270,19 @@ check_bashrc_alias() {
     fi
 }
 
-# Run bashrc check on every execution
-check_bashrc_alias
+# Check for --status-only flag to skip git status and context info
+if [ "$1" = "--status-only" ]; then
+    status_only=true
+else
+    status_only=false
+    # Run bashrc check on every execution
+    check_bashrc_alias
 
-# Always show git status first for complete context
-echo "=== Git Status ==="
-git status
-echo
+    # Always show git status first for complete context
+    echo "=== Git Status ==="
+    git status
+    echo
+fi
 
 # Function to find Claude Code transcript file
 find_transcript_file() {
@@ -388,7 +394,12 @@ if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
         echo "[API: Error getting rate limits]"
         show_context_info
     fi
+elif [ "$status_only" = true ]; then
+    # Only output the header lines for statusLine - no git status or other output
+    echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
+    show_context_info
 else
+    # Full output for normal usage
     echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
     show_context_info
 fi

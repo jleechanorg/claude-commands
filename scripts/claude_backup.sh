@@ -29,6 +29,11 @@ LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
 # Source directory
 SOURCE_DIR="$HOME/.claude"
 
+# Exit codes
+SUCCESS=0
+ERROR=1
+PARTIAL_SUCCESS=23
+
 # Security: Hostname validation function
 validate_hostname() {
     local host="$1"
@@ -50,8 +55,11 @@ validate_path() {
         return 1
     fi
 
-    # Check for null bytes
-    if [[ "$path" =~ $'\x00' ]]; then
+    # Check for null bytes.
+    # Previous approach used a regex to detect null bytes, but this could
+    # incorrectly flag valid paths containing certain escape sequences or binary data,
+    # resulting in false positives. This approach uses byte length comparison for reliability.
+    if [ "${#path}" -ne "$(printf '%s' "$path" | wc -c)" ]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
     fi
@@ -106,7 +114,24 @@ get_clean_hostname() {
 # Initialize backup destination - called lazily to prevent sourcing issues
 init_destination() {
     DEVICE_NAME="$(get_clean_hostname)" || return 1
-    DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+
+    # Platform-specific default backup directories
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations, fallback to Documents
+        if [ -d "$HOME/Dropbox" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Dropbox/claude_backup_$DEVICE_NAME"
+        elif [ -d "$HOME/Documents" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Documents/claude_backup_$DEVICE_NAME"
+        else
+            DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+    fi
 
     if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
         # Parameter provided and it's not a flag - append device suffix
@@ -215,8 +240,8 @@ backup_to_destination() {
 
     # Run rsync with proper error logging and extended attributes support
     # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
-    timeout 300 rsync -av \
-        --extended-attributes \
+    rsync -av \
+        --xattrs \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -236,7 +261,7 @@ backup_to_destination() {
         backup_log "rsync completed successfully for .claude directory"
     elif [ $rsync_exit -eq 23 ]; then
         # Partial transfer due to errors - log specific failures
-        local failed_count=$(grep -i -c "failed\|error" "$rsync_errors" 2>/dev/null || echo "0")
+        local failed_count=$(grep -c "failed:" "$rsync_errors" 2>/dev/null || echo "0")
         backup_log "rsync partial transfer: $failed_count files failed"
         backup_log "Failed files details:"
         cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
@@ -257,8 +282,8 @@ backup_to_destination() {
         local rsync_log2="$SECURE_TEMP/rsync_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
         local rsync_errors2="$SECURE_TEMP/rsync_errors_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
 
-        timeout 300 rsync -av \
-            --extended-attributes \
+        rsync -av \
+            --xattrs \
             --include='.claude.json' \
             --include='.claude.json.backup*' \
             --exclude='*' \
@@ -271,24 +296,24 @@ backup_to_destination() {
             backup_log "rsync completed successfully for .claude.json files"
             if [ $rsync_exit -eq 0 ]; then
                 add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
-                return 0
+                return $SUCCESS
             else
                 add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files, some .claude directory files failed)"
-                return 23
+                return $PARTIAL_SUCCESS
             fi
         elif [ $rsync_exit2 -eq 23 ]; then
-            local failed_count2=$(grep -i -c "failed\|error" "$rsync_errors2" 2>/dev/null || echo "0")
+            local failed_count2=$(grep -c "failed:" "$rsync_errors2" 2>/dev/null || echo "0")
             backup_log "rsync partial transfer for .claude.json: $failed_count2 files failed"
             cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "WARNING" "$dest_name Claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
+            add_result "WARNING" "$dest_name .claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
             add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return 23
+            return $PARTIAL_SUCCESS
         else
             backup_log "rsync failed for .claude.json files with exit code $rsync_exit2"
             cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "WARNING" "$dest_name Claude.json Backup" "Main .claude directory synced, but .claude.json files failed"
-            add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return 23
+            add_result "ERROR" "$dest_name .claude.json Backup" "Complete failure of .claude.json backup (exit code $rsync_exit2)"
+            add_result "PARTIAL" "$dest_name Backup" "Main .claude directory synced, but .claude.json files completely failed"
+            return $ERROR
         fi
     else
         add_result "ERROR" "$dest_name Backup" "rsync failed to $dest_dir"
@@ -332,7 +357,8 @@ Log File: $LOG_FILE
 
 TROUBLESHOOTING:
 ===============
-- Verify macOS CloudStorage path: ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (macOS): ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (Linux): ls -la "$HOME/Dropbox" or "$HOME/Documents"
 - Verify rsync installation: which rsync
 - Check source directory: ls -la $SOURCE_DIR
 - Review full log: cat $LOG_FILE
@@ -438,7 +464,8 @@ EMAIL SETUP (for failure alerts):
 
 BACKUP TARGETS:
     Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (macOS): ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (Linux): ~/Dropbox/claude_backup_HOSTNAME or ~/Documents/claude_backup_HOSTNAME
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:

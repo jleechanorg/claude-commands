@@ -172,7 +172,7 @@ start_orchestration_background() {
     fi
 }
 
-# Function to setup all required cron jobs
+# Function to setup all required cron jobs with Linux/Ubuntu compatibility
 setup_cron_jobs() {
     echo -e "${BLUE}🔍 Verifying cron job configuration...${NC}"
 
@@ -182,42 +182,72 @@ setup_cron_jobs() {
     local cron_entries_added=0
     local current_crontab=$(crontab -l 2>/dev/null || echo "")
 
-    # 1. Claude Backup Cron (every 4 hours)
-    if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh"; then
+    # 1. Claude Backup Cron (every 4 hours) - Cross-platform and worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
         echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
 
-        # Create wrapper for claude backup
+        # Create worktree-agnostic wrapper with cross-platform compatibility
         cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Claude backup wrapper - worktree-agnostic
+# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
 set -euo pipefail
 
-# Allow an optional destination argument; default to Dropbox folder
-dest="${1:-$HOME/Library/CloudStorage/Dropbox}"
-
-# Search all worktrees for the real backup script
+# First try to find backup script in any worktree
 for wt in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
   if [ -x "$wt/scripts/claude_backup.sh" ]; then
-    exec "$wt/scripts/claude_backup.sh" "$dest"
+    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations
+        if [ -d "$HOME/Dropbox" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+        else
+            exec "$wt/scripts/claude_backup.sh" "$HOME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        exec "$wt/scripts/claude_backup.sh" "$HOME"
+    fi
   fi
 done
 
-# Fallback if not found anywhere
-echo "$(date): claude_backup.sh not found in any worktree" >> /tmp/backup_errors.log
-exit 1
+# If no worktree backup script found, try legacy approach
+if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Platform-specific Dropbox paths for legacy script
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        if [ -d "$HOME/Dropbox" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Documents"
+        else
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+        fi
+    else
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+    fi
+else
+    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    exit 1
+fi
 EOF
         chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
 
-        # Add to cron
-        (echo "$current_crontab"; echo '0 */4 * * * "$HOME/.local/bin/claude_backup_wrapper.sh" 2>&1') | crontab -
+        # Add to cron with proper $HOME expansion
+        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh 2>&1') | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 
-    # 2. TMux Cleanup (every 15 minutes)
+    # 2. TMux Cleanup (every 15 minutes) - Worktree-agnostic
     if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
         echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
 
-        # Create tmux cleanup wrapper
+        # Create tmux cleanup wrapper that works across worktrees
         cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
 #!/bin/bash
 # Find any available WorldArchitect worktree with orchestration
@@ -235,24 +265,24 @@ EOF
 
         # Add to cron
         current_crontab=$(crontab -l 2>/dev/null || echo "")
-        (echo "$current_crontab"; echo "*/15 * * * * $HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+        (echo "$current_crontab"; echo "*/15 * * * * \$HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 
-    # 3. Agent Monitor Disabled (commenting out the problematic entry)
-    echo -e "${BLUE}💡 Agent monitor is disabled as requested${NC}"
+    # 3. Agent Monitor Disabled (remove problematic hardcoded entries)
+    echo -e "${BLUE}💡 Agent monitor disabled to prevent resource conflicts${NC}"
 
-    # Remove any existing agent monitor cron entries
+    # Remove any existing agent monitor cron entries with hardcoded paths
     current_crontab=$(crontab -l 2>/dev/null || echo "")
     if echo "$current_crontab" | grep -q "agent_monitor.py"; then
-        echo -e "${YELLOW}⚠️  Removing existing agent monitor cron entries${NC}"
+        echo -e "${YELLOW}⚠️  Removing existing agent monitor cron entries (hardcoded paths)${NC}"
         # Filter out agent monitor entries
         echo "$current_crontab" | grep -v "agent_monitor.py" | crontab -
     fi
 
     # Display results
     if [ $cron_entries_added -gt 0 ]; then
-        echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) successfully${NC}"
+        echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) with Linux/Ubuntu compatibility${NC}"
     else
         echo -e "${GREEN}✅ All required cron jobs already configured${NC}"
     fi
@@ -265,7 +295,7 @@ EOF
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
 
-    # First check tmux cleanup automation
+    # First check comprehensive cron setup
     setup_cron_jobs
 
     if is_orchestration_running; then

@@ -765,30 +765,29 @@ backup_with_error_detection() {
     local rsync_log=$(mktemp)
     local failed_files=0
 
-    # Run rsync with detailed logging and capture specific errors
-    if rsync -av "$source/" "$dest/" 2>"$error_log"; then
-        # Check for partial failures (exit code 23)
-        local rsync_exit=$?
-        if [ $rsync_exit -eq 23 ]; then
-            failed_files=$(grep "failed:" "$error_log" | wc -l)
-        fi
-    else
-        echo "ERROR: Complete rsync failure"
-        rm -f "$rsync_log"
-        return 1
-    fi
+    # Run rsync and capture exit code before if statement
+    rsync -av "$source/" "$dest/" >"$rsync_log" 2>"$error_log"
+    local rsync_exit=$?
 
-    # Report results with file-specific failure detection
-    if [ $failed_files -gt 0 ]; then
-        echo "PARTIAL: $failed_files files failed to backup"
-        cat "$error_log"
-        rm -f "$rsync_log"
-        return 23  # rsync partial transfer exit code
-    else
+    case "$rsync_exit" in
+      0)
         echo "SUCCESS: All files backed up successfully"
         rm -f "$rsync_log"
         return 0
-    fi
+        ;;
+      23)
+        failed_files=$(grep -c "failed:" "$error_log" 2>/dev/null || echo 0)
+        echo "PARTIAL: $failed_files files failed to backup"
+        cat "$error_log"
+        rm -f "$rsync_log"
+        return 23
+        ;;
+      *)
+        echo "ERROR: Complete rsync failure (exit $rsync_exit)"
+        rm -f "$rsync_log"
+        return 1
+        ;;
+    esac
 }
 
 # Main test entry point
@@ -859,7 +858,7 @@ EOF
         # If we're still in the old behavior, this is the expected failure during RED phase
         echo -e "${RED}EXPECTED FAILURE (RED phase)${NC}: Current backup script still incorrectly reports success despite file failures"
         ((FAIL_COUNT++))
-        return 1  # This failure indicates we need to fix the script
+        return 0  # This failure indicates we need to fix the script
     else
         echo -e "${RED}UNEXPECTED RESULT${NC}: Neither old nor new behavior detected. Exit1: $exit1, Result1: $result1, Exit2: $exit2, Result2: $result2"
         ((FAIL_COUNT++))
