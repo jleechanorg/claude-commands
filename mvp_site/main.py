@@ -47,6 +47,9 @@ import datetime
 import json
 import logging
 import os
+
+# Additional imports for conditional logic (moved from inline to meet import validation)
+import re
 import subprocess
 import sys
 import traceback
@@ -58,6 +61,7 @@ import constants
 # Firebase imports
 import firebase_admin
 import logging_util
+import world_logic  # For MCP fallback logic
 from custom_types import CampaignId, UserId
 from firebase_admin import auth
 
@@ -78,14 +82,10 @@ from flask_cors import CORS
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
+import firestore_service  # For testing mode conditional logic
+
 # Import JSON serializer for Firestore compatibility
 from firestore_service import json_default_serializer
-
-# Additional imports for conditional logic (moved from inline to meet import validation)
-import re
-import firebase_utils  # For should_skip_firebase_init
-import firestore_service  # For testing mode conditional logic
-import world_logic  # For MCP fallback logic
 
 # --- CONSTANTS ---
 # API Configuration
@@ -274,7 +274,13 @@ def create_app() -> Flask:
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
-                id_token = request.headers[HEADER_AUTH].split(" ").pop()
+                auth_header = request.headers[HEADER_AUTH]
+                # Validate Bearer scheme
+                if not auth_header.startswith("Bearer "):
+                    raise ValueError("Invalid authorization scheme")
+                id_token = auth_header[7:]  # Remove 'Bearer ' prefix
+                if not id_token:
+                    raise ValueError("Empty token")
                 # Firebase token verification using Admin SDK with clock skew tolerance
                 # check_revoked=True ensures revoked tokens are rejected for security
                 # clock_skew_seconds=10 allows for up to 10 seconds of clock difference
@@ -290,10 +296,10 @@ def create_app() -> Flask:
                 # Do not log tokens or Authorization headers
                 logging_util.error(traceback.format_exc())
 
-                # Enhanced error response with clock skew hints
+                # Generic error response - don't expose internal error details
                 response_data = {
                     KEY_SUCCESS: False,
-                    KEY_ERROR: f"Authentication failed: {error_message}",
+                    KEY_ERROR: "Authentication failed",
                 }
 
                 # Add clock skew guidance for specific errors
@@ -917,7 +923,9 @@ def run_test_command(command: str) -> None:
                 "🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)..."
             )
             logging_util.info("   Using real browser automation with mocked backend")
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -939,7 +947,13 @@ def run_test_command(command: str) -> None:
             )
             env = os.environ.copy()
             env["REAL_APIS"] = "true"
-            result = subprocess.run([sys.executable, test_runner], check=False, env=env)
+            result = subprocess.run(
+                [sys.executable, test_runner],
+                shell=False,
+                timeout=30,
+                check=False,
+                env=env,
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -955,7 +969,9 @@ def run_test_command(command: str) -> None:
         if os.path.exists(test_runner):
             logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
             logging_util.info("   Using direct HTTP requests with mocked backend")
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -974,7 +990,9 @@ def run_test_command(command: str) -> None:
             logging_util.warning(
                 "⚠️  WARNING: These tests use REAL APIs and cost money!"
             )
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Full API test runner not found: {test_runner}")

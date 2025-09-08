@@ -446,7 +446,6 @@ class TestSecurityTokenMatrix(unittest.TestCase):
 
         self.assertIn("User not authenticated", str(context.exception))
 
-
     def _call_get_compensated_token(self, force_refresh=False):
         """
         Helper method to simulate calling getCompensatedToken
@@ -495,7 +494,6 @@ class TestSecurityTokenMatrix(unittest.TestCase):
             raise ValueError("Authentication token has invalid JWT structure")
 
         return token
-
 
 
 if __name__ == "__main__":

@@ -78,7 +78,8 @@ class ApiService {
         const roundTripTime = clientTimeAfter - clientTimeBefore;
 
         // Estimate server time at the moment we made the request
-        const estimatedServerTime = data.server_timestamp_ms + (roundTripTime / 2);
+        // Server time was captured when response was generated, so we need to account for the network delay
+        const estimatedServerTime = data.server_timestamp_ms;
         const clientTimeAtRequest = clientTimeBefore + (roundTripTime / 2);
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
@@ -108,9 +109,9 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // If we have detected clock skew and client is behind, wait before token generation
-    if (this.clockSkewDetected && this.clockSkewOffset < 0) {
-      const waitTime = Math.abs(this.clockSkewOffset) + 500; // Add 500ms buffer
+    // If we have detected clock skew and client is ahead, wait before token generation
+    if (this.clockSkewDetected && this.clockSkewOffset > 0) {
+      const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, 10000); // Add 500ms buffer, cap at 10s
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
       }
@@ -466,11 +467,12 @@ class ApiService {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
 
-      // Add additional delay if we've detected significant clock skew
+      // Add additional delay if we've detected significant clock skew (capped at 10 seconds)
       if (this.clockSkewDetected && Math.abs(this.clockSkewOffset) > 1000) {
-        delay += Math.abs(this.clockSkewOffset);
+        const skewDelay = Math.min(Math.abs(this.clockSkewOffset), 10000);
+        delay += skewDelay;
         if (import.meta.env?.DEV) {
-          console.log(`⏱️ Adding ${Math.abs(this.clockSkewOffset)}ms delay for clock skew compensation`);
+          console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation (capped at 10s)`);
         }
       }
     }
@@ -820,7 +822,8 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    const token = await user.getIdToken();
+    // Use compensated token for ALL auth headers including file operations
+    const token = await this.getCompensatedToken();
     return {
       'Authorization': `Bearer ${token}`,
     };
