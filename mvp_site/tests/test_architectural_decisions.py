@@ -20,15 +20,24 @@ import pytest  # Required for tests
 
 # Set up import paths and import modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), ".claude", "commands"))
+sys.path.insert(
+    0,
+    os.path.join(
+        os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+        ".claude",
+        "commands",
+    ),
+)
 
 # Import using importlib to avoid import order issues
-entities_pydantic = importlib.import_module('schemas.entities_pydantic')
+entities_pydantic = importlib.import_module("schemas.entities_pydantic")
 NPC = entities_pydantic.NPC
 HealthStatus = entities_pydantic.HealthStatus
-DefensiveNumericConverter = importlib.import_module('schemas.defensive_numeric_converter').DefensiveNumericConverter
-entity_tracking = importlib.import_module('entity_tracking')
-arch = importlib.import_module('arch')
+DefensiveNumericConverter = importlib.import_module(
+    "schemas.defensive_numeric_converter"
+).DefensiveNumericConverter
+entity_tracking = importlib.import_module("entity_tracking")
+arch = importlib.import_module("arch")
 
 
 class TestArchitecturalDecisions(unittest.TestCase):
@@ -274,69 +283,103 @@ def broken_function(:
 
     def test_adt_011_calculate_cyclomatic_complexity_simple(self):
         """ADT-011: Cyclomatic complexity calculation for simple code"""
-        
+
         simple_code = "def hello():\n    return 'world'"
         # Parse AST and calculate actual cyclomatic complexity
         tree = ast.parse(simple_code)
-        
+
         # Basic complexity calculation: 1 + number of decision points
         complexity = 1  # Base complexity
         for node in ast.walk(tree):
-            if isinstance(node, (ast.If, ast.While, ast.For, ast.AsyncFor, 
-                               ast.ExceptHandler, ast.With, ast.AsyncWith)):
+            if isinstance(
+                node,
+                (
+                    ast.If,
+                    ast.While,
+                    ast.For,
+                    ast.AsyncFor,
+                    ast.ExceptHandler,
+                    ast.With,
+                    ast.AsyncWith,
+                ),
+            ):
                 complexity += 1
             elif isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
-        
+
         self.assertEqual(complexity, 1, "Simple function should have complexity 1")
         self.assertIsInstance(complexity, int)
         self.assertGreater(complexity, 0)
 
     def test_adt_012_calculate_cyclomatic_complexity_complex(self):
         """ADT-012: Cyclomatic complexity calculation for complex code"""
-        
+
         complex_code = "def complex_func(x):\n    if x > 0:\n        return 'positive'\n    else:\n        return 'negative'"
         # Parse AST and calculate actual cyclomatic complexity
         tree = ast.parse(complex_code)
-        
+
         # Basic complexity calculation: 1 + number of decision points
         complexity = 1  # Base complexity
         for node in ast.walk(tree):
-            if isinstance(node, (ast.If, ast.While, ast.For, ast.AsyncFor, 
-                               ast.ExceptHandler, ast.With, ast.AsyncWith)):
+            if isinstance(
+                node,
+                (
+                    ast.If,
+                    ast.While,
+                    ast.For,
+                    ast.AsyncFor,
+                    ast.ExceptHandler,
+                    ast.With,
+                    ast.AsyncWith,
+                ),
+            ):
                 complexity += 1
             elif isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
-        
-        self.assertEqual(complexity, 2, "Function with if/else should have complexity 2")
+
+        self.assertEqual(
+            complexity, 2, "Function with if/else should have complexity 2"
+        )
         self.assertIsInstance(complexity, int)
         self.assertGreater(complexity, 1)
 
     def test_adt_013_extract_functions_with_complexity(self):
         """ADT-013: Function extraction with complexity analysis"""
-        
+
         code = "def func1():\n    pass\n\ndef func2(x):\n    if x:\n        return True"
         # Parse AST and extract actual functions with complexity
         tree = ast.parse(code)
         extracted_functions = []
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 # Calculate complexity for this function
                 complexity = 1  # Base complexity
                 for child in ast.walk(node):
-                    if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, 
-                                        ast.ExceptHandler, ast.With, ast.AsyncWith)):
+                    if isinstance(
+                        child,
+                        (
+                            ast.If,
+                            ast.While,
+                            ast.For,
+                            ast.AsyncFor,
+                            ast.ExceptHandler,
+                            ast.With,
+                            ast.AsyncWith,
+                        ),
+                    ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
                         complexity += len(child.values) - 1
-                
-                extracted_functions.append({
-                    "name": node.name,
-                    "complexity": complexity,
-                    "line_number": node.lineno
-                })
-        
+
+                extracted_functions.append(
+                    {
+                        "name": node.name,
+                        "complexity": complexity,
+                        "line_number": node.lineno,
+                    }
+                )
+
         self.assertEqual(len(extracted_functions), 2, "Should extract 2 functions")
         self.assertEqual(extracted_functions[0]["name"], "func1")
         self.assertEqual(extracted_functions[0]["complexity"], 1)
@@ -345,12 +388,12 @@ def broken_function(:
 
     def test_adt_014_extract_import_dependencies(self):
         """ADT-014: Import dependency extraction"""
-        
+
         code = "import os\nfrom sys import path\nimport json"
         # Parse AST and extract actual imports
         tree = ast.parse(code)
         extracted_imports = []
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
@@ -362,7 +405,7 @@ def broken_function(:
                         extracted_imports.append(f"{module}.{alias.name}")
                     else:
                         extracted_imports.append(alias.name)
-        
+
         self.assertEqual(len(extracted_imports), 3, "Should extract 3 imports")
         self.assertIn("os", extracted_imports)
         self.assertIn("sys.path", extracted_imports)
@@ -370,34 +413,34 @@ def broken_function(:
 
     def test_adt_015_extract_classes_with_methods(self):
         """ADT-015: Class and method extraction"""
-        
+
         code = "class TestClass:\n    def method1(self):\n        pass\n    def method2(self):\n        return True"
         # Parse AST and extract actual classes with methods
         tree = ast.parse(code)
         extracted_classes = []
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 methods = []
                 for child in node.body:
                     if isinstance(child, ast.FunctionDef):
                         methods.append(child.name)
-                
-                extracted_classes.append({
-                    "name": node.name,
-                    "methods": methods,
-                    "line_number": node.lineno
-                })
-        
+
+                extracted_classes.append(
+                    {"name": node.name, "methods": methods, "line_number": node.lineno}
+                )
+
         self.assertEqual(len(extracted_classes), 1, "Should extract 1 class")
         self.assertEqual(extracted_classes[0]["name"], "TestClass")
-        self.assertEqual(len(extracted_classes[0]["methods"]), 2, "Should extract 2 methods")
+        self.assertEqual(
+            len(extracted_classes[0]["methods"]), 2, "Should extract 2 methods"
+        )
         self.assertIn("method1", extracted_classes[0]["methods"])
         self.assertIn("method2", extracted_classes[0]["methods"])
 
     def test_adt_016_find_architectural_issues_high_complexity(self):
         """ADT-016: High complexity issue detection"""
-        
+
         # Test code with known complexity issues
         code_with_issues = """
 def complex_func(x, y, z):
@@ -415,39 +458,51 @@ def complex_func(x, y, z):
 def simple_func():
     return "simple"
         """
-        
+
         # Parse and analyze for complexity issues
         tree = ast.parse(code_with_issues)
         high_complexity_functions = []
         complexity_threshold = 3  # Functions above this are flagged
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 complexity = 1  # Base complexity
                 for child in ast.walk(node):
-                    if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, 
-                                        ast.ExceptHandler, ast.With, ast.AsyncWith)):
+                    if isinstance(
+                        child,
+                        (
+                            ast.If,
+                            ast.While,
+                            ast.For,
+                            ast.AsyncFor,
+                            ast.ExceptHandler,
+                            ast.With,
+                            ast.AsyncWith,
+                        ),
+                    ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
                         complexity += len(child.values) - 1
-                
+
                 if complexity > complexity_threshold:
                     high_complexity_functions.append(node.name)
-        
+
         analysis_result = {
             "high_complexity_functions": high_complexity_functions,
             "complexity_threshold": complexity_threshold,
-            "issues_found": len(high_complexity_functions)
+            "issues_found": len(high_complexity_functions),
         }
-        
-        self.assertGreaterEqual(analysis_result["issues_found"], 0, "Should identify issues")
+
+        self.assertGreaterEqual(
+            analysis_result["issues_found"], 0, "Should identify issues"
+        )
         self.assertIsInstance(analysis_result["high_complexity_functions"], list)
         # The complex_func should be flagged as high complexity
         self.assertIn("complex_func", analysis_result["high_complexity_functions"])
 
     def test_adt_017_generate_evidence_based_insights(self):
         """ADT-017: Evidence-based insights generation"""
-        
+
         # Test code with various quality issues
         test_code = """
 def very_complex_function(a, b, c, d, e):
@@ -471,57 +526,73 @@ def very_complex_function(a, b, c, d, e):
 def simple_good_function():
     return "good"
         """
-        
+
         # Analyze code for evidence-based insights
         tree = ast.parse(test_code)
         function_count = 0
         high_complexity_functions = []
         maintainability_issues = []
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
                 function_count += 1
-                
+
                 # Calculate complexity
                 complexity = 1
                 for child in ast.walk(node):
-                    if isinstance(child, (ast.If, ast.While, ast.For, ast.AsyncFor, 
-                                        ast.ExceptHandler, ast.With, ast.AsyncWith)):
+                    if isinstance(
+                        child,
+                        (
+                            ast.If,
+                            ast.While,
+                            ast.For,
+                            ast.AsyncFor,
+                            ast.ExceptHandler,
+                            ast.With,
+                            ast.AsyncWith,
+                        ),
+                    ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
                         complexity += len(child.values) - 1
-                
+
                 # Check for maintainability issues
                 if complexity > 5:
                     high_complexity_functions.append(node.name)
-                    maintainability_issues.append(f"High complexity ({complexity}) in function {node.name}")
-                
+                    maintainability_issues.append(
+                        f"High complexity ({complexity}) in function {node.name}"
+                    )
+
                 # Check parameter count
                 param_count = len(node.args.args)
                 if param_count > 4:
-                    maintainability_issues.append(f"Too many parameters ({param_count}) in function {node.name}")
-        
+                    maintainability_issues.append(
+                        f"Too many parameters ({param_count}) in function {node.name}"
+                    )
+
         # Generate quality score based on issues found
         issue_penalty = len(maintainability_issues) * 1.5
         quality_score = max(0, 10 - issue_penalty)
-        
+
         # Generate recommendations based on evidence
         recommendations = []
         if high_complexity_functions:
-            recommendations.append(f"Refactor complex functions: {', '.join(high_complexity_functions)}")
+            recommendations.append(
+                f"Refactor complex functions: {', '.join(high_complexity_functions)}"
+            )
         if len(maintainability_issues) > 0:
             recommendations.append("Add unit tests for complex functions")
         if quality_score < 5:
             recommendations.append("Consider code review and refactoring")
-        
+
         insights = {
             "code_quality_score": quality_score,
             "maintainability_issues": maintainability_issues,
             "recommendations": recommendations,
             "high_complexity_functions": high_complexity_functions,
-            "function_count": function_count
+            "function_count": function_count,
         }
-        
+
         self.assertIsInstance(insights["code_quality_score"], (int, float))
         self.assertIsInstance(insights["recommendations"], list)
         self.assertGreater(len(insights["recommendations"]), 0)
