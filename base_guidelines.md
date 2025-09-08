@@ -9,20 +9,21 @@
 #### ❌ Pattern That FAILS (Flagged as "Inline Import")
 ```python
 import standard_modules
-# Any comment or logic here breaks the rule
-if condition:
-    sys.path.insert(0, some_path)
-from local_modules import Class  # ← Flagged as IMP002 violation
+sys.path.insert(0, os.path.dirname(__file__))  # ← This breaks the rule!
+from local_modules import Class                 # ← Flagged as IMP002 violation
 ```
 
 #### ✅ Pattern That WORKS (Compliant)
 ```python
-import standard_modules
-sys.path.insert(0, os.path.dirname(__file__))  # Single line path setup
-from local_modules import Class                 # Immediately after
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))  # Path setup with minimal imports
+
+import standard_modules                         # All other imports grouped together
+from local_modules import Class                 # Local imports immediately after
 ```
 
-**Key Insight:** The import validator considers ANY code between imports as making subsequent imports "inline" - even necessary sys.path setup, comments, or conditional logic.
+**Key Insight:** The import validator considers ANY code between imports as making subsequent imports "inline" - even single-line sys.path setup. The solution is to do path setup with minimal imports first, then group ALL remaining imports together.
 
 ### IMP001 Rule
 - No try/except blocks around imports

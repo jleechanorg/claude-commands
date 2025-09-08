@@ -6,16 +6,16 @@ Monitors A2A system health, cleans up stale registrations,
 and provides system status reporting.
 """
 
-import json
-import logging
 import os
 import sys
+sys.path.insert(0, os.path.dirname(__file__))
+
+import json
+import logging
 import threading
 import time
 from pathlib import Path
 from typing import Any
-
-sys.path.insert(0, os.path.dirname(__file__))
 from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
 
 logger = logging.getLogger(__name__)
