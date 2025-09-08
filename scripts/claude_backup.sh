@@ -236,7 +236,7 @@ backup_to_destination() {
         backup_log "rsync completed successfully for .claude directory"
     elif [ $rsync_exit -eq 23 ]; then
         # Partial transfer due to errors - log specific failures
-        local failed_count=$(grep -c "failed:" "$rsync_errors" 2>/dev/null || echo "0")
+        local failed_count=$(grep -i -c "failed\|error" "$rsync_errors" 2>/dev/null || echo "0")
         backup_log "rsync partial transfer: $failed_count files failed"
         backup_log "Failed files details:"
         cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
@@ -277,7 +277,7 @@ backup_to_destination() {
                 return 23
             fi
         elif [ $rsync_exit2 -eq 23 ]; then
-            local failed_count2=$(grep -c "failed:" "$rsync_errors2" 2>/dev/null || echo "0")
+            local failed_count2=$(grep -i -c "failed\|error" "$rsync_errors2" 2>/dev/null || echo "0")
             backup_log "rsync partial transfer for .claude.json: $failed_count2 files failed"
             cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
             add_result "WARNING" "$dest_name Claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"

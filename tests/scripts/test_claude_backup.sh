@@ -859,7 +859,7 @@ EOF
         # If we're still in the old behavior, this is the expected failure during RED phase
         echo -e "${RED}EXPECTED FAILURE (RED phase)${NC}: Current backup script still incorrectly reports success despite file failures"
         ((FAIL_COUNT++))
-        return 0  # This failure indicates we need to fix the script
+        return 1  # This failure indicates we need to fix the script
     else
         echo -e "${RED}UNEXPECTED RESULT${NC}: Neither old nor new behavior detected. Exit1: $exit1, Result1: $result1, Exit2: $exit2, Result2: $result2"
         ((FAIL_COUNT++))

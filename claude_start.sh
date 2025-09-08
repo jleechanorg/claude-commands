@@ -189,12 +189,22 @@ setup_cron_jobs() {
         # Create wrapper for claude backup
         cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Claude backup wrapper - looks for backup script
-if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
-    "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
-else
-    echo "$(date): claude_backup_cron.sh not found" >> /tmp/backup_errors.log
-fi
+# Claude backup wrapper - worktree-agnostic
+set -euo pipefail
+
+# Allow an optional destination argument; default to Dropbox folder
+dest="${1:-$HOME/Library/CloudStorage/Dropbox}"
+
+# Search all worktrees for the real backup script
+for wt in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
+  if [ -x "$wt/scripts/claude_backup.sh" ]; then
+    exec "$wt/scripts/claude_backup.sh" "$dest"
+  fi
+done
+
+# Fallback if not found anywhere
+echo "$(date): claude_backup.sh not found in any worktree" >> /tmp/backup_errors.log
+exit 1
 EOF
         chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
 
@@ -225,7 +235,7 @@ EOF
 
         # Add to cron
         current_crontab=$(crontab -l 2>/dev/null || echo "")
-        (echo "$current_crontab"; echo "*/15 * * * * \$HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+        (echo "$current_crontab"; echo "*/15 * * * * $HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 
