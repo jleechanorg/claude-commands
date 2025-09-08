@@ -78,9 +78,9 @@ class ApiService {
         const roundTripTime = clientTimeAfter - clientTimeBefore;
 
         // Estimate server time at the moment we made the request
-        // Server time was captured when response was generated, so we need to account for the network delay
-        const estimatedServerTime = data.server_timestamp_ms;
-        const clientTimeAtRequest = clientTimeBefore + (roundTripTime / 2);
+        // Server time was captured when response was generated, so subtract half RTT to get time at request
+        const estimatedServerTime = data.server_timestamp_ms - (roundTripTime / 2);
+        const clientTimeAtRequest = clientTimeBefore;
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
         this.clockSkewOffset = clientTimeAtRequest - estimatedServerTime;

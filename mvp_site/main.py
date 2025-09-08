@@ -399,8 +399,8 @@ def create_app() -> Flask:
                 return jsonify({"error": "Campaign not found"}), 404
 
             # Get user settings for debug mode
-            user_settings = firestore_service.get_user_settings(user_id)
-            debug_mode = user_settings.get("debug_mode", False)
+            user_settings = firestore_service.get_user_settings(user_id) or {}
+            debug_mode = bool(user_settings.get("debug_mode", False))
 
             # Get game state
             game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
@@ -409,10 +409,10 @@ def create_app() -> Flask:
 
             # Process story entries based on debug mode
             if debug_mode:
-                processed_story = story
+                processed_story = story or []
             else:
                 # Strip debug fields when debug mode is off
-                processed_story = world_logic._strip_game_state_fields(story)
+                processed_story = world_logic._strip_game_state_fields(story or [])
 
             result = {
                 "success": True,
@@ -841,8 +841,12 @@ def create_app() -> Flask:
                 request_data = {"user_id": user_id, "settings": filtered_data}
 
                 # Direct service calls (testing mode removed - always use direct approach)
-                firestore_service.update_user_settings(user_id, filtered_data)
-                result = {"success": True}
+                ok = firestore_service.update_user_settings(user_id, filtered_data)
+                result = (
+                    {"success": True}
+                    if ok
+                    else {"success": False, "error": "Failed to update settings"}
+                )
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
