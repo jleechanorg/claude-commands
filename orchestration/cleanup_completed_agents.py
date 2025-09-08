@@ -15,11 +15,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Set
 
-# Add current directory to path for both local and CI execution
-current_dir = os.path.dirname(__file__)
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-
+sys.path.insert(0, os.path.dirname(__file__))
 from constants import IDLE_MINUTES_THRESHOLD
 
 

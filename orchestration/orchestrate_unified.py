@@ -12,11 +12,7 @@ import sys
 import time
 from datetime import datetime, timedelta
 
-# Add current directory to path for both local and CI execution
-current_dir = os.path.dirname(__file__)
-if current_dir not in sys.path:
-    sys.path.insert(0, current_dir)
-
+sys.path.insert(0, os.path.dirname(__file__))
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
