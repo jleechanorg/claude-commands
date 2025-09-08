@@ -22,28 +22,26 @@ Key MCP Tools:
 
 import argparse
 import asyncio
+import importlib
 import json
 import logging
 import os
 import sys
+import threading
 import traceback
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 # WorldArchitect imports
 import logging_util
 import world_logic
+from firestore_service import json_default_serializer
 
 # MCP imports
 from mcp.server import Server
 from mcp.types import Resource, TextContent, Tool
 
-# Import stdio transport at module level (gated usage in run_server)
-try:
-    from mcp.server.stdio import stdio_server
-except ImportError:
-    stdio_server = None
-
-from firestore_service import json_default_serializer
+# Note: stdio_server import handled dynamically when needed
 
 # Initialize MCP server
 server = Server("world-logic")
@@ -499,7 +497,11 @@ def run_server():
 
     # Auto-enable stdio-only mode when detected or explicitly requested
     if args.stdio or is_claude_code:
-        if stdio_server is None:
+        # Import stdio_server when actually needed
+        try:
+            stdio_module = importlib.import_module('mcp.server.stdio')
+            stdio_server = getattr(stdio_module, 'stdio_server')
+        except ImportError:
             logging_util.error(
                 "stdio transport not available - install mcp package with stdio support"
             )
@@ -518,18 +520,23 @@ def run_server():
 
     # Handle dual transport mode (default behavior)
     if args.dual:
-        if stdio_server is None:
+        # Check if stdio_server is available for dual mode
+        try:
+            stdio_module = importlib.import_module('mcp.server.stdio')
+            stdio_server = getattr(stdio_module, 'stdio_server')
+            stdio_available = True
+        except ImportError:
             logging_util.warning(
                 "stdio transport not available - falling back to HTTP-only mode"
             )
-        else:
+            stdio_available = False
+        
+        if stdio_available:
             logging_util.info(
                 f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio"
             )
 
             # Run dual transport using threading
-            import threading
-            from http.server import BaseHTTPRequestHandler, HTTPServer
 
             # HTTP handler for dual mode (simplified)
             class DualMCPHandler(BaseHTTPRequestHandler):
@@ -586,7 +593,6 @@ def run_server():
     )
 
     # Run HTTP server with JSON-RPC support
-    from http.server import BaseHTTPRequestHandler, HTTPServer
 
     class MCPHandler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
