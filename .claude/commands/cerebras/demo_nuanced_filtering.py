@@ -53,3 +53,33 @@ This should work for your needs."""
         {
             "name": "Pure Discussion",
             "content": """User: What's the best approach for authentication?
+
+Assistant: For security, I recommend using established libraries like bcrypt for password hashing, implementing proper session management, and adding two-factor authentication when possible. Always validate inputs and use HTTPS."""
+        }
+    ]
+
+    print("🎯 NUANCED FILTERING DEMO")
+    print("=" * 50)
+    print()
+
+    for case in test_cases:
+        print(f"📝 {case['name']}:")
+        print(f"   Original Length: {len(case['content'])} chars")
+
+        # Get quality score
+        quality = scorer.score_content_quality(case['content'])
+        print(f"   Quality Score: {quality:.2f}")
+
+        # Apply filtering
+        clean_messages = filter.extract_clean_messages(case['content'])
+        clean_context = filter._rebuild_conversation_context(clean_messages)
+
+        print(f"   Filtered Length: {len(clean_context)} chars")
+        print(f"   Size Change: {((len(clean_context) - len(case['content'])) / len(case['content']) * 100):+.1f}%")
+        print(f"   Has Code: {'✅' if '```' in clean_context else '❌'}")
+        print(f"   Protocol Refs: {'❌' if '[Used' in clean_context else '✅ Clean'}")
+        print(f"   Preview: {clean_context[:100]}...")
+        print()
+
+if __name__ == "__main__":
+    test_different_content_types()

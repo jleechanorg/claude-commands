@@ -12,9 +12,7 @@ import os
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
 from datetime import datetime
-
-# Add current directory to path for imports
-sys.path.insert(0, os.path.dirname(__file__))
+from claude_code_context_filter import ClaudeCodeContextFilter, ContextQualityScorer
 
 
 @dataclass
@@ -103,8 +101,6 @@ The implementation is now ready for production use."""
 
     def test_filter_mcp_protocol_references(self):
         """🔴 FAIL: Should remove MCP tool reference patterns"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
         clean_messages = filter.extract_clean_messages(self.contaminated_conversation)
 
@@ -116,8 +112,6 @@ The implementation is now ready for production use."""
 
     def test_preserve_semantic_content(self):
         """🔴 FAIL: Should preserve code blocks and technical content"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
         clean_messages = filter.extract_clean_messages(self.contaminated_conversation)
 
@@ -139,8 +133,6 @@ The implementation is now ready for production use."""
 
     def test_extract_tool_metadata(self):
         """🔴 FAIL: Should convert tool references to clean metadata"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
         clean_messages = filter.extract_clean_messages(self.contaminated_conversation)
 
@@ -154,8 +146,6 @@ The implementation is now ready for production use."""
 
     def test_context_quality_scoring(self):
         """🔴 FAIL: Should score context quality vs contamination risk"""
-        from claude_code_context_filter import ContextQualityScorer
-
         scorer = ContextQualityScorer()
 
         # High quality: code + explanations, no protocol refs
@@ -172,8 +162,6 @@ The implementation is now ready for production use."""
 
     def test_message_role_inference(self):
         """🔴 FAIL: Should correctly identify message roles"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
         clean_messages = filter.extract_clean_messages(self.contaminated_conversation)
 
@@ -188,9 +176,6 @@ The implementation is now ready for production use."""
 
     def test_integration_with_existing_context_extractor(self):
         """🔴 FAIL: Should integrate with existing extract_conversation_context.py"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-        from extract_conversation_context import extract_conversation_context
-
         # Mock a conversation file
         filter = ClaudeCodeContextFilter()
 
@@ -205,8 +190,6 @@ The implementation is now ready for production use."""
 
     def test_empty_and_edge_cases(self):
         """🔴 FAIL: Should handle empty and malformed input gracefully"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
 
         # Empty input
@@ -224,8 +207,6 @@ class TestCerebrasIntegration(unittest.TestCase):
 
     def test_context_mode_flags(self):
         """🔴 FAIL: Should support different context modes"""
-        from claude_code_context_filter import ClaudeCodeContextFilter
-
         filter = ClaudeCodeContextFilter()
         contaminated_text = "[Used tool] Some good technical content with code."
 
@@ -244,8 +225,6 @@ class TestCerebrasIntegration(unittest.TestCase):
 
     def test_quality_threshold_logic(self):
         """🔴 FAIL: Should automatically fallback to no-context for poor quality"""
-        from claude_code_context_filter import ContextQualityScorer
-
         scorer = ContextQualityScorer()
 
         # Very contaminated context should trigger fallback
