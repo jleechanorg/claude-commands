@@ -8,14 +8,22 @@ Flask App → MCPClient → MCP Server → World Logic → Response Chain
 This supplements the existing Flask-only end2end tests with true MCP server integration.
 """
 
+# Import path setup must be done before ANY imports
+import os
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
 import asyncio
 import json
-import os
 import subprocess
-import sys
 import time
 import unittest
 from unittest.mock import patch
+
+import logging_util as log
+from main import create_app
+from mcp_client import MCPClient
 
 try:
     import requests
@@ -26,12 +34,6 @@ except ImportError:
 os.environ["TESTING"] = "true"
 # Note: This test spawns real MCP server processes for integration testing
 # It does not use USE_MOCKS since it tests actual MCP communication
-
-# Add parent directories to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-from main import create_app  # noqa: E402
-from mcp_client import MCPClient  # noqa: E402
 
 
 class TestMCPIntegrationComprehensive(unittest.TestCase):
@@ -71,8 +73,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 raise Exception("MCP server not responding correctly")
 
         except Exception as e:
-            print(f"Warning: Could not start MCP server for comprehensive tests: {e}")
-            print("Falling back to mock-only testing")
+            log.getLogger(__name__).warning(
+                "Could not start MCP server for comprehensive tests: %s", e
+            )
+            log.getLogger(__name__).info("Falling back to mock-only testing")
             cls.mcp_process = None
 
     @classmethod
