@@ -55,7 +55,9 @@ class ImportValidator(ast.NodeVisitor):
             'ssl', 'socket', 'subprocess', 'shutil', 're', 'math',
             'random', 'statistics', 'contextlib', 'dataclasses',
             'abc', 'enum', 'copy', 'pickle', 'base64', 'hashlib',
-            'traceback', 'warnings', 'pytest', 'unittest'
+            'traceback', 'warnings', 'pytest', 'unittest',
+            # Test module imports that need sys.path manipulation
+            'main', 'mcp_client', 'tests.fake_firestore', 'logging_util'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:

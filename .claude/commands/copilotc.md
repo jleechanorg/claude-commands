@@ -12,7 +12,7 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 **Flow**:
 ```
 1. `/conv "resolve all serious GitHub comments"`
-2. Auto-execute `/copilot` for each iteration  
+2. Auto-execute `/copilot` for each iteration
 3. Continue until convergence criteria met (all serious comments resolved)
 4. Success when GitHub shows clean PR status
 ```
@@ -43,7 +43,7 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 
 ## 🎛️ Configuration Options
 
-**Default Behavior**: 
+**Default Behavior**:
 - **Max Iterations**: 10 (inherited from `/conv` default)
 - **Success Criteria**: All serious GitHub comments resolved + PR mergeable
 - **Validation Method**: GitHub API status checks + comment analysis
@@ -58,7 +58,7 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 
 **CONVERGENCE-DRIVEN**: Uses `/conv` autonomous goal achievement system
 - **No user prompts**: Continues until success or iteration limit
-- **Smart iteration**: Each cycle improves PR state toward mergeable status  
+- **Smart iteration**: Each cycle improves PR state toward mergeable status
 - **Evidence-based success**: GitHub API confirmation of comment resolution
 - **Auto-learning**: Convergence system learns from each iteration
 
@@ -66,6 +66,36 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 - **Direct GitHub MCP**: Fast comment processing and resolution
 - **Performance optimized**: 2-3 minute copilot cycles vs 20+ minute alternatives
 - **Comprehensive coverage**: Processes all comment types systematically
+
+## 🚨 PR BRANCH CONSTRAINTS - MANDATORY
+
+**CRITICAL: STAY ON EXISTING PR BRANCH**
+- ❌ **NEVER create new PRs** when working on existing PR comment resolution
+- ❌ **NEVER switch branches** unless explicitly required for PR context
+- ✅ **ALWAYS work on current PR branch** throughout entire copilotc execution
+- ✅ **ALWAYS update existing PR** with comment resolution changes
+
+**BRANCH DISCIPLINE PROTOCOL:**
+- **Before execution**: Verify current branch matches target PR
+- **During execution**: All commits stay on same branch
+- **After execution**: Push updates to same PR, never create new PR
+
+**GUARDRAILS & ENFORCEMENT (REQUIRED):**
+- **Preflight:**
+  - Resolve PR number and target branch via GitHub API
+  - Verify `git rev-parse --abbrev-ref HEAD` == PR branch; abort if mismatch
+  - Refuse to run if there is any uncommitted worktree state that could trigger unintended branch ops
+- **Runtime:**
+  - Disallow any command that opens a new PR (e.g., `/pushl --create-pr`); abort with error
+  - Block `git checkout -b`, `git switch -c`, or branch-renaming commands
+  - Ensure all pushes target the PR branch and the same PR number
+- **Failure handling:**
+  - If any guard triggers, stop immediately, post a PR comment with the violation details, and exit `FAILURE`
+
+**EXIT CRITERIA ENFORCEMENT:**
+- Success = Comments resolved ON CURRENT PR
+- Failure = Creating duplicate/new PRs instead of fixing existing one
+- Context awareness = Understand you're fixing existing PR, not creating new work
 
 ## 💡 Use Cases
 
@@ -83,7 +113,7 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 
 ## ⚡ Performance Expectations
 
-**Target Performance**: 
+**Target Performance**:
 - **Per Iteration**: 2-3 minutes (copilot processing)
 - **Total Time**: 10-30 minutes (depending on comment complexity)
 - **Success Rate**: High (convergence + copilot proven systems)
