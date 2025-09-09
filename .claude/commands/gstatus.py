@@ -149,9 +149,14 @@ def analyze_ci_status(ci_status):
     if not isinstance(status_checks, list):
         status_checks = []
 
-    failing_checks = []
-    passing_checks = []
-    pending_checks = []
+    # Reference: CheckRun {status: QUEUED|IN_PROGRESS|COMPLETED, conclusion: SUCCESS|FAILURE|NEUTRAL|CANCELLED|TIMED_OUT|ACTION_REQUIRED|STALE|SKIPPED}
+    #            StatusContext {state: PENDING|SUCCESS|FAILURE}
+    failure_conclusions = {"FAILURE", "CANCELLED", "TIMED_OUT", "ACTION_REQUIRED"}
+    failure_states = {"FAILURE", "ERROR"}
+    success_conclusions = {"SUCCESS"}
+    pending_statuses = {"PENDING", "QUEUED", "IN_PROGRESS", "REQUESTED", "WAITING"}
+
+    failing_checks, passing_checks, pending_checks = [], [], []
 
     # Process each check - following fixpr.md safe processing pattern
     for check in status_checks:
@@ -159,33 +164,44 @@ def analyze_ci_status(ci_status):
             continue
 
         # Get check details safely
-        name = check.get('context') or check.get('name', 'unknown')
-        conclusion = check.get('conclusion')
-        state = check.get('state')
-        is_required = check.get('isRequired', False)
+        name = check.get('name') or check.get('context') or 'unknown'
+        conclusion = (check.get('conclusion') or '').upper() or None
+        state = (check.get('state') or '').upper() or None
+        status = (check.get('status') or '').upper() or None
+        # Only mark required when explicitly provided; else None to avoid misleading labels
+        is_required = True if check.get('isRequired') is True else None
         description = check.get('description', '')
 
-        # Determine status - following fixpr.md failure detection logic
-        if conclusion == "FAILURE" or state == "FAILURE":
+        # Classify failures
+        if (conclusion in failure_conclusions) or (state in failure_states):
             failing_checks.append({
                 'name': name,
-                'status': 'FAILURE',
+                'status': conclusion or state or 'FAILURE',
                 'required': is_required,
                 'description': description
             })
-        elif conclusion == "SUCCESS" or state == "SUCCESS":
+        # Classify successes
+        elif (conclusion in success_conclusions) or (state == "SUCCESS"):
             passing_checks.append({
                 'name': name,
-                'status': 'SUCCESS',
+                'status': conclusion or state or 'SUCCESS',
                 'required': is_required
             })
         else:
-            # PENDING, SKIPPED, etc.
-            pending_checks.append({
-                'name': name,
-                'status': conclusion or state or 'PENDING',
-                'required': is_required
-            })
+            # Pending or ambiguous
+            if (status in pending_statuses) or (state == "PENDING") or (conclusion in {None, "STALE"}):
+                pending_checks.append({
+                    'name': name,
+                    'status': conclusion or state or status or 'PENDING',
+                    'required': is_required
+                })
+            else:
+                # NEUTRAL/SKIPPED treated as non-blocking
+                passing_checks.append({
+                    'name': name,
+                    'status': conclusion or state or status or 'NEUTRAL',
+                    'required': is_required
+                })
 
     # CRITICAL: Following fixpr.md logic for mergeable status
     mergeable = ci_status.get('mergeable')
@@ -193,14 +209,19 @@ def analyze_ci_status(ci_status):
 
     # Determine if truly mergeable - CRITICAL: Don't trust mergeable alone
     has_failures = len(failing_checks) > 0
+    has_pending = len(pending_checks) > 0
     is_unstable = merge_state == 'UNSTABLE'
     is_dirty = merge_state == 'DIRTY'
     is_conflicting = mergeable == 'CONFLICTING'
+    is_blocked = merge_state in {'BLOCKED', 'HAS_HOOKS'}
+    is_behind = merge_state == 'BEHIND'
+    is_draft = merge_state == 'DRAFT'
 
     is_truly_mergeable = (
         mergeable == 'MERGEABLE' and
         merge_state == 'CLEAN' and
-        not has_failures
+        not has_failures and
+        not has_pending
     )
 
     return {
@@ -210,9 +231,13 @@ def analyze_ci_status(ci_status):
         'pending_checks': pending_checks,
         'is_mergeable': is_truly_mergeable,
         'has_failures': has_failures,
+        'has_pending': has_pending,
         'is_unstable': is_unstable,
         'is_dirty': is_dirty,
-        'is_conflicting': is_conflicting
+        'is_conflicting': is_conflicting,
+        'is_blocked': is_blocked,
+        'is_behind': is_behind,
+        'is_draft': is_draft
     }
 
 def get_git_status():
@@ -404,7 +429,9 @@ def main():
 
             # CRITICAL: Get comprehensive CI status like fixpr.md
             ci_status = get_pr_ci_status(pr_number)
-            ci_analysis = analyze_ci_status(ci_status)
+            if not ci_status:
+                print("\n⚠️  CI STATUS: unavailable (gh not authenticated or network error)")
+            ci_analysis = analyze_ci_status(ci_status or {})
 
             # Display CI status with proper failure detection
             print(f"\n🚨 CI STATUS: {ci_analysis['mergeable_status']}")
@@ -412,14 +439,14 @@ def main():
             if ci_analysis['has_failures']:
                 print(f"❌ FAILING CHECKS ({len(ci_analysis['failing_checks'])}):")
                 for check in ci_analysis['failing_checks']:
-                    req_marker = " (required)" if check['required'] else ""
+                    req_marker = " (required)" if check.get('required') is True else ""
                     desc = f" - {check['description']}" if check['description'] else ""
                     print(f"  ❌ {check['name']}: {check['status']}{req_marker}{desc}")
 
             if ci_analysis['passing_checks']:
                 print(f"✅ PASSING CHECKS ({len(ci_analysis['passing_checks'])}):")
                 for check in ci_analysis['passing_checks'][:3]:  # Show first 3
-                    req_marker = " (required)" if check['required'] else ""
+                    req_marker = " (required)" if check.get('required') is True else ""
                     print(f"  ✅ {check['name']}: {check['status']}{req_marker}")
                 if len(ci_analysis['passing_checks']) > 3:
                     remaining = len(ci_analysis['passing_checks']) - 3
@@ -437,12 +464,20 @@ def main():
                 reasons = []
                 if ci_analysis['has_failures']:
                     reasons.append("failing tests")
+                if ci_analysis.get('has_pending'):
+                    reasons.append("pending checks")
                 if ci_analysis['is_unstable']:
                     reasons.append("unstable state")
                 if ci_analysis['is_dirty']:
                     reasons.append("dirty merge state")
                 if ci_analysis['is_conflicting']:
                     reasons.append("merge conflicts")
+                if ci_analysis.get('is_blocked'):
+                    reasons.append("blocked")
+                if ci_analysis.get('is_behind'):
+                    reasons.append("behind base")
+                if ci_analysis.get('is_draft'):
+                    reasons.append("draft")
 
                 reason_text = ", ".join(reasons) if reasons else "unknown issues"
                 print(f"❌ PR NOT MERGEABLE: {reason_text}")
