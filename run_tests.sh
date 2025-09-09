@@ -78,7 +78,14 @@ get_memory_usage_gb() {
 get_total_memory_usage_gb() {
     # Get total memory usage for all our test processes
     local total_kb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
-    awk -v total="$total_kb" 'BEGIN {printf "%.2f", total / 1024 / 1024}'
+
+    # Input validation for memory calculation robustness
+    if [ -z "$total_kb" ] || ! echo "$total_kb" | grep -qE '^[0-9]+$'; then
+        echo "Warning: Invalid memory value ($total_kb), defaulting to 0.00" >&2
+        echo "0.00"
+    else
+        awk -v total="$total_kb" 'BEGIN {printf "%.2f", total / 1024 / 1024}'
+    fi
 }
 
 memory_monitor() {
