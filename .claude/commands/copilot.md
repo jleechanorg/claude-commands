@@ -30,7 +30,7 @@ Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Uses hybr
 - **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
 - **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
 - **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
-- **30 recent comments focus** - Process only actionable recent feedback  
+- **30 recent comments focus** - Process only actionable recent feedback
 - **Expected time**: **2-3 minutes** with reliable hybrid coordination
 
 ## 🚀 Core Workflow - Hybrid Orchestrator Pattern
@@ -58,6 +58,7 @@ Execute comment processing workflow directly for reliable GitHub operations:
 
 **🚀 Parallel copilot-fixpr Agent Launch**:
 Launch specialized agent for file modifications in parallel:
+- **FIRST**: Execute `/fixpr` command to resolve merge conflicts and CI failures
 - Analyze current GitHub PR status and identify potential improvements
 - Review code changes for security vulnerabilities and quality issues
 - Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol
@@ -149,10 +150,11 @@ fi
 ## 🔧 **HYBRID ORCHESTRATION BOUNDARIES**
 
 ### copilot-fixpr Agent Responsibilities:
+- **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures
 - **PRIMARY**: Security vulnerability detection and code implementation
-- **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis
-- **FOCUS**: Actual code changes with File Justification Protocol compliance
-- **BOUNDARY**: File operations only - never handles GitHub comment responses
+- **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis, `/fixpr` command
+- **FOCUS**: Make PR mergeable first, then actual code changes with File Justification Protocol compliance
+- **BOUNDARY**: File operations and PR mergeability - never handles GitHub comment responses
 
 ### Direct Orchestrator Responsibilities:
 - **PRIMARY**: Comment processing, GitHub operations, workflow coordination
