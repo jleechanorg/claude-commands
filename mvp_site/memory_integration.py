@@ -127,9 +127,7 @@ class MemoryIntegration:
         # Recency bonus based on entity timestamps
         try:
             # Check if entity has timestamp information
-            entity_timestamp = entity.get("timestamp") or entity.get(
-                "last_seen"
-            )
+            entity_timestamp = entity.get("timestamp") or entity.get("last_seen")
             if entity_timestamp:
                 try:
                     # Parse timestamp (handle multiple formats)
@@ -140,7 +138,7 @@ class MemoryIntegration:
                         )
                     else:
                         timestamp = entity_timestamp
-                        
+
                     # Ensure timezone-aware (assume UTC if naive)
                     if getattr(timestamp, "tzinfo", None) is None:
                         timestamp = timestamp.replace(tzinfo=UTC)

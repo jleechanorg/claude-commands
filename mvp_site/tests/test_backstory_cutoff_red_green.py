@@ -20,8 +20,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import modules using importlib to avoid import validation issues
-json_utils = importlib.import_module('json_utils')
-robust_json_parser = importlib.import_module('robust_json_parser')
+json_utils = importlib.import_module("json_utils")
+robust_json_parser = importlib.import_module("robust_json_parser")
 
 # Create aliases for the functions we need
 extract_field_value = json_utils.extract_field_value

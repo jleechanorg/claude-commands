@@ -14,36 +14,36 @@ from typing import List, Dict
 class FinalInlineDetector:
     def __init__(self):
         self.inline_imports = []
-        
+
     def find_all_inline_imports(self) -> List[Dict]:
         """Find ALL remaining inline imports in the codebase."""
         all_files = []
-        
+
         # Scan key directories
         for directory in ["mvp_site", "scripts", "testing_ui"]:
             path = Path(directory)
             if path.exists():
                 for py_file in path.rglob("*.py"):
                     all_files.append(str(py_file))
-        
+
         all_imports = []
         for filepath in all_files:
             imports = self.visit_file(filepath)
             all_imports.extend(imports)
-            
+
         return all_imports
-    
+
     def visit_file(self, filepath: str) -> List[Dict]:
         """Detect inline imports in a Python file."""
         try:
             with open(filepath, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             tree = ast.parse(content, filename=filepath)
             detector = FinalInlineImportVisitor(filepath)
             detector.visit(tree)
             return detector.inline_imports
-            
+
         except Exception as e:
             print(f"Warning: Error processing {filepath}: {e}")
             return []
@@ -55,22 +55,22 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
         self.inline_imports = []
         self.in_function = False
         self.function_depth = 0
-        
+
     def visit_FunctionDef(self, node):
         old_in_function = self.in_function
         old_depth = self.function_depth
-        
+
         self.in_function = True
         self.function_depth += 1
-        
+
         self.generic_visit(node)
-        
+
         self.in_function = old_in_function
         self.function_depth = old_depth
-        
+
     def visit_AsyncFunctionDef(self, node):
         self.visit_FunctionDef(node)
-        
+
     def visit_Import(self, node):
         if self.in_function:
             for alias in node.names:
@@ -78,7 +78,7 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
                 complexity = self._get_complexity(alias.name)
                 if alias.asname:
                     complexity = 'COMPLEX'
-                
+
                 self.inline_imports.append({
                     'file': self.filepath,
                     'line': node.lineno,
@@ -89,7 +89,7 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
                     'priority': self._get_priority(alias.name),
                     'complexity': complexity
                 })
-    
+
     def visit_ImportFrom(self, node):
         if self.in_function:
             module = node.module or ''
@@ -98,7 +98,7 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
                 complexity = self._get_complexity(module or alias.name)
                 if alias.asname:
                     complexity = 'COMPLEX'
-                    
+
                 self.inline_imports.append({
                     'file': self.filepath,
                     'line': node.lineno,
@@ -111,7 +111,7 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
                     'priority': self._get_priority(module or alias.name),
                     'complexity': complexity
                 })
-    
+
     def _get_priority(self, module_name: str) -> str:
         """Classify import priority."""
         # HIGH: Standard library modules
@@ -121,16 +121,16 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
             'logging', 'typing', 'socket', 'tempfile', 'shutil', 'glob',
             'unittest', 'pytest', 'mock', 'io', 'random'
         }
-        
+
         module_base = module_name.split('.')[0]
-        
+
         if module_base in stdlib_modules:
             return 'HIGH'
         elif module_name.startswith(('mvp_site', 'scripts')):
             return 'MEDIUM'
         else:
             return 'LOW'
-    
+
     def _get_complexity(self, module_name: str) -> str:
         """Classify complexity of fixing the import."""
         # SIMPLE: Easy to move to top
@@ -138,20 +138,20 @@ class FinalInlineImportVisitor(ast.NodeVisitor):
             'os', 'sys', 'json', 'time', 'datetime', 're', 'tempfile',
             'pathlib', 'collections', 'logging', 'typing'
         }
-        
+
         # CONDITIONAL: May be conditional imports
         conditional_patterns = {
             'unittest.mock', 'pytest', 'google.', 'firebase_', 'argparse'
         }
-        
+
         # COMPLEX: Likely conditional or special handling
         complex_patterns = {
-            'http.server', 'threading', 'uuid', 'firestore_service', 
+            'http.server', 'threading', 'uuid', 'firestore_service',
             'world_logic', 'firebase_utils'
         }
-        
+
         module_base = module_name.split('.')[0]
-        
+
         if module_base in simple_modules:
             return 'SIMPLE'
         elif any(pattern in module_name for pattern in conditional_patterns):
@@ -184,7 +184,7 @@ def get_top_level_imports(source_code: str) -> set:
 def fix_simple_imports(imports: List[Dict]) -> int:
     """Fix SIMPLE priority imports that can be safely moved."""
     fixed_count = 0
-    
+
     # Group by file
     by_file = {}
     for imp in imports:
@@ -193,11 +193,11 @@ def fix_simple_imports(imports: List[Dict]) -> int:
             if filepath not in by_file:
                 by_file[filepath] = []
             by_file[filepath].append(imp)
-    
+
     for filepath, file_imports in by_file.items():
         if fix_file_simple_imports(filepath, file_imports):
             fixed_count += 1
-    
+
     return fixed_count
 
 
@@ -206,9 +206,9 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
-        
+
         lines = content.split('\n')
-        
+
         # Collect unique imports to add
         imports_to_add = set()
         for imp in imports:
@@ -216,7 +216,7 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                 imports_to_add.add(f"import {imp['module']}")
             else:
                 imports_to_add.add(f"from {imp['from_module']} import {imp['import_name']}")
-        
+
         # Find insertion point after existing imports
         insert_pos = 0
         for i, line in enumerate(lines):
@@ -229,22 +229,22 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                 else:
                     insert_pos = i
                     break
-        
+
         # Add missing imports using AST-based detection
         existing_imports = get_top_level_imports(content)
         new_imports = []
         for import_line in sorted(imports_to_add):
             if import_line not in existing_imports:
                 new_imports.append(import_line)
-        
+
         if new_imports:
             # Insert new imports
             for i, import_line in enumerate(new_imports):
                 lines.insert(insert_pos + i, import_line)
-            
+
             # Simple cleanup: remove obvious inline patterns
             new_content = '\n'.join(lines)
-            
+
             # Try to remove inline imports (basic patterns)
             for imp in imports:
                 line_num = imp['line'] - 1  # Convert to 0-based
@@ -255,17 +255,17 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                         lines[line_num] = f"{original_indent}# Moved import to top-level"
                     elif imp['type'] == 'from_import' and line.strip().startswith('from '):
                         lines[line_num] = f"{original_indent}# Moved import to top-level"
-            
+
             new_content = '\n'.join(lines)
-            
+
             with open(filepath, 'w', encoding='utf-8') as f:
                 f.write(new_content)
-            
+
             print(f"Fixed {len(new_imports)} simple imports in {filepath}")
             return True
-        
+
         return False
-        
+
     except Exception as e:
         print(f"Error fixing {filepath}: {e}")
         return False
@@ -274,16 +274,16 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
 def main():
     """Main execution for Phase 4 final import optimization."""
     print("Phase 4: Final comprehensive inline import scan...")
-    
+
     detector = FinalInlineDetector()
     imports = detector.find_all_inline_imports()
-    
+
     if not imports:
         print("No inline imports found.")
         return 0
-    
+
     print(f"Found {len(imports)} total inline imports:")
-    
+
     # Group by priority and complexity
     stats = {
         'HIGH_SIMPLE': [],
@@ -292,11 +292,11 @@ def main():
         'MEDIUM': [],
         'LOW': []
     }
-    
+
     for imp in imports:
         priority = imp['priority']
         complexity = imp['complexity']
-        
+
         if priority == 'HIGH':
             key = f"HIGH_{complexity}"
             if key in stats:
@@ -305,7 +305,7 @@ def main():
                 stats['HIGH_COMPLEX'].append(imp)
         else:
             stats[priority].append(imp)
-    
+
     # Display summary
     print("\n📊 IMPORT ANALYSIS:")
     for category, items in stats.items():
@@ -315,14 +315,14 @@ def main():
                 print(f"  {imp['file']}:{imp['line']} - {imp.get('module', 'unknown')}")
             if len(items) > 3:
                 print(f"  ... and {len(items) - 3} more")
-    
+
     # Fix SIMPLE HIGH priority imports
     simple_high = stats.get('HIGH_SIMPLE', [])
     if simple_high:
         print(f"\n🔧 Fixing {len(simple_high)} SIMPLE HIGH priority imports...")
         fixed_count = fix_simple_imports(simple_high)
         print(f"Fixed imports in {fixed_count} files.")
-    
+
     return len(imports)
 
 
