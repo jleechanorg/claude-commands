@@ -6,25 +6,22 @@ Tests all key functions with mocking for subprocess calls and file operations.
 
 import os
 import pytest
-import time
-from unittest.mock import Mock, patch, mock_open, MagicMock
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, mock_open, patch
 
-# Add the orchestration directory to the path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-from cleanup_completed_agents import (
-    get_tmux_sessions,
-    get_all_monitoring_sessions,
-    get_session_timeout,
-    check_session_timeout,
+from orchestration.cleanup_completed_agents import (
     check_agent_completion,
+    check_session_timeout,
     cleanup_agent_session,
     cleanup_completed_agents,
-    get_task_agent_sessions
+    get_all_monitoring_sessions,
+    get_session_timeout,
+    get_task_agent_sessions,
+    get_tmux_sessions,
 )
 
 

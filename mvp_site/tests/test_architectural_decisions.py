@@ -89,7 +89,7 @@ class TestArchitecturalDecisions(unittest.TestCase):
     def test_adt_004_pydantic_validation_actually_rejects_bad_data(self):
         """ADT-004: Pydantic validation actually rejects invalid data"""
         # Test that gender validation works for NPCs (Luke campaign fix)
-        with pytest.raises(Exception) as context:
+        with pytest.raises(ValueError, match="Gender is required for NPCs") as context:
             NPC(
                 entity_id="npc_test_001",
                 display_name="Test NPC",
@@ -293,23 +293,21 @@ def broken_function(:
         for node in ast.walk(tree):
             if isinstance(
                 node,
-                (
-                    ast.If,
-                    ast.While,
-                    ast.For,
-                    ast.AsyncFor,
-                    ast.ExceptHandler,
-                    ast.With,
-                    ast.AsyncWith,
-                ),
+                ast.If
+                | ast.While
+                | ast.For
+                | ast.AsyncFor
+                | ast.ExceptHandler
+                | ast.With
+                | ast.AsyncWith,
             ):
                 complexity += 1
             elif isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
 
-        self.assertEqual(complexity, 1, "Simple function should have complexity 1")
-        self.assertIsInstance(complexity, int)
-        self.assertGreater(complexity, 0)
+        assert complexity == 1, "Simple function should have complexity 1"
+        assert isinstance(complexity, int)
+        assert complexity > 0
 
     def test_adt_012_calculate_cyclomatic_complexity_complex(self):
         """ADT-012: Cyclomatic complexity calculation for complex code"""
@@ -323,25 +321,21 @@ def broken_function(:
         for node in ast.walk(tree):
             if isinstance(
                 node,
-                (
-                    ast.If,
-                    ast.While,
-                    ast.For,
-                    ast.AsyncFor,
-                    ast.ExceptHandler,
-                    ast.With,
-                    ast.AsyncWith,
-                ),
+                ast.If
+                | ast.While
+                | ast.For
+                | ast.AsyncFor
+                | ast.ExceptHandler
+                | ast.With
+                | ast.AsyncWith,
             ):
                 complexity += 1
             elif isinstance(node, ast.BoolOp):
                 complexity += len(node.values) - 1
 
-        self.assertEqual(
-            complexity, 2, "Function with if/else should have complexity 2"
-        )
-        self.assertIsInstance(complexity, int)
-        self.assertGreater(complexity, 1)
+        assert complexity == 2, "Function with if/else should have complexity 2"
+        assert isinstance(complexity, int)
+        assert complexity > 1
 
     def test_adt_013_extract_functions_with_complexity(self):
         """ADT-013: Function extraction with complexity analysis"""
@@ -358,15 +352,13 @@ def broken_function(:
                 for child in ast.walk(node):
                     if isinstance(
                         child,
-                        (
-                            ast.If,
-                            ast.While,
-                            ast.For,
-                            ast.AsyncFor,
-                            ast.ExceptHandler,
-                            ast.With,
-                            ast.AsyncWith,
-                        ),
+                        ast.If
+                        | ast.While
+                        | ast.For
+                        | ast.AsyncFor
+                        | ast.ExceptHandler
+                        | ast.With
+                        | ast.AsyncWith,
                     ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
@@ -380,11 +372,11 @@ def broken_function(:
                     }
                 )
 
-        self.assertEqual(len(extracted_functions), 2, "Should extract 2 functions")
-        self.assertEqual(extracted_functions[0]["name"], "func1")
-        self.assertEqual(extracted_functions[0]["complexity"], 1)
-        self.assertEqual(extracted_functions[1]["name"], "func2")
-        self.assertEqual(extracted_functions[1]["complexity"], 2)
+        assert len(extracted_functions) == 2, "Should extract 2 functions"
+        assert extracted_functions[0]["name"] == "func1"
+        assert extracted_functions[0]["complexity"] == 1
+        assert extracted_functions[1]["name"] == "func2"
+        assert extracted_functions[1]["complexity"] == 2
 
     def test_adt_014_extract_import_dependencies(self):
         """ADT-014: Import dependency extraction"""
@@ -406,10 +398,10 @@ def broken_function(:
                     else:
                         extracted_imports.append(alias.name)
 
-        self.assertEqual(len(extracted_imports), 3, "Should extract 3 imports")
-        self.assertIn("os", extracted_imports)
-        self.assertIn("sys.path", extracted_imports)
-        self.assertIn("json", extracted_imports)
+        assert len(extracted_imports) == 3, "Should extract 3 imports"
+        assert "os" in extracted_imports
+        assert "sys.path" in extracted_imports
+        assert "json" in extracted_imports
 
     def test_adt_015_extract_classes_with_methods(self):
         """ADT-015: Class and method extraction"""
@@ -430,13 +422,11 @@ def broken_function(:
                     {"name": node.name, "methods": methods, "line_number": node.lineno}
                 )
 
-        self.assertEqual(len(extracted_classes), 1, "Should extract 1 class")
-        self.assertEqual(extracted_classes[0]["name"], "TestClass")
-        self.assertEqual(
-            len(extracted_classes[0]["methods"]), 2, "Should extract 2 methods"
-        )
-        self.assertIn("method1", extracted_classes[0]["methods"])
-        self.assertIn("method2", extracted_classes[0]["methods"])
+        assert len(extracted_classes) == 1, "Should extract 1 class"
+        assert extracted_classes[0]["name"] == "TestClass"
+        assert len(extracted_classes[0]["methods"]) == 2, "Should extract 2 methods"
+        assert "method1" in extracted_classes[0]["methods"]
+        assert "method2" in extracted_classes[0]["methods"]
 
     def test_adt_016_find_architectural_issues_high_complexity(self):
         """ADT-016: High complexity issue detection"""
@@ -470,15 +460,13 @@ def simple_func():
                 for child in ast.walk(node):
                     if isinstance(
                         child,
-                        (
-                            ast.If,
-                            ast.While,
-                            ast.For,
-                            ast.AsyncFor,
-                            ast.ExceptHandler,
-                            ast.With,
-                            ast.AsyncWith,
-                        ),
+                        ast.If
+                        | ast.While
+                        | ast.For
+                        | ast.AsyncFor
+                        | ast.ExceptHandler
+                        | ast.With
+                        | ast.AsyncWith,
                     ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
@@ -493,12 +481,10 @@ def simple_func():
             "issues_found": len(high_complexity_functions),
         }
 
-        self.assertGreaterEqual(
-            analysis_result["issues_found"], 0, "Should identify issues"
-        )
-        self.assertIsInstance(analysis_result["high_complexity_functions"], list)
+        assert analysis_result["issues_found"] >= 0, "Should identify issues"
+        assert isinstance(analysis_result["high_complexity_functions"], list)
         # The complex_func should be flagged as high complexity
-        self.assertIn("complex_func", analysis_result["high_complexity_functions"])
+        assert "complex_func" in analysis_result["high_complexity_functions"]
 
     def test_adt_017_generate_evidence_based_insights(self):
         """ADT-017: Evidence-based insights generation"""
@@ -542,15 +528,13 @@ def simple_good_function():
                 for child in ast.walk(node):
                     if isinstance(
                         child,
-                        (
-                            ast.If,
-                            ast.While,
-                            ast.For,
-                            ast.AsyncFor,
-                            ast.ExceptHandler,
-                            ast.With,
-                            ast.AsyncWith,
-                        ),
+                        ast.If
+                        | ast.While
+                        | ast.For
+                        | ast.AsyncFor
+                        | ast.ExceptHandler
+                        | ast.With
+                        | ast.AsyncWith,
                     ):
                         complexity += 1
                     elif isinstance(child, ast.BoolOp):
@@ -593,11 +577,11 @@ def simple_good_function():
             "function_count": function_count,
         }
 
-        self.assertIsInstance(insights["code_quality_score"], (int, float))
-        self.assertIsInstance(insights["recommendations"], list)
-        self.assertGreater(len(insights["recommendations"]), 0)
-        self.assertGreater(len(insights["maintainability_issues"]), 0)
-        self.assertIn("very_complex_function", insights["high_complexity_functions"])
+        assert isinstance(insights["code_quality_score"], int | float)
+        assert isinstance(insights["recommendations"], list)
+        assert len(insights["recommendations"]) > 0
+        assert len(insights["maintainability_issues"]) > 0
+        assert "very_complex_function" in insights["high_complexity_functions"]
 
     def test_adt_018_format_analysis_for_arch_command(self):
         """ADT-018: Formatted output for /arch command integration"""

@@ -65,9 +65,9 @@ get_memory_usage_gb() {
     local pid="$1"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
         # Get RSS memory in KB and convert to GB
-        local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
-        if [ -n "$rss" ]; then
-            echo "scale=2; $rss / 1024 / 1024" | bc -l
+        local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' | grep -E '^[0-9]+$')
+        if [ -n "$rss" ] && [ "$rss" -gt 0 ] 2>/dev/null; then
+            python3 -c "print(${rss} / 1024 / 1024)" 2>/dev/null || echo "0"
         else
             echo "0"
         fi
@@ -78,29 +78,46 @@ get_memory_usage_gb() {
 
 get_total_memory_usage_gb() {
     # Get total memory usage for all our test processes
-    local total_kb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
-    echo "scale=2; $total_kb / 1024 / 1024" | bc -l
+    local total_kb=0
+    local pids=$(pgrep -f "python.*test_" 2>/dev/null || echo "")
+
+    if [ -n "$pids" ]; then
+        for pid in $pids; do
+            if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+                local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' | grep -E '^[0-9]+$')
+                if [ -n "$rss" ] && [ "$rss" -gt 0 ] 2>/dev/null; then
+                    total_kb=$((total_kb + rss))
+                fi
+            fi
+        done
+    fi
+
+    if [ "$total_kb" -gt 0 ] 2>/dev/null; then
+        python3 -c "print(${total_kb} / 1024 / 1024)" 2>/dev/null || echo "0"
+    else
+        echo "0"
+    fi
 }
 
 memory_monitor() {
     local monitor_file="$1"
     local log_counter=0
     local start_time=$(date +%s)
-    
+
     # Redirect output to avoid interfering with main script
     exec 3>&1  # Save stdout
     exec 1>/dev/null  # Redirect stdout to null during background monitoring
-    
+
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
         local total_memory=$(get_total_memory_usage_gb)
         local comparison=$(echo "$total_memory > $MEMORY_LIMIT_GB" | bc -l 2>/dev/null)
-        
+
         # Log detailed process info every 3 iterations (every 6 seconds)
         if [ $((log_counter % 3)) -eq 0 ]; then
             local elapsed=$((current_time - start_time))
             echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
-            
+
             # Show all Python test processes with memory usage
             local python_pids=$(pgrep -f "python.*test_" 2>/dev/null || true)
             if [ -n "$python_pids" ]; then
@@ -115,51 +132,51 @@ memory_monitor() {
                 echo -e "${BLUE}[INFO]${NC}   📊 No Python test processes running" >&3
             fi
         fi
-        
+
         if [ "$comparison" = "1" ]; then
             echo -e "${RED}[FAIL]${NC} 🚨 MEMORY LIMIT EXCEEDED: ${total_memory}GB > ${MEMORY_LIMIT_GB}GB" >&3
             pkill -f "python.*test_" || true
             echo "MEMORY_KILL" > "$monitor_file.kill"
             break
         fi
-        
+
         # Check individual process limits
         pgrep -f "python.*test_" 2>/dev/null | while read pid; do
             if [ -n "$pid" ]; then
                 local proc_memory=$(get_memory_usage_gb "$pid")
                 local proc_comparison=$(echo "$proc_memory > $SINGLE_PROCESS_LIMIT_GB" | bc -l 2>/dev/null)
-                
+
                 if [ "$proc_comparison" = "1" ]; then
                     echo -e "${RED}[FAIL]${NC} 🚨 KILLING RUNAWAY PROCESS: PID $pid using ${proc_memory}GB > ${SINGLE_PROCESS_LIMIT_GB}GB" >&3
                     kill -9 "$pid" 2>/dev/null || true
                 fi
             fi
         done
-        
+
         log_counter=$((log_counter + 1))
         sleep "$MONITOR_INTERVAL"
     done
-    
+
     # Restore stdout
     exec 1>&3
 }
 
 simple_memory_monitor() {
     local memory_limit_gb=${1:-5}  # Default to 5GB if no parameter provided
-    
+
     while true; do
         sleep 10
-        
+
         # Get total memory used by Python test processes in MB
         local total_mb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
         local total_gb=$((total_mb / 1024))
-        
+
         if [ $total_gb -gt $memory_limit_gb ]; then
             print_error "🚨 MEMORY LIMIT EXCEEDED: ${total_gb}GB > ${memory_limit_gb}GB - killing Python test processes"
             pkill -f "python.*test_"
             break
         fi
-        
+
         # Log every 30 seconds (every 3 iterations)
         if [ $(($(date +%s) % 30)) -lt 10 ]; then
             print_status "📊 Memory usage: ${total_gb}GB (limit: ${memory_limit_gb}GB)"
@@ -291,7 +308,7 @@ fi
 # Handle MCP tests specifically
 if [ "$mcp_tests" = true ]; then
     print_status "🚀 MCP Server Test Mode - Running MCP test client"
-    
+
     # Check if MCP server is running
     if ! curl -s -f "http://localhost:8000/health" >/dev/null 2>&1; then
         print_error "❌ MCP server not running on localhost:8000"
@@ -299,9 +316,9 @@ if [ "$mcp_tests" = true ]; then
         print_error "  python3 mvp_site/mcp_api.py --host localhost --port 8000"
         exit 1
     fi
-    
+
     print_success "✅ MCP server is running"
-    
+
     # Run MCP test client
     if TESTING=true python3 mvp_site/tests/mcp_test_client.py --test all; then
         print_success "🎉 All MCP tests passed!"
@@ -339,13 +356,13 @@ if [ ${#specific_test_files[@]} -gt 0 ]; then
     print_status "✅ Using ${#selected_test_files[@]} specified test file(s)"
 elif [ "$intelligent_mode" = true ]; then
     print_status "🔍 Analyzing git changes for intelligent test selection..."
-    
+
     # Check if dependency analyzer exists
     analyzer_script="$PROJECT_ROOT/scripts/test_dependency_analyzer.py"
     if [ -f "$analyzer_script" ]; then
         # Run the dependency analyzer
         analysis_output_file="/tmp/selected_tests.txt"
-        
+
         # Note: The analyzer includes always-run tests and handles integration logic internally
         # based on the configuration, so we don't need to pass integration flag separately
         if python3 "$analyzer_script" --git-diff --output "$analysis_output_file" 2>/dev/null; then
@@ -354,15 +371,15 @@ elif [ "$intelligent_mode" = true ]; then
                 # Use IFS approach for macOS compatibility (mapfile not available)
                 IFS=$'\n' read -d '' -r -a selected_test_files < "$analysis_output_file" || true
                 use_intelligent_selection=true
-                
+
                 # Count total tests for comparison
                 total_possible_tests=$(find ./mvp_site/tests -name "test_*.py" -type f | wc -l)
                 selected_count=${#selected_test_files[@]}
-                
+
                 if [ $total_possible_tests -gt 0 ]; then
                     reduction_pct=$(echo "scale=0; (($total_possible_tests - $selected_count) * 100) / $total_possible_tests" | bc -l 2>/dev/null || echo "0")
                     time_savings_min=$(echo "scale=0; $reduction_pct * 15 / 100" | bc -l 2>/dev/null || echo "0")
-                    
+
                     print_status "📊 Running $selected_count selected tests (${reduction_pct}% reduction, ~$((total_possible_tests - selected_count)) tests skipped)"
                     if [ $time_savings_min -gt 0 ]; then
                         print_status "⚡ Estimated time savings: ~${time_savings_min} minutes"
@@ -370,7 +387,7 @@ elif [ "$intelligent_mode" = true ]; then
                 else
                     print_status "📊 Running $selected_count selected tests"
                 fi
-                
+
                 # Show changed files that triggered selection
                 changed_files=$(cd "$PROJECT_ROOT" && git diff --name-only origin/main...HEAD 2>/dev/null | head -5)
                 if [ -n "$changed_files" ]; then
@@ -389,7 +406,7 @@ elif [ "$intelligent_mode" = true ]; then
         print_warning "⚠️  Dependency analyzer not found at $analyzer_script, falling back to full suite"
         use_intelligent_selection=false
     fi
-    
+
     # Handle dry run mode
     if [ "$dry_run_mode" = true ]; then
         if [ "$use_intelligent_selection" = true ]; then
@@ -461,13 +478,13 @@ if [ ${#specific_test_files[@]} -gt 0 ]; then
 elif [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt 0 ]; then
     # Use intelligently selected tests
     print_status "🎯 Using intelligent test selection results"
-    
+
     # Convert selected test paths to full paths and validate they exist
     for selected_test in "${selected_test_files[@]}"; do
         if [ -n "$selected_test" ]; then
             # Remove leading ./ if present
             clean_path="${selected_test#./}"
-            
+
             # Check if file exists
             if [ -f "./$clean_path" ]; then
                 test_files+=("./$clean_path")
@@ -476,7 +493,7 @@ elif [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt
             fi
         fi
     done
-    
+
     # Ensure we still respect integration flag for always-run tests
     if [ "$include_integration" = true ]; then
         # Add integration tests that might not be in intelligent selection
@@ -484,7 +501,7 @@ elif [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt
             while IFS= read -r -d '' file; do
                 # Normalize path format for consistent duplicate detection
                 file_normalized="${file#./}"  # Remove ./ prefix
-                
+
                 # Check against normalized test_files array (also remove ./ prefix for comparison)
                 is_duplicate=false
                 for existing_test in "${test_files[@]}"; do
@@ -494,7 +511,7 @@ elif [ "$use_intelligent_selection" = true ] && [ ${#selected_test_files[@]} -gt
                         break
                     fi
                 done
-                
+
                 # Only add if not already included
                 if [ "$is_duplicate" = false ]; then
                     test_files+=("$file")
@@ -514,7 +531,7 @@ else
         done < "${INTELLIGENT_TEST_SELECTION}"
     else
         print_status "🔍 Discovering all test files (traditional mode)"
-        
+
         # Main mvp_site tests
         while IFS= read -r -d '' file; do
             # Skip integration tests if not running integration tests (filename-based filtering)
@@ -569,7 +586,7 @@ else
             while IFS= read -r -d '' file; do
                 # Normalize path format for consistent duplicate detection
                 file_normalized="${file#./}"
-                
+
                 # Check against normalized test_files array
                 is_duplicate=false
                 for existing_test in "${test_files[@]}"; do
@@ -579,20 +596,20 @@ else
                         break
                     fi
                 done
-                
+
                 # Only add if not already included
                 if [ "$is_duplicate" = false ]; then
                     test_files+=("$file")
                 fi
             done < <(find ./mvp_site/test_integration -name "test_*.py" -type f -print0 2>/dev/null)
         fi
-        
+
         if [ -d "./test_integration" ]; then
             print_status "Including integration tests from test_integration/"
             while IFS= read -r -d '' file; do
                 # Normalize path format for consistent duplicate detection
                 file_normalized="${file#./}"
-                
+
                 # Check against normalized test_files array
                 is_duplicate=false
                 for existing_test in "${test_files[@]}"; do
@@ -602,7 +619,7 @@ else
                         break
                     fi
                 done
-                
+
                 # Only add if not already included
                 if [ "$is_duplicate" = false ]; then
                     test_files+=("$file")
@@ -615,7 +632,7 @@ else
             while IFS= read -r -d '' file; do
                 # Normalize path format for consistent duplicate detection
                 file_normalized="${file#./}"
-                
+
                 # Check against normalized test_files array
                 is_duplicate=false
                 for existing_test in "${test_files[@]}"; do
@@ -625,7 +642,7 @@ else
                         break
                     fi
                 done
-                
+
                 # Only add if not already included
                 if [ "$is_duplicate" = false ]; then
                     test_files+=("$file")
@@ -638,7 +655,7 @@ else
             while IFS= read -r -d '' file; do
                 # Normalize path format for consistent duplicate detection
                 file_normalized="${file#./}"
-                
+
                 # Check against normalized test_files array
                 is_duplicate=false
                 for existing_test in "${test_files[@]}"; do
@@ -648,7 +665,7 @@ else
                         break
                     fi
                 done
-                
+
                 # Only add if not already included
                 if [ "$is_duplicate" = false ]; then
                     test_files+=("$file")
@@ -756,13 +773,13 @@ if [ ${#test_files[@]} -gt 0 ]; then
     # Create temporary file for sorting
     temp_file=$(mktemp)
     printf '%s\n' "${test_files[@]}" | sort -u > "$temp_file"
-    
+
     # Read back into array
     test_files=()
     while IFS= read -r line; do
         test_files+=("$line")
     done < "$temp_file"
-    
+
     # Clean up
     rm "$temp_file"
 fi
@@ -862,7 +879,7 @@ run_test() {
             PYTHONPATH_TO_EXPORT="$PYTHONPATH_TO_EXPORT:$PROJECT_ROOT/.claude/commands"
         fi
         export PYTHONPATH="$PYTHONPATH_TO_EXPORT:${PYTHONPATH:-}"
-        
+
         # Choose command based on coverage mode
         if [ "$enable_coverage" = true ]; then
             # Run with coverage
@@ -961,7 +978,7 @@ if [ "$enable_coverage" = true ]; then
             print_error "🚨 SCRIPT TERMINATED: Memory limit exceeded during sequential execution"
             exit 2
         fi
-        
+
         if [ -f "$test_file" ]; then
             total_tests=$((total_tests + 1))
             echo -n "[$total_tests/${#test_files[@]}] "
@@ -983,7 +1000,7 @@ else
         max_workers=$(nproc)
         print_status "Running tests in parallel (CI replica: $max_workers workers - full CPU with memory monitoring)..."
     else
-        # Regular local development - conservative limit  
+        # Regular local development - conservative limit
         max_workers=2
         print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
     fi
@@ -998,7 +1015,7 @@ else
     # Export variables and functions needed by xargs subshells
     export PROJECT_ROOT enable_coverage TEST_MODE RED GREEN YELLOW BLUE NC
     export -f run_test print_status print_success print_error
-    
+
     # Run tests with controlled concurrency using xargs
     printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c '
         if [ -f "$1" ]; then
@@ -1011,14 +1028,14 @@ fi
 if [ -f "$monitor_file.kill" ]; then
     print_error "🚨 SCRIPT TERMINATED: Memory limit exceeded to prevent system crash"
     print_error "One or more test processes consumed too much memory (>${MEMORY_LIMIT_GB}GB total)"
-    
+
     # Stop the memory monitor
     rm -f "$monitor_file" 2>/dev/null
-    
+
     # Show memory usage at time of kill
     total_memory=$(get_total_memory_usage_gb)
     print_error "Memory usage at termination: ${total_memory}GB"
-    
+
     exit 2  # Exit code 2 = memory kill
 fi
 

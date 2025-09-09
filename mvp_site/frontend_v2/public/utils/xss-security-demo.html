@@ -51,7 +51,7 @@
 <body>
     <h1>🔒 XSS Security Demo - Error Handling</h1>
     <p>This demo shows how the errorHandling.ts file prevents XSS attacks by properly sanitizing user input.</p>
-    
+
     <div class="demo-section">
         <h2>Test 1: Script Tag Injection</h2>
         <button id="script-test-btn" class="test-button">
@@ -105,28 +105,28 @@
             if (!input || typeof input !== 'string') {
                 return 'Invalid input';
             }
-            
+
             // Create a temporary DOM element for safe parsing
             const tempDiv = document.createElement('div');
             tempDiv.textContent = input; // This automatically escapes HTML
             let sanitized = tempDiv.textContent;
-            
+
             // Additional safety: remove protocol handlers and event attributes
             sanitized = sanitized
                 .replace(/javascript:/gi, '')
                 .replace(/data:/gi, '')
                 .replace(/vbscript:/gi, '')
                 .replace(/on\w+\s*=/gi, '');
-            
+
             // Allowlist approach: only allow safe characters
             sanitized = sanitized.replace(/[^\w\s\-\.,:;!?()\[\]{}]/g, '');
-            
+
             // Limit length to prevent abuse
             const maxLength = 500;
             if (sanitized.length > maxLength) {
                 sanitized = sanitized.substring(0, maxLength) + '...';
             }
-            
+
             return sanitized.trim() || 'Error message unavailable';
         }
 
@@ -134,11 +134,11 @@
         function showErrorToastDemo(message, options = {}) {
             const sanitizedMessage = sanitizeForDisplay(message);
             const sanitizedContext = options.context ? sanitizeForDisplay(options.context) : null;
-            
-            const finalMessage = sanitizedContext 
+
+            const finalMessage = sanitizedContext
                 ? `[${sanitizedContext}] ${sanitizedMessage}`
                 : sanitizedMessage;
-            
+
             // Create notification safely using DOM methods
             const notification = document.createElement('div');
             notification.style.cssText = `
@@ -149,10 +149,10 @@
                 border-radius: 4px;
                 border-left: 4px solid rgba(255, 255, 255, 0.4);
             `;
-            
+
             // Safe: using textContent instead of innerHTML
             notification.textContent = `Error: ${finalMessage}`;
-            
+
             return {
                 element: notification,
                 sanitizedMessage: finalMessage,
@@ -164,17 +164,17 @@
         window.testScriptInjection = function() {
             const maliciousInput = '<script>alert("XSS Attack!")</script>Database error occurred';
             const result = showErrorToastDemo(maliciousInput);
-            
+
             const resultDiv = document.getElementById('script-result');
             resultDiv.innerHTML = '';
             resultDiv.className = 'result safe';
-            
+
             resultDiv.innerHTML = `
                 <strong>Original Input:</strong> ${escapeHtml(maliciousInput)}<br>
                 <strong>Sanitized Output:</strong> ${escapeHtml(result.sanitizedMessage)}<br>
                 <strong>Status:</strong> ✅ XSS Prevented - Script tags removed
             `;
-            
+
             // Add the actual notification to show it's safe
             resultDiv.appendChild(result.element);
         };
@@ -182,17 +182,17 @@
         window.testEventHandlerInjection = function() {
             const maliciousInput = 'Error occurred onmouseover=alert("XSS") onclick=alert("XSS")';
             const result = showErrorToastDemo(maliciousInput);
-            
+
             const resultDiv = document.getElementById('event-result');
             resultDiv.innerHTML = '';
             resultDiv.className = 'result safe';
-            
+
             resultDiv.innerHTML = `
                 <strong>Original Input:</strong> ${escapeHtml(maliciousInput)}<br>
                 <strong>Sanitized Output:</strong> ${escapeHtml(result.sanitizedMessage)}<br>
                 <strong>Status:</strong> ✅ XSS Prevented - Event handlers removed
             `;
-            
+
             resultDiv.appendChild(result.element);
         };
 
@@ -200,42 +200,42 @@
             const message = 'Database connection failed';
             const maliciousContext = '<img src=x onerror=alert("XSS")>';
             const result = showErrorToastDemo(message, { context: maliciousContext });
-            
+
             const resultDiv = document.getElementById('context-result');
             resultDiv.innerHTML = '';
             resultDiv.className = 'result safe';
-            
+
             resultDiv.innerHTML = `
                 <strong>Message:</strong> ${escapeHtml(message)}<br>
                 <strong>Malicious Context:</strong> ${escapeHtml(maliciousContext)}<br>
                 <strong>Sanitized Output:</strong> ${escapeHtml(result.sanitizedMessage)}<br>
                 <strong>Status:</strong> ✅ XSS Prevented - HTML tags and event handlers removed
             `;
-            
+
             resultDiv.appendChild(result.element);
         };
 
         window.testHtmlEntities = function() {
             const maliciousInput = '&lt;script&gt;alert("XSS")&lt;/script&gt;Error occurred';
             const result = showErrorToastDemo(maliciousInput);
-            
+
             const resultDiv = document.getElementById('entity-result');
             resultDiv.innerHTML = '';
             resultDiv.className = 'result safe';
-            
+
             // Create elements safely using DOM methods
             const originalLabel = document.createElement('strong');
             originalLabel.textContent = 'Original Input: ';
             const originalText = document.createTextNode(maliciousInput);
-            
+
             const sanitizedLabel = document.createElement('strong');
             sanitizedLabel.textContent = 'Sanitized Output: ';
             const sanitizedText = document.createTextNode(result.sanitizedMessage);
-            
+
             const statusLabel = document.createElement('strong');
             statusLabel.textContent = 'Status: ';
             const statusText = document.createTextNode('✅ XSS Prevented - Safe DOM manipulation with textContent');
-            
+
             resultDiv.appendChild(originalLabel);
             resultDiv.appendChild(originalText);
             resultDiv.appendChild(document.createElement('br'));
@@ -244,7 +244,7 @@
             resultDiv.appendChild(document.createElement('br'));
             resultDiv.appendChild(statusLabel);
             resultDiv.appendChild(statusText);
-            
+
             resultDiv.appendChild(result.element);
         };
 

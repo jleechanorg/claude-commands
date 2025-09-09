@@ -26,3 +26,4 @@ types-flask>=1.1.6
 types-requests>=2.31.0
 mcp>=1.0.0
 pytest>=6.0.0
+pytest-timeout>=2.4.0

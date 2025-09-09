@@ -8,7 +8,7 @@ Tests that React V2 frontend makes real API calls to Flask backend (not mock)
 import os
 import sys
 import unittest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 # Set test environment for CI compatibility
 os.environ["TESTING"] = "true"

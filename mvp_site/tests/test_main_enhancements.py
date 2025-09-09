@@ -1,8 +1,6 @@
+from unittest.mock import patch
+
 import pytest
-import json
-import sys
-import os
-from unittest.mock import patch, MagicMock
 
 # Try to import the Flask app with proper package import
 try:
@@ -28,7 +26,7 @@ def test_flask_app_import():
     """Test that the Flask app can be imported successfully"""
     if not HAS_MAIN_APP:
         pytest.fail(f"Failed to import Flask app from main.py: {IMPORT_ERROR}")
-    
+
     assert app is not None
     assert hasattr(app, 'test_client')
 
@@ -36,7 +34,7 @@ def test_flask_app_is_flask_instance():
     """Test that imported app is a Flask instance"""
     if not HAS_MAIN_APP:
         pytest.skip(f"Cannot test Flask instance: {IMPORT_ERROR}")
-    
+
     from flask import Flask
     assert isinstance(app, Flask)
 
@@ -87,7 +85,7 @@ def test_create_campaign_requires_auth(client):
         'name': 'Test Campaign',
         'description': 'A test campaign for unit testing'
     }
-    response = client.post('/api/campaigns', 
+    response = client.post('/api/campaigns',
                           json=campaign_data,
                           content_type='application/json')
     # Should return 401 Unauthorized without proper auth
@@ -121,13 +119,13 @@ def test_mcp_client_integration(mock_mcp_client, client):
             {'id': 'test-123', 'name': 'Test Campaign'}
         ]
     })
-    
+
     headers = {
         'X-Test-Bypass-Auth': 'true',
         'X-Test-User-ID': 'test-user-123'
     }
     response = client.get('/api/campaigns', headers=headers)
-    
+
     # Should succeed with mocked MCP
     assert response.status_code == 200
     assert response.is_json
@@ -169,7 +167,7 @@ def test_invalid_json_handling(client):
 def test_nonexistent_campaign_handling(client):
     """Test handling of requests for non-existent campaigns"""
     headers = {
-        'X-Test-Bypass-Auth': 'true', 
+        'X-Test-Bypass-Auth': 'true',
         'X-Test-User-ID': 'test-user-123'
     }
     response = client.get('/api/campaigns/nonexistent-id', headers=headers)
