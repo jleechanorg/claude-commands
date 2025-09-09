@@ -103,10 +103,11 @@ def _format_message_text(message):
     timestamp_str = f" ({timestamp})" if timestamp else ""
     return f"\n## {message['role'].title()}{timestamp_str}\n{message['content']}\n"
 
-def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS, filter_mcp=False):
+def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS):
     """
     Extract recent conversation context from Claude Code CLI history.
     Returns formatted context string limited to max_tokens.
+    MCP contamination filtering is always enabled.
     """
 
     # Find current project directory in ~/.claude/projects
@@ -171,8 +172,7 @@ def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS, filter_mcp=False
 
                         if content and content.strip():
                             processed_content = _redact(content)
-                            if filter_mcp:
-                                processed_content = _filter_mcp_contamination(processed_content)
+                            processed_content = _filter_mcp_contamination(processed_content)
 
                             # Only include messages that still have content after filtering
                             if processed_content.strip():
@@ -187,8 +187,7 @@ def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS, filter_mcp=False
 
                         if content and content.strip():
                             processed_content = _redact(content)
-                            if filter_mcp:
-                                processed_content = _filter_mcp_contamination(processed_content)
+                            processed_content = _filter_mcp_contamination(processed_content)
 
                             # Only include messages that still have content after filtering
                             if processed_content.strip():
@@ -245,15 +244,12 @@ def extract_conversation_context(max_tokens=DEFAULT_MAX_TOKENS, filter_mcp=False
 
 if __name__ == '__main__':
     max_tokens = DEFAULT_MAX_TOKENS
-    filter_mcp = False
 
     # Parse command line arguments
     args = sys.argv[1:]
     for i, arg in enumerate(args):
-        if arg == '--filter-mcp':
-            filter_mcp = True
-        elif arg.isdigit():
+        if arg.isdigit():
             max_tokens = int(arg)
 
-    context = extract_conversation_context(max_tokens, filter_mcp)
+    context = extract_conversation_context(max_tokens)
     print(context)

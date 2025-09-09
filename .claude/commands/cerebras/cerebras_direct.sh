@@ -154,14 +154,14 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
             if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
                 # Capture extractor exit code and emit minimal diagnostics when debug is on
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT" --filter-mcp) >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
                 if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
                     echo "DEBUG: Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
                 fi
             else
                 # Mirror debug error handling to maintain invisible operation
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT" --filter-mcp) >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
                 # Continue silently regardless of extraction success - invisible operation maintained
             fi
 

@@ -490,21 +490,17 @@ class TestMCPContaminationFiltering(unittest.TestCase):
         """
         🔴 RED Phase Test: Integration with extract_conversation_context
 
-        Tests that the --filter-mcp flag works in the actual context extraction
+        Tests that MCP contamination filtering is always enabled in context extraction
         """
         # This test verifies integration but may not have real conversation data
         # In a full TDD cycle, we'd create mock conversation data
 
         try:
-            # Test with filtering disabled
-            context_unfiltered = self.extract_func(max_tokens=1000, filter_mcp=False)
+            # Test context extraction (filtering is always enabled now)
+            context = self.extract_func(max_tokens=1000)
 
-            # Test with filtering enabled
-            context_filtered = self.extract_func(max_tokens=1000, filter_mcp=True)
-
-            # Both should complete without errors (even if no conversation data)
-            assert isinstance(context_unfiltered, str)
-            assert isinstance(context_filtered, str)
+            # Should complete without errors (even if no conversation data)
+            assert isinstance(context, str)
 
         except Exception:
             # If no conversation data, that's expected - just verify the function exists
