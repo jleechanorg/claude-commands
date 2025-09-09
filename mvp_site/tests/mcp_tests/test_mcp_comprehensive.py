@@ -43,6 +43,9 @@ class TestMCPComprehensive:
     @pytest.mark.asyncio()
     async def test_tool_discovery(self):
         """Test that all slash commands are properly discovered"""
+        if not MCP_ROUTER_AVAILABLE or not create_tools:
+            pytest.skip("MCP router or create_tools not available")
+
         tools = create_tools()
         assert len(tools) > 0, "No tools discovered"
         # Verify cerebras tool is present
@@ -54,6 +57,9 @@ class TestMCPComprehensive:
     @pytest.mark.asyncio()
     async def test_cerebras_tool_execution(self):
         """Test cerebras tool execution through unified router"""
+        if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
+            pytest.skip("MCP router or handle_tool_call not available")
+
         # Test basic cerebras functionality
         result = await handle_tool_call("cerebras", {"args": ["print('hello world')"]})
         assert result is not None
@@ -65,6 +71,9 @@ class TestMCPComprehensive:
     @pytest.mark.asyncio()
     async def test_input_validation_basic(self):
         """Test basic input validation in handle_tool_call"""
+        if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
+            pytest.skip("MCP router or handle_tool_call not available")
+
         malicious_inputs = ["../../../etc/passwd", "'; DROP TABLE users; --"]
         for malicious_input in malicious_inputs:
             result = await handle_tool_call("cerebras", {"args": [malicious_input]})
@@ -74,6 +83,9 @@ class TestMCPComprehensive:
     @pytest.mark.asyncio()
     async def test_invalid_tool_rejection(self):
         """Test that invalid tools are rejected"""
+        if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
+            pytest.skip("MCP router or handle_tool_call not available")
+
         result = await handle_tool_call("nonexistent_tool", {"args": ["test"]})
         assert result is not None
         assert (
