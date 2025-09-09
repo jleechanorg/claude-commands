@@ -122,10 +122,14 @@ else
     fi
 fi
 
-# Guaranteed cleanup for auto-extracted context (handles errors/interrupts)
+# Guaranteed cleanup for auto-extracted context and debug files (handles errors/interrupts)
 cleanup() {
   if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
     rm -f "$AUTO_CONTEXT_FILE" 2>/dev/null
+  fi
+  # Clean up debug files to prevent sensitive data accumulation
+  if [ -n "$DEBUG_FILE" ] && [ -f "$DEBUG_FILE" ]; then
+    rm -f "$DEBUG_FILE" 2>/dev/null
   fi
 }
 trap cleanup EXIT INT TERM
