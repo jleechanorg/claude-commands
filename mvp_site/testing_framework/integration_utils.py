@@ -9,8 +9,6 @@ import time
 from typing import Any
 from unittest.mock import patch
 
-import main
-
 from .factory import get_service_provider
 
 # Removed circular import - update_test_imports is defined in this file
@@ -187,6 +185,8 @@ class SmartPatcher:
 
                 if mock_obj:
                     try:
+                        # Conditional import to avoid unconditional dependency
+                        import main
                         # Only patch if the attribute exists in main
                         if hasattr(main, service_name):
                             patch_obj = patch(f"main.{service_name}", mock_obj)
