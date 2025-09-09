@@ -399,9 +399,13 @@ RESPONSE="$HTTP_BODY"
 END_TIME=$(date +%s%N)
 ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
 
-# Debug: Save raw response for analysis
-DEBUG_FILE="/tmp/cerebras_debug_response.json"
-echo "$RESPONSE" > "$DEBUG_FILE"
+# Debug: Save raw response for analysis (branch-safe)
+BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
+[ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
+DEBUG_FILE="$(mktemp "/tmp/cerebras_debug_response_${BRANCH_NAME}_XXXXXX.json" 2>/dev/null)"
+if [ -n "$DEBUG_FILE" ]; then
+    echo "$RESPONSE" > "$DEBUG_FILE"
+fi
 
 # Extract and display the response (OpenAI format)
 CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
