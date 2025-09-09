@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
             SKIP_CODEGEN_SYS_PROMPT=true
             shift
             ;;
-        --light)
+        --light|--light-mode)
             LIGHT_MODE=true
             shift
             ;;
@@ -130,7 +130,7 @@ cleanup() {
 }
 trap cleanup EXIT INT TERM
 
-if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
+if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CONTEXT_FILE" ]; then
     # Create branch-safe temporary file for auto-extracted context
     BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
     [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
@@ -174,7 +174,7 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ -z "$CONTEXT_FILE" ]; then
 fi
 
 # Load conversation context from file (manual or auto-extracted)
-if [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
+if [ "$LIGHT_MODE" != true ] && [ -n "$CONTEXT_FILE" ] && [ -f "$CONTEXT_FILE" ]; then
     CONVERSATION_CONTEXT=$(cat "$CONTEXT_FILE" 2>/dev/null)
 fi
 
@@ -303,7 +303,12 @@ This system integrates proven development practices with rapid execution capabil
 fi
 
 # User task
-if [ -n "$CONVERSATION_CONTEXT" ]; then
+if [ "$LIGHT_MODE" = true ]; then
+    # Light mode: No system prompt, no conversation context - completely clean
+    USER_PROMPT="Task: $PROMPT
+
+Generate the code."
+elif [ -n "$CONVERSATION_CONTEXT" ]; then
     if [ -n "$SYSTEM_PROMPT" ]; then
         USER_PROMPT="$CONVERSATION_CONTEXT
 
@@ -394,13 +399,27 @@ RESPONSE="$HTTP_BODY"
 END_TIME=$(date +%s%N)
 ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
 
+# Debug: Save raw response for analysis
+DEBUG_FILE="/tmp/cerebras_debug_response.json"
+echo "$RESPONSE" > "$DEBUG_FILE"
+
 # Extract and display the response (OpenAI format)
 CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
-if [ -z "$CONTENT" ]; then
-    echo "Error: Unexpected API response format." >&2
-    echo "Raw response:" >&2
-    echo "$RESPONSE" >&2
-    exit 4
+
+# Debug: If content extraction fails, try alternative parsing
+if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then
+    echo "Debug: Standard parsing failed, trying alternative methods..." >&2
+    echo "Raw response saved to: $DEBUG_FILE" >&2
+
+    # Try different extraction paths
+    CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].content // .content // .message // .text // empty')
+
+    if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then
+        echo "Error: Could not extract content from API response." >&2
+        echo "Response structure:" >&2
+        echo "$RESPONSE" | jq -r 'keys[]' 2>/dev/null || echo "Invalid JSON response"
+        exit 4
+    fi
 fi
 
 # Count lines in generated content

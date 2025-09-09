@@ -504,9 +504,10 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - **CRITICAL**: Progress reporting ≠ stopping for approval. Report progress but continue autonomously
 - **Autonomy Boundary**: Once /converge starts, zero user intervention until 100% goal achievement or limits
 
-🚨 **ABSOLUTE BRANCH ISOLATION:** ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
-- ❌ FORBIDDEN: `git checkout`, `git switch`, or any branch switching
-- ✅ MANDATORY: Stay on current branch - delegate everything else to agents
+🚨 **BRANCH SWITCHING PROTOCOL:** ⚠️ MANDATORY - Only switch when explicitly requested by user
+- ❌ FORBIDDEN: `git checkout`, `git switch` without explicit user request
+- ✅ ALLOWED: Branch switching when user explicitly says "switch to [branch]" or similar direct command
+- ✅ MANDATORY: Stay on current branch unless user directly requests branch change
 
 ## Project Overview
 
