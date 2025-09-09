@@ -182,21 +182,45 @@ setup_cron_jobs() {
     local cron_entries_added=0
     local current_crontab=$(crontab -l 2>/dev/null || echo "")
 
-    # 1. Claude Backup Cron (every 4 hours) - Cross-platform paths
+    # 1. Claude Backup Cron (every 4 hours) - Cross-platform and worktree-agnostic
     if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
         echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
 
-        # Create wrapper for claude backup with Linux/Ubuntu compatibility
+        # Create worktree-agnostic wrapper with cross-platform compatibility
         cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Claude backup wrapper with Linux/Ubuntu compatibility
-if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
+set -euo pipefail
+
+# First try to find backup script in any worktree
+for wt in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
+  if [ -x "$wt/scripts/claude_backup.sh" ]; then
     # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Use CloudStorage Dropbox path
-        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
     elif [[ "$OSTYPE" == "linux"* ]]; then
         # Linux/Ubuntu: Try common Dropbox locations
+        if [ -d "$HOME/Dropbox" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+        else
+            exec "$wt/scripts/claude_backup.sh" "$HOME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        exec "$wt/scripts/claude_backup.sh" "$HOME"
+    fi
+  fi
+done
+
+# If no worktree backup script found, try legacy approach
+if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Platform-specific Dropbox paths for legacy script
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
         if [ -d "$HOME/Dropbox" ]; then
             "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Dropbox"
         elif [ -d "$HOME/Documents" ]; then
@@ -205,17 +229,17 @@ if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
             "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
         fi
     else
-        # Other systems: fallback to home directory
         "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
     fi
 else
-    echo "$(date): claude_backup_cron.sh not found" >> /tmp/backup_errors.log
+    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    exit 1
 fi
 EOF
         chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
 
-        # Add to cron
-        (echo "$current_crontab"; echo '0 */4 * * * "$HOME/.local/bin/claude_backup_wrapper.sh" 2>&1') | crontab -
+        # Add to cron with proper $HOME expansion
+        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh 2>&1') | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 

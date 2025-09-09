@@ -4,47 +4,44 @@ Specific test for the agent name collision bug fix.
 Verifies that custom workspace names properly prevent collisions and use correct cleanup names.
 """
 
-import unittest
-import tempfile
 import os
 import sys
-from unittest.mock import patch, MagicMock
+import tempfile
+import unittest
+from unittest.mock import MagicMock, patch
 
-# Add orchestration to path
-sys.path.insert(0, os.path.dirname(__file__))
-
-from task_dispatcher import TaskDispatcher
+from .task_dispatcher import TaskDispatcher
 
 
 class TestCollisionBugFix(unittest.TestCase):
     """Test the specific agent name collision bug fix"""
-    
+
     def setUp(self):
         """Set up test environment"""
         self.dispatcher = TaskDispatcher()
-    
+
     def test_original_collision_bug_scenario(self):
         """Test the exact scenario that caused the original bug"""
         # This is the scenario reported by the user:
         # "When a custom workspace name is used, the agent_name is reassigned within create_dynamic_agent.
         # This bypasses the initial collision detection for the final name"
-        
+
         # Create a task with custom workspace name
         task = "Run copilot analysis on PR #1234 --workspace-name tmux-pr1234 --workspace-root /tmp/.worktrees"
-        
-        # Get agent specification  
+
+        # Get agent specification
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         agent_spec = agent_specs[0]
-        
+
         # Should have workspace config
         self.assertIn("workspace_config", agent_spec)
         workspace_config = agent_spec["workspace_config"]
         self.assertEqual(workspace_config["workspace_name"], "tmux-pr1234")
-        
+
         # The original agent name should be meaningful
         original_name = agent_spec["name"]
         self.assertIn("task-agent", original_name)
-        
+
         # Mock existing agents to force collision with FINAL name
         with patch.object(self.dispatcher, '_check_existing_agents', return_value={'tmux-pr1234'}):
             with patch.object(self.dispatcher, '_active_agents', set()):
@@ -56,14 +53,14 @@ class TestCollisionBugFix(unittest.TestCase):
                                 # This should NOT fail - collision should be resolved
                                 result = self.dispatcher.create_dynamic_agent(agent_spec)
                                 self.assertTrue(result)
-    
+
     def test_cleanup_uses_final_name(self):
         """Test that cleanup operations use the final resolved agent name"""
         task = "Run copilot analysis on PR #5678 --workspace-name tmux-pr5678"
-        
+
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         agent_spec = agent_specs[0]
-        
+
         # Mock the cleanup method to track what name is used
         with patch.object(self.dispatcher, '_cleanup_stale_prompt_files') as mock_cleanup:
             with patch('subprocess.run') as mock_run:
@@ -72,20 +69,20 @@ class TestCollisionBugFix(unittest.TestCase):
                     with patch('os.path.exists', return_value=True):
                         with patch('builtins.open', create=True):
                             self.dispatcher.create_dynamic_agent(agent_spec)
-                            
+
                             # Cleanup should be called with the final name (tmux-pr5678), not original
                             mock_cleanup.assert_called_once_with("tmux-pr5678")
-    
+
     def test_workspace_alignment_prevents_confusion(self):
         """Test that agent name aligns with workspace name to prevent confusion"""
         task = "Update documentation --workspace-name custom-docs-workspace"
-        
+
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         agent_spec = agent_specs[0]
-        
+
         original_name = agent_spec["name"]
         workspace_name = agent_spec["workspace_config"]["workspace_name"]
-        
+
         # When create_dynamic_agent runs, it should align the names
         with patch('subprocess.run') as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
@@ -95,24 +92,24 @@ class TestCollisionBugFix(unittest.TestCase):
                         # Capture the tmux command to verify agent name
                         result = self.dispatcher.create_dynamic_agent(agent_spec)
                         self.assertTrue(result)
-                        
+
                         # Check that tmux session was created with workspace name
                         tmux_calls = [call for call in mock_run.call_args_list if 'tmux' in str(call)]
                         self.assertTrue(any('custom-docs-workspace' in str(call) for call in tmux_calls))
-    
+
     def test_no_workspace_config_uses_original_behavior(self):
         """Test that agents without workspace config use original behavior"""
         task = "Run tests without workspace config"
-        
+
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         agent_spec = agent_specs[0]
-        
+
         # Should not have workspace config
         self.assertNotIn("workspace_config", agent_spec)
-        
+
         # Original name should be preserved
         original_name = agent_spec["name"]
-        
+
         with patch.object(self.dispatcher, '_cleanup_stale_prompt_files') as mock_cleanup:
             with patch('subprocess.run') as mock_run:
                 mock_run.return_value = MagicMock(returncode=0)
@@ -121,7 +118,7 @@ class TestCollisionBugFix(unittest.TestCase):
                         with patch('builtins.open', create=True):
                             result = self.dispatcher.create_dynamic_agent(agent_spec)
                             self.assertTrue(result)
-                            
+
                             # Cleanup should use original name
                             mock_cleanup.assert_called_once_with(original_name)
 
