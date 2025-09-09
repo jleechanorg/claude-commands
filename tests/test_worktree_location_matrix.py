@@ -507,20 +507,14 @@ class TestWorktreeLocationMatrix(unittest.TestCase):
 
             # Check that git worktree add was called with the new location
             worktree_calls = [call for call in mock_run.call_args_list
-                            if call[0][0] and len(call[0][0]) > 2 and call[0][0][0] == "git" and call[0][0][1] == "worktree"]
+                            if hasattr(call, 'args') and call.args and len(call.args[0]) > 2 and call.args[0][0] == "git" and call.args[0][1] == "worktree"]
 
             self.assertTrue(len(worktree_calls) > 0, "Expected git worktree add to be called")
 
-            # Verify the directory path in the call with defensive bounds checking
-            # Defensive checks to avoid IndexError
-            if (
-                isinstance(worktree_calls[0], (list, tuple)) and
-                len(worktree_calls[0]) > 0 and
-                isinstance(worktree_calls[0][0], (list, tuple)) and
-                len(worktree_calls[0][0]) > 0
-            ):
-                worktree_call = worktree_calls[0][0][0]  # First positional argument (command list)
-                self.assertIn(expected_dir, worktree_call)
+            # Verify the directory path in the call using proper call.args access
+            if worktree_calls and hasattr(worktree_calls[0], 'args') and worktree_calls[0].args:
+                worktree_call = worktree_calls[0].args[0]  # First positional argument (command list)
+                self.assertIn(expected_dir, str(worktree_call))
             else:
                 self.fail("Unexpected call structure in worktree_calls[0]")
 
