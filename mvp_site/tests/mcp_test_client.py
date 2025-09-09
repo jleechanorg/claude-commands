@@ -4,6 +4,7 @@ MCP Test Client for WorldArchitect.AI
 Provides programmatic testing interface for the MCP server
 """
 
+import argparse
 import sys
 from typing import Any
 
@@ -414,8 +415,6 @@ class MCPTestSuite:
 
 def main():
     """Main test execution function."""
-    import argparse
-
     parser = argparse.ArgumentParser(description="MCP Test Client")
     parser.add_argument("--server", default="http://localhost:8000",
                        help="MCP server URL")

@@ -14,7 +14,12 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from gemini_request import GeminiRequest
+try:
+    from gemini_request import GeminiRequest
+    GEMINI_REQUEST_AVAILABLE = True
+except ImportError:
+    GeminiRequest = None
+    GEMINI_REQUEST_AVAILABLE = False
 
 
 class AIContentPersonalizationTest(unittest.TestCase):

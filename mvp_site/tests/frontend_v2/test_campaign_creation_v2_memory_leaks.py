@@ -22,6 +22,14 @@ except ImportError:
     # Fallback if base class not available
     BaseTestUI = unittest.TestCase
 
+# Import Playwright at module level
+try:
+    from playwright.sync_api import sync_playwright
+    PLAYWRIGHT_AVAILABLE = True
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    sync_playwright = None
+
 class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
     """Test memory leak fixes in CampaignCreationV2 component"""
 
@@ -44,8 +52,7 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
                 self.server_running = False
 
         # Initialize Playwright browser if needed
-        if not hasattr(self, 'page') and self.server_running:
-            from playwright.sync_api import sync_playwright
+        if not hasattr(self, 'page') and self.server_running and PLAYWRIGHT_AVAILABLE:
             self.playwright = sync_playwright().start()
             self.browser = self.playwright.chromium.launch(headless=True)
             self.page = self.browser.new_page()

@@ -15,7 +15,14 @@ import pytest
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-from mcp_servers.slash_commands.unified_router import create_tools, handle_tool_call
+# Import MCP modules
+try:
+    from mcp_servers.slash_commands.unified_router import create_tools, handle_tool_call
+    MCP_ROUTER_AVAILABLE = True
+except ImportError:
+    create_tools = None
+    handle_tool_call = None
+    MCP_ROUTER_AVAILABLE = False
 
 
 class TestMCPComprehensive:

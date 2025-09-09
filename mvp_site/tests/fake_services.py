@@ -27,9 +27,17 @@ except ImportError:
     from fake_auth import FakeFirebaseAuth, FakeUserRecord
     from fake_firestore import FakeFirestoreClient
     from fake_gemini import create_fake_gemini_client
+
 # Import functions from main at module level to avoid inline imports
 # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 from main import create_app
+
+# Handle firebase_admin imports at module level
+try:
+    import firebase_admin.auth
+    FIREBASE_ADMIN_AVAILABLE = True
+except ImportError:
+    FIREBASE_ADMIN_AVAILABLE = False
 
 with suppress(ImportError):
     # Legacy json_input_schema imports removed - using GeminiRequest now
@@ -78,10 +86,8 @@ class FakeServiceManager:
     def start_patches(self):
         """Start all service patches."""
         try:
-            # Ensure firebase_admin.auth module is imported before patching
-            try:
-                import firebase_admin.auth
-            except ImportError:
+            # Check if firebase_admin.auth module is available
+            if not FIREBASE_ADMIN_AVAILABLE:
                 # If firebase_admin.auth can't be imported, fall back to mock modules
                 self._setup_mock_modules()
                 return self

@@ -18,10 +18,16 @@ import os
 import subprocess
 import sys
 import time
+import traceback
 import unittest
 from datetime import datetime
 
 import requests
+
+# Add parent directory to path to import logging_util
+parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.insert(0, parent_dir)
+import logging_util
 
 
 class RealBrowserSettingsGameTest:
@@ -31,12 +37,6 @@ class RealBrowserSettingsGameTest:
         self.base_url = "http://localhost:8081"
         self.test_user_id = "real-browser-test-user"
         # Use centralized logging utility for consistent paths
-        import os
-        import sys
-        # Add parent directory to path to import logging_util
-        parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        sys.path.insert(0, parent_dir)
-        import logging_util
         self.log_file = logging_util.LoggingUtil.get_log_file("integration-test")
 
         self.headers = {
@@ -382,8 +382,6 @@ class RealBrowserSettingsGameTest:
 
         except Exception as e:
             print(f"\n❌ Test failed with error: {e}")
-            import traceback
-
             traceback.print_exc()
             return False
 

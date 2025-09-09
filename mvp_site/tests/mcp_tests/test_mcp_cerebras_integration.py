@@ -22,11 +22,10 @@ import pytest
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Check for MCP dependencies and exit early if not available
+# Check for MCP dependencies and handle imports
 try:
     from fastmcp import FastMCP
     from mcp.types import TextContent
-
     from mcp_servers.slash_commands.unified_router import (
         _execute_slash_command,
         create_tools,
@@ -34,6 +33,12 @@ try:
     from mcp_servers.slash_commands.unified_router import main as server_main
     MCP_AVAILABLE = True
 except ImportError as e:
+    # Set fallback values for unavailable MCP dependencies
+    FastMCP = None
+    TextContent = None
+    _execute_slash_command = None
+    create_tools = None
+    server_main = None
     MCP_AVAILABLE = False
     SKIP_REASON = f"MCP dependencies not available: {e}"
 

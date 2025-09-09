@@ -5,10 +5,30 @@ Test that JSON mode is always used for all LLM calls
 Tests now properly skip when dependencies are unavailable (comprehensive dependency detection).
 """
 
+import json
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock
+
+# Import modules needed for dependency detection
+try:
+    import cachetools
+    CACHETOOLS_AVAILABLE = True
+except ImportError:
+    CACHETOOLS_AVAILABLE = False
+    
+try:
+    import google.genai
+    GOOGLE_GENAI_AVAILABLE = True
+except ImportError:
+    GOOGLE_GENAI_AVAILABLE = False
+    
+try:
+    import pydantic
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
 
 # Set test environment variables before importing modules
 os.environ["TESTING"] = "true"
@@ -111,32 +131,10 @@ try:
         # In mock testing mode - dependencies are not available
         DEPENDENCIES_AVAILABLE = False
     else:
-        # Try to import real dependencies (not our mocks)
-        import sys
-
-        # Remove our mocks temporarily to check for real dependencies
-        mock_modules_to_remove = ['pydantic', 'cachetools', 'google', 'google.genai']
-        original_modules = {}
-        for mod in mock_modules_to_remove:
-            if mod in sys.modules:
-                original_modules[mod] = sys.modules[mod]
-                del sys.modules[mod]
-
-        try:
-            import cachetools
-            import google.genai
-            import pydantic
-            DEPENDENCIES_AVAILABLE = True
-        except ImportError:
-            DEPENDENCIES_AVAILABLE = False
-        finally:
-            # Restore mocks
-            for mod, original in original_modules.items():
-                sys.modules[mod] = original
+        # Check for real dependencies using module-level imports
+        DEPENDENCIES_AVAILABLE = CACHETOOLS_AVAILABLE and GOOGLE_GENAI_AVAILABLE and PYDANTIC_AVAILABLE
 except Exception:
     DEPENDENCIES_AVAILABLE = False
-
-import json
 from unittest.mock import MagicMock, patch
 
 from game_state import GameState
