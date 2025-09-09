@@ -8,6 +8,7 @@ import json
 import os
 import sys
 import unittest
+from unittest.mock import patch
 
 # Set environment variables for MCP testing
 os.environ["TESTING"] = "true"
@@ -28,11 +29,20 @@ class TestMCPInteractionStructuredFields(unittest.TestCase):
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
-        # Test headers for MCP authentication bypass
+        self.test_user_id = "mcp-structured-fields-test-user"
+
+        # Use stable test UID and stub Firebase verification - patch fully-qualified target
+        self._auth_patcher = patch(
+            "firebase_admin.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
+        )
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+
+        # Test headers with Authorization token
         self.test_headers = {
-            "X-Test-Bypass-Auth": "true",
-            "X-Test-User-ID": "mcp-structured-fields-test-user",
             "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
         self.campaign_id = "mcp-structured-test-campaign"

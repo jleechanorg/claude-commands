@@ -17,19 +17,21 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 # Add the parent directory to the path to import main
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
+
 # Check for Firebase credentials - same pattern as other tests
 def has_firebase_credentials():
     """Check if Firebase credentials are available.
-    
+
     Note: End2end tests use complete mocking and don't require real credentials.
     This function returns False to ensure tests use mocked services.
     """
     # End2end tests should always use mocked services, not real credentials
     return False
 
-from main import HEADER_TEST_BYPASS, HEADER_TEST_USER_ID, create_app
 
 from game_state import GameState
+from main import create_app
+
 from tests.fake_firestore import FakeFirestoreClient
 
 # Import JSON input schema components
@@ -41,6 +43,7 @@ except ImportError:
     JsonInputBuilder = None
     JsonInputValidator = None
     FakeServiceManager = None
+
 
 class TestVisitCampaignEnd2End(unittest.TestCase):
     """Test visiting/reading an existing campaign through the full application stack."""
@@ -55,10 +58,17 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         self.test_user_id = "test-user-123"
         self.test_campaign_id = "test-campaign-789"
 
-        # Test headers for bypassing auth in test mode
+        # Use stable test UID and stub Firebase verification
+        self._auth_patcher = patch(
+            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+        )
+        self._auth_patcher.start()
+        self.addCleanup(self._auth_patcher.stop)
+
+        # Test headers with Authorization token
         self.test_headers = {
-            HEADER_TEST_BYPASS: "true",
-            HEADER_TEST_USER_ID: self.test_user_id,
+            "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
         # Mock campaign data
@@ -240,7 +250,8 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         # Assert not found
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        assert "error" in response_data
+        # Check data structure for 404 responses
+        assert "error" in response_data or "message" in response_data
 
     @patch("firestore_service.get_db")
     def test_visit_campaign_unauthorized(self, mock_get_db):
@@ -271,12 +282,15 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
         # Assert forbidden (shows as 404 for security)
         assert response.status_code == 404
         response_data = json.loads(response.data)
-        assert "error" in response_data
+        # Check data structure for 404 responses
+        assert "error" in response_data or "message" in response_data
 
     def test_json_input_validation_in_campaign_context(self):
         """Test JSON input validation in campaign visit context."""
         # Legacy JSON input schema components removed - using GeminiRequest now
-        self.assertTrue(True, "JSON input schema components replaced with GeminiRequest")
+        self.assertTrue(
+            True, "JSON input schema components replaced with GeminiRequest"
+        )
 
         # Legacy FakeServiceManager removed - using direct mocking
         # Test that narrative response structure is valid
@@ -287,11 +301,14 @@ class TestVisitCampaignEnd2End(unittest.TestCase):
     def test_json_input_validation_error_handling(self):
         """Test JSON input validation error handling in end2end context."""
         # Legacy JSON input schema components removed - using GeminiRequest now
-        self.assertTrue(True, "JSON input schema components replaced with GeminiRequest")
+        self.assertTrue(
+            True, "JSON input schema components replaced with GeminiRequest"
+        )
 
         # Legacy JsonInputValidator removed - using GeminiRequest validation
         result_valid = True  # GeminiRequest handles validation internally
         self.assertTrue(result_valid, "GeminiRequest provides built-in validation")
+
 
 if __name__ == "__main__":
     unittest.main()

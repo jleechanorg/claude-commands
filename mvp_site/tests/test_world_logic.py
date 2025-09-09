@@ -4,10 +4,11 @@ This test doesn't require external dependencies.
 """
 
 import asyncio
+import inspect
 import os
 import sys
 import unittest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
@@ -19,9 +20,9 @@ firebase_admin_mock = MagicMock()
 firebase_admin_mock.firestore = MagicMock()
 firebase_admin_mock.auth = MagicMock()
 firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
-sys.modules['firebase_admin'] = firebase_admin_mock
-sys.modules['firebase_admin.firestore'] = firebase_admin_mock.firestore
-sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
+sys.modules["firebase_admin"] = firebase_admin_mock
+sys.modules["firebase_admin.firestore"] = firebase_admin_mock.firestore
+sys.modules["firebase_admin.auth"] = firebase_admin_mock.auth
 
 # Add mvp_site to path AFTER mocking firebase_admin
 mvp_site_path = os.path.dirname(os.path.dirname(__file__))
@@ -32,55 +33,58 @@ if mvp_site_path not in sys.path:
 # Import fakes library components (will be imported after path setup)
 try:
     # Fakes library will be imported after path setup below
-    
+
     # Mock pydantic dependencies
     pydantic_module = MagicMock()
     pydantic_module.BaseModel = MagicMock()
     pydantic_module.Field = MagicMock()
     pydantic_module.field_validator = MagicMock()
     pydantic_module.model_validator = MagicMock()
-    pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
-    sys.modules['pydantic'] = pydantic_module
-    
+    pydantic_module.ValidationError = (
+        Exception  # Use regular Exception for ValidationError
+    )
+    sys.modules["pydantic"] = pydantic_module
+
     # Mock cachetools dependencies
     cachetools_module = MagicMock()
     cachetools_module.TTLCache = MagicMock()
     cachetools_module.cached = MagicMock()
-    sys.modules['cachetools'] = cachetools_module
-    
+    sys.modules["cachetools"] = cachetools_module
+
     # Mock google dependencies
     google_module = MagicMock()
     google_module.genai = MagicMock()
     google_module.genai.Client = MagicMock()
-    sys.modules['google'] = google_module
-    sys.modules['google.genai'] = google_module.genai
-    
+    sys.modules["google"] = google_module
+    sys.modules["google.genai"] = google_module.genai
+
     # Mock other optional dependencies that might not be available
     docx_module = MagicMock()
     docx_module.Document = MagicMock()
-    sys.modules['docx'] = docx_module
-    
+    sys.modules["docx"] = docx_module
+
     # Mock fpdf dependencies
     fpdf_module = MagicMock()
     fpdf_module.FPDF = MagicMock()
     fpdf_module.XPos = MagicMock()
     fpdf_module.YPos = MagicMock()
-    sys.modules['fpdf'] = fpdf_module
-    
+    sys.modules["fpdf"] = fpdf_module
+
     # Mock flask dependencies that might not be available
     flask_module = MagicMock()
     flask_module.Flask = MagicMock()
     flask_module.request = MagicMock()
     flask_module.jsonify = MagicMock()
-    sys.modules['flask'] = flask_module
+    sys.modules["flask"] = flask_module
 except Exception:
     pass  # If mocking fails, continue anyway
 
 # Import proper fakes library (removing unused imports per CodeRabbit feedback)
 
 import world_logic
+
 from mvp_site.debug_hybrid_system import convert_json_escape_sequences
-from mvp_site.prompt_utils import _convert_and_format_field, _build_campaign_prompt
+from mvp_site.prompt_utils import _convert_and_format_field
 
 
 class TestUnifiedAPIStructure(unittest.TestCase):
@@ -91,16 +95,16 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         # Set environment variables for testing
         os.environ["TESTING"] = "true"
         os.environ["USE_MOCKS"] = "true"
-        
+
         # Clear any cached modules to prevent Firebase initialization errors
         modules_to_clear = [
             "world_logic",
-            "firestore_service", 
+            "firestore_service",
             "gemini_service",
             "logging_util",
             "constants",
             "document_generator",
-            "structured_fields_utils", 
+            "structured_fields_utils",
             "custom_types",
             "debug_hybrid_system",
             "debug_mode_parser",
@@ -117,7 +121,7 @@ class TestUnifiedAPIStructure(unittest.TestCase):
         self.mock_modules = {}
         modules_to_mock = [
             "constants",
-            "document_generator", 
+            "document_generator",
             "firestore_service",
             "gemini_service",
             "logging_util",
@@ -227,7 +231,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
     def test_create_campaign_unified_validation_sync(self):
         """Test campaign creation validation (sync version)"""
-        import asyncio
 
         # world_logic already imported at module level with proper mocking
 
@@ -262,7 +265,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
     def test_process_action_unified_validation_sync(self):
         """Test action processing validation (sync version)"""
-        import asyncio
 
         # world_logic already imported at module level with proper mocking
 
@@ -329,11 +331,11 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     ):
         """
         🔴 RED PHASE: Test that would FAIL before sequence_id fix
-        
+
         This test verifies that AI responses get the correct sequence_id calculation:
         - User input should get: len(story_context) + 1 = 5
         - AI response should get: len(story_context) + 2 = 6
-        
+
         Before the fix, both would get len(story_context) + 1 = 5 (WRONG!)
         """
         # Mock the campaign data and story context
@@ -391,7 +393,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     ):
         """
         🔴 RED PHASE: Test that would FAIL before user_scene_number field addition
-        
+
         This test verifies that the user_scene_number field is present in API responses.
         Before the fix, this field was missing and would break frontend compatibility.
         """
@@ -445,12 +447,11 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     def test_enhanced_logging_json_serialization_red_phase(self):
         """
         🔴 RED PHASE: Test that would FAIL before enhanced logging fix
-        
+
         This test verifies that the enhanced logging with JSON serialization
         works correctly with complex objects that have custom serializers.
         """
-        import world_logic
-        
+
         # Create a complex game state dict that would cause JSON serialization issues
         complex_game_state = {
             "string_fields": {"name": "Test Campaign"},
@@ -462,7 +463,9 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         # CRITICAL TEST: This should not raise an exception with enhanced logging
         # The function should handle complex objects via internal json_default_serializer
         try:
-            result = world_logic.truncate_game_state_for_logging(complex_game_state, max_lines=10)
+            result = world_logic.truncate_game_state_for_logging(
+                complex_game_state, max_lines=10
+            )
             # Should return truncated JSON string without crashing
             self.assertIsInstance(result, str)
             # Should handle Mock objects gracefully (not crash)
@@ -479,12 +482,12 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
 
 class TestJSONEscapeConversion(unittest.TestCase):
     """Test JSON escape sequence conversion functionality."""
-    
+
     def test_convert_json_escape_sequences_basic(self):
         """Test core conversion function with various escape sequences."""
         test_cases = [
             ("\\n", "\n"),
-            ("\\t", "\t"),  
+            ("\\t", "\t"),
             ('\\"', '"'),
             ("\\\\", "\\"),
             ("Hello\\nWorld", "Hello\nWorld"),
@@ -493,7 +496,7 @@ class TestJSONEscapeConversion(unittest.TestCase):
             ("", ""),  # Edge case: empty string
             ("No escapes", "No escapes"),  # Edge case: no escapes
         ]
-        
+
         for escaped_input, expected_output in test_cases:
             with self.subTest(input=escaped_input):
                 result = convert_json_escape_sequences(escaped_input)
@@ -506,7 +509,7 @@ class TestJSONEscapeConversion(unittest.TestCase):
         once = convert_json_escape_sequences(s)
         twice = convert_json_escape_sequences(once)
         self.assertEqual(once, twice)
-        
+
         # Ensure no further escape sequences remain after conversion
         self.assertNotIn("\\\\n", once)
         self.assertNotIn("\\\\t", once)
@@ -524,7 +527,7 @@ class TestJSONEscapeConversion(unittest.TestCase):
             "settlement of innocent refugees whose very existence has been deemed a threat "
             "to the Empress's perfect, unyielding order."
         )
-        
+
         # Expected converted text
         expected_converted = (
             "# Campaign summary\n\n"
@@ -536,10 +539,10 @@ class TestJSONEscapeConversion(unittest.TestCase):
             "settlement of innocent refugees whose very existence has been deemed a threat "
             "to the Empress's perfect, unyielding order."
         )
-        
+
         result = convert_json_escape_sequences(dragon_knight_escaped)
         self.assertEqual(result, expected_converted)
-        
+
         # Ensure no escape sequences remain
         self.assertNotIn("\\n", result)
         self.assertNotIn('\\"', result)
@@ -547,56 +550,58 @@ class TestJSONEscapeConversion(unittest.TestCase):
 
 class TestConvertAndFormatField(unittest.TestCase):
     """Test the helper function that eliminates code duplication."""
-    
+
     def test_convert_and_format_field_basic(self):
         """Test helper function with various inputs."""
         # Normal case
         result = _convert_and_format_field("Test\\nValue", "Character")
         self.assertEqual(result, "Character: Test\nValue")
-        
+
         # Empty field
         result = _convert_and_format_field("", "Setting")
         self.assertEqual(result, "")
-        
+
         # Whitespace only
         result = _convert_and_format_field("   ", "Description")
         self.assertEqual(result, "")
-        
+
         # No escapes needed
         result = _convert_and_format_field("Normal text", "Character")
         self.assertEqual(result, "Character: Normal text")
-        
+
         # Complex escapes
-        result = _convert_and_format_field("Line1\\n\\nLine2\\twith\\ttabs", "Description")
+        result = _convert_and_format_field(
+            "Line1\\n\\nLine2\\twith\\ttabs", "Description"
+        )
         self.assertEqual(result, "Description: Line1\n\nLine2\twith\ttabs")
 
 
 class TestBuildCampaignPromptConversion(unittest.TestCase):
     """Test campaign prompt building with conversion integration."""
-    
+
     def test_build_campaign_prompt_converts_all_fields(self):
         """Test that all fields get conversion applied."""
         result = world_logic._build_campaign_prompt(
             character="Hero\\nwith\\nlinebreaks",
-            setting="World\\twith\\ttabs", 
+            setting="World\\twith\\ttabs",
             description="Story\\n\\nwith\\n\\nparagraphs",
-            old_prompt=""
+            old_prompt="",
         )
-        
+
         # All fields should have escape sequences converted
         self.assertIn("Hero\nwith\nlinebreaks", result)
         self.assertIn("World\twith\ttabs", result)
         self.assertIn("Story\n\nwith\n\nparagraphs", result)
-        
+
         # No escape sequences should remain
         self.assertNotIn("\\n", result)
         self.assertNotIn("\\t", result)
-        
+
         # Should be properly formatted with label prefixes appearing exactly once
         self.assertIn("Character: Hero", result)
         self.assertIn("Setting: World", result)
         self.assertIn("Description: Story", result)
-        
+
         # Assert label prefixes appear exactly once to catch accidental duplication
         self.assertEqual(result.count("Character:"), 1)
         self.assertEqual(result.count("Setting:"), 1)
@@ -614,23 +619,23 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             "settlement of innocent refugees whose very existence has been deemed a threat "
             "to the Empress's perfect, unyielding order."
         )
-        
+
         result = world_logic._build_campaign_prompt(
             character="Ser Arion val Valerion",
             setting="Celestial Imperium",
             description=dragon_knight_escaped,
-            old_prompt=""
+            old_prompt="",
         )
-        
+
         # Should contain properly formatted description
         self.assertIn("# Campaign summary\n\n", result)
         self.assertIn("You are Ser Arion, a 16 year old honorable knight", result)
         self.assertIn("Celestial Imperium. For decades", result)
-        
+
         # Should not contain any escape sequences
         self.assertNotIn("\\n", result)
         self.assertNotIn('\\"', result)
-        
+
         # All fields should be present
         self.assertIn("Character: Ser Arion val Valerion", result)
         self.assertIn("Setting: Celestial Imperium", result)
@@ -639,14 +644,14 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
     def test_build_campaign_prompt_old_prompt_priority(self):
         """Test that old_prompt takes priority and bypasses conversion."""
         old_prompt = "Legacy prompt with\\nescapes"
-        
+
         result = world_logic._build_campaign_prompt(
             character="Test",
             setting="Test",
-            description="Description\\nwith\\nescapes", 
-            old_prompt=old_prompt
+            description="Description\\nwith\\nescapes",
+            old_prompt=old_prompt,
         )
-        
+
         # Should return old prompt exactly as-is (no conversion)
         self.assertEqual(result, "Legacy prompt with\\nescapes")
 
@@ -656,9 +661,9 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             character="",
             setting="   ",
             description="Valid\\nDescription",
-            old_prompt=""
+            old_prompt="",
         )
-        
+
         # Should only include non-empty fields
         self.assertNotIn("Character:", result)
         self.assertNotIn("Setting:", result)
@@ -667,12 +672,9 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
     def test_build_campaign_prompt_all_empty_triggers_random(self):
         """Test that all empty fields triggers random generation."""
         result = world_logic._build_campaign_prompt(
-            character="",
-            setting="",
-            description="",
-            old_prompt=""
+            character="", setting="", description="", old_prompt=""
         )
-        
+
         # Should generate random character and setting
         self.assertIn("Character:", result)
         self.assertIn("Setting:", result)
@@ -681,7 +683,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
 
 class TestMarkdownStructurePreservation(unittest.TestCase):
     """Test that conversion preserves markdown formatting."""
-    
+
     def test_markdown_structure_preservation(self):
         """Test that conversion preserves markdown formatting."""
         markdown_description = (
@@ -696,14 +698,11 @@ class TestMarkdownStructurePreservation(unittest.TestCase):
             "code block\\n"
             "```"
         )
-        
+
         result = world_logic._build_campaign_prompt(
-            character="",
-            setting="", 
-            description=markdown_description,
-            old_prompt=""
+            character="", setting="", description=markdown_description, old_prompt=""
         )
-        
+
         # Should preserve markdown structure
         self.assertIn("# Campaign Title\n\n", result)
         self.assertIn("## Section 1\n\n", result)
@@ -716,33 +715,41 @@ class TestMarkdownStructurePreservation(unittest.TestCase):
 
 class TestCodeHealthChecks(unittest.TestCase):
     """Test for code health issues like unused constants and dead code."""
-    
+
     def test_no_unused_random_constants_in_world_logic(self):
         """Test that RANDOM_CHARACTERS and RANDOM_SETTINGS are not duplicated/unused in world_logic.py"""
         # RED phase: This test should fail initially due to unused constants
-        
+
         # Read world_logic.py source
-        import inspect
-        import world_logic
-        
+
         source = inspect.getsource(world_logic)
-        
+
         # Check if constants are defined
         has_random_characters = "RANDOM_CHARACTERS" in source
         has_random_settings = "RANDOM_SETTINGS" in source
-        
+
         if has_random_characters or has_random_settings:
             # If they exist, they should be used somewhere
-            uses_random_characters = "random.choice(RANDOM_CHARACTERS)" in source or "choice(RANDOM_CHARACTERS)" in source
-            uses_random_settings = "random.choice(RANDOM_SETTINGS)" in source or "choice(RANDOM_SETTINGS)" in source
-            
+            uses_random_characters = (
+                "random.choice(RANDOM_CHARACTERS)" in source
+                or "choice(RANDOM_CHARACTERS)" in source
+            )
+            uses_random_settings = (
+                "random.choice(RANDOM_SETTINGS)" in source
+                or "choice(RANDOM_SETTINGS)" in source
+            )
+
             # Constants should either not exist OR be used
             if has_random_characters:
-                self.assertTrue(uses_random_characters, 
-                    "RANDOM_CHARACTERS constant is defined but never used - this is dead code")
+                self.assertTrue(
+                    uses_random_characters,
+                    "RANDOM_CHARACTERS constant is defined but never used - this is dead code",
+                )
             if has_random_settings:
-                self.assertTrue(uses_random_settings,
-                    "RANDOM_SETTINGS constant is defined but never used - this is dead code")
+                self.assertTrue(
+                    uses_random_settings,
+                    "RANDOM_SETTINGS constant is defined but never used - this is dead code",
+                )
 
 
 if __name__ == "__main__":

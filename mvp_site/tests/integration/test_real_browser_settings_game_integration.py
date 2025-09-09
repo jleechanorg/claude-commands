@@ -18,10 +18,18 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
+import traceback
 import unittest
+from datetime import datetime
 
 import requests
+
+# Add parent directory to path to import logging_util
+parent_dir = os.path.dirname(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
+sys.path.insert(0, parent_dir)
+import logging_util
 
 
 class RealBrowserSettingsGameTest:
@@ -31,12 +39,6 @@ class RealBrowserSettingsGameTest:
         self.base_url = "http://localhost:8081"
         self.test_user_id = "real-browser-test-user"
         # Use centralized logging utility for consistent paths
-        import sys
-        import os
-        # Add parent directory to path to import logging_util
-        parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        sys.path.insert(0, parent_dir)
-        import logging_util
         self.log_file = logging_util.LoggingUtil.get_log_file("integration-test")
 
         self.headers = {
@@ -69,9 +71,9 @@ class RealBrowserSettingsGameTest:
     def is_ci_environment(self):
         """Detect if running in CI environment"""
         return (
-            os.getenv('CI') == 'true' or 
-            os.getenv('GITHUB_ACTIONS') == 'true' or
-            os.getenv('TESTING') == 'true'
+            os.getenv("CI") == "true"
+            or os.getenv("GITHUB_ACTIONS") == "true"
+            or os.getenv("TESTING") == "true"
         )
 
     def wait_for_server(self, max_retries=5):
@@ -90,9 +92,11 @@ class RealBrowserSettingsGameTest:
         # In CI environment, skip with success instead of failing
         if self.is_ci_environment():
             print("⚠️ CI Environment: Server not available, skipping integration test")
-            print("✅ PASS: tests/integration/test_real_browser_settings_game_integration.py")
+            print(
+                "✅ PASS: tests/integration/test_real_browser_settings_game_integration.py"
+            )
             return False  # Indicate server not available, but handle gracefully
-        
+
         raise Exception("❌ Server not available for testing")
 
     def clear_existing_settings(self):
@@ -295,9 +299,11 @@ class RealBrowserSettingsGameTest:
                 # In CI, we skip the server-dependent parts but still validate test structure
                 print("⚠️ Skipping server-dependent integration test in CI environment")
                 print("✅ Test structure and imports validated successfully")
-                print("💡 Integration test would run successfully with server available")
+                print(
+                    "💡 Integration test would run successfully with server available"
+                )
                 return True  # Pass the test in CI by validating structure only
-            
+
             # Setup (local environment only)
             if not self.wait_for_server():
                 # Server not available even in local environment
@@ -382,8 +388,6 @@ class RealBrowserSettingsGameTest:
 
         except Exception as e:
             print(f"\n❌ Test failed with error: {e}")
-            import traceback
-
             traceback.print_exc()
             return False
 
@@ -391,10 +395,10 @@ class RealBrowserSettingsGameTest:
 # Support both unittest and direct execution
 class TestRealBrowserSettingsGameIntegration(unittest.TestCase):
     """Unittest wrapper for integration test"""
-    
+
     def setUp(self):
         self.test = RealBrowserSettingsGameTest()
-    
+
     def test_real_browser_settings_game_integration(self):
         """Main integration test method"""
         success = self.test.run_complete_test()
@@ -403,7 +407,7 @@ class TestRealBrowserSettingsGameIntegration(unittest.TestCase):
 
 if __name__ == "__main__":
     # Support both unittest and direct execution
-    if len(sys.argv) > 1 and 'unittest' in sys.argv[0]:
+    if len(sys.argv) > 1 and "unittest" in sys.argv[0]:
         unittest.main()
     else:
         test = RealBrowserSettingsGameTest()

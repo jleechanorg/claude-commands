@@ -39,40 +39,12 @@ class ApiService {
   private clockSkewOffset = 0; // Detected clock skew in milliseconds
   private clockSkewDetected = false;
 
-  /**
-   * Authentication bypass for development mode
-   */
-  private testAuthBypass: { enabled: boolean; userId: string } | null = null;
+  // Testing mode removed - authentication now always uses real Firebase
 
   constructor() {
-    // SECURITY: Only enable test mode authentication bypass in non-production environments
-    // This prevents authentication bypass in production builds via URL manipulation
-    if (import.meta.env.MODE !== 'production') {
-      // Enable test mode authentication bypass only when explicitly requested via URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const isTestMode = urlParams.get('test_mode') === 'true';
-      
-      if (isTestMode) {
-        const testUserId = urlParams.get('test_user_id') || 'test-user-123';
-        this.testAuthBypass = {
-          enabled: true,
-          userId: testUserId
-        };
-        
-        if (import.meta.env?.DEV) {
-          devLog('🧪 Test authentication bypass enabled for user:', testUserId);
-        }
-      } else {
-        this.testAuthBypass = null;
-      }
-    } else {
-      // SECURITY: In production, test authentication bypass is completely disabled
-      this.testAuthBypass = null;
-      
-      // Only log in development mode to avoid production console noise
-      if (import.meta.env?.DEV) {
-        devLog('🔒 Test authentication bypass disabled in production mode');
-      }
+    // Testing mode removed - authentication now always uses real Firebase
+    if (import.meta.env?.DEV) {
+      devLog('🔒 Authentication always uses real Firebase (testing mode removed)');
     }
 
     // Clean up expired cache entries periodically
@@ -99,20 +71,21 @@ class ApiService {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
-      
+
       if (response.ok) {
         const data = await response.json();
         const clientTimeAfter = Date.now();
         const roundTripTime = clientTimeAfter - clientTimeBefore;
-        
+
         // Estimate server time at the moment we made the request
-        const estimatedServerTime = data.server_timestamp_ms + (roundTripTime / 2);
-        const clientTimeAtRequest = clientTimeBefore + (roundTripTime / 2);
-        
+        // Server time was captured at response; subtract half RTT to approximate server time at request send
+        const estimatedServerTime = data.server_timestamp_ms - (roundTripTime / 2);
+        const clientTimeAtRequest = clientTimeBefore;
+
         // Calculate clock skew (positive means client is ahead, negative means behind)
         this.clockSkewOffset = clientTimeAtRequest - estimatedServerTime;
         this.clockSkewDetected = true;
-        
+
         if (import.meta.env?.DEV) {
           devLog(`🕐 Clock skew detected: ${this.clockSkewOffset}ms (client ${this.clockSkewOffset > 0 ? 'ahead' : 'behind'})`);
           devLog(`   Round trip time: ${roundTripTime}ms`);
@@ -136,9 +109,9 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // If we have detected clock skew and client is behind, wait before token generation
-    if (this.clockSkewDetected && this.clockSkewOffset < 0) {
-      const waitTime = Math.abs(this.clockSkewOffset) + 500; // Add 500ms buffer
+    // If client is ahead, wait before token generation
+    if (this.clockSkewDetected && this.clockSkewOffset > 0) {
+      const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, 10000); // Add 500ms buffer, cap at 10s
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
       }
@@ -146,7 +119,7 @@ class ApiService {
     }
 
     const token = await user.getIdToken(forceRefresh);
-    
+
     // Validate token structure
     if (!token || typeof token !== 'string') {
       throw new Error('Authentication token is not a valid string');
@@ -172,11 +145,11 @@ class ApiService {
       const serverTime = errorData.server_time_ms;
       const clientTime = Date.now();
       const detectedSkew = clientTime - serverTime;
-      
+
       // Update our clock skew offset with the server's measurement
       this.clockSkewOffset = detectedSkew;
       this.clockSkewDetected = true;
-      
+
       if (import.meta.env?.DEV) {
         devLog(`🔄 Updated clock skew from server error: ${detectedSkew}ms`);
         devLog(`   Server reported time: ${new Date(serverTime).toISOString()}`);
@@ -235,34 +208,24 @@ class ApiService {
     }
 
     // Build headers based on auth mode
-    let headers: Record<string, string>;
+    // Authentication now always uses real Firebase (testing mode removed)
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
 
-    if (this.testAuthBypass?.enabled) {
-      // Test mode headers
+    // Get fresh token, forcing refresh on retries and applying clock skew compensation
+    const forceRefresh = retryCount > 0;
+    let headers: Record<string, string>;
+    try {
+      const token = await this.getCompensatedToken(forceRefresh);
       headers = {
-        'X-Test-Bypass-Auth': 'true',
-        'X-Test-User-ID': this.testAuthBypass.userId,
+        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       };
-    } else {
-      // Normal Firebase authentication
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Get fresh token, forcing refresh on retries and applying clock skew compensation
-      const forceRefresh = retryCount > 0;
-      try {
-        const token = await this.getCompensatedToken(forceRefresh);
-        headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        };
-      } catch (tokenError) {
-        devError('Token retrieval error:', tokenError);
-        throw new Error(`Authentication token error: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
-      }
+    } catch (tokenError) {
+      devError('Token retrieval error:', tokenError);
+      throw new Error(`Authentication token error: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
     }
 
     const config: RequestInit = {
@@ -296,7 +259,7 @@ class ApiService {
           if (response.status === 401) {
             await this.handleClockSkewError(errorData);
           }
-          
+
           const delay = this.calculateRetryDelay(retryCount, response.status);
 
           if (import.meta.env?.DEV) {
@@ -503,12 +466,13 @@ class ApiService {
     if (status === 401) {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
-      
-      // Add additional delay if we've detected significant clock skew
+
+      // Add additional delay if we've detected significant clock skew (capped at 10 seconds)
       if (this.clockSkewDetected && Math.abs(this.clockSkewOffset) > 1000) {
-        delay += Math.abs(this.clockSkewOffset);
+        const skewDelay = Math.min(Math.abs(this.clockSkewOffset), 10000);
+        delay += skewDelay;
         if (import.meta.env?.DEV) {
-          console.log(`⏱️ Adding ${Math.abs(this.clockSkewOffset)}ms delay for clock skew compensation`);
+          console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation (capped at 10s)`);
         }
       }
     }
@@ -549,15 +513,7 @@ class ApiService {
    * Get the current authenticated user
    */
   async getCurrentUser(): Promise<User | null> {
-    if (this.testAuthBypass?.enabled) {
-      // Return test user
-      return {
-        uid: this.testAuthBypass.userId,
-        email: `${this.testAuthBypass.userId}@test.com`,
-        displayName: 'Test User'
-      };
-    }
-
+    // Authentication now always uses real Firebase (testing mode removed)
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
       return null;
@@ -575,10 +531,7 @@ class ApiService {
    * Sign in with Google (Firebase)
    */
   async login(): Promise<User> {
-    if (this.testAuthBypass?.enabled) {
-      throw new Error('Cannot login in test mode');
-    }
-
+    // Authentication now always uses real Firebase (testing mode removed)
     const result = await signInWithPopup(auth, googleProvider);
 
     return {
@@ -593,10 +546,7 @@ class ApiService {
    * Sign out
    */
   async logout(): Promise<void> {
-    if (this.testAuthBypass?.enabled) {
-      throw new Error('Cannot logout in test mode');
-    }
-
+    // Authentication now always uses real Firebase (testing mode removed)
     await signOut(auth);
   }
 
@@ -866,19 +816,14 @@ class ApiService {
    * Helper method to get auth headers for non-JSON requests
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
-    if (this.testAuthBypass?.enabled) {
-      return {
-        'X-Test-Bypass-Auth': 'true',
-        'X-Test-User-ID': this.testAuthBypass.userId,
-      };
-    }
-
+    // Authentication now always uses real Firebase (testing mode removed)
     const user = auth.currentUser;
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    const token = await user.getIdToken();
+    // Use compensated token for ALL auth headers including file operations
+    const token = await this.getCompensatedToken();
     return {
       'Authorization': `Bearer ${token}`,
     };
@@ -888,10 +833,7 @@ class ApiService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
-    if (this.testAuthBypass?.enabled) {
-      return true;
-    }
-
+    // Authentication now always uses real Firebase (testing mode removed)
     return auth.currentUser !== null;
   }
 
@@ -899,19 +841,7 @@ class ApiService {
    * Listen to auth state changes
    */
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    if (this.testAuthBypass?.enabled) {
-      // Call immediately with test user
-      callback({
-        uid: this.testAuthBypass.userId,
-        email: `${this.testAuthBypass.userId}@test.com`,
-        displayName: 'Test User'
-      });
-
-      // Return empty unsubscribe function
-      return () => {};
-    }
-
-    // Normal Firebase auth state listener
+    // Authentication now always uses real Firebase (testing mode removed)
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         callback({

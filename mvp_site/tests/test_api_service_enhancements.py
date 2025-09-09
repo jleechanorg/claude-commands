@@ -2,11 +2,12 @@
 TDD Tests for Flask API Service Enhancements
 These tests validate REAL Flask application behavior using test_client
 """
-import pytest
-import sys
-import os
 import json
-from unittest.mock import patch, MagicMock
+import os
+import sys
+from unittest.mock import patch
+
+import pytest
 
 # Add mvp_site to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
@@ -23,7 +24,7 @@ def client():
     """Flask test client fixture for real app testing"""
     if not HAS_MAIN_APP:
         pytest.skip(f"Could not import Flask app: {IMPORT_ERROR}")
-    
+
     flask_app.config['TESTING'] = True
     with flask_app.test_client() as client:
         with flask_app.app_context():
@@ -33,7 +34,7 @@ def test_time_endpoint_available(client):
     """Test that time endpoint is available and returns proper structure"""
     response = client.get('/api/time')
     assert response.status_code == 200
-    
+
     data = json.loads(response.data)
     assert 'timestamp' in data
     assert isinstance(data['timestamp'], str)
@@ -63,7 +64,7 @@ def test_settings_endpoint_requires_auth(client):
 def test_settings_endpoint_with_test_bypass(client):
     """Test settings endpoint with test bypass header"""
     headers = {
-        'X-Test-Bypass-Auth': 'true', 
+        'X-Test-Bypass-Auth': 'true',
         'X-Test-User-ID': 'test-user-123'
     }
     response = client.get('/api/settings', headers=headers)
@@ -76,7 +77,7 @@ def test_campaign_creation_requires_auth(client):
         'name': 'Test Campaign',
         'description': 'A test campaign'
     }
-    response = client.post('/api/campaigns', 
+    response = client.post('/api/campaigns',
                           json=campaign_data,
                           content_type='application/json')
     # Should return 401 Unauthorized without proper auth
@@ -90,7 +91,7 @@ def test_campaign_creation_with_test_bypass(client):
         'Content-Type': 'application/json'
     }
     campaign_data = {
-        'name': 'Test Campaign', 
+        'name': 'Test Campaign',
         'description': 'A test campaign'
     }
     response = client.post('/api/campaigns',
@@ -134,13 +135,13 @@ def test_campaign_get_with_mocked_mcp(mock_mcp_client, client):
         'campaign_id': 'test-123',
         'name': 'Test Campaign'
     })
-    
+
     headers = {
         'X-Test-Bypass-Auth': 'true',
         'X-Test-User-ID': 'test-user-123'
     }
     response = client.get('/api/campaigns/test-123', headers=headers)
-    
+
     # Should succeed with mocked MCP
     assert response.status_code == 200
     assert response.is_json

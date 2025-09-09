@@ -90,7 +90,7 @@ def convert_json_escape_sequences(text: str) -> str:
     """
     if not text:
         return text
-    
+
     # Use json_utils.unescape_json_string for proper conversion
     return unescape_json_string(text)
 

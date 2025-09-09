@@ -24,7 +24,7 @@ def test_mode() -> str:
     return os.getenv("TEST_MODE", "mock")
 
 
-@pytest.fixture()
+@pytest.fixture
 def service_provider(test_mode: str) -> Generator[TestServiceProvider, None, None]:
     """Provide appropriate service provider based on TEST_MODE.
 
@@ -37,7 +37,7 @@ def service_provider(test_mode: str) -> Generator[TestServiceProvider, None, Non
         provider.cleanup()
 
 
-@pytest.fixture()
+@pytest.fixture
 def isolated_service_provider(
     test_mode: str,
 ) -> Generator[TestServiceProvider, None, None]:
@@ -54,31 +54,31 @@ def isolated_service_provider(
         reset_global_provider()
 
 
-@pytest.fixture()
+@pytest.fixture
 def firestore_client(service_provider: TestServiceProvider):
     """Provide Firestore client (mock or real) based on TEST_MODE."""
     return service_provider.get_firestore()
 
 
-@pytest.fixture()
+@pytest.fixture
 def gemini_client(service_provider: TestServiceProvider):
     """Provide Gemini client (mock or real) based on TEST_MODE."""
     return service_provider.get_gemini()
 
 
-@pytest.fixture()
+@pytest.fixture
 def auth_service(service_provider: TestServiceProvider):
     """Provide auth service (mock or real) based on TEST_MODE."""
     return service_provider.get_auth()
 
 
-@pytest.fixture()
+@pytest.fixture
 def is_real_service(service_provider: TestServiceProvider) -> bool:
     """Check if using real services."""
     return service_provider.is_real_service
 
 
-@pytest.fixture()
+@pytest.fixture
 def test_services(service_provider: TestServiceProvider) -> dict[str, Any]:
     """Provide all services as a dictionary for convenience."""
     return {

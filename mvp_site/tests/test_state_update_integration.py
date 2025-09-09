@@ -9,13 +9,18 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import unittest
 
 # Add the parent directory to path to enable imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from narrative_response_schema import parse_structured_response
-
+try:
+    from narrative_response_schema import parse_structured_response
+    MODULES_AVAILABLE = True
+except ImportError:
+    parse_structured_response = None
+    MODULES_AVAILABLE = False
 
 
 class TestStateUpdateIntegration(unittest.TestCase):
@@ -25,7 +30,6 @@ class TestStateUpdateIntegration(unittest.TestCase):
         """Set up test fixtures and mock objects"""
         # Following zero-tolerance skip pattern ban - provide basic implementation
         # Integration tests can run with mock data for validation
-        import tempfile
         self.temp_dir = tempfile.mkdtemp()
 
         # Sample AI response with state updates
@@ -77,11 +81,11 @@ class TestStateUpdateIntegration(unittest.TestCase):
         # Verify basic parsing worked
         assert narrative_text is not None
         assert parsed_response is not None
-        
+
         # Verify state updates are present in the parsed response object
         assert hasattr(parsed_response, 'state_updates')
         assert parsed_response.state_updates is not None
-        
+
         # Verify specific state update values through the object attributes
         state_updates = parsed_response.state_updates
         assert "player_character_data" in state_updates
@@ -151,7 +155,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
         # GeminiService would process state updates through structured response parsing
         json_response = json.dumps(self.ai_response_with_state_updates)
         narrative_text, parsed_response = parse_structured_response(json_response)
-        
+
         # Verify basic processing works
         self.assertIsNotNone(parsed_response)
         self.assertTrue(hasattr(parsed_response, 'state_updates'))

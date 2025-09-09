@@ -16,15 +16,15 @@ print_banner "WorldArchitect.AI Development Server Launcher" "Dual server setup:
 # Function to offer cleanup of existing servers with aggressive port clearing
 cleanup_servers_aggressive() {
     list_worldarchitect_servers
-    
+
     local servers=$(ps aux | grep -E "python.*main.py.*serve" | grep -v grep || true)
     local vite_servers=$(ps aux | grep -E "(vite|node.*vite)" | grep -v grep || true)
-    
+
     if [ -n "$servers" ] || [ -n "$vite_servers" ]; then
         echo ""
         echo "${EMOJI_GEAR} Server Cleanup Options:"
         echo "   [a] Kill all servers (aggressive cleanup)"
-        echo "   [p] Kill processes on target ports only" 
+        echo "   [p] Kill processes on target ports only"
         echo "   [n] Keep all servers running"
         echo -n "   Choice (default: a): "
         read -r choice
@@ -153,20 +153,13 @@ if [ $? -ne 0 ]; then
 fi
 
 if command -v gnome-terminal &> /dev/null; then
-    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT; exec bash"
+    gnome-terminal --tab --title="MCP Server" -- bash -c "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT; exec bash"
 elif command -v xterm &> /dev/null; then
-    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && source '$PROJECT_ROOT/scripts/start_mcp_production.sh' && python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT" &
+    xterm -title "MCP Server" -e "cd '$PROJECT_ROOT' && source '$PROJECT_ROOT/venv/bin/activate' && bash '$PROJECT_ROOT/scripts/start_mcp_production.sh' --host 127.0.0.1 --port $MCP_PORT" &
 else
-    # Fallback: run in background
+    # Fallback: run in background with dual transport (stdio + HTTP) using named pipe
     echo "${EMOJI_INFO} Running MCP server in background (no terminal emulator found)"
-    (
-        cd "$PROJECT_ROOT" || exit 1
-        if [ -z "$VIRTUAL_ENV" ] && [ -f "$PROJECT_ROOT/venv/bin/activate" ]; then
-            source "$PROJECT_ROOT/venv/bin/activate"
-        fi
-        source "$PROJECT_ROOT/scripts/start_mcp_production.sh"
-        python mvp_site/mcp_api.py --host 127.0.0.1 --port $MCP_PORT
-    ) &
+    "$PROJECT_ROOT/scripts/mcp_dual_background.sh" --host 127.0.0.1 --port $MCP_PORT &
     MCP_PID=$!
     echo "${EMOJI_INFO} MCP server started in background (PID: $MCP_PID, Port: $MCP_PORT)"
 fi

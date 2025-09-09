@@ -350,25 +350,24 @@ def json_default_serializer(obj: Any) -> Any:
         if hasattr(obj, "isoformat"):
             # Handle datetime objects
             return obj.isoformat()
-        elif isinstance(obj, (set, frozenset)):
+        if isinstance(obj, (set, frozenset)):
             # Handle sets by converting to lists
             return list(obj)
-        elif isinstance(obj, bytes):
+        if isinstance(obj, bytes):
             # Handle bytes by decoding to string
             return obj.decode("utf-8", errors="replace")
-        elif hasattr(obj, "__dict__"):
+        if hasattr(obj, "__dict__"):
             # Handle objects with __dict__ (convert to dict)
             return obj.__dict__
-        elif hasattr(obj, "__str__"):
+        if hasattr(obj, "__str__"):
             # Fall back to string representation
             str_repr = str(obj)
             # Limit string length to prevent huge serializations
             if len(str_repr) > MAX_STRING_LENGTH:
                 return str_repr[:MAX_STRING_LENGTH] + "...[truncated]"
             return str_repr
-        else:
-            # Last resort - return type name
-            return f"<{type(obj).__name__} object>"
+        # Last resort - return type name
+        return f"<{type(obj).__name__} object>"
     except Exception as e:
         logger.warning(f"Failed to serialize object of type {type(obj)}: {e}")
         return f"<{type(obj).__name__} serialization failed>"

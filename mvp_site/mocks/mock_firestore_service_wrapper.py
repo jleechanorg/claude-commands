@@ -16,8 +16,8 @@ except ImportError:
     except ImportError:
         try:
             # Handle import from testing framework context
-            import sys
             import os
+            import sys
             sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
             import logging_util
         except ImportError:
