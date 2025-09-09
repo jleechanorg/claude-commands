@@ -37,7 +37,6 @@ from flask import Request, Response
 
 import firestore_service
 
-
 # Initialize logging
 logger = logging_util.logging.getLogger(__name__)
 
