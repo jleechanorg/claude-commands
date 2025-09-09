@@ -1,10 +1,11 @@
-import unittest
-import subprocess
 import os
-import tempfile
-import shutil
 import re
-from unittest.mock import patch, MagicMock
+import shutil
+import subprocess
+import tempfile
+import unittest
+from unittest.mock import MagicMock, patch
+
 
 class TestMCPGlobalInstallation(unittest.TestCase):
     """Test suite for MCP slash commands global installation functionality."""

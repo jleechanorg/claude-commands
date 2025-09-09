@@ -5,10 +5,33 @@ Test that JSON mode is always used for all LLM calls
 Tests now properly skip when dependencies are unavailable (comprehensive dependency detection).
 """
 
+import json
 import os
 import sys
 import unittest
 from unittest.mock import MagicMock
+
+# Import modules needed for dependency detection
+try:
+    import cachetools
+
+    CACHETOOLS_AVAILABLE = True
+except ImportError:
+    CACHETOOLS_AVAILABLE = False
+
+try:
+    import google.genai
+
+    GOOGLE_GENAI_AVAILABLE = True
+except ImportError:
+    GOOGLE_GENAI_AVAILABLE = False
+
+try:
+    import pydantic
+
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
 
 # Set test environment variables before importing modules
 os.environ["TESTING"] = "true"
@@ -21,88 +44,90 @@ firebase_admin_mock = MagicMock()
 firebase_admin_mock.firestore = MagicMock()
 firebase_admin_mock.auth = MagicMock()
 firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
-sys.modules['firebase_admin'] = firebase_admin_mock
-sys.modules['firebase_admin.firestore'] = firebase_admin_mock.firestore
-sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
+sys.modules["firebase_admin"] = firebase_admin_mock
+sys.modules["firebase_admin.firestore"] = firebase_admin_mock.firestore
+sys.modules["firebase_admin.auth"] = firebase_admin_mock.auth
 
 # Use proper fakes library instead of manual MagicMock setup
 # Import fakes library components (will be imported after path setup)
 try:
     # Fakes library will be imported after path setup below
-    
+
     # Mock pydantic dependencies comprehensively with proper class behavior
     pydantic_module = MagicMock()
-    
+
     # Create mock BaseModel class that behaves like a real class
     class MockBaseModel:
         def __init__(self, *args, **kwargs):
             # Store all arguments as attributes with safe defaults
             for key, value in kwargs.items():
                 setattr(self, key, value)
-            
+
             # Ensure status attribute exists and is iterable (prevents NoneType iteration errors)
-            if not hasattr(self, 'status'):
+            if not hasattr(self, "status"):
                 self.status = []
-        
+
         def model_dump(self):
-            return {k: v for k, v in self.__dict__.items() if not k.startswith('_')}
-        
+            return {k: v for k, v in self.__dict__.items() if not k.startswith("_")}
+
         def model_validate(self, data):
             return self.__class__(**data) if isinstance(data, dict) else data
-        
+
         def to_prompt_format(self):
             return "Mock entity prompt format"
-        
+
         @classmethod
         def model_fields(cls):
             return {}
-    
+
     pydantic_module.BaseModel = MockBaseModel
     pydantic_module.Field = lambda default=None, **kwargs: default
     pydantic_module.field_validator = lambda *args, **kwargs: lambda func: func
     pydantic_module.model_validator = lambda *args, **kwargs: lambda func: func
-    pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
-    sys.modules['pydantic'] = pydantic_module
-    
+    pydantic_module.ValidationError = (
+        Exception  # Use regular Exception for ValidationError
+    )
+    sys.modules["pydantic"] = pydantic_module
+
     # Mock cachetools dependencies
     cachetools_module = MagicMock()
     cachetools_module.TTLCache = MagicMock()
     cachetools_module.cached = MagicMock()
-    sys.modules['cachetools'] = cachetools_module
-    
+    sys.modules["cachetools"] = cachetools_module
+
     # Mock google dependencies
     google_module = MagicMock()
     google_module.genai = MagicMock()
     google_module.genai.Client = MagicMock()
-    sys.modules['google'] = google_module
-    sys.modules['google.genai'] = google_module.genai
-    
+    sys.modules["google"] = google_module
+    sys.modules["google.genai"] = google_module.genai
+
     # Mock schema dependencies that might cause entity iteration errors
     schemas_module = MagicMock()
     entities_pydantic_module = MagicMock()
-    
+
     # Create a mock entity manifest that prevents NoneType iteration
     class MockEntityManifest:
         def __init__(self, *args, **kwargs):
             pass
-        
+
         def to_prompt_format(self):
             return "Mock entity manifest prompt"
-    
+
     entities_pydantic_module.EntityManifest = MockEntityManifest
-    sys.modules['schemas'] = schemas_module
-    sys.modules['schemas.entities_pydantic'] = entities_pydantic_module
+    sys.modules["schemas"] = schemas_module
+    sys.modules["schemas.entities_pydantic"] = entities_pydantic_module
 except Exception:
     pass  # If mocking fails, continue anyway
 
 # Add mvp_site to path AFTER mocking firebase_admin (append instead of insert to avoid shadowing google package)
-mvp_site_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+mvp_site_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 if mvp_site_path not in sys.path:
     sys.path.append(mvp_site_path)
 
 # Import proper fakes library from tests directory
-from tests.fake_services import FakeServiceManager
-from tests.fake_firestore import FakeFirestoreClient
 
 # Check for required dependencies early - BEFORE any mocking
 # This test requires real dependencies to work with the complex entity schema system
@@ -113,32 +138,12 @@ try:
         # In mock testing mode - dependencies are not available
         DEPENDENCIES_AVAILABLE = False
     else:
-        # Try to import real dependencies (not our mocks)
-        import sys
-        
-        # Remove our mocks temporarily to check for real dependencies
-        mock_modules_to_remove = ['pydantic', 'cachetools', 'google', 'google.genai']
-        original_modules = {}
-        for mod in mock_modules_to_remove:
-            if mod in sys.modules:
-                original_modules[mod] = sys.modules[mod]
-                del sys.modules[mod]
-        
-        try:
-            import pydantic
-            import cachetools 
-            import google.genai
-            DEPENDENCIES_AVAILABLE = True
-        except ImportError:
-            DEPENDENCIES_AVAILABLE = False
-        finally:
-            # Restore mocks
-            for mod, original in original_modules.items():
-                sys.modules[mod] = original
+        # Check for real dependencies using module-level imports
+        DEPENDENCIES_AVAILABLE = (
+            CACHETOOLS_AVAILABLE and GOOGLE_GENAI_AVAILABLE and PYDANTIC_AVAILABLE
+        )
 except Exception:
     DEPENDENCIES_AVAILABLE = False
-
-import json
 from unittest.mock import MagicMock, patch
 
 from narrative_response_schema import (
@@ -156,8 +161,10 @@ class TestAlwaysJSONMode(unittest.TestCase):
     def setUp(self):
         """Set up test fixtures"""
         if not DEPENDENCIES_AVAILABLE:
-            self.skipTest("Resource not available: Required dependencies (pydantic, cachetools, google.genai) not available, skipping JSON mode tests")
-        
+            self.skipTest(
+                "Resource not available: Required dependencies (pydantic, cachetools, google.genai) not available, skipping JSON mode tests"
+            )
+
         self.game_state = GameState(user_id="test-user-123")  # Add required user_id
         self.story_context = []
 

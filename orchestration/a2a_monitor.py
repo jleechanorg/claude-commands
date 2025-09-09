@@ -8,11 +8,12 @@ and provides system status reporting.
 
 import json
 import logging
+import os
+import sys
 import threading
 import time
 from pathlib import Path
 from typing import Any
-
 from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
 
 logger = logging.getLogger(__name__)

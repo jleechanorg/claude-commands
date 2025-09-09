@@ -32,9 +32,9 @@ class StateUpdate(TypedDict):
 
     type: str
     key: str
-    value: Union[str, int, float, bool, None]
-    description: Union[str, None]
-    category: Union[str, None]
+    value: str | int | float | bool | None
+    description: str | None
+    category: str | None
 
 
 class EntityData(TypedDict, total=False):
@@ -43,13 +43,13 @@ class EntityData(TypedDict, total=False):
     name: str
     type: str
     description: str
-    level: Union[int, None]
-    hp: Union[int, None]
-    max_hp: Union[int, None]
-    attributes: dict[str, Union[str, int, float]]
+    level: int | None
+    hp: int | None
+    max_hp: int | None
+    attributes: dict[str, str | int | float]
     equipment: list[str]
     spells: list[str]
-    location: Union[str, None]
+    location: str | None
 
 
 class MissionData(TypedDict):
@@ -60,26 +60,26 @@ class MissionData(TypedDict):
     description: str
     status: Literal["active", "completed", "failed", "inactive"]
     objectives: list[str]
-    rewards: Union[list[str], None]
+    rewards: list[str] | None
 
 
 class ApiResponse(TypedDict):
     """Standard API response structure."""
 
     success: bool
-    message: Union[str, None]
-    data: Union[dict[str, Any], None]
-    error: Union[str, None]
+    message: str | None
+    data: dict[str, Any] | None
+    error: str | None
 
 
 class GeminiRequest(TypedDict):
     """Type definition for Gemini API requests."""
 
     prompt: str
-    max_tokens: Union[int, None]
-    temperature: Union[float, None]
+    max_tokens: int | None
+    temperature: float | None
     response_mode: Literal["json", "text"]
-    model: Union[str, None]
+    model: str | None
 
 
 class GeminiResponse(TypedDict):
@@ -88,7 +88,7 @@ class GeminiResponse(TypedDict):
     text: str
     usage: dict[str, int]
     model: str
-    finish_reason: Union[str, None]
+    finish_reason: str | None
 
 
 # Type aliases
@@ -109,7 +109,7 @@ class DatabaseService(Protocol):
 
     def get_campaign(
         self, user_id: UserId, campaign_id: CampaignId
-    ) -> Union[CampaignData, None]:
+    ) -> CampaignData | None:
         """Retrieve a campaign by ID."""
         ...
 

@@ -39,8 +39,13 @@ class ApiService {
   private clockSkewOffset = 0; // Detected clock skew in milliseconds
   private clockSkewDetected = false;
 
+  // Testing mode removed - authentication now always uses real Firebase
 
   constructor() {
+    // Testing mode removed - authentication now always uses real Firebase
+    if (import.meta.env?.DEV) {
+      devLog('🔒 Authentication always uses real Firebase (testing mode removed)');
+    }
 
     // Clean up expired cache entries periodically
     setInterval(() => this.cleanupCache(), 10 * 60 * 1000); // Every 10 minutes
@@ -73,23 +78,12 @@ class ApiService {
         const roundTripTime = clientTimeAfter - clientTimeBefore;
 
         // Estimate server time at the moment we made the request
-        // Server timestamp was captured at server, so we subtract half RTT to estimate when request was sent
+        // Server time was captured at response; subtract half RTT to approximate server time at request send
         const estimatedServerTime = data.server_timestamp_ms - (roundTripTime / 2);
         const clientTimeAtRequest = clientTimeBefore;
 
         // Calculate clock skew (positive means client is ahead, negative means behind)
-        const calculatedSkew = clientTimeAtRequest - estimatedServerTime;
-
-        // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
-        const MAX_ACCEPTABLE_SKEW = 3600000;
-        if (Math.abs(calculatedSkew) > MAX_ACCEPTABLE_SKEW) {
-          if (import.meta.env?.DEV) {
-            devWarn(`⚠️ Detected extreme clock skew (${calculatedSkew}ms), ignoring`);
-          }
-          return;
-        }
-
-        this.clockSkewOffset = calculatedSkew;
+        this.clockSkewOffset = clientTimeAtRequest - estimatedServerTime;
         this.clockSkewDetected = true;
 
         if (import.meta.env?.DEV) {
@@ -98,14 +92,6 @@ class ApiService {
           devLog(`   Server time: ${new Date(data.server_timestamp_ms).toISOString()}`);
           devLog(`   Client time: ${new Date(clientTimeAtRequest).toISOString()}`);
         }
-      } else if (response.status === 404) {
-        // Server doesn't expose time endpoint; skip skew detection
-        if (import.meta.env?.DEV) devWarn('⚠️ /time endpoint not available; skipping skew detection');
-        return;
-      } else {
-        const body = await response.text().catch(() => '');
-        if (import.meta.env?.DEV) devWarn(`⚠️ /time returned ${response.status} ${response.statusText}`, body);
-        return;
       }
     } catch (error) {
       if (import.meta.env?.DEV) {
@@ -123,10 +109,9 @@ class ApiService {
       throw new Error('User not authenticated');
     }
 
-    // If we have detected clock skew and client is ahead, wait before token generation
+    // If client is ahead, wait before token generation
     if (this.clockSkewDetected && this.clockSkewOffset > 0) {
-      const MAX_COMPENSATION_WAIT_MS = 10_000; // 10s cap
-      const waitTime = Math.min(this.clockSkewOffset + 500, MAX_COMPENSATION_WAIT_MS);
+      const waitTime = Math.min(Math.abs(this.clockSkewOffset) + 500, 10000); // Add 500ms buffer, cap at 10s
       if (import.meta.env?.DEV) {
         devLog(`⏱️ Applying clock skew compensation: waiting ${waitTime}ms before token generation`);
       }
@@ -160,15 +145,6 @@ class ApiService {
       const serverTime = errorData.server_time_ms;
       const clientTime = Date.now();
       const detectedSkew = clientTime - serverTime;
-
-      // Sanity check: clock skew shouldn't exceed 1 hour (3600000 ms)
-      const MAX_ACCEPTABLE_SKEW = 3600000;
-      if (Math.abs(detectedSkew) > MAX_ACCEPTABLE_SKEW) {
-        if (import.meta.env?.DEV) {
-          devWarn(`⚠️ Detected extreme clock skew (${detectedSkew}ms), ignoring`);
-        }
-        return;
-      }
 
       // Update our clock skew offset with the server's measurement
       this.clockSkewOffset = detectedSkew;
@@ -232,27 +208,24 @@ class ApiService {
     }
 
     // Build headers based on auth mode
+    // Authentication now always uses real Firebase (testing mode removed)
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    // Get fresh token, forcing refresh on retries and applying clock skew compensation
+    const forceRefresh = retryCount > 0;
     let headers: Record<string, string>;
-
-    {
-      // Normal Firebase authentication
-      const user = auth.currentUser;
-      if (!user) {
-        throw new Error('User not authenticated');
-      }
-
-      // Get fresh token, forcing refresh on retries and applying clock skew compensation
-      const forceRefresh = retryCount > 0;
-      try {
-        const token = await this.getCompensatedToken(forceRefresh);
-        headers = {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        };
-      } catch (tokenError) {
-        devError('Token retrieval error:', tokenError);
-        throw new Error(`Authentication token error: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
-      }
+    try {
+      const token = await this.getCompensatedToken(forceRefresh);
+      headers = {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      };
+    } catch (tokenError) {
+      devError('Token retrieval error:', tokenError);
+      throw new Error(`Authentication token error: ${tokenError instanceof Error ? tokenError.message : 'Unknown error'}`);
     }
 
     const config: RequestInit = {
@@ -494,13 +467,12 @@ class ApiService {
       // Start with longer base delay for auth errors
       delay = Math.max(2000, (retryCount + 1) * 2000);
 
-      // Add additional delay only if client is ahead and cap the addition
-      if (this.clockSkewDetected && this.clockSkewOffset > 1000) {
-        const MAX_EXTRA_SKEW_DELAY = 10_000;
-        const extraDelay = Math.min(this.clockSkewOffset, MAX_EXTRA_SKEW_DELAY);
-        delay += extraDelay;
+      // Add additional delay if we've detected significant clock skew (capped at 10 seconds)
+      if (this.clockSkewDetected && Math.abs(this.clockSkewOffset) > 1000) {
+        const skewDelay = Math.min(Math.abs(this.clockSkewOffset), 10000);
+        delay += skewDelay;
         if (import.meta.env?.DEV) {
-          devLog(`⏱️ Adding ${extraDelay}ms delay for clock skew compensation (client ahead)`);
+          console.log(`⏱️ Adding ${skewDelay}ms delay for clock skew compensation (capped at 10s)`);
         }
       }
     }
@@ -541,6 +513,7 @@ class ApiService {
    * Get the current authenticated user
    */
   async getCurrentUser(): Promise<User | null> {
+    // Authentication now always uses real Firebase (testing mode removed)
     const firebaseUser = auth.currentUser;
     if (!firebaseUser) {
       return null;
@@ -558,6 +531,7 @@ class ApiService {
    * Sign in with Google (Firebase)
    */
   async login(): Promise<User> {
+    // Authentication now always uses real Firebase (testing mode removed)
     const result = await signInWithPopup(auth, googleProvider);
 
     return {
@@ -572,6 +546,7 @@ class ApiService {
    * Sign out
    */
   async logout(): Promise<void> {
+    // Authentication now always uses real Firebase (testing mode removed)
     await signOut(auth);
   }
 
@@ -841,13 +816,14 @@ class ApiService {
    * Helper method to get auth headers for non-JSON requests
    */
   private async getAuthHeaders(): Promise<Record<string, string>> {
+    // Authentication now always uses real Firebase (testing mode removed)
     const user = auth.currentUser;
     if (!user) {
       throw new Error('User not authenticated');
     }
 
-    // Use existing token (no force refresh) for auth headers
-    const token = await this.getCompensatedToken(false);
+    // Use compensated token for ALL auth headers including file operations
+    const token = await this.getCompensatedToken();
     return {
       'Authorization': `Bearer ${token}`,
     };
@@ -857,6 +833,7 @@ class ApiService {
    * Check if user is authenticated
    */
   isAuthenticated(): boolean {
+    // Authentication now always uses real Firebase (testing mode removed)
     return auth.currentUser !== null;
   }
 
@@ -864,7 +841,7 @@ class ApiService {
    * Listen to auth state changes
    */
   onAuthStateChanged(callback: (user: User | null) => void): () => void {
-    // Firebase auth state listener
+    // Authentication now always uses real Firebase (testing mode removed)
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         callback({

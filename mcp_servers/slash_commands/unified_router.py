@@ -13,13 +13,13 @@ def discover_slash_commands() -> Dict[str, str]:
     commands_dir = Path(".claude/commands")
     if not commands_dir.exists():
         return {}
-    
+
     commands = {}
     for file_path in commands_dir.glob("*.md"):
         if file_path.name != "CLAUDE.md":  # Skip the marker file
             command_name = f"/{file_path.stem}"
             commands[command_name] = str(file_path)
-    
+
     return commands
 
 
@@ -33,7 +33,7 @@ def get_tool_commands() -> List[str]:
 def create_tools() -> List[Tool]:
     """Create MCP tools that map to Claude slash commands - only cerebras for now."""
     tools = []
-    
+
     # Only expose the cerebras tool
     tools.append(Tool(
         name="cerebras",
@@ -49,7 +49,7 @@ def create_tools() -> List[Tool]:
             }
         }
     ))
-    
+
     return tools
 
 
@@ -57,17 +57,19 @@ def sanitize_args(args: Any) -> str:
     """Sanitize command arguments to prevent injection."""
     if isinstance(args, list):
         # Join array arguments into a single string
-        args = " ".join(str(arg) for arg in args)
-    elif not isinstance(args, str):
+        args_str = " ".join(str(arg) for arg in args)
+    elif isinstance(args, str):
+        args_str = args
+    else:
         # Convert non-string arguments to string
-        args = str(args) if args else ""
-    
+        args_str = str(args) if args else ""
+
     # Remove dangerous characters
     dangerous_chars = [";", "&", "|", "`", "$", "<", ">", "(", ")", "{", "}", "[", "]", "\n", "\r"]
     for char in dangerous_chars:
-        args = args.replace(char, "")
-    
-    return args
+        args_str = args_str.replace(char, "")
+
+    return args_str
 
 
 def execute_direct_command(command: str, args: str = "", cwd: str = None) -> str:
@@ -81,16 +83,16 @@ def execute_direct_command(command: str, args: str = "", cwd: str = None) -> str
                 break
         else:
             cwd = os.environ.get("PROJECT_ROOT", ".")
-    
+
     # Sanitize arguments
     safe_args = sanitize_args(args)
-    
+
     # Construct the full command
     if safe_args:
         cmd_line = f"{command} {safe_args}"
     else:
         cmd_line = command
-    
+
     # Execute with subprocess - use shell=False for security
     try:
         # Split command into components for secure execution - properly handle quotes
@@ -131,16 +133,16 @@ async def handle_tool_call(name: str, arguments: Dict[str, Any]) -> List[TextCon
     # Only allow cerebras tool for security reasons
     if name != "cerebras":
         return [TextContent(type="text", text=f"Tool '{name}' is not available. Only '/cerebras' is currently supported.")]
-    
+
     # Extract arguments for cerebras tool
     args = arguments.get("args", [])
-    
+
     # Join array arguments into a single string for command execution
     if isinstance(args, list):
         args_str = " ".join(str(arg) for arg in args)
     else:
         args_str = str(args) if args else ""
-    
+
     # Execute the cerebras command
     try:
         output = _execute_slash_command("/cerebras", args_str)
@@ -152,26 +154,26 @@ async def handle_tool_call(name: str, arguments: Dict[str, Any]) -> List[TextCon
 async def main():
     """Main entry point for the FastMCP server."""
     from fastmcp import FastMCP
-    
+
     mcp = FastMCP("claude-slash-commands")
-    
+
     # Register cerebras tool using decorator approach
     @mcp.tool()
     async def cerebras(args: list = None) -> str:
         """Execute Claude slash command: /cerebras - Ultra-fast AI code generation using Cerebras API"""
         if args is None:
             args = []
-        
+
         # Convert args to string for command execution
         args_str = " ".join(str(arg) for arg in args)
-        
+
         # Execute the cerebras command
         try:
             output = _execute_slash_command("/cerebras", args_str)
             return output
         except Exception as e:
             return f"Security error: {str(e)}"
-    
+
     # Start the server
     await mcp.run_stdio_async()
 

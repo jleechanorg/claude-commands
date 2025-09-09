@@ -7,7 +7,7 @@ This test suite follows Red-Green-Refactor methodology to drive fixes for
 critical issues identified in the React V2 audit:
 
 1. Hardcoded "Ser Arion" character names
-2. "intermediate • fantasy" text clutter 
+2. "intermediate • fantasy" text clutter
 3. Broken URL routing for /campaign/:id
 4. Missing settings functionality
 
@@ -15,6 +15,7 @@ Each test will initially FAIL (RED), driving implementation of fixes (GREEN).
 """
 
 import os
+import re
 import sys
 import unittest
 
@@ -30,15 +31,15 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         # Use environment variable or default to 8081 (matching main.py)
-        port = os.environ.get('PORT', '8081')
+        port = os.environ.get("PORT", "8081")
         self.backend_url = f"http://localhost:{port}"
         self.frontend_url = "http://localhost:3002"  # V2 runs on port 3002
         self.test_user_id = "test-user-123"
-        
+
         # Test campaign data with custom character name
         self.test_campaign_data = {
             "title": "Dragon Knight Adventure",
-            "character": "Lady Elara",  # NOT "Ser Arion" 
+            "character": "Lady Elara",  # NOT "Ser Arion"
             "setting": "Mystical Forest",
             "description": "Custom character test campaign",
         }
@@ -64,18 +65,14 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # This should FAIL - hardcoded names exist
-        self.assertNotIn(
-            "Ser Arion", 
-            content, 
-            "❌ HARDCODED CHARACTER: 'Ser Arion' found in CampaignCreationV2.tsx"
-        )
-        
+        assert (
+            "Ser Arion" not in content
+        ), "❌ HARDCODED CHARACTER: 'Ser Arion' found in CampaignCreationV2.tsx"
+
         # Also check for other hardcoded character references
-        self.assertNotIn(
-            "Knight of the Silver Blade",
-            content,
-            "❌ HARDCODED CHARACTER: 'Knight of the Silver Blade' found in CampaignCreationV2.tsx"
-        )
+        assert (
+            "Knight of the Silver Blade" not in content
+        ), "❌ HARDCODED CHARACTER: 'Knight of the Silver Blade' found in CampaignCreationV2.tsx"
 
         print("✅ No hardcoded character names found in React components")
 
@@ -97,24 +94,18 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # This should PASS now - specific text clutter should be removed
         # Check for the actual clutter pattern that was removed, not just "intermediate" which is in code
-        self.assertNotIn(
-            "span className=\"capitalize\">{difficulty}</span>",
-            content,
-            "❌ TEXT CLUTTER: Difficulty display clutter found in CampaignList.tsx"
-        )
+        assert (
+            'span className="capitalize">{difficulty}</span>' not in content
+        ), "❌ TEXT CLUTTER: Difficulty display clutter found in CampaignList.tsx"
 
-        self.assertNotIn(
-            "• fantasy",
-            content.lower(),
-            "❌ TEXT CLUTTER: '• fantasy' text found in CampaignList.tsx"
-        )
-        
+        assert (
+            "• fantasy" not in content.lower()
+        ), "❌ TEXT CLUTTER: '• fantasy' text found in CampaignList.tsx"
+
         # Verify the clean "Adventure Ready" replacement is present
-        self.assertIn(
-            "Adventure Ready",
-            content,
-            "✅ Clean 'Adventure Ready' text should be present"
-        )
+        assert (
+            "Adventure Ready" in content
+        ), "✅ Clean 'Adventure Ready' text should be present"
 
         print("✅ No 'intermediate • fantasy' text clutter found")
 
@@ -135,18 +126,14 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # This should FAIL - route not configured
-        self.assertIn(
-            "/campaign/:id",
-            content,
-            "❌ MISSING ROUTE: /campaign/:id route not found in AppWithRouter.tsx"
-        )
+        assert (
+            "/campaign/:id" in content
+        ), "❌ MISSING ROUTE: /campaign/:id route not found in AppWithRouter.tsx"
 
         # Check that route has proper component
-        self.assertIn(
-            "CampaignPage",
-            content,
-            "❌ MISSING COMPONENT: CampaignPage not found in routes"
-        )
+        assert (
+            "CampaignPage" in content
+        ), "❌ MISSING COMPONENT: CampaignPage not found in routes"
 
         print("✅ Campaign ID routing properly configured")
 
@@ -166,21 +153,20 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         with open(campaign_list_path) as f:
             content = f.read()
 
-        # This should PASS - settings button exists in CampaignList  
-        self.assertIn(
-            "Settings",
-            content,
-            "❌ MISSING FEATURE: Settings button not found in CampaignList.tsx"
-        )
+        # This should PASS - settings button exists in CampaignList
+        assert (
+            "Settings" in content
+        ), "❌ MISSING FEATURE: Settings button not found in CampaignList.tsx"
 
         # Check for settings icon or text
         settings_indicators = ["Settings", "settings", "⚙", "gear", "cog"]
-        has_settings_indicator = any(indicator in content for indicator in settings_indicators)
-        
-        self.assertTrue(
-            has_settings_indicator,
-            "❌ MISSING FEATURE: No settings indicator found in CampaignList.tsx"
+        has_settings_indicator = any(
+            indicator in content for indicator in settings_indicators
         )
+
+        assert (
+            has_settings_indicator
+        ), "❌ MISSING FEATURE: No settings indicator found in CampaignList.tsx"
 
         print("✅ Settings button found in campaigns page")
 
@@ -195,31 +181,33 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         possible_locations = [
             "frontend_v2/src/components/CampaignList.tsx",
             "frontend_v2/src/components/Header.tsx",
-            "frontend_v2/src/pages/SettingsPage.tsx", 
-            "frontend_v2/src/components/UserMenu.tsx"
+            "frontend_v2/src/pages/SettingsPage.tsx",
+            "frontend_v2/src/components/UserMenu.tsx",
         ]
 
         sign_out_found = False
-        
+
         for location in possible_locations:
             file_path = os.path.join(
                 os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                 location,
             )
-            
+
             if os.path.exists(file_path):
                 with open(file_path) as f:
                     content = f.read()
-                    
-                if any(term in content for term in ["signOut", "sign-out", "Sign Out", "logout", "Log Out"]):
+
+                if any(
+                    term in content
+                    for term in ["signOut", "sign-out", "Sign Out", "logout", "Log Out"]
+                ):
                     sign_out_found = True
                     break
 
         # This should FAIL - sign out not implemented
-        self.assertTrue(
-            sign_out_found,
-            "❌ MISSING FEATURE: Sign-out functionality not found in any component"
-        )
+        assert (
+            sign_out_found
+        ), "❌ MISSING FEATURE: Sign-out functionality not found in any component"
 
         print("✅ Sign-out functionality found")
 
@@ -236,7 +224,7 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # This test validates the behavior we want after fixing hardcoded values
         # It should pass once we remove hardcoded "Ser Arion" references
-        
+
         # Mock API test - in real scenario this would be browser automation
         try:
             # Test campaign creation with custom character name
@@ -253,20 +241,26 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
             if response.status_code == 201:
                 data = response.json()
-                
+
                 # Verify campaign uses our custom character name, NOT "Ser Arion"
                 campaign_id = data.get("campaign_id")
-                self.assertIsNotNone(campaign_id, "Campaign creation should return ID")
-                
+                assert campaign_id is not None, "Campaign creation should return ID"
+
                 # The key test: verify custom character is preserved
                 # This validates that frontend sent correct data to backend
-                print(f"✅ Campaign created with custom character: {self.test_campaign_data['character']}")
+                print(
+                    f"✅ Campaign created with custom character: {self.test_campaign_data['character']}"
+                )
                 print("✅ No hardcoded character names interfering with user input")
-                
+
             else:
                 # Backend issues are separate from frontend hardcoding
-                print("⚠️ Backend returned error, but frontend should still avoid hardcoding")
-                print("✅ This test validates frontend behavior independent of backend state")
+                print(
+                    "⚠️ Backend returned error, but frontend should still avoid hardcoding"
+                )
+                print(
+                    "✅ This test validates frontend behavior independent of backend state"
+                )
 
         except requests.ConnectionError:
             # Connection issues don't affect hardcoding validation
@@ -282,7 +276,7 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # Check that campaign cards show meaningful information without clutter
         # This test defines the desired behavior after removing "intermediate • fantasy"
-        
+
         # Check CampaignList for clean campaign display (the actual component that displays campaign cards)
         campaign_list_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -293,26 +287,22 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
             content = f.read()
 
         # Verify clean display without clutter
-        self.assertIn(
-            "Adventure Ready",
-            content,
-            "✅ Campaign cards show clean 'Adventure Ready' text"
-        )
-        
-        # Verify component shows meaningful campaign information  
+        assert (
+            "Adventure Ready" in content
+        ), "✅ Campaign cards show clean 'Adventure Ready' text"
+
+        # Verify component shows meaningful campaign information
         meaningful_fields = ["title", "prompt"]
         for field in meaningful_fields:
-            self.assertIn(
-                field,
-                content.lower(),
-                f"✅ Campaign cards should display {field} information"
-            )
+            assert (
+                field in content.lower()
+            ), f"✅ Campaign cards should display {field} information"
 
         # This test passes when we have meaningful content without clutter
         print("✅ Campaign cards display user-meaningful information")
         print("✅ Clean presentation without technical clutter text")
 
-    # =====================================================================  
+    # =====================================================================
     # INTEGRATION TESTS: End-to-end behavior validation
     # =====================================================================
 
@@ -321,9 +311,11 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         🔴 RED TEST: GamePlayView component should not cause infinite re-render loops
         This will FAIL because of useEffect dependency issue causing "Too many re-renders" React error
         """
-        print("🔴 RED TEST: Checking GamePlayView.tsx for infinite render loop patterns")
+        print(
+            "🔴 RED TEST: Checking GamePlayView.tsx for infinite render loop patterns"
+        )
 
-        # Read GamePlayView component 
+        # Read GamePlayView component
         gameplay_view_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "frontend_v2/src/components/GamePlayView.tsx",
@@ -334,31 +326,29 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # Look for problematic useEffect dependency patterns that cause infinite loops
         # The specific issue: useEffect depends on 'mode' but also calls API that can trigger mode changes
-        
+
         # Check for the problematic pattern: useEffect([..., mode]) that could cause cascade
-        import re
-        
         # Find useEffect blocks with mode dependency
-        useeffect_pattern = r'useEffect\(\(\)\s*=>\s*\{[^}]*\},\s*\[[^\]]*mode[^\]]*\]'
-        mode_dependent_effects = re.findall(useeffect_pattern, content, re.MULTILINE | re.DOTALL)
-        
+        useeffect_pattern = r"useEffect\(\(\)\s*=>\s*\{[^}]*\},\s*\[[^\]]*mode[^\]]*\]"
+        mode_dependent_effects = re.findall(
+            useeffect_pattern, content, re.MULTILINE | re.DOTALL
+        )
+
         if mode_dependent_effects:
             # Check if any of these effects also trigger API calls or state updates
             for effect in mode_dependent_effects:
                 # This pattern is problematic: useEffect that depends on mode AND calls API
-                if 'apiService' in effect and 'mode' in effect:
+                if "apiService" in effect and "mode" in effect:
                     self.fail(
                         "❌ INFINITE RENDER LOOP: useEffect depends on 'mode' AND calls API with mode. "
                         "This creates cascade re-renders when mode changes."
                     )
-        
+
         # Also check for the specific error-causing dependency array
-        self.assertNotIn(
-            ", mode]", 
-            content,
-            "❌ INFINITE RENDER LOOP: useEffect dependency on 'mode' causes infinite re-renders"
-        )
-        
+        assert (
+            ", mode]" not in content
+        ), "❌ INFINITE RENDER LOOP: useEffect dependency on 'mode' causes infinite re-renders"
+
         print("✅ GamePlayView has no infinite render loop patterns")
 
     def test_gameplay_view_stable_useeffect_green(self):
@@ -366,9 +356,11 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         🟢 GREEN TEST: GamePlayView useEffect should have stable dependencies
         This will pass after we fix the infinite render dependency issue
         """
-        print("🟢 GREEN TEST: Validating GamePlayView has stable useEffect dependencies")
+        print(
+            "🟢 GREEN TEST: Validating GamePlayView has stable useEffect dependencies"
+        )
 
-        # Read GamePlayView component 
+        # Read GamePlayView component
         gameplay_view_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
             "frontend_v2/src/components/GamePlayView.tsx",
@@ -379,14 +371,12 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # After fix, initial content generation should only depend on campaignId, not mode
         # This prevents infinite loops when mode changes via UI
-        
+
         # Look for the corrected useEffect pattern
-        self.assertIn(
-            ", [campaignId]",
-            content,
-            "✅ Initial content useEffect should only depend on campaignId, not mode"
-        )
-        
+        assert (
+            ", [campaignId]" in content
+        ), "✅ Initial content useEffect should only depend on campaignId, not mode"
+
         # Mode should be passed as a parameter to API calls, not a dependency
         # This validates the fix prevents cascading re-renders
         print("✅ GamePlayView useEffect has stable dependencies")
@@ -401,39 +391,39 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
 
         # This test validates that the entire user journey works correctly:
         # 1. User enters custom character name
-        # 2. Frontend doesn't replace with hardcoded values  
+        # 2. Frontend doesn't replace with hardcoded values
         # 3. API receives correct user data
         # 4. Campaign is created with user's actual inputs
         # 5. UI displays clean information without clutter
-        
+
         test_scenarios = [
             {
                 "character": "Lady Elara",
-                "title": "Forest Adventure", 
-                "setting": "Enchanted Woods"
+                "title": "Forest Adventure",
+                "setting": "Enchanted Woods",
             },
             {
                 "character": "Sir Marcus",
                 "title": "Desert Quest",
-                "setting": "Ancient Ruins"
+                "setting": "Ancient Ruins",
             },
             {
-                "character": "Wizard Thorin", 
+                "character": "Wizard Thorin",
                 "title": "Mountain Expedition",
-                "setting": "Dwarven Halls"
-            }
+                "setting": "Dwarven Halls",
+            },
         ]
 
         for scenario in test_scenarios:
-            print(f"   Testing scenario: {scenario['character']} in {scenario['setting']}")
-            
-            # Verify each character name is NOT hardcoded
-            self.assertNotEqual(
-                scenario["character"], 
-                "Ser Arion",
-                f"✅ Custom character {scenario['character']} should not be replaced by hardcoded 'Ser Arion'"
+            print(
+                f"   Testing scenario: {scenario['character']} in {scenario['setting']}"
             )
-            
+
+            # Verify each character name is NOT hardcoded
+            assert (
+                scenario["character"] != "Ser Arion"
+            ), f"✅ Custom character {scenario['character']} should not be replaced by hardcoded 'Ser Arion'"
+
         print("✅ All test scenarios use custom character names, no hardcoding")
         print("✅ Integration workflow preserves user input throughout the process")
 
@@ -447,9 +437,9 @@ def run_tdd_test_suite():
     print("=" * 70)
     print("\n🎯 TESTING STRATEGY:")
     print("   🔴 RED TESTS: Should FAIL initially, driving implementation")
-    print("   🟢 GREEN TESTS: Should PASS after fixes are implemented") 
+    print("   🟢 GREEN TESTS: Should PASS after fixes are implemented")
     print("   🔄 REFACTOR: Code improvements while maintaining GREEN state")
-    
+
     # Create test suite
     suite = unittest.TestLoader().loadTestsFromTestCase(ReactV2CriticalIssuesTDD)
 
@@ -463,7 +453,7 @@ def run_tdd_test_suite():
         print(f"✅ {result.testsRun} tests passed")
         print("\n🎯 VERIFIED FIXES:")
         print("   • Hardcoded character names removed ✅")
-        print("   • Text clutter eliminated ✅") 
+        print("   • Text clutter eliminated ✅")
         print("   • URL routing implemented ✅")
         print("   • Settings functionality added ✅")
         print("   • Sign-out feature accessible ✅")

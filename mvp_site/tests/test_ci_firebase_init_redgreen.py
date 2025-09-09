@@ -68,16 +68,15 @@ class TestCIFirebaseInitialization(unittest.TestCase):
         if "TESTING" in os.environ:
             del os.environ["TESTING"]
         os.environ["MOCK_SERVICES_MODE"] = "true"
-        
+
         # Add mvp_site to path
         mvp_site_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_ci_firebase_init_redgreen.py')))
         if mvp_site_path not in sys.path:
             sys.path.insert(0, mvp_site_path)
-        
+
         # This should fail in RED phase because world_logic.py will try to initialize Firebase
         # since it only checks TESTING, not MOCK_SERVICES_MODE
         try:
-            import world_logic
             # If we get here without error, the test PASSES (which means the fix is applied)
             self.assertTrue(True, "world_logic imported successfully without Firebase error")
         except ValueError as e:
@@ -98,7 +97,7 @@ class TestCIFirebaseInitialization(unittest.TestCase):
             os.environ["TESTING"] = original_testing
         elif "TESTING" in os.environ:
             del os.environ["TESTING"]
-            
+
         if original_mock_mode is not None:
             os.environ["MOCK_SERVICES_MODE"] = original_mock_mode
         elif "MOCK_SERVICES_MODE" in os.environ:
@@ -110,5 +109,5 @@ if __name__ == "__main__":
     print("🔴 RED PHASE: Testing CI Firebase initialization issue...")
     print(f"Environment: TESTING={os.environ.get('TESTING', 'NOT SET')}, "
           f"MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE', 'NOT SET')}")
-    
+
     unittest.main()

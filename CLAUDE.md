@@ -199,6 +199,41 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 
 **EXISTING ROOT FILES**: Only established project scripts remain in root for backward compatibility. NO NEW ADDITIONS.
 
+## 🚨 CRITICAL: FILE DELETION PROTOCOL - ZERO TOLERANCE
+
+**🚨 NEVER DELETE FILES WITHOUT DEPENDENCY CLEANUP**: ⚠️ MANDATORY - Systematic file removal protocol
+- ❌ **FORBIDDEN**: Deleting files without first finding ALL imports and references
+- ❌ **FORBIDDEN**: Reactive cleanup after deletion causes test failures
+- ✅ **REQUIRED**: Search entire codebase for ALL imports of target file BEFORE deletion
+- ✅ **REQUIRED**: Fix or remove ALL imports and references systematically
+- ✅ **REQUIRED**: Update ALL test files that mock or reference the deleted file
+- ✅ **REQUIRED**: Update ALL documentation that references the deleted file
+- **Pattern**: Search → Fix imports → Update tests → Update docs → Delete file
+- **Anti-Pattern**: Delete file → Fix broken imports → Reactive cleanup commits
+- **Violation Example**: Deleting firebase_utils.py without fixing imports causes "ModuleNotFoundError" in tests
+
+**🚨 MANDATORY DELETION WORKFLOW**: ⚠️ SYSTEMATIC PROCESS
+1. **SEARCH PHASE**: Use comprehensive search to find ALL references
+   - `grep -r "import.*filename" .` - Direct imports
+   - `grep -r "from.*filename" .` - From imports
+   - `grep -r "filename" .` - General references
+   - Check test files for mocking: `grep -r "mock.*filename" mvp_site/tests/`
+   - Check documentation: `grep -r "filename" docs/`
+2. **FIX PHASE**: Systematically address ALL found references
+   - Remove or replace import statements
+   - Update test mocking to remove references
+   - Update documentation to reflect removal
+3. **VERIFY PHASE**: Ensure no broken dependencies remain
+   - Run tests to verify no ModuleNotFoundError
+   - Check for any remaining references
+4. **DELETE PHASE**: Only delete file after ALL references fixed
+
+**🚨 CRITICAL LEARNING**: From PR #1551 firebase_utils deletion violation
+- **Mistake**: Deleted firebase_utils.py without checking imports first
+- **Consequence**: Test failures, reactive cleanup commits, "why so sloppy?" feedback
+- **Prevention**: ALWAYS search and fix dependencies before file deletion
+- **Success Metric**: Zero test failures after file deletion
+
 ## 🚨 CRITICAL: CONVERSATION HISTORY PROTECTION PROTOCOL
 
 **🚨 NEVER TOUCH ~/.claude/projects/ DIRECTORY**: ⚠️ MANDATORY - Absolute protection of conversation history
@@ -469,9 +504,10 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - **CRITICAL**: Progress reporting ≠ stopping for approval. Report progress but continue autonomously
 - **Autonomy Boundary**: Once /converge starts, zero user intervention until 100% goal achievement or limits
 
-🚨 **ABSOLUTE BRANCH ISOLATION:** ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
-- ❌ FORBIDDEN: `git checkout`, `git switch`, or any branch switching
-- ✅ MANDATORY: Stay on current branch - delegate everything else to agents
+🚨 **BRANCH SWITCHING PROTOCOL:** ⚠️ MANDATORY - Only switch when explicitly requested by user
+- ❌ FORBIDDEN: `git checkout`, `git switch` without explicit user request
+- ✅ ALLOWED: Branch switching when user explicitly says "switch to [branch]" or similar direct command
+- ✅ MANDATORY: Stay on current branch unless user directly requests branch change
 
 ## Project Overview
 
@@ -515,11 +551,14 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - ✅ EXPLICIT error handling - capture stderr and raise specific exceptions
 - **Pattern:** `subprocess.run(["cmd"], shell=False, timeout=30, check=True)`
 
-🚨 **IMPORT STANDARDS:** ⚠️ MANDATORY - Module-level imports only
-- ❌ NEVER use inline imports inside functions
-- ❌ NEVER use try-catch imports for optional dependencies
-- ✅ ALWAYS import at module level - fail fast if missing
-- **Pattern:** Handle optionality in logic, not imports
+🚨 **IMPORT STANDARDS:** ⚠️ MANDATORY - ZERO TOLERANCE IMPORT POLICY
+- ❌ **ABSOLUTELY FORBIDDEN**: try/except around imports (ANY context, ANY reason)
+- ❌ **ABSOLUTELY FORBIDDEN**: inline imports inside functions
+- ❌ **ABSOLUTELY FORBIDDEN**: conditional imports for optional dependencies
+- ✅ **MANDATORY PATTERN**: All imports at module level - fail fast if missing
+- ✅ **GRACEFUL HANDLING**: Handle optionality in logic/runtime, NEVER in imports
+- 🚨 **ZERO EXCEPTIONS**: No try/except imports even for "graceful fallbacks"
+- **Pattern:** `import module` → handle `module is None` in logic if needed
 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
