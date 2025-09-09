@@ -23,17 +23,23 @@ import concurrent.futures
 import inspect
 import json
 import os
+import tempfile
 import threading
 import traceback
 import uuid
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Union
+from typing import Any
 
-import firestore_service
 import logging_util
 import requests
 from flask import Request, Response
+
+# Firestore import with error handling
+try:
+    import firestore_service
+except ImportError:
+    firestore_service = None
 
 
 # Initialize logging
@@ -58,7 +64,7 @@ class MCPError:
 
     code: int
     message: str
-    data: Union[dict[str, Any], None] = None
+    data: dict[str, Any] | None = None
 
 
 class MCPClientError(Exception):
@@ -109,7 +115,7 @@ class MCPClient:
             raise ValueError("base_url must be a non-empty string")
         if not isinstance(timeout, (int, float)) or timeout <= 0:
             raise ValueError("timeout must be a positive number")
-            
+
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
         self.skip_http = skip_http
@@ -269,46 +275,62 @@ class MCPClient:
             # Check if world_logic is available
             if self.world_logic is None:
                 # Initialize campaign storage for mock state tracking (class-level for persistence)
-                if not hasattr(MCPClient, '_mock_campaigns'):
+                if not hasattr(MCPClient, "_mock_campaigns"):
                     MCPClient._mock_campaigns = set()
                 mock_campaigns = MCPClient._mock_campaigns
-                
+
                 # Gracefully handle missing world_logic in test mode
                 if tool_name == "get_campaigns_list":
                     return {"success": True, "campaigns": []}
-                elif tool_name in ["get_campaign_state", "process_action"]: 
+                elif tool_name in ["get_campaign_state", "process_action"]:
                     # Check if campaign exists in our mock storage OR in FakeFirestore
                     args = arguments or {}
                     campaign_id = args.get("campaign_id", "")
                     user_id = args.get("user_id", "")
-                    
-                    logger.info(f"🔧 DEBUG: Checking campaign {campaign_id} in mock_campaigns: {mock_campaigns}")
-                    
+
+                    logger.info(
+                        f"🔧 DEBUG: Checking campaign {campaign_id} in mock_campaigns: {mock_campaigns}"
+                    )
+
                     # Check both mock_campaigns and FakeFirestore for campaign existence
                     campaign_exists = campaign_id in mock_campaigns
-                    
+
                     # In test mode, also check FakeFirestore for campaigns set up by tests
                     if not campaign_exists and user_id:
                         try:
                             db = firestore_service.get_db()
-                            campaign_ref = db.collection("users").document(user_id).collection("campaigns").document(campaign_id)
+                            campaign_ref = (
+                                db.collection("users")
+                                .document(user_id)
+                                .collection("campaigns")
+                                .document(campaign_id)
+                            )
                             campaign_doc = campaign_ref.get()
                             campaign_exists = campaign_doc.exists()
-                            logger.info(f"🔧 DEBUG: Checked FakeFirestore for {campaign_id}: exists={campaign_exists}")
+                            logger.info(
+                                f"🔧 DEBUG: Checked FakeFirestore for {campaign_id}: exists={campaign_exists}"
+                            )
                         except Exception as e:
                             logger.info(f"🔧 DEBUG: FakeFirestore check failed: {e}")
-                    
+
                     if campaign_exists:
                         # Return mock response for existing campaigns
                         if tool_name == "get_campaign_state":
-                            return {"success": True, "campaign": {"id": campaign_id, "status": "active"}, "story": "Mock story", "game_state": {}}
+                            return {
+                                "success": True,
+                                "campaign": {"id": campaign_id, "status": "active"},
+                                "story": "Mock story",
+                                "game_state": {},
+                            }
                         else:  # process_action
                             # Format response to match what main.py expects: story field with list of entries
                             # Determine test narrative based on user input to support multiple end-to-end tests
                             user_input = args.get("user_input", "")
                             if "I begin my adventure" in user_input:
                                 # MCP protocol end-to-end test
-                                narrative_text = "The MCP protocol test hero enters the realm..."
+                                narrative_text = (
+                                    "The MCP protocol test hero enters the realm..."
+                                )
                                 return {
                                     "success": True,
                                     "story": [
@@ -321,16 +343,19 @@ class MCPClient:
                                     "dice_rolls": [],
                                     "resources": "None",
                                     "state_updates": {"hp": 100},
-                                    "sequence_id": "test-sequence-1"
+                                    "sequence_id": "test-sequence-1",
                                 }
                             else:
                                 # Continue story end-to-end test (Batch 2)
                                 return {
-                                    "success": True, 
+                                    "success": True,
                                     "story": [
-                                        {"text": "The story continues with new adventures...", "type": "narrative"}
-                                    ], 
-                                    "updated_state": {}
+                                        {
+                                            "text": "The story continues with new adventures...",
+                                            "type": "narrative",
+                                        }
+                                    ],
+                                    "updated_state": {},
                                 }
                     else:
                         raise MCPClientError("Campaign not found", error_code=404)
@@ -341,40 +366,51 @@ class MCPClient:
                 elif tool_name == "create_campaign":
                     # Smart mock for create_campaign - check for malformed requests
                     args = arguments or {}
-                    
+
                     # Test for invalid request format (e.g., missing required fields)
                     if not args.get("character") and not args.get("title"):
-                        raise MCPClientError("Missing required campaign fields", error_code=400)
+                        raise MCPClientError(
+                            "Missing required campaign fields", error_code=400
+                        )
                     else:
                         # Generate a mock campaign ID for testing and track it
                         campaign_id = str(uuid.uuid4())
                         mock_campaigns.add(campaign_id)
-                        logger.info(f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}")
+                        logger.info(
+                            f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}"
+                        )
                         return {"success": True, "campaign_id": campaign_id}
                 elif tool_name == "export_campaign":
                     # Smart mock for export_campaign - check parameters for error conditions
                     args = arguments or {}
                     campaign_id = args.get("campaign_id", "")
                     export_format = args.get("format", "txt")
-                    
+
                     # Test for specific error conditions that tests expect
-                    if campaign_id == "nonexistent-campaign-id" or (campaign_id and campaign_id not in mock_campaigns):
+                    if campaign_id == "nonexistent-campaign-id" or (
+                        campaign_id and campaign_id not in mock_campaigns
+                    ):
                         raise MCPClientError("Campaign not found", error_code=404)
                     elif export_format not in ["txt", "pdf", "json"]:
                         raise MCPClientError("Invalid export format", error_code=400)
                     else:
                         # Create a temporary file for successful mock export
-                        temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=f'.{export_format}', delete=False)
+                        temp_file = tempfile.NamedTemporaryFile(
+                            mode="w", suffix=f".{export_format}", delete=False
+                        )
                         temp_file.write("Mock campaign export content for testing")
                         temp_file.close()
-                        return {"success": True, "export_path": temp_file.name, "campaign_title": "Test Campaign"}
+                        return {
+                            "success": True,
+                            "export_path": temp_file.name,
+                            "campaign_title": "Test Campaign",
+                        }
+                elif os.getenv("TESTING") == "true":
+                    return {"success": True, "result": f"Mock response for {tool_name}"}
                 else:
-                    # For unknown tools in testing, return a generic success response
-                    # instead of failing with 503 to prevent test cascade failures
-                    if os.getenv("TESTING") == "true":
-                        return {"success": True, "result": f"Mock response for {tool_name}"}
-                    else:
-                        raise MCPClientError("Service temporarily unavailable", error_code=503)
+                    raise MCPClientError(
+                        "Service temporarily unavailable", error_code=503
+                    )
 
             # Map tool names to world_logic.py functions
             tool_mapping = {
@@ -393,12 +429,18 @@ class MCPClient:
                 raise MCPClientError(f"Unknown tool: {tool_name}")
 
             if not hasattr(self.world_logic, function_name):
-                raise MCPClientError(f"Tool not implemented: {function_name}", error_code=501)
+                raise MCPClientError(
+                    f"Tool not implemented: {function_name}", error_code=501
+                )
 
             function = getattr(self.world_logic, function_name)
             logger.debug(f"Calling {function_name} directly with args: {arguments}")
             maybe_result = function(arguments or {})
-            result = await maybe_result if inspect.isawaitable(maybe_result) else maybe_result
+            result = (
+                await maybe_result
+                if inspect.isawaitable(maybe_result)
+                else maybe_result
+            )
 
             logger.debug(f"Direct call {function_name} returned: {result}")
             return result
@@ -471,14 +513,14 @@ class MCPClient:
                 cls._shared_event_loop = asyncio.new_event_loop()
                 # Start the event loop in a background thread
                 cls._loop_thread = threading.Thread(
-                    target=cls._run_event_loop_forever, 
-                    daemon=True, 
-                    name="MCP-EventLoop"
+                    target=cls._run_event_loop_forever,
+                    daemon=True,
+                    name="MCP-EventLoop",
                 )
                 cls._loop_thread.start()
                 logger.debug("Created and started shared event loop for MCP operations")
             return cls._shared_event_loop
-    
+
     @classmethod
     def _run_event_loop_forever(cls):
         """Run the shared event loop forever in background thread"""
@@ -509,15 +551,19 @@ class MCPClient:
             if shared_loop == current_loop:
                 # Same loop - use fresh loop in thread to avoid conflicts
                 with concurrent.futures.ThreadPoolExecutor() as executor:
+
                     def run_in_fresh_loop():
                         # Create fresh event loop for this thread to avoid async conflicts
                         fresh_loop = asyncio.new_event_loop()
                         asyncio.set_event_loop(fresh_loop)
                         try:
-                            return fresh_loop.run_until_complete(self.call_tool(tool_name, arguments))
+                            return fresh_loop.run_until_complete(
+                                self.call_tool(tool_name, arguments)
+                            )
                         finally:
                             fresh_loop.close()
                             asyncio.set_event_loop(None)
+
                     future = executor.submit(run_in_fresh_loop)
                     return future.result(timeout=self.timeout)
             else:
@@ -552,6 +598,7 @@ class MCPClient:
             if shared_loop == current_loop:
                 # Same loop - use fresh loop in thread to avoid conflicts
                 with concurrent.futures.ThreadPoolExecutor() as executor:
+
                     def run_in_fresh_loop():
                         # Create fresh event loop for this thread to avoid async conflicts
                         fresh_loop = asyncio.new_event_loop()
@@ -561,6 +608,7 @@ class MCPClient:
                         finally:
                             fresh_loop.close()
                             asyncio.set_event_loop(None)
+
                     future = executor.submit(run_in_fresh_loop)
                     return future.result(timeout=self.timeout)
             else:
@@ -640,10 +688,13 @@ def http_to_mcp_request(flask_request: Request, tool_name: str) -> dict[str, Any
 
     # Create safe version for logging (mask sensitive headers)
     safe_arguments = arguments.copy()
-    if "_http_headers" in safe_arguments and "authorization" in safe_arguments["_http_headers"]:
+    if (
+        "_http_headers" in safe_arguments
+        and "authorization" in safe_arguments["_http_headers"]
+    ):
         safe_arguments["_http_headers"] = safe_arguments["_http_headers"].copy()
         safe_arguments["_http_headers"]["authorization"] = "***MASKED***"
-    
+
     logger.debug(f"Converted Flask request to MCP arguments: {safe_arguments}")
 
     return arguments
@@ -704,7 +755,7 @@ def mcp_to_http_response(mcp_result: Any, status_code: int = 200) -> Response:
         )
 
 
-def handle_mcp_errors(error: Union[MCPClientError, Exception]) -> Response:
+def handle_mcp_errors(error: MCPClientError | Exception) -> Response:
     """
     Map MCP errors to appropriate HTTP status codes and responses
 

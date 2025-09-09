@@ -412,15 +412,35 @@ EOF
    - **🚨 MANDATORY FAILURE CHECK**: Explicitly validate NO tests are failing:
      ```bash
      # CRITICAL: Check for any failing required checks
-     failing_checks=$(gh pr view $PR --json statusCheckRollup --jq '
-       [.statusCheckRollup[] | select(.conclusion == "FAILURE" or .state == "FAILURE")] | length
+     failing_checks=$(gh pr view "$PR" --json statusCheckRollup --jq '
+       [
+         (.statusCheckRollup // [])[]
+         | select(.isRequired == true)
+         | select(
+             (.conclusion == "FAILURE") or
+             (.conclusion == "TIMED_OUT") or
+             (.conclusion == "CANCELLED") or
+             (.conclusion == "ACTION_REQUIRED") or
+             (.state == "FAILURE") or
+             (.state == "ERROR")
+           )
+       ] | length
      ')
 
      if [ "$failing_checks" -gt 0 ]; then
        echo "❌ BLOCKING: $failing_checks required checks failing"
-       gh pr view $PR --json statusCheckRollup --jq '
-         .statusCheckRollup[] | select(.conclusion == "FAILURE" or .state == "FAILURE") |
-         "❌ \(.context // .name): \(.conclusion // .state) - \(.description // "No description")"
+       gh pr view "$PR" --json statusCheckRollup --jq '
+         (.statusCheckRollup // [])[]
+         | select(.isRequired == true)
+         | select(
+             (.conclusion == "FAILURE") or
+             (.conclusion == "TIMED_OUT") or
+             (.conclusion == "CANCELLED") or
+             (.conclusion == "ACTION_REQUIRED") or
+             (.state == "FAILURE") or
+             (.state == "ERROR")
+           )
+         | "❌ \((.context // .name) // "unknown"): \((.conclusion // .state) // "unknown") - \((.description // "No description"))"
        '
        echo "🚨 /fixpr MUST NOT declare success with failing tests"
        exit 1
@@ -441,7 +461,7 @@ EOF
      AFTER (Fresh from GitHub):
      ✅ ALL CHECKS VERIFIED: No failing tests found
      ✅ test-unit: PASSING - All tests pass
-     ✅ mergeable: true, mergeStateStatus: CLEAN
+     ✅ mergeable: "MERGEABLE", mergeStateStatus: CLEAN
 
      📊 RESULT: PR is genuinely mergeable on GitHub
      ```

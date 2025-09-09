@@ -238,14 +238,7 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                 new_imports.append(import_line)
 
         if new_imports:
-            # Insert new imports
-            for i, import_line in enumerate(new_imports):
-                lines.insert(insert_pos + i, import_line)
-
-            # Simple cleanup: remove obvious inline patterns
-            new_content = '\n'.join(lines)
-
-            # Try to remove inline imports (basic patterns)
+            # First, remove inline imports (before inserting new ones to avoid line number shifts)
             for imp in imports:
                 line_num = imp['line'] - 1  # Convert to 0-based
                 if 0 <= line_num < len(lines):
@@ -255,6 +248,10 @@ def fix_file_simple_imports(filepath: str, imports: List[Dict]) -> bool:
                         lines[line_num] = f"{original_indent}# Moved import to top-level"
                     elif imp['type'] == 'from_import' and line.strip().startswith('from '):
                         lines[line_num] = f"{original_indent}# Moved import to top-level"
+
+            # Then insert new imports at the top
+            for i, import_line in enumerate(new_imports):
+                lines.insert(insert_pos + i, import_line)
 
             new_content = '\n'.join(lines)
 
