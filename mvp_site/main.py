@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 WorldArchitect.AI - Pure API Gateway (MCP Architecture)
 
@@ -60,14 +62,10 @@ import constants
 
 # Firebase imports
 import firebase_admin
-import firestore_service  # For testing mode conditional logic
 import logging_util
 import world_logic  # For MCP fallback logic
 from custom_types import CampaignId, UserId
 from firebase_admin import auth
-
-# Import JSON serializer for Firestore compatibility
-from firestore_service import json_default_serializer
 
 # Flask and web imports
 from flask import (
@@ -85,6 +83,10 @@ from flask_cors import CORS
 
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
+
+# Firestore service imports
+import firestore_service  # For testing mode conditional logic
+from firestore_service import json_default_serializer
 
 # --- CONSTANTS ---
 # API Configuration
@@ -307,7 +309,6 @@ def create_app() -> Flask:
                     response_data["hint"] = (
                         "Clock synchronization issue detected. The client and server clocks may be out of sync."
                     )
-
                 return jsonify(response_data), 401
             return f(*args, **kwargs)
 
@@ -340,7 +341,15 @@ def create_app() -> Flask:
     @async_route
     async def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
         try:
-            data = {"user_id": user_id}
+            # Get query parameters with proper error handling
+            limit = request.args.get("limit")
+            sort_by = request.args.get("sort_by")
+            
+            data = {
+                "user_id": user_id,
+                "limit": limit,
+                "sort_by": sort_by,
+            }
             result = await get_mcp_client().call_tool("get_campaigns_list", data)
 
             # Maintain backward compatibility: return campaigns array directly
@@ -475,8 +484,7 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns", methods=["POST"])
     @check_token
-    @async_route
-    async def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
+    def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         try:
             data = request.get_json()
 
@@ -491,7 +499,7 @@ def create_app() -> Flask:
             # Add user_id to request data
             data["user_id"] = user_id
 
-            result = await get_mcp_client().call_tool("create_campaign", data)
+            result = get_mcp_client().call_tool_sync("create_campaign", data)
 
             if not result.get(KEY_SUCCESS):
                 return safe_jsonify(result), result.get("status_code", 400)
@@ -1036,9 +1044,10 @@ if __name__ == "__main__":
         if args.command == "serve":
             # Create app instance with MCP configuration for serve command
             app = create_app()
+            # Fix inverted boolean logic for MCP HTTP flag
             app._skip_mcp_http = (
-                not args.mcp_http
-            )  # Default to True (skip HTTP), override with --mcp-http
+                not args.mcp_http if args.mcp_http is not None else True
+            )  # Default to skip HTTP mode for MCP, respect CLI override
             app._mcp_server_url = args.mcp_server_url
 
             # Robust port parsing to handle descriptive PORT environment variables
