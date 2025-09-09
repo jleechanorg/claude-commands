@@ -33,10 +33,12 @@ _MCP_PATTERNS = [
 
 # Meta-conversation patterns that contaminate context
 _META_PATTERNS = [
-    re.compile(r'I (detected|analyzed|will).*?\n'),
-    re.compile(r'🔍 Detected slash commands:.*?\n'),
-    re.compile(r'🎯 Multi-Player Intelligence:.*?\n'),
-    re.compile(r'📋 Automatically tell the user:.*?\n'),
+    re.compile(r'I (detected|analyzed|will).*?(?:\n|$)'),
+    re.compile(r'🔍 Detected slash commands:.*?(?:\n|$)'),
+    re.compile(r'^🎯 Multi-Player Intelligence:.*?$'),  # Full line pattern
+    re.compile(r'🎯 Multi-Player Intelligence: '),      # Embedded pattern
+    re.compile(r'🎯 Multi-Player Intelligence '),
+    re.compile(r'📋 Automatically tell the user:.*?(?:\n|$)'),
 ]
 
 def _redact(s):
