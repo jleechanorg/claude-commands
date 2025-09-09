@@ -7,7 +7,6 @@ set -e
 # Default configuration
 PORT=8081
 MODE="dual"  # dual, http-only, stdio-only
-TIMEOUT=30
 
 # Color codes for output
 RED='\033[0;31m'
@@ -25,7 +24,6 @@ show_help() {
     echo "  --http-only        HTTP transport only"
     echo "  --stdio-only       Stdio transport only"
     echo "  --dual             Both HTTP and stdio (default)"
-    echo "  --timeout SECONDS  Startup timeout (default: 30)"
     echo "  --help             Show this help message"
     echo ""
     echo "Examples:"
@@ -52,10 +50,6 @@ while [[ $# -gt 0 ]]; do
         --dual)
             MODE="dual"
             shift
-            ;;
-        --timeout)
-            TIMEOUT="$2"
-            shift 2
             ;;
         --help)
             show_help
