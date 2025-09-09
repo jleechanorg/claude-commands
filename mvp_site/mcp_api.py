@@ -168,11 +168,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_campaigns_list",
-            description="Retrieve list of user campaigns",
+            description="Retrieve list of user campaigns with pagination and sorting",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "Firebase user ID"}
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of campaigns to return"},
+                    "sort_by": {"type": "string", "description": "Sort field: 'created_at' or 'last_played'"}
                 },
                 "required": ["user_id"],
             },

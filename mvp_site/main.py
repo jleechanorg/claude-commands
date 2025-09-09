@@ -84,9 +84,8 @@ from flask_cors import CORS
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
+# Firestore service imports
 import firestore_service  # For testing mode conditional logic
-
-# Import JSON serializer for Firestore compatibility
 from firestore_service import json_default_serializer
 
 # --- CONSTANTS ---
@@ -342,7 +341,15 @@ def create_app() -> Flask:
     @async_route
     async def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
         try:
-            data = {"user_id": user_id}
+            # Get query parameters with proper error handling
+            limit = request.args.get("limit")
+            sort_by = request.args.get("sort_by")
+            
+            data = {
+                "user_id": user_id,
+                "limit": limit,
+                "sort_by": sort_by,
+            }
             result = await get_mcp_client().call_tool("get_campaigns_list", data)
 
             # Maintain backward compatibility: return campaigns array directly
