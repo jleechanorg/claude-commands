@@ -56,6 +56,8 @@ from entity_preloader import EntityPreloader
 from entity_tracking import create_from_game_state
 from entity_validator import EntityValidator
 from file_cache import read_file_cached
+from firestore_service import get_user_settings, json_default_serializer
+from game_state import GameState
 from gemini_request import GeminiRequest
 from gemini_response import GeminiResponse
 
@@ -74,9 +76,6 @@ from narrative_sync_validator import NarrativeSyncValidator
 from schemas.entities_pydantic import sanitize_entity_name_for_id
 from token_utils import estimate_tokens, log_with_tokens
 from world_loader import load_world_content_for_system_instruction
-
-from firestore_service import get_user_settings, json_default_serializer
-from game_state import GameState
 
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

@@ -75,11 +75,11 @@ def test_file_sizes():
     if not project_root:
         import pytest
         pytest.skip("Project root not found")
-    
+
     for doc_file in DOCUMENTATION_FILES:
         filepath = os.path.join(project_root, doc_file)
         result = check_file_size(filepath)
-        
+
         # Assert that files don't exceed maximum size
         assert not result["needs_reduction"], (
             f"File {doc_file} is too large: {result['lines']} lines "
@@ -108,7 +108,7 @@ def test_read_performance():
     if not project_root:
         import pytest
         pytest.skip("Project root not found")
-    
+
     for doc_file in DOCUMENTATION_FILES:
         filepath = os.path.join(project_root, doc_file)
         if os.path.exists(filepath):

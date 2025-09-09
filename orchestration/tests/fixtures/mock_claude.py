@@ -1,6 +1,7 @@
 """Mock fixtures for Claude CLI operations in orchestration tests."""
 
 import os
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 
@@ -102,8 +103,6 @@ class MockClaude:
                     return True
         return False
 
-
-from contextlib import contextmanager
 
 
 @contextmanager

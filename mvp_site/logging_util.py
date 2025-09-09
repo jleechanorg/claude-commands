@@ -52,14 +52,14 @@ class LoggingUtil:
             ).strip()
         except (subprocess.CalledProcessError, FileNotFoundError, OSError):
             branch = "unknown"
-        
+
         # Convert forward slashes to underscores for valid directory name
         safe_branch = branch.replace("/", "_")
         log_dir = f"/tmp/worldarchitect.ai/{safe_branch}"
-        
+
         # Ensure directory exists
         os.makedirs(log_dir, exist_ok=True)
-        
+
         return log_dir
 
     @staticmethod
@@ -78,7 +78,7 @@ class LoggingUtil:
 
     @staticmethod
     def error(
-        message: str, *args: Any, logger: Union[logging.Logger, None] = None, **kwargs: Any
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
     ) -> None:
         """
         Log an error message with fire and red dot emojis.
@@ -97,7 +97,7 @@ class LoggingUtil:
 
     @staticmethod
     def warning(
-        message: str, *args: Any, logger: Union[logging.Logger, None] = None, **kwargs: Any
+        message: str, *args: Any, logger: logging.Logger | None = None, **kwargs: Any
     ) -> None:
         """
         Log a warning message with warning emoji.

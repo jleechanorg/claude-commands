@@ -13,8 +13,15 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from game_state import GameState
-from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block
+try:
+    from game_state import GameState
+    from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block
+    MODULES_AVAILABLE = True
+except ImportError:
+    GameState = None
+    NarrativeResponse = None
+    _validate_and_enforce_planning_block = None
+    MODULES_AVAILABLE = False
 
 
 class TestPlanningBlockValidationIntegration(unittest.TestCase):
@@ -46,7 +53,7 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
 
         # Setup mocks for API calls that might be triggered
         mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"  
+        mock_get_text.return_value = "Generated planning block content"
         mock_parse.return_value = ("Generated planning block content", self.structured_response)
 
         for response_text in test_cases:
@@ -368,9 +375,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         """Test that the function doesn't crash with malformed inputs."""
         # Setup mocks for any potential API calls
         mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"  
+        mock_get_text.return_value = "Generated planning block content"
         mock_parse.return_value = ("Generated planning block content", self.structured_response)
-        
+
         # Test with None inputs
         try:
             result = _validate_and_enforce_planning_block(
@@ -412,9 +419,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         """Test that logging handles unicode characters safely."""
         # Setup mocks for any potential API calls
         mock_call_api.return_value = "mock_api_response"
-        mock_get_text.return_value = "Generated planning block content"  
+        mock_get_text.return_value = "Generated planning block content"
         mock_parse.return_value = ("Generated planning block content", self.structured_response)
-        
+
         # Test with unicode in response text
         unicode_response = "Story with unicode: 🔍 📊 ✅ ❌ 🚨"
 

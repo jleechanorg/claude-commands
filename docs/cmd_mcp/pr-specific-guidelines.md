@@ -107,7 +107,7 @@ logger = logging.getLogger(__name__)
 
 # CLAUDE.MD COMPLIANT
 import logging_util
-logger = logging_util.get_logger(__name__)
+logger = logging_util.getLogger(__name__)
 ```
 
 ## Architectural Excellence (✅ ACHIEVED)
