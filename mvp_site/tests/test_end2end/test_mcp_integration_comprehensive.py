@@ -8,32 +8,28 @@ Flask App → MCPClient → MCP Server → World Logic → Response Chain
 This supplements the existing Flask-only end2end tests with true MCP server integration.
 """
 
-# Import path setup must be done before ANY imports
+# Set environment variables for MCP testing BEFORE any other imports
 import os
-import sys
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-import asyncio
-import json
-import subprocess
-import time
-import unittest
-from unittest.mock import patch
-
-import logging_util as log
-from main import create_app
-from mcp_client import MCPClient
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-# Set environment variables for MCP testing
 os.environ["TESTING"] = "true"
+
+import asyncio  # noqa: E402
+import json  # noqa: E402
+import subprocess  # noqa: E402
+import sys  # noqa: E402
+import time  # noqa: E402
+import unittest  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+import requests  # noqa: E402
+
+import mvp_site.logging_util as log  # noqa: E402
+
 # Note: This test spawns real MCP server processes for integration testing
 # It does not use USE_MOCKS since it tests actual MCP communication
+# Package imports (no sys.path manipulation needed)
+from mvp_site.main import create_app  # noqa: E402
+from mvp_site.mcp_client import MCPClient  # noqa: E402
 
 
 class TestMCPIntegrationComprehensive(unittest.TestCase):
@@ -65,9 +61,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             time.sleep(2)
 
             # Verify MCP server is running
-            if requests is None:
-                raise Exception("requests module not available")
-
             response = requests.get(f"http://localhost:{cls.mcp_port}", timeout=5)
             if response.status_code != 200:
                 raise Exception("MCP server not responding correctly")
@@ -173,9 +166,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         # Test direct MCP server health
         try:
-            if requests is None:
-                self.skipTest("requests module not available")
-
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}", timeout=5
             )
@@ -286,8 +276,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_event_loop_performance_bug(self):
         """Test that MCP does NOT create new event loops per request (RED test - should fail initially)."""
-        if requests is None:
-            self.skipTest("requests module not available")
 
         # Track event loop creation calls
         original_new_event_loop = asyncio.new_event_loop
@@ -350,8 +338,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_production_traceback_security_bug(self):
         """Test that MCP does NOT expose tracebacks in production mode (RED test - should fail initially)."""
-        if requests is None:
-            self.skipTest("requests module not available")
 
         # Set production mode environment variable
         original_production_mode = os.environ.get("PRODUCTION_MODE")

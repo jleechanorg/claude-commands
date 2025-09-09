@@ -9,6 +9,7 @@ instead of real working functionality.
 import ast
 import os
 import re
+import sys
 from dataclasses import dataclass
 from typing import Any, List
 
@@ -333,7 +334,6 @@ def generate_fake_report(filepath: str) -> str:
 
 
 if __name__ == "__main__":
-    import sys
 
     if len(sys.argv) > 1:
         filepath = sys.argv[1]
