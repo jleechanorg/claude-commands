@@ -46,13 +46,14 @@ class TestProductionParity(unittest.TestCase):
 
     def setUp(self):
         """Set up test client for production parity testing."""
-        
+
         # Mock Firebase to prevent initialization errors
         self.firebase_patcher = patch("firestore_service.get_db")
         self.mock_get_db = self.firebase_patcher.start()
-        
+
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
+
         fake_firestore = FakeFirestoreClient()
         self.mock_get_db.return_value = fake_firestore
         # Direct calls are now the default - no MCP server setup needed
@@ -63,16 +64,25 @@ class TestProductionParity(unittest.TestCase):
 
         # Test data
         self.test_user_id = "production-parity-test-user"
+
+        # Use stable test UID and stub Firebase verification - patch fully-qualified target
+        self._auth_patcher = patch(
+            "mvp_site.main.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
+        )
+        self._auth_patcher.start()
+
         self.test_headers = {
-            "X-Test-Bypass-Auth": "true",
-            "X-Test-User-ID": self.test_user_id,
             "Content-Type": "application/json",
+            "Authorization": "Bearer test-id-token",
         }
 
     def tearDown(self):
         """Restore original environment."""
         # Stop Firebase mock patcher to ensure proper test isolation
         self.firebase_patcher.stop()
+        # Stop auth patcher
+        self._auth_patcher.stop()
         # No additional environment cleanup needed - direct calls are default
 
     def test_campaigns_list_response_format_compatibility(self):
@@ -86,39 +96,37 @@ class TestProductionParity(unittest.TestCase):
         # Make request to campaigns list endpoint
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
-        # Should succeed with proper auth bypass
-        assert response.status_code in [
-            200,
-            404,
-        ], "Should handle campaigns list request"
+        # Should succeed with proper authentication headers - tighten assertion
+        assert (
+            response.status_code == 200
+        ), f"Should return success with auth headers, got {response.status_code}"
 
-        if response.status_code == 200:
-            response_data = response.get_json()
+        response_data = response.get_json()
 
-            # This is the critical test - verify frontend expectations
-            # Frontend expects: const { data: campaigns } = await fetchApi('/api/campaigns')
-            # So response_data should be directly usable as campaigns array for backward compatibility
+        # This is the critical test - verify frontend expectations
+        # Frontend expects: const { data: campaigns } = await fetchApi('/api/campaigns')
+        # So response_data should be directly usable as campaigns array for backward compatibility
 
-            # Check if it's directly an array (what frontend expects for backward compatibility)
-            if isinstance(response_data, list):
-                campaigns = response_data
-            # Check if it has campaigns field (current backend format) - fallback for compatibility
-            elif isinstance(response_data, dict) and "campaigns" in response_data:
-                campaigns = response_data["campaigns"]
-            else:
-                self.fail(
-                    f"Response format incompatible with frontend expectations: {response_data}"
-                )
+        # Check if it's directly an array (what frontend expects for backward compatibility)
+        if isinstance(response_data, list):
+            campaigns = response_data
+        # Check if it has campaigns field (current backend format) - fallback for compatibility
+        elif isinstance(response_data, dict) and "campaigns" in response_data:
+            campaigns = response_data["campaigns"]
+        else:
+            self.fail(
+                f"Response format incompatible with frontend expectations: {response_data}"
+            )
 
-            # Verify campaigns is iterable (prevents forEach error)
-            assert hasattr(
-                campaigns, "__iter__"
-            ), "Campaigns should be iterable for forEach()"
+        # Verify campaigns is iterable (prevents forEach error)
+        assert hasattr(
+            campaigns, "__iter__"
+        ), "Campaigns should be iterable for forEach()"
 
-            # Verify it's specifically a list (what forEach expects)
-            assert isinstance(
-                campaigns, list
-            ), "Campaigns should be a list for forEach() compatibility"
+        # Verify it's specifically a list (what forEach expects)
+        assert isinstance(
+            campaigns, list
+        ), "Campaigns should be a list for forEach() compatibility"
 
     def test_direct_calls_mode_response_format(self):
         """Test response format when using direct calls mode (default).
@@ -133,42 +141,38 @@ class TestProductionParity(unittest.TestCase):
 
         response = direct_client.get("/api/campaigns", headers=self.test_headers)
 
-        assert response.status_code in [
-            200,
-            404,
-        ], "Direct calls mode should handle campaigns request"
+        assert (
+            response.status_code == 200
+        ), f"Direct calls mode should return success, got {response.status_code}"
 
-        if response.status_code == 200:
-            response_data = response.get_json()
+        response_data = response.get_json()
 
-            # Test the specific issue: frontend destructuring compatibility
-            # Frontend code: const { data: campaigns } = await fetchApi('/api/campaigns')
-            # This means response_data should be the campaigns array directly,
-            # or the destructuring will fail
+        # Test the specific issue: frontend destructuring compatibility
+        # Frontend code: const { data: campaigns } = await fetchApi('/api/campaigns')
+        # This means response_data should be the campaigns array directly,
+        # or the destructuring will fail
 
-            assert isinstance(
-                response_data, (list, dict)
-            ), "Response should be list or dict"
+        assert isinstance(
+            response_data, (list, dict)
+        ), "Response should be list or dict"
 
-            if isinstance(response_data, dict):
-                # If it's a dict, it should have campaigns field
-                assert (
-                    "campaigns" in response_data
-                ), "Dict response should have 'campaigns' field"
-                campaigns = response_data["campaigns"]
-            else:
-                campaigns = response_data
+        if isinstance(response_data, dict):
+            # If it's a dict, it should have campaigns field
+            assert (
+                "campaigns" in response_data
+            ), "Dict response should have 'campaigns' field"
+            campaigns = response_data["campaigns"]
+        else:
+            campaigns = response_data
 
-            # This is the critical test that would have caught the production error
-            try:
-                # Simulate the frontend forEach call
-                list(campaigns)  # This will fail if campaigns is not iterable
-                for _ in campaigns:
-                    pass  # Simulate forEach iteration
-            except TypeError as e:
-                self.fail(
-                    f"Frontend forEach would fail: {e}. Response: {response_data}"
-                )
+        # This is the critical test that would have caught the production error
+        try:
+            # Simulate the frontend forEach call
+            list(campaigns)  # This will fail if campaigns is not iterable
+            for _ in campaigns:
+                pass  # Simulate forEach iteration
+        except TypeError as e:
+            self.fail(f"Frontend forEach would fail: {e}. Response: {response_data}")
 
         # No environment cleanup needed - direct calls are default
 

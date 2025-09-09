@@ -36,7 +36,6 @@ from unittest.mock import MagicMock
 
 import constants
 import firebase_admin
-import firebase_utils
 import logging_util
 from custom_types import CampaignId, UserId
 from decorators import log_exceptions
@@ -450,10 +449,12 @@ def get_db() -> firestore.Client:
     In test environments, this function should be mocked using unittest.mock.patch
     or similar mocking frameworks to provide test doubles.
     """
-    # Check if Firebase initialization should be skipped (testing/mock mode)
-    skip_init = firebase_utils.should_skip_firebase_init()
-    logging_util.info(f"🔧 DEBUG: Firebase init check - skip_init={skip_init}")
-    if skip_init:
+    # Firebase is always initialized (testing mode removed)
+    logging_util.info("🔧 DEBUG: Firebase init check - always enabled")
+
+    # Mock mode removed - tests use proper mocking instead
+    # Keeping mock client code for compatibility with tests that may patch this function
+    if False:  # This code is unreachable but kept for reference
         logging_util.warning("🚨 Firebase initialization skipped - using mock client")
         # Uses MagicMock imported at module level
 
@@ -549,10 +550,9 @@ def get_db() -> firestore.Client:
         # Final fallback for test environments
         testing_env = _env_truthy("TESTING")
         ci_env = _env_truthy("CI")
-        skip_init = firebase_utils.should_skip_firebase_init()
         production_mode = _env_truthy("PRODUCTION_MODE")
         logging_util.warning(
-            f"🚨 Firestore client creation failed! TESTING={testing_env}, CI={ci_env}, skip_init={skip_init}, PRODUCTION_MODE={production_mode}"
+            f"🚨 Firestore client creation failed! TESTING={testing_env}, CI={ci_env}, PRODUCTION_MODE={production_mode}"
         )
 
         # PRODUCTION MODE: Never use mocks - fail fast instead
@@ -561,7 +561,7 @@ def get_db() -> firestore.Client:
                 f"PRODUCTION MODE: Firestore client creation failed: {client_error}"
             )
 
-        if testing_env or ci_env or skip_init:
+        if testing_env or ci_env:
             logging_util.warning(
                 "🚨 Using mock client due to client creation failure in test/CI environment"
             )

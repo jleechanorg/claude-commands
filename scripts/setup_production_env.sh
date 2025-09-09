@@ -7,15 +7,15 @@ setup_mcp_production_env() {
     unset TESTING
     unset MOCK_SERVICES_MODE
     unset MOCK_MODE
-    
+
     # Ensure production mode is explicit
     export PRODUCTION_MODE="true"
-    
+
     echo "🔧 Production environment configured:" >&2
     echo "  TESTING=${TESTING:-unset}" >&2
-    echo "  MOCK_SERVICES_MODE=${MOCK_SERVICES_MODE:-unset}" >&2  
+    echo "  MOCK_SERVICES_MODE=${MOCK_SERVICES_MODE:-unset}" >&2
     echo "  PRODUCTION_MODE=${PRODUCTION_MODE}" >&2
-    
+
     # Test Firebase environment detection (robust to invocation path)
     if command -v python3 &> /dev/null; then
         echo "🔧 Testing Firebase environment detection..." >&2
@@ -26,11 +26,9 @@ import os, sys
 repo_root = os.environ.get("REPO_ROOT", ".")
 mvp_site_path = os.path.join(repo_root, "mvp_site")
 sys.path.insert(0, mvp_site_path)
-try:
-    import firebase_utils
-    print("  Firebase skip check:", firebase_utils.should_skip_firebase_init())
-except Exception as e:
-    print("  Firebase check error:", e, file=sys.stderr)
+# Firebase utils removed - testing mode eliminated
+# Firebase is now always initialized in production
+print("  Firebase: Always enabled (testing mode removed)")
 PY
     fi
 }

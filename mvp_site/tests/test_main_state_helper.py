@@ -30,8 +30,6 @@ from main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
     HEADER_AUTH,
-    HEADER_TEST_BYPASS,
-    HEADER_TEST_USER_ID,
     KEY_CAMPAIGN_ID,
     KEY_ERROR,
     KEY_MESSAGE,
@@ -245,8 +243,7 @@ class TestConstants(unittest.TestCase):
         """Test that header constants are properly defined."""
 
         assert HEADER_AUTH == "Authorization"
-        assert HEADER_TEST_BYPASS == "X-Test-Bypass-Auth"
-        assert HEADER_TEST_USER_ID == "X-Test-User-ID"
+        # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 
     def test_key_constants(self):
         """Test that response key constants are properly defined."""

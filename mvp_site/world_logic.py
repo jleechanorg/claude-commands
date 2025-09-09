@@ -15,7 +15,6 @@ import collections
 import datetime
 import json
 import os
-import random
 import tempfile
 import uuid
 from typing import Any
@@ -27,8 +26,8 @@ import firebase_admin
 import logging_util
 import structured_fields_utils
 from custom_types import CampaignId, UserId
-from debug_hybrid_system import clean_json_artifacts, process_story_for_display, convert_json_escape_sequences
-from prompt_utils import _convert_and_format_field, _build_campaign_prompt as _build_campaign_prompt_impl
+from debug_hybrid_system import clean_json_artifacts, process_story_for_display
+from prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 
 import firestore_service
 import gemini_service
@@ -39,16 +38,16 @@ from firestore_service import (
 )
 from game_state import GameState
 
-# Initialize Firebase if not already initialized
-if not firebase_admin._apps:
-    from firebase_utils import should_skip_firebase_init
-    
-    if not should_skip_firebase_init():
-        try:
-            firebase_admin.initialize_app()
-            logging_util.info("Firebase initialized successfully in world_logic.py")
-        except Exception as e:
-            logging_util.error(f"Failed to initialize Firebase: {e}")
+# Initialize Firebase if not already initialized (testing mode removed)
+try:
+    firebase_admin.get_app()
+except ValueError:
+    try:
+        firebase_admin.initialize_app()
+        logging_util.info("Firebase initialized successfully in world_logic.py")
+    except Exception as e:
+        logging_util.critical(f"Failed to initialize Firebase: {e}")
+        raise
 
 # --- Constants ---
 KEY_ERROR = "error"
@@ -227,7 +226,6 @@ def _strip_game_state_fields(
 
 
 # Helper function moved to prompt_utils.py to eliminate duplication
-
 
 
 def _build_campaign_prompt(

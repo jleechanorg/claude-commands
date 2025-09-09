@@ -60,7 +60,6 @@ import constants
 
 # Firebase imports
 import firebase_admin
-import firebase_utils  # For should_skip_firebase_init
 import logging_util
 import world_logic  # For MCP fallback logic
 from custom_types import CampaignId, UserId
@@ -94,8 +93,7 @@ CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
 
 # Request Headers
 HEADER_AUTH = "Authorization"
-HEADER_TEST_BYPASS = "X-Test-Bypass-Auth"
-HEADER_TEST_USER_ID = "X-Test-User-ID"
+# Testing mode headers removed - authentication now always uses real Firebase
 
 # Logging Configuration (using centralized logging_util)
 # LOG_DIRECTORY moved to logging_util.get_log_directory() for consistency
@@ -218,8 +216,23 @@ def create_app() -> Flask:
                 "_mcp_server_url",
                 os.environ.get("MCP_SERVER_URL", "http://localhost:8000"),
             )
+            # Import world_logic module for direct calls when skip_http=True
+            world_logic_module = None
+            if skip_http_mode:
+                try:
+                    import world_logic
+
+                    world_logic_module = world_logic
+                except ImportError as e:
+                    logging_util.error(
+                        f"Failed to import world_logic for direct MCP calls: {e}"
+                    )
+
             app._mcp_client = MCPClient(
-                mcp_server_url, timeout=300, skip_http=skip_http_mode
+                mcp_server_url,
+                timeout=300,
+                skip_http=skip_http_mode,
+                world_logic_module=world_logic_module,
             )
         return app._mcp_client
 
@@ -246,35 +259,28 @@ def create_app() -> Flask:
             url_for("frontend_files_with_cache_busting", filename=filename), code=301
         )
 
-    # Set TESTING config from environment
-    if os.environ.get("TESTING", "").lower() in ["true", "1", "yes"]:
-        app.config["TESTING"] = True
+    # Testing mode removed - Flask TESTING config no longer set from environment
 
-    # Initialize Firebase only if not using mock or in testing mode
-    if not firebase_admin._apps and not firebase_utils.should_skip_firebase_init():
+    # Initialize Firebase - always enabled (testing mode removed)
+    try:
+        firebase_admin.get_app()
+    except ValueError:
         firebase_admin.initialize_app()
 
     def check_token(f):
         @wraps(f)
         def wrap(*args: Any, **kwargs: Any) -> Response:
-            # Check for auth skip mode (for testing with real services)
-            auth_skip_enabled = (
-                app.config.get("TESTING") or os.getenv("AUTH_SKIP_MODE") == "true"
-            )
-            if (
-                auth_skip_enabled
-                and request.headers.get(HEADER_TEST_BYPASS, "").lower() == "true"
-            ):
-                # Require user ID header when using test bypass
-                test_user_id = request.headers.get(HEADER_TEST_USER_ID)
-                if not test_user_id:
-                    return jsonify({KEY_MESSAGE: "Test user ID required"}), 401
-                kwargs["user_id"] = test_user_id
-                return f(*args, **kwargs)
+            # Authentication now always uses real Firebase (testing mode removed)
             if not request.headers.get(HEADER_AUTH):
                 return jsonify({KEY_MESSAGE: "No token provided"}), 401
             try:
-                id_token = request.headers[HEADER_AUTH].split(" ").pop()
+                auth_header = request.headers.get(HEADER_AUTH, "")
+                parts = auth_header.split()
+                if len(parts) != 2 or parts[0].lower() != "bearer":
+                    raise ValueError("Invalid authorization scheme")
+                id_token = parts[1].strip()
+                if not id_token:
+                    raise ValueError("Empty token")
                 # Firebase token verification using Admin SDK with clock skew tolerance
                 # check_revoked=True ensures revoked tokens are rejected for security
                 # clock_skew_seconds=10 allows for up to 10 seconds of clock difference
@@ -290,10 +296,10 @@ def create_app() -> Flask:
                 # Do not log tokens or Authorization headers
                 logging_util.error(traceback.format_exc())
 
-                # Enhanced error response with clock skew hints
+                # Generic error response - don't expose internal error details
                 response_data = {
                     KEY_SUCCESS: False,
-                    KEY_ERROR: f"Authentication failed: {error_message}",
+                    KEY_ERROR: "Authentication failed",
                 }
 
                 # Add clock skew guidance for specific errors
@@ -385,40 +391,35 @@ def create_app() -> Flask:
                 "include_story": True,  # Include story processing for frontend compatibility
             }
 
-            # In testing mode, call legacy logic directly to work with mocked Firestore
-            if app.config.get("TESTING"):
-                campaign_data, story = firestore_service.get_campaign_by_id(
-                    user_id, campaign_id
-                )
-                if not campaign_data:
-                    return jsonify({"error": "Campaign not found"}), 404
+            # Direct service calls (testing mode removed - always use direct approach)
+            campaign_data, story = firestore_service.get_campaign_by_id(
+                user_id, campaign_id
+            )
+            if not campaign_data:
+                return jsonify({"error": "Campaign not found"}), 404
 
-                # Get user settings for debug mode
-                user_settings = firestore_service.get_user_settings(user_id)
-                debug_mode = user_settings.get("debug_mode", False)
+            # Get user settings for debug mode
+            user_settings = firestore_service.get_user_settings(user_id) or {}
+            debug_mode = bool(user_settings.get("debug_mode", False))
 
-                # Get game state
-                game_state = firestore_service.get_campaign_game_state(
-                    user_id, campaign_id
-                )
-                if game_state:
-                    game_state.debug_mode = debug_mode
+            # Get game state
+            game_state = firestore_service.get_campaign_game_state(user_id, campaign_id)
+            if game_state:
+                game_state.debug_mode = debug_mode
 
-                # Process story entries based on debug mode
-                if debug_mode:
-                    processed_story = story
-                else:
-                    # Strip debug fields when debug mode is off
-                    processed_story = world_logic._strip_game_state_fields(story)
-
-                result = {
-                    "success": True,
-                    "campaign": campaign_data,
-                    "story": processed_story,
-                    "game_state": game_state.to_dict() if game_state else {},
-                }
+            # Process story entries based on debug mode
+            if debug_mode:
+                processed_story = story or []
             else:
-                result = await get_mcp_client().call_tool("get_campaign_state", data)
+                # Strip debug fields when debug mode is off
+                processed_story = world_logic._strip_game_state_fields(story or [])
+
+            result = {
+                "success": True,
+                "campaign": campaign_data,
+                "story": processed_story,
+                "game_state": game_state.to_dict() if game_state else {},
+            }
 
             if not result.get(KEY_SUCCESS):
                 return safe_jsonify(result), result.get("status_code", 404)
@@ -542,13 +543,8 @@ def create_app() -> Flask:
                 "updates": updates,
             }
 
-            # In testing mode, call legacy logic directly to work with mocked services
-            if app.config.get("TESTING"):
-                result = await world_logic.update_campaign_unified(request_data)
-            else:
-                result = await get_mcp_client().call_tool(
-                    "update_campaign", request_data
-                )
+            # Direct service calls (testing mode removed - always use direct approach)
+            result = await world_logic.update_campaign_unified(request_data)
 
             if not result.get(KEY_SUCCESS):
                 return safe_jsonify(result), result.get("status_code", 400)
@@ -575,12 +571,8 @@ def create_app() -> Flask:
         user_id: UserId, campaign_id: CampaignId
     ) -> Response | tuple[Response, int]:
         try:
-            print(
-                f"DEBUG PRINT: handle_interaction START - app.config TESTING={app.config.get('TESTING')}"
-            )
-            logging_util.info(
-                f"DEBUG: handle_interaction START - app.config TESTING={app.config.get('TESTING')}"
-            )
+            print("DEBUG PRINT: handle_interaction START - testing mode removed")
+            logging_util.info("DEBUG: handle_interaction START - testing mode removed")
             data = request.get_json()
             print(f"DEBUG PRINT: request data = {data}")
             logging_util.info(f"DEBUG: request data = {data}")
@@ -597,47 +589,12 @@ def create_app() -> Flask:
             if user_input is None:
                 return jsonify({KEY_ERROR: "User input is required"}), 400
 
-            # In testing mode, use MCP client with mock support to work with mocked services
-            if app.config.get("TESTING"):
-                logging_util.info(
-                    f"DEBUG: In TESTING mode for interaction - user_id={user_id}, campaign_id={campaign_id}"
-                )
+            # Use MCP client for processing action (testing mode removed)
+            logging_util.info(
+                f"DEBUG: Processing interaction - user_id={user_id}, campaign_id={campaign_id}"
+            )
 
-                try:
-                    # Use MCP client which has proper mock campaign support
-                    request_data = {
-                        "user_id": user_id,
-                        "campaign_id": campaign_id,
-                        "user_input": user_input,
-                        "mode": mode,
-                    }
-                    world_result = await get_mcp_client().call_tool(
-                        "process_action", request_data
-                    )
-                    logging_util.info(
-                        f"DEBUG: world_logic returned result: {world_result.get('success', False)}"
-                    )
-                    if world_result.get("success"):
-                        result = world_result
-                    else:
-                        error_msg = world_result.get("error", "Unknown error")
-                        logging_util.error(f"DEBUG: world_logic failed: {error_msg}")
-
-                        # Return appropriate error response based on error type
-                        if (
-                            "not found" in error_msg.lower()
-                            or "campaign not found" in error_msg.lower()
-                        ):
-                            return jsonify({"error": "Campaign not found"}), 404
-                        else:
-                            return jsonify({"error": error_msg}), 400
-                except MCPClientError as e:
-                    # Handle MCP-specific errors with proper status code translation
-                    return handle_mcp_errors(e)
-                except Exception as e:
-                    logging_util.error(f"DEBUG: world_logic exception: {e}")
-                    return jsonify({"error": "Internal server error"}), 500
-            else:
+            try:
                 # Prepare request data for unified API
                 request_data = {
                     "user_id": user_id,
@@ -645,11 +602,30 @@ def create_app() -> Flask:
                     "user_input": user_input,
                     "mode": mode,
                 }
-
-                # Use MCP client for processing action
                 result = await get_mcp_client().call_tool(
                     "process_action", request_data
                 )
+                logging_util.info(
+                    f"DEBUG: MCP process_action returned result: {result.get('success', False)}"
+                )
+                if not result.get("success"):
+                    error_msg = result.get("error", "Unknown error")
+                    logging_util.error(f"DEBUG: MCP process_action failed: {error_msg}")
+
+                    # Return appropriate error response based on error type
+                    if (
+                        "not found" in error_msg.lower()
+                        or "campaign not found" in error_msg.lower()
+                    ):
+                        return jsonify({"error": "Campaign not found"}), 404
+                    else:
+                        return jsonify({"error": error_msg}), 400
+            except MCPClientError as e:
+                # Handle MCP-specific errors with proper status code translation
+                return handle_mcp_errors(e)
+            except Exception as e:
+                logging_util.error(f"DEBUG: MCP process_action exception: {e}")
+                return jsonify({"error": "Internal server error"}), 500
 
             if not result.get(KEY_SUCCESS):
                 return safe_jsonify(result), result.get("status_code", 400)
@@ -818,17 +794,12 @@ def create_app() -> Flask:
                 # Use MCP client for getting settings
                 request_data = {"user_id": user_id}
 
-                # In testing mode, call legacy logic directly to work with mocked Firestore
-                if app.config.get("TESTING"):
-                    settings = firestore_service.get_user_settings(user_id)
-                    # Handle case where settings is None (user doesn't exist yet)
-                    if settings is None:
-                        settings = {}
-                    result = {"success": True, **settings}
-                else:
-                    result = await get_mcp_client().call_tool(
-                        "get_user_settings", request_data
-                    )
+                # Direct service calls (testing mode removed - always use direct approach)
+                settings = firestore_service.get_user_settings(user_id)
+                # Handle case where settings is None (user doesn't exist yet)
+                if settings is None:
+                    settings = {}
+                result = {"success": True, **settings}
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
@@ -869,14 +840,13 @@ def create_app() -> Flask:
                 }
                 request_data = {"user_id": user_id, "settings": filtered_data}
 
-                # In testing mode, call legacy logic directly to work with mocked Firestore
-                if app.config.get("TESTING"):
-                    firestore_service.update_user_settings(user_id, filtered_data)
-                    result = {"success": True}
-                else:
-                    result = await get_mcp_client().call_tool(
-                        "update_user_settings", request_data
-                    )
+                # Direct service calls (testing mode removed - always use direct approach)
+                ok = firestore_service.update_user_settings(user_id, filtered_data)
+                result = (
+                    {"success": True}
+                    if ok
+                    else {"success": False, "error": "Failed to update settings"}
+                )
 
                 if not result.get(KEY_SUCCESS):
                     return jsonify(result), result.get("status_code", 400)
@@ -957,7 +927,9 @@ def run_test_command(command: str) -> None:
                 "🌐 Running WorldArchitect.AI Browser Tests (Mock APIs)..."
             )
             logging_util.info("   Using real browser automation with mocked backend")
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -979,7 +951,13 @@ def run_test_command(command: str) -> None:
             )
             env = os.environ.copy()
             env["REAL_APIS"] = "true"
-            result = subprocess.run([sys.executable, test_runner], check=False, env=env)
+            result = subprocess.run(
+                [sys.executable, test_runner],
+                shell=False,
+                timeout=30,
+                check=False,
+                env=env,
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -995,7 +973,9 @@ def run_test_command(command: str) -> None:
         if os.path.exists(test_runner):
             logging_util.info("🔗 Running WorldArchitect.AI HTTP Tests (Mock APIs)...")
             logging_util.info("   Using direct HTTP requests with mocked backend")
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Test runner not found: {test_runner}")
@@ -1014,7 +994,9 @@ def run_test_command(command: str) -> None:
             logging_util.warning(
                 "⚠️  WARNING: These tests use REAL APIs and cost money!"
             )
-            result = subprocess.run([sys.executable, test_runner], check=False)
+            result = subprocess.run(
+                [sys.executable, test_runner], shell=False, timeout=30, check=False
+            )
             sys.exit(result.returncode)
         else:
             logging_util.error(f"Full API test runner not found: {test_runner}")
