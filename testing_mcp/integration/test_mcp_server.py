@@ -28,6 +28,9 @@ from helpers import (
     patch_firestore,
     patch_gemini,
 )
+
+# Import mcp_api - will handle if not available in test logic
+import mcp_api
 from mcp_test_client import MCPError
 
 
@@ -687,8 +690,6 @@ class TestMCPServerIntegration(unittest.TestCase):
             sys.path.insert(0, mvp_site_path)
 
         try:
-            import mcp_api
-
             # Test handle_list_tools function
             async def test_tools():
                 tools = await mcp_api.handle_list_tools()

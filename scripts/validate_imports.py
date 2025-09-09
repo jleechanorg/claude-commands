@@ -57,7 +57,10 @@ class ImportValidator(ast.NodeVisitor):
             'abc', 'enum', 'copy', 'pickle', 'base64', 'hashlib',
             'traceback', 'warnings', 'pytest', 'unittest',
             # Test module imports that need sys.path manipulation
-            'main', 'mcp_client', 'tests.fake_firestore', 'logging_util'
+            'main', 'mcp_client', 'tests.fake_firestore', 'logging_util',
+            # Test infrastructure modules that need sys.path manipulation
+            'orchestrate', 'pr_comment_formatter', 'command_output_trimmer',
+            'helpers', 'mcp_api', 'mcp_test_client', 'commentreply'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:

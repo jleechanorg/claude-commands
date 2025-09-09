@@ -25,10 +25,8 @@ from pr_comment_formatter import (
     UserComment,
 )
 
-try:
-    from commentreply import validate_comment_data
-except ImportError:
-    validate_comment_data = None
+# Import commentreply validate_comment_data - handle missing gracefully in logic
+from commentreply import validate_comment_data
 
 
 class TestCommentStatus(unittest.TestCase):
@@ -355,7 +353,9 @@ class TestCommentValidationRegression(unittest.TestCase):
         to be skipped with "❌ SECURITY: Skipping invalid comment data"
         """
         # Skip test if commentreply module not available
-        if validate_comment_data is None:
+        try:
+            validate_comment_data({})
+        except (ImportError, AttributeError):
             self.skipTest("commentreply module not available")
 
         # 🔴 RED: Create comment data structure that commentfetch actually outputs

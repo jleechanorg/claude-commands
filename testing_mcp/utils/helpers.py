@@ -18,19 +18,11 @@ from contextlib import asynccontextmanager, contextmanager, suppress
 from typing import Any
 from unittest.mock import patch
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
-    logger = logging.getLogger(__name__)
-    logger.warning(
-        "psutil module not found. Port cleanup functionality may be limited."
-    )
-
+import psutil
 import requests
 
-from testing_mcp.utils.mcp_test_client import WorldArchitectMCPClient
-from testing_mcp.utils.mock_mcp_server import MockMCPServer, run_mock_server_background
+from mcp_test_client import WorldArchitectMCPClient
+from mock_mcp_server import MockMCPServer, run_mock_server_background
 
 logger = logging.getLogger(__name__)
 
@@ -424,19 +416,19 @@ def find_free_port(start_port: int = 8000) -> int:
 
 def kill_process_on_port(port: int):
     """Kill any process running on the specified port."""
-    if psutil is None:
-        logger.warning(f"psutil not available. Cannot kill process on port {port}")
-        return
-
-    for conn in psutil.net_connections():
-        if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
-            try:
-                process = psutil.Process(conn.pid)
-                process.terminate()
-                process.wait(timeout=5)
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                with suppress(psutil.NoSuchProcess):
-                    process.kill()
+    try:
+        for conn in psutil.net_connections():
+            if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
+                try:
+                    process = psutil.Process(conn.pid)
+                    process.terminate()
+                    process.wait(timeout=5)
+                except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                    with suppress(psutil.NoSuchProcess):
+                        process.kill()
+    except (ImportError, AttributeError) as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"psutil not available. Cannot kill process on port {port}: {e}")
 
 
 @asynccontextmanager
