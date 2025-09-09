@@ -46,7 +46,7 @@ CRITICAL VALIDATION:
 Total Matrix Coverage: 35 systematic test cases
 """
 
-import os
+import importlib.util
 import sys
 import time
 import unittest
@@ -58,8 +58,21 @@ import pytest
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
-# Check for MCP dependencies and exit early if not available
-try:
+# Add cerebras commands directory to path for extract_conversation_context
+cerebras_path = project_root / ".claude" / "commands" / "cerebras"
+sys.path.insert(0, str(cerebras_path))
+
+# Check for MCP dependencies availability without try/except imports
+
+# Check if MCP dependencies are available
+fastmcp_spec = importlib.util.find_spec("fastmcp")
+unified_router_spec = importlib.util.find_spec(
+    "mcp_servers.slash_commands.unified_router"
+)
+extract_context_spec = importlib.util.find_spec("extract_conversation_context")
+
+if fastmcp_spec is not None and unified_router_spec is not None:
+    # Import dependencies only if available
     from fastmcp import FastMCP
 
     from mcp_servers.slash_commands.unified_router import (
@@ -68,14 +81,32 @@ try:
     )
 
     MCP_AVAILABLE = True
-except ImportError as e:
+    SKIP_REASON = None
+else:
+    # Create placeholder objects to avoid NameError
+    FastMCP = None
+    _execute_slash_command = None
+    create_tools = None
     MCP_AVAILABLE = False
-    SKIP_REASON = f"MCP dependencies not available: {e}"
+    SKIP_REASON = "MCP dependencies not available"
 
     # Exit early if running as script (not being collected by pytest)
     if __name__ == "__main__":
         print(f"SKIPPED: {SKIP_REASON}")
         sys.exit(0)
+
+# Import extract_conversation_context functions if available
+if extract_context_spec is not None:
+    from extract_conversation_context import (
+        _filter_mcp_contamination,
+        extract_conversation_context,
+    )
+
+    EXTRACT_CONTEXT_AVAILABLE = True
+else:
+    _filter_mcp_contamination = None
+    extract_conversation_context = None
+    EXTRACT_CONTEXT_AVAILABLE = False
 
 
 class TestMCPCerebrasIntegration:
@@ -287,25 +318,16 @@ class TestMCPContaminationFiltering(unittest.TestCase):
     """
 
     def setUp(self):
-        """Set up test environment and import context extraction logic"""
+        """Set up test environment and context extraction logic"""
 
-        # Add cerebras commands directory to path to test the filtering logic
-        project_root = os.path.abspath(
-            os.path.join(os.path.dirname(__file__), "../../..")
-        )
-        cerebras_dir = os.path.join(project_root, ".claude", "commands", "cerebras")
-        sys.path.insert(0, cerebras_dir)
-
-        try:
-            from extract_conversation_context import (
-                _filter_mcp_contamination,
-                extract_conversation_context,
+        # Check if extract_conversation_context functions are available
+        if not EXTRACT_CONTEXT_AVAILABLE:
+            self.skipTest(
+                "Cannot import MCP filtering functions: extract_conversation_context module not available"
             )
 
-            self.filter_func = _filter_mcp_contamination
-            self.extract_func = extract_conversation_context
-        except ImportError as e:
-            self.skipTest(f"Cannot import MCP filtering functions: {e}")
+        self.filter_func = _filter_mcp_contamination
+        self.extract_func = extract_conversation_context
 
     def test_matrix_1_mcp_pattern_recognition(self):
         """
