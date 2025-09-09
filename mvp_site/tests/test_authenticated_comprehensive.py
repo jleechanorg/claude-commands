@@ -48,20 +48,22 @@ class AuthenticatedTestSuite:
                 timeout=10,
             )
 
+            # Parse JSON only once to prevent double parsing error
+            json_data = None
+            if response.status_code == 200 and response.headers.get(
+                "content-type", ""
+            ).startswith("application/json"):
+                json_data = response.json()
+
             return {
                 "success": response.status_code == 200,
                 "status_code": response.status_code,
                 "error_message": response.text if response.status_code != 200 else None,
                 "campaign_count": (
-                    len(response.json())
-                    if response.headers.get("content-type", "").startswith(
-                        "application/json"
-                    )
-                    and isinstance(response.json(), list)
+                    len(json_data)
+                    if json_data is not None and isinstance(json_data, list)
                     else 0
-                )
-                if response.status_code == 200
-                else 0,
+                ),
             }
         except (requests.RequestException, requests.Timeout, ValueError) as e:
             return {"success": False, "error": str(e)}
