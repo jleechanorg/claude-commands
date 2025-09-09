@@ -7,7 +7,6 @@ import os
 import re
 import sys
 import unittest
-from unittest.mock import MagicMock
 
 # Set test environment before imports
 os.environ["TESTING"] = "true"
@@ -18,14 +17,15 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-# Import proper fakes library 
+# Import proper fakes library
 from tests.fake_services import FakeServiceManager
-from tests.fake_firestore import FakeFirestoreClient
 
 # Use proper fakes library instead of manual MagicMock setup
 with FakeServiceManager() as fake_services:
     pass  # Fakes library handles firebase_admin setup
 
+# Import after mocking
+from gemini_response import GeminiResponse
 from main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
@@ -34,11 +34,8 @@ from main import (
     KEY_ERROR,
     KEY_MESSAGE,
     KEY_SUCCESS,
+    create_app,
 )
-
-# Import after mocking
-from gemini_response import GeminiResponse
-from main import create_app
 from world_logic import format_game_state_updates
 
 

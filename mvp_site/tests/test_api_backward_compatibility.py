@@ -47,11 +47,11 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        
+
         # Mock Firebase to prevent initialization errors
         self.firebase_patcher = patch("firestore_service.get_db")
         self.mock_get_db = self.firebase_patcher.start()
-        
+
         # Set up fake Firestore client
         from tests.fake_firestore import FakeFirestoreClient
         fake_firestore = FakeFirestoreClient()
@@ -65,7 +65,7 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
         # Test data
         self.test_user_id = "test-backward-compat-user"
         # Note: Testing mode removed - no longer using bypass headers
-        # Now using mock Firebase authentication via test mocks  
+        # Now using mock Firebase authentication via test mocks
         self.test_headers = {
             "Content-Type": "application/json",
         }
@@ -86,7 +86,7 @@ class TestAPIBackwardCompatibility(unittest.TestCase):
         """
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
-        # With testing mode removed, expect 401 (authentication required) 
+        # With testing mode removed, expect 401 (authentication required)
         # or 200/404 if authentication is properly mocked
         assert response.status_code in [200, 404, 401]
 

@@ -31,7 +31,7 @@ class TestFirestoreMocking(unittest.TestCase):
         mock_client = MagicMock()
         mock_collection = MagicMock()
         mock_document = MagicMock()
-        
+
         # Set up the mock chain
         mock_client.collection.return_value = mock_collection
         mock_collection.document.return_value = mock_document
@@ -40,24 +40,24 @@ class TestFirestoreMocking(unittest.TestCase):
             'campaign_id': 'test_id',
             'name': 'Test Campaign'
         }
-        
+
         # Configure get_db to return our mock
         mock_get_db.return_value = mock_client
-        
+
         # Import the module that uses get_db
         import firestore_service
-        
+
         # Test that get_db returns our mock
         db = firestore_service.get_db()
         self.assertEqual(db, mock_client)
-        
+
         # Demonstrate that operations work with the mock
         doc_ref = db.collection('campaigns').document('test_id')
         doc = doc_ref.get()
-        
+
         self.assertTrue(doc.exists)
         self.assertEqual(doc.to_dict()['name'], 'Test Campaign')
-        
+
         # Verify the mock was called correctly
         mock_client.collection.assert_called_with('campaigns')
         mock_collection.document.assert_called_with('test_id')
@@ -69,18 +69,18 @@ class TestFirestoreMocking(unittest.TestCase):
         # Firebase is now always enabled, so we mock get_db() directly
         mock_client = MagicMock()
         mock_get_db.return_value = mock_client
-        
+
         import firestore_service
-        
+
         db = firestore_service.get_db()
-        
+
         # With proper mocking, get_db() should return our MagicMock
         self.assertIsInstance(db, MagicMock)
-        
+
         # Verify the mock has the expected Firestore interface
         self.assertTrue(hasattr(db, 'collection'))
         self.assertTrue(hasattr(db, 'batch'))
-        
+
         # Test that the mock works as expected for common operations
         collection_ref = db.collection('test')
         self.assertIsInstance(collection_ref, MagicMock)
@@ -91,9 +91,9 @@ class TestFirestoreMocking(unittest.TestCase):
         with patch('firestore_service.get_db') as mock_get_db:
             mock_client = MagicMock()
             mock_get_db.return_value = mock_client
-            
+
             import firestore_service
-            
+
             db = firestore_service.get_db()
             self.assertEqual(db, mock_client)
 

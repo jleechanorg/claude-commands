@@ -85,19 +85,18 @@ class TestV2CampaignDisplayLogic(TestBase):
                 )
                 return False  # RED - Test fails as expected
 
-            elif has_campaign_list or has_campaign_data:
+            if has_campaign_list or has_campaign_data:
                 print("✅ TEST PASSING: V2 correctly showing campaigns dashboard")
                 print(
                     "   🎯 V2 properly displays existing campaigns instead of landing page"
                 )
                 return True  # GREEN - Test passes after fix
 
-            else:
-                print(
-                    "❓ UNCLEAR STATE: V2 showing neither landing page nor campaigns dashboard"
-                )
-                print("   🔍 Manual investigation needed")
-                return False
+            print(
+                "❓ UNCLEAR STATE: V2 showing neither landing page nor campaigns dashboard"
+            )
+            print("   🔍 Manual investigation needed")
+            return False
 
             browser.close()
 
@@ -117,10 +116,9 @@ def run_red_green_test():
         print("   ✅ Confirmed: V2 shows landing page despite having campaigns")
         print("   🎯 Next: Implement fix to show campaigns dashboard")
         return "RED"
-    else:
-        print("\n✅ GREEN PHASE: Test passes!")
-        print("   🎯 V2 correctly shows campaigns dashboard when campaigns exist")
-        return "GREEN"
+    print("\n✅ GREEN PHASE: Test passes!")
+    print("   🎯 V2 correctly shows campaigns dashboard when campaigns exist")
+    return "GREEN"
 
 
 if __name__ == "__main__":

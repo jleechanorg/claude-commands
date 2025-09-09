@@ -6,21 +6,21 @@ Extracted to avoid import-unsafe dependencies and code duplication.
 """
 
 import random
-from typing import Optional
-from debug_hybrid_system import convert_json_escape_sequences
+
 import logging_util
+from debug_hybrid_system import convert_json_escape_sequences
 
 # Random content constants (copied from world_logic.py to avoid circular dependencies)
 RANDOM_CHARACTERS = [
     "A brave warrior seeking to prove their worth in battle",
-    "A cunning rogue with a mysterious past and hidden agenda", 
+    "A cunning rogue with a mysterious past and hidden agenda",
     "A wise wizard devoted to uncovering ancient magical secrets",
     "A noble paladin sworn to protect the innocent from evil",
     "A skilled ranger who knows the wilderness like no other",
     "A charismatic bard who weaves magic through music and stories",
     "A devout cleric blessed with divine power to heal and smite",
     "A fierce barbarian driven by primal instincts and tribal honor",
-    "A stealthy monk trained in martial arts and inner discipline", 
+    "A stealthy monk trained in martial arts and inner discipline",
     "A nature-loving druid who can shapeshift and command beasts",
 ]
 
@@ -50,12 +50,12 @@ def _convert_and_format_field(field_value: str, field_name: str) -> str:
     """
     if not field_value.strip():
         return ""
-    
+
     converted_value = convert_json_escape_sequences(field_value.strip())
     return f"{field_name}: {converted_value}"
 
 
-def _build_campaign_prompt(character: str, setting: str, description: str, old_prompt: Optional[str]) -> str:
+def _build_campaign_prompt(character: str, setting: str, description: str, old_prompt: str | None) -> str:
     """Build campaign prompt from components with JSON escape sequence conversion.
     
     Args:
@@ -76,11 +76,11 @@ def _build_campaign_prompt(character: str, setting: str, description: str, old_p
     character_part = _convert_and_format_field(character, "Character")
     if character_part:
         prompt_parts.append(character_part)
-        
+
     setting_part = _convert_and_format_field(setting, "Setting")
     if setting_part:
         prompt_parts.append(setting_part)
-        
+
     description_part = _convert_and_format_field(description, "Description")
     if description_part:
         prompt_parts.append(description_part)
@@ -90,7 +90,7 @@ def _build_campaign_prompt(character: str, setting: str, description: str, old_p
         random_character = random.choice(RANDOM_CHARACTERS)  # nosec B311
         random_setting = random.choice(RANDOM_SETTINGS)  # nosec B311
         prompt_parts = [f"Character: {random_character}", f"Setting: {random_setting}"]
-        
+
         logging_util.info(
             f"Generated random campaign: character='{random_character}', setting='{random_setting}'"
         )
@@ -101,9 +101,9 @@ def _build_campaign_prompt(character: str, setting: str, description: str, old_p
 # Alias for existing callers in world_logic.py
 def _build_campaign_prompt_impl(
     character: str,
-    setting: str, 
+    setting: str,
     description: str,
-    old_prompt: Optional[str]
+    old_prompt: str | None
 ) -> str:
     """Backwards compatibility alias for world_logic.py imports."""
     return _build_campaign_prompt(character, setting, description, old_prompt)
