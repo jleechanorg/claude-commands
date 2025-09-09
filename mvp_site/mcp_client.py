@@ -22,6 +22,8 @@ import asyncio
 import concurrent.futures
 import inspect
 import json
+import os
+import tempfile
 import threading
 import traceback
 import uuid
@@ -273,7 +275,7 @@ class MCPClient:
                 # Gracefully handle missing world_logic in test mode
                 if tool_name == "get_campaigns_list":
                     return {"success": True, "campaigns": []}
-                if tool_name in ["get_campaign_state", "process_action"]:
+                elif tool_name in ["get_campaign_state", "process_action"]:
                     # Check if campaign exists in our mock storage OR in FakeFirestore
                     args = arguments or {}
                     campaign_id = args.get("campaign_id", "")
@@ -359,8 +361,6 @@ class MCPClient:
                     if export_format not in ["txt", "pdf", "json"]:
                         raise MCPClientError("Invalid export format", error_code=400)
                     # Create a temporary file for successful mock export
-                    import os
-                    import tempfile
                     temp_file = tempfile.NamedTemporaryFile(mode='w', suffix=f'.{export_format}', delete=False)
                     temp_file.write("Mock campaign export content for testing")
                     temp_file.close()
