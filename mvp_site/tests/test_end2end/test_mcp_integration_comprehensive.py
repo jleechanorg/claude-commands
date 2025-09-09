@@ -66,10 +66,10 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
                 raise Exception("MCP server not responding correctly")
 
         except Exception as e:
-            log.get_logger(__name__).warning(
+            log.getLogger(__name__).warning(
                 "Could not start MCP server for comprehensive tests: %s", e
             )
-            log.get_logger(__name__).info("Falling back to mock-only testing")
+            log.getLogger(__name__).info("Falling back to mock-only testing")
             cls.mcp_process = None
 
     @classmethod
