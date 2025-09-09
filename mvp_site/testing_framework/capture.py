@@ -63,14 +63,14 @@ class CaptureManager:
             if hasattr(self, '_pending_responses') and interaction["id"] in self._pending_responses:
                 interaction["response"] = self._pending_responses[interaction["id"]]
                 del self._pending_responses[interaction["id"]]
-            
+
             self.interactions.append(interaction)
 
     def record_response(self, interaction_id: int, response_data: Any):
         """Record response data for a specific interaction."""
         # Find the interaction by ID in the active context or in the list
         target_interaction = None
-        
+
         # Check if interaction is already in the list
         if interaction_id < len(self.interactions):
             target_interaction = self.interactions[interaction_id]
@@ -82,7 +82,7 @@ class CaptureManager:
                 self._pending_responses = {}
             self._pending_responses[interaction_id] = self._sanitize_data(response_data)
             return
-            
+
         if target_interaction:
             target_interaction["response"] = self._sanitize_data(response_data)
 

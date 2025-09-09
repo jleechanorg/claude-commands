@@ -9,9 +9,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from unittest.mock import MagicMock, patch
 
 import constants
-from narrative_response_schema import parse_structured_response
-
 import firestore_service
+from narrative_response_schema import parse_structured_response
 
 
 class TestGodModeResponseField(unittest.TestCase):

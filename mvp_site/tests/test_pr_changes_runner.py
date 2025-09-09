@@ -12,7 +12,6 @@ sys.path.insert(
 )
 import constants
 from entity_tracking import create_from_game_state
-
 from game_state import GameState
 
 

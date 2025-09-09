@@ -681,7 +681,7 @@ def run_server():
 
                 return {"jsonrpc": "2.0", "result": result_data, "id": request_id}
 
-            elif method == "tools/list":
+            if method == "tools/list":
                 # Handle tools list using asyncio.run() for better performance
                 tools = asyncio.run(handle_list_tools())
 
@@ -700,7 +700,7 @@ def run_server():
                     "id": request_id,
                 }
 
-            elif method == "resources/list":
+            if method == "resources/list":
                 # Handle resources list using asyncio.run() for better performance
                 resources = asyncio.run(handle_list_resources())
 
@@ -720,19 +720,18 @@ def run_server():
                     "id": request_id,
                 }
 
-            elif method == "resources/read":
+            if method == "resources/read":
                 # Handle resource read
                 uri = params.get("uri")
 
                 # Use asyncio.run() instead of manual loop management for better performance
                 result = asyncio.run(handle_read_resource(uri))
                 return {"jsonrpc": "2.0", "result": result, "id": request_id}
-            else:
-                return {
-                    "jsonrpc": "2.0",
-                    "error": {"code": -32601, "message": f"Method not found: {method}"},
-                    "id": request_id,
-                }
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
+                "id": request_id,
+            }
 
         def log_message(self, format, *args):
             # Suppress default logging for cleaner output

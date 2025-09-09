@@ -27,7 +27,7 @@ except ImportError:
     from fake_auth import FakeFirebaseAuth, FakeUserRecord
     from fake_firestore import FakeFirestoreClient
     from fake_gemini import create_fake_gemini_client
-# Import functions from main at module level to avoid inline imports  
+# Import functions from main at module level to avoid inline imports
 # Note: HEADER_TEST_BYPASS and HEADER_TEST_USER_ID removed with testing mode deletion
 from main import create_app
 
@@ -250,7 +250,7 @@ class FakeServiceManager:
                     **kwargs.get("context", {}),
                 },
             }
-        elif message_type == "system_instruction":
+        if message_type == "system_instruction":
             # System instructions don't have a specific builder method
             return {
                 "message_type": "system_instruction",
@@ -259,14 +259,13 @@ class FakeServiceManager:
                     "instruction_type": kwargs.get("instruction_type", "base_system")
                 },
             }
-        else:
-            # Generic JSON input structure
-            return {
-                "message_type": message_type,
-                "content": kwargs.get("content", ""),
-                "context": kwargs.get("context", {}),
-                **kwargs,
-            }
+        # Generic JSON input structure
+        return {
+            "message_type": message_type,
+            "content": kwargs.get("content", ""),
+            "context": kwargs.get("context", {}),
+            **kwargs,
+        }
 
     def validate_json_input(self, json_input: dict) -> bool:
         """Validate JSON input structure.

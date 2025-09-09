@@ -40,9 +40,8 @@ import logging_util
 from custom_types import CampaignId, UserId
 from decorators import log_exceptions
 from firebase_admin import firestore
-from numeric_field_converter import NumericFieldConverter
-
 from game_state import GameState
+from numeric_field_converter import NumericFieldConverter
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
@@ -535,12 +534,11 @@ def get_db() -> firestore.Client:
                 mock_client = MagicMock()
                 mock_client.collection.return_value = mock_collection
                 return mock_client
-            else:
-                # In production, this is a critical error
-                raise ValueError(
-                    f"Firebase app initialization failed: {init_error}. "
-                    "Ensure proper Firebase configuration is available."
-                ) from init_error
+            # In production, this is a critical error
+            raise ValueError(
+                f"Firebase app initialization failed: {init_error}. "
+                "Ensure proper Firebase configuration is available."
+            ) from init_error
 
     # Firebase is initialized - return the client
     try:
@@ -584,11 +582,10 @@ def get_db() -> firestore.Client:
             mock_client = MagicMock()
             mock_client.collection.return_value = mock_collection
             return mock_client
-        else:
-            raise ValueError(
-                f"Failed to create Firestore client: {client_error}. "
-                "Check Firebase configuration and network connectivity."
-            ) from client_error
+        raise ValueError(
+            f"Failed to create Firestore client: {client_error}. "
+            "Check Firebase configuration and network connectivity."
+        ) from client_error
 
 
 @log_exceptions

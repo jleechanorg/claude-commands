@@ -10,10 +10,9 @@ sys.path.insert(
 
 
 import constants
+import gemini_service
 import logging_util
 import pytest
-
-import gemini_service
 from gemini_service import _load_instruction_file, _loaded_instructions_cache
 
 # The list of all known prompt types to test, using shared constants.

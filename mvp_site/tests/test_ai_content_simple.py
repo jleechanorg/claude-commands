@@ -80,7 +80,7 @@ class AIContentPersonalizationTest(unittest.TestCase):
 
         # Verify character prompt is present and basic
         enhanced_prompt = request.character_prompt
-        
+
         # Should contain the original character prompt
         assert "Begin the adventure" in enhanced_prompt
         # Should not contain hardcoded character names

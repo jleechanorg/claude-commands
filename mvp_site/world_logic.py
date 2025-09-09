@@ -23,20 +23,19 @@ from typing import Any
 import constants
 import document_generator
 import firebase_admin
+import firestore_service
+import gemini_service
 import logging_util
 import structured_fields_utils
 from custom_types import CampaignId, UserId
 from debug_hybrid_system import clean_json_artifacts, process_story_for_display
-from prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
-
-import firestore_service
-import gemini_service
 from firestore_service import (
     _truncate_log_json,
     get_user_settings,
     update_state_with_changes,
 )
 from game_state import GameState
+from prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 
 # Initialize Firebase if not already initialized (testing mode removed)
 try:

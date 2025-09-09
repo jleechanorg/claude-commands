@@ -17,7 +17,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from narrative_response_schema import parse_structured_response
 
 
-
 class TestStateUpdateIntegration(unittest.TestCase):
     """Test the complete state update flow from AI response to game state"""
 
@@ -77,11 +76,11 @@ class TestStateUpdateIntegration(unittest.TestCase):
         # Verify basic parsing worked
         assert narrative_text is not None
         assert parsed_response is not None
-        
+
         # Verify state updates are present in the parsed response object
         assert hasattr(parsed_response, 'state_updates')
         assert parsed_response.state_updates is not None
-        
+
         # Verify specific state update values through the object attributes
         state_updates = parsed_response.state_updates
         assert "player_character_data" in state_updates
@@ -151,7 +150,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
         # GeminiService would process state updates through structured response parsing
         json_response = json.dumps(self.ai_response_with_state_updates)
         narrative_text, parsed_response = parse_structured_response(json_response)
-        
+
         # Verify basic processing works
         self.assertIsNotNone(parsed_response)
         self.assertTrue(hasattr(parsed_response, 'state_updates'))

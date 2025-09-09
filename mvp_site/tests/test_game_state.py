@@ -7,7 +7,7 @@ Comprehensive mocking implemented to handle CI environments that lack Firebase d
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
@@ -28,7 +28,7 @@ sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
 # Import fakes library components (will be imported after path setup)
 try:
     # Fakes library will be imported after path setup below
-    
+
     # Mock pydantic dependencies
     pydantic_module = MagicMock()
     pydantic_module.BaseModel = MagicMock()
@@ -37,25 +37,25 @@ try:
     pydantic_module.model_validator = MagicMock()
     pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
     sys.modules['pydantic'] = pydantic_module
-    
+
     # Mock cachetools dependencies
     cachetools_module = MagicMock()
     cachetools_module.TTLCache = MagicMock()
     cachetools_module.cached = MagicMock()
     sys.modules['cachetools'] = cachetools_module
-    
+
     # Mock google dependencies
     google_module = MagicMock()
     google_module.genai = MagicMock()
     google_module.genai.Client = MagicMock()
     sys.modules['google'] = google_module
     sys.modules['google.genai'] = google_module.genai
-    
+
     # Mock other optional dependencies that might not be available
     docx_module = MagicMock()
     docx_module.Document = MagicMock()
     sys.modules['docx'] = docx_module
-    
+
     # Mock fpdf dependencies
     fpdf_module = MagicMock()
     fpdf_module.FPDF = MagicMock()
@@ -70,11 +70,12 @@ mvp_site_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__f
 if mvp_site_path not in sys.path:
     sys.path.append(mvp_site_path)
 
-# Import proper fakes library 
-from tests.fake_services import FakeServiceManager
-from tests.fake_firestore import FakeFirestoreClient
+# Import proper fakes library
 
 import datetime
+
+from firestore_service import _perform_append, update_state_with_changes
+from game_state import GameState
 
 # Import modules with comprehensive mocking in place
 from world_logic import (
@@ -82,9 +83,6 @@ from world_logic import (
     format_game_state_updates,
     parse_set_command,
 )
-
-from firestore_service import _perform_append, update_state_with_changes
-from game_state import GameState
 
 
 class TestGameState(unittest.TestCase):

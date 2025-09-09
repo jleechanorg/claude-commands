@@ -18,8 +18,8 @@ import os
 import subprocess
 import sys
 import time
-from datetime import datetime
 import unittest
+from datetime import datetime
 
 import requests
 
@@ -31,8 +31,8 @@ class RealBrowserSettingsGameTest:
         self.base_url = "http://localhost:8081"
         self.test_user_id = "real-browser-test-user"
         # Use centralized logging utility for consistent paths
-        import sys
         import os
+        import sys
         # Add parent directory to path to import logging_util
         parent_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
         sys.path.insert(0, parent_dir)
@@ -69,7 +69,7 @@ class RealBrowserSettingsGameTest:
     def is_ci_environment(self):
         """Detect if running in CI environment"""
         return (
-            os.getenv('CI') == 'true' or 
+            os.getenv('CI') == 'true' or
             os.getenv('GITHUB_ACTIONS') == 'true' or
             os.getenv('TESTING') == 'true'
         )
@@ -92,7 +92,7 @@ class RealBrowserSettingsGameTest:
             print("⚠️ CI Environment: Server not available, skipping integration test")
             print("✅ PASS: tests/integration/test_real_browser_settings_game_integration.py")
             return False  # Indicate server not available, but handle gracefully
-        
+
         raise Exception("❌ Server not available for testing")
 
     def clear_existing_settings(self):
@@ -297,7 +297,7 @@ class RealBrowserSettingsGameTest:
                 print("✅ Test structure and imports validated successfully")
                 print("💡 Integration test would run successfully with server available")
                 return True  # Pass the test in CI by validating structure only
-            
+
             # Setup (local environment only)
             if not self.wait_for_server():
                 # Server not available even in local environment
@@ -391,10 +391,10 @@ class RealBrowserSettingsGameTest:
 # Support both unittest and direct execution
 class TestRealBrowserSettingsGameIntegration(unittest.TestCase):
     """Unittest wrapper for integration test"""
-    
+
     def setUp(self):
         self.test = RealBrowserSettingsGameTest()
-    
+
     def test_real_browser_settings_game_integration(self):
         """Main integration test method"""
         success = self.test.run_complete_test()

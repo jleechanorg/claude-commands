@@ -303,25 +303,25 @@ class TestFirestoreStateHelpers(unittest.TestCase):
     # =============================================================================
     # MATRIX-DRIVEN TDD TESTS - Phase 1: RED (Failing Tests)
     # =============================================================================
-    
+
     def test_matrix_delete_token_comprehensive(self):
         """Matrix 1: DELETE_TOKEN handling - All combinations [1,1-3]"""
         # Test cases based on comprehensive matrix planning
         test_cases = [
             # [1,1] DELETE_TOKEN with existing key - should delete
             {
-                "name": "delete_existing_key", 
+                "name": "delete_existing_key",
                 "state": {"key": "value", "other": "data"},
                 "key": "key",
                 "value": DELETE_TOKEN,
                 "expected_handled": True,
                 "expected_state": {"other": "data"}
             },
-            # [1,2] DELETE_TOKEN with non-existing key - should log attempt  
+            # [1,2] DELETE_TOKEN with non-existing key - should log attempt
             {
                 "name": "delete_missing_key",
                 "state": {"other": "data"},
-                "key": "missing_key", 
+                "key": "missing_key",
                 "value": DELETE_TOKEN,
                 "expected_handled": True,
                 "expected_state": {"other": "data"}
@@ -336,16 +336,16 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "expected_state": {"key": "value"}
             }
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case["name"]):
                 result = _handle_delete_token(case["state"], case["key"], case["value"])
-                self.assertEqual(result, case["expected_handled"], 
+                self.assertEqual(result, case["expected_handled"],
                                f"Handler return mismatch for {case['name']}")
                 self.assertEqual(case["state"], case["expected_state"],
                                f"State mismatch for {case['name']}")
 
-    @patch("firestore_service._perform_append")  
+    @patch("firestore_service._perform_append")
     @patch("logging_util.info")
     def test_matrix_append_syntax_comprehensive(self, mock_log, mock_append):
         """Matrix 2: Append syntax handling - All combinations [2,1-3]"""
@@ -354,14 +354,14 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             {
                 "name": "append_to_existing_list",
                 "state": {"items": ["existing"]},
-                "key": "items", 
+                "key": "items",
                 "value": {"append": ["new1", "new2"]},
                 "expected_handled": True,
                 "expect_append_call": True
             },
             # [2,2] Valid append creates new list
             {
-                "name": "append_creates_new_list", 
+                "name": "append_creates_new_list",
                 "state": {},
                 "key": "new_items",
                 "value": {"append": ["item1"]},
@@ -378,16 +378,16 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "expect_append_call": False
             }
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case["name"]):
                 mock_append.reset_mock()
                 mock_log.reset_mock()
-                
+
                 result = _handle_append_syntax(case["state"], case["key"], case["value"])
                 self.assertEqual(result, case["expected_handled"],
                                f"Handler return mismatch for {case['name']}")
-                
+
                 if case["expect_append_call"]:
                     mock_append.assert_called_once()
                     mock_log.assert_called_once()
@@ -395,7 +395,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                     mock_append.assert_not_called()
 
     @patch("firestore_service._perform_append")
-    @patch("logging_util.warning") 
+    @patch("logging_util.warning")
     def test_matrix_core_memories_safeguard_comprehensive(self, mock_log, mock_append):
         """Matrix 3: Core memories safeguard - All combinations [3,1-3]"""
         test_cases = [
@@ -412,7 +412,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             {
                 "name": "core_memories_empty_state",
                 "state": {},
-                "key": "core_memories", 
+                "key": "core_memories",
                 "value": ["first_memory"],
                 "expected_handled": True,
                 "expect_warning": True
@@ -427,16 +427,16 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "expect_warning": False
             }
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case["name"]):
                 mock_append.reset_mock()
                 mock_log.reset_mock()
-                
+
                 result = _handle_core_memories_safeguard(case["state"], case["key"], case["value"])
                 self.assertEqual(result, case["expected_handled"],
                                f"Handler return mismatch for {case['name']}")
-                
+
                 if case["expect_warning"]:
                     mock_log.assert_called_once()
                     mock_append.assert_called_once_with(
@@ -459,21 +459,21 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             },
             # [5,2] List field with append operation
             {
-                "name": "list_append_operation", 
+                "name": "list_append_operation",
                 "initial_state": {"inventory": ["sword"]},
                 "changes": {"inventory": {"append": ["potion", "shield"]}},
                 "should_contain_original": True,
                 "should_contain_new": ["potion", "shield"]
             }
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case["name"]):
                 result = update_state_with_changes(case["initial_state"], case["changes"])
-                
+
                 # Basic assertions that should work
                 self.assertIsInstance(result, dict)
-                
+
                 # More specific assertions for different test types
                 if "expected_keys" in case:
                     for key in case["expected_keys"]:
@@ -491,17 +491,17 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             {"input": [1, 2, 3], "expected_type": list, "description": "list_value"},
             {"input": {"key": "value"}, "expected_type": dict, "description": "dict_value"}
         ]
-        
+
         for case in test_cases:
             with self.subTest(case=case["description"]):
                 state = {}
                 changes = {"test_field": case["input"]}
-                
+
                 result = update_state_with_changes(state, changes)
-                
+
                 # Basic validation - the function should not crash
                 self.assertIsInstance(result, dict)
-                
+
                 # Type preservation tests
                 if case["input"] is not None:
                     self.assertIn("test_field", result)
@@ -519,7 +519,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
             },
             # [7,2] Large data handling
             {
-                "name": "large_data_handling", 
+                "name": "large_data_handling",
                 "state": {},
                 "changes": {"large_field": "x" * 1000},
                 "expect_success": True
@@ -547,15 +547,15 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "expect_success": True
             }
         ]
-        
+
         for case in edge_cases:
             with self.subTest(case=case["name"]):
                 with patch("logging_util.info"), patch("logging_util.warning"):
                     result = update_state_with_changes(case["state"], case["changes"])
-                    
+
                     # Should not crash
                     self.assertIsInstance(result, dict)
-                    
+
                     # Check specific expected results if provided
                     if "expected_result" in case:
                         self.assertEqual(result, case["expected_result"])
@@ -563,7 +563,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
     def test_matrix_performance_characteristics(self):
         """Matrix 8: Performance and scalability testing [8,1-4]"""
         import time
-        
+
         performance_cases = [
             # [8,1] Large dictionary merge
             {
@@ -572,7 +572,7 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "changes": {f"key_{i}": f"new_value_{i}" for i in range(50, 150)},
                 "max_time": 0.1  # Should complete within 100ms
             },
-            # [8,2] Deep nesting performance  
+            # [8,2] Deep nesting performance
             {
                 "name": "deep_nesting",
                 "state": {"level1": {"level2": {"level3": {"data": "original"}}}},
@@ -587,20 +587,20 @@ class TestFirestoreStateHelpers(unittest.TestCase):
                 "max_time": 0.1  # Should handle large lists efficiently
             }
         ]
-        
+
         for case in performance_cases:
             with self.subTest(case=case["name"]):
                 start_time = time.time()
-                
+
                 with patch("logging_util.info"), patch("logging_util.warning"):
                     result = update_state_with_changes(case["state"], case["changes"])
-                
+
                 elapsed_time = time.time() - start_time
-                
+
                 # Performance assertion
-                self.assertLess(elapsed_time, case["max_time"], 
+                self.assertLess(elapsed_time, case["max_time"],
                                f"Performance test {case['name']} took {elapsed_time:.3f}s, expected < {case['max_time']}s")
-                
+
                 # Correctness assertion
                 self.assertIsInstance(result, dict)
 

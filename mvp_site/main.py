@@ -60,10 +60,14 @@ import constants
 
 # Firebase imports
 import firebase_admin
+import firestore_service  # For testing mode conditional logic
 import logging_util
 import world_logic  # For MCP fallback logic
 from custom_types import CampaignId, UserId
 from firebase_admin import auth
+
+# Import JSON serializer for Firestore compatibility
+from firestore_service import json_default_serializer
 
 # Flask and web imports
 from flask import (
@@ -81,11 +85,6 @@ from flask_cors import CORS
 
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
-
-import firestore_service  # For testing mode conditional logic
-
-# Import JSON serializer for Firestore compatibility
-from firestore_service import json_default_serializer
 
 # --- CONSTANTS ---
 # API Configuration
@@ -618,8 +617,7 @@ def create_app() -> Flask:
                         or "campaign not found" in error_msg.lower()
                     ):
                         return jsonify({"error": "Campaign not found"}), 404
-                    else:
-                        return jsonify({"error": error_msg}), 400
+                    return jsonify({"error": error_msg}), 400
             except MCPClientError as e:
                 # Handle MCP-specific errors with proper status code translation
                 return handle_mcp_errors(e)
@@ -1081,8 +1079,7 @@ if __name__ == "__main__":
                     # Validate port range
                     if 1024 <= port <= 65535:
                         return port
-                    else:
-                        return default_port
+                    return default_port
                 except (ValueError, IndexError):
                     return default_port
 

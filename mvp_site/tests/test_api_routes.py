@@ -29,7 +29,7 @@ class TestAPIRoutes(unittest.TestCase):
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
-        # Test data for MCP architecture  
+        # Test data for MCP architecture
         self.test_user_id = "mcp-api-test-user"
         # Testing mode removed - no longer using bypass headers
         self.test_headers = {
@@ -72,7 +72,7 @@ class TestAPIRoutes(unittest.TestCase):
         """Test campaigns endpoint response through MCP."""
         response = self.client.get("/api/campaigns", headers=self.test_headers)
 
-        # With testing mode removed, expect 401 (auth required) or 200/404 if mocked properly  
+        # With testing mode removed, expect 401 (auth required) or 200/404 if mocked properly
         assert response.status_code in [200, 401, 404], f"Expected 200/401/404 for campaigns list, got {response.status_code}"
 
         data = response.get_json()

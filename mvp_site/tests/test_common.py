@@ -2,7 +2,6 @@
 Common test utilities shared across test files.
 """
 
-import os
 
 
 def has_firebase_credentials():
