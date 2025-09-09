@@ -1,8 +1,6 @@
 #!/bin/bash
-"""
-WorldArchitect MCP Server Startup Script
-Starts the MCP server with configurable transport options
-"""
+# WorldArchitect MCP Server Startup Script
+# Starts the MCP server with configurable transport options
 
 set -e
 

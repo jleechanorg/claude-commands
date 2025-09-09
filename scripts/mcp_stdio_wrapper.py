@@ -14,4 +14,4 @@ mcp_server_path = os.path.join(os.path.dirname(script_dir), "mvp_site", "mcp_api
 
 # Run the MCP server in stdio-only mode for Claude Code
 cmd = [sys.executable, mcp_server_path, "--stdio"]
-os.execv(sys.executable, cmd)
+os.execv(sys.executable, [sys.executable] + cmd[1:])

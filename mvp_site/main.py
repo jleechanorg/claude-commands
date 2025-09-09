@@ -1040,7 +1040,7 @@ if __name__ == "__main__":
             # Fix inverted boolean logic for MCP HTTP flag
             app._skip_mcp_http = (
                 not args.mcp_http if args.mcp_http is not None else True
-            )  # Default to HTTP mode for MCP, respect CLI override
+            )  # Default to skip HTTP mode for MCP, respect CLI override
             app._mcp_server_url = args.mcp_server_url
 
             # Robust port parsing to handle descriptive PORT environment variables
