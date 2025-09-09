@@ -16,6 +16,7 @@ import os
 import statistics
 import sys
 import time
+import uuid
 from collections.abc import Callable
 from typing import Any
 
@@ -45,8 +46,6 @@ class MockDirectCalls:
 
         # Simulate database operation delay
         time.sleep(0.001)  # 1ms simulated DB delay
-
-        import uuid
 
         campaign_id = str(uuid.uuid4())
 
@@ -432,7 +431,5 @@ async def main():
 
 
 if __name__ == "__main__":
-    import sys
-
     exit_code = asyncio.run(main())
     sys.exit(exit_code)

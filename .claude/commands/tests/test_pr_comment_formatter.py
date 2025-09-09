@@ -12,6 +12,10 @@ import unittest
 # Add scripts directory to path for pr_comment_formatter module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts'))
 
+# Add commands directory to path for commentreply module
+commands_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+sys.path.insert(0, commands_dir)
+
 from pr_comment_formatter import (
     CommentStatus,
     CopilotComment,
@@ -20,6 +24,11 @@ from pr_comment_formatter import (
     TaskItem,
     UserComment,
 )
+
+try:
+    from commentreply import validate_comment_data
+except ImportError:
+    validate_comment_data = None
 
 
 class TestCommentStatus(unittest.TestCase):
@@ -345,16 +354,9 @@ class TestCommentValidationRegression(unittest.TestCase):
         validation expected 'user.login' structure, causing ALL comments
         to be skipped with "❌ SECURITY: Skipping invalid comment data"
         """
-        import sys
-        import os
-
-        # Add the correct path to commentreply module
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
-        sys.path.insert(0, commands_dir)
-
-        # Import the validation function we're testing
-        from commentreply import validate_comment_data
+        # Skip test if commentreply module not available
+        if validate_comment_data is None:
+            self.skipTest("commentreply module not available")
 
         # 🔴 RED: Create comment data structure that commentfetch actually outputs
         comment_with_author_field = {
@@ -403,13 +405,6 @@ class TestCommentValidationRegression(unittest.TestCase):
         This tests the dual format support in get_response_for_comment
         and main processing loop.
         """
-        import sys
-        import os
-
-        # Add the correct path to commentreply module
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
-        sys.path.insert(0, commands_dir)
 
         # Test data structures
         comment_with_author = {

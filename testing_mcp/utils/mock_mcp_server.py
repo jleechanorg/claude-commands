@@ -527,8 +527,6 @@ def run_mock_server_background(port: int = 8001) -> threading.Thread:
 
 if __name__ == "__main__":
     # Run mock server directly
-    import sys
-
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8001
 
     print(f"Starting mock MCP server on port {port}")

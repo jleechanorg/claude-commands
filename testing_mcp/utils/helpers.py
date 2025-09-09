@@ -7,6 +7,8 @@ Common utilities, fixtures, and helper functions for MCP testing.
 import json
 import logging
 import os
+import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -63,8 +65,6 @@ class TestEnvironment:
         # Clean up temp directories
         for temp_dir in self.temp_dirs:
             try:
-                import shutil
-
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception as e:
                 logger.warning(f"Error cleaning up temp dir {temp_dir}: {e}")
@@ -411,8 +411,6 @@ async def assert_mcp_response_format(response: dict[str, Any]):
 
 def find_free_port(start_port: int = 8000) -> int:
     """Find a free port starting from the given port."""
-    import socket
-
     for port in range(start_port, start_port + 100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             try:
