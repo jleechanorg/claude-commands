@@ -128,6 +128,11 @@ Until: Success criteria fully met
   - Primary goal accomplished (90%+ criteria met)
   - Diminishing returns threshold reached (last 2 iterations <5% improvement)
   - PR is in good mergeable state with only cosmetic issues remaining
+
+  **Threshold Definitions:**
+  - **"90%+ criteria met"**: Calculate as (number of primary success criteria achieved) / (total number of primary success criteria). For example, if there are 10 criteria and 9 are met, progress = 90%. Criteria may include PR mergeability, CI passing, blocking comments resolved, etc.
+  - **"Last 2 iterations <5% improvement"**: Measure progress using a quantifiable validation score (e.g., percentage of criteria met, CI pass rate, or resolved blocking issues). If the increase in score between the last two iterations is less than 5% (e.g., from 88% to 90%), this threshold is considered reached.
+  - **Example**: If in iteration 8, 8/10 criteria are met (80%), and in iteration 9, 9/10 are met (90%), the improvement is 10%. If in iteration 10, 9.5/10 are met (95%), the improvement is 5%. If subsequent iterations show <5% improvement, convergence is triggered.
 - **IF STALLED**: No meaningful progress in validation for 2+ iterations → STOP with stall report
   - Same validation scores for 2+ consecutive iterations
   - Unable to improve PR mergeability status
