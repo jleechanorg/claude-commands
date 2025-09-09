@@ -4,6 +4,7 @@ This test doesn't require external dependencies.
 """
 
 import asyncio
+import inspect
 import os
 import sys
 import unittest
@@ -19,9 +20,9 @@ firebase_admin_mock = MagicMock()
 firebase_admin_mock.firestore = MagicMock()
 firebase_admin_mock.auth = MagicMock()
 firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
-sys.modules['firebase_admin'] = firebase_admin_mock
-sys.modules['firebase_admin.firestore'] = firebase_admin_mock.firestore
-sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
+sys.modules["firebase_admin"] = firebase_admin_mock
+sys.modules["firebase_admin.firestore"] = firebase_admin_mock.firestore
+sys.modules["firebase_admin.auth"] = firebase_admin_mock.auth
 
 # Add mvp_site to path AFTER mocking firebase_admin
 mvp_site_path = os.path.dirname(os.path.dirname(__file__))
@@ -39,40 +40,42 @@ try:
     pydantic_module.Field = MagicMock()
     pydantic_module.field_validator = MagicMock()
     pydantic_module.model_validator = MagicMock()
-    pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
-    sys.modules['pydantic'] = pydantic_module
+    pydantic_module.ValidationError = (
+        Exception  # Use regular Exception for ValidationError
+    )
+    sys.modules["pydantic"] = pydantic_module
 
     # Mock cachetools dependencies
     cachetools_module = MagicMock()
     cachetools_module.TTLCache = MagicMock()
     cachetools_module.cached = MagicMock()
-    sys.modules['cachetools'] = cachetools_module
+    sys.modules["cachetools"] = cachetools_module
 
     # Mock google dependencies
     google_module = MagicMock()
     google_module.genai = MagicMock()
     google_module.genai.Client = MagicMock()
-    sys.modules['google'] = google_module
-    sys.modules['google.genai'] = google_module.genai
+    sys.modules["google"] = google_module
+    sys.modules["google.genai"] = google_module.genai
 
     # Mock other optional dependencies that might not be available
     docx_module = MagicMock()
     docx_module.Document = MagicMock()
-    sys.modules['docx'] = docx_module
+    sys.modules["docx"] = docx_module
 
     # Mock fpdf dependencies
     fpdf_module = MagicMock()
     fpdf_module.FPDF = MagicMock()
     fpdf_module.XPos = MagicMock()
     fpdf_module.YPos = MagicMock()
-    sys.modules['fpdf'] = fpdf_module
+    sys.modules["fpdf"] = fpdf_module
 
     # Mock flask dependencies that might not be available
     flask_module = MagicMock()
     flask_module.Flask = MagicMock()
     flask_module.request = MagicMock()
     flask_module.jsonify = MagicMock()
-    sys.modules['flask'] = flask_module
+    sys.modules["flask"] = flask_module
 except Exception:
     pass  # If mocking fails, continue anyway
 
@@ -328,11 +331,11 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     ):
         """
         🔴 RED PHASE: Test that would FAIL before sequence_id fix
-        
+
         This test verifies that AI responses get the correct sequence_id calculation:
         - User input should get: len(story_context) + 1 = 5
         - AI response should get: len(story_context) + 2 = 6
-        
+
         Before the fix, both would get len(story_context) + 1 = 5 (WRONG!)
         """
         # Mock the campaign data and story context
@@ -390,7 +393,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     ):
         """
         🔴 RED PHASE: Test that would FAIL before user_scene_number field addition
-        
+
         This test verifies that the user_scene_number field is present in API responses.
         Before the fix, this field was missing and would break frontend compatibility.
         """
@@ -444,7 +447,7 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
     def test_enhanced_logging_json_serialization_red_phase(self):
         """
         🔴 RED PHASE: Test that would FAIL before enhanced logging fix
-        
+
         This test verifies that the enhanced logging with JSON serialization
         works correctly with complex objects that have custom serializers.
         """
@@ -460,7 +463,9 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         # CRITICAL TEST: This should not raise an exception with enhanced logging
         # The function should handle complex objects via internal json_default_serializer
         try:
-            result = world_logic.truncate_game_state_for_logging(complex_game_state, max_lines=10)
+            result = world_logic.truncate_game_state_for_logging(
+                complex_game_state, max_lines=10
+            )
             # Should return truncated JSON string without crashing
             self.assertIsInstance(result, str)
             # Should handle Mock objects gracefully (not crash)
@@ -565,7 +570,9 @@ class TestConvertAndFormatField(unittest.TestCase):
         self.assertEqual(result, "Character: Normal text")
 
         # Complex escapes
-        result = _convert_and_format_field("Line1\\n\\nLine2\\twith\\ttabs", "Description")
+        result = _convert_and_format_field(
+            "Line1\\n\\nLine2\\twith\\ttabs", "Description"
+        )
         self.assertEqual(result, "Description: Line1\n\nLine2\twith\ttabs")
 
 
@@ -578,7 +585,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             character="Hero\\nwith\\nlinebreaks",
             setting="World\\twith\\ttabs",
             description="Story\\n\\nwith\\n\\nparagraphs",
-            old_prompt=""
+            old_prompt="",
         )
 
         # All fields should have escape sequences converted
@@ -617,7 +624,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             character="Ser Arion val Valerion",
             setting="Celestial Imperium",
             description=dragon_knight_escaped,
-            old_prompt=""
+            old_prompt="",
         )
 
         # Should contain properly formatted description
@@ -642,7 +649,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             character="Test",
             setting="Test",
             description="Description\\nwith\\nescapes",
-            old_prompt=old_prompt
+            old_prompt=old_prompt,
         )
 
         # Should return old prompt exactly as-is (no conversion)
@@ -654,7 +661,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
             character="",
             setting="   ",
             description="Valid\\nDescription",
-            old_prompt=""
+            old_prompt="",
         )
 
         # Should only include non-empty fields
@@ -665,10 +672,7 @@ class TestBuildCampaignPromptConversion(unittest.TestCase):
     def test_build_campaign_prompt_all_empty_triggers_random(self):
         """Test that all empty fields triggers random generation."""
         result = world_logic._build_campaign_prompt(
-            character="",
-            setting="",
-            description="",
-            old_prompt=""
+            character="", setting="", description="", old_prompt=""
         )
 
         # Should generate random character and setting
@@ -696,10 +700,7 @@ class TestMarkdownStructurePreservation(unittest.TestCase):
         )
 
         result = world_logic._build_campaign_prompt(
-            character="",
-            setting="",
-            description=markdown_description,
-            old_prompt=""
+            character="", setting="", description=markdown_description, old_prompt=""
         )
 
         # Should preserve markdown structure
@@ -721,7 +722,6 @@ class TestCodeHealthChecks(unittest.TestCase):
 
         # Read world_logic.py source
 
-
         source = inspect.getsource(world_logic)
 
         # Check if constants are defined
@@ -730,16 +730,26 @@ class TestCodeHealthChecks(unittest.TestCase):
 
         if has_random_characters or has_random_settings:
             # If they exist, they should be used somewhere
-            uses_random_characters = "random.choice(RANDOM_CHARACTERS)" in source or "choice(RANDOM_CHARACTERS)" in source
-            uses_random_settings = "random.choice(RANDOM_SETTINGS)" in source or "choice(RANDOM_SETTINGS)" in source
+            uses_random_characters = (
+                "random.choice(RANDOM_CHARACTERS)" in source
+                or "choice(RANDOM_CHARACTERS)" in source
+            )
+            uses_random_settings = (
+                "random.choice(RANDOM_SETTINGS)" in source
+                or "choice(RANDOM_SETTINGS)" in source
+            )
 
             # Constants should either not exist OR be used
             if has_random_characters:
-                self.assertTrue(uses_random_characters,
-                    "RANDOM_CHARACTERS constant is defined but never used - this is dead code")
+                self.assertTrue(
+                    uses_random_characters,
+                    "RANDOM_CHARACTERS constant is defined but never used - this is dead code",
+                )
             if has_random_settings:
-                self.assertTrue(uses_random_settings,
-                    "RANDOM_SETTINGS constant is defined but never used - this is dead code")
+                self.assertTrue(
+                    uses_random_settings,
+                    "RANDOM_SETTINGS constant is defined but never used - this is dead code",
+                )
 
 
 if __name__ == "__main__":
