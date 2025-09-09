@@ -550,11 +550,14 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - ✅ EXPLICIT error handling - capture stderr and raise specific exceptions
 - **Pattern:** `subprocess.run(["cmd"], shell=False, timeout=30, check=True)`
 
-🚨 **IMPORT STANDARDS:** ⚠️ MANDATORY - Module-level imports only
-- ❌ NEVER use inline imports inside functions
-- ❌ NEVER use try-catch imports for optional dependencies
-- ✅ ALWAYS import at module level - fail fast if missing
-- **Pattern:** Handle optionality in logic, not imports
+🚨 **IMPORT STANDARDS:** ⚠️ MANDATORY - ZERO TOLERANCE IMPORT POLICY
+- ❌ **ABSOLUTELY FORBIDDEN**: try/except around imports (ANY context, ANY reason)
+- ❌ **ABSOLUTELY FORBIDDEN**: inline imports inside functions
+- ❌ **ABSOLUTELY FORBIDDEN**: conditional imports for optional dependencies
+- ✅ **MANDATORY PATTERN**: All imports at module level - fail fast if missing
+- ✅ **GRACEFUL HANDLING**: Handle optionality in logic/runtime, NEVER in imports
+- 🚨 **ZERO EXCEPTIONS**: No try/except imports even for "graceful fallbacks"
+- **Pattern:** `import module` → handle `module is None` in logic if needed
 
 ### Gemini SDK
 ✅ `from google import genai` | ✅ `client = genai.Client(api_key=api_key)`
