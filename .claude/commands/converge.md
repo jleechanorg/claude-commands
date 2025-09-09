@@ -137,10 +137,10 @@ Until: Success criteria fully met
   - Same validation scores for 2+ consecutive iterations
   - Unable to improve PR mergeability status
   - Repeated execution failures on same issue
-- **IF IMPROVING**: Meaningful progress on PRIMARY criteria → Continue (max 2 more iterations)
+- **IF IMPROVING**: Meaningful progress on PRIMARY criteria → Continue (up to 2 more iterations, but never exceeding the hard cap)
   - Measurable improvement in PR status or CI state
   - Successful resolution of blocking GitHub comments
-  - BUT: Hard cap at 10 iterations regardless of progress
+  - NOTE: The hard cap of 10 iterations always applies, overriding all other limits
 - **IF MAX ITERATIONS**: Absolute limit reached → STOP with partial report
 
 🔒 **AUTONOMY PRESERVATION**: No user intervention allowed during convergence decision process
