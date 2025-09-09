@@ -15,10 +15,9 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from world_logic import apply_automatic_combat_cleanup
-
 from firestore_service import update_state_with_changes
 from game_state import GameState
+from world_logic import apply_automatic_combat_cleanup
 
 
 class TestCombatCleanupComprehensive(unittest.TestCase):

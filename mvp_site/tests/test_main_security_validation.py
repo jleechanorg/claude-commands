@@ -21,9 +21,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-# Import proper fakes library 
+# Import proper fakes library
 from tests.fake_services import FakeServiceManager
-from tests.fake_firestore import FakeFirestoreClient
 
 # Use proper fakes library instead of manual MagicMock setup
 with FakeServiceManager() as fake_services:

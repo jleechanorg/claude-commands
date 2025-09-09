@@ -7,11 +7,10 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
+import gemini_service
 import pytest
 from gemini_response import GeminiResponse
 from narrative_response_schema import NarrativeResponse
-
-import gemini_service
 
 
 class TestJSONOnlyComprehensive(unittest.TestCase):

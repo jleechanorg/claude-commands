@@ -25,8 +25,8 @@ sys.path.insert(
 )
 
 import constants
-
 from firestore_service import add_story_entry
+
 from tests.fake_firestore import FakeFirestoreClient
 
 

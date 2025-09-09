@@ -19,9 +19,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
 os.environ["TESTING"] = "true"
 
-import pytest
-
 import firestore_service
+import pytest
 from game_state import GameState
 
 

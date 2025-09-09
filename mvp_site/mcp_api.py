@@ -26,22 +26,23 @@ import json
 import logging
 import os
 import sys
+import threading
 import traceback
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 # WorldArchitect imports
 import logging_util
 import world_logic
 
-# MCP imports
+# MCP imports  
 from mcp.server import Server
 from mcp.types import Resource, TextContent, Tool
 
-# Import stdio transport at module level (gated usage in run_server)
-try:
-    from mcp.server.stdio import stdio_server
-except ImportError:
-    stdio_server = None
+# Import stdio transport at module level - CLAUDE.md compliant
+# NOTE: If this import fails, the application will fail fast at startup
+# which is the correct behavior per CLAUDE.md import standards
+from mcp.server.stdio import stdio_server
 
 from firestore_service import json_default_serializer
 
@@ -226,16 +227,16 @@ async def handle_call_tool(name: str, arguments: dict[str, Any]) -> list[TextCon
 
     except Exception as e:
         logging_util.error(f"Tool {name} failed: {e}")
-        
+
         # Security fix: Only include traceback in development/testing, not production
-        is_production = os.environ.get('PRODUCTION_MODE', '').lower() == 'true'
+        is_production = os.environ.get("PRODUCTION_MODE", "").lower() == "true"
         error_response = {
             "error": str(e),
             "tool": name,
         }
         if not is_production:
             error_response["traceback"] = traceback.format_exc()
-        
+
         return [
             TextContent(
                 type="text",
@@ -466,106 +467,124 @@ def run_server():
     # This prevents false positives in CI, I/O redirection, or background processes
     no_tty = not sys.stdin.isatty() or not sys.stdout.isatty()
     claude_env_indicators = (
-        os.environ.get('CLAUDE_CODE') == '1' or  # Explicit Claude Code flag
-        os.environ.get('MCP_STDIO_MODE') == '1' or  # Explicit stdio mode flag
-        'claude' in os.environ.get('USER', '').lower() or  # Claude user context
-        'claude' in sys.argv[0].lower()  # Called from claude-related script
+        os.environ.get("CLAUDE_CODE") == "1"  # Explicit Claude Code flag
+        or os.environ.get("MCP_STDIO_MODE") == "1"  # Explicit stdio mode flag
+        or "claude" in os.environ.get("USER", "").lower()  # Claude user context
+        or "claude" in sys.argv[0].lower()  # Called from claude-related script
     )
     is_claude_code = no_tty and claude_env_indicators
-    
+
     parser = argparse.ArgumentParser(description="WorldArchitect.AI MCP Server")
     parser.add_argument("--port", type=int, default=8000, help="Port to run on")
     parser.add_argument("--host", default="localhost", help="Host to bind to")
-    parser.add_argument("--stdio", action="store_true", help="Use stdio transport only (for Claude Code)")
-    parser.add_argument("--http-only", action="store_true", help="Use HTTP transport only (legacy mode)")
-    parser.add_argument("--dual", action="store_true", default=True, help="Run both HTTP and stdio transports simultaneously (default)")
+    parser.add_argument(
+        "--stdio",
+        action="store_true",
+        help="Use stdio transport only (for Claude Code)",
+    )
+    parser.add_argument(
+        "--http-only", action="store_true", help="Use HTTP transport only (legacy mode)"
+    )
+    parser.add_argument(
+        "--dual",
+        action="store_true",
+        default=True,
+        help="Run both HTTP and stdio transports simultaneously (default)",
+    )
     args = parser.parse_args()
 
     # Set up logging first
-    logging_util.info(f"🔧 DEBUG: MCP server environment check:")
-    logging_util.info(f"  TESTING={os.environ.get('TESTING', 'UNSET')}")
-    logging_util.info(f"  MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE', 'UNSET')}")
+    logging_util.info("🔧 DEBUG: MCP server environment check:")
+    logging_util.info(
+        "  TESTING environment variable no longer affects production behavior"
+    )
+    logging_util.info(
+        f"  MOCK_SERVICES_MODE={os.environ.get('MOCK_SERVICES_MODE', 'UNSET')}"
+    )
     logging_util.info(f"  PRODUCTION_MODE={os.environ.get('PRODUCTION_MODE', 'UNSET')}")
-    
+
     # Override dual mode if specific transport is requested
-    if args.stdio or is_claude_code:
+    if args.stdio or is_claude_code or args.http_only:
         args.dual = False
-    elif args.http_only:
-        args.dual = False
-    
+
     # Auto-enable stdio-only mode when detected or explicitly requested
     if args.stdio or is_claude_code:
-        if stdio_server is None:
-            logging_util.error("stdio transport not available - install mcp package with stdio support")
-            sys.exit(1)
-            
         logging_util.info("Starting MCP server in stdio mode for Claude Code")
+
         async def main():
             async with stdio_server() as (read_stream, write_stream):
-                await server.run(read_stream, write_stream, server.create_initialization_options())
-        
+                await server.run(
+                    read_stream, write_stream, server.create_initialization_options()
+                )
+
         asyncio.run(main())
         return
-    
+
     # Handle dual transport mode (default behavior)
     if args.dual:
-        if stdio_server is None:
-            logging_util.warning("stdio transport not available - falling back to HTTP-only mode")
-        else:
-            logging_util.info(f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio")
-            
-            # Run dual transport using threading
-            import threading
-            from http.server import BaseHTTPRequestHandler, HTTPServer
-            
-            # HTTP handler for dual mode (simplified)
-            class DualMCPHandler(BaseHTTPRequestHandler):
-                def do_GET(self):
-                    if self.path == "/health":
-                        self.send_response(200)
-                        self.send_header("Content-type", "application/json")
-                        self.end_headers()
-                        health_status = {
-                            "status": "healthy", 
-                            "server": "world-logic",
-                            "transport": "dual",
-                            "http_port": args.port,
-                            "stdio_available": True
-                        }
-                        self.wfile.write(json.dumps(health_status).encode())
-                    else:
-                        self.send_response(404)
-                        self.end_headers()
-                
-                def log_message(self, format, *args):
-                    pass  # Suppress HTTP server logs
-            
-            # Start HTTP server in background
-            httpd = HTTPServer((args.host, args.port), DualMCPHandler)
-            http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-            http_thread.start()
-            logging_util.info(f"HTTP health endpoint started on http://{args.host}:{args.port}/health")
-            
-            # Run stdio transport in main thread
-            async def main():
-                async with stdio_server() as (read_stream, write_stream):
-                    await server.run(read_stream, write_stream, server.create_initialization_options())
-            
-            try:
-                asyncio.run(main())
-            except KeyboardInterrupt:
-                logging_util.info("Dual transport server shutdown")
-                httpd.shutdown()
-            return
+        logging_util.info(
+            f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio"
+        )
+
+        # Run dual transport using threading
+        # threading and HTTPServer already imported at module level
+
+        # HTTP handler for dual mode (simplified)
+        class DualMCPHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/health":
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    health_status = {
+                        "status": "healthy",
+                        "server": "world-logic",
+                        "transport": "dual",
+                        "http_port": args.port,
+                        "stdio_available": True,
+                    }
+                    self.wfile.write(json.dumps(health_status).encode())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def log_message(self, format, *args):
+                pass  # Suppress HTTP server logs
+
+        # Start HTTP server in background
+        httpd = HTTPServer((args.host, args.port), DualMCPHandler)
+        http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        http_thread.start()
+        logging_util.info(
+            f"HTTP health endpoint started on http://{args.host}:{args.port}/health"
+        )
+
+        # Run stdio transport in main thread
+        async def main():
+            async with stdio_server() as (read_stream, write_stream):
+                await server.run(
+                    read_stream,
+                    write_stream,
+                    server.create_initialization_options(),
+                )
+
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            logging_util.info("Dual transport server shutdown")
+            httpd.shutdown()
+        return
 
     # Fallback to HTTP-only mode
-    logging_util.info(f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)")
+    logging_util.info(
+        f"Starting World Logic MCP server on {args.host}:{args.port} (HTTP-only mode)"
+    )
 
     # Configure centralized logging
     setup_mcp_logging()
 
     # Run HTTP server with JSON-RPC support
-    from http.server import BaseHTTPRequestHandler, HTTPServer
+    # BaseHTTPRequestHandler and HTTPServer already imported at module level
 
     class MCPHandler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
@@ -600,11 +619,13 @@ def run_server():
 
                 except Exception as e:
                     logging_util.error(f"JSON-RPC error: {e}")
-                    
+
                     # Security fix: Only include traceback in development/testing, not production
-                    is_production = os.environ.get('PRODUCTION_MODE', '').lower() == 'true'
+                    is_production = (
+                        os.environ.get("PRODUCTION_MODE", "").lower() == "true"
+                    )
                     error_data = None if is_production else traceback.format_exc()
-                    
+
                     error_response = {
                         "jsonrpc": "2.0",
                         "error": {
@@ -640,7 +661,7 @@ def run_server():
 
                 # Use asyncio.run() instead of manual loop management for better performance
                 result = asyncio.run(handle_call_tool(tool_name, arguments))
-                
+
                 # Extract text content from result
                 if result and len(result) > 0 and hasattr(result[0], "text"):
                     result_data = json.loads(result[0].text)
@@ -649,10 +670,10 @@ def run_server():
 
                 return {"jsonrpc": "2.0", "result": result_data, "id": request_id}
 
-            elif method == "tools/list":
+            if method == "tools/list":
                 # Handle tools list using asyncio.run() for better performance
                 tools = asyncio.run(handle_list_tools())
-                
+
                 # Convert tools to JSON-serializable format
                 tools_data = [
                     {
@@ -668,10 +689,10 @@ def run_server():
                     "id": request_id,
                 }
 
-            elif method == "resources/list":
+            if method == "resources/list":
                 # Handle resources list using asyncio.run() for better performance
                 resources = asyncio.run(handle_list_resources())
-                
+
                 # Convert resources to JSON-serializable format
                 resources_data = [
                     {
@@ -688,19 +709,18 @@ def run_server():
                     "id": request_id,
                 }
 
-            elif method == "resources/read":
+            if method == "resources/read":
                 # Handle resource read
                 uri = params.get("uri")
 
                 # Use asyncio.run() instead of manual loop management for better performance
                 result = asyncio.run(handle_read_resource(uri))
                 return {"jsonrpc": "2.0", "result": result, "id": request_id}
-            else:
-                return {
-                    "jsonrpc": "2.0",
-                    "error": {"code": -32601, "message": f"Method not found: {method}"},
-                    "id": request_id,
-                }
+            return {
+                "jsonrpc": "2.0",
+                "error": {"code": -32601, "message": f"Method not found: {method}"},
+                "id": request_id,
+            }
 
         def log_message(self, format, *args):
             # Suppress default logging for cleaner output

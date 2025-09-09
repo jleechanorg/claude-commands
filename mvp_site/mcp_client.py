@@ -317,48 +317,46 @@ class MCPClient:
                                 "story": "Mock story",
                                 "game_state": {},
                             }
-                        else:  # process_action
-                            # Format response to match what main.py expects: story field with list of entries
-                            # Determine test narrative based on user input to support multiple end-to-end tests
-                            user_input = args.get("user_input", "")
-                            if "I begin my adventure" in user_input:
-                                # MCP protocol end-to-end test
-                                narrative_text = (
-                                    "The MCP protocol test hero enters the realm..."
-                                )
-                                return {
-                                    "success": True,
-                                    "story": [
-                                        {"text": narrative_text, "type": "narrative"}
-                                    ],
-                                    "narrative": narrative_text,
-                                    "entities_mentioned": ["Test Hero"],
-                                    "location_confirmed": "Test Realm",
-                                    "planning_block": "The adventure begins",
-                                    "dice_rolls": [],
-                                    "resources": "None",
-                                    "state_updates": {"hp": 100},
-                                    "sequence_id": "test-sequence-1",
+                        # process_action
+                        # Format response to match what main.py expects: story field with list of entries
+                        # Determine test narrative based on user input to support multiple end-to-end tests
+                        user_input = args.get("user_input", "")
+                        if "I begin my adventure" in user_input:
+                            # MCP protocol end-to-end test
+                            narrative_text = (
+                                "The MCP protocol test hero enters the realm..."
+                            )
+                            return {
+                                "success": True,
+                                "story": [
+                                    {"text": narrative_text, "type": "narrative"}
+                                ],
+                                "narrative": narrative_text,
+                                "entities_mentioned": ["Test Hero"],
+                                "location_confirmed": "Test Realm",
+                                "planning_block": "The adventure begins",
+                                "dice_rolls": [],
+                                "resources": "None",
+                                "state_updates": {"hp": 100},
+                                "sequence_id": "test-sequence-1",
+                            }
+                        # Continue story end-to-end test (Batch 2)
+                        return {
+                            "success": True,
+                            "story": [
+                                {
+                                    "text": "The story continues with new adventures...",
+                                    "type": "narrative",
                                 }
-                            else:
-                                # Continue story end-to-end test (Batch 2)
-                                return {
-                                    "success": True,
-                                    "story": [
-                                        {
-                                            "text": "The story continues with new adventures...",
-                                            "type": "narrative",
-                                        }
-                                    ],
-                                    "updated_state": {},
-                                }
-                    else:
-                        raise MCPClientError("Campaign not found", error_code=404)
-                elif tool_name == "get_user_settings":
+                            ],
+                            "updated_state": {},
+                        }
+                    raise MCPClientError("Campaign not found", error_code=404)
+                if tool_name == "get_user_settings":
                     return {"success": True, "settings": {}}
-                elif tool_name == "update_user_settings":
+                if tool_name == "update_user_settings":
                     return {"success": True}
-                elif tool_name == "create_campaign":
+                if tool_name == "create_campaign":
                     # Smart mock for create_campaign - check for malformed requests
                     args = arguments or {}
 
@@ -367,15 +365,14 @@ class MCPClient:
                         raise MCPClientError(
                             "Missing required campaign fields", error_code=400
                         )
-                    else:
-                        # Generate a mock campaign ID for testing and track it
-                        campaign_id = str(uuid.uuid4())
-                        mock_campaigns.add(campaign_id)
-                        logger.info(
-                            f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}"
-                        )
-                        return {"success": True, "campaign_id": campaign_id}
-                elif tool_name == "export_campaign":
+                    # Generate a mock campaign ID for testing and track it
+                    campaign_id = str(uuid.uuid4())
+                    mock_campaigns.add(campaign_id)
+                    logger.info(
+                        f"🔧 DEBUG: Created mock campaign {campaign_id}, total campaigns: {len(mock_campaigns)}"
+                    )
+                    return {"success": True, "campaign_id": campaign_id}
+                if tool_name == "export_campaign":
                     # Smart mock for export_campaign - check parameters for error conditions
                     args = arguments or {}
                     campaign_id = args.get("campaign_id", "")
@@ -386,26 +383,24 @@ class MCPClient:
                         campaign_id and campaign_id not in mock_campaigns
                     ):
                         raise MCPClientError("Campaign not found", error_code=404)
-                    elif export_format not in ["txt", "pdf", "json"]:
+                    if export_format not in ["txt", "pdf", "json"]:
                         raise MCPClientError("Invalid export format", error_code=400)
-                    else:
-                        # Create a temporary file for successful mock export
-                        temp_file = tempfile.NamedTemporaryFile(
-                            mode="w", suffix=f".{export_format}", delete=False
-                        )
-                        temp_file.write("Mock campaign export content for testing")
-                        temp_file.close()
-                        return {
-                            "success": True,
-                            "export_path": temp_file.name,
-                            "campaign_title": "Test Campaign",
-                        }
-                elif os.getenv("TESTING") == "true":
-                    return {"success": True, "result": f"Mock response for {tool_name}"}
-                else:
-                    raise MCPClientError(
-                        "Service temporarily unavailable", error_code=503
+                    # Create a temporary file for successful mock export
+                    temp_file = tempfile.NamedTemporaryFile(
+                        mode="w", suffix=f".{export_format}", delete=False
                     )
+                    temp_file.write("Mock campaign export content for testing")
+                    temp_file.close()
+                    return {
+                        "success": True,
+                        "export_path": temp_file.name,
+                        "campaign_title": "Test Campaign",
+                    }
+                # For unknown tools in testing, return a generic success response
+                # instead of failing with 503 to prevent test cascade failures
+                if os.getenv("TESTING") == "true":
+                    return {"success": True, "result": f"Mock response for {tool_name}"}
+                raise MCPClientError("Service temporarily unavailable", error_code=503)
 
             # Map tool names to world_logic.py functions
             tool_mapping = {

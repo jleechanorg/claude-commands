@@ -18,11 +18,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
-
 from game_state import GameState
+from gemini_response import GeminiResponse
 from gemini_service import continue_story, get_initial_story
+from narrative_response_schema import NarrativeResponse
 
 
 class TestGeminiResponse(unittest.TestCase):

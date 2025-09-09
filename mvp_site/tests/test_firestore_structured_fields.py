@@ -15,7 +15,6 @@ sys.path.insert(
 )
 
 import constants
-
 from firestore_service import add_story_entry
 
 

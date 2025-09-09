@@ -10,20 +10,16 @@ RED: Temporarily break the field format to ensure test catches it
 GREEN: Fix the field format and ensure test passes
 """
 
-import asyncio
-import json
 import os
 import sys
 import unittest
-from types import ModuleType
-from unittest.mock import MagicMock, patch
 
 # Add tests directory to path for imports when run as standalone script
 tests_dir = os.path.dirname(os.path.abspath(__file__))
 if tests_dir not in sys.path:
     sys.path.insert(0, tests_dir)
 
-from fake_firestore import FakeFirestoreClient, FakeGeminiResponse, FakeTokenCount
+from fake_firestore import FakeFirestoreClient
 
 # Set TESTING environment variable
 os.environ["TESTING"] = "true"
@@ -66,7 +62,7 @@ class TestFieldFormatValidation(unittest.TestCase):
         if os.environ.get('TESTING') == 'true':
             self.skipTest("Integration test skipped in TESTING environment")
             return
-            
+
         try:
             # Try to import main and world_logic to test field format consistency
             from main import create_app

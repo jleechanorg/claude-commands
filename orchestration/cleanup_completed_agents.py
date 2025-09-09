@@ -6,19 +6,15 @@ This script identifies and cleans up completed tmux agents that are sitting idle
 Agents are considered completed if they have completion markers in their logs.
 """
 
+import argparse
+import json
 import os
 import subprocess
-import json
+import sys
 import time
 from pathlib import Path
-from typing import List, Dict, Set, Any
-
-# Import shared constants
-try:
-    from .constants import IDLE_MINUTES_THRESHOLD
-except ImportError:
-    # Fallback for direct execution
-    from constants import IDLE_MINUTES_THRESHOLD
+from typing import Any, Dict, List, Set
+from constants import IDLE_MINUTES_THRESHOLD
 
 
 def get_tmux_sessions() -> List[str]:
@@ -26,6 +22,7 @@ def get_tmux_sessions() -> List[str]:
     try:
         result = subprocess.run(
             ["tmux", "list-sessions", "-F", "#{session_name}"],
+            shell=False,
             capture_output=True,
             text=True,
             check=True,
@@ -97,6 +94,7 @@ def check_agent_completion(agent_name: str) -> Dict[str, Any]:
         # Check last 50 lines for completion markers
         result = subprocess.run(
             ["tail", "-50", log_path],
+            shell=False,
             capture_output=True,
             text=True,
             timeout=30
@@ -144,6 +142,7 @@ def check_session_timeout(session_name: str) -> Dict[str, Any]:
         # Get session activity timestamp using display-message for specific session
         result = subprocess.run(
             ["tmux", "display-message", "-p", "-t", session_name, "#{session_activity}"],
+            shell=False,
             capture_output=True,
             text=True,
             check=True,
@@ -200,6 +199,7 @@ def cleanup_agent_session(agent_name: str, dry_run: bool = False) -> bool:
             # Kill the tmux session
             subprocess.run(
                 ["tmux", "kill-session", "-t", agent_name],
+                shell=False,
                 check=True,
                 timeout=30
             )
@@ -316,7 +316,6 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
 
 def main():
     """Main entry point."""
-    import argparse
 
     parser = argparse.ArgumentParser(description="Cleanup completed tmux agents")
     parser.add_argument(
