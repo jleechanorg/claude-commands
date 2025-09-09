@@ -13,7 +13,7 @@ import unittest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts'))
 
 # Add commands directory to path for commentreply module
-commands_dir = os.path.join(os.path.dirname(__file__), '..', '..')
+commands_dir = os.path.join(os.path.dirname(__file__), '..')
 sys.path.insert(0, commands_dir)
 
 from pr_comment_formatter import (
