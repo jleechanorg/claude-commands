@@ -80,6 +80,18 @@ Runs `/conv` (convergence) and `/copilot` in an autonomous loop until all seriou
 - **During execution**: All commits stay on same branch
 - **After execution**: Push updates to same PR, never create new PR
 
+**GUARDRAILS & ENFORCEMENT (REQUIRED):**
+- **Preflight:**
+  - Resolve PR number and target branch via GitHub API
+  - Verify `git rev-parse --abbrev-ref HEAD` == PR branch; abort if mismatch
+  - Refuse to run if there is any uncommitted worktree state that could trigger unintended branch ops
+- **Runtime:**
+  - Disallow any command that opens a new PR (e.g., `/pushl --create-pr`); abort with error
+  - Block `git checkout -b`, `git switch -c`, or branch-renaming commands
+  - Ensure all pushes target the PR branch and the same PR number
+- **Failure handling:**
+  - If any guard triggers, stop immediately, post a PR comment with the violation details, and exit `FAILURE`
+
 **EXIT CRITERIA ENFORCEMENT:**
 - Success = Comments resolved ON CURRENT PR
 - Failure = Creating duplicate/new PRs instead of fixing existing one
