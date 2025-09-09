@@ -35,11 +35,7 @@ import logging_util
 import requests
 from flask import Request, Response
 
-# Firestore import with error handling
-try:
-    import firestore_service
-except ImportError:
-    firestore_service = None
+import firestore_service
 
 
 # Initialize logging
