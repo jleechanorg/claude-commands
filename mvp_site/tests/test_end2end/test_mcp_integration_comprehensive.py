@@ -9,12 +9,18 @@ This supplements the existing Flask-only end2end tests with true MCP server inte
 """
 
 import asyncio
+import json
 import os
 import subprocess
 import sys
 import time
 import unittest
 from unittest.mock import patch
+
+try:
+    import requests
+except ImportError:
+    requests = None
 
 # Set environment variables for MCP testing
 os.environ["TESTING"] = "true"
@@ -24,8 +30,8 @@ os.environ["TESTING"] = "true"
 # Add parent directories to path for imports
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
-from main import create_app
-from mcp_client import MCPClient
+from main import create_app  # noqa: E402
+from mcp_client import MCPClient  # noqa: E402
 
 
 class TestMCPIntegrationComprehensive(unittest.TestCase):
@@ -57,7 +63,8 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             time.sleep(2)
 
             # Verify MCP server is running
-            import requests
+            if requests is None:
+                raise Exception("requests module not available")
 
             response = requests.get(f"http://localhost:{cls.mcp_port}", timeout=5)
             if response.status_code != 200:
@@ -162,7 +169,8 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         # Test direct MCP server health
         try:
-            import requests
+            if requests is None:
+                self.skipTest("requests module not available")
 
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}", timeout=5
@@ -274,10 +282,8 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_event_loop_performance_bug(self):
         """Test that MCP does NOT create new event loops per request (RED test - should fail initially)."""
-        import json
-        from unittest.mock import patch
-
-        import requests
+        if requests is None:
+            self.skipTest("requests module not available")
 
         # Track event loop creation calls
         original_new_event_loop = asyncio.new_event_loop
@@ -340,10 +346,8 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_production_traceback_security_bug(self):
         """Test that MCP does NOT expose tracebacks in production mode (RED test - should fail initially)."""
-        import json
-        import os
-
-        import requests
+        if requests is None:
+            self.skipTest("requests module not available")
 
         # Set production mode environment variable
         original_production_mode = os.environ.get("PRODUCTION_MODE")
