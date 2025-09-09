@@ -467,7 +467,6 @@ class ClaudeCommandsExporter:
             if response.status_code == 200:
                 content = response.text
                 # Look for version patterns like ### v1.2.3
-                import re
                 versions = re.findall(r'### v(\d+\.\d+\.\d+)', content)
                 if versions:
                     # Return the latest version (first one found, assuming newest first)
@@ -486,7 +485,6 @@ class ClaudeCommandsExporter:
             if response.status_code == 200:
                 existing_content = response.text
                 # Extract the version history section
-                import re
                 version_section_match = re.search(r'## 📚 Version History\s*\n\n(.*?)(?=\n---|\nGenerated with|\Z)', existing_content, re.DOTALL)
                 if version_section_match:
                     existing_history = version_section_match.group(1).strip()
