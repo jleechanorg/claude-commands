@@ -151,12 +151,12 @@ class MemoryIntegration:
                     if hours_ago < 24:
                         recency_bonus = 0.1 * (1 - hours_ago / 24)  # Up to 0.1 bonus
                         score += recency_bonus
-                except Exception:
+                except Exception as e:
                     # Skip recency bonus if timestamp parsing fails
-                    pass
-        except Exception:
+                    logger.debug(f"Failed to parse timestamp for recency bonus: {e}")
+        except Exception as e:
             # Skip recency calculation if no timestamp data available
-            pass
+            logger.debug(f"No timestamp data available for recency calculation: {e}")
 
         return min(1.0, score)
 
@@ -170,7 +170,8 @@ class MemoryIntegration:
             logger.debug(
                 f"Memory MCP search for '{query}' returned {len(results)} results"
             )
-            return results
+            # Type cast to satisfy mypy
+            return list(results) if results else []
 
         except ImportError:
             # No fallback - MCP tools are not accessible from Python
@@ -206,10 +207,13 @@ class MemoryIntegration:
 
         # Check hot cache first
         cache_key = f"search:{':'.join(sorted(terms))}"
-        if cache_key in self.hot_cache:
-            if time.time() - self.cache_timestamps[cache_key] < 300:  # 5 min TTL
-                self.metrics.record_query(True, time.time() - start_time)
-                return self.hot_cache[cache_key]
+        if (
+            cache_key in self.hot_cache
+            and time.time() - self.cache_timestamps[cache_key] < 300
+        ):  # 5 min TTL
+            self.metrics.record_query(True, time.time() - start_time)
+            cached_result: list[dict[str, Any]] = self.hot_cache[cache_key]
+            return cached_result
 
         try:
             # Use real Memory MCP functions - integrate directly with Claude Code MCP

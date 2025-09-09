@@ -55,8 +55,11 @@ validate_path() {
         return 1
     fi
 
-    # Check for null bytes
-    if [[ "$path" =~ $'\x00' ]]; then
+    # Check for null bytes.
+    # Previous approach used a regex to detect null bytes, but this could
+    # incorrectly flag valid paths containing certain escape sequences or binary data,
+    # resulting in false positives. This approach uses byte length comparison for reliability.
+    if [ "${#path}" -ne "$(printf '%s' "$path" | wc -c)" ]; then
         echo "ERROR: Null byte detected in $context: $path" >&2
         return 1
     fi
@@ -111,7 +114,24 @@ get_clean_hostname() {
 # Initialize backup destination - called lazily to prevent sourcing issues
 init_destination() {
     DEVICE_NAME="$(get_clean_hostname)" || return 1
-    DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+
+    # Platform-specific default backup directories
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations, fallback to Documents
+        if [ -d "$HOME/Dropbox" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Dropbox/claude_backup_$DEVICE_NAME"
+        elif [ -d "$HOME/Documents" ]; then
+            DEFAULT_BACKUP_DIR="$HOME/Documents/claude_backup_$DEVICE_NAME"
+        else
+            DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+    fi
 
     if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
         # Parameter provided and it's not a flag - append device suffix
@@ -221,7 +241,7 @@ backup_to_destination() {
     # Run rsync with proper error logging and extended attributes support
     # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
     rsync -av \
-        --extended-attributes \
+        --xattrs \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -263,7 +283,7 @@ backup_to_destination() {
         local rsync_errors2="$SECURE_TEMP/rsync_errors_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
 
         rsync -av \
-            --extended-attributes \
+            --xattrs \
             --include='.claude.json' \
             --include='.claude.json.backup*' \
             --exclude='*' \
@@ -337,7 +357,8 @@ Log File: $LOG_FILE
 
 TROUBLESHOOTING:
 ===============
-- Verify macOS CloudStorage path: ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (macOS): ls -la "$HOME/Library/CloudStorage/Dropbox"
+- Verify backup path (Linux): ls -la "$HOME/Dropbox" or "$HOME/Documents"
 - Verify rsync installation: which rsync
 - Check source directory: ls -la $SOURCE_DIR
 - Review full log: cat $LOG_FILE
@@ -443,7 +464,8 @@ EMAIL SETUP (for failure alerts):
 
 BACKUP TARGETS:
     Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (macOS): ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
+    Default (Linux): ~/Dropbox/claude_backup_HOSTNAME or ~/Documents/claude_backup_HOSTNAME
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:
