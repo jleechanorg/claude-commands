@@ -365,6 +365,17 @@ def get_file_changes():
 
 def main():
     """Main execution function"""
+    import sys
+
+    # Check for PR number argument
+    target_pr = None
+    if len(sys.argv) > 1:
+        try:
+            target_pr = int(sys.argv[1])
+        except ValueError:
+            print(f"❌ Invalid PR number: {sys.argv[1]}")
+            return
+
     print("🔍 Comprehensive Git Status Dashboard")
     print("=" * 50)
 
@@ -385,7 +396,7 @@ def main():
         print("⚠️  No upstream branch configured")
 
     # PR information with CI status
-    pr_number = get_pr_number()
+    pr_number = target_pr if target_pr else get_pr_number()
     if pr_number:
         owner, repo = get_repo_info()
         if owner and repo:
