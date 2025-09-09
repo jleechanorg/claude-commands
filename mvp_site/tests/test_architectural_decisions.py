@@ -134,8 +134,11 @@ class TestArchitecturalDecisions(unittest.TestCase):
             if "entity_tracking" in sys.modules:
                 del sys.modules["entity_tracking"]
 
+            # Get fresh module reference after sys.modules deletion
+            entity_tracking_fresh = importlib.import_module("entity_tracking")
+
             # Should still be Pydantic
-            assert entity_tracking.VALIDATION_TYPE == "Pydantic"
+            assert entity_tracking_fresh.VALIDATION_TYPE == "Pydantic"
 
         finally:
             if old_env is not None:
