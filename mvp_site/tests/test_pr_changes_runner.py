@@ -10,9 +10,17 @@ import sys
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-import constants
-from entity_tracking import create_from_game_state
-from game_state import GameState
+
+try:
+    import constants
+    from entity_tracking import create_from_game_state
+    from game_state import GameState
+    MODULES_AVAILABLE = True
+except ImportError:
+    constants = None
+    create_from_game_state = None
+    GameState = None
+    MODULES_AVAILABLE = False
 
 
 def run_pr_change_tests():

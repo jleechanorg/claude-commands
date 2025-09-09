@@ -16,7 +16,12 @@ from unittest.mock import MagicMock, patch
 project_root = os.path.join(os.path.dirname(__file__), '..', '..')
 sys.path.insert(0, os.path.join(project_root, '.claude', 'commands', '_copilot_modules'))
 
-from utils import GitCommands
+try:
+    from utils import GitCommands
+    UTILS_AVAILABLE = True
+except ImportError:
+    GitCommands = None
+    UTILS_AVAILABLE = False
 
 
 class TestSubprocessSecurity(unittest.TestCase):

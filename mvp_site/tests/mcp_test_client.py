@@ -16,23 +16,25 @@ class MCPTestClient:
 
     def __init__(self, base_url: str = "http://localhost:8000"):
         """Initialize MCP test client.
-        
+
         Args:
             base_url: Base URL of the MCP server
         """
         self.base_url = base_url
         self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'User-Agent': 'WorldArchitect-MCP-TestClient/1.0'
-        })
+        self.session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "User-Agent": "WorldArchitect-MCP-TestClient/1.0",
+            }
+        )
 
     def health_check(self) -> dict[str, Any]:
         """Check server health status.
-        
+
         Returns:
             Health status response
-            
+
         Raises:
             requests.RequestException: If request fails
         """
@@ -40,26 +42,23 @@ class MCPTestClient:
         response.raise_for_status()
         return response.json()
 
-    def json_rpc_request(self, method: str, params: dict | None = None,
-                        request_id: str | int = 1) -> dict[str, Any]:
+    def json_rpc_request(
+        self, method: str, params: dict | None = None, request_id: str | int = 1
+    ) -> dict[str, Any]:
         """Send JSON-RPC 2.0 request to MCP server.
-        
+
         Args:
             method: JSON-RPC method name
             params: Method parameters (optional)
             request_id: Request identifier
-            
+
         Returns:
             JSON-RPC response
-            
+
         Raises:
             requests.RequestException: If request fails
         """
-        payload = {
-            "jsonrpc": "2.0",
-            "method": method,
-            "id": request_id
-        }
+        payload = {"jsonrpc": "2.0", "method": method, "id": request_id}
 
         if params is not None:
             payload["params"] = params
@@ -70,7 +69,7 @@ class MCPTestClient:
 
     def list_tools(self) -> list[dict[str, Any]]:
         """List available MCP tools.
-        
+
         Returns:
             List of tool definitions
         """
@@ -81,7 +80,7 @@ class MCPTestClient:
 
     def list_resources(self) -> list[dict[str, Any]]:
         """List available MCP resources.
-        
+
         Returns:
             List of resource definitions
         """
@@ -92,10 +91,10 @@ class MCPTestClient:
 
     def read_resource(self, uri: str) -> str:
         """Read MCP resource content.
-        
+
         Args:
             uri: Resource URI to read
-            
+
         Returns:
             Resource content
         """
@@ -106,30 +105,27 @@ class MCPTestClient:
 
     def call_tool(self, name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call MCP tool.
-        
+
         Args:
             name: Tool name
             arguments: Tool arguments
-            
+
         Returns:
             Tool execution result
         """
-        params = {
-            "name": name,
-            "arguments": arguments
-        }
+        params = {"name": name, "arguments": arguments}
         return self.json_rpc_request("tools/call", params)
 
     # Convenience methods for specific tools
 
     def create_campaign(self, user_id: str, title: str, **kwargs) -> dict[str, Any]:
         """Create a new campaign.
-        
+
         Args:
             user_id: Firebase user ID
             title: Campaign title
             **kwargs: Additional campaign parameters
-            
+
         Returns:
             Campaign creation result
         """
@@ -139,81 +135,84 @@ class MCPTestClient:
 
     def get_campaign_state(self, user_id: str, campaign_id: str) -> dict[str, Any]:
         """Get campaign state.
-        
+
         Args:
             user_id: Firebase user ID
             campaign_id: Campaign identifier
-            
+
         Returns:
             Campaign state data
         """
-        return self.call_tool("get_campaign_state", {
-            "user_id": user_id,
-            "campaign_id": campaign_id
-        })
+        return self.call_tool(
+            "get_campaign_state", {"user_id": user_id, "campaign_id": campaign_id}
+        )
 
-    def process_action(self, user_id: str, campaign_id: str, user_input: str,
-                      mode: str = "character") -> dict[str, Any]:
+    def process_action(
+        self, user_id: str, campaign_id: str, user_input: str, mode: str = "character"
+    ) -> dict[str, Any]:
         """Process user action in campaign.
-        
+
         Args:
             user_id: Firebase user ID
             campaign_id: Campaign identifier
             user_input: User's action or dialogue
             mode: Interaction mode (character/narrator)
-            
+
         Returns:
             Action processing result
         """
-        return self.call_tool("process_action", {
-            "user_id": user_id,
-            "campaign_id": campaign_id,
-            "user_input": user_input,
-            "mode": mode
-        })
+        return self.call_tool(
+            "process_action",
+            {
+                "user_id": user_id,
+                "campaign_id": campaign_id,
+                "user_input": user_input,
+                "mode": mode,
+            },
+        )
 
-    def update_campaign(self, user_id: str, campaign_id: str,
-                       updates: dict[str, Any]) -> dict[str, Any]:
+    def update_campaign(
+        self, user_id: str, campaign_id: str, updates: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update campaign metadata.
-        
+
         Args:
             user_id: Firebase user ID
             campaign_id: Campaign identifier
             updates: Fields to update
-            
+
         Returns:
             Update result
         """
-        return self.call_tool("update_campaign", {
-            "user_id": user_id,
-            "campaign_id": campaign_id,
-            "updates": updates
-        })
+        return self.call_tool(
+            "update_campaign",
+            {"user_id": user_id, "campaign_id": campaign_id, "updates": updates},
+        )
 
-    def export_campaign(self, user_id: str, campaign_id: str,
-                       format: str = "pdf") -> dict[str, Any]:
+    def export_campaign(
+        self, user_id: str, campaign_id: str, format: str = "pdf"
+    ) -> dict[str, Any]:
         """Export campaign to document format.
-        
+
         Args:
             user_id: Firebase user ID
             campaign_id: Campaign identifier
             format: Export format (pdf/docx/txt)
-            
+
         Returns:
             Export result
         """
-        return self.call_tool("export_campaign", {
-            "user_id": user_id,
-            "campaign_id": campaign_id,
-            "format": format
-        })
+        return self.call_tool(
+            "export_campaign",
+            {"user_id": user_id, "campaign_id": campaign_id, "format": format},
+        )
 
     def get_campaigns_list(self, user_id: str) -> dict[str, Any]:
         """Get list of user campaigns.
-        
+
         Args:
             user_id: Firebase user ID
-            
+
         Returns:
             Campaigns list
         """
@@ -221,30 +220,30 @@ class MCPTestClient:
 
     def get_user_settings(self, user_id: str) -> dict[str, Any]:
         """Get user settings.
-        
+
         Args:
             user_id: Firebase user ID
-            
+
         Returns:
             User settings
         """
         return self.call_tool("get_user_settings", {"user_id": user_id})
 
-    def update_user_settings(self, user_id: str,
-                           settings: dict[str, Any]) -> dict[str, Any]:
+    def update_user_settings(
+        self, user_id: str, settings: dict[str, Any]
+    ) -> dict[str, Any]:
         """Update user settings.
-        
+
         Args:
             user_id: Firebase user ID
             settings: Settings to update
-            
+
         Returns:
             Update result
         """
-        return self.call_tool("update_user_settings", {
-            "user_id": user_id,
-            "settings": settings
-        })
+        return self.call_tool(
+            "update_user_settings", {"user_id": user_id, "settings": settings}
+        )
 
 
 class MCPTestSuite:
@@ -252,7 +251,7 @@ class MCPTestSuite:
 
     def __init__(self, client: MCPTestClient):
         """Initialize test suite.
-        
+
         Args:
             client: MCP test client instance
         """
@@ -262,11 +261,11 @@ class MCPTestSuite:
 
     def run_test(self, test_name: str, test_func) -> bool:
         """Run individual test and record result.
-        
+
         Args:
             test_name: Name of the test
             test_func: Test function to execute
-            
+
         Returns:
             True if test passed, False otherwise
         """
@@ -293,9 +292,14 @@ class MCPTestSuite:
         assert len(tools) >= 8  # Expected number of tools
 
         expected_tools = {
-            "create_campaign", "get_campaign_state", "process_action",
-            "update_campaign", "export_campaign", "get_campaigns_list",
-            "get_user_settings", "update_user_settings"
+            "create_campaign",
+            "get_campaign_state",
+            "process_action",
+            "update_campaign",
+            "export_campaign",
+            "get_campaigns_list",
+            "get_user_settings",
+            "update_user_settings",
         }
 
         actual_tools = {tool["name"] for tool in tools}
@@ -310,7 +314,7 @@ class MCPTestSuite:
         expected_uris = {
             "worldarchitect://campaigns",
             "worldarchitect://game-rules",
-            "worldarchitect://prompts"
+            "worldarchitect://prompts",
         }
 
         actual_uris = {resource["uri"] for resource in resources}
@@ -329,7 +333,7 @@ class MCPTestSuite:
             user_id=self.test_user_id,
             title="Test Campaign",
             character="Test character",
-            setting="Test setting"
+            setting="Test setting",
         )
 
         assert "result" in campaign_result
@@ -350,8 +354,7 @@ class MCPTestSuite:
 
         # Update settings
         update_result = self.client.update_user_settings(
-            self.test_user_id,
-            {"theme": "dark", "auto_save": True}
+            self.test_user_id, {"theme": "dark", "auto_save": True}
         )
         assert "result" in update_result
 
@@ -373,7 +376,7 @@ class MCPTestSuite:
 
     def run_all_tests(self) -> dict[str, Any]:
         """Run all tests in the suite.
-        
+
         Returns:
             Test results summary
         """
@@ -409,18 +412,22 @@ class MCPTestSuite:
             "total": total,
             "passed": passed,
             "failed": total - passed,
-            "results": self.results
+            "results": self.results,
         }
 
 
 def main():
     """Main test execution function."""
     parser = argparse.ArgumentParser(description="MCP Test Client")
-    parser.add_argument("--server", default="http://localhost:8000",
-                       help="MCP server URL")
-    parser.add_argument("--test", choices=[
-        "health", "tools", "resources", "campaign", "settings", "all"
-    ], default="all", help="Test to run")
+    parser.add_argument(
+        "--server", default="http://localhost:8000", help="MCP server URL"
+    )
+    parser.add_argument(
+        "--test",
+        choices=["health", "tools", "resources", "campaign", "settings", "all"],
+        default="all",
+        help="Test to run",
+    )
 
     args = parser.parse_args()
 

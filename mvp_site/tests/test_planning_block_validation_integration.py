@@ -13,8 +13,15 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from game_state import GameState
-from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block
+try:
+    from game_state import GameState
+    from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block
+    MODULES_AVAILABLE = True
+except ImportError:
+    GameState = None
+    NarrativeResponse = None
+    _validate_and_enforce_planning_block = None
+    MODULES_AVAILABLE = False
 
 
 class TestPlanningBlockValidationIntegration(unittest.TestCase):

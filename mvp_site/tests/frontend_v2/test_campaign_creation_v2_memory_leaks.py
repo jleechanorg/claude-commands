@@ -3,6 +3,7 @@
 Test for CampaignCreationV2 memory leak fixes
 Tests that all timeouts and intervals are properly cleaned up on component unmount
 """
+
 import os
 import sys
 import time
@@ -25,10 +26,12 @@ except ImportError:
 # Import Playwright at module level
 try:
     from playwright.sync_api import sync_playwright
+
     PLAYWRIGHT_AVAILABLE = True
 except ImportError:
     PLAYWRIGHT_AVAILABLE = False
     sync_playwright = None
+
 
 class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
     """Test memory leak fixes in CampaignCreationV2 component"""
@@ -36,10 +39,16 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
     def setUp(self):
         super().setUp()
         self.base_url = "http://localhost:8081"
-        self.test_mode_url = f"{self.base_url}?test_mode=true&test_user_id=test-user-123"
+        self.test_mode_url = (
+            f"{self.base_url}?test_mode=true&test_user_id=test-user-123"
+        )
 
         # Detect CI environment or testing mode
-        self.is_ci = bool(os.environ.get('CI') or os.environ.get('GITHUB_ACTIONS') or os.environ.get('TESTING'))
+        self.is_ci = bool(
+            os.environ.get("CI")
+            or os.environ.get("GITHUB_ACTIONS")
+            or os.environ.get("TESTING")
+        )
 
         # Check if server is running (skip in CI)
         if self.is_ci:
@@ -52,7 +61,7 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
                 self.server_running = False
 
         # Initialize Playwright browser if needed
-        if not hasattr(self, 'page') and self.server_running and PLAYWRIGHT_AVAILABLE:
+        if not hasattr(self, "page") and self.server_running and PLAYWRIGHT_AVAILABLE:
             self.playwright = sync_playwright().start()
             self.browser = self.playwright.chromium.launch(headless=True)
             self.page = self.browser.new_page()
@@ -63,7 +72,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         if not self.server_running:
             if self.is_ci:
-                self.assertTrue(True, "CI environment detected - server dependency test skipped")
+                self.assertTrue(
+                    True, "CI environment detected - server dependency test skipped"
+                )
                 return
             self.fail("Server not running on localhost:8081")
 
@@ -80,7 +91,7 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         title_input.fill("Memory Leak Test Campaign")
 
         # Select campaign type (should be Dragon Knight by default)
-        self.click('text=Dragon Knight Campaign')
+        self.click("text=Dragon Knight Campaign")
 
         # Fill character name
         character_input = self.page.locator('input[placeholder*="knight character"]')
@@ -88,7 +99,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         # Navigate to step 2
         self.click('button:has-text("Next")')
-        self.wait_for_element('h2:has-text("Choose Your AI\'s Expertise")', timeout=5000)
+        self.wait_for_element(
+            'h2:has-text("Choose Your AI\'s Expertise")', timeout=5000
+        )
 
         # Navigate to step 3
         self.click('button:has-text("Next")')
@@ -96,45 +109,47 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         # Start campaign creation process to activate timers
         create_button = self.page.locator('button:has-text("Begin Adventure!")')
-        self.assertTrue(create_button.is_visible(), "Create campaign button should be visible")
+        self.assertTrue(
+            create_button.is_visible(), "Create campaign button should be visible"
+        )
 
         # Use JavaScript to track active timers before clicking
         timer_count_before = self.page.evaluate("""
             // Count active timeouts and intervals
             let timeoutCount = 0;
             let intervalCount = 0;
-            
+
             // Monkey patch setTimeout to count active timeouts
             const originalSetTimeout = window.setTimeout;
             const originalClearTimeout = window.clearTimeout;
             const originalSetInterval = window.setInterval;
             const originalClearInterval = window.clearInterval;
-            
+
             const activeTimeouts = new Set();
             const activeIntervals = new Set();
-            
+
             window.setTimeout = function(...args) {
                 const id = originalSetTimeout.apply(this, args);
                 activeTimeouts.add(id);
                 return id;
             };
-            
+
             window.clearTimeout = function(id) {
                 activeTimeouts.delete(id);
                 return originalClearTimeout.apply(this, arguments);
             };
-            
+
             window.setInterval = function(...args) {
                 const id = originalSetInterval.apply(this, args);
                 activeIntervals.add(id);
                 return id;
             };
-            
+
             window.clearInterval = function(id) {
                 activeIntervals.delete(id);
                 return originalClearInterval.apply(this, arguments);
             };
-            
+
             return {
                 timeouts: activeTimeouts.size,
                 intervals: activeIntervals.size
@@ -167,7 +182,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
             };
         """)
 
-        self.assertTrue(timer_count_after['success'], "Timer cleanup verification should succeed")
+        self.assertTrue(
+            timer_count_after["success"], "Timer cleanup verification should succeed"
+        )
         print(f"✅ {timer_count_after['message']}")
 
     def test_error_handling_clears_timers(self):
@@ -176,7 +193,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         if not self.server_running:
             if self.is_ci:
-                self.assertTrue(True, "CI environment detected - server dependency test skipped")
+                self.assertTrue(
+                    True, "CI environment detected - server dependency test skipped"
+                )
                 return
             self.fail("Server not running on localhost:8081")
 
@@ -191,7 +210,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         # Navigate through steps quickly
         self.click('button:has-text("Next")')
-        self.wait_for_element('h2:has-text("Choose Your AI\'s Expertise")', timeout=5000)
+        self.wait_for_element(
+            'h2:has-text("Choose Your AI\'s Expertise")', timeout=5000
+        )
 
         self.click('button:has-text("Next")')
         self.wait_for_element('h2:has-text("Ready to Launch!")', timeout=5000)
@@ -213,14 +234,14 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         create_button.click()
 
         # Wait for progress to start
-        self.wait_for_element('text=Creating Your Campaign', timeout=5000)
+        self.wait_for_element("text=Creating Your Campaign", timeout=5000)
 
         # Wait for error to appear
-        error_element = self.page.locator('.bg-red-900\\/50')
+        error_element = self.page.locator(".bg-red-900\\/50")
         self.wait_for_element(error_element, timeout=15000)
 
         # Verify error message appears
-        error_text = self.page.locator('text=Campaign creation failed')
+        error_text = self.page.locator("text=Campaign creation failed")
         self.assertTrue(error_text.is_visible(), "Error message should be visible")
 
         print("✅ Error handling properly clears timers on failure")
@@ -231,7 +252,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         if not self.server_running:
             if self.is_ci:
-                self.assertTrue(True, "CI environment detected - server dependency test skipped")
+                self.assertTrue(
+                    True, "CI environment detected - server dependency test skipped"
+                )
                 return
             self.fail("Server not running on localhost:8081")
 
@@ -249,7 +272,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
         # Navigate through steps
         self.click('button:has-text("Next")')
-        self.wait_for_element('h2:has-text("Choose Your AI\'s Expertise")', timeout=5000)
+        self.wait_for_element(
+            'h2:has-text("Choose Your AI\'s Expertise")', timeout=5000
+        )
 
         self.click('button:has-text("Next")')
         self.wait_for_element('h2:has-text("Ready to Launch!")', timeout=5000)
@@ -276,10 +301,12 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         create_button.click()
 
         # Wait for progress to start
-        self.wait_for_element('text=Creating Your Campaign', timeout=5000)
+        self.wait_for_element("text=Creating Your Campaign", timeout=5000)
 
         # Wait for success message (this verifies the completion flow works)
-        success_message = self.page.locator('text=Campaign ready! Taking you to your adventure')
+        success_message = self.page.locator(
+            "text=Campaign ready! Taking you to your adventure"
+        )
 
         # Give it enough time for the completion flow
         try:
@@ -288,9 +315,9 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
         except Exception as e:
             # Fallback: check for any completion indicator
             completion_indicators = [
-                'text=Campaign created successfully',
-                'text=100% Complete',
-                'text=Campaign ready'
+                "text=Campaign created successfully",
+                "text=100% Complete",
+                "text=Campaign ready",
             ]
 
             found_indicator = False
@@ -305,13 +332,14 @@ class TestCampaignCreationV2MemoryLeaks(BaseTestUI):
 
     def tearDown(self):
         """Clean up browser resources"""
-        if hasattr(self, 'page'):
+        if hasattr(self, "page"):
             self.page.close()
-        if hasattr(self, 'browser'):
+        if hasattr(self, "browser"):
             self.browser.close()
-        if hasattr(self, 'playwright'):
+        if hasattr(self, "playwright"):
             self.playwright.stop()
         super().tearDown()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     unittest.main()

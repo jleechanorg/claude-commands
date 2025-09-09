@@ -9,12 +9,18 @@ import json
 import os
 import shutil
 import sys
+import tempfile
 import unittest
 
 # Add the parent directory to path to enable imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from narrative_response_schema import parse_structured_response
+try:
+    from narrative_response_schema import parse_structured_response
+    MODULES_AVAILABLE = True
+except ImportError:
+    parse_structured_response = None
+    MODULES_AVAILABLE = False
 
 
 class TestStateUpdateIntegration(unittest.TestCase):
@@ -24,7 +30,6 @@ class TestStateUpdateIntegration(unittest.TestCase):
         """Set up test fixtures and mock objects"""
         # Following zero-tolerance skip pattern ban - provide basic implementation
         # Integration tests can run with mock data for validation
-        import tempfile
         self.temp_dir = tempfile.mkdtemp()
 
         # Sample AI response with state updates

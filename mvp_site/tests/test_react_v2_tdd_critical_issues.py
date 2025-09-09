@@ -14,6 +14,8 @@ critical issues identified in the React V2 audit:
 Each test will initially FAIL (RED), driving implementation of fixes (GREEN).
 """
 
+import re
+
 import os
 import sys
 import unittest
@@ -336,8 +338,6 @@ class ReactV2CriticalIssuesTDD(unittest.TestCase):
         # The specific issue: useEffect depends on 'mode' but also calls API that can trigger mode changes
 
         # Check for the problematic pattern: useEffect([..., mode]) that could cause cascade
-        import re
-
         # Find useEffect blocks with mode dependency
         useeffect_pattern = r'useEffect\(\(\)\s*=>\s*\{[^}]*\},\s*\[[^\]]*mode[^\]]*\]'
         mode_dependent_effects = re.findall(useeffect_pattern, content, re.MULTILINE | re.DOTALL)

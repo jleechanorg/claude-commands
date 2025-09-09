@@ -18,6 +18,7 @@ sys.path.insert(0, str(project_root))
 # Import MCP modules
 try:
     from mcp_servers.slash_commands.unified_router import create_tools, handle_tool_call
+
     MCP_ROUTER_AVAILABLE = True
 except ImportError:
     create_tools = None
@@ -39,7 +40,7 @@ class TestMCPComprehensive:
         # Fallback to environment variable or current working directory
         return Path(os.environ.get("PROJECT_ROOT", ".")).resolve()
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tool_discovery(self):
         """Test that all slash commands are properly discovered"""
         tools = create_tools()
@@ -50,7 +51,7 @@ class TestMCPComprehensive:
         assert "cerebras" in cerebras_tool.description.lower()
         print(f"✅ Discovered {len(tools)} MCP tools including cerebras")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_cerebras_tool_execution(self):
         """Test cerebras tool execution through unified router"""
         # Test basic cerebras functionality
@@ -61,7 +62,7 @@ class TestMCPComprehensive:
         assert "SLASH_COMMAND_EXECUTE:" in response_text
         print("✅ Cerebras tool executed successfully")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_input_validation_basic(self):
         """Test basic input validation in handle_tool_call"""
         malicious_inputs = ["../../../etc/passwd", "'; DROP TABLE users; --"]
@@ -70,19 +71,23 @@ class TestMCPComprehensive:
             assert "SLASH_COMMAND_EXECUTE:" in result[0].text
         print("✅ Input validation working correctly")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_invalid_tool_rejection(self):
         """Test that invalid tools are rejected"""
         result = await handle_tool_call("nonexistent_tool", {"args": ["test"]})
         assert result is not None
-        assert "disabled" in result[0].text.lower() or "cerebras" in result[0].text.lower()
+        assert (
+            "disabled" in result[0].text.lower() or "cerebras" in result[0].text.lower()
+        )
         print("✅ Invalid tools properly rejected")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_json_rpc_communication(self):
         """Test JSON-RPC communication pattern with MCP server"""
         # Test with cerebras args
-        result = await handle_tool_call("cerebras", {"args": ["def add(a, b): return a + b"]})
+        result = await handle_tool_call(
+            "cerebras", {"args": ["def add(a, b): return a + b"]}
+        )
         assert result is not None
         response_text = result[0].text
         assert "SLASH_COMMAND_EXECUTE:" in response_text
@@ -98,9 +103,14 @@ class TestMCPComprehensive:
         # Try to start server briefly to test it can initialize
         try:
             # Test that server script is executable
-            result = subprocess.run([
-                sys.executable, str(server_script)
-            ], check=False, capture_output=True, text=True, timeout=5, input="\n")
+            result = subprocess.run(
+                [sys.executable, str(server_script)],
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=5,
+                input="\n",
+            )
             # Server should start then exit gracefully on stdin
             print("✅ MCP server starts correctly")
         except subprocess.TimeoutExpired:
@@ -109,29 +119,35 @@ class TestMCPComprehensive:
         except Exception as e:
             pytest.fail(f"Server startup failed: {e}")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_red_green_refactor_cycle(self):
         """Test red-green-refactor methodology through MCP server"""
         # Red phase - test cerebras command with failing scenario
-        red_result = await handle_tool_call("cerebras", {
-            "args": ["Generate a pytest test function that fails with AssertionError"]
-        })
+        red_result = await handle_tool_call(
+            "cerebras",
+            {
+                "args": [
+                    "Generate a pytest test function that fails with AssertionError"
+                ]
+            },
+        )
         assert red_result is not None
         red_response = red_result[0].text
         assert "SLASH_COMMAND_EXECUTE:" in red_response
         assert "/cerebras" in red_response
 
         # Green phase - test cerebras command with implementation
-        green_result = await handle_tool_call("cerebras", {
-            "args": ["Generate a simple Python function that returns True"]
-        })
+        green_result = await handle_tool_call(
+            "cerebras",
+            {"args": ["Generate a simple Python function that returns True"]},
+        )
         assert green_result is not None
         green_response = green_result[0].text
         assert "SLASH_COMMAND_EXECUTE:" in green_response
 
         print("✅ Red-green-refactor cycle working through MCP")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_argument_handling(self):
         """Test various argument patterns"""
         # Test with multiple args
@@ -147,7 +163,7 @@ class TestMCPComprehensive:
 
         print("✅ Argument handling working correctly")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_syntax_error_prevention(self):
         """Test that indentation and syntax errors are prevented"""
         # This test would have failed before the fix due to indentation error
@@ -157,11 +173,13 @@ class TestMCPComprehensive:
         assert isinstance(result[0].text, str)
         print("✅ Syntax error prevention working")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_consistent_argument_parsing(self):
         """Test consistent argument key usage (args vs arguments)"""
         # Test that 'args' key is used consistently
-        result1 = await handle_tool_call("cerebras", {"args": ["consistent", "parsing"]})
+        result1 = await handle_tool_call(
+            "cerebras", {"args": ["consistent", "parsing"]}
+        )
         assert result1 is not None
 
         # Test edge case with string args
@@ -174,13 +192,15 @@ class TestMCPComprehensive:
 
         print("✅ Consistent argument parsing working")
 
-    @pytest.mark.asyncio
+    @pytest.mark.asyncio()
     async def test_tool_restriction_logic(self):
         """Test that only cerebras tool is allowed as intended"""
         # Test that non-cerebras tools are properly rejected
         result = await handle_tool_call("fake_tool", {"args": ["test"]})
         assert result is not None
-        assert "disabled" in result[0].text.lower() or "cerebras" in result[0].text.lower()
+        assert (
+            "disabled" in result[0].text.lower() or "cerebras" in result[0].text.lower()
+        )
 
         # Test that cerebras tool still works
         result = await handle_tool_call("cerebras", {"args": ["working"]})
@@ -188,6 +208,7 @@ class TestMCPComprehensive:
         assert "SLASH_COMMAND_EXECUTE:" in result[0].text or "working" in result[0].text
 
         print("✅ Tool restriction logic working correctly")
+
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

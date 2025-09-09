@@ -35,6 +35,7 @@ from main import create_app
 # Handle firebase_admin imports at module level
 try:
     import firebase_admin.auth
+
     FIREBASE_ADMIN_AVAILABLE = True
 except ImportError:
     FIREBASE_ADMIN_AVAILABLE = False

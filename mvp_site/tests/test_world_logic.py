@@ -228,7 +228,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
     def test_create_campaign_unified_validation_sync(self):
         """Test campaign creation validation (sync version)"""
-        import asyncio
 
         # world_logic already imported at module level with proper mocking
 
@@ -263,7 +262,6 @@ class TestUnifiedAPIStructure(unittest.TestCase):
 
     def test_process_action_unified_validation_sync(self):
         """Test action processing validation (sync version)"""
-        import asyncio
 
         # world_logic already imported at module level with proper mocking
 
@@ -450,7 +448,6 @@ class TestMCPMigrationRedGreen(unittest.TestCase):
         This test verifies that the enhanced logging with JSON serialization
         works correctly with complex objects that have custom serializers.
         """
-        import world_logic
 
         # Create a complex game state dict that would cause JSON serialization issues
         complex_game_state = {
@@ -723,9 +720,7 @@ class TestCodeHealthChecks(unittest.TestCase):
         # RED phase: This test should fail initially due to unused constants
 
         # Read world_logic.py source
-        import inspect
 
-        import world_logic
 
         source = inspect.getsource(world_logic)
 

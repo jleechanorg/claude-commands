@@ -8,12 +8,21 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-
-import constants
-import gemini_service
-import logging_util
-import pytest
-from gemini_service import _load_instruction_file, _loaded_instructions_cache
+try:
+    import constants
+    import gemini_service
+    import logging_util
+    import pytest
+    from gemini_service import _load_instruction_file, _loaded_instructions_cache
+    MODULES_AVAILABLE = True
+except ImportError:
+    constants = None
+    gemini_service = None
+    logging_util = None
+    pytest = None
+    _load_instruction_file = None
+    _loaded_instructions_cache = None
+    MODULES_AVAILABLE = False
 
 # The list of all known prompt types to test, using shared constants.
 PROMPT_TYPES_TO_TEST = [
