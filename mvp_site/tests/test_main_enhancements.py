@@ -1,19 +1,16 @@
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock, AsyncMock
+import argparse
+import sys
+import threading
 
 import pytest
+from flask import Flask
 
-# Try to import the Flask app with proper package import
-try:
-    from mvp_site.main import app
-
-    HAS_MAIN_APP = True
-    IMPORT_ERROR = None
-except ImportError as e:
-    HAS_MAIN_APP = False
-    IMPORT_ERROR = str(e)
-except Exception as e:
-    HAS_MAIN_APP = False
-    IMPORT_ERROR = f"Unexpected error importing main: {str(e)}"
+# Import handling for main app
+import mvp_site.main
+app = mvp_site.main.app
+HAS_MAIN_APP = True
+IMPORT_ERROR = None
 
 
 @pytest.fixture()
@@ -183,7 +180,10 @@ def test_nonexistent_campaign_handling(client):
 # Tests for MCP async fixes and boolean logic improvements
 def test_future_annotations_import():
     """Test that __future__ annotations are properly imported for forward compatibility"""
-    import mvp_site.main as main_module
+    if not HAS_MAIN_APP:
+        pytest.skip(f"Cannot test future annotations: {IMPORT_ERROR}")
+    
+    main_module = mvp_site.main
 
     # Check that the module has the future annotations imported
     assert hasattr(main_module, "__annotations__") or "__future__" in str(main_module)
@@ -191,7 +191,10 @@ def test_future_annotations_import():
 
 def test_import_organization():
     """Test that imports are properly organized and accessible"""
-    import mvp_site.main as main_module
+    if not HAS_MAIN_APP:
+        pytest.skip(f"Cannot test import organization: {IMPORT_ERROR}")
+    
+    main_module = mvp_site.main
 
     # Test that key imports are available
     assert hasattr(main_module, "Flask") or "Flask" in dir(main_module)
@@ -208,8 +211,6 @@ def test_mcp_http_flag_default_behavior(mock_argv):
     """Test MCP HTTP flag default behavior (should default to True - HTTP mode)"""
     # Test with no --mcp-http flag specified
     mock_argv.return_value = ["main.py", "serve"]
-
-    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["serve"])
@@ -232,8 +233,6 @@ def test_mcp_http_flag_default_behavior(mock_argv):
 def test_mcp_http_flag_explicit_enable(mock_argv):
     """Test MCP HTTP flag when explicitly enabled"""
     mock_argv.return_value = ["main.py", "serve", "--mcp-http"]
-
-    import argparse
 
     parser = argparse.ArgumentParser()
     parser.add_argument("command", choices=["serve"])
@@ -277,8 +276,6 @@ def test_mcp_http_boolean_logic_matrix():
 @patch("mvp_site.main.create_app")
 def test_app_configuration_with_mcp_settings(mock_create_app):
     """Test that app configuration includes MCP settings correctly"""
-    from unittest.mock import MagicMock
-
     # Mock the Flask app
     mock_app = MagicMock()
     mock_create_app.return_value = mock_app
@@ -296,37 +293,34 @@ def test_app_configuration_with_mcp_settings(mock_create_app):
 
 def test_import_error_handling():
     """Test that import errors are handled gracefully"""
+    if not HAS_MAIN_APP:
+        pytest.skip(f"Cannot test import handling: {IMPORT_ERROR}")
+    
     # This tests the import structure improvements
-    try:
-        import mvp_site.main as main_module
-
-        # Should not raise import errors with the reorganized imports
-        assert main_module is not None
-    except ImportError as e:
-        pytest.fail(f"Import error in reorganized main.py: {e}")
-    except Exception as e:
-        pytest.fail(f"Unexpected error importing main.py: {e}")
+    main_module = mvp_site.main
+    # Should not raise import errors with the reorganized imports
+    assert main_module is not None
 
 
 def test_async_safety_improvements():
     """Test that async safety improvements are in place"""
-    import mvp_site.main as main_module
+    if not HAS_MAIN_APP:
+        pytest.skip(f"Cannot test async safety: {IMPORT_ERROR}")
+    
+    main_module = mvp_site.main
 
     # Test that the module can be imported without async loop conflicts
     # This validates the removal of problematic async decorators
     assert hasattr(main_module, "create_app")
 
     # Test that create_app returns a Flask instance
-    app = main_module.create_app()
-    from flask import Flask
-
-    assert isinstance(app, Flask)
+    test_app = main_module.create_app()
+    assert isinstance(test_app, Flask)
 
 
 @patch("argparse.ArgumentParser.parse_args")
 def test_cli_argument_parsing_safety(mock_parse_args):
     """Test that CLI argument parsing handles edge cases safely"""
-    from unittest.mock import MagicMock
 
     # Mock args with various combinations
     mock_args = MagicMock()
@@ -352,9 +346,10 @@ def test_cli_argument_parsing_safety(mock_parse_args):
 
 def test_threading_safety_with_mcp():
     """Test threading safety improvements with MCP integration"""
-    import threading
-
-    import mvp_site.main as main_module
+    if not HAS_MAIN_APP:
+        pytest.skip(f"Cannot test threading safety: {IMPORT_ERROR}")
+    
+    main_module = mvp_site.main
 
     # Test that multiple threads can create apps simultaneously
     results = []
