@@ -40,8 +40,9 @@ import logging_util
 from custom_types import CampaignId, UserId
 from decorators import log_exceptions
 from firebase_admin import firestore
-from game_state import GameState
 from numeric_field_converter import NumericFieldConverter
+
+from game_state import GameState
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20
@@ -589,23 +590,27 @@ def get_db() -> firestore.Client:
 
 
 @log_exceptions
-def get_campaigns_for_user(user_id: UserId, limit: int = None, sort_by: str = "last_played") -> list[dict[str, Any]]:
+def get_campaigns_for_user(
+    user_id: UserId, limit: int = None, sort_by: str = "last_played"
+) -> list[dict[str, Any]]:
     """Retrieves campaigns for a given user with optional pagination and sorting.
-    
+
     Args:
         user_id: Firebase user ID
         limit: Optional maximum number of campaigns to return
         sort_by: Sort field ('created_at' or 'last_played'), defaults to 'last_played'
-    
+
     Returns:
         List of campaign dictionaries
     """
     db = get_db()
     campaigns_ref = db.collection("users").document(user_id).collection("campaigns")
-    
-    # Apply sorting
+
+    # Apply sorting (handle empty sort_by values)
+    if not sort_by:
+        sort_by = "last_played"  # Default sort field
     campaigns_query = campaigns_ref.order_by(sort_by, direction="DESCENDING")
-    
+
     # Apply limit if specified
     if limit is not None:
         campaigns_query = campaigns_query.limit(limit)
