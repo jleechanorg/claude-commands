@@ -37,8 +37,13 @@ import world_logic
 
 # MCP imports
 from mcp.server import Server
-from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
+
+# Import stdio transport at module level with graceful fallback for CLAUDE.md compliance
+try:
+    from mcp.server.stdio import stdio_server
+except ImportError:
+    stdio_server = None
 
 from firestore_service import json_default_serializer
 
