@@ -11,6 +11,7 @@ Extracts comments from all sources:
 Based on copilot_comment_fetch.py from PR #796 but adapted for modular architecture.
 """
 
+import argparse
 import json
 import os
 import subprocess
@@ -463,8 +464,6 @@ class CommentFetch(CopilotCommandBase):
 
 def main():
     """Command line interface."""
-    import argparse
-
     parser = argparse.ArgumentParser(description="Fetch all comments from a GitHub PR")
     parser.add_argument("pr_number", help="PR number to fetch comments from")
     parser.add_argument(
@@ -482,7 +481,6 @@ def main():
         print(json.dumps(result["data"], indent=2))
 
         # Log success to stderr so it doesn't interfere with JSON output
-        import sys
         print(f"[CommentFetch] ✅ Success: {result.get('message', 'Command completed')}", file=sys.stderr)
 
         return 0 if result.get("success") else 1

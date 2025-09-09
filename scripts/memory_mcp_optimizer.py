@@ -10,6 +10,7 @@ Based on investigation showing:
 """
 
 import argparse
+import json
 import sys
 import os
 from typing import List, Dict, Any
@@ -340,7 +341,6 @@ def main() -> None:
         print(f"✅ Optimized terms: {optimized_terms}")
 
         # Output in JSON format for scripting integration
-        import json
         result = {
             'original_query': args.query,
             'optimized_terms': optimized_terms,

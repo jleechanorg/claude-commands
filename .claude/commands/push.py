@@ -5,6 +5,7 @@ Pre-push review, validation, PR create/update, and test server startup
 """
 
 import os
+import socket
 import subprocess
 import sys
 import time
@@ -110,7 +111,6 @@ def detect_significant_changes(commits):
 
 def find_available_port(start_port=6006):
     """Find an available port starting from start_port"""
-    import socket
 
     for port in range(start_port, start_port + 100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
