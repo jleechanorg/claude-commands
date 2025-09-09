@@ -26,22 +26,23 @@ import json
 import logging
 import os
 import sys
+import threading
 import traceback
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 # WorldArchitect imports
 import logging_util
 import world_logic
 
-# MCP imports
+# MCP imports  
 from mcp.server import Server
 from mcp.types import Resource, TextContent, Tool
 
-# Import stdio transport at module level (gated usage in run_server)
-try:
-    from mcp.server.stdio import stdio_server
-except ImportError:
-    stdio_server = None
+# Import stdio transport at module level - CLAUDE.md compliant
+# NOTE: If this import fails, the application will fail fast at startup
+# which is the correct behavior per CLAUDE.md import standards
+from mcp.server.stdio import stdio_server
 
 from firestore_service import json_default_serializer
 
@@ -508,12 +509,6 @@ def run_server():
 
     # Auto-enable stdio-only mode when detected or explicitly requested
     if args.stdio or is_claude_code:
-        if stdio_server is None:
-            logging_util.error(
-                "stdio transport not available - install mcp package with stdio support"
-            )
-            sys.exit(1)
-
         logging_util.info("Starting MCP server in stdio mode for Claude Code")
 
         async def main():
@@ -527,64 +522,58 @@ def run_server():
 
     # Handle dual transport mode (default behavior)
     if args.dual:
-        if stdio_server is None:
-            logging_util.warning(
-                "stdio transport not available - falling back to HTTP-only mode"
-            )
-        else:
-            logging_util.info(
-                f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio"
-            )
+        logging_util.info(
+            f"Starting MCP server with dual transport: HTTP on {args.host}:{args.port} + stdio"
+        )
 
-            # Run dual transport using threading
-            import threading
-            from http.server import BaseHTTPRequestHandler, HTTPServer
+        # Run dual transport using threading
+        # threading and HTTPServer already imported at module level
 
-            # HTTP handler for dual mode (simplified)
-            class DualMCPHandler(BaseHTTPRequestHandler):
-                def do_GET(self):
-                    if self.path == "/health":
-                        self.send_response(200)
-                        self.send_header("Content-type", "application/json")
-                        self.end_headers()
-                        health_status = {
-                            "status": "healthy",
-                            "server": "world-logic",
-                            "transport": "dual",
-                            "http_port": args.port,
-                            "stdio_available": True,
-                        }
-                        self.wfile.write(json.dumps(health_status).encode())
-                    else:
-                        self.send_response(404)
-                        self.end_headers()
+        # HTTP handler for dual mode (simplified)
+        class DualMCPHandler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                if self.path == "/health":
+                    self.send_response(200)
+                    self.send_header("Content-type", "application/json")
+                    self.end_headers()
+                    health_status = {
+                        "status": "healthy",
+                        "server": "world-logic",
+                        "transport": "dual",
+                        "http_port": args.port,
+                        "stdio_available": True,
+                    }
+                    self.wfile.write(json.dumps(health_status).encode())
+                else:
+                    self.send_response(404)
+                    self.end_headers()
 
-                def log_message(self, format, *args):
-                    pass  # Suppress HTTP server logs
+            def log_message(self, format, *args):
+                pass  # Suppress HTTP server logs
 
-            # Start HTTP server in background
-            httpd = HTTPServer((args.host, args.port), DualMCPHandler)
-            http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
-            http_thread.start()
-            logging_util.info(
-                f"HTTP health endpoint started on http://{args.host}:{args.port}/health"
-            )
+        # Start HTTP server in background
+        httpd = HTTPServer((args.host, args.port), DualMCPHandler)
+        http_thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        http_thread.start()
+        logging_util.info(
+            f"HTTP health endpoint started on http://{args.host}:{args.port}/health"
+        )
 
-            # Run stdio transport in main thread
-            async def main():
-                async with stdio_server() as (read_stream, write_stream):
-                    await server.run(
-                        read_stream,
-                        write_stream,
-                        server.create_initialization_options(),
-                    )
+        # Run stdio transport in main thread
+        async def main():
+            async with stdio_server() as (read_stream, write_stream):
+                await server.run(
+                    read_stream,
+                    write_stream,
+                    server.create_initialization_options(),
+                )
 
-            try:
-                asyncio.run(main())
-            except KeyboardInterrupt:
-                logging_util.info("Dual transport server shutdown")
-                httpd.shutdown()
-            return
+        try:
+            asyncio.run(main())
+        except KeyboardInterrupt:
+            logging_util.info("Dual transport server shutdown")
+            httpd.shutdown()
+        return
 
     # Fallback to HTTP-only mode
     logging_util.info(
@@ -595,7 +584,7 @@ def run_server():
     setup_mcp_logging()
 
     # Run HTTP server with JSON-RPC support
-    from http.server import BaseHTTPRequestHandler, HTTPServer
+    # BaseHTTPRequestHandler and HTTPServer already imported at module level
 
     class MCPHandler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
