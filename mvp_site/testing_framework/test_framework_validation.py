@@ -9,9 +9,6 @@ import sys
 import traceback
 from typing import Any
 
-# Ensure project root is in path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
 from mvp_site.testing_framework import (
     RealServiceProvider,
     TestConfig,
@@ -21,6 +18,9 @@ from mvp_site.testing_framework import (
     reset_global_provider,
     set_service_provider,
 )
+
+# Ensure project root is in path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 
 def validate_component(name: str, test_func) -> dict[str, Any]:

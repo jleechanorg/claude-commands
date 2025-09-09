@@ -18,7 +18,7 @@
 - **Validation**: Scan scripts for hardcoded URLs, tokens, paths that could be configured
 - **Documentation**: Update setup instructions to specify required environment variables
 
-### 2. **Cross-Platform Compatibility Pattern**  
+### 2. **Cross-Platform Compatibility Pattern**
 - **Critical**: Replace GNU-specific tools with portable POSIX alternatives
 - **Pattern**: `bc`, `python3` → `awk` for mathematical operations
 - **Pattern**: GNU-specific flags → POSIX-compliant alternatives
@@ -43,7 +43,7 @@ BACKUP_DIR="/Users/specific-user/backups"
 ```
 
 ### 2. **Platform-Specific Dependencies**
-```bash  
+```bash
 # WRONG - GNU-specific tools not available on all systems
 echo "3.14159 * 2" | bc -l  # bc not available on minimal systems
 python3 -c "print(3.14159 * 2)"  # python3 may not be available
@@ -54,7 +54,7 @@ grep -P "pattern" file  # -P (Perl regex) not POSIX compliant
 
 ### 3. **Insecure Environment Variable Handling**
 ```bash
-# WRONG - No validation of environment variables  
+# WRONG - No validation of environment variables
 REPO_URL="$BACKUP_REPO_URL"  # Could be empty/undefined
 
 # WRONG - Exposing sensitive values in logs
@@ -86,7 +86,7 @@ result=$(echo "3.14159 2" | awk '{print $1 * $2}')
 grep -E "pattern" file  # Extended regex is POSIX-compliant
 ```
 
-### 3. **Secure File Path Handling** 
+### 3. **Secure File Path Handling**
 ```bash
 # RIGHT - Use relative paths or configurable base paths
 BACKUP_DIR="${BACKUP_BASE_DIR:-./backups}"

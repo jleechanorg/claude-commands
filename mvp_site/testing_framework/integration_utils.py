@@ -9,25 +9,16 @@ import time
 from typing import Any
 from unittest.mock import patch
 
+import main
+
+from .factory import get_service_provider
+
 # Removed circular import - update_test_imports is defined in this file
 
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-
-from .factory import get_service_provider
-
-# Import IntegrationTestSetup for backward compatibility
-try:
-    from ..test_integration.integration_test_lib import IntegrationTestSetup
-except ImportError:
-    # Fallback stub if integration_test_lib is not available
-    class IntegrationTestSetup:
-        """Compatibility stub for IntegrationTestSetup"""
-
-        def __init__(self):
-            pass
 
 # ============================================================================
 # MIGRATION DECORATORS
@@ -197,8 +188,6 @@ class SmartPatcher:
                 if mock_obj:
                     try:
                         # Only patch if the attribute exists in main
-                        import main
-
                         if hasattr(main, service_name):
                             patch_obj = patch(f"main.{service_name}", mock_obj)
                             self.patches.append(patch_obj)
