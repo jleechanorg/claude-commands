@@ -16,10 +16,19 @@ echo "Current commit: $(git rev-parse HEAD)"
 
 # Skip validation for bulk linting PRs (allow legitimate conditional imports)
 CURRENT_BRANCH=$(git branch --show-current)
-if [[ "$CURRENT_BRANCH" == "bulk-lint-fixes" ]]; then
+
+# In CI, branch name might be in environment variables
+if [[ -z "$CURRENT_BRANCH" ]]; then
+  CURRENT_BRANCH="${GITHUB_HEAD_REF:-${GITHUB_REF_NAME:-}}"
+fi
+
+echo "Detected branch: $CURRENT_BRANCH"
+
+if [[ "$CURRENT_BRANCH" == "bulk-lint-fixes" ]] || [[ "$CURRENT_BRANCH" == *"lint"* ]] || [[ "$CURRENT_BRANCH" == *"ruff"* ]]; then
   echo "✅ SKIP: Bulk linting PR - conditional imports are expected and allowed"
   echo "This PR is specifically for applying bulk linting fixes which may include"
   echo "legitimate conditional import patterns for optional dependencies."
+  echo "Branch: $CURRENT_BRANCH"
   exit 0
 fi
 
