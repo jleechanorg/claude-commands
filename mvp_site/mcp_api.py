@@ -26,7 +26,9 @@ import json
 import logging
 import os
 import sys
+import threading
 import traceback
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
 
 # WorldArchitect imports
@@ -35,13 +37,8 @@ import world_logic
 
 # MCP imports
 from mcp.server import Server
+from mcp.server.stdio import stdio_server
 from mcp.types import Resource, TextContent, Tool
-
-# Import stdio transport at module level (gated usage in run_server)
-try:
-    from mcp.server.stdio import stdio_server
-except ImportError:
-    stdio_server = None
 
 from firestore_service import json_default_serializer
 
@@ -537,8 +534,7 @@ def run_server():
             )
 
             # Run dual transport using threading
-            import threading
-            from http.server import BaseHTTPRequestHandler, HTTPServer
+            # threading and HTTPServer already imported at module level
 
             # HTTP handler for dual mode (simplified)
             class DualMCPHandler(BaseHTTPRequestHandler):
@@ -595,7 +591,7 @@ def run_server():
     setup_mcp_logging()
 
     # Run HTTP server with JSON-RPC support
-    from http.server import BaseHTTPRequestHandler, HTTPServer
+    # BaseHTTPRequestHandler and HTTPServer already imported at module level
 
     class MCPHandler(BaseHTTPRequestHandler):
         def do_GET(self):  # noqa: N802
