@@ -607,7 +607,7 @@ def get_campaigns_for_user(
     campaigns_ref = db.collection("users").document(user_id).collection("campaigns")
 
     # Apply sorting (handle empty sort_by values)
-    if not sort_by:
+    if not sort_by or not sort_by.strip():
         sort_by = "last_played"  # Default sort field
     campaigns_query = campaigns_ref.order_by(sort_by, direction="DESCENDING")
 
