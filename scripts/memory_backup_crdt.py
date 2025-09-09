@@ -20,24 +20,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Optional psutil import for memory monitoring
-try:
-    import psutil
-    PSUTIL_AVAILABLE = True
-except ImportError:
-    PSUTIL_AVAILABLE = False
+# Add mvp_site to path and import project utilities
+sys.path.append(str(Path(__file__).parent.parent / 'mvp_site'))
+import psutil
+import logging_util
 
-# Import project logging utility
-try:
-    from pathlib import Path
-    sys.path.append(str(Path(__file__).parent.parent / 'mvp_site'))
-    import logging_util
-    logger = logging_util.getLogger(__name__)
-except (ImportError, TypeError):
-    # Fallback to standard logging if project logging unavailable or incompatible
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+PSUTIL_AVAILABLE = True
+logger = logging_util.getLogger(__name__)
 
 # Git timeout configuration for subprocess operations
 GIT_TIMEOUT_SECONDS = 30

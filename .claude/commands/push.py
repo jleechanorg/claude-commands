@@ -10,9 +10,6 @@ import subprocess
 import sys
 import time
 from datetime import datetime
-
-# Import shared utilities
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from lint_utils import run_lint_check, should_run_linting
 from pr_utils import (
     check_pr_exists_for_branch,

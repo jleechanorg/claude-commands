@@ -11,10 +11,10 @@ Based on investigation showing:
 
 import argparse
 import json
-import sys
 import os
-from typing import List, Dict, Any
 import re
+import sys
+from typing import List, Dict, Any
 
 # Add mvp_site to path for logging_util import
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'mvp_site'))

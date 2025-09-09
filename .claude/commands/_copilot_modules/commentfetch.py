@@ -21,10 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-try:
-    from .base import CopilotCommandBase
-except ImportError:
-    from base import CopilotCommandBase
+from .base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):

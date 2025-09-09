@@ -350,7 +350,7 @@ class TestCommentValidationRegression(unittest.TestCase):
 
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
+        commands_dir = os.path.dirname(script_dir)  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
         # Import the validation function we're testing
@@ -408,7 +408,7 @@ class TestCommentValidationRegression(unittest.TestCase):
 
         # Add the correct path to commentreply module
         script_dir = os.path.dirname(os.path.abspath(__file__))
-        commands_dir = os.path.join(os.path.dirname(script_dir), '.claude', 'commands')
+        commands_dir = os.path.dirname(script_dir)  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
         # Test data structures

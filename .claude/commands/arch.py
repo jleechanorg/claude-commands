@@ -13,12 +13,8 @@ import subprocess
 import sys
 import time
 from typing import Any, Dict, List
-
-# Add lib directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
-
-from fake_detector import FakeDetector
-from request_optimizer import optimize_file_read, optimizer
+from lib.fake_detector import FakeDetector
+from lib.request_optimizer import optimize_file_read, optimizer
 
 
 def analyze_current_branch_architecture() -> Dict[str, Any]:
