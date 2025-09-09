@@ -311,6 +311,33 @@ def analyze():
         return scipy.optimize()
 ```
 
+#### 🚨 **CRITICAL: Import Validation IMP002 Violations**
+
+**Rule:** ALL imports must be at the absolute top of file with ZERO intervening code.
+
+**Root Cause:** Import validator flags ANY non-import statement (including `sys.path.insert()`) as making subsequent imports "inline violations."
+
+```python
+# WRONG - Even sys.path setup breaks the rule
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))  # ← This triggers IMP002!
+from local_modules import Class                 # ← Flagged as "inline import"
+```
+
+**SOLUTION:** Centralized path setup in package `__init__.py`:
+
+```python
+# In orchestration/__init__.py:
+import os
+import sys
+sys.path.insert(0, os.path.dirname(__file__))
+
+# In individual modules - NO path manipulation:
+import standard_modules
+from local_modules import LocalClass  # ← Clean imports only
+```
+
 #### ✅ **Correct Approach**
 ```python
 # RIGHT - All imports at module level
@@ -330,6 +357,8 @@ def analyze():
         return scipy.optimize.minimize(...)
     return basic_analysis()
 ```
+
+**Key Learning (2025-09-08):** Import validators are EXTREMELY strict - even necessary path setup code triggers violations. Centralized path management in `__init__.py` is the only compliant solution.
 
 ### **Tool Usage Mistakes**
 
