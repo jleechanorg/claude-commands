@@ -15,7 +15,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 # Import MCP server components - use unified router architecture
-from ..unified_router import handle_tool_call, create_tools
+try:
+    from ..unified_router import handle_tool_call, create_tools
+except ImportError:
+    # Fallback for direct execution
+    from unified_router import handle_tool_call, create_tools
 
 
 class TestSecurity:

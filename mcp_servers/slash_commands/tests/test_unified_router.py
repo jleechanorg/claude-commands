@@ -19,15 +19,27 @@ project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import modules under test
-from ..unified_router import (
-    discover_slash_commands,
-    get_tool_commands,
-    create_tools,
-    sanitize_args,
-    execute_direct_command,
-    handle_tool_call,
-    main
-)
+try:
+    from ..unified_router import (
+        discover_slash_commands,
+        get_tool_commands,
+        create_tools,
+        sanitize_args,
+        execute_direct_command,
+        handle_tool_call,
+        main
+    )
+except ImportError:
+    # Fallback for direct execution
+    from unified_router import (
+        discover_slash_commands,
+        get_tool_commands,
+        create_tools,
+        sanitize_args,
+        execute_direct_command,
+        handle_tool_call,
+        main
+    )
 from mcp.types import Tool, TextContent
 from mcp.server import FastMCP
 import inspect
@@ -435,7 +447,10 @@ class TestToolCallHandling:
     async def test_handle_tool_call_argument_limit(self):
         """Test argument count limits for DoS protection."""
         # Use a real discovered command to avoid caching issues
-        from ..unified_router import get_tool_commands
+        try:
+            from ..unified_router import get_tool_commands
+        except ImportError:
+            from unified_router import get_tool_commands
         # Temporarily clear the cache to ensure our patch works
         if hasattr(get_tool_commands, '_cached_commands'):
             del get_tool_commands._cached_commands
@@ -702,7 +717,10 @@ class TestCommandArgumentParsing:
         RED PHASE: This test should FAIL initially due to cmd_line.split() bug
         Command arguments with spaces should be parsed correctly
         """
-        from ..unified_router import execute_direct_command
+        try:
+            from ..unified_router import execute_direct_command
+        except ImportError:
+            from unified_router import execute_direct_command
 
         # Test case: command with quoted argument containing spaces
         cmd_line = "echo 'hello world'"
@@ -726,7 +744,10 @@ class TestCommandArgumentParsing:
         """
         RED PHASE: Another failing test case for complex quoted arguments
         """
-        from ..unified_router import execute_direct_command
+        try:
+            from ..unified_router import execute_direct_command
+        except ImportError:
+            from unified_router import execute_direct_command
 
         cmd_line = 'python -c "print(\\"hello world\\")" --verbose'
 
