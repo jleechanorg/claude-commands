@@ -11,8 +11,8 @@ from pathlib import Path
 # Ensure proper path setup for direct execution
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-# Always use the full qualified import to avoid conditional imports
-from mcp_servers.slash_commands.unified_router import main as router_main
+# Use relative import for package compatibility
+from .unified_router import main as router_main
 
 async def async_main():
     """

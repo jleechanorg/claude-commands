@@ -37,7 +37,7 @@ dev = [
 ]
 
 [project.scripts]
-claude-slash-commands-mcp = "mcp_servers.slash_commands.server:main"
+claude-slash-commands-mcp = "slash_commands.server:main"
 
 [project.urls]
 Homepage = "https://github.com/jleechanorg/worldarchitect.ai"
@@ -50,6 +50,9 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["."]
+
+[tool.hatch.build.targets.wheel.force-include]
+"." = "slash_commands"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
