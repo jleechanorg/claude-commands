@@ -4,15 +4,23 @@ Comprehensive unit tests for unified_router.py
 Implements Test-Driven Development (TDD) approach with RED-GREEN-REFACTOR methodology
 """
 
+# Standard library imports
 import pytest
 import asyncio
 import subprocess
 import sys
 import os
 import shlex
+import inspect
+import ast
+import re
 from pathlib import Path
 from unittest.mock import patch, MagicMock, AsyncMock
 from typing import Dict, List, Any
+
+# Third-party imports
+from mcp.types import Tool, TextContent
+from mcp.server import FastMCP
 
 # Add project root to Python path
 project_root = Path(__file__).parent.parent.parent.parent
@@ -29,6 +37,9 @@ try:
         handle_tool_call,
         main
     )
+    # Import get_tool_commands for test use
+    get_tool_commands_import = get_tool_commands
+    execute_direct_command_import = execute_direct_command
 except ImportError:
     # Fallback for direct execution
     from unified_router import (
@@ -40,11 +51,9 @@ except ImportError:
         handle_tool_call,
         main
     )
-from mcp.types import Tool, TextContent
-from mcp.server import FastMCP
-import inspect
-import ast
-import re
+    # Import get_tool_commands for test use
+    get_tool_commands_import = get_tool_commands
+    execute_direct_command_import = execute_direct_command
 
 
 class TestUnifiedRouterCore:
@@ -447,10 +456,7 @@ class TestToolCallHandling:
     async def test_handle_tool_call_argument_limit(self):
         """Test argument count limits for DoS protection."""
         # Use a real discovered command to avoid caching issues
-        try:
-            from ..unified_router import get_tool_commands
-        except ImportError:
-            from unified_router import get_tool_commands
+        get_tool_commands = get_tool_commands_import
         # Temporarily clear the cache to ensure our patch works
         if hasattr(get_tool_commands, '_cached_commands'):
             del get_tool_commands._cached_commands
@@ -717,10 +723,7 @@ class TestCommandArgumentParsing:
         RED PHASE: This test should FAIL initially due to cmd_line.split() bug
         Command arguments with spaces should be parsed correctly
         """
-        try:
-            from ..unified_router import execute_direct_command
-        except ImportError:
-            from unified_router import execute_direct_command
+        execute_direct_command = execute_direct_command_import
 
         # Test case: command with quoted argument containing spaces
         cmd_line = "echo 'hello world'"
@@ -744,10 +747,7 @@ class TestCommandArgumentParsing:
         """
         RED PHASE: Another failing test case for complex quoted arguments
         """
-        try:
-            from ..unified_router import execute_direct_command
-        except ImportError:
-            from unified_router import execute_direct_command
+        execute_direct_command = execute_direct_command_import
 
         cmd_line = 'python -c "print(\\"hello world\\")" --verbose'
 

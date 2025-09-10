@@ -59,7 +59,7 @@ class ImportValidator(ast.NodeVisitor):
             # Test module imports that need sys.path manipulation
             'main', 'mcp_client', 'tests.fake_firestore', 'logging_util',
             'mvp_site.logging_util', 'pr_comment_formatter', 'psutil',
-            'importlib.util', 'datetime'
+            'importlib.util', 'datetime', 'unified_router'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
