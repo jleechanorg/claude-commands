@@ -418,14 +418,17 @@ def kill_process_on_port(port: int):
     """Kill any process running on the specified port."""
     try:
         for conn in psutil.net_connections():
-            if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
+            if (conn.laddr and getattr(conn, "pid", None) is not None and
+                conn.laddr.port == port and conn.status == psutil.CONN_LISTEN):
+                proc = None  # Initialize process variable
                 try:
-                    process = psutil.Process(conn.pid)
-                    process.terminate()
-                    process.wait(timeout=5)
+                    proc = psutil.Process(conn.pid)
+                    proc.terminate()
+                    proc.wait(timeout=5)
                 except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                    with suppress(psutil.NoSuchProcess):
-                        process.kill()
+                    if proc is not None:
+                        with suppress(psutil.NoSuchProcess):
+                            proc.kill()
     except (ImportError, AttributeError) as e:
         logger = logging.getLogger(__name__)
         logger.warning(f"psutil not available. Cannot kill process on port {port}: {e}")
