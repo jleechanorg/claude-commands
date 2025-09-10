@@ -47,7 +47,7 @@ class ClaudeCommandsExporter:
 
         # Export configuration - all directories will be exported automatically
         self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'infrastructure-scripts', 'orchestration']
-        
+
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
             'testi.sh', 'run_tests.sh', 'copilot_inline_reply_example.sh',  # project-specific
@@ -55,13 +55,13 @@ class ClaudeCommandsExporter:
             'conv.md', 'orchconverge.md',                                   # additional orchestration exclusions
             'copilotc.md', 'fixprc.md'                                      # new autonomous composition commands
         ]
-        
+
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
         self.agents_count = 0
         self.scripts_count = 0
-        
+
         # Versioning is now handled by LLM in exportcommands.md
         # These are kept for backward compatibility but not actively used
         self.current_version = None
@@ -120,7 +120,7 @@ class ClaudeCommandsExporter:
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
-        
+
         # Generate README
         self._generate_readme()
 
@@ -143,7 +143,7 @@ class ClaudeCommandsExporter:
 
         # First, copy entire .claude/commands directory structure
         self._copy_directory_with_filtering(commands_dir, target_dir)
-        
+
         # Count all files for summary (matching actual copy logic)
         for root, dirs, files in os.walk(target_dir):
             for file in files:
@@ -159,21 +159,20 @@ class ClaudeCommandsExporter:
 
     def _copy_hooks_manual(self, hooks_dir, target_dir):
         """Windows fallback - manual directory copy with filtering"""
-        import shutil
         for root, dirs, files in os.walk(hooks_dir):
             # Filter out nested .claude directories during traversal
             dirs[:] = [d for d in dirs if d != '.claude']
-            
+
             rel_path = os.path.relpath(root, hooks_dir)
             target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
             os.makedirs(target_root, exist_ok=True)
-            
+
             for file in files:
                 if file.endswith(('.sh', '.py', '.md')):
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(target_root, file)
                     shutil.copy2(src_file, dst_file)
-        
+
         print("   ✅ Hooks exported using manual copy")
 
     def _export_hooks(self, staging_dir):
@@ -208,7 +207,7 @@ class ClaudeCommandsExporter:
                 self._copy_hooks_manual(hooks_dir, target_dir)
             else:
                 print("   ✅ Hooks exported using rsync")
-                
+
         except FileNotFoundError:
             # Windows fallback - manual directory copy with filtering
             print("   rsync not found, using Windows-compatible manual copy...")
@@ -234,18 +233,18 @@ class ClaudeCommandsExporter:
                     print(f"   📎 {rel_path}")
 
         print(f"✅ Exported {self.hooks_count} hooks")
-        
+
     def _copy_directory_with_filtering(self, src_dir, dst_dir):
         """Copy directory recursively with file filtering and content transformation"""
         for root, dirs, files in os.walk(src_dir):
             # Skip nested .claude directories and test directories that might contain sensitive data
             dirs[:] = [d for d in dirs if d != '.claude']
-            
+
             # Create relative path structure
             rel_path = os.path.relpath(root, src_dir)
             target_root = os.path.join(dst_dir, rel_path) if rel_path != '.' else dst_dir
             os.makedirs(target_root, exist_ok=True)
-            
+
             for file in files:
                 # Only copy relevant file types
                 if file.endswith(('.sh', '.py', '.md', '.json', '.toml', '.txt')):
@@ -253,31 +252,31 @@ class ClaudeCommandsExporter:
                     if file in self.COMMANDS_SKIP_LIST:
                         print(f"   ⏭ Skipping {file} (project-specific/orchestration)")
                         continue
-                        
+
                     src_file = os.path.join(root, file)
                     dst_file = os.path.join(target_root, file)
                     shutil.copy2(src_file, dst_file)
-                    
+
                     # Apply content filtering to copied file
                     self._apply_content_filtering(dst_file)
-                    
+
                     # Make scripts executable if needed
                     if file.endswith(('.sh', '.py')):
                         try:
                             os.chmod(dst_file, 0o755)
                         except (OSError, NotImplementedError):
                             pass  # Windows compatibility
-                            
+
 
     def _export_agents(self, staging_dir):
         """Export Claude Code agent definitions"""
         print("🤖 Exporting Claude Code agents...")
-        
+
         agents_dir = os.path.join(self.project_root, '.claude', 'agents')
         if not os.path.exists(agents_dir):
             print("⚠️  Warning: .claude/agents directory not found")
             return
-            
+
         target_dir = os.path.join(staging_dir, 'agents')
         for file_path in Path(agents_dir).glob('*'):
             if file_path.is_file() and file_path.suffix == '.md':
@@ -285,11 +284,11 @@ class ClaudeCommandsExporter:
                 shutil.copy2(file_path, target_dir)
                 self.agents_count += 1
                 print(f"   🤖 {file_path.name}")
-                
+
                 # Apply content filtering if needed
                 target_file = os.path.join(target_dir, file_path.name)
                 self._apply_content_filtering(target_file)
-        
+
         print(f"✅ Exported {self.agents_count} agents")
 
     def _export_infrastructure_scripts(self, staging_dir):
@@ -356,21 +355,19 @@ class ClaudeCommandsExporter:
     def _copy_orchestration_manual(self, source_dir, target_dir):
         """Manual orchestration copy with exclusions for Windows compatibility"""
         excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks'}
-        
-        import shutil
         for root, dirs, files in os.walk(source_dir):
             # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
-            
+
             rel_path = os.path.relpath(root, source_dir)
             target_root = os.path.join(target_dir, rel_path) if rel_path != '.' else target_dir
             os.makedirs(target_root, exist_ok=True)
-            
+
             for file in files:
                 src_file = os.path.join(root, file)
                 dst_file = os.path.join(target_root, file)
                 shutil.copy2(src_file, dst_file)
-        
+
         print("✅ Orchestration exported using manual copy (excluded specified directories)")
 
     def _apply_content_filtering(self, file_path):
@@ -404,7 +401,7 @@ class ClaudeCommandsExporter:
         """Intelligently detect version number using multiple strategies"""
         try:
             # Strategy 1: Try to get latest git tag that looks like a version
-            result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'], 
+            result = subprocess.run(['git', 'describe', '--tags', '--abbrev=0'],
                                   capture_output=True, text=True, cwd=self.project_root)
             if result.returncode == 0:
                 tag = result.stdout.strip()
@@ -417,7 +414,7 @@ class ClaudeCommandsExporter:
         except (subprocess.CalledProcessError, OSError, AttributeError) as e:
             print(f"   ⚠️ Git tag version detection failed: {e}")
             pass
-        
+
         try:
             # Strategy 2: Try reading VERSION file
             version_file = os.path.join(self.project_root, 'VERSION')
@@ -429,7 +426,7 @@ class ClaudeCommandsExporter:
         except (FileNotFoundError, OSError, IOError) as e:
             print(f"   ⚠️ VERSION file not found or unreadable: {e}")
             pass
-        
+
         try:
             # Strategy 3: Try reading package.json version
             package_json = os.path.join(self.project_root, 'package.json')
@@ -443,7 +440,7 @@ class ClaudeCommandsExporter:
         except (FileNotFoundError, json.JSONDecodeError, KeyError, OSError) as e:
             print(f"   ⚠️ package.json version detection failed: {e}")
             pass
-        
+
         # Strategy 4: Check target repository for existing version and increment
         try:
             # Try to get existing version from target repository README
@@ -455,23 +452,21 @@ class ClaudeCommandsExporter:
         except Exception as e:
             print(f"   ⚠️ GitHub repository version detection failed: {e}")
             pass
-        
+
         # For this specific export, we want to use v1.1.0 for today's changes
         # regardless of what's in the target repository
         version = "1.1.0"
         print(f"   📋 Using v1.1.0 for command count consistency fixes")
         return version
-    
+
     def _get_existing_version_from_target(self):
         """Get the latest version from target repository README"""
         try:
-            import requests
             url = "https://raw.githubusercontent.com/jleechanorg/claude-commands/main/README.md"
             response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 content = response.text
                 # Look for version patterns like ### v1.2.3
-                import re
                 versions = re.findall(r'### v(\d+\.\d+\.\d+)', content)
                 if versions:
                     # Return the latest version (first one found, assuming newest first)
@@ -481,17 +476,15 @@ class ClaudeCommandsExporter:
         except Exception as e:
             print(f"   ⚠️ Could not fetch existing version: {e}")
         return None
-    
+
     def _get_existing_version_history(self, content):
         """Extract existing version history from target repository content"""
         try:
-            import requests
             url = "https://raw.githubusercontent.com/jleechanorg/claude-commands/main/README.md"
             response = requests.get(url, timeout=10)
             if response.status_code == 200:
                 existing_content = response.text
                 # Extract the version history section
-                import re
                 version_section_match = re.search(r'## 📚 Version History\s*\n\n(.*?)(?=\n---|\nGenerated with|\Z)', existing_content, re.DOTALL)
                 if version_section_match:
                     existing_history = version_section_match.group(1).strip()
@@ -501,7 +494,7 @@ class ClaudeCommandsExporter:
         except Exception as e:
             print(f"   ⚠️ Could not fetch existing version history: {e}")
         return None
-    
+
     def _increment_version(self, version):
         """Increment minor version for new export (patch for small changes)"""
         try:
@@ -517,22 +510,22 @@ class ClaudeCommandsExporter:
     def _replace_llm_placeholders(self, content):
         """Replace LLM placeholders with actual version information and dynamic command counts"""
         print("🤖 Generating version information with LLM intelligence...")
-        
+
         # Replace dynamic placeholders in template BEFORE version processing
         content = self._replace_dynamic_placeholders(content)
-        
+
         # Get current date for version
         current_date = time.strftime('%Y-%m-%d')
-        
+
         # Intelligently detect version number using multiple strategies
         version = self._detect_version()
-        
+
         # Generate new version entry for this release
         new_version_entry = f'''### v{version} ({current_date})
 
 **Export Statistics**:
 - **{self.commands_count} Commands**: Complete workflow orchestration system
-- **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks  
+- **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks
 - **{self.scripts_count} Scripts**: Infrastructure and development environment scripts
 
 **Major Changes**:
@@ -557,7 +550,7 @@ class ClaudeCommandsExporter:
 
         # Try to get existing version history to preserve it
         existing_history = self._get_existing_version_history(content)
-        
+
         # Create full version history (new entry + existing entries)
         if existing_history:
             version_entry = new_version_entry + '\n\n' + existing_history
@@ -569,7 +562,7 @@ class ClaudeCommandsExporter:
 
 **Export Statistics**:
 - **118 Commands**: Complete workflow orchestration system
-- **21 Hooks**: Claude Code automation and workflow hooks  
+- **21 Hooks**: Claude Code automation and workflow hooks
 - **5 Scripts**: Infrastructure and development environment scripts
 
 **Major Changes**:
@@ -598,15 +591,15 @@ class ClaudeCommandsExporter:
         # Replace the LLM placeholder section (with whitespace tolerance)
         llm_pattern = r'<!--\s*LLM_VERSION_START\s*-->.*?<!--\s*LLM_VERSION_END\s*-->'
         replacement = version_entry
-        
+
         content = re.sub(llm_pattern, replacement, content, flags=re.DOTALL)
-        
+
         return content
 
     def _replace_dynamic_placeholders(self, content):
         """Replace dynamic placeholders in template with actual runtime values"""
         print("🔧 Replacing dynamic placeholders with runtime values...")
-        
+
         # Define replacement mappings
         replacements = {
             # Command count - handles various formats
@@ -614,18 +607,18 @@ class ClaudeCommandsExporter:
             r'\*\*118 commands\*\*': f'**{self.commands_count} commands**',  # Handle legacy counts
             r'144 commands': f'{self.commands_count} commands',
             r'118 commands': f'{self.commands_count} commands',  # Handle legacy counts
-            
+
             # Export statistics - make them dynamic
             r'\*\*(\d+) Commands\*\*': f'**{self.commands_count} Commands**',
             r'\*\*(\d+) Hooks\*\*': f'**{self.hooks_count} Hooks**',
             r'\*\*(\d+) Scripts\*\*': f'**{self.scripts_count} Scripts**',
             r'\*\*(\d+) Agents\*\*': f'**{self.agents_count} Agents**',
         }
-        
+
         # Apply all replacements
         for pattern, replacement in replacements.items():
             content = re.sub(pattern, replacement, content)
-            
+
         print(f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents")
         return content
 
@@ -633,22 +626,22 @@ class ClaudeCommandsExporter:
         """Generate README with LLM placeholder replacement"""
         # Look for README_EXPORT_TEMPLATE.md in the commands directory
         readme_template_path = os.path.join(self.project_root, '.claude', 'commands', 'README_EXPORT_TEMPLATE.md')
-        
+
         if os.path.exists(readme_template_path):
             print("📖 Processing README_EXPORT_TEMPLATE.md with LLM version generation")
             readme_dest = os.path.join(self.export_dir, 'README.md')
-            
+
             # Read template content
             with open(readme_template_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            
+
             # Replace LLM placeholders with actual version information
             content = self._replace_llm_placeholders(content)
-            
+
             # Write processed README
             with open(readme_dest, 'w', encoding='utf-8') as f:
                 f.write(content)
-                
+
             print("✅ Generated README.md with LLM version information")
         else:
             print(f"Warning: README_EXPORT_TEMPLATE.md not found at {readme_template_path}")
@@ -664,7 +657,7 @@ class ClaudeCommandsExporter:
 ## Export Contents
 
 - **{self.commands_count} commands** workflow orchestration commands
-- **{self.hooks_count} hooks** Claude Code automation hooks  
+- **{self.hooks_count} hooks** Claude Code automation hooks
 - **{self.scripts_count} scripts** infrastructure management scripts
 
 ## MANUAL INSTALLATION
@@ -775,7 +768,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 
         # Ensure export directory exists
         os.makedirs(self.export_dir, exist_ok=True)
-        
+
         readme_path = os.path.join(self.export_dir, 'README.md')
         with open(readme_path, 'w') as f:
             f.write(readme_content)
@@ -845,10 +838,10 @@ This is a filtered reference export from a working Claude Code project. Commands
                 if os.path.exists(path):
                     gh_cmd = path
                     break
-            
+
             if not gh_cmd:
                 raise GitHubAPIError("GitHub CLI (gh) not found in PATH or common locations. Please install GitHub CLI.")
-        
+
         cmd = [gh_cmd, 'repo', 'clone', 'jleechanorg/claude-commands', self.repo_dir]
         result = subprocess.run(cmd, capture_output=True, text=True)
         if result.returncode != 0:
@@ -883,7 +876,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Create target directories with proper .claude/ structure
         dirs_mapping = {
             'commands': os.path.join(claude_dir, 'commands'),
-            'hooks': os.path.join(claude_dir, 'hooks'), 
+            'hooks': os.path.join(claude_dir, 'hooks'),
             'agents': os.path.join(claude_dir, 'agents'),
             'orchestration': 'orchestration',  # Goes to repo root
             'infrastructure-scripts': None     # Goes to repo root individually
@@ -898,7 +891,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         staging_dir = os.path.join(self.export_dir, 'staging')
         for item in os.listdir(staging_dir):
             src = os.path.join(staging_dir, item)
-            
+
             # Map to correct target location
             if item in dirs_mapping:
                 target_path = dirs_mapping[item]
@@ -1128,7 +1121,7 @@ def sync_files_differential(source_dir, target_dir):
     """
     source_path = Path(source_dir)
     target_path = Path(target_dir)
-    
+
     # Get all relative paths from source .claude/ directory
     claude_source_dir = source_path / '.claude'
     if not claude_source_dir.exists():
@@ -1143,10 +1136,10 @@ def sync_files_differential(source_dir, target_dir):
                 except (PermissionError, OSError):
                     pass  # Skip items we can't delete
         return
-    
+
     source_files = set()
     source_dirs = set()
-    
+
     for root, dirs, files in os.walk(claude_source_dir):
         rel_root = Path(root).relative_to(claude_source_dir)
         for file in files:
@@ -1158,34 +1151,34 @@ def sync_files_differential(source_dir, target_dir):
         # Add intermediate directory paths
         if rel_root != Path('.'):
             source_dirs.add(rel_root)
-    
+
     # Track what to delete in target
     dirs_to_delete = []
     files_to_delete = []
-    
+
     # Walk through target directory
     for root, dirs, files in os.walk(target_dir):
         rel_root = Path(root).relative_to(target_path)
-        
+
         # Check files for deletion
         for file in files:
             rel_file_path = rel_root / file if rel_root != Path('.') else Path(file)
             if rel_file_path not in source_files:
                 files_to_delete.append(Path(root) / file)
-        
+
         # Check directories for deletion
         for dir in dirs:
             rel_dir_path = rel_root / dir if rel_root != Path('.') else Path(dir)
             if rel_dir_path not in source_dirs:
                 dirs_to_delete.append(Path(root) / dir)
-    
+
     # Delete files first
     for file_path in files_to_delete:
         try:
             file_path.unlink()
         except (PermissionError, OSError):
             pass  # Skip files we can't delete due to permissions
-    
+
     # Delete directories (in reverse order to handle nested dirs)
     for dir_path in sorted(dirs_to_delete, reverse=True):
         try:

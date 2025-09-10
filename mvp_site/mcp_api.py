@@ -35,14 +35,14 @@ from typing import Any
 import logging_util
 import world_logic
 
-# MCP imports  
+# MCP imports
 from mcp.server import Server
-from mcp.types import Resource, TextContent, Tool
 
 # Import stdio transport at module level - CLAUDE.md compliant
 # NOTE: If this import fails, the application will fail fast at startup
 # which is the correct behavior per CLAUDE.md import standards
 from mcp.server.stdio import stdio_server
+from mcp.types import Resource, TextContent, Tool
 
 from firestore_service import json_default_serializer
 
@@ -168,11 +168,13 @@ async def handle_list_tools() -> list[Tool]:
         ),
         Tool(
             name="get_campaigns_list",
-            description="Retrieve list of user campaigns",
+            description="Retrieve list of user campaigns with pagination and sorting",
             inputSchema={
                 "type": "object",
                 "properties": {
-                    "user_id": {"type": "string", "description": "Firebase user ID"}
+                    "user_id": {"type": "string", "description": "Firebase user ID"},
+                    "limit": {"type": "integer", "description": "Maximum number of campaigns to return"},
+                    "sort_by": {"type": "string", "description": "Sort field: 'created_at' or 'last_played'"}
                 },
                 "required": ["user_id"],
             },

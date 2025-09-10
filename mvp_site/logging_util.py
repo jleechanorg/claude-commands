@@ -8,7 +8,7 @@ that preserve logger context.
 import logging
 import os
 import subprocess
-from typing import Any
+from typing import Any, Optional
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -39,7 +39,7 @@ class LoggingUtil:
     def get_log_directory() -> str:
         """
         Get the standardized log directory path with branch isolation.
-        
+
         Returns:
             str: Path to the log directory in format /tmp/worldarchitect.ai/{branch_name}
         """
@@ -66,10 +66,10 @@ class LoggingUtil:
     def get_log_file(service_name: str) -> str:
         """
         Get the standardized log file path for a specific service.
-        
+
         Args:
             service_name: Name of the service (e.g., 'flask-server', 'mcp-server', 'test-server')
-            
+
         Returns:
             str: Full path to the log file
         """
@@ -185,7 +185,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: str | None = None) -> logging.Logger:
+    def getLogger(name: Optional[str] = None) -> logging.Logger:
         """
         Get a logger instance.
 
@@ -250,6 +250,6 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: str | None = None) -> logging.Logger:
+def getLogger(name: Optional[str] = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)
