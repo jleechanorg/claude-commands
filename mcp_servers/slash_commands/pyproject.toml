@@ -37,7 +37,7 @@ dev = [
 ]
 
 [project.scripts]
-claude-slash-commands-mcp = "server:main"
+claude-slash-commands-mcp = "mcp_servers.slash_commands.server:main"
 
 [project.urls]
 Homepage = "https://github.com/jleechanorg/worldarchitect.ai"

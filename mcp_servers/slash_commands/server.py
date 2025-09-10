@@ -8,18 +8,11 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Import handling for both package and direct execution
-try:
-    # Try package import first (when installed via pip)
-    from .unified_router import main as router_main
-except ImportError:
-    # Fallback for direct execution
-    if __name__ == "__main__":
-        # Add parent directory to path for direct execution
-        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-        from mcp_servers.slash_commands.unified_router import main as router_main
-    else:
-        from unified_router import main as router_main
+# Ensure proper path setup for direct execution
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+# Always use the full qualified import to avoid conditional imports
+from mcp_servers.slash_commands.unified_router import main as router_main
 
 async def async_main():
     """
