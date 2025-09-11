@@ -26,6 +26,10 @@ from mcp.server import FastMCP
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
 
+# Add parent directory to path for unified_router import fallback
+parent_dir = Path(__file__).parent.parent
+sys.path.insert(0, str(parent_dir))
+
 # Import modules under test
 try:
     from ..unified_router import (
