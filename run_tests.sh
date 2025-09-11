@@ -97,15 +97,24 @@ memory_monitor() {
     exec 3>&1  # Save stdout
     exec 1>/dev/null  # Redirect stdout to null during background monitoring
 
+    # Safety timeout: Maximum 45 minutes of monitoring
+    local max_monitor_time=2700  # 45 minutes in seconds
+
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+
+        # Safety exit if monitoring too long
+        if [ $elapsed -gt $max_monitor_time ]; then
+            echo -e "${RED}[ERROR]${NC} Memory monitor timeout after ${elapsed}s, exiting..." >&3
+            break
+        fi
         local total_memory=$(get_total_memory_usage_gb)
         local comparison=$(awk -v mem="$total_memory" -v limit="$MEMORY_LIMIT_GB" 'BEGIN {print (mem > limit) ? "1" : "0"}')
 
         # Log detailed process info every 3 iterations (every 6 seconds)
         if [ $((log_counter % 3)) -eq 0 ]; then
-            local elapsed=$((current_time - start_time))
-            echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
+                echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
 
             # Show all Python test processes with memory usage
             local python_procs=$(pgrep -f "python.*test_" 2>/dev/null)
