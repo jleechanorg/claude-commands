@@ -180,7 +180,18 @@ def backup_memory() -> None:
 
     # Step 3: Load both memory sources
     cache_memories = load_memory_array(cache_path)
-    repo_memories = load_memory_jsonl(repo_path)
+    # Check if repo file is in JSON array or JSONL format
+    if os.path.exists(repo_path):
+        with open(repo_path, 'r') as f:
+            first_char = f.read(1)
+        if first_char == '[':
+            # JSON array format
+            repo_memories = load_memory_array(repo_path)
+        else:
+            # JSONL format
+            repo_memories = load_memory_jsonl(repo_path)
+    else:
+        repo_memories = []
 
     print(f"📊 Cache memories: {len(cache_memories)}")
     print(f"📊 Repo memories: {len(repo_memories)}")
