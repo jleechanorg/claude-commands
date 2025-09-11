@@ -18,22 +18,22 @@ MONITOR_INTERVAL=2
 
 get_total_memory_usage_gb() {
     local total_kb=$(pgrep -f "python.*test_" | xargs -r ps -o rss= -p 2>/dev/null | awk '{sum+=$1} END {print sum+0}')
-    echo "scale=2; $total_kb / 1024 / 1024" | bc -l
+    awk -v total="$total_kb" 'BEGIN {printf "%.2f", total / 1024 / 1024}'
 }
 
 simple_memory_monitor() {
     local monitor_file="$1"
     local counter=0
-    
+
     print_status "Monitor starting for file: $monitor_file"
-    
+
     while [ -f "$monitor_file" ] && [ $counter -lt 10 ]; do
         local total_memory=$(get_total_memory_usage_gb)
         print_status "Monitor loop $counter: ${total_memory}GB"
         counter=$((counter + 1))
         sleep 2
     done
-    
+
     print_status "Monitor finished"
 }
 
