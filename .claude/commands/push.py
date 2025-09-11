@@ -5,13 +5,11 @@ Pre-push review, validation, PR create/update, and test server startup
 """
 
 import os
+import socket
 import subprocess
 import sys
 import time
 from datetime import datetime
-
-# Import shared utilities
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from lint_utils import run_lint_check, should_run_linting
 from pr_utils import (
     check_pr_exists_for_branch,
@@ -110,7 +108,6 @@ def detect_significant_changes(commits):
 
 def find_available_port(start_port=6006):
     """Find an available port starting from start_port"""
-    import socket
 
     for port in range(start_port, start_port + 100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

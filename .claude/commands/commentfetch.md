@@ -1,8 +1,15 @@
 # /commentfetch Command
 
-**Usage**: `/commentfetch <PR_NUMBER>`
+**Usage**: `/commentfetch <PR_NUMBER>` or `/commentfetch [natural language instruction]`
 
 **Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Also fetches GitHub CI status using /fixpr methodology. Always fetches fresh data from GitHub API - no caching.
+
+## 🤖 ENHANCED: Intelligent Natural Language Processing
+
+**NEW CAPABILITY**: Parse natural language instructions like:
+- `/commentfetch print last 30 unresponded here`
+- `/commentfetch get recent unresponded comments`
+- `/commentfetch show me unresponded from PR 1436`
 
 ## 🚨 CRITICAL: Comprehensive Comment Detection Function
 
@@ -119,9 +126,73 @@ For comments that are NOT already replied, determine if they need responses base
 
 ## Implementation
 
-The command runs the Python script directly:
+### Intelligent Argument Processing
+
 ```bash
-python3 .claude/commands/_copilot_modules/commentfetch.py <PR_NUMBER>
+# Parse natural language instructions intelligently
+ARGS="$*"
+echo "📝 Processing instruction: $ARGS"
+
+# Extract PR number from current branch if not specified  
+# Fixed: Only match explicit PR patterns (PR123, pr#123, #123) to avoid matching standalone numbers
+if ! echo "$ARGS" | grep -qE '([Pp][Rr][#[:space:]]*|#)[0-9]+'; then
+    PR_NUMBER=$(gh pr list --head $(git branch --show-current) --json number --jq '.[0].number' 2>/dev/null)
+    if [ -z "$PR_NUMBER" ]; then
+        echo "❌ ERROR: Could not determine PR number. Please specify PR number or run from PR branch."
+        exit 1
+    fi
+    echo "🔍 Auto-detected PR number: $PR_NUMBER"
+else
+    # Extract PR number from arguments using the improved pattern
+    # Fixed: Use two-step extraction to get only the number portion from valid PR patterns
+    PR_NUMBER=$(
+      echo "$ARGS" \
+      | grep -oE '([Pp][Rr][#[:space:]]*|#)[0-9]+' \
+      | grep -oE '[0-9]+' \
+      | head -1
+    )
+fi
+
+# Determine output format and limits
+PRINT_INLINE=false
+LIMIT=""
+
+if echo "$ARGS" | grep -qi "print\|show\|display"; then
+    PRINT_INLINE=true
+    echo "📺 Will display comments inline"
+fi
+
+if echo "$ARGS" | grep -o '[0-9]\+' | head -2 | tail -1 | grep -q .; then
+    LIMIT=$(echo "$ARGS" | grep -o '[0-9]\+' | head -2 | tail -1)
+    echo "🔢 Comment limit: $LIMIT"
+fi
+
+echo "🚀 Fetching comments for PR #$PR_NUMBER..."
+python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER"
+
+# If user requested inline display, show the results
+if [ "$PRINT_INLINE" = "true" ]; then
+    BRANCH_NAME=$(git branch --show-current)
+    COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
+    
+    if [ -f "$COMMENTS_FILE" ]; then
+        echo ""
+        echo "📋 UNRESPONDED COMMENTS (Last fetched: $(date)):"
+        echo "=================================================="
+        
+        if [ -n "$LIMIT" ]; then
+            # Show limited number of recent comments
+            echo "🔍 Showing last $LIMIT unresponded comments:"
+            jq -r --argjson limit "$LIMIT" '.comments | sort_by(.created_at) | reverse | .[:$limit] | .[] | "👤 \(.author) (\(.type)) - \(.created_at)\n📝 \(.body[0:200])...\n📍 \(.file // "General"):\(.line // "")\n---"' "$COMMENTS_FILE" 2>/dev/null || echo "❌ Error parsing comments JSON"
+        else
+            # Show all unresponded comments
+            echo "📊 Total unresponded: $(jq '.metadata.unresponded_count' "$COMMENTS_FILE" 2>/dev/null || echo "unknown")"
+            jq -r '.comments | sort_by(.created_at) | reverse | .[] | "👤 \(.author) (\(.type)) - \(.created_at)\n📝 \(.body[0:200])...\n📍 \(.file // "General"):\(.line // "")\n---"' "$COMMENTS_FILE" 2>/dev/null || echo "❌ Error parsing comments JSON"
+        fi
+    else
+        echo "❌ Comments file not found: $COMMENTS_FILE"
+    fi
+fi
 ```
 
 ## Examples

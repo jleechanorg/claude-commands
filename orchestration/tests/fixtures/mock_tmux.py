@@ -1,5 +1,6 @@
 """Mock fixtures for tmux operations in orchestration tests."""
 
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 
@@ -115,8 +116,6 @@ class MockTmux:
         if session_name in self.sessions:
             self.sessions[session_name].running = False
 
-
-from contextlib import contextmanager
 
 
 @contextmanager

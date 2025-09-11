@@ -12,19 +12,17 @@ Usage:
     python3 run_integration_tests.py --verbose        # Verbose output
 """
 
-import sys
-import unittest
 import argparse
 import os
+import sys
+import unittest
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-# Import test modules
-import test_stale_task_prevention
-import test_prompt_file_lifecycle
-import test_task_execution_verification
-import test_tmux_session_lifecycle
+from . import (
+    test_prompt_file_lifecycle,
+    test_stale_task_prevention,
+    test_task_execution_verification,
+    test_tmux_session_lifecycle,
+)
 
 
 def create_test_suite(test_type='all'):

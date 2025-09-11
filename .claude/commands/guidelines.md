@@ -12,11 +12,15 @@
 
 ### Automatic Guidelines Consultation Protocol
 
-**1. Memory MCP Integration** (MANDATORY):
-- **Command**: `mcp__memory-server__search_nodes` - Search for relevant guidelines and patterns from memory
-- **Command**: `mcp__memory-server__open_nodes` - Retrieve historical guidelines applications and outcomes
-- Extract learned patterns, successful strategies, and documented anti-patterns from memory graph
-- Identify context-specific guidelines and decision patterns from previous work
+**1. Memory MCP Integration with Query Optimization** (MANDATORY):
+- **Enhanced Search**: Use Memory MCP query optimization engine for improved search effectiveness
+- **Universal Composition**: Use `/memory search "[guidelines query]"` for optimized query processing
+- **Multi-Query Strategy**: Leverage `/memory` command's automatic compound query transformation
+- **Command**: `/memory search "relevant guidelines and patterns"` - Search with automatic optimization
+- **Command**: `/memory recall "historical guidelines applications"` - Retrieve specific guideline contexts
+- **Result Merging**: Automatic through `/memory` command's built-in deduplication and scoring
+- Extract learned patterns, successful strategies, and documented anti-patterns from enhanced knowledge retrieval
+- Identify context-specific guidelines and decision patterns from improved search results
 
 **2. CLAUDE.md Reading** (MANDATORY):
 - Always read CLAUDE.md first to understand current rules and constraints
@@ -53,7 +57,7 @@
 ```bash
 # Called by enhanced commands for systematic consultation
 /plan [task]         → calls /guidelines → proceeds with planning
-/execute [task]      → calls /guidelines → proceeds with execution  
+/execute [task]      → calls /guidelines → proceeds with execution
 /review-enhanced     → calls /guidelines → proceeds with review
 /reviewdeep          → calls /guidelines → proceeds with deep analysis
 ```
@@ -198,7 +202,7 @@
 - **Memory MCP Connection**: Full persistent knowledge graph integration
   - **Command**: `mcp__memory-server__create_entities` - Store guideline patterns as structured entities
   - **Command**: `mcp__memory-server__create_relations` - Link patterns to contexts, outcomes, and effectiveness
-  - **Command**: `mcp__memory-server__search_nodes` - Query for relevant patterns during consultation
+  - **Command**: `/memory search "[relevant patterns]"` - Query with automatic optimization during consultation
 - **Evidence Collection**: Document specific incidents with PR references and structured metadata
 - **Continuous Improvement**: Update guidelines based on execution outcomes with persistent learning
 - **Cross-PR Learning**: Apply patterns learned in one PR to future work through memory graph analysis
