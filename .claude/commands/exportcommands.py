@@ -292,7 +292,7 @@ class ClaudeCommandsExporter:
         print(f"✅ Exported {self.agents_count} agents")
 
     def _export_infrastructure_scripts(self, staging_dir):
-        """Export root-level infrastructure scripts"""
+        """Export root-level infrastructure scripts (both Claude Code specific and generally useful development tools)"""
         print("🚀 Exporting infrastructure scripts...")
 
         target_dir = os.path.join(staging_dir, 'infrastructure-scripts')
@@ -301,8 +301,18 @@ class ClaudeCommandsExporter:
         os.makedirs(target_dir, exist_ok=True)
 
         script_patterns = [
-            'claude_start.sh', 'claude_mcp.sh', 'integrate.sh',
-            'resolve_conflicts.sh', 'sync_branch.sh'
+            # Claude Code infrastructure (project-specific)
+            'claude_start.sh', 'claude_mcp.sh',
+            # Generally useful git/development workflow scripts
+            'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
+            # Code analysis and metrics
+            'codebase_loc.sh', 'coverage.sh', 'loc.sh', 'loc_simple.sh',
+            # Testing infrastructure
+            'run_tests_with_coverage.sh', 'run_lint.sh',
+            # CI/CD and infrastructure
+            'setup-github-runner.sh', 'setup_email.sh',
+            # Development environment
+            'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
         for script_name in script_patterns:
@@ -526,27 +536,29 @@ class ClaudeCommandsExporter:
 **Export Statistics**:
 - **{self.commands_count} Commands**: Complete workflow orchestration system
 - **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks
-- **{self.scripts_count} Scripts**: Infrastructure and development environment scripts
+- **{self.scripts_count} Scripts**: Infrastructure and development environment scripts (expanded allowlist)
 
 **Major Changes**:
-- **Command Count Consistency**: Fixed discrepancy between template (80+) and actual count (118)
-- **Documentation Accuracy**: Updated all references to show correct command statistics
-- **Version Incrementing**: Proper semantic versioning with additive version history
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to infrastructure export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Infrastructure Scripts**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Infrastructure**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
 
 **Technical Improvements**:
-- Enhanced version detection to check target repository and increment properly
-- Improved LLM placeholder replacement with additive version history
-- Consistent command counting throughout export process and documentation
-
-**Bug Fixes**:
-- Resolved command count inconsistency in README template vs export output
-- Fixed version replacement to be additive rather than replacement-based
-- Corrected export statistics display to match actual command count
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
 
 **Documentation**:
-- Updated README template with accurate 118 command count
-- Enhanced version history to preserve previous releases
-- Improved export documentation consistency'''
+- Updated infrastructure script export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage'''
 
         # Try to get existing version history to preserve it
         existing_history = self._get_existing_version_history(content)
