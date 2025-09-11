@@ -9,24 +9,17 @@ import time
 from typing import Any
 from unittest.mock import patch
 
+# Import main module - fail fast if not available
+import main
+
+from .factory import get_service_provider
+
 # Removed circular import - update_test_imports is defined in this file
 
 # Add the project root to the path for imports
 project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-
-from .factory import get_service_provider
-
-# Import IntegrationTestSetup for backward compatibility
-try:
-    from ..test_integration.integration_test_lib import IntegrationTestSetup
-except ImportError:
-    # Fallback stub if integration_test_lib is not available
-    class IntegrationTestSetup:
-        """Compatibility stub for IntegrationTestSetup"""
-        def __init__(self):
-            pass
 
 # ============================================================================
 # MIGRATION DECORATORS
@@ -193,7 +186,8 @@ class SmartPatcher:
                     elif "auth" in service_name.lower():
                         mock_obj = self.provider.get_auth()
 
-                if mock_obj:
+                if mock_obj and hasattr(main, service_name):
+                    # Use module-level main import
                     patch_obj = patch(f"main.{service_name}", mock_obj)
                     self.patches.append(patch_obj)
                     patch_obj.__enter__()
@@ -234,10 +228,9 @@ def convert_test_class(test_class, add_mixins=True):
     Returns:
         Modified test class
     """
-    if add_mixins:
+    if add_mixins and not issubclass(test_class, DualModeTestMixin):
         # Add dual-mode support
-        if not issubclass(test_class, DualModeTestMixin):
-            test_class.__bases__ = (DualModeTestMixin,) + test_class.__bases__
+        test_class.__bases__ = (DualModeTestMixin,) + test_class.__bases__
 
     # Convert test methods
     for attr_name in dir(test_class):
@@ -250,7 +243,7 @@ def convert_test_class(test_class, add_mixins=True):
     return test_class
 
 
-def update_test_imports(test_module):
+def update_test_imports(_test_module):
     """Update test module to import testing framework.
 
     Call this at the top of existing test files:
@@ -258,7 +251,7 @@ def update_test_imports(test_module):
         update_test_imports(__name__)
 
     Args:
-        test_module: The module name (typically __name__)
+        _test_module: The module name (typically __name__)
     """
     # This is a placeholder for future import manipulation if needed
 

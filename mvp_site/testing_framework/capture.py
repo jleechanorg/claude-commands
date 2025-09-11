@@ -60,7 +60,10 @@ class CaptureManager:
             raise
         finally:
             # Apply any pending responses that were recorded during execution
-            if hasattr(self, '_pending_responses') and interaction["id"] in self._pending_responses:
+            if (
+                hasattr(self, "_pending_responses")
+                and interaction["id"] in self._pending_responses
+            ):
                 interaction["response"] = self._pending_responses[interaction["id"]]
                 del self._pending_responses[interaction["id"]]
 
@@ -78,7 +81,7 @@ class CaptureManager:
             # This might be called during context manager execution
             # where interaction hasn't been added to list yet
             # Store response for later use when interaction is finalized
-            if not hasattr(self, '_pending_responses'):
+            if not hasattr(self, "_pending_responses"):
                 self._pending_responses = {}
             self._pending_responses[interaction_id] = self._sanitize_data(response_data)
             return
@@ -106,28 +109,56 @@ class CaptureManager:
 
         return filepath
 
-    def _sanitize_data(self, data: Any) -> Any:
+    def _sanitize_data(self, data: Any, visited=None) -> Any:
         """Sanitize data for JSON serialization and privacy."""
-        if isinstance(data, dict):
-            sanitized = {}
-            for key, value in data.items():
-                # Redact sensitive fields - match key patterns more specifically
-                key_lower = key.lower()
-                if any(
-                    pattern in key_lower
-                    for pattern in ["password", "secret", "token", "api_key", "auth_key", "private_key"]
-                ) or key_lower.endswith("_key") or key_lower.startswith("key_"):
-                    sanitized[key] = "[REDACTED]"
-                else:
-                    sanitized[key] = self._sanitize_data(value)
-            return sanitized
-        if isinstance(data, list):
-            return [self._sanitize_data(item) for item in data]
-        if hasattr(data, "__dict__"):
-            # Handle objects by converting to dict
-            return self._sanitize_data(data.__dict__)
-        # Handle primitive types
-        return data
+        if visited is None:
+            visited = set()
+
+        # Prevent infinite recursion for circular references
+        data_id = id(data)
+        if data_id in visited:
+            return "<circular_reference>"
+
+        # Only track objects that could have circular references
+        if isinstance(data, (dict, list)) or hasattr(data, "__dict__"):
+            visited.add(data_id)
+
+        try:
+            if isinstance(data, dict):
+                sanitized = {}
+                for key, value in data.items():
+                    # Redact sensitive fields - match key patterns more specifically
+                    key_lower = str(key).lower()
+                    if (
+                        any(
+                            pattern in key_lower
+                            for pattern in [
+                                "password",
+                                "secret",
+                                "token",
+                                "api_key",
+                                "auth_key",
+                                "private_key",
+                            ]
+                        )
+                        or key_lower.endswith("_key")
+                        or key_lower.startswith("key_")
+                    ):
+                        sanitized[key] = "[REDACTED]"
+                    else:
+                        sanitized[key] = self._sanitize_data(value, visited)
+                return sanitized
+            if isinstance(data, list):
+                return [self._sanitize_data(item, visited) for item in data]
+            if hasattr(data, "__dict__"):
+                # Handle objects by converting to dict
+                return self._sanitize_data(data.__dict__, visited)
+            # Handle primitive types
+            return data
+        finally:
+            # Remove from visited set when done
+            if isinstance(data, (dict, list)) or hasattr(data, "__dict__"):
+                visited.discard(data_id)
 
     def get_summary(self) -> dict:
         """Get summary statistics of captured interactions."""

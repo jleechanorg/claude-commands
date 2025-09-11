@@ -8,7 +8,7 @@ that preserve logger context.
 import logging
 import os
 import subprocess
-from typing import Any, Optional
+from typing import Any
 
 # Export logging level constants
 CRITICAL = logging.CRITICAL
@@ -185,7 +185,7 @@ class LoggingUtil:
         logging.basicConfig(**kwargs)
 
     @staticmethod
-    def getLogger(name: Optional[str] = None) -> logging.Logger:
+    def getLogger(name: str | None = None) -> logging.Logger:
         """
         Get a logger instance.
 
@@ -250,6 +250,6 @@ def basicConfig(**kwargs: Any) -> None:
     LoggingUtil.basicConfig(**kwargs)
 
 
-def getLogger(name: Optional[str] = None) -> logging.Logger:
+def getLogger(name: str | None = None) -> logging.Logger:
     """Get a logger instance."""
     return LoggingUtil.getLogger(name)

@@ -24,7 +24,13 @@ timeout_cmd() {
 
 HOSTNAME=$(hostname -s)
 MEMORY_FILE="${MEMORY_FILE:-$HOME/.cache/mcp-memory/memory.json}"
-REPO_URL="https://github.com/jleechanorg/worldarchitect-memory-backups.git"
+REPO_URL="${BACKUP_REPO_URL:-}"
+# Validate repository URL is set
+if [ -z "$REPO_URL" ]; then
+    echo "❌ Error: BACKUP_REPO_URL environment variable is not set" >&2
+    echo "Please set BACKUP_REPO_URL to your GitHub memory backup repository URL" >&2
+    exit 1
+fi
 REPO_DIR="$HOME/.cache/memory-backup-repo"
 
 log() {
@@ -36,7 +42,7 @@ log() {
 prepare_memory_with_metadata() {
     local output_file=$1
     local timestamp=$(date +%s)
-    
+
     # Add metadata to each entity to make it globally unique (with timeout)
     timeout_cmd 10s jq --arg host "$HOSTNAME" --arg ts "$timestamp" '
         .[] | . + {
@@ -55,10 +61,10 @@ merge_memory_files() {
     local output_file=$1
     shift
     local input_files=("$@")
-    
+
     # Collect all entities from all files
     local all_entities=$(mktemp)
-    
+
     for file in "${input_files[@]}"; do
         if [ -f "$file" ]; then
             # Extract entities, handling both array and object formats (with timeout)
@@ -66,7 +72,7 @@ merge_memory_files() {
             timeout_cmd 5s jq -r '.' "$file" 2>/dev/null >> "$all_entities" || true
         fi
     done
-    
+
     # Apply CRDT merge rules (with timeout):
     # 1. Group by entity ID
     # 2. For duplicates, keep the one with latest timestamp
@@ -78,16 +84,16 @@ merge_memory_files() {
             last
         )
     ' "$all_entities" > "$output_file"
-    
+
     rm -f "$all_entities"
 }
 
 # Perform bi-directional sync before backup
 perform_fetch_before_backup() {
     local fetch_script="$(dirname "${BASH_SOURCE[0]}")/memory_sync/fetch_memory.py"
-    
+
     log "Performing bi-directional sync before backup"
-    
+
     # Check if fetch script exists
     if [[ -f "$fetch_script" ]]; then
         if timeout_cmd 60s python3 "$fetch_script"; then
@@ -104,36 +110,36 @@ perform_fetch_before_backup() {
 # Git handles the "distributed" part, CRDT handles the "conflict" part
 perform_backup() {
     log "Starting CRDT-based backup with bi-directional sync"
-    
+
     # Fetch latest changes first for bi-directional sync
     perform_fetch_before_backup
-    
+
     cd "$REPO_DIR"
-    
+
     # Always work with latest (with timeout protection)
     timeout_cmd 30s git fetch origin main
     timeout_cmd 10s git reset --hard origin/main
-    
+
     # Prepare our data with metadata
     local temp_memory=$(mktemp)
     prepare_memory_with_metadata "$temp_memory"
-    
+
     # Save hostname-specific file
     cp "$temp_memory" "memory-${HOSTNAME}.json"
-    
+
     # Merge all memory files using CRDT semantics
     local all_files=(memory-*.json)
     local unified=$(mktemp)
     merge_memory_files "$unified" "${all_files[@]}"
-    
+
     # Update the unified file
     mv "$unified" "memory.json"
-    
+
     # Commit everything (with timeout protection)
     local entity_count=$(timeout_cmd 5s jq length "memory.json")
     timeout_cmd 10s git add memory*.json
     timeout_cmd 10s git commit -m "CRDT merge from $HOSTNAME: $entity_count total entities" || true
-    
+
     # Push with automatic retry on conflicts
     local max_retries=5
     for i in $(seq 1 $max_retries); do
@@ -141,18 +147,18 @@ perform_backup() {
             log "Push successful"
             break
         fi
-        
+
         log "Conflict detected, re-merging..."
         timeout_cmd 30s git pull origin main --strategy=recursive --strategy-option=theirs
-        
+
         # Re-merge with CRDT semantics
         merge_memory_files "$unified" memory-*.json
         mv "$unified" "memory.json"
-        
+
         timeout_cmd 10s git add memory.json
         timeout_cmd 10s git commit --amend --no-edit
     done
-    
+
     rm -f "$temp_memory"
     log "Backup complete - no locks needed!"
 }

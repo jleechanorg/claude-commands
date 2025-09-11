@@ -42,7 +42,7 @@ import re
 import sys
 import traceback
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import constants
 import logging_util
@@ -234,7 +234,7 @@ def get_client() -> genai.Client:
     global _client
     if _client is None:
         logging_util.info("Initializing Gemini Client")
-        api_key: str | None = os.environ.get("GEMINI_API_KEY")
+        api_key: Optional[str] = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
@@ -425,7 +425,7 @@ class PromptBuilder:
         if isinstance(state, dict):
             story = state.get("game_state", {}).get("story")
 
-        summary: str | None = None
+        summary: Optional[str] = None
         if isinstance(story, dict):
             summary = story.get("summary")
 
@@ -737,7 +737,7 @@ def _validate_entity_tracking(
 def _log_token_count(
     model_name: str,
     user_prompt_contents: list[Any],
-    system_instruction_text: str | None = None,
+    system_instruction_text: Optional[str] = None,
 ) -> None:
     """Helper function to count and log the number of tokens being sent, with a breakdown.
 
@@ -789,7 +789,7 @@ def _log_token_count(
 def _call_gemini_api_with_gemini_request(
     gemini_request: GeminiRequest,
     model_name: str,
-    system_instruction_text: str | None = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     Calls Gemini API with structured JSON from GeminiRequest.
@@ -898,8 +898,8 @@ def _call_gemini_api_with_gemini_request(
 def _call_gemini_api_with_model_cycling(
     prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: str | None = None,
-    system_instruction_text: str | None = None,
+    current_prompt_text_for_logging: Optional[str] = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     Calls the Gemini API with model cycling on 503 errors.
@@ -1045,7 +1045,7 @@ def _call_gemini_api_with_model_cycling(
 def _call_gemini_api_with_json_structure(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: str | None = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     Core function that handles structured JSON input to Gemini API.
@@ -1121,7 +1121,7 @@ def _call_gemini_api_with_json_structure(
 def _call_gemini_api_with_structured_json(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: str | None = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input (DEPRECATED).
@@ -1157,10 +1157,10 @@ def _call_gemini_api_with_json_schema(
     content: str,
     message_type: str,
     model_name: str,
-    user_id: str | None = None,
-    game_mode: str | None = None,
+    user_id: Optional[str] = None,
+    game_mode: Optional[str] = None,
     game_state: dict[str, Any] | None = None,
-    system_instruction_text: str | None = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input schema (DEPRECATED).
@@ -1230,8 +1230,8 @@ def _call_gemini_api_with_json_schema(
 def _call_gemini_api(
     prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: str | None = None,
-    system_instruction_text: str | None = None,
+    current_prompt_text_for_logging: Optional[str] = None,
+    system_instruction_text: Optional[str] = None,
 ) -> Any:
     """
     Call Gemini API with model cycling on errors.
@@ -1694,7 +1694,7 @@ def get_initial_story(
 
 
 def _log_api_response_safely(
-    response_text: str | None, context: str = "", max_length: int = 400
+    response_text: Optional[str], context: str = "", max_length: int = 400
 ) -> None:
     """
     Log API response content safely with truncation and redaction.
@@ -1731,7 +1731,7 @@ def _log_api_response_safely(
 
 
 def _validate_and_enforce_planning_block(
-    response_text: str | None,
+    response_text: Optional[str],
     user_input: str,
     game_state: GameState,
     chosen_model: str,
@@ -2506,8 +2506,8 @@ def _get_static_prompt_parts(
     else:
         missions_summary = "Missions: None"
 
-    ambition: str | None = pc_data.get("core_ambition")
-    milestone: str | None = pc_data.get("next_milestone")
+    ambition: Optional[str] = pc_data.get("core_ambition")
+    milestone: Optional[str] = pc_data.get("next_milestone")
     ambition_summary: str = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"

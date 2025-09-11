@@ -1,8 +1,0 @@
-HTTP 201 CREATED
-URL: http://localhost:8086/api/campaigns
-Headers: {'Server': 'Werkzeug/3.1.3 Python/3.12.3', 'Date': 'Sun, 06 Jul 2025 16:41:00 GMT', 'Content-Type': 'application/json', 'Content-Length': '54', 'Access-Control-Allow-Origin': '*', 'Connection': 'close'}
-Cookies: {}
---------------------------------------------------------------------------------
-CONTENT:
---------------------------------------------------------------------------------
-{"campaign_id":"T4WndJhY5skN5rggGyka","success":true}

@@ -9,12 +9,12 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import unittest
+
 from playwright.sync_api import sync_playwright
 
-from testing_http.test_base import TestBase
 
-
-class TestV2CampaignDisplayLogic(TestBase):
+class TestV2CampaignDisplayLogic(unittest.TestCase):
     """Test V2 properly displays campaigns dashboard when campaigns exist"""
 
     def test_v2_shows_campaigns_when_they_exist(self):

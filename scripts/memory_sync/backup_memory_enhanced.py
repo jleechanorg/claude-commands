@@ -16,18 +16,18 @@ def validate_repository_url(url: str) -> bool:
     """Validate repository URL against whitelist for security"""
     try:
         parsed = urlparse(url)
-        
+
         # Only allow HTTPS GitHub URLs
         if parsed.scheme != 'https':
             return False
-        
+
         if parsed.netloc not in ['github.com', 'api.github.com']:
             return False
-        
+
         # Validate path pattern for GitHub repositories
         if not re.match(r'^/[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+(?:\.git)?/?$', parsed.path):
             return False
-        
+
         return True
     except Exception:
         return False
@@ -101,7 +101,7 @@ def get_memory_timestamp(memory: Dict[str, Any]) -> str:
                 return str(value)
         elif field in memory:
             return str(memory[field])
-    
+
     # Default timestamp if none found
     return "1970-01-01T00:00:00Z"
 
@@ -110,7 +110,7 @@ def merge_memory_entries(local_memories: List[Dict[str, Any]], remote_memories: 
     # Create lookup by memory ID/name
     merged = {}
     fallback_counter = 0
-    
+
     # Process local memories first
     for memory in local_memories:
         memory_id = memory.get('id') or memory.get('name')
@@ -118,25 +118,25 @@ def merge_memory_entries(local_memories: List[Dict[str, Any]], remote_memories: 
             memory_id = f"memory_{fallback_counter}"
             fallback_counter += 1
         merged[memory_id] = memory
-    
+
     # Merge remote memories using LWW
     for remote_memory in remote_memories:
         memory_id = remote_memory.get('id') or remote_memory.get('name')
         if not memory_id:
             memory_id = f"memory_{fallback_counter}"
             fallback_counter += 1
-        
+
         if memory_id in merged:
             local_memory = merged[memory_id]
             local_timestamp = get_memory_timestamp(local_memory)
             remote_timestamp = get_memory_timestamp(remote_memory)
-            
+
             # Last-Write-Wins: keep the memory with later timestamp
             if remote_timestamp > local_timestamp:
                 merged[memory_id] = remote_memory
         else:
             merged[memory_id] = remote_memory
-    
+
     return list(merged.values())
 
 def backup_memory() -> None:
@@ -144,76 +144,76 @@ def backup_memory() -> None:
     cache_path = os.path.expanduser("~/.cache/mcp-memory/memory.json")
     repo_dir = os.path.expanduser("~/projects/worldarchitect-memory-backups")
     repo_path = os.path.join(repo_dir, "memory.json")
-    repo_url = "https://github.com/jleechanorg/worldarchitect-memory-backups.git"
-    
+    repo_url = os.environ.get("BACKUP_REPO_URL", "")
+
     # Validate repository URL for security
     if not validate_repository_url(repo_url):
         print(f"❌ Invalid repository URL: {repo_url}")
         print("Only HTTPS GitHub URLs are allowed")
         return
-    
+
     print(f"🔄 Starting enhanced memory backup - {datetime.now()}")
-    
+
     # Step 1: Ensure repo exists and is up to date
     if not os.path.exists(repo_dir):
         print("📁 Cloning memory backup repository...")
         if not run_command([
-            "git", "clone", 
-            repo_url, 
+            "git", "clone",
+            repo_url,
             repo_dir
         ]):
             print("❌ Failed to clone repository")
             return
-    
+
     # Step 2: Fetch latest changes from remote
     print("⬇️ Fetching latest changes from remote...")
     if not run_command(["git", "pull", "origin", "main"], cwd=repo_dir):
         print("⚠️ Failed to pull latest changes, continuing with local state")
-    
+
     # Step 3: Load both memory sources
     cache_memories = load_memory_array(cache_path)
     repo_memories = load_memory_jsonl(repo_path)
-    
+
     print(f"📊 Cache memories: {len(cache_memories)}")
     print(f"📊 Repo memories: {len(repo_memories)}")
-    
+
     # Step 4: Merge using CRDT logic
     merged_memories = merge_memory_entries(cache_memories, repo_memories)
     print(f"🔀 Merged result: {len(merged_memories)} total memories")
-    
+
     # Step 5: Save back to both locations
     save_memory_array(merged_memories, cache_path)
     save_memory_jsonl(merged_memories, repo_path)
-    
+
     # Step 6: Check if there are changes to commit
     result = subprocess.run(
-        ["git", "diff", "--quiet", "memory.json"], 
-        cwd=repo_dir, 
+        ["git", "diff", "--quiet", "memory.json"],
+        cwd=repo_dir,
         capture_output=True
     )
-    
+
     if result.returncode != 0:  # There are changes
         print("📝 Changes detected, committing and pushing...")
-        
+
         # Commit changes
         if not run_command(["git", "add", "memory.json"], cwd=repo_dir):
             print("❌ Failed to stage changes")
             return
-            
+
         commit_msg = f"Memory backup from {os.uname().nodename} - {datetime.now().isoformat()}"
         if not run_command(["git", "commit", "-m", commit_msg], cwd=repo_dir):
             print("❌ Failed to commit changes")
             return
-        
+
         # Push changes
         if not run_command(["git", "push", "origin", "main"], cwd=repo_dir):
             print("❌ Failed to push changes")
             return
-        
+
         print("✅ Memory backup complete and pushed to repository")
     else:
         print("ℹ️ No changes detected, skipping commit")
-    
+
     print(f"🎉 Enhanced memory backup finished - {datetime.now()}")
 
 if __name__ == "__main__":
