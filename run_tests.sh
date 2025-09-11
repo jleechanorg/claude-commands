@@ -776,8 +776,8 @@ run_single_test() {
 export -f run_single_test run_tests_with_timeout
 export tmp_dir enable_coverage test_files max_workers
 
-# Overall test suite timeout (25 minutes to leave buffer for CI job timeout of 30 minutes)
-TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-1500}  # 25 minutes default
+# Overall test suite timeout (10 minutes for faster feedback and resource efficiency)
+TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-600}  # 10 minutes default
 
 print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)"
 
