@@ -4,14 +4,23 @@
 
 **Purpose**: First run context estimation, then provide comprehensive analysis with optimization recommendations for Claude Code CLI conversations.
 
+## 🎯 UNIVERSAL COMPOSITION PRINCIPLE
+
+**CRITICAL**: This command uses **Universal Composition** - it MUST call the built-in `/context` command first to get actual data, then provide strategic analysis based on that real data.
+
+**❌ NEVER estimate context usage**  
+**✅ ALWAYS call `/context` command first**  
+**✅ ALWAYS use actual data from `/context` output**
+
 ## 🚨 THREE-PHASE EXECUTION WORKFLOW
 
-### 📊 PHASE 1: CONTEXT ESTIMATION
-**Primary Analysis & Baseline Metrics**
-- **Execute baseline context analysis** using internal token tracking
-- **Calculate current session metrics** including tool usage and complexity  
-- **Generate context health status** with traffic light system (Green/Yellow/Orange/Red)
-- **Display current token consumption** and remaining capacity
+### 📊 PHASE 1: CONTEXT ESTIMATION (UNIVERSAL COMPOSITION)
+**MANDATORY: Execute Built-in `/context` Command First**
+- **🎯 CALL `/context` COMMAND DIRECTLY** - Use Claude Code's built-in context analysis
+- **Extract actual token metrics** from `/context` output (not estimated)
+- **Parse real context breakdown** (Messages, MCP tools, Memory files, etc.)
+- **Use actual percentages and token counts** from `/context` command output
+- **Never estimate or guess context usage** - only use `/context` command data
 
 ### 🔍 PHASE 2: STRATEGIC ANALYSIS
 **Pattern Recognition & Optimization Detection**
@@ -33,13 +42,13 @@
 
 ### 🎯 MANDATORY EXECUTION SEQUENCE:
 
-#### ⚡ PHASE 1 EXECUTION
-**Context Estimation Must Run First**
-1. Count and categorize ALL tool operations in current session
-2. Estimate token usage from conversation history and tool outputs  
-3. Calculate session complexity score based on operation types
-4. Determine context health status (Green/Yellow/Orange/Red)
-5. Display baseline metrics before proceeding
+#### ⚡ PHASE 1 EXECUTION (UNIVERSAL COMPOSITION)
+**MANDATORY: Execute `/context` Command First**
+1. **🎯 EXECUTE `/context` COMMAND** - Get actual context data from Claude Code CLI
+2. **Parse `/context` output** - Extract real token counts, percentages, breakdowns
+3. **Use actual metrics only** - Never estimate, always use `/context` command data
+4. **Display actual context status** - Show real usage from `/context` output
+5. **Determine health status** based on actual percentage from `/context`
 
 #### 🔍 PHASE 2 EXECUTION  
 **Strategic Analysis Based on Phase 1 Results**
@@ -101,15 +110,15 @@
 
 When `/contexte` is invoked, **MUST EXECUTE ALL THREE PHASES SEQUENTIALLY**:
 
-### 📊 PHASE 1: CONTEXT ESTIMATION (MANDATORY FIRST)
+### 📊 PHASE 1: CONTEXT ESTIMATION (MANDATORY FIRST) - UNIVERSAL COMPOSITION
 ```
-Execute baseline context analysis:
-- Analyze current conversation for ALL tool usage patterns
-- Estimate approximate token consumption from session data
-- Calculate session complexity score (0-100 scale)
-- Determine context health status (Green/Yellow/Orange/Red)
-- Display baseline context metrics with clear numbers
-- Show percentage of context capacity used
+🎯 EXECUTE BUILT-IN `/context` COMMAND:
+- ALWAYS call `/context` command first to get actual data
+- Extract real token counts from `/context` output  
+- Parse actual breakdown (Messages, MCP tools, Memory files, etc.)
+- Use real percentages and usage metrics from `/context`
+- Never estimate or calculate - only use `/context` command data
+- Display actual context status based on `/context` output
 ```
 
 ### 🔍 PHASE 2: STRATEGIC ANALYSIS (BASED ON PHASE 1)

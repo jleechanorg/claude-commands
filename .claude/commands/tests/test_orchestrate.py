@@ -4,7 +4,7 @@ Unit tests for orchestrate.py command.
 
 Tests:
 - Configuration constants validation
-- Main function redirect functionality 
+- Main function redirect functionality
 - Module imports
 """
 
@@ -32,17 +32,17 @@ class TestOrchestrateModule(unittest.TestCase):
         """Test that main() function redirects to unified orchestration."""
         # Mock successful orchestration script execution
         mock_run.return_value.returncode = 0
-        
+
         # Test with no arguments (should show usage)
         with patch('sys.argv', ['orchestrate.py']):
             result = orchestrate.main()
             self.assertEqual(result, 1)  # Returns 1 for usage error
-            
+
         # Test with task arguments
         with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
             result = orchestrate.main()
             self.assertEqual(result, 0)  # Returns 0 for success
-            
+
         # Verify subprocess was called for the task
         self.assertTrue(mock_run.called)
 
@@ -53,7 +53,7 @@ class TestOrchestrateModule(unittest.TestCase):
         project_root = os.path.dirname(os.path.dirname(script_dir))
         orchestration_dir = os.path.join(project_root, "orchestration")
         unified_script = os.path.join(orchestration_dir, "orchestrate_unified.py")
-        
+
         # Verify path construction logic
         self.assertTrue(orchestration_dir.endswith("orchestration"))
         self.assertTrue(unified_script.endswith("orchestrate_unified.py"))
@@ -62,7 +62,7 @@ class TestOrchestrateModule(unittest.TestCase):
     def test_missing_unified_script_handling(self, mock_exists):
         """Test behavior when unified orchestration script is missing."""
         mock_exists.return_value = False
-        
+
         with patch('orchestrate.subprocess.run') as mock_run:
             with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
                 result = orchestrate.main()
@@ -90,7 +90,7 @@ class TestOrchestrateModule(unittest.TestCase):
     def test_error_handling_on_script_failure(self, mock_run):
         """Test error handling when unified script fails."""
         mock_run.side_effect = Exception("Script execution failed")
-        
+
         with patch('sys.argv', ['orchestrate.py', 'test', 'task']):
             with patch('os.path.exists', return_value=True):
                 result = orchestrate.main()
@@ -99,13 +99,13 @@ class TestOrchestrateModule(unittest.TestCase):
     def test_argument_forwarding(self):
         """Test that command line arguments are properly forwarded."""
         test_args = ['orchestrate.py', 'analyze', 'codebase', 'for', 'issues']
-        
+
         with patch('sys.argv', test_args):
             with patch('subprocess.run') as mock_run:
                 with patch('os.path.exists', return_value=True):
                     mock_run.return_value.returncode = 0
                     result = orchestrate.main()
-                    
+
                     # Verify subprocess was called with forwarded arguments
                     self.assertTrue(mock_run.called)
                     # Arguments should be forwarded (excluding script name)
@@ -115,13 +115,12 @@ class TestOrchestrateModule(unittest.TestCase):
 
     def test_redirect_module_purpose(self):
         """Test that orchestrate module serves as pure redirect."""
-        # Import the module to verify it's a redirect
-        import orchestrate
+        # Module already imported at top level
 
         # Verify main function exists (core redirect functionality)
         self.assertTrue(hasattr(orchestrate, "main"))
         self.assertTrue(callable(orchestrate.main))
-        
+
         # Verify this is a pure redirect module - no orchestration constants
         # (Constants moved to unified orchestration system)
 

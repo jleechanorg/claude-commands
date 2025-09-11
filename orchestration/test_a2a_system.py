@@ -3,23 +3,21 @@
 Test suite for A2A system integration
 """
 
+import contextlib
 import os
 import shutil
+import sys
 import tempfile
 import time
 
-# Set test A2A directory
+from .a2a_agent_wrapper import create_a2a_wrapper
+from .a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
+from .a2a_monitor import A2AMonitor
+from .task_dispatcher import TaskDispatcher
+
+# Set test A2A directory after imports
 test_dir = tempfile.mkdtemp()
 os.environ["A2A_BASE_DIR"] = f"{test_dir}/a2a"
-
-# Import A2A components after setting environment
-import contextlib
-import sys
-
-from a2a_agent_wrapper import create_a2a_wrapper
-from a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
-from a2a_monitor import A2AMonitor
-from task_dispatcher import TaskDispatcher
 
 
 def test_basic_a2a_functionality():

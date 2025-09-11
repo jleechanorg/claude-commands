@@ -6,17 +6,15 @@ Conducts comprehensive architecture reviews with fake detection,
 size optimization, and timeout prevention.
 """
 
+import ast
+import glob
 import os
 import subprocess
 import sys
 import time
 from typing import Any, Dict, List
-
-# Add lib directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "lib"))
-
-from fake_detector import FakeDetector
-from request_optimizer import optimize_file_read, optimizer
+from lib.fake_detector import FakeDetector
+from lib.request_optimizer import optimize_file_read, optimizer
 
 
 def analyze_current_branch_architecture() -> Dict[str, Any]:
@@ -79,7 +77,6 @@ def analyze_file_structure(filepath: str) -> Dict[str, Any]:
             return {"error": f"Not a Python file: {filepath}", "skipped": True}
 
         # Try to parse as Python AST
-        import ast
 
         try:
             tree = ast.parse(content, filename=filepath)
@@ -454,7 +451,6 @@ def main():
 # Additional compatibility functions for tests
 def calculate_cyclomatic_complexity(tree) -> int:
     """Stub implementation for cyclomatic complexity calculation"""
-    import ast
 
     # Simple complexity calculation - count decision points
     complexity = 1  # Base complexity
@@ -470,7 +466,6 @@ def calculate_cyclomatic_complexity(tree) -> int:
 
 def extract_functions_with_complexity(tree) -> List[Dict[str, Any]]:
     """Stub implementation for extracting functions with complexity"""
-    import ast
 
     functions = []
     for node in ast.walk(tree):
@@ -490,7 +485,6 @@ def extract_functions_with_complexity(tree) -> List[Dict[str, Any]]:
 
 def extract_import_dependencies(tree) -> List[Dict[str, Any]]:
     """Stub implementation for extracting import dependencies"""
-    import ast
 
     imports = []
     for node in ast.walk(tree):
@@ -520,7 +514,6 @@ def extract_import_dependencies(tree) -> List[Dict[str, Any]]:
 
 def extract_classes_with_methods(tree) -> List[Dict[str, Any]]:
     """Stub implementation for extracting classes with methods"""
-    import ast
 
     classes = []
     for node in ast.walk(tree):
@@ -567,7 +560,6 @@ def extract_classes_with_methods(tree) -> List[Dict[str, Any]]:
 
 def find_architectural_issues(tree, filepath: str) -> List[Dict[str, Any]]:
     """Stub implementation for finding architectural issues"""
-    import ast
 
     issues = []
 
@@ -697,7 +689,6 @@ def format_analysis_for_arch_command(
 
 def analyze_project_files(file_patterns: List[str]) -> Dict[str, Any]:
     """Stub implementation for project analysis"""
-    import glob
 
     analysis_results = []
     all_files = []

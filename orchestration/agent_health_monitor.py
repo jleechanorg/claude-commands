@@ -52,7 +52,12 @@ class AgentHealthMonitor:
         """Get list of active tmux sessions"""
         try:
             result = subprocess.run(
-                ["tmux", "list-sessions"], check=False, capture_output=True, text=True
+                ["tmux", "list-sessions"],
+                shell=False,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=30
             )
             if result.returncode == 0:
                 sessions = []
@@ -72,9 +77,11 @@ class AgentHealthMonitor:
             # Try to capture recent output
             result = subprocess.run(
                 ["tmux", "capture-pane", "-t", session_name, "-p", "-S", "-10"],
+                shell=False,
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=30
             )
 
             if result.returncode == 0:
@@ -210,6 +217,8 @@ class AgentHealthMonitor:
             try:
                 project_root = subprocess.run(
                     ["git", "rev-parse", "--show-toplevel"],
+                    shell=False,
+                    timeout=30,
                     capture_output=True,
                     text=True,
                     check=True,

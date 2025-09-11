@@ -22,6 +22,7 @@ Execute test specifications directly as an LLM without generating intermediate s
 - **Precise Following**: Execute test instructions exactly as written
 - **Browser Automation**: Use Playwright MCP for real browser testing
 - **Real Authentication**: Use actual Google OAuth with real credentials
+- **🚨 TOTAL FAILURE PROTOCOL**: Apply [Total Failure Protocol](total_failure.md) - 100% working or TOTAL FAILURE
 
 ## Dual-Agent Architecture (Enhanced Reliability)
 
@@ -59,11 +60,64 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 6. **Success Declaration**: Only declare success with complete evidence portfolio
 
 ### Anti-Pattern Prevention
+- 🚨 **TOTAL FAILURE PROTOCOL ENFORCEMENT**: Apply [Total Failure Protocol](total_failure.md) before declaring any results
 - ❌ **NO Partial Success Declaration**: Cannot claim success based on partial validation
 - ❌ **NO Assumption-Based Conclusions**: Every claim requires specific evidence
 - ❌ **NO Skipping Failure Conditions**: Must test both positive and negative cases
 - ✅ **ALWAYS Use TodoWrite**: Track validation state systematically
 - ✅ **ALWAYS Collect Evidence**: Screenshots, logs, console output for each requirement
+
+## 🚨 DIRECTORY TESTING PROTOCOL - MANDATORY FOR ALL DIRECTORY-BASED TESTS
+
+### When User Requests "testing_llm/ test cases" or Similar Directory-Based Testing:
+
+**🚨 CRITICAL RULE: NEVER TEST JUST ONE FILE WHEN DIRECTORY REQUESTED**
+
+#### Step 1: Complete Directory Analysis (MANDATORY GATE)
+1. **Read ALL test files** in the specified directory before any execution
+2. **Catalog ALL test cases** across all files in TodoWrite checklist
+3. **Identify test dependencies** and execution order requirements
+4. **Verify test coverage** spans all requested functionality
+5. **Document test matrix** showing all scenarios to be validated
+6. **⚠️ GATE: Cannot proceed without complete test inventory from ALL files**
+
+#### Step 2: Comprehensive Test Planning
+1. **Extract requirements from EACH test file** into unified checklist
+2. **Map test interdependencies** (authentication → campaign creation, etc.)
+3. **Plan execution sequence** respecting prerequisites
+4. **Estimate total test duration** for all cases combined
+5. **Document evidence collection** needs for complete matrix
+6. **⚠️ GATE: Cannot start testing without unified execution plan**
+
+#### Step 3: Sequential Test Execution
+1. **Execute ALL test files** in logical dependency order
+2. **Complete each test matrix** before moving to next file
+3. **Collect evidence for EVERY test case** across all files
+4. **Track completion status** for entire directory scope
+5. **Validate success criteria** for combined test suite
+6. **⚠️ GATE: Cannot declare success without ALL files tested**
+
+### Anti-Pattern Prevention (MANDATORY ENFORCEMENT)
+- ❌ **FORBIDDEN**: Reading only one test file when directory/multiple tests requested
+- ❌ **FORBIDDEN**: Declaring success after partial file execution
+- ❌ **FORBIDDEN**: Assuming "working authentication" means "testing complete"
+- ✅ **REQUIRED**: Complete directory inventory before any test execution
+- ✅ **REQUIRED**: TodoWrite checklist encompassing ALL files in scope
+- ✅ **REQUIRED**: Evidence collection from ALL test cases across ALL files
+
+### Directory Testing Success Criteria
+**PASS requires:**
+- ✅ ALL test files in requested directory executed
+- ✅ ALL test cases within each file completed with evidence
+- ✅ Combined test matrix shows comprehensive coverage
+- ✅ Evidence portfolio contains screenshots/logs from every test scenario
+- ✅ No skipped files or partial execution within scope
+
+**FAIL indicators:**
+- ❌ Only executed subset of available test files
+- ❌ Declared success based on single file completion
+- ❌ Missing evidence from test cases in unexecuted files
+- ❌ Partial coverage of requested directory scope
 
 ## Implementation Protocol
 
@@ -242,3 +296,4 @@ else:
 - **Dual-Agent**: Independent verification eliminates execution bias
 - **Evidence-Based**: Both modes require concrete proof for all claims
 - **Comprehensive**: Both success AND failure scenarios validated
+- **🚨 TOTAL FAILURE PROTOCOL**: Apply [Total Failure Protocol](total_failure.md) for all result declarations

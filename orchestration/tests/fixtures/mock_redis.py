@@ -1,6 +1,8 @@
 """Mock fixtures for Redis operations in orchestration tests."""
 
+import fnmatch
 import json
+from contextlib import contextmanager
 from datetime import datetime
 from unittest.mock import patch
 
@@ -80,7 +82,6 @@ class MockRedisClient:
             return list(self.data.keys()) + list(self.hashes.keys())
 
         # Simple pattern matching
-        import fnmatch
 
         all_keys = list(self.data.keys()) + list(self.hashes.keys())
         return [key for key in all_keys if fnmatch.fnmatch(key, pattern)]
@@ -185,8 +186,6 @@ class MockMessageBroker:
         """Assert that an agent was registered."""
         assert agent_id in self.registered_agents, f"Agent {agent_id} not registered"
 
-
-from contextlib import contextmanager
 
 
 @contextmanager
