@@ -772,10 +772,6 @@ run_single_test() {
     } > "$result_file"
 }
 
-# Export the function for use with xargs
-export -f run_single_test run_tests_with_timeout
-export tmp_dir enable_coverage test_files max_workers
-
 # Overall test suite timeout (10 minutes for faster feedback and resource efficiency)
 TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-600}  # 10 minutes default
 
@@ -794,7 +790,12 @@ run_tests_with_timeout() {
     fi
 }
 
+# Export functions for use with xargs and timeout wrapper
+export -f run_single_test run_tests_with_timeout
+export tmp_dir enable_coverage max_workers
+
 # Execute tests with timeout
+suite_timed_out=false
 if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
     echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
     echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
@@ -806,8 +807,8 @@ if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
     # Kill any remaining test processes
     pkill -f "python.*test_" || true
 
-    # Set failure status
-    failed_tests=$((total_tests))
+    # Mark as timed out to prevent result processing from overriding
+    suite_timed_out=true
 fi
 
 # Wait for all background jobs to complete
@@ -822,8 +823,19 @@ fi
 
 print_status "📊 Processing test results..."
 
-# Process results from all test files
-for test_file in "${test_files[@]}"; do
+# Handle timeout case - set all tests as failed and skip individual result processing
+if [ "$suite_timed_out" = true ]; then
+    failed_tests=$((total_tests))
+    passed_tests=0
+    skipped_tests=0
+    for test_file in "${test_files[@]}"; do
+        failed_test_files+=("$test_file")
+        echo -e "  ${RED}✗${NC} $(basename "$test_file") (timeout)"
+    done
+    echo -e "${RED}All tests marked as failed due to suite timeout${NC}"
+else
+    # Process results from individual test files normally
+    for test_file in "${test_files[@]}"; do
     result_file="$tmp_dir/$(basename "$test_file").result"
 
     if [ -f "$result_file" ]; then
@@ -854,7 +866,8 @@ for test_file in "${test_files[@]}"; do
         echo -e "  ${YELLOW}?${NC} $(basename "$test_file") - No result file"
         failed_test_files+=("$test_file")
     fi
-done
+    done
+fi
 
 # Generate coverage report if enabled
 if [ "$enable_coverage" = true ]; then
