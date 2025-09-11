@@ -8,11 +8,14 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Ensure proper path setup for direct execution
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-# Use relative import for package compatibility
-from .unified_router import main as router_main
+# Dynamic import logic to handle both direct execution and package import
+if __name__ == "__main__":
+    # Direct execution: use absolute imports and add path
+    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+    from unified_router import main as router_main
+else:
+    # Package import: use relative imports
+    from .unified_router import main as router_main
 
 async def async_main():
     """
