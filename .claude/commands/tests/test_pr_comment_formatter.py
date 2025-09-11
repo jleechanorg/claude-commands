@@ -12,6 +12,10 @@ import unittest
 # Add scripts directory to path for pr_comment_formatter module
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', '..', 'scripts'))
 
+# Add commands directory to path for commentreply module
+commands_dir = os.path.join(os.path.dirname(__file__), '..')
+sys.path.insert(0, commands_dir)
+
 from pr_comment_formatter import (
     CommentStatus,
     CopilotComment,
@@ -20,6 +24,9 @@ from pr_comment_formatter import (
     TaskItem,
     UserComment,
 )
+
+# Import commentreply validate_comment_data - handle missing gracefully in logic
+from commentreply import validate_comment_data
 
 
 class TestCommentStatus(unittest.TestCase):
@@ -353,8 +360,11 @@ class TestCommentValidationRegression(unittest.TestCase):
         commands_dir = os.path.dirname(script_dir)  # Go up one level from tests/ to commands/
         sys.path.insert(0, commands_dir)
 
-        # Import the validation function we're testing
-        from commentreply import validate_comment_data
+        # Import the validation function we're testing - handle missing gracefully
+        try:
+            from commentreply import validate_comment_data
+        except (ImportError, AttributeError):
+            self.skipTest("commentreply module not available")
 
         # 🔴 RED: Create comment data structure that commentfetch actually outputs
         comment_with_author_field = {

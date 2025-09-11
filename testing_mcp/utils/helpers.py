@@ -7,6 +7,8 @@ Common utilities, fixtures, and helper functions for MCP testing.
 import json
 import logging
 import os
+import shutil
+import socket
 import subprocess
 import tempfile
 import time
@@ -16,19 +18,11 @@ from contextlib import asynccontextmanager, contextmanager, suppress
 from typing import Any
 from unittest.mock import patch
 
-try:
-    import psutil
-except ImportError:
-    psutil = None
-    logger = logging.getLogger(__name__)
-    logger.warning(
-        "psutil module not found. Port cleanup functionality may be limited."
-    )
-
+import psutil
 import requests
 
-from testing_mcp.utils.mcp_test_client import WorldArchitectMCPClient
-from testing_mcp.utils.mock_mcp_server import MockMCPServer, run_mock_server_background
+from mcp_test_client import WorldArchitectMCPClient
+from mock_mcp_server import MockMCPServer, run_mock_server_background
 
 logger = logging.getLogger(__name__)
 
@@ -63,8 +57,6 @@ class TestEnvironment:
         # Clean up temp directories
         for temp_dir in self.temp_dirs:
             try:
-                import shutil
-
                 shutil.rmtree(temp_dir, ignore_errors=True)
             except Exception as e:
                 logger.warning(f"Error cleaning up temp dir {temp_dir}: {e}")
@@ -411,8 +403,6 @@ async def assert_mcp_response_format(response: dict[str, Any]):
 
 def find_free_port(start_port: int = 8000) -> int:
     """Find a free port starting from the given port."""
-    import socket
-
     for port in range(start_port, start_port + 100):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
             try:
@@ -426,19 +416,22 @@ def find_free_port(start_port: int = 8000) -> int:
 
 def kill_process_on_port(port: int):
     """Kill any process running on the specified port."""
-    if psutil is None:
-        logger.warning(f"psutil not available. Cannot kill process on port {port}")
-        return
-
-    for conn in psutil.net_connections():
-        if conn.laddr.port == port and conn.status == psutil.CONN_LISTEN:
-            try:
-                process = psutil.Process(conn.pid)
-                process.terminate()
-                process.wait(timeout=5)
-            except (psutil.NoSuchProcess, psutil.TimeoutExpired):
-                with suppress(psutil.NoSuchProcess):
-                    process.kill()
+    try:
+        for conn in psutil.net_connections():
+            if (conn.laddr and getattr(conn, "pid", None) is not None and
+                conn.laddr.port == port and conn.status == psutil.CONN_LISTEN):
+                proc = None  # Initialize process variable
+                try:
+                    proc = psutil.Process(conn.pid)
+                    proc.terminate()
+                    proc.wait(timeout=5)
+                except (psutil.NoSuchProcess, psutil.TimeoutExpired):
+                    if proc is not None:
+                        with suppress(psutil.NoSuchProcess):
+                            proc.kill()
+    except (ImportError, AttributeError) as e:
+        logger = logging.getLogger(__name__)
+        logger.warning(f"psutil not available. Cannot kill process on port {port}: {e}")
 
 
 @asynccontextmanager
