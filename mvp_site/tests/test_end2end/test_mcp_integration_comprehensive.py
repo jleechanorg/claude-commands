@@ -8,24 +8,28 @@ Flask App → MCPClient → MCP Server → World Logic → Response Chain
 This supplements the existing Flask-only end2end tests with true MCP server integration.
 """
 
-import asyncio
+# Set environment variables for MCP testing BEFORE any other imports
 import os
-import subprocess
-import sys
-import time
-import unittest
-from unittest.mock import patch
 
-# Set environment variables for MCP testing
 os.environ["TESTING"] = "true"
+
+import asyncio  # noqa: E402
+import json  # noqa: E402
+import subprocess  # noqa: E402
+import sys  # noqa: E402
+import time  # noqa: E402
+import unittest  # noqa: E402
+from unittest.mock import patch  # noqa: E402
+
+import requests  # noqa: E402
+
+import mvp_site.logging_util as log  # noqa: E402
+
 # Note: This test spawns real MCP server processes for integration testing
 # It does not use USE_MOCKS since it tests actual MCP communication
-
-# Add parent directories to path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-from main import create_app
-from mcp_client import MCPClient
+# Package imports (no sys.path manipulation needed)
+from mvp_site.main import create_app  # noqa: E402
+from mvp_site.mcp_client import MCPClient  # noqa: E402
 
 
 class TestMCPIntegrationComprehensive(unittest.TestCase):
@@ -57,15 +61,15 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
             time.sleep(2)
 
             # Verify MCP server is running
-            import requests
-
             response = requests.get(f"http://localhost:{cls.mcp_port}", timeout=5)
             if response.status_code != 200:
                 raise Exception("MCP server not responding correctly")
 
         except Exception as e:
-            print(f"Warning: Could not start MCP server for comprehensive tests: {e}")
-            print("Falling back to mock-only testing")
+            log.getLogger(__name__).warning(
+                "Could not start MCP server for comprehensive tests: %s", e
+            )
+            log.getLogger(__name__).info("Falling back to mock-only testing")
             cls.mcp_process = None
 
     @classmethod
@@ -86,7 +90,8 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         # Use stable test UID and stub Firebase verification
         self._auth_patcher = patch(
-            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)
@@ -162,8 +167,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
         # Test direct MCP server health
         try:
-            import requests
-
             health_response = requests.get(
                 f"http://localhost:{self.mcp_port}", timeout=5
             )
@@ -274,10 +277,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_event_loop_performance_bug(self):
         """Test that MCP does NOT create new event loops per request (RED test - should fail initially)."""
-        import json
-        from unittest.mock import patch
-
-        import requests
 
         # Track event loop creation calls
         original_new_event_loop = asyncio.new_event_loop
@@ -340,10 +339,6 @@ class TestMCPIntegrationComprehensive(unittest.TestCase):
 
     def test_mcp_production_traceback_security_bug(self):
         """Test that MCP does NOT expose tracebacks in production mode (RED test - should fail initially)."""
-        import json
-        import os
-
-        import requests
 
         # Set production mode environment variable
         original_production_mode = os.environ.get("PRODUCTION_MODE")

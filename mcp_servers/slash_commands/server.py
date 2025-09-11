@@ -8,23 +8,30 @@ import asyncio
 import sys
 from pathlib import Path
 
-# Fix relative import issue - use absolute import when run as main script
+# Dynamic import logic to handle both direct execution and package import
 if __name__ == "__main__":
-    # Add parent directory to path for direct execution
+    # Direct execution: use absolute imports and add path
     sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-    from mcp_servers.slash_commands.unified_router import main as router_main
+    from unified_router import main as router_main
 else:
+    # Package import: use relative imports
     from .unified_router import main as router_main
 
-async def main():
+async def async_main():
     """
-    Main server entry point - delegates to unified router.
+    Async server entry point - delegates to unified router.
     All 29 tools now consolidated into single router pattern.
     """
     print("🚀 Starting consolidated MCP server with unified router...", file=sys.stderr)
     print("📋 29 individual tool files → 1 unified router", file=sys.stderr)
     await router_main()
 
+def main():
+    """
+    Synchronous entry point for pip-installed command
+    """
+    asyncio.run(async_main())
+
 if __name__ == "__main__":
     # Start the unified router server
-    asyncio.run(main())
+    main()

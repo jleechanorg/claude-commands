@@ -5,6 +5,7 @@ Shared utilities for PR-related commands (/pr, /push, /handoff)
 
 import json
 import os
+import re
 import subprocess
 from typing import Dict, List, Optional, Tuple
 
@@ -98,8 +99,6 @@ def format_test_results(success: bool, output: str) -> str:
     """Format test results for PR description"""
     if success:
         # Extract test count if available
-        import re
-
         match = re.search(r"(\d+)\s+test.*pass", output, re.IGNORECASE)
         count = match.group(1) if match else "all"
         return f"✅ **Tests**: {count} tests passing"
