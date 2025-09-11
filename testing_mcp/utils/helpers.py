@@ -421,9 +421,15 @@ def kill_process_on_port(port: int):
             laddr = getattr(conn, "laddr", None)
             pid = getattr(conn, "pid", None)
             # Handle both namedtuple and tuple laddr formats
-            lport = (getattr(laddr, "port", None)
-                     if laddr is not None
-                     else (laddr[1] if isinstance(laddr, tuple) and len(laddr) > 1 else None))
+            if laddr is not None:
+                if hasattr(laddr, "port"):
+                    lport = getattr(laddr, "port", None)
+                elif isinstance(laddr, tuple) and len(laddr) > 1:
+                    lport = laddr[1]
+                else:
+                    lport = None
+            else:
+                lport = None
 
             if lport == port and pid is not None and conn.status == psutil.CONN_LISTEN:
                 proc = None  # Initialize process variable
