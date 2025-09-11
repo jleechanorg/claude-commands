@@ -64,6 +64,9 @@ addopts = [
     "--disable-warnings",
     "-ra"
 ]
+markers = [
+    "asyncio: mark test as async",
+]
 
 [tool.black]
 line-length = 88
