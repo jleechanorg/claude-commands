@@ -61,7 +61,8 @@ class ImportValidator(ast.NodeVisitor):
             # Test infrastructure modules that need sys.path manipulation
             'orchestrate', 'pr_comment_formatter', 'command_output_trimmer',
             'helpers', 'mcp_api', 'mcp_test_client', 'commentreply',
-            'mvp_site.logging_util', 'psutil', 'importlib.util', 'datetime'
+            'mvp_site.logging_util', 'psutil', 'importlib.util', 'datetime',
+            'unified_router'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
