@@ -773,18 +773,41 @@ run_single_test() {
 }
 
 # Export the function for use with xargs
-export -f run_single_test
-export tmp_dir enable_coverage
+export -f run_single_test run_tests_with_timeout
+export tmp_dir enable_coverage test_files max_workers
 
-# Run tests in parallel using xargs
-if [ $max_workers -eq 1 ]; then
-    # Sequential execution
-    for test_file in "${test_files[@]}"; do
-        run_single_test "$test_file"
-    done
-else
-    # Parallel execution
-    printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
+# Overall test suite timeout (25 minutes to leave buffer for CI job timeout of 30 minutes)
+TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-1500}  # 25 minutes default
+
+print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)"
+
+# Run tests with overall timeout wrapper
+run_tests_with_timeout() {
+    if [ $max_workers -eq 1 ]; then
+        # Sequential execution
+        for test_file in "${test_files[@]}"; do
+            run_single_test "$test_file"
+        done
+    else
+        # Parallel execution
+        printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
+    fi
+}
+
+# Execute tests with timeout
+if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
+    echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
+    echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
+    echo "  - Infinite loops in test code" >&2
+    echo "  - Network timeouts or external service dependencies" >&2
+    echo "  - Memory leaks causing system slowdown" >&2
+    echo "  - Tests waiting for user input or external events" >&2
+
+    # Kill any remaining test processes
+    pkill -f "python.*test_" || true
+
+    # Set failure status
+    failed_tests=$((total_tests))
 fi
 
 # Wait for all background jobs to complete
