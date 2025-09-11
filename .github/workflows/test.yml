@@ -10,6 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # Prevent infinite CI runs - kill job after 30 minutes
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
