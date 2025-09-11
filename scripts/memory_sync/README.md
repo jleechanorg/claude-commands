@@ -51,7 +51,7 @@ Complete setup for new machines including repository cloning, cron jobs, and con
 
 Uses Last-Write-Wins based on timestamp comparison:
 - `timestamp` field (primary)
-- `last_updated` field (secondary)  
+- `last_updated` field (secondary)
 - `created_at` field (tertiary)
 - `_crdt_metadata.timestamp` field (quaternary)
 
@@ -62,7 +62,7 @@ Uses Last-Write-Wins based on timestamp comparison:
 # Pull latest from backup repo
 fetch-memory
 
-# Merge local changes with repo  
+# Merge local changes with repo
 merge-memory
 
 # Push local changes to backup repo
@@ -78,26 +78,32 @@ backup-memory
 1. Run setup script:
 ```bash
 git clone https://github.com/jleechanorg/worldarchitect.ai.git
-cd worldarchitect.ai/worktree_human
+cd worldarchitect.ai
 ./scripts/memory_sync/setup_memory_sync.sh
 ```
 
-2. Verify setup:
+2. Verify setup (works with default repository):
 ```bash
-fetch-memory
-backup-memory
+python3 scripts/memory_sync/fetch_memory.py
+python3 scripts/memory_sync/backup_memory_enhanced.py
+```
+
+### Custom Repository Setup (Optional)
+By default, scripts use the main project repository. To use a custom repository:
+```bash
+export BACKUP_REPO_URL='https://github.com/yourusername/your-memory-backups.git'
 ```
 
 ## Features
 
-✅ **Dropbox-like Sync**: Automatic synchronization across multiple machines  
-✅ **CRDT Conflict Resolution**: Last-Write-Wins strategy for concurrent edits  
-✅ **Format Conversion**: Seamless conversion between MCP (array) and repo (JSONL) formats  
-✅ **Git Integration**: Full version control with conflict detection  
-✅ **Cron Automation**: Hourly background synchronization  
-✅ **Convenience Commands**: Simple `fetch-memory`, `merge-memory`, `backup-memory` commands  
-✅ **Error Handling**: Graceful fallback when network unavailable  
-✅ **Setup Automation**: One-command setup for new machines  
+✅ **Dropbox-like Sync**: Automatic synchronization across multiple machines
+✅ **CRDT Conflict Resolution**: Last-Write-Wins strategy for concurrent edits
+✅ **Format Conversion**: Seamless conversion between MCP (array) and repo (JSONL) formats
+✅ **Git Integration**: Full version control with conflict detection
+✅ **Cron Automation**: Hourly background synchronization
+✅ **Convenience Commands**: Simple `fetch-memory`, `merge-memory`, `backup-memory` commands
+✅ **Error Handling**: Graceful fallback when network unavailable
+✅ **Setup Automation**: One-command setup for new machines
 
 ## Implementation Status
 

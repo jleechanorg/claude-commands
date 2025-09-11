@@ -123,13 +123,19 @@ def fetch_memory() -> None:
     repo_dir = os.path.expanduser("~/projects/worldarchitect-memory-backups")
     cache_file = os.path.join(cache_dir, "memory.json")
     repo_file = os.path.join(repo_dir, "memory.json")
-    repo_url = os.getenv("BACKUP_REPO_URL", "")
+    # Default to the main project's memory backup repository
+    default_repo = "https://github.com/jleechanorg/worldarchitect-memory-backups.git"
+    repo_url = os.getenv("BACKUP_REPO_URL", default_repo)
 
-    # Validate required environment variable
+    print(f"📁 Using backup repository: {repo_url}")
+    if os.getenv("BACKUP_REPO_URL"):
+        print("   (from BACKUP_REPO_URL environment variable)")
+    else:
+        print("   (default repository - set BACKUP_REPO_URL to override)")
+
+    # Validate repository URL
     if not repo_url:
-        print("❌ Error: BACKUP_REPO_URL environment variable is not set")
-        print("Please set BACKUP_REPO_URL to your GitHub memory backup repository URL")
-        print("Example: export BACKUP_REPO_URL='https://github.com/user/worldarchitect-memory-backups.git'")
+        print("❌ Error: No backup repository URL available")
         return
 
     print("🚀 Starting memory fetch operation...")

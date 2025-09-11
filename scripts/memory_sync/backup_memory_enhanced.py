@@ -144,7 +144,15 @@ def backup_memory() -> None:
     cache_path = os.path.expanduser("~/.cache/mcp-memory/memory.json")
     repo_dir = os.path.expanduser("~/projects/worldarchitect-memory-backups")
     repo_path = os.path.join(repo_dir, "memory.json")
-    repo_url = os.environ.get("BACKUP_REPO_URL", "")
+    # Default to the main project's memory backup repository
+    default_repo = "https://github.com/jleechanorg/worldarchitect-memory-backups.git"
+    repo_url = os.environ.get("BACKUP_REPO_URL", default_repo)
+
+    print(f"📁 Using backup repository: {repo_url}")
+    if os.environ.get("BACKUP_REPO_URL"):
+        print("   (from BACKUP_REPO_URL environment variable)")
+    else:
+        print("   (default repository - set BACKUP_REPO_URL to override)")
 
     # Validate repository URL for security
     if not validate_repository_url(repo_url):
