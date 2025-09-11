@@ -1,1 +1,0 @@
-"""MCP Testing Infrastructure Package."""

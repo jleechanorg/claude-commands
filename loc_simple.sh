@@ -54,7 +54,7 @@ echo "  Test Code:       $total_test lines"
 echo "  TOTAL CODEBASE:  $total_all lines"
 
 if [[ $total_all -gt 0 ]]; then
-    test_percentage=$(echo "scale=1; $total_test * 100 / $total_all" | bc -l 2>/dev/null || echo "0")
+    test_percentage=$(awk -v test="$total_test" -v all="$total_all" 'BEGIN {if (all > 0) printf "%.1f", test * 100 / all; else print "0"}')
     echo "  Test Coverage:   ${test_percentage}%"
 fi
 

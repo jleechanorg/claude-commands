@@ -1,7 +1,0 @@
-HTTP 200 OK
-URL: http://localhost:8086/
-Headers: {'Server': 'Werkzeug/3.1.3 Python/3.12.3', 'Date': 'Sun, 06 Jul 2025 16:12:52 GMT, Sun, 06 Jul 2025 16:12:52 GMT', 'Content-Disposition': 'inline; filename=index.html', 'Content-Type': 'text/html; charset=utf-8', 'Content-Length': '13299', 'Last-Modified': 'Sun, 06 Jul 2025 00:59:28 GMT', 'Cache-Control': 'no-cache', 'ETag': '"1751763568.2455728-13299-2414420311"', 'Connection': 'close'}
-Cookies: {}
---------------------------------------------------------------------------------
-CONTENT:
---------------------------------------------------------------------------------

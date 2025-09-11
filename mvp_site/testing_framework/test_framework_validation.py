@@ -4,12 +4,20 @@ Framework validation script to demonstrate all components working together.
 Run this to verify the TestServiceProvider framework is functioning correctly.
 """
 
+# ALL imports must be at the very top - no code before imports  
 import os
 import sys
 import traceback
+from pathlib import Path
 from typing import Any
 
-from mvp_site.testing_framework import (
+# Ensure project root is in path for imports (must be before mvp_site imports)
+ROOT = Path(__file__).resolve().parents[2]  
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+# noqa: E402 - imports after sys.path modification
+from mvp_site.testing_framework import (  
     RealServiceProvider,
     TestConfig,
     TestServiceProvider,
@@ -18,9 +26,6 @@ from mvp_site.testing_framework import (
     reset_global_provider,
     set_service_provider,
 )
-
-# Ensure project root is in path for imports
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
 
 
 def validate_component(name: str, test_func) -> dict[str, Any]:
@@ -84,10 +89,8 @@ def validate_real_provider_validation():
         raise AssertionError("Should have raised ValueError")
     except ValueError as e:
         # Verify the error message contains the expected key
-        if "TEST_GEMINI_API_KEY" not in str(e):
-            raise AssertionError(
-                f"Expected 'TEST_GEMINI_API_KEY' in error message: {e}"
-            ) from None
+        error_msg = str(e)
+        assert "TEST_GEMINI_API_KEY" in error_msg
     except ImportError:
         # Expected if google packages not installed
         pass
