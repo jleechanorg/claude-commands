@@ -43,7 +43,7 @@ Until: Success criteria fully met
 - Establish validation methods and completion thresholds using established frameworks
 - Create goal tracking structure with evidence requirements following proven patterns
 
-#### Step 2: Strategic Planning and Tool Analysis  
+#### Step 2: Strategic Planning and Tool Analysis
 **Command**: `/plan` - Create comprehensive strategy with command index optimization
 - **CONTEXT OPTIMIZATION**: Use command index instead of reading full .claude/commands/ files
 - **Command Index**: Load /tmp/converge/{branch}/command-cache/index.json (71K chars vs 677K chars)
@@ -57,7 +57,7 @@ Until: Success criteria fully met
 - Identify potential obstacles and mitigation strategies
 - Create detailed TodoWrite tracking system with command-specific tasks
 
-#### Step 3: Plan Review & Confidence Assessment  
+#### Step 3: Plan Review & Confidence Assessment
 **Action**: Review the plan using strategic analysis with confidence scoring
 - Critically analyze plan against available slash command library
 - **Confidence Assessment**: Evaluate goal clarity, pattern recognition, and complexity
@@ -86,7 +86,7 @@ Until: Success criteria fully met
 #### Step 6: Validation Against Goals
 **Command**: `/goal --validate` against the goals - Objective success measurement
 - Check each success criterion systematically using structured validation
-- Measure progress quantitatively with evidence collection  
+- Measure progress quantitatively with evidence collection
 - Identify gaps between actual and expected outcomes
 - Document validation results with concrete evidence for learning phase
 - Generate completion percentage and remaining work analysis
@@ -119,12 +119,37 @@ Until: Success criteria fully met
 - ✅ **REQUIRED**: Continue immediately if success criteria < 100% and iterations < max
 
 **Convergence Decision Logic**:
-- **IF CONVERGED**: All success criteria met (100%) → STOP with completion report
-- **IF STALLED**: No progress in validation → Escalate or adapt approach  
-- **IF IMPROVING**: Partial success → Return to Step 2 with accumulated learnings IMMEDIATELY
-- **IF MAX ITERATIONS**: Time/resource limits reached → Stop with partial report
+- **IF CONVERGED**: All PRIMARY success criteria met → STOP with completion report
+  - PR is MERGEABLE status (not conflicting)
+  - All SERIOUS GitHub comments addressed (blocking issues resolved)
+  - CI passes (no failed checks)
+  - No critical errors or failures detected
+- **IF GOOD ENOUGH**: Core objectives achieved even if minor issues remain → STOP
+  - Primary goal accomplished (90%+ criteria met)
+  - Diminishing returns threshold reached (last 2 iterations <5% improvement)
+  - PR is in good mergeable state with only cosmetic issues remaining
+
+  **Threshold Definitions:**
+  - **"90%+ criteria met"**: Calculate as (number of primary success criteria achieved) / (total number of primary success criteria). For example, if there are 10 criteria and 9 are met, progress = 90%. Criteria may include PR mergeability, CI passing, blocking comments resolved, etc.
+  - **"Last 2 iterations <5% improvement"**: Measure progress using a quantifiable validation score (e.g., percentage of criteria met, CI pass rate, or resolved blocking issues). If the increase in score between the last two iterations is less than 5% (e.g., from 88% to 90%), this threshold is considered reached.
+  - **Example**: If in iteration 8, 8/10 criteria are met (80%), and in iteration 9, 9/10 are met (90%), the improvement is 10%. If in iteration 10, 9.5/10 are met (95%), the improvement is 5%. If subsequent iterations show <5% improvement, convergence is triggered.
+- **IF STALLED**: No meaningful progress in validation for 2+ iterations → STOP with stall report
+  - Same validation scores for 2+ consecutive iterations
+  - Unable to improve PR mergeability status
+  - Repeated execution failures on same issue
+- **IF IMPROVING**: Meaningful progress on PRIMARY criteria → Continue (up to 2 more iterations, but never exceeding the hard cap)
+  - Measurable improvement in PR status or CI state
+  - Successful resolution of blocking GitHub comments
+  - NOTE: The hard cap of 10 iterations always applies, overriding all other limits
+- **IF MAX ITERATIONS**: Absolute limit reached → STOP with partial report
 
 🔒 **AUTONOMY PRESERVATION**: No user intervention allowed during convergence decision process
+
+**PR CONTEXT AWARENESS**: When goal involves PR work:
+- Primary success = PR is MERGEABLE on current branch
+- ❌ NEVER create additional PRs as "solutions"
+- ✅ ALWAYS work within existing PR constraints
+- ✅ STAY ON CURRENT BRANCH throughout convergence
 
 ## 🔒 AUTONOMY BOUNDARIES & OPERATION
 
@@ -160,7 +185,7 @@ Until: Success criteria fully met
 - **Goal-Driven Loops**: Each cycle begins with intelligent goal analysis (Step 1)
 - **Strategic Planning**: Meta-cognitive planning capabilities with tool awareness (Step 2)
 - **Autonomous Decision-Making**: Smart defaults and pattern-based choices (Step 4)
-- **Self-Validation**: Objective measurement against success criteria (Step 6) 
+- **Self-Validation**: Objective measurement against success criteria (Step 6)
 - **Persistent Learning**: Memory MCP integration with evolving knowledge graph (Step 7)
 - **Status Documentation**: Comprehensive progress reporting and analysis (Step 8)
 - **Recursive Improvement**: Each cycle builds on accumulated learnings (Step 9)
@@ -190,7 +215,7 @@ Until: Success criteria fully met
 
 **Completion Report Generation**:
 - Total iterations completed
-- Success criteria achievement percentage  
+- Success criteria achievement percentage
 - Key learnings and guideline updates
 - Performance metrics (time, commands used, efficiency)
 - Recommendations for future similar goals
@@ -228,7 +253,7 @@ Result: Builds feature incrementally with validation at each step
 ### Universal Composition Execution
 **Command Selection Protocol**: Choose appropriate slash command for each task type:
 - **Code/Script Generation**: **Command**: `/cerebras` - Fast high-quality code generation
-- **PR Review Processing**: **Command**: `/copilot` - Complete PR comment processing  
+- **PR Review Processing**: **Command**: `/copilot` - Complete PR comment processing
 - **Test Suite Management**: **Command**: `/test` - Run and fix failing tests
 - **Complex Multi-Step**: **Command**: `/orch` - Delegate to orchestration agents
 - **Planning & Analysis**: **Command**: `/execute` - Break down complex goals
@@ -323,7 +348,7 @@ Result: Builds feature incrementally with validation at each step
 
 ### Primary Command Arsenal
 - **`/execute`**: Planning, analysis, validation, and coordination
-- **`/cerebras`**: High-speed code/script/document generation  
+- **`/cerebras`**: High-speed code/script/document generation
 - **`/copilot`**: Complete PR review and comment processing
 - **`/test`**: Test execution and failure resolution
 - **`/orch`**: Complex multi-agent task orchestration
@@ -333,7 +358,7 @@ Result: Builds feature incrementally with validation at each step
 ```
 Goal Type → Command Selection:
 - Code generation → /cerebras
-- PR processing → /copilot  
+- PR processing → /copilot
 - Test management → /test
 - Multi-step automation → /orch
 - Planning/validation → /execute
@@ -365,7 +390,7 @@ Goal Type → Command Selection:
 
 **Command**: `/cerebras` - Generate test_utils.py with utility function tests
 - Prompt: "Create test_utils.py with pytest tests for string and list utilities"
-- Result: File created with 4 test functions  
+- Result: File created with 4 test functions
 - Validation: File exists ✅
 
 **Command**: `/test` - Run pytest and check results
@@ -387,7 +412,7 @@ Goal Type → Command Selection:
 #### Convergence Report:
 - **Total iterations**: 2/10 (within default limit)
 - **Commands used**: /execute (2x), /cerebras (3x), /test (2x)
-- **Time**: 3 minutes  
+- **Time**: 3 minutes
 - **Success criteria**: All met ✅
 - **Files created**: test_math.py, test_utils.py, math.py
 - **Test results**: 10/10 passing
@@ -417,7 +442,7 @@ Goal Type → Command Selection:
 /converge --goal-integration
 
 # Emergency termination conditions
-- Manual interruption (Ctrl+C) 
+- Manual interruption (Ctrl+C)
 - Resource exhaustion (context/API limits)
 - Blocking external dependencies
 - Maximum time exceeded
@@ -425,7 +450,7 @@ Goal Type → Command Selection:
 
 ### Convergence States & Termination
 - **SUCCESS**: All criteria met before max iterations
-- **PARTIAL**: Some progress made, iteration limit reached  
+- **PARTIAL**: Some progress made, iteration limit reached
 - **BLOCKED**: External dependencies prevent progress
 - **TIMEOUT**: Maximum execution time exceeded
 - **INTERRUPTED**: Manual termination requested
@@ -470,7 +495,7 @@ Implement PR #1307 roadmap with 18 PR operations
 
 ## Iterations: 3
 1. Closed obsolete PRs (5/5 ✅)
-2. Created focused PRs (7/7 ✅)  
+2. Created focused PRs (7/7 ✅)
 3. Fixed existing PRs (6/6 ✅)
 
 ## Success Criteria Met

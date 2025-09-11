@@ -162,7 +162,7 @@
 
         // Test functions
         window.testScriptInjection = function() {
-            const maliciousInput = '<script>alert("XSS Attack!")</script>Database error occurred';
+            const maliciousInput = '<scr' + 'ipt>alert("XSS Attack!")</scr' + 'ipt>Database error occurred';
             const result = showErrorToastDemo(maliciousInput);
 
             const resultDiv = document.getElementById('script-result');

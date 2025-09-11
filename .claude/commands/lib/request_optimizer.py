@@ -8,6 +8,7 @@ and providing timeout mitigation strategies.
 
 import json
 import os
+import sys
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
@@ -346,7 +347,6 @@ def handle_timeout(operation_type: str, attempt: int) -> Tuple[bool, float]:
 
 
 if __name__ == "__main__":
-    import sys
 
     if len(sys.argv) > 1:
         print(optimizer.get_optimization_report())

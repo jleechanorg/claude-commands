@@ -11,6 +11,7 @@ Provides:
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -86,8 +87,6 @@ class CopilotCommandBase(ABC):
 
     def _sanitize_branch_name(self, branch_name: str) -> str:
         """Sanitize branch name using PR #941 standard pattern for consistency."""
-        import re
-
         # PR #941 standard: Replace any non-alphanumeric, non-dot, non-underscore, non-dash with underscore
         sanitized = re.sub(r"[^a-zA-Z0-9._-]", "_", branch_name)
         # Remove leading dots/dashes for filesystem safety
@@ -303,8 +302,6 @@ class CopilotCommandBase(ABC):
         Returns:
             Dict with test counts
         """
-        import re
-
         # Common test result patterns
         patterns = {
             "passed": r"(\d+) passed",

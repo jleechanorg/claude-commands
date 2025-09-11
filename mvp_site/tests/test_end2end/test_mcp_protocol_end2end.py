@@ -4,33 +4,28 @@ Tests the complete MCP protocol flow: Flask → MCPClient → world_logic → re
 Only mocks external services (Firestore DB and Gemini API) at the lowest level.
 """
 
-import json
+# Set TESTING environment variable BEFORE any other imports
 import os
-import sys
-import unittest
-from unittest.mock import MagicMock, patch
 
-# Set TESTING environment variable
 os.environ["TESTING"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
-# Add the parent directory to the path to import main
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+import json  # noqa: E402
+import time  # noqa: E402
+import unittest  # noqa: E402
+from datetime import UTC, datetime  # noqa: E402
+from importlib.util import find_spec  # noqa: E402
+from unittest.mock import MagicMock, patch  # noqa: E402
 
-# Check if google-genai is available (for local vs CI environments)
-try:
-    from google import genai
+# Check availability without importing (avoids conditional imports)
+HAS_GENAI = find_spec("google") is not None and find_spec("google.genai") is not None  # noqa: E402
 
-    HAS_GENAI = True
-except ImportError:
-    HAS_GENAI = False
-
-
-from datetime import UTC, datetime
-
-from main import create_app
-
-from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse, FakeTokenCount
+from mvp_site.main import create_app  # noqa: E402
+from mvp_site.tests.fake_firestore import (  # noqa: E402
+    FakeFirestoreClient,
+    FakeGeminiResponse,
+    FakeTokenCount,
+)
 
 
 class TestMCPProtocolEnd2End(unittest.TestCase):
@@ -43,8 +38,6 @@ class TestMCPProtocolEnd2End(unittest.TestCase):
         self.client = self.app.test_client()
 
         # Test data - use unique IDs per test to avoid interference
-        import time
-
         timestamp = int(time.time() * 1000)  # milliseconds for uniqueness
         self.test_user_id = f"mcp-protocol-test-user-{timestamp}"
         self.test_campaign_id = f"mcp-protocol-test-campaign-{timestamp}"

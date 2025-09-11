@@ -14,6 +14,7 @@ NC='\033[0m' # No Color
 # Global variables for token status
 GITHUB_TOKEN_LOADED=false
 PERPLEXITY_TOKEN_LOADED=false
+GEMINI_TOKEN_LOADED=false
 TOKEN_FILE_EXISTS=false
 
 # Function to log token loading events
@@ -53,6 +54,22 @@ validate_perplexity_token() {
     fi
 }
 
+validate_gemini_token() {
+    local token="$1"
+    # Gemini API keys typically start with 'AI' and are 39 characters long
+    if [[ "$token" =~ ^AI[A-Za-z0-9_-]{37}$ ]]; then
+        return 0
+    else
+        # More lenient validation - any non-empty string is considered valid
+        # since Gemini API key format may vary
+        if [ -n "$token" ] && [ ${#token} -ge 20 ]; then
+            return 0
+        else
+            return 1
+        fi
+    fi
+}
+
 # Function to load tokens from ~/.token file
 load_tokens() {
     local quiet_mode="$1"  # Set to "quiet" to suppress output
@@ -66,10 +83,13 @@ load_tokens() {
             echo -e "${YELLOW}📋 To create token file:${NC}"
             echo -e "${YELLOW}   1. Generate GitHub token at: https://github.com/settings/tokens${NC}"
             echo -e "${YELLOW}   2. Generate Perplexity token at: https://www.perplexity.ai/settings/api${NC}"
-            echo -e "${YELLOW}   3. Create ~/.token file with:${NC}"
+            echo -e "${YELLOW}   3. Generate Gemini API key at: https://console.cloud.google.com/apis/credentials${NC}"
+            echo -e "${YELLOW}   4. Create ~/.token file with:${NC}"
             echo -e "${YELLOW}      export GITHUB_TOKEN=\"ghp_your_github_token_here\"${NC}"
             echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_token_here\"${NC}"
-            echo -e "${YELLOW}   4. chmod 600 ~/.token${NC}"
+            echo -e "${YELLOW}      export GEMINI_API_KEY=\"AI_your_gemini_api_key_here\"${NC}"
+            echo -e "${YELLOW}   5. chmod 600 ~/.token${NC}"
+            echo -e "${YELLOW}   Alternative: Add GEMINI_API_KEY to ~/.bashrc or ~/.gemini_api_key_secret${NC}"
         fi
         return 1
     fi
@@ -80,7 +100,15 @@ load_tokens() {
         log_token_event "Loading tokens from $HOME_TOKEN_FILE" "INFO"
     fi
 
-    # Source the token file to load environment variables
+    # Parse Gemini API key secret file if it exists (secure - no source command)
+    if [ -z "${GEMINI_API_KEY:-}" ] && [ -f "$HOME/.gemini_api_key_secret" ]; then
+        GEMINI_API_KEY="$(awk -F= '/^[[:space:]]*GEMINI_API_KEY[[:space:]]*=/{val=$2; gsub(/^[[:space:]]+|[[:space:]]+$/, "", val); gsub(/^"+|"+$/, "", val); print val; exit}' "$HOME/.gemini_api_key_secret")"
+        if [ "$quiet_mode" != "quiet" ]; then
+            log_token_event "Parsed ~/.gemini_api_key_secret for Gemini API key (secure)" "INFO"
+        fi
+    fi
+
+    # Source the token file to load additional environment variables
     if source "$HOME_TOKEN_FILE" 2>/dev/null; then
         # Verify and export GitHub token
         if [ -n "$GITHUB_TOKEN" ]; then
@@ -121,6 +149,26 @@ load_tokens() {
             fi
         fi
 
+        # Verify and export Gemini API key (may come from bashrc or token file)
+        if [ -n "$GEMINI_API_KEY" ]; then
+            if validate_gemini_token "$GEMINI_API_KEY"; then
+                export GEMINI_API_KEY="$GEMINI_API_KEY"
+                GEMINI_TOKEN_LOADED=true
+                if [ "$quiet_mode" != "quiet" ]; then
+                    log_token_event "Gemini API key loaded and validated" "INFO"
+                fi
+            else
+                if [ "$quiet_mode" != "quiet" ]; then
+                    log_token_event "Gemini API key format may be invalid" "WARN"
+                fi
+            fi
+        else
+            if [ "$quiet_mode" != "quiet" ]; then
+                log_token_event "GEMINI_API_KEY not found in environment or token file" "WARN"
+                log_token_event "Check ~/.bashrc or ~/.gemini_api_key_secret file" "INFO"
+            fi
+        fi
+
         return 0
     else
         if [ "$quiet_mode" != "quiet" ]; then
@@ -151,6 +199,12 @@ check_token_status() {
         echo -e "${GREEN}✅ Perplexity token: Loaded and valid${NC}"
     else
         echo -e "${YELLOW}⚠️ Perplexity token: Not loaded${NC}"
+    fi
+
+    if [ "$GEMINI_TOKEN_LOADED" = true ]; then
+        echo -e "${GREEN}✅ Gemini API key: Loaded and valid${NC}"
+    else
+        echo -e "${RED}❌ Gemini API key: Not loaded${NC}"
     fi
 }
 
@@ -202,6 +256,11 @@ export GITHUB_TOKEN="ghp_your_github_token_here"
 # Perplexity API Key (optional)
 # Generate at: https://www.perplexity.ai/settings/api
 export PERPLEXITY_API_KEY="pplx_your_perplexity_token_here"
+
+# Gemini API Key
+# Generate at: https://console.cloud.google.com/apis/credentials
+# Alternative: Get from ~/.bashrc or ~/.gemini_api_key_secret
+export GEMINI_API_KEY="AI_your_gemini_api_key_here"
 EOF
 
     chmod 600 "$token_file"

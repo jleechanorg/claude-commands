@@ -880,6 +880,8 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
     Args:
         request_data: Dictionary containing:
             - user_id: User ID
+            - limit: Optional maximum number of campaigns to return
+            - sort_by: Optional sort field ('created_at' or 'last_played')
 
     Returns:
         Dictionary with success/error status and campaigns list
@@ -887,13 +889,27 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
     try:
         # Extract parameters
         user_id = request_data.get("user_id")
+        limit = request_data.get("limit")
+        sort_by = request_data.get("sort_by", "last_played")
 
         # Validate required fields
         if not user_id:
             return {KEY_ERROR: "User ID is required"}
+            
+        # Validate limit parameter with proper error handling
+        if limit is not None:
+            try:
+                limit = int(limit) if limit else None
+            except (ValueError, TypeError):
+                return {KEY_ERROR: "Invalid limit parameter - must be a valid integer"}
+                
+        # Validate sort_by parameter
+        valid_sort_fields = ["created_at", "last_played"]
+        if sort_by and sort_by not in valid_sort_fields:
+            return {KEY_ERROR: f"Invalid sort_by parameter - must be one of: {', '.join(valid_sort_fields)}"}
 
-        # Get campaigns
-        campaigns = firestore_service.get_campaigns_for_user(user_id)
+        # Get campaigns with pagination and sorting
+        campaigns = firestore_service.get_campaigns_for_user(user_id, limit=limit, sort_by=sort_by)
 
         # Clean JSON artifacts from campaign text fields
         if campaigns:

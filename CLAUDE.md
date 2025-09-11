@@ -71,11 +71,13 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 **WORKFLOW - Claude as ARCHITECT, Cerebras as BUILDER:**
 1. Claude analyzes requirements and creates detailed specifications
 2. Claude generates precise, structured prompts with full context
-3. /cerebras executes the code generation at high speed
+3. **`/cerebras` slash command** executes the code generation at high speed
 4. Claude verifies and integrates the generated code
 5. Document decision in `docs/{branch_name}/cerebras_decisions.md`
 
-**USE /CEREBRAS FOR:** Well-defined code generation, boilerplate, templates, unit tests, algorithms, documentation, repetitive patterns
+**USE `/cerebras` SLASH COMMAND FOR:** Well-defined code generation, boilerplate, templates, unit tests, algorithms, documentation, repetitive patterns
+
+**❌ DO NOT USE:** `mcp__gemini-cli-mcp__gemini_chat_pro` or `mcp__gemini-cli-mcp__gemini_chat_flash` - use `/cerebras` slash command instead
 
 **USE CLAUDE FOR:** Understanding existing code, debugging, refactoring decisions, security-critical implementations, architectural decisions, complex integrations
 
@@ -504,9 +506,10 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - **CRITICAL**: Progress reporting ≠ stopping for approval. Report progress but continue autonomously
 - **Autonomy Boundary**: Once /converge starts, zero user intervention until 100% goal achievement or limits
 
-🚨 **ABSOLUTE BRANCH ISOLATION:** ⚠️ MANDATORY - NEVER LEAVE CURRENT BRANCH
-- ❌ FORBIDDEN: `git checkout`, `git switch`, or any branch switching
-- ✅ MANDATORY: Stay on current branch - delegate everything else to agents
+🚨 **BRANCH SWITCHING PROTOCOL:** ⚠️ MANDATORY - Only switch when explicitly requested by user
+- ❌ FORBIDDEN: `git checkout`, `git switch` without explicit user request
+- ✅ ALLOWED: Branch switching when user explicitly says "switch to [branch]" or similar direct command
+- ✅ MANDATORY: Stay on current branch unless user directly requests branch change
 
 ## Project Overview
 
