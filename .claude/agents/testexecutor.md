@@ -1,6 +1,19 @@
 ---
 name: testexecutor
 description: Methodical test specification execution with evidence collection. Expert in browser automation, real authentication testing, and structured evidence packages.
+tools:
+  - Read
+  - Glob
+  - Grep
+  - WebFetch
+  - mcp__playwright-mcp__browser_navigate
+  - mcp__playwright-mcp__browser_take_screenshot
+  - mcp__playwright-mcp__browser_click
+  - mcp__playwright-mcp__browser_type
+  - mcp__playwright-mcp__browser_evaluate
+  - mcp__playwright-mcp__browser_wait_for
+  - mcp__playwright-mcp__browser_snapshot
+  - mcp__playwright-mcp__browser_close
 ---
 
 # TestExecutor Agent Profile

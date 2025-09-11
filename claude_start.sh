@@ -129,7 +129,7 @@ start_orchestration_background() {
         # Start orchestration agents in quiet mode
         ./start_system.sh --quiet start &> /dev/null
     ) &
-    
+
     # Store the background process PID for monitoring
     local START_PID=$!
 
@@ -137,7 +137,7 @@ start_orchestration_background() {
     local max_wait=10
     local wait_time=0
     local startup_success=false
-    
+
     while [ $wait_time -lt $max_wait ]; do
         # Check if the orchestration monitor is running
         if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
@@ -148,7 +148,7 @@ start_orchestration_background() {
                 break
             fi
         fi
-        
+
         # Also check if the start script is still running
         if ! kill -0 $START_PID 2>/dev/null; then
             # Start script exited, check if it was successful
@@ -159,7 +159,7 @@ start_orchestration_background() {
                 return 1
             fi
         fi
-        
+
         sleep 1
         wait_time=$((wait_time + 1))
     done
@@ -172,9 +172,132 @@ start_orchestration_background() {
     fi
 }
 
+# Function to setup all required cron jobs with Linux/Ubuntu compatibility
+setup_cron_jobs() {
+    echo -e "${BLUE}🔍 Verifying cron job configuration...${NC}"
+
+    # Ensure wrapper scripts directory exists
+    mkdir -p "$HOME/.local/bin"
+
+    local cron_entries_added=0
+    local current_crontab=$(crontab -l 2>/dev/null || echo "")
+
+    # 1. Claude Backup Cron (every 4 hours) - Cross-platform and worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
+        echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
+
+        # Create worktree-agnostic wrapper with cross-platform compatibility
+        cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
+set -euo pipefail
+
+# First try to find backup script in any worktree
+for wt in "$HOME/projects/your-project.com" "$HOME/projects/worktree_"*; do
+  if [ -x "$wt/scripts/claude_backup.sh" ]; then
+    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations
+        if [ -d "$HOME/Dropbox" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+        else
+            exec "$wt/scripts/claude_backup.sh" "$HOME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        exec "$wt/scripts/claude_backup.sh" "$HOME"
+    fi
+  fi
+done
+
+# If no worktree backup script found, try legacy approach
+if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Platform-specific Dropbox paths for legacy script
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        if [ -d "$HOME/Dropbox" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Documents"
+        else
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+        fi
+    else
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+    fi
+else
+    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    exit 1
+fi
+EOF
+        chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
+
+        # Add to cron with proper $HOME expansion
+        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh 2>&1') | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 2. TMux Cleanup (every 15 minutes) - Worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
+        echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
+
+        # Create tmux cleanup wrapper that works across worktrees
+        cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Find any available WorldArchitect worktree with orchestration
+for worktree in "$HOME/projects/your-project.com" "$HOME/projects/worktree_"*; do
+    if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
+        cd "$worktree" && python3 orchestration/cleanup_completed_agents.py
+        exit $?
+    fi
+done
+# Fallback: if no worktree found, log the issue
+echo "$(date): No WorldArchitect worktree with orchestration found" >> /tmp/tmux_cleanup.log
+exit 1
+EOF
+        chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
+
+        # Add to cron
+        current_crontab=$(crontab -l 2>/dev/null || echo "")
+        (echo "$current_crontab"; echo "*/15 * * * * \$HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 3. Agent Monitor Disabled (remove problematic hardcoded entries)
+    echo -e "${BLUE}💡 Agent monitor disabled to prevent resource conflicts${NC}"
+
+    # Remove any existing agent monitor cron entries with hardcoded paths
+    current_crontab=$(crontab -l 2>/dev/null || echo "")
+    if echo "$current_crontab" | grep -q "agent_monitor.py"; then
+        echo -e "${YELLOW}⚠️  Removing existing agent monitor cron entries (hardcoded paths)${NC}"
+        # Filter out agent monitor entries
+        echo "$current_crontab" | grep -v "agent_monitor.py" | crontab -
+    fi
+
+    # Display results
+    if [ $cron_entries_added -gt 0 ]; then
+        echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) with Linux/Ubuntu compatibility${NC}"
+    else
+        echo -e "${GREEN}✅ All required cron jobs already configured${NC}"
+    fi
+
+    echo -e "${BLUE}📋 Current cron configuration:${NC}"
+    crontab -l 2>/dev/null | grep -E "(claude_backup|tmux_cleanup|cleanup_completed_agents)" || echo "  (no matching entries)"
+}
+
 # Function to check and start orchestration for non-worker modes
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
+
+    # First check comprehensive cron setup
+    setup_cron_jobs
+
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
     else
@@ -187,6 +310,40 @@ check_orchestration() {
         fi
     fi
 }
+
+# Check development environment setup (only if needed)
+if [ ! -d "venv" ] || [ ! -f "venv/bin/activate" ]; then
+    echo -e "${YELLOW}⚠️  Virtual environment not found - setting up development environment...${NC}"
+    if [ -f "scripts/setup-dev-env.sh" ]; then
+        ./scripts/setup-dev-env.sh
+        echo -e "${GREEN}✅ Development environment setup complete${NC}"
+    else
+        echo -e "${YELLOW}⚠️  setup-dev-env.sh not found - you may need to run it manually${NC}"
+    fi
+else
+    # Check if FastMCP is installed in the virtual environment (any Python version)
+    if [ -f "venv/bin/activate" ]; then
+        if source venv/bin/activate 2>/dev/null; then
+            if ! python -c "import fastmcp" >/dev/null 2>&1; then
+                echo -e "${YELLOW}⚠️  FastMCP not found in virtual environment - installing MCP dependencies...${NC}"
+                if [ -f "mcp_servers/slash_commands/requirements.txt" ]; then
+                    if pip install -r mcp_servers/slash_commands/requirements.txt; then
+                        echo -e "${GREEN}✅ MCP dependencies installed successfully${NC}"
+                    else
+                        echo -e "${RED}❌ Failed to install MCP dependencies${NC}"
+                        echo -e "${YELLOW}💡 Try running: ./scripts/setup-dev-env.sh${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠️  Cannot auto-install MCP dependencies - you may need to run setup-dev-env.sh${NC}"
+                fi
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Cannot check FastMCP - virtual environment activation failed${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Virtual environment activate script not found${NC}"
+    fi
+fi
 
 # Enhanced MCP server detection with better error handling
 echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
@@ -1500,7 +1657,7 @@ restart_claude_bot() {
     echo -e "${BLUE}🔄 Restarting Claude bot server...${NC}"
     stop_claude_bot
     sleep 2
-    
+
     if start_claude_bot_background; then
         sleep 3
         if is_claude_bot_running; then
