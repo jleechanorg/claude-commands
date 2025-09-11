@@ -28,6 +28,9 @@ from helpers import (
     patch_firestore,
     patch_gemini,
 )
+
+# Import mcp_api - will handle if not available in test logic
+import mcp_api
 from mcp_test_client import MCPError
 
 
@@ -48,8 +51,6 @@ class TestMCPServerIntegration(unittest.TestCase):
             assert env["mock_server"] is not None
 
             # Test direct health check
-            import requests
-
             response = requests.get(f"http://localhost:{self.mock_port}/health")
             assert response.status_code == 200
             data = response.json()
@@ -463,10 +464,10 @@ class TestMCPServerIntegration(unittest.TestCase):
 
     def test_mcp_server_direct_stdio(self):
         """Test MCP server functionality via direct stdio communication.
-        
+
         Validates:
         - JSON-RPC protocol compliance
-        - tools/list endpoint functionality  
+        - tools/list endpoint functionality
         - create_campaign tool execution
         - Process lifecycle management
         - Error handling for communication failures
@@ -474,12 +475,12 @@ class TestMCPServerIntegration(unittest.TestCase):
         env = os.environ.copy()
         env['TESTING'] = 'true'
         env['MOCK_SERVICES_MODE'] = 'true'
-        
+
         # Resolve repo root -> mvp_site/mcp_api.py robustly
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         server_script = os.path.join(repo_root, "mvp_site", "mcp_api.py")
         server_cmd = [sys.executable, server_script, "--stdio"]
-        
+
         server = None
         try:
             # Start server process
@@ -492,27 +493,27 @@ class TestMCPServerIntegration(unittest.TestCase):
                 env=env,
                 cwd=os.path.dirname(__file__)  # Run from test directory
             )
-            
+
             # Test tools/list request
             tools_request = {
                 "jsonrpc": "2.0",
-                "method": "tools/list", 
+                "method": "tools/list",
                 "params": {},
                 "id": 1
             }
-            
+
             server.stdin.write(json.dumps(tools_request) + '\n')
             server.stdin.flush()
-            
+
             # Read response with timeout
             response_line = server.stdout.readline()
             self.assertTrue(response_line, "No response from tools/list")
-            
+
             response = json.loads(response_line.strip())
             result = response.get('result', {})
             tools = result.get('tools', [])
             self.assertGreater(len(tools), 0, f"No tools returned. Response: {response}")
-            
+
             # Test create_campaign call
             campaign_request = {
                 "jsonrpc": "2.0",
@@ -529,21 +530,21 @@ class TestMCPServerIntegration(unittest.TestCase):
                 },
                 "id": 2
             }
-            
+
             server.stdin.write(json.dumps(campaign_request) + '\n')
             server.stdin.flush()
-            
+
             response_line = server.stdout.readline()
             self.assertTrue(response_line, "No response from create_campaign")
-            
+
             response = json.loads(response_line.strip())
             result = response.get('result', {})
             self.assertNotIn('error', result, f"Campaign creation failed: {result.get('error')}. Full response: {response}")
-            
+
             # Clean shutdown
             server.stdin.close()
             server.wait(timeout=5)
-            
+
         except subprocess.TimeoutExpired:
             if server:
                 server.kill()
@@ -555,7 +556,7 @@ class TestMCPServerIntegration(unittest.TestCase):
 
     def test_mcp_server_http_mode(self):
         """Test MCP server functionality via HTTP JSON-RPC.
-        
+
         Validates:
         - HTTP server startup and health checks
         - JSON-RPC over HTTP protocol compliance
@@ -566,11 +567,11 @@ class TestMCPServerIntegration(unittest.TestCase):
         env = os.environ.copy()
         env['TESTING'] = 'true'
         env['MOCK_SERVICES_MODE'] = 'true'
-        
+
         # Resolve repo root -> mvp_site/mcp_api.py robustly
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
         server_script = os.path.join(repo_root, "mvp_site", "mcp_api.py")
-        
+
         test_port = 8003  # Different from mock_port to avoid conflicts
         server_cmd = [
             sys.executable,
@@ -578,7 +579,7 @@ class TestMCPServerIntegration(unittest.TestCase):
             '--port', str(test_port),
             '--http-only'
         ]
-        
+
         server = None
         try:
             # Start server process in HTTP mode
@@ -590,7 +591,7 @@ class TestMCPServerIntegration(unittest.TestCase):
                 env=env,
                 cwd=os.path.dirname(__file__)
             )
-            
+
             # Wait for server startup with health check polling
             for attempt in range(30):  # 30 attempts = 15 seconds max
                 try:
@@ -601,13 +602,13 @@ class TestMCPServerIntegration(unittest.TestCase):
                     time.sleep(0.5)
             else:
                 self.fail("Server failed to start within timeout")
-                
+
             # Verify server is healthy
             self.assertEqual(health_response.status_code, 200)
-            
+
             health_data = health_response.json()
             self.assertEqual(health_data["status"], "ok")
-            
+
             # Test tools/list via HTTP
             tools_request = {
                 "jsonrpc": "2.0",
@@ -615,19 +616,19 @@ class TestMCPServerIntegration(unittest.TestCase):
                 "params": {},
                 "id": 1
             }
-            
+
             response = requests.post(
                 f"http://localhost:{test_port}/rpc",
                 json=tools_request,
                 headers={"Content-Type": "application/json"},
                 timeout=10
             )
-            
+
             self.assertEqual(response.status_code, 200)
             result = response.json()
             tools = result.get('result', {}).get('tools', [])
             self.assertGreater(len(tools), 0, f"No tools returned via HTTP. Response: {result}")
-            
+
             # Test create_campaign via HTTP
             campaign_request = {
                 "jsonrpc": "2.0",
@@ -644,19 +645,19 @@ class TestMCPServerIntegration(unittest.TestCase):
                 },
                 "id": 2
             }
-            
+
             response = requests.post(
                 f"http://localhost:{test_port}/rpc",
                 json=campaign_request,
                 headers={"Content-Type": "application/json"},
                 timeout=15
             )
-            
+
             self.assertEqual(response.status_code, 200)
             result = response.json()
             campaign_result = result.get('result', {})
             self.assertNotIn('error', campaign_result, f"Campaign creation failed: {campaign_result.get('error')}")
-            
+
         except Exception as e:
             self.fail(f"HTTP mode test failed: {e}")
         finally:
@@ -669,7 +670,7 @@ class TestMCPServerIntegration(unittest.TestCase):
 
     def test_mcp_direct_import_functions(self):
         """Test MCP server functions by direct import and execution.
-        
+
         Validates:
         - Direct function imports without process overhead
         - handle_list_tools, handle_call_tool, handle_list_resources
@@ -682,56 +683,54 @@ class TestMCPServerIntegration(unittest.TestCase):
         old_mock_services_mode = os.environ.get('MOCK_SERVICES_MODE')
         os.environ['TESTING'] = 'true'
         os.environ['MOCK_SERVICES_MODE'] = 'true'
-        
+
         # Add mvp_site to path for imports
         mvp_site_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "mvp_site"))
         if mvp_site_path not in map(os.path.abspath, sys.path):
             sys.path.insert(0, mvp_site_path)
-        
+
         try:
-            import mcp_api
-            
             # Test handle_list_tools function
             async def test_tools():
                 tools = await mcp_api.handle_list_tools()
                 self.assertGreater(len(tools), 0, "No tools found via direct import")
                 return tools
-                
+
             # Test handle_call_tool function
             async def test_campaign():
                 campaign_args = {
                     "user_id": self.test_user_id,
                     "title": "Direct Import Test Campaign",
-                    "character": "Import Character", 
+                    "character": "Import Character",
                     "setting": "Import Setting",
                     "description": "Test via direct import"
                 }
-                
+
                 result = await mcp_api.handle_call_tool("create_campaign", campaign_args)
                 self.assertTrue(result, "No result from create_campaign")
-                
+
                 result_text = result[0].text
                 result_data = json.loads(result_text)
                 self.assertNotIn('error', result_data, f"Campaign creation error: {result_data.get('error')}")
                 return result_data
-                
-            # Test handle_list_resources function  
+
+            # Test handle_list_resources function
             async def test_resources():
                 resources = await mcp_api.handle_list_resources()
                 self.assertGreater(len(resources), 0, "No resources found via direct import")
                 return resources
-                
+
             # Run async tests
             tools = asyncio.run(test_tools())
             campaign_data = asyncio.run(test_campaign())
             resources = asyncio.run(test_resources())
-            
+
             # Verify tool names include expected ones
             tool_names = [tool.name for tool in tools]
             expected_tools = ['create_campaign', 'get_campaign_state', 'process_action']
             for expected_tool in expected_tools:
                 self.assertIn(expected_tool, tool_names, f"Missing expected tool: {expected_tool}")
-                
+
         except Exception as e:
             self.fail(f"Direct import test failed: {e}")
         finally:
