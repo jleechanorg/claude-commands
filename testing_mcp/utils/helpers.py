@@ -417,21 +417,35 @@ def find_free_port(start_port: int = 8000) -> int:
 def kill_process_on_port(port: int):
     """Kill any process running on the specified port."""
     try:
-        for conn in psutil.net_connections():
-            if (conn.laddr and getattr(conn, "pid", None) is not None and
-                conn.laddr.port == port and conn.status == psutil.CONN_LISTEN):
+        for conn in psutil.net_connections(kind="inet"):
+            laddr = getattr(conn, "laddr", None)
+            pid = getattr(conn, "pid", None)
+            # Handle both namedtuple and tuple laddr formats
+            if laddr is not None:
+                if hasattr(laddr, "port"):
+                    lport = getattr(laddr, "port", None)
+                elif isinstance(laddr, tuple) and len(laddr) > 1:
+                    lport = laddr[1]
+                else:
+                    lport = None
+            else:
+                lport = None
+
+            if lport == port and pid is not None and conn.status == psutil.CONN_LISTEN:
                 proc = None  # Initialize process variable
                 try:
-                    proc = psutil.Process(conn.pid)
+                    proc = psutil.Process(pid)
                     proc.terminate()
                     proc.wait(timeout=5)
                 except (psutil.NoSuchProcess, psutil.TimeoutExpired):
                     if proc is not None:
                         with suppress(psutil.NoSuchProcess):
                             proc.kill()
-    except (ImportError, AttributeError) as e:
-        logger = logging.getLogger(__name__)
-        logger.warning(f"psutil not available. Cannot kill process on port {port}: {e}")
+                        # Wait briefly to reap the process
+                        with suppress(psutil.NoSuchProcess, psutil.TimeoutExpired):
+                            proc.wait(timeout=3)
+    except AttributeError as e:
+        logger.warning(f"psutil missing attribute. Cannot kill process on port {port}: {e}")
 
 
 @asynccontextmanager
