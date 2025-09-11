@@ -8,6 +8,8 @@
 
 **CRITICAL RULE**: GitHub PR status is the ONLY source of truth. Local conditions (tests, conflicts, etc.) may differ from GitHub's reality.
 
+**🚨 CRITICAL LEARNING (2025-09-09)**: GitHub `mergeable: "MERGEABLE"` can be MISLEADING - it indicates no merge conflicts but does NOT guarantee tests are passing. Always explicitly check `statusCheckRollup[]` for failing tests before declaring success.
+
 **MANDATORY APPROACH**:
 - ✅ **ALWAYS start by fetching fresh GitHub PR status**
 - ✅ **ALWAYS display GitHub status inline for transparency**
@@ -239,10 +241,10 @@ Examine the collected data to understand what needs fixing:
       -e 'TypeError:' \
       -e '\.py[:,]?\d+(:\d+)?' \
     -A 3 -B 3
-  
+
   # Common patterns to identify:
   # - ModuleNotFoundError: Missing imports or dependencies
-  # - AssertionError: Test logic failures with specific expectations  
+  # - AssertionError: Test logic failures with specific expectations
   # - NameError: Undefined variables or missing imports
   # - ImportError: Module loading issues
   # - TypeError: Type mismatches in function calls
@@ -402,27 +404,72 @@ EOF
 
 **MANDATORY GITHUB RE-VERIFICATION PROTOCOL**:
 
-1. **Re-fetch Fresh GitHub Status** (Wait for CI to complete):
+🚨 **CRITICAL**: Never trust `mergeable: "MERGEABLE"` alone - it can show mergeable even with failing tests!
+
+1. **Comprehensive Test State Verification** (Wait for CI to complete):
    - **WAIT**: Allow 30-60 seconds for GitHub CI to register changes after push
-   - **RE-FETCH**: `gh pr view <PR> --json statusCheckRollup,mergeable,mergeableState`
-   - **DISPLAY**: Print updated GitHub status inline with before/after comparison
-   - **EXAMPLE**:
+   - **FETCH ALL STATUS**: `gh pr view <PR> --json statusCheckRollup,mergeable,mergeStateStatus`
+   - **🚨 MANDATORY FAILURE CHECK**: Explicitly validate NO tests are failing:
+     ```bash
+     # CRITICAL: Check for any failing required checks
+     failing_checks=$(gh pr view "$PR" --json statusCheckRollup --jq '
+       [
+         (.statusCheckRollup // [])[]
+         | select(.isRequired == true)
+         | select(
+             (.conclusion == "FAILURE") or
+             (.conclusion == "TIMED_OUT") or
+             (.conclusion == "CANCELLED") or
+             (.conclusion == "ACTION_REQUIRED") or
+             (.state == "FAILURE") or
+             (.state == "ERROR")
+           )
+       ] | length
+     ')
+
+     if [ "$failing_checks" -gt 0 ]; then
+       echo "❌ BLOCKING: $failing_checks required checks failing"
+       gh pr view "$PR" --json statusCheckRollup --jq '
+         (.statusCheckRollup // [])[]
+         | select(.isRequired == true)
+         | select(
+             (.conclusion == "FAILURE") or
+             (.conclusion == "TIMED_OUT") or
+             (.conclusion == "CANCELLED") or
+             (.conclusion == "ACTION_REQUIRED") or
+             (.state == "FAILURE") or
+             (.state == "ERROR")
+           )
+         | "❌ \((.context // .name) // "unknown"): \((.conclusion // .state) // "unknown") - \((.description // "No description"))"
+       '
+       echo "🚨 /fixpr MUST NOT declare success with failing tests"
+       exit 1
+     fi
+     ```
+   - **🚨 WARNING SIGNS**:
+     - `mergeStateStatus: "UNSTABLE"` = Failing required checks
+     - `conclusion: "FAILURE"` in ANY statusCheckRollup entry = Hard failure
+     - `state: "FAILURE"` = Failed CI run
+   - **DISPLAY**: Print updated GitHub status with explicit test validation:
      ```text
      🔄 GITHUB STATUS VERIFICATION (After Fixes):
 
      BEFORE:
      ❌ test-unit: FAILING - TypeError in auth.py
-     ❌ mergeable: false
+     ❌ mergeable: false, mergeStateStatus: CONFLICTING
 
      AFTER (Fresh from GitHub):
+     ✅ ALL CHECKS VERIFIED: No failing tests found
      ✅ test-unit: PASSING - All tests pass
-     ✅ mergeable: true
+     ✅ mergeable: "MERGEABLE", mergeStateStatus: CLEAN
 
-     📊 RESULT: PR is now mergeable on GitHub
+     📊 RESULT: PR is genuinely mergeable on GitHub
      ```
-   - Verify mergeable status changed from CONFLICTING to MERGEABLE
-   - Confirm no new test failures were introduced
-   - Ensure bot feedback has been addressed
+   - **SUCCESS CRITERIA**:
+     - `mergeable: "MERGEABLE"` AND
+     - `mergeStateStatus: "CLEAN"` (not "UNSTABLE") AND
+     - Zero entries with `conclusion: "FAILURE"` AND
+     - All required checks passing
 
 2. **Local CI Replica Verification**:
    - **MANDATORY**: Run `./run_ci_replica.sh` to verify fixes in CI-equivalent environment
@@ -437,11 +484,13 @@ EOF
    - Wait for GitHub to re-run CI checks
    - Monitor the PR page to see blockers clearing
 
-4. **Success Criteria**:
-   - All required CI checks show green checkmarks
-   - GitHub shows "This branch has no conflicts"
-   - No "Changes requested" reviews blocking merge
-   - The merge button would be green (but we don't click it!)
+4. **Success Criteria** (🚨 ALL MUST BE TRUE):
+   - **COMPREHENSIVE TEST VALIDATION**: Zero failing checks in statusCheckRollup
+   - **STATUS VERIFICATION**: `mergeable: "MERGEABLE"` AND `mergeStateStatus: "CLEAN"`
+   - **CONFLICT RESOLUTION**: GitHub shows "This branch has no conflicts"
+   - **REVIEW APPROVAL**: No "Changes requested" reviews blocking merge
+   - **FINAL VALIDATION**: The merge button would be green (but we don't click it!)
+   - **🚨 MANDATORY**: If ANY check shows `conclusion: "FAILURE"`, /fixpr has NOT succeeded
 
 If blockers remain, iterate through the analysis and fix process again until the PR is fully mergeable.
 
