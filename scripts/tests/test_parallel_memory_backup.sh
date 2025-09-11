@@ -175,14 +175,14 @@ verify_results() {
 
     # Count entities in each file
     if [ -f "$env1_file" ]; then
-        local env1_count=$(jq 'length' "$env1_file" 2>/dev/null || echo "0")
+        local env1_count=$(jq -s 'length' "$env1_file" 2>/dev/null || echo "0")
         log "Environment 1 file: $env1_count entities"
     else
         error "Environment 1 file missing!"
     fi
 
     if [ -f "$env2_file" ]; then
-        local env2_count=$(jq 'length' "$env2_file" 2>/dev/null || echo "0")
+        local env2_count=$(jq -s 'length' "$env2_file" 2>/dev/null || echo "0")
         log "Environment 2 file: $env2_count entities"
     else
         error "Environment 2 file missing!"

@@ -324,3 +324,7 @@ def take_screenshot(page: Page, filename: str) -> str:
     page.screenshot(path=filepath)
     print(f"📸 Screenshot: {filename}")
     return filepath
+
+
+# Alias for compatibility with existing tests
+TestBase = BrowserTestBase

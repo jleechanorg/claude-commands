@@ -65,7 +65,8 @@ get_memory_usage_gb() {
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
         # Get RSS memory in KB and convert to GB
         local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
-        if [ -n "$rss" ]; then
+        # Validate RSS is numeric before calculation
+        if [ -n "$rss" ] && echo "$rss" | grep -qE '^[0-9]+$'; then
             awk -v rss="$rss" 'BEGIN {printf "%.2f", rss / 1024 / 1024}'
         else
             echo "0"
@@ -742,7 +743,9 @@ print_status "📊 Memory monitoring active: ${MEMORY_LIMIT_GB}GB total limit, $
 # Function to run a single test file
 run_single_test() {
     local test_file="$1"
-    local result_file="$tmp_dir/$(basename "$test_file").result"
+    # Use full path hash to avoid basename collisions for same-named tests in different dirs
+    local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
+    local result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
     local start_time=$(date +%s)
 
     {
@@ -801,7 +804,9 @@ print_status "📊 Processing test results..."
 
 # Process results from all test files
 for test_file in "${test_files[@]}"; do
-    result_file="$tmp_dir/$(basename "$test_file").result"
+    # Use same path hash to find result file (matching run_single_test logic)
+    local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
+    result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
 
     if [ -f "$result_file" ]; then
         result=$(grep "^RESULT:" "$result_file" | cut -d' ' -f2)
