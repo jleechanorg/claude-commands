@@ -20,10 +20,23 @@ from unittest.mock import patch, MagicMock, mock_open
 
 # Import coverage if available - let it fail at module level if not available
 import coverage
+import importlib.util
 
-# Add scripts directory to sys.path and import unified_memory_backup in one block
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'memory_sync'))
-from unified_memory_backup import UnifiedMemoryBackup
+# Import unified_memory_backup using importlib to avoid sys.path manipulation
+def _import_unified_backup_module():
+    """Import unified_memory_backup from memory_sync directory using importlib."""
+    memory_sync_dir = os.path.join(os.path.dirname(__file__), '..', 'memory_sync')
+    module_path = os.path.join(memory_sync_dir, 'unified_memory_backup.py')
+    spec = importlib.util.spec_from_file_location('unified_memory_backup', module_path)
+    if spec and spec.loader:
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+    return None
+
+# Load unified_memory_backup module at module level
+_backup_module = _import_unified_backup_module()
+UnifiedMemoryBackup = _backup_module.UnifiedMemoryBackup if _backup_module else None
 
 
 class TestUnifiedMemoryBackup(unittest.TestCase):

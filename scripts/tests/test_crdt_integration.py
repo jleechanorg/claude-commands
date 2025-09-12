@@ -4,6 +4,7 @@ Integration test for CRDT memory backup system.
 Tests the complete workflow including parallel backups.
 """
 
+import importlib.util
 import json
 import os
 import sys
@@ -11,11 +12,36 @@ import tempfile
 import unittest
 from pathlib import Path
 
-# Add parent directory to sys.path and import CRDT module in one block
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
-from memory_backup_crdt import MemoryBackupCRDT, crdt_merge
+# Import CRDT module using importlib to avoid sys.path manipulation
+def _import_crdt_module():
+    """Import CRDT module from parent directory using importlib."""
+    parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # Try multiple possible locations for the CRDT module
+    possible_paths = [
+        os.path.join(parent_dir, 'memory_backup_crdt.py'),
+        os.path.join(parent_dir, 'crdt_merge.py'),
+        os.path.join(parent_dir, 'memory_sync', 'memory_backup_crdt.py')
+    ]
+    
+    for module_path in possible_paths:
+        if os.path.exists(module_path):
+            spec = importlib.util.spec_from_file_location('memory_backup_crdt', module_path)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)
+                return module
+    return None
 
-CRDT_AVAILABLE = True
+# Load CRDT module at module level
+try:
+    _crdt_module = _import_crdt_module()
+    MemoryBackupCRDT = getattr(_crdt_module, 'MemoryBackupCRDT', None) if _crdt_module else None
+    crdt_merge = getattr(_crdt_module, 'crdt_merge', None) if _crdt_module else None
+    CRDT_AVAILABLE = _crdt_module is not None and MemoryBackupCRDT is not None and crdt_merge is not None
+except Exception:
+    MemoryBackupCRDT = None
+    crdt_merge = None
+    CRDT_AVAILABLE = False
 
 @unittest.skipUnless(CRDT_AVAILABLE, "memory_backup_crdt module not available")
 
