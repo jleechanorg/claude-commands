@@ -98,14 +98,24 @@ memory_monitor() {
     exec 3>&1  # Save stdout
     exec 1>/dev/null  # Redirect stdout to null during background monitoring
 
+    # Safety timeout: configurable monitoring timeout
+    local MONITOR_TIMEOUT_SECONDS=${MONITOR_TIMEOUT_SECONDS:-600}  # Default 10 minutes (much more reasonable)
+    local max_monitor_time=$MONITOR_TIMEOUT_SECONDS
+
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
+        local elapsed=$((current_time - start_time))
+
+        # Safety exit if monitoring too long
+        if [ $elapsed -gt $max_monitor_time ]; then
+            echo -e "${RED}[ERROR]${NC} Memory monitor timeout after ${elapsed}s, exiting..." >&3
+            break
+        fi
         local total_memory=$(get_total_memory_usage_gb)
         local comparison=$(awk -v mem="$total_memory" -v limit="$MEMORY_LIMIT_GB" 'BEGIN {print (mem > limit) ? "1" : "0"}')
 
         # Log detailed process info every 3 iterations (every 6 seconds)
         if [ $((log_counter % 3)) -eq 0 ]; then
-            local elapsed=$((current_time - start_time))
             echo -e "${BLUE}[INFO]${NC} ⏱️  Memory Monitor [${elapsed}s]: Total=${total_memory}GB (limit: ${MEMORY_LIMIT_GB}GB)" >&3
 
             # Show all Python test processes with memory usage
@@ -775,19 +785,43 @@ run_single_test() {
     } > "$result_file"
 }
 
-# Export the function for use with xargs
-export -f run_single_test
-export tmp_dir enable_coverage
+# Overall test suite timeout (10 minutes for faster feedback and resource efficiency)
+TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-600}  # 10 minutes default
 
-# Run tests in parallel using xargs
-if [ $max_workers -eq 1 ]; then
-    # Sequential execution
-    for test_file in "${test_files[@]}"; do
-        run_single_test "$test_file"
-    done
-else
-    # Parallel execution
-    printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
+print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)"
+
+# Run tests with overall timeout wrapper
+run_tests_with_timeout() {
+    if [ $max_workers -eq 1 ]; then
+        # Sequential execution
+        for test_file in "${test_files[@]}"; do
+            run_single_test "$test_file"
+        done
+    else
+        # Parallel execution
+        printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
+    fi
+}
+
+# Export functions for use with xargs and timeout wrapper
+export -f run_single_test run_tests_with_timeout
+export tmp_dir enable_coverage max_workers
+
+# Execute tests with timeout
+suite_timed_out=false
+if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
+    echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
+    echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
+    echo "  - Infinite loops in test code" >&2
+    echo "  - Network timeouts or external service dependencies" >&2
+    echo "  - Memory leaks causing system slowdown" >&2
+    echo "  - Tests waiting for user input or external events" >&2
+
+    # Kill any remaining test processes
+    pkill -f "python.*test_" || true
+
+    # Mark as timed out to prevent result processing from overriding
+    suite_timed_out=true
 fi
 
 # Wait for all background jobs to complete
@@ -802,11 +836,20 @@ fi
 
 print_status "📊 Processing test results..."
 
-# Process results from all test files
-for test_file in "${test_files[@]}"; do
-    # Use same path hash to find result file (matching run_single_test logic)
-    local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
-    result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
+# Handle timeout case - set all tests as failed and skip individual result processing
+if [ "$suite_timed_out" = true ]; then
+    failed_tests=$((total_tests))
+    passed_tests=0
+    skipped_tests=0
+    for test_file in "${test_files[@]}"; do
+        failed_test_files+=("$test_file")
+        echo -e "  ${RED}✗${NC} $(basename "$test_file") (timeout)"
+    done
+    echo -e "${RED}All tests marked as failed due to suite timeout${NC}"
+else
+    # Process results from individual test files normally
+    for test_file in "${test_files[@]}"; do
+        result_file="$tmp_dir/$(basename "$test_file").result"
 
     if [ -f "$result_file" ]; then
         result=$(grep "^RESULT:" "$result_file" | cut -d' ' -f2)
@@ -836,7 +879,8 @@ for test_file in "${test_files[@]}"; do
         echo -e "  ${YELLOW}?${NC} $(basename "$test_file") - No result file"
         failed_test_files+=("$test_file")
     fi
-done
+    done
+fi
 
 # Generate coverage report if enabled
 if [ "$enable_coverage" = true ]; then
