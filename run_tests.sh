@@ -97,8 +97,9 @@ memory_monitor() {
     exec 3>&1  # Save stdout
     exec 1>/dev/null  # Redirect stdout to null during background monitoring
 
-    # Safety timeout: Maximum 45 minutes of monitoring
-    local max_monitor_time=2700  # 45 minutes in seconds
+    # Safety timeout: configurable monitoring timeout
+    local MONITOR_TIMEOUT_SECONDS=${MONITOR_TIMEOUT_SECONDS:-600}  # Default 10 minutes (much more reasonable)
+    local max_monitor_time=$MONITOR_TIMEOUT_SECONDS
 
     while [ -f "$monitor_file" ]; do
         local current_time=$(date +%s)
