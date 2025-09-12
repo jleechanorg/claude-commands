@@ -10,6 +10,7 @@ Tests cover:
 - Git operations safety
 - Error handling and recovery
 """
+import importlib.util
 import json
 import os
 import shutil
@@ -20,15 +21,11 @@ from datetime import datetime
 from subprocess import CalledProcessError
 from unittest.mock import patch, MagicMock, mock_open
 
-# Import coverage if available - let it fail gracefully
-try:
-    import coverage
-    COVERAGE_AVAILABLE = True
-except ImportError:
-    coverage = None
-    COVERAGE_AVAILABLE = False
-
-import importlib.util
+# Import coverage at module level - handling gracefully if not available
+coverage = None
+COVERAGE_AVAILABLE = importlib.util.find_spec("coverage") is not None
+if COVERAGE_AVAILABLE:
+    coverage = __import__("coverage")
 
 # Import unified_memory_backup using importlib to avoid sys.path manipulation
 def _import_unified_backup_module():

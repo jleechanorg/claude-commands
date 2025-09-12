@@ -13,18 +13,16 @@ import sys
 import unittest
 from typing import Any
 
+import httpx
+from a2a.client.client import A2AClient
+from a2a.types import AgentCard, Message, Role, TextPart
+from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
+
 # Check A2A availability using importlib to avoid crashing on missing dependencies
 A2A_AVAILABLE = (
     importlib.util.find_spec("httpx") is not None
     and importlib.util.find_spec("a2a") is not None
 )
-
-# Only import A2A dependencies if available
-if A2A_AVAILABLE:
-    import httpx
-    from a2a.client.client import A2AClient
-    from a2a.types import AgentCard, Message, Role, TextPart
-    from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
 
 
 class RealA2AClientTester(unittest.TestCase):
