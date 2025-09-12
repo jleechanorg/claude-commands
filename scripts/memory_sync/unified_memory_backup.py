@@ -17,20 +17,62 @@ from urllib.parse import urlparse
 import re
 
 class UnifiedMemoryBackup:
-    def __init__(self, mode: str = "manual"):
+    def __init__(self, mode: str = "manual", repo_name: str = None):
         self.mode = mode
         self.is_cron = mode == "cron"
         self.timestamp = datetime.now()
         self.date_stamp = self.timestamp.strftime('%Y-%m-%d')
 
-        # Configuration
-        self.memory_file = os.path.expanduser("~/.cache/mcp-memory/memory.json")
+        # Auto-detect repository name if not provided
+        if repo_name is None:
+            repo_name = self._detect_repo_name()
+
+        self.repo_name = repo_name
+
+        # Configuration with repository-specific memory file
+        memory_filename = f"memory_{repo_name}.json"
+        self.memory_file = os.path.expanduser(f"~/.cache/mcp-memory/{memory_filename}")
         self.repo_url = os.environ.get("BACKUP_REPO_URL", "https://github.com/jleechanorg/worldarchitect-memory-backups.git")
         self.repo_dir = os.path.expanduser("~/.cache/memory-backup-repo")
-        self.lock_file = os.path.expanduser("~/.cache/mcp-memory/backup.lock")
+        self.lock_file = os.path.expanduser(f"~/.cache/mcp-memory/backup_{repo_name}.lock")
 
         # Logging configuration
         self.verbose = not self.is_cron
+
+    def _detect_repo_name(self) -> str:
+        """Auto-detect current repository name for memory file naming"""
+        try:
+            # Try to get repository name from git remote
+            result = subprocess.run(
+                ["git", "remote", "get-url", "origin"],
+                capture_output=True, text=True, timeout=10, check=True
+            )
+            remote_url = result.stdout.strip()
+
+            # Extract repository name from URL
+            if remote_url:
+                # Handle both HTTPS and SSH URLs
+                repo_name = remote_url.split('/')[-1]
+                if repo_name.endswith('.git'):
+                    repo_name = repo_name[:-4]
+                # Replace dots with dashes for filename compatibility
+                repo_name = repo_name.replace('.', '-')
+                return repo_name
+        except (subprocess.SubprocessError, subprocess.TimeoutExpired):
+            pass
+
+        # Fallback to directory name if git is not available
+        try:
+            cwd = os.getcwd()
+            dir_name = os.path.basename(cwd)
+            # Clean directory name for filename use
+            clean_name = re.sub(r'[^a-zA-Z0-9_-]', '-', dir_name)
+            return clean_name
+        except:
+            pass
+
+        # Ultimate fallback
+        return "default"
 
     def log(self, message: str, force: bool = False) -> None:
         """Log message with timestamp, respecting verbosity settings"""
@@ -341,10 +383,12 @@ def main():
     parser = argparse.ArgumentParser(description="Unified Memory Backup Script")
     parser.add_argument('--mode', choices=['manual', 'cron'], default='manual',
                       help='Execution mode: manual (verbose) or cron (quiet)')
+    parser.add_argument('--repo-name', type=str, default=None,
+                      help='Repository name for memory file (auto-detected if not specified)')
 
     args = parser.parse_args()
 
-    backup = UnifiedMemoryBackup(mode=args.mode)
+    backup = UnifiedMemoryBackup(mode=args.mode, repo_name=args.repo_name)
 
     try:
         backup.acquire_lock()
