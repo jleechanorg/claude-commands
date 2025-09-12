@@ -850,7 +850,7 @@ else
     # Process results from individual test files normally
     for test_file in "${test_files[@]}"; do
         # Use same path hash to find result file (matching run_single_test logic)
-        local path_hash=$(python3 -c "import hashlib,sys; print(hashlib.sha1(sys.argv[1].encode()).hexdigest()[:8])" "$test_file")
+        path_hash=$(python3 -c "import hashlib,sys; print(hashlib.sha1(sys.argv[1].encode()).hexdigest()[:8])" "$test_file")
         result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
 
     if [ -f "$result_file" ]; then

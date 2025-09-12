@@ -28,12 +28,13 @@
 `/commentcheck` - Verify 100% comment coverage with warnings if incomplete
 
 ### Phase 6: Iteration (MANDATORY UNTIL COMPLETE)
-**MANDATORY**: Repeat Phases 3-5 until GitHub shows ALL criteria met:
+**MANDATORY**: Repeat Phases 3–5 until GitHub shows ALL criteria met, with strict bounds:
 - ✅ No failing tests
 - ✅ No merge conflicts
 - ✅ No unaddressed comments
 - ✅ CI passing
-- **NEVER STOP until GitHub ready-for-merge**
+- ⏱️ **Hard caps**: max 5 iterations or 30 minutes per run (whichever comes first), exponential backoff between attempts
+- **Stop** when no-op cycles are detected (no diffs, no new replies), then surface a summary and next actions
 
 ### Phase 7: Push
 `/pushl` - Push changes with labels and description
