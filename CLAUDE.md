@@ -115,8 +115,10 @@ Genesis Coder, Prime Mover,
 
 **Header Generation Methods:**
 - **PREFERRED:** Use `/header` command (finds project root automatically by looking for CLAUDE.md)
-- **Manual:** Run individual commands for local branch, remote, and PR info
-
+- **Manual:** Run the following commands to gather header info:
+    - **Local branch:** `git rev-parse --abbrev-ref HEAD`
+    - **Remote:** `git remote -v`
+    - **PR number & URL:** Use `gh pr list` (GitHub CLI) or check the PR page on GitHub/GitLab
 ## 🚨 CRITICAL PR & COPILOT PROTOCOLS
 
 🚨 **ZERO TOLERANCE PR MERGE APPROVAL PROTOCOL**: ⚠️ MANDATORY
