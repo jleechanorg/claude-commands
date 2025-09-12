@@ -754,7 +754,7 @@ print_status "📊 Memory monitoring active: ${MEMORY_LIMIT_GB}GB total limit, $
 run_single_test() {
     local test_file="$1"
     # Use full path hash to avoid basename collisions for same-named tests in different dirs
-    local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
+    local path_hash=$(python3 -c "import hashlib,sys; print(hashlib.sha1(sys.argv[1].encode()).hexdigest()[:8])" "$test_file")
     local result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
     local start_time=$(date +%s)
 
@@ -850,7 +850,7 @@ else
     # Process results from individual test files normally
     for test_file in "${test_files[@]}"; do
         # Use same path hash to find result file (matching run_single_test logic)
-        local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
+        local path_hash=$(python3 -c "import hashlib,sys; print(hashlib.sha1(sys.argv[1].encode()).hexdigest()[:8])" "$test_file")
         result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
 
     if [ -f "$result_file" ]; then
