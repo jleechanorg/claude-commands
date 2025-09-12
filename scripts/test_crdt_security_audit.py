@@ -201,9 +201,9 @@ def test_git_integration_security():
         repo_path.mkdir()
 
         # Initialize git repo
-        subprocess.run(["git", "init", "--quiet"], cwd=repo_path, check=True)
-        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True)
-        subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True)
+        subprocess.run(["git", "init", "--quiet"], cwd=repo_path, check=True, timeout=30)
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=repo_path, check=True, timeout=30)
+        subprocess.run(["git", "config", "user.name", "Test User"], cwd=repo_path, check=True, timeout=30)
 
         git_integration = GitIntegration(str(repo_path))
 
