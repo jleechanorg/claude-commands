@@ -1,7 +1,26 @@
 # /copilot - Fast PR Processing
 
+## 🚨 Mandatory Comment Coverage Tracking
+This command automatically tracks comment coverage and warns about missing responses:
+```bash
+# COVERAGE TRACKING: Monitor comment response completion (silent unless errors)
+```
+
+## ⏱️ Automatic Timing Protocol
+This command silently tracks execution time and only reports if exceeded:
+```bash
+# Silent timing - only output if >3 minutes
+COPILOT_START_TIME=$(date +%s)
+# ... execution phases ...
+COPILOT_END_TIME=$(date +%s)
+COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
+if [ $COPILOT_DURATION -gt 180 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
+fi
+```
+
 ## 🎯 Purpose
-Ultra-fast PR processing using hybrid orchestration: direct comment handling + copilot-fixpr agent for file operations.
+Ultra-fast PR processing using hybrid orchestration with comprehensive coverage and quality assurance. Uses hybrid orchestrator with copilot-fixpr agent by default for maximum reliability.
 
 ## ⚡ Core Workflow
 
@@ -20,8 +39,10 @@ Ultra-fast PR processing using hybrid orchestration: direct comment handling + c
 
 **INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
 ```bash
-# Get comprehensive PR status and initialize timing
+# Get comprehensive PR status first
 /gstatus
+
+# Initialize timing for performance tracking (silent unless exceeded)
 COPILOT_START_TIME=$(date +%s)
 ```
 
@@ -92,9 +113,12 @@ git diff --stat
 
 **Final Timing:**
 ```bash
+# Calculate and report timing (only if performance targets exceeded)
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-[ "${COPILOT_DURATION:-0}" -gt 180 ] && echo "⚠️ PERFORMANCE: ${COPILOT_DURATION}s exceeded 3m target"
+if [ $COPILOT_DURATION -gt 180 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
+fi
 
 /guidelines
 ```
@@ -113,11 +137,11 @@ COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 - GitHub operations and workflow coordination
 - Verification checkpoints and evidence collection
 
-## 🎯 Success Criteria
+## 🎯 **SUCCESS CRITERIA**
 
-**BOTH REQUIRED:**
-1. **Implementation**: All actionable issues have actual file changes
-2. **Communication**: 100% comment response rate
+### **HYBRID VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
+1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr agent
+2. **Communication Coverage**: 100% comment response rate with direct orchestrator /commentreply execution
 
 **FAILURE CONDITIONS:**
 - No file changes after agent execution

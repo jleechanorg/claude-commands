@@ -60,6 +60,15 @@ MONITOR_INTERVAL=2  # Check memory every N seconds
 LOG_INTERVAL=5     # Log detailed process info every N seconds
 
 # Memory monitoring functions
+# Reusable function to convert KB to GB (addresses code duplication)
+convert_kb_to_gb() {
+    local kb_value="$1"
+    if [ -z "$kb_value" ] || ! echo "$kb_value" | grep -qE '^[0-9]+$'; then
+        echo "0.00"
+    else
+        awk -v kb="$kb_value" 'BEGIN {printf "%.2f", kb / 1024 / 1024}'
+    fi
+}
 get_memory_usage_gb() {
     local pid="$1"
     if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
@@ -67,7 +76,7 @@ get_memory_usage_gb() {
         local rss=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ')
         # Validate RSS is numeric before calculation
         if [ -n "$rss" ] && echo "$rss" | grep -qE '^[0-9]+$'; then
-            awk -v rss="$rss" 'BEGIN {printf "%.2f", rss / 1024 / 1024}'
+            convert_kb_to_gb "$rss"
         else
             echo "0"
         fi
@@ -85,7 +94,7 @@ get_total_memory_usage_gb() {
         echo "Warning: Invalid memory value ($total_kb), defaulting to 0.00" >&2
         echo "0.00"
     else
-        awk -v total="$total_kb" 'BEGIN {printf "%.2f", total / 1024 / 1024}'
+        convert_kb_to_gb "$total_kb"
     fi
 }
 
