@@ -8,6 +8,7 @@ import os
 import subprocess
 import sys
 import re
+import hashlib
 from datetime import datetime
 from typing import Dict, Any, List
 from urllib.parse import urlparse
@@ -115,16 +116,18 @@ def merge_memory_entries(local_memories: List[Dict[str, Any]], remote_memories: 
     for memory in local_memories:
         memory_id = memory.get('id') or memory.get('name')
         if not memory_id:
-            memory_id = f"memory_{fallback_counter}"
-            fallback_counter += 1
+            # Use content hash for consistent ID across runs
+            content_hash = hashlib.md5(json.dumps(memory, sort_keys=True).encode()).hexdigest()[:8]
+            memory_id = f"hash_{content_hash}"
         merged[memory_id] = memory
 
     # Merge remote memories using LWW
     for remote_memory in remote_memories:
         memory_id = remote_memory.get('id') or remote_memory.get('name')
         if not memory_id:
-            memory_id = f"memory_{fallback_counter}"
-            fallback_counter += 1
+            # Use content hash for consistent ID across runs
+            content_hash = hashlib.md5(json.dumps(remote_memory, sort_keys=True).encode()).hexdigest()[:8]
+            memory_id = f"hash_{content_hash}"
 
         if memory_id in merged:
             local_memory = merged[memory_id]
