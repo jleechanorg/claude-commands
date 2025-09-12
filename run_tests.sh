@@ -849,7 +849,9 @@ if [ "$suite_timed_out" = true ]; then
 else
     # Process results from individual test files normally
     for test_file in "${test_files[@]}"; do
-        result_file="$tmp_dir/$(basename "$test_file").result"
+        # Use same path hash to find result file (matching run_single_test logic)
+        local path_hash=$(echo "$test_file" | sha1sum | cut -c1-8)
+        result_file="$tmp_dir/$(basename "$test_file")_${path_hash}.result"
 
     if [ -f "$result_file" ]; then
         result=$(grep "^RESULT:" "$result_file" | cut -d' ' -f2)

@@ -85,34 +85,9 @@ git diff --stat
 /pushl || { echo "🚨 PUSH FAILED: PR not updated"; exit 1; }
 ```
 
-**Coverage Tracking:**
+**Coverage Tracking (delegated):**
 ```bash
-# Coverage verification (silent unless incomplete)
-REPO="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)"
-PR_NUMBER="$(gh pr view --json number -q .number 2>/dev/null)"
-
-# Input validation
-[[ ! "$REPO" =~ ^[a-zA-Z0-9._/-]+$ ]] || [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]] && echo "🚨 INVALID REPO/PR" && exit 1
-
-# Calculate coverage
-REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'add // []' 2>/dev/null)"
-REV_ORIGINAL="$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<"$REV_JSON")"
-UNIQUE_REPLIED_ORIGINALS="$(jq -r '[.[] | select(.in_reply_to_id != null) | .in_reply_to_id] | unique | length' <<<"$REV_JSON")"
-
-ORIGINAL_COMMENTS="${REV_ORIGINAL:-0}"
-REPLIED_ORIGINALS="${UNIQUE_REPLIED_ORIGINALS:-0}"
-
-[[ ! "$ORIGINAL_COMMENTS" =~ ^[0-9]+$ ]] && ORIGINAL_COMMENTS=0
-[[ ! "$REPLIED_ORIGINALS" =~ ^[0-9]+$ ]] && REPLIED_ORIGINALS=0
-
-if [ "${ORIGINAL_COMMENTS:-0}" -gt 0 ]; then
-  COVERAGE_PERCENT=$(( REPLIED_ORIGINALS * 100 / ORIGINAL_COMMENTS ))
-  if [ "$COVERAGE_PERCENT" -lt 100 ]; then
-    missing=$(( ORIGINAL_COMMENTS - REPLIED_ORIGINALS ))
-    [ "$missing" -lt 0 ] && missing=0
-    echo "🚨 WARNING: INCOMPLETE COVERAGE: ${COVERAGE_PERCENT}% (missing: ${missing})"
-  fi
-fi
+/commentcheck  # authoritative coverage verification & reporting
 ```
 
 **Final Timing:**
