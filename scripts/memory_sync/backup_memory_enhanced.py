@@ -178,8 +178,21 @@ def backup_memory() -> None:
     if not run_command(["git", "pull", "origin", "main"], cwd=repo_dir):
         print("⚠️ Failed to pull latest changes, continuing with local state")
 
-    # Step 3: Load both memory sources
-    cache_memories = load_memory_array(cache_path)
+    # Step 3: Load both memory sources with format detection
+    # Detect cache file format (Memory MCP may write JSONL, not JSON array)
+    if os.path.exists(cache_path):
+        with open(cache_path, 'r') as f:
+            first_char = f.read(1)
+        if first_char == '[':
+            cache_memories = load_memory_array(cache_path)
+            print("📁 Cache format: JSON array")
+        else:
+            cache_memories = load_memory_jsonl(cache_path)
+            print("📁 Cache format: JSONL")
+    else:
+        cache_memories = []
+        print("📁 No cache file found")
+
     # Check if repo file is in JSON array or JSONL format
     if os.path.exists(repo_path):
         with open(repo_path, 'r') as f:
@@ -187,11 +200,14 @@ def backup_memory() -> None:
         if first_char == '[':
             # JSON array format
             repo_memories = load_memory_array(repo_path)
+            print("📁 Repo format: JSON array")
         else:
             # JSONL format
             repo_memories = load_memory_jsonl(repo_path)
+            print("📁 Repo format: JSONL")
     else:
         repo_memories = []
+        print("📁 No repo file found")
 
     print(f"📊 Cache memories: {len(cache_memories)}")
     print(f"📊 Repo memories: {len(repo_memories)}")
