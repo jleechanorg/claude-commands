@@ -204,16 +204,17 @@ class TestUnifiedMemoryBackup(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             lock_file = os.path.join(temp_dir, "test.lock")
 
-            # Create existing lock file
+            # Create existing lock file with a PID
             with open(lock_file, 'w') as f:
-                f.write("existing lock")
+                f.write("12345")  # Mock PID
 
             self.backup.lock_file = lock_file
 
-            # Mock sys.exit to prevent actual exit during testing
-            with patch('sys.exit') as mock_exit:
-                self.backup.acquire_lock()
-                mock_exit.assert_called_once_with(1)
+            # Mock os.kill to simulate running process (which triggers error_exit)
+            with patch('os.kill', return_value=None):  # Process exists (no OSError)
+                with patch('sys.exit') as mock_exit:
+                    self.backup.acquire_lock()
+                    mock_exit.assert_called_once_with(1)
 
     def test_run_command_success(self):
         """Test successful command execution"""
@@ -228,11 +229,10 @@ class TestUnifiedMemoryBackup(unittest.TestCase):
 
     def test_run_command_failure(self):
         """Test failed command execution"""
-        mock_result = MagicMock()
-        mock_result.returncode = 1
-        mock_result.stderr = "error"
+        # The run_command method uses check=True, so it raises CalledProcessError on failure
+        from subprocess import CalledProcessError
 
-        with patch('subprocess.run', return_value=mock_result):
+        with patch('subprocess.run', side_effect=CalledProcessError(1, ['false'], stderr="error")):
             result = self.backup.run_command(['false'])
 
         self.assertFalse(result)
