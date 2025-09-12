@@ -146,6 +146,12 @@ def backup_memory() -> None:
     repo_path = os.path.join(repo_dir, "memory.json")
     repo_url = os.environ.get("BACKUP_REPO_URL", "")
 
+    # Check if repository URL is provided
+    if not repo_url:
+        print("❌ Missing BACKUP_REPO_URL environment variable")
+        print("Please set BACKUP_REPO_URL to a valid GitHub repository URL")
+        return
+
     # Validate repository URL for security
     if not validate_repository_url(repo_url):
         print(f"❌ Invalid repository URL: {repo_url}")

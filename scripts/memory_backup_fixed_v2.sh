@@ -122,10 +122,9 @@ setup_repository() {
     cd "$REPO_DIR" || error_exit "Cannot access repository directory"
 
     # Use flock for git operations to prevent conflicts
+    # Ensure consistent file locking - flock is mandatory for git operations
     (
-        if command -v flock >/dev/null 2>&1; then
-            flock -x 200
-        fi
+        flock -x 200
 
         git checkout main || error_exit "Failed to checkout main branch"
         git pull origin main || error_exit "Failed to pull latest changes"
