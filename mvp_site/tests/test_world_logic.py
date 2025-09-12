@@ -82,9 +82,8 @@ except Exception:
 # Import proper fakes library (removing unused imports per CodeRabbit feedback)
 
 import world_logic
-
-from mvp_site.debug_hybrid_system import convert_json_escape_sequences
-from mvp_site.prompt_utils import _convert_and_format_field
+from debug_hybrid_system import convert_json_escape_sequences
+from prompt_utils import _convert_and_format_field
 
 
 class TestUnifiedAPIStructure(unittest.TestCase):

@@ -1,0 +1,193 @@
+{
+  "test_suite": "MCP Pagination Parameter Validation (Unit Test)",
+  "timestamp": "2025-09-11 18:00:01",
+  "test_focus": "Parameter validation for limit and sort_by in pagination",
+  "implementation_commit": "fb579b8c",
+  "results": {
+    "limit_validation": {
+      "total_cases": 7,
+      "passed_cases": 7,
+      "results": [
+        {
+          "limit_value": "5",
+          "expected_valid": true,
+          "has_error": false,
+          "is_limit_error": false,
+          "correct_validation": true,
+          "description": "Valid string number"
+        },
+        {
+          "limit_value": 5,
+          "expected_valid": true,
+          "has_error": false,
+          "is_limit_error": false,
+          "correct_validation": true,
+          "description": "Valid integer"
+        },
+        {
+          "limit_value": "0",
+          "expected_valid": true,
+          "has_error": false,
+          "is_limit_error": false,
+          "correct_validation": true,
+          "description": "Zero limit"
+        },
+        {
+          "limit_value": "abc",
+          "expected_valid": false,
+          "has_error": true,
+          "is_limit_error": true,
+          "correct_validation": true,
+          "description": "Invalid string"
+        },
+        {
+          "limit_value": "12.5",
+          "expected_valid": false,
+          "has_error": true,
+          "is_limit_error": true,
+          "correct_validation": true,
+          "description": "Decimal string"
+        },
+        {
+          "limit_value": null,
+          "expected_valid": true,
+          "has_error": false,
+          "is_limit_error": false,
+          "correct_validation": true,
+          "description": "None (no limit)"
+        },
+        {
+          "limit_value": "",
+          "expected_valid": true,
+          "has_error": false,
+          "is_limit_error": false,
+          "correct_validation": true,
+          "description": "Empty string"
+        }
+      ]
+    },
+    "sort_validation": {
+      "total_cases": 6,
+      "passed_cases": 6,
+      "results": [
+        {
+          "sort_by_value": "created_at",
+          "expected_valid": true,
+          "has_error": false,
+          "is_sort_error": false,
+          "correct_validation": true,
+          "description": "Valid sort field: created_at"
+        },
+        {
+          "sort_by_value": "last_played",
+          "expected_valid": true,
+          "has_error": false,
+          "is_sort_error": false,
+          "correct_validation": true,
+          "description": "Valid sort field: last_played"
+        },
+        {
+          "sort_by_value": "invalid_field",
+          "expected_valid": false,
+          "has_error": true,
+          "is_sort_error": true,
+          "correct_validation": true,
+          "description": "Invalid sort field"
+        },
+        {
+          "sort_by_value": null,
+          "expected_valid": true,
+          "has_error": false,
+          "is_sort_error": false,
+          "correct_validation": true,
+          "description": "None (default sort)"
+        },
+        {
+          "sort_by_value": "",
+          "expected_valid": true,
+          "has_error": false,
+          "is_sort_error": false,
+          "correct_validation": true,
+          "description": "Empty string (default sort)"
+        },
+        {
+          "sort_by_value": "title",
+          "expected_valid": false,
+          "has_error": true,
+          "is_sort_error": true,
+          "correct_validation": true,
+          "description": "Unsupported field: title"
+        }
+      ]
+    },
+    "combined_validation": {
+      "total_cases": 4,
+      "passed_cases": 4,
+      "results": [
+        {
+          "parameters": "limit=5, sort_by=created_at",
+          "expected_valid": true,
+          "has_error": false,
+          "error_message": "",
+          "correct_validation": true,
+          "description": "Valid limit + valid sort"
+        },
+        {
+          "parameters": "limit=invalid, sort_by=created_at",
+          "expected_valid": false,
+          "has_error": true,
+          "error_message": "Invalid limit parameter - must be a valid integer",
+          "correct_validation": true,
+          "description": "Invalid limit + valid sort (should fail on limit)"
+        },
+        {
+          "parameters": "limit=5, sort_by=invalid_field",
+          "expected_valid": false,
+          "has_error": true,
+          "error_message": "Invalid sort_by parameter - must be one of: created_at, last_played",
+          "correct_validation": true,
+          "description": "Valid limit + invalid sort (should fail on sort)"
+        },
+        {
+          "parameters": "limit=abc, sort_by=invalid_field",
+          "expected_valid": false,
+          "has_error": true,
+          "error_message": "Invalid limit parameter - must be a valid integer",
+          "correct_validation": true,
+          "description": "Both parameters invalid"
+        }
+      ]
+    },
+    "firestore_empty_sort_fix": {
+      "total_cases": 3,
+      "passed_cases": 3,
+      "results": [
+        {
+          "sort_by_value": null,
+          "success": true,
+          "error": null,
+          "description": "None sort_by should default to last_played"
+        },
+        {
+          "sort_by_value": "",
+          "success": true,
+          "error": null,
+          "description": "Empty sort_by should default to last_played"
+        },
+        {
+          "sort_by_value": "  ",
+          "success": true,
+          "error": null,
+          "description": "Whitespace sort_by should default to last_played"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_test_cases": 20,
+    "passed_test_cases": 20,
+    "failed_test_cases": 0,
+    "success_rate": "100.0%",
+    "overall_success": true
+  }
+}

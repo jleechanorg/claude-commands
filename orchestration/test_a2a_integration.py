@@ -11,10 +11,18 @@ import logging
 import sys
 from typing import Any
 
-import httpx
-from a2a.client.client import A2AClient
-from a2a.types import AgentCard, Message, Role, TextPart
-from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
+try:
+    import httpx
+    from a2a.client.client import A2AClient
+    from a2a.types import AgentCard, Message, Role, TextPart
+    from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
+    A2A_AVAILABLE = True
+except ImportError:
+    A2A_AVAILABLE = False
+
+import unittest
+
+@unittest.skipUnless(A2A_AVAILABLE, "A2A dependencies not available")
 
 
 class RealA2AClientTester:

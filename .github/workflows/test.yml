@@ -89,6 +89,9 @@ jobs:
         export ENABLE_NETWORK_TESTS=0
         export GITHUB_ACTIONS=true
 
+        # Set Python path for proper module imports
+        export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site"
+
         # Run specific test group based on matrix
         chmod +x run_tests.sh
         case "${{ matrix.test-group }}" in
