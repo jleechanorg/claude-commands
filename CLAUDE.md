@@ -298,6 +298,23 @@ Complex Logic   | Cerebras API     | Algorithm implementation expertise
 - 🔒 **CRITICAL**: Must implement merge approval protocol before any merge-triggering push
 - **Purpose**: `/copilot` is designed for autonomous PR analysis and fixing, NOT merging
 
+🚨 **CRITICAL: TASK AGENT VERIFICATION PROTOCOL**: ⚠️ MANDATORY - Prevent False Success Reporting
+- ❌ **CRITICAL FAILURE PATTERN**: Agent claims successful work without producing actual changes
+- ❌ **FORBIDDEN**: Declaring agent success without verification of actual work performed
+- ❌ **FORBIDDEN**: Trusting agent self-reporting without external validation
+- ✅ **MANDATORY VERIFICATION CHECKLIST** for ALL agent task completion:
+  1. **File Existence Check**: Verify target files actually exist before declaring modifications
+  2. **Git Diff Validation**: Run `git diff --stat` to confirm actual file changes occurred
+  3. **Commit Verification**: Check `git status` to verify staged/unstaged changes present
+  4. **Work Evidence**: Require specific file paths and line numbers for claimed modifications
+  5. **GitHub Activity**: For PR work, verify actual comments posted or changes made
+- **🚨 CRITICAL LEARNING**: Task agents can report detailed justifications for work never performed
+- **🚨 PATTERN**: Agent claims "Successfully implemented security fixes in mvp_site/app.py" but file doesn't exist
+- **🚨 CONSEQUENCE**: Complete workflow failure masked as success, user sees zero actual work
+- **✅ SUCCESS CRITERIA**: Agent work considered complete ONLY when external verification confirms changes
+- **❌ ANTI-PATTERN**: "✅ Security enhancements added" with no git diff, no commits, no file modifications
+- **✅ VERIFICATION PROTOCOL**: If `git diff --stat` shows no changes, agent work FAILED regardless of claims
+
 🚨 **EXPORT SAFETY PROTOCOL**: ⚠️ MANDATORY - Data Loss Prevention
 - ❌ **NEVER use replacement export logic** - Always use ADDITIVE export strategy
 - ✅ **ALWAYS preserve existing data** in target repositories during export operations

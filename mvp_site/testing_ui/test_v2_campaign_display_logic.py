@@ -6,10 +6,10 @@ Verifies V2 shows campaigns dashboard when campaigns exist (not landing page)
 
 import os
 import sys
-
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import unittest
+
+# Set up path for imports
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from playwright.sync_api import sync_playwright
 
@@ -35,70 +35,74 @@ class TestV2CampaignDisplayLogic(unittest.TestCase):
 
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
-            page = context.new_page()
+            try:
+                context = browser.new_context()
+                page = context.new_page()
 
-            # Navigate to V2 React frontend
-            print("📍 Navigating to V2 React frontend...")
-            page.goto("http://localhost:3001")
+                # Navigate to V2 React frontend
+                print("📍 Navigating to V2 React frontend...")
+                page.goto("http://localhost:3001")
 
-            # Wait for authentication and API calls to complete
-            print("⏳ Waiting for authentication and API calls...")
-            page.wait_for_timeout(5000)  # Wait for auth + API calls
+                # Wait for authentication and API calls to complete
+                print("⏳ Waiting for authentication and API calls...")
+                page.wait_for_timeout(5000)  # Wait for auth + API calls
 
-            # Check current page state
-            page_content = page.content()
+                # Check current page state
+                page_content = page.content()
 
-            # TEST ASSERTION: V2 should show campaigns dashboard, not landing page
-            print("🧪 Testing V2 display logic...")
+                # TEST ASSERTION: V2 should show campaigns dashboard, not landing page
+                print("🧪 Testing V2 display logic...")
 
-            # Check if showing landing page (WRONG behavior)
-            has_create_first_campaign = "Create Your First Campaign" in page_content
-            has_welcome_adventurer = "Welcome, Adventurer" in page_content
+                # Check if showing landing page (WRONG behavior)
+                has_create_first_campaign = "Create Your First Campaign" in page_content
+                has_welcome_adventurer = "Welcome, Adventurer" in page_content
 
-            # Check if showing campaigns dashboard (CORRECT behavior)
-            has_campaign_list = "campaigns" in page_content.lower() and (
-                "my campaigns" in page_content.lower()
-                or "campaign list" in page_content.lower()
-            )
-            has_campaign_data = any(
-                keyword in page_content.lower()
-                for keyword in ["zara", "elara", "warrior", "knight"]
-            )
-
-            print("📊 V2 Page Analysis:")
-            print(f"   - Has 'Create Your First Campaign': {has_create_first_campaign}")
-            print(f"   - Has 'Welcome, Adventurer': {has_welcome_adventurer}")
-            print(f"   - Has campaign list UI: {has_campaign_list}")
-            print(f"   - Has campaign data: {has_campaign_data}")
-
-            # RED TEST: This should FAIL initially (V2 showing wrong page)
-            if has_create_first_campaign and has_welcome_adventurer:
-                print(
-                    "🔴 TEST FAILURE (EXPECTED): V2 showing landing page instead of campaigns dashboard"
+                # Check if showing campaigns dashboard (CORRECT behavior)
+                has_campaign_list = "campaigns" in page_content.lower() and (
+                    "my campaigns" in page_content.lower()
+                    or "campaign list" in page_content.lower()
                 )
-                print(
-                    "   ✅ This confirms the bug - V2 has campaigns but shows landing page"
+                has_campaign_data = any(
+                    keyword in page_content.lower()
+                    for keyword in ["zara", "elara", "warrior", "knight"]
                 )
+
+                print("📊 V2 Page Analysis:")
                 print(
-                    "   🎯 Next: Fix V2 to show campaigns dashboard when campaigns exist"
+                    f"   - Has 'Create Your First Campaign': {has_create_first_campaign}"
                 )
-                return False  # RED - Test fails as expected
+                print(f"   - Has 'Welcome, Adventurer': {has_welcome_adventurer}")
+                print(f"   - Has campaign list UI: {has_campaign_list}")
+                print(f"   - Has campaign data: {has_campaign_data}")
 
-            if has_campaign_list or has_campaign_data:
-                print("✅ TEST PASSING: V2 correctly showing campaigns dashboard")
+                # RED TEST: This should FAIL initially (V2 showing wrong page)
+                if has_create_first_campaign and has_welcome_adventurer:
+                    print(
+                        "🔴 TEST FAILURE (EXPECTED): V2 showing landing page instead of campaigns dashboard"
+                    )
+                    print(
+                        "   ✅ This confirms the bug - V2 has campaigns but shows landing page"
+                    )
+                    print(
+                        "   🎯 Next: Fix V2 to show campaigns dashboard when campaigns exist"
+                    )
+                    return False  # RED - Test fails as expected
+
+                if has_campaign_list or has_campaign_data:
+                    print("✅ TEST PASSING: V2 correctly showing campaigns dashboard")
+                    print(
+                        "   🎯 V2 properly displays existing campaigns instead of landing page"
+                    )
+                    return True  # GREEN - Test passes after fix
+
                 print(
-                    "   🎯 V2 properly displays existing campaigns instead of landing page"
+                    "❓ UNCLEAR STATE: V2 showing neither landing page nor campaigns dashboard"
                 )
-                return True  # GREEN - Test passes after fix
+                print("   🔍 Manual investigation needed")
+                return False
 
-            print(
-                "❓ UNCLEAR STATE: V2 showing neither landing page nor campaigns dashboard"
-            )
-            print("   🔍 Manual investigation needed")
-            return False
-
-            browser.close()
+            finally:
+                browser.close()
 
 
 def run_red_green_test():
