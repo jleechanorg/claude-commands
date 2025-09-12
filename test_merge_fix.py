@@ -132,4 +132,5 @@ def test_merge_duplication_bug():
     print("🎯 RED-GREEN TDD SUCCESS: Bug identified and fixed!")
 
 if __name__ == "__main__":
-    test_merge_duplication_bug()
+    import unittest
+    unittest.main()

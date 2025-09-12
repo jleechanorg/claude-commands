@@ -13,6 +13,9 @@ from datetime import datetime
 from typing import Dict, Any, List
 from urllib.parse import urlparse
 
+# Timeout constant for subprocess operations (align with repo policy)
+TIMEOUT_SEC = 30
+
 def validate_repository_url(url: str) -> bool:
     """Validate repository URL against whitelist for security"""
     try:
@@ -22,7 +25,7 @@ def validate_repository_url(url: str) -> bool:
         if parsed.scheme != 'https':
             return False
 
-        if parsed.netloc not in ['github.com', 'api.github.com']:
+        if parsed.netloc != 'github.com':
             return False
 
         # Validate path pattern for GitHub repositories
@@ -36,8 +39,18 @@ def validate_repository_url(url: str) -> bool:
 def run_command(cmd: List[str], cwd: str = None) -> bool:
     """Run a shell command and return success status"""
     try:
-        result = subprocess.run(cmd, cwd=cwd, check=True, capture_output=True, text=True)
+        result = subprocess.run(
+            cmd,
+            cwd=cwd,
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=TIMEOUT_SEC,
+        )
         return True
+    except subprocess.TimeoutExpired as e:
+        print(f"Command timed out after {TIMEOUT_SEC}s: {' '.join(cmd)}")
+        return False
     except subprocess.CalledProcessError as e:
         print(f"Command failed: {' '.join(cmd)}")
         print(f"Error: {e.stderr}")
@@ -227,7 +240,8 @@ def backup_memory() -> None:
     result = subprocess.run(
         ["git", "diff", "--quiet", "memory.json"],
         cwd=repo_dir,
-        capture_output=True
+        capture_output=True,
+        timeout=TIMEOUT_SEC,
     )
 
     if result.returncode != 0:  # There are changes
