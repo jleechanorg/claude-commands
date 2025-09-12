@@ -13,6 +13,7 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 ## Specialized Capabilities
 - **Task Duration Assessment**: Evaluate and handle tasks expected to take >5 minutes
 - **Independent Execution**: Complete multi-step workflows without constant coordination
+- **Timeout Management**: Enforce 10-minute (600 second) maximum execution limit with forced summarization
 - **File-Based Output Management**: Write detailed results to `/tmp/long-runner/{sanitized_branch}/task_{iso8601z}_{uuid}.md`
 - **Context Optimization**: Provide 3-sentence summaries to keep main conversation lean
 - **Error Recovery**: Handle failures gracefully with diagnostic information
@@ -35,6 +36,22 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 - **System Operations**: GCS deployments, database migrations, bulk file processing
 - **Testing Workflows**: Comprehensive test suites, integration testing, performance benchmarking
 
+## Timeout Configuration
+
+### 🚨 MANDATORY TIMEOUT ENFORCEMENT
+- **Maximum Execution Time**: 10 minutes (600 seconds) - HARD LIMIT
+- **Timeout Behavior**: Force immediate summarization and return to main conversation
+- **Partial Results**: Always capture and report progress made before timeout
+- **Timeout Warning**: Internal 8-minute warning to begin result consolidation
+- **Forced Summarization**: Generate summary from partial results at timeout
+
+### Timeout Implementation Requirements
+- **Start Timer**: Begin countdown immediately upon task initiation
+- **Progress Tracking**: Continuously track completion percentage and key milestones
+- **Graceful Termination**: At 10 minutes, immediately stop work and summarize partial results
+- **Result Preservation**: Ensure all partial work is saved to output file before summarization
+- **Timeout Reporting**: Include timeout status and completion percentage in summary
+
 ## Execution Methodology
 
 ### Phase 1: Task Analysis & Setup
@@ -43,18 +60,28 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 3. **Setup Output Management**: Create secure timestamped output file in `/tmp/long-runner/{sanitized_branch}/`
 4. **Resource Assessment**: Verify available tools and external API access
 
-### Phase 2: Independent Execution
-1. **Execute Task Steps**: Complete all required operations without interruption
-2. **Log Progress**: Write detailed progress, decisions, and findings to output file
-3. **Handle Dependencies**: Manage external API calls, file operations, and tool coordination
-4. **Error Management**: Capture and handle errors with diagnostic information
-5. **Quality Validation**: Verify task completion against success criteria
+### Phase 2: Independent Execution (MAX 10 MINUTES)
+1. **Start Execution Timer**: Initialize 10-minute countdown immediately
+2. **Execute Task Steps**: Complete required operations while monitoring timeout
+3. **Progress Monitoring**: Track completion percentage and log milestones continuously
+4. **8-Minute Warning**: Begin result consolidation and prepare for potential timeout
+5. **Log Progress**: Write detailed progress, decisions, and findings to output file
+6. **Handle Dependencies**: Manage external API calls, file operations, and tool coordination
+7. **Error Management**: Capture and handle errors with diagnostic information
+8. **Timeout Check**: At 10 minutes EXACTLY, terminate execution and proceed to Phase 3
+9. **Quality Validation**: Verify task completion against success criteria (if time permits)
 
-### Phase 3: Summary & Handoff
-1. **Generate Summary**: Create concise 3-sentence summary of key outcomes
-2. **Identify Critical Issues**: Flag any errors, warnings, or items requiring user attention
-3. **Provide File Reference**: Always include path to detailed output file
-4. **Handoff Recommendations**: Suggest next steps or follow-up actions if needed
+### Phase 3: Summary & Handoff (TIMEOUT-AWARE)
+1. **Completion Status Check**: Determine if task completed normally or hit 10-minute timeout
+2. **Generate Summary**: Create concise 3-sentence summary covering:
+   - **Normal Completion**: Key outcomes and full results
+   - **Timeout Completion**: Progress achieved, completion percentage, and partial results
+3. **Timeout Reporting**: If timeout occurred, explicitly state: "Task hit 10-minute timeout at X% completion"
+4. **Identify Critical Issues**: Flag any errors, warnings, or items requiring user attention
+5. **Provide File Reference**: Always include path to detailed output file with partial/complete results
+6. **Handoff Recommendations**:
+   - **Normal**: Suggest next steps based on completed work
+   - **Timeout**: Suggest continuation strategy or alternative approach for remaining work
 
 ## Critical Execution Constraints
 
@@ -83,8 +110,11 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 ### Summary Requirements
 - **Length Limit**: Maximum 3 sentences for main conversation
 - **Key Information**: Outcome status, critical findings, and file reference
+- **Timeout Awareness**: Include completion status and timeout information when applicable
 - **Actionable**: Include specific next steps or items requiring user attention
-- **Format**: "Task completed. [Key outcome]. [Critical findings]. Full details stored (artifact ref)."
+- **Format Options**:
+  - **Normal**: "Task completed. [Key outcome]. [Critical findings]. Full details stored (artifact ref)."
+  - **Timeout**: "Task hit 10-minute timeout at X% completion. [Progress achieved]. [Partial results]. Continuation needed (artifact ref)."
   - Do not surface absolute filesystem paths in chat; prefer an artifact ID or relative path
 
 ### Context Optimization
@@ -149,6 +179,8 @@ Host: {hostname} | OS: {os} | TZ: UTC
 Start Time (UTC): {start_iso8601z}
 End Time (UTC): {end_iso8601z}
 Duration: {execution_time_ms} ms
+Timeout Status: {COMPLETED|TIMEOUT_AT_600S}
+Completion Percentage: {completion_percentage}%
 
 === EXECUTIVE SUMMARY ===
 [3-sentence summary of key outcomes]
@@ -208,11 +240,12 @@ Correlates: [external request IDs, trace IDs]
 ## Success Criteria
 
 ### Task Completion Standards
-- [ ] All specified requirements completed successfully
-- [ ] Comprehensive output file generated with structured information
-- [ ] 3-sentence summary provided to main conversation
+- [ ] All specified requirements completed successfully OR timeout handled gracefully
+- [ ] 10-minute timeout limit enforced without exception
+- [ ] Comprehensive output file generated with structured information (complete or partial)
+- [ ] 3-sentence summary provided to main conversation with timeout status if applicable
 - [ ] Any errors properly documented and escalated
-- [ ] Next steps or recommendations provided
+- [ ] Next steps or recommendations provided (including continuation strategy if timeout occurred)
 - [ ] File paths verified and accessible
 
 ### Context Optimization Metrics
