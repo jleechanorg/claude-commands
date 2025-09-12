@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Aggressive timeout for fast feedback, fail fast if tests hang
+    timeout-minutes: 15  # Prevent infinite CI runs - kill job after 15 minutes
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
@@ -47,26 +47,26 @@ jobs:
         python -m venv venv
         source venv/bin/activate
 
-        # Upgrade pip and install resolver tools
-        python -m pip install --upgrade pip setuptools wheel
+        # Upgrade pip and install resolver tools with timeout
+        timeout 300 python -m pip install --upgrade pip setuptools wheel
 
-        # Install all requirements files in the project
+        # Install all requirements files in the project with timeouts
         # Core application requirements
-        pip install -r mvp_site/requirements.txt
+        timeout 600 pip install -r mvp_site/requirements.txt
 
-        # Install additional requirements for MCP servers and testing
+        # Install additional requirements for MCP servers and testing with individual timeouts
         find . -name "requirements.txt" -not -path "./venv/*" -not -path "./task-agent*" | while read req_file; do
-          echo "Installing $req_file"
-          pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
+          echo "Installing $req_file (with 300s timeout)"
+          timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file (timeout or error)"
         done
 
-        # Verify key dependencies are available
-        python -c "import pydantic; print(f'Pydantic {pydantic.__version__} installed')"
-        python -c "import sys; print(f'Python path: {sys.path}')"
+        # Verify key dependencies are available with timeout
+        timeout 60 python -c "import pydantic; print(f'Pydantic {pydantic.__version__} installed')"
+        timeout 60 python -c "import sys; print(f'Python path: {sys.path}')"
 
-        # Verify vpython works
+        # Verify vpython works with timeout
         chmod +x vpython
-        ./vpython --version
+        timeout 60 ./vpython --version
 
     # Step 5: Run test group based on matrix strategy
     - name: Run test group - ${{ matrix.test-group }}
