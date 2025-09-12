@@ -38,19 +38,39 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 
 ## Timeout Configuration
 
-### 🚨 MANDATORY TIMEOUT ENFORCEMENT
-- **Maximum Execution Time**: 10 minutes (600 seconds) - HARD LIMIT
-- **Timeout Behavior**: Force immediate summarization and return to main conversation
-- **Partial Results**: Always capture and report progress made before timeout
-- **Timeout Warning**: Internal 8-minute warning to begin result consolidation
-- **Forced Summarization**: Generate summary from partial results at timeout
+### 🚨 MANDATORY OPERATION ENFORCEMENT
+- **Maximum Operations**: 35 operations - HARD LIMIT (evidence-based 10-minute timeout equivalent)
+- **Operation Definition**: Each tool call, file operation, API request, or significant action counts as 1 operation
+- **Enforcement Behavior**: Force immediate summarization and return to main conversation
+- **Partial Results**: Always capture and report progress made before limit
+- **Operation Warning**: At 30 operations, begin result consolidation
+- **Forced Summarization**: Generate summary from partial results at operation limit
 
-### Timeout Implementation Requirements
-- **Start Timer**: Begin countdown immediately upon task initiation
-- **Progress Tracking**: Continuously track completion percentage and key milestones
-- **Graceful Termination**: At 10 minutes, immediately stop work and summarize partial results
+### Operation Implementation Requirements
+- **Start Counter**: Begin counting operations immediately upon task initiation
+- **Operation Tracking**: COUNT EVERY: tool call, file read/write, API request, analysis step
+- **Progress Tracking**: Track completion percentage and key milestones per operation
+- **Graceful Termination**: At 10 operations EXACTLY, immediately stop work and summarize partial results
 - **Result Preservation**: Ensure all partial work is saved to output file before summarization
-- **Timeout Reporting**: Include timeout status and completion percentage in summary
+- **Operation Reporting**: Include operation count and completion percentage in summary
+
+### 🔥 CRITICAL OPERATION COUNTING PROTOCOL
+**YOU MUST COUNT AND ANNOUNCE EACH OPERATION:**
+- **Operation 1**: [Describe what you're doing]
+- **Operation 2**: [Describe what you're doing]
+- **Operation 3**: [Describe what you're doing]
+- **...**
+- **Operation 30**: [Describe what you're doing] ⚠️ WARNING: Approaching limit
+- **Operation 31-34**: [Continue with caution]
+- **Operation 35**: [Describe what you're doing] 🛑 LIMIT REACHED - TERMINATE IMMEDIATELY
+
+### 🚨 ABSOLUTE TERMINATION RULE
+**AFTER OPERATION 35, YOU MUST:**
+1. STOP all work immediately
+2. DO NOT perform additional operations
+3. DO NOT continue analysis
+4. PROVIDE SUMMARY with operation count
+5. INCLUDE "OPERATION_LIMIT_REACHED" in response
 
 ## Execution Methodology
 
@@ -60,23 +80,23 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 3. **Setup Output Management**: Create secure timestamped output file in `/tmp/long-runner/{sanitized_branch}/`
 4. **Resource Assessment**: Verify available tools and external API access
 
-### Phase 2: Independent Execution (MAX 10 MINUTES)
-1. **Start Execution Timer**: Initialize 10-minute countdown immediately
-2. **Execute Task Steps**: Complete required operations while monitoring timeout
-3. **Progress Monitoring**: Track completion percentage and log milestones continuously
-4. **8-Minute Warning**: Begin result consolidation and prepare for potential timeout
-5. **Log Progress**: Write detailed progress, decisions, and findings to output file
-6. **Handle Dependencies**: Manage external API calls, file operations, and tool coordination
+### Phase 2: Independent Execution (MAX 35 OPERATIONS)
+1. **Start Operation Counter**: Initialize operation count at 0 - announce each operation
+2. **Execute Task Steps**: Complete required operations while announcing each one explicitly
+3. **Operation Monitoring**: Track completion percentage and log milestones per operation
+4. **30-Operation Warning**: Begin result consolidation and prepare for potential operation limit
+5. **Log Progress**: Write detailed progress, decisions, and findings to output file (counts as 1 operation)
+6. **Handle Dependencies**: Manage external API calls, file operations, and tool coordination (each counts as 1 operation)
 7. **Error Management**: Capture and handle errors with diagnostic information
-8. **Timeout Check**: At 10 minutes EXACTLY, terminate execution and proceed to Phase 3
-9. **Quality Validation**: Verify task completion against success criteria (if time permits)
+8. **Operation Check**: At 35 operations EXACTLY, terminate execution and proceed to Phase 3
+9. **Quality Validation**: Verify task completion against success criteria (if operations permit)
 
-### Phase 3: Summary & Handoff (TIMEOUT-AWARE)
-1. **Completion Status Check**: Determine if task completed normally or hit 10-minute timeout
+### Phase 3: Summary & Handoff (OPERATION-AWARE)
+1. **Completion Status Check**: Determine if task completed normally or hit 35-operation limit
 2. **Generate Summary**: Create concise 3-sentence summary covering:
-   - **Normal Completion**: Key outcomes and full results
-   - **Timeout Completion**: Progress achieved, completion percentage, and partial results
-3. **Timeout Reporting**: If timeout occurred, explicitly state: "Task hit 10-minute timeout at X% completion"
+   - **Normal Completion**: Key outcomes and full results with operation count
+   - **Limit Completion**: Progress achieved, completion percentage, and partial results with final operation count
+3. **Operation Reporting**: ALWAYS state: "Task completed using X/35 operations" or "Task hit 35-operation limit at X% completion"
 4. **Identify Critical Issues**: Flag any errors, warnings, or items requiring user attention
 5. **Provide File Reference**: Always include path to detailed output file with partial/complete results
 6. **Handoff Recommendations**:
