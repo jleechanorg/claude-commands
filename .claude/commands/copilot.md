@@ -22,6 +22,18 @@ fi
 ## 🎯 Purpose
 Ultra-fast PR processing using hybrid orchestration with comprehensive coverage and quality assurance. Uses hybrid orchestrator with copilot-fixpr agent by default for maximum reliability.
 
+## 🚨 ALL COMMENTS FIRST - MANDATORY HUMAN PRIORITY PROTOCOL
+
+**🚨 CRITICAL REQUIREMENT**: EVERY PR comment MUST receive a response - human feedback takes ABSOLUTE PRIORITY over automated suggestions.
+
+**HUMAN COMMENT HANDLING REQUIREMENTS**:
+- ✅ **Check ALL authors including human reviewers** - Not just bots
+- ✅ **Respond to questions, not just fix issues** - Human questions require answers
+- ✅ **Human comments are equally important as bot comments** - Actually MORE important
+- ✅ **100% ALL comment response rate** - No exceptions, no priorities that skip comments
+
+**PRIORITY ORDER - HUMAN FIRST**: Human Questions → Human Style Feedback → Security → Runtime Errors → Test Failures → Automated Style
+
 ## ⚡ Core Workflow
 
 🚨 **OPTIMIZED HYBRID PATTERN**: /copilot uses direct execution + selective task agents for maximum reliability
@@ -30,7 +42,7 @@ Ultra-fast PR processing using hybrid orchestration with comprehensive coverage 
 - **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
 - **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
 - **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
-- **30 recent comments focus** - Process only actionable recent feedback
+- **30 recent comments focus** - Process ALL recent feedback (human + automated)
 - **Expected time**: **2-3 minutes** with reliable hybrid coordination
 
 ## 🚀 Core Workflow - Hybrid Orchestrator Pattern
@@ -50,9 +62,9 @@ COPILOT_START_TIME=$(date +%s)
 
 **🎯 Direct Comment Analysis**:
 Execute comment processing workflow directly for reliable GitHub operations:
-- Execute /commentfetch to gather all PR comments and issues
-- Analyze actionable issues and categorize by type (security, runtime, tests, style)
-- Process issue responses and plan implementation strategy
+- Execute /commentfetch to gather ALL PR comments and issues (human + automated)
+- Analyze ALL comments and categorize by type (human questions, human style, security, runtime, tests, automated style)
+- Process ALL comment responses and plan implementation strategy with HUMAN PRIORITY
 - Handle all GitHub API operations directly (proven to work)
 
 **🚀 Parallel copilot-fixpr Agent Launch**:
@@ -86,7 +98,7 @@ Launch specialized agent for file modifications in parallel:
 - **Justification categories**: Classify each change as Essential, Enhancement, or Unnecessary
 
 **Implementation with Protocol Enforcement**:
-- **Priority Order**: Security → Runtime Errors → Test Failures → Style
+- **Priority Order**: Human Questions → Human Style Feedback → Security → Runtime Errors → Test Failures → Automated Style
 - **MANDATORY TOOLS**: Edit/MultiEdit for code changes, NOT GitHub review posting
 - **IMPLEMENTATION REQUIREMENT**: Must modify actual files to resolve issues WITH justification
 - **VERIFICATION**: Use git diff to confirm file changes made AND protocol compliance
@@ -127,10 +139,11 @@ fi
 
 ### copilot-fixpr Agent Responsibilities:
 - **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures
-- **PRIMARY**: Security vulnerability detection and code implementation
+- **PRIMARY**: Address ALL human feedback through code implementation, then security vulnerabilities
+- **HUMAN INTERACTION**: Implement changes requested by human reviewers with highest priority
 - **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis, `/fixpr` command
-- **FOCUS**: Make PR mergeable first, then actual code changes with File Justification Protocol compliance
-- **BOUNDARY**: File operations and PR mergeability - never handles GitHub comment responses
+- **FOCUS**: Make PR mergeable first, implement ALL human feedback, then technical fixes with File Justification Protocol compliance
+- **BOUNDARY**: File operations and PR mergeability - never handles GitHub comment responses directly
 
 **Direct Orchestrator:**
 - Comment processing (/commentfetch, /commentreply)
@@ -140,8 +153,8 @@ fi
 ## 🎯 **SUCCESS CRITERIA**
 
 ### **HYBRID VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
-1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr agent
-2. **Communication Coverage**: 100% comment response rate with direct orchestrator /commentreply execution
+1. **Implementation Coverage**: ALL comments (human + automated) have actual file changes or explicit responses from copilot-fixpr agent
+2. **Communication Coverage**: 100% ALL comment response rate with direct orchestrator /commentreply execution - NO COMMENT LEFT UNADDRESSED
 
 **FAILURE CONDITIONS:**
 - No file changes after agent execution
@@ -157,7 +170,7 @@ fi
 - ✅ **Performance**: Execution completed within 2-3 minute target
 
 ### **FAILURE CONDITIONS**:
-- ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
+- ❌ **Coverage Gaps**: <100% ALL comment response rate OR unaddressed human/automated feedback
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
 - ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
