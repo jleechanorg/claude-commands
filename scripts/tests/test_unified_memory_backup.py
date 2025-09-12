@@ -12,14 +12,22 @@ Tests cover:
 """
 import json
 import os
+import shutil
 import sys
 import tempfile
 import unittest
 from datetime import datetime
+from subprocess import CalledProcessError
 from unittest.mock import patch, MagicMock, mock_open
 
-# Import coverage if available - let it fail at module level if not available
-import coverage
+# Import coverage if available - let it fail gracefully
+try:
+    import coverage
+    COVERAGE_AVAILABLE = True
+except ImportError:
+    coverage = None
+    COVERAGE_AVAILABLE = False
+
 import importlib.util
 
 # Import unified_memory_backup using importlib to avoid sys.path manipulation
@@ -246,7 +254,6 @@ class TestUnifiedMemoryBackup(unittest.TestCase):
     def test_run_command_failure(self):
         """Test failed command execution"""
         # The run_command method uses check=True, so it raises CalledProcessError on failure
-        from subprocess import CalledProcessError
 
         with patch('subprocess.run', side_effect=CalledProcessError(1, ['false'], stderr="error")):
             result = self.backup.run_command(['false'])
@@ -345,8 +352,8 @@ class TestUnifiedMemoryBackup(unittest.TestCase):
 
             # Simulate error and cleanup
             try:
-                raise Exception("Simulated error")
-            except:
+                raise RuntimeError("Simulated error")
+            except RuntimeError:
                 self.backup.cleanup()
 
             # Verify cleanup occurred
@@ -361,7 +368,6 @@ class TestUnifiedMemoryBackupIntegration(unittest.TestCase):
         self.backup = UnifiedMemoryBackup(mode='manual')
 
     def tearDown(self):
-        import shutil
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_end_to_end_backup_workflow(self):
@@ -401,18 +407,22 @@ if __name__ == '__main__':
     # Create test results directory
     os.makedirs('test_results', exist_ok=True)
 
-    # Run tests with coverage
-    cov = coverage.Coverage()
-    cov.start()
+    # Run tests with coverage if available
+    if COVERAGE_AVAILABLE:
+        cov = coverage.Coverage()
+        cov.start()
 
-    unittest.main(verbosity=2, exit=False)
+        unittest.main(verbosity=2, exit=False)
 
-    cov.stop()
-    cov.save()
-    print("\n" + "="*50)
-    print("📊 COVERAGE REPORT")
-    print("="*50)
-    cov.report(show_missing=True)
+        cov.stop()
+        cov.save()
+        print("\n" + "="*50)
+        print("📊 COVERAGE REPORT")
+        print("="*50)
+        cov.report(show_missing=True)
+    else:
+        print("ℹ️ Coverage package not available, running tests without coverage")
+        unittest.main(verbosity=2, exit=False)
 
     print("\n" + "="*50)
     print("✅ UNIFIED MEMORY BACKUP TESTS COMPLETE")

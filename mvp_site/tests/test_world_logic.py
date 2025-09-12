@@ -10,11 +10,6 @@ import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-# Import modules that need mocking setup
-import world_logic
-from debug_hybrid_system import convert_json_escape_sequences
-from prompt_utils import _convert_and_format_field
-
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
 os.environ["USE_MOCKS"] = "true"
@@ -28,6 +23,11 @@ firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
 sys.modules["firebase_admin"] = firebase_admin_mock
 sys.modules["firebase_admin.firestore"] = firebase_admin_mock.firestore
 sys.modules["firebase_admin.auth"] = firebase_admin_mock.auth
+
+# Import modules that need mocking setup - AFTER firebase_admin is mocked
+import world_logic  # noqa: E402
+from debug_hybrid_system import convert_json_escape_sequences  # noqa: E402
+from prompt_utils import _convert_and_format_field  # noqa: E402
 
 # Add mvp_site to path AFTER mocking firebase_admin
 mvp_site_path = os.path.dirname(os.path.dirname(__file__))
