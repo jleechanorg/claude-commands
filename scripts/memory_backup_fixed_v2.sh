@@ -149,8 +149,8 @@ create_historical_snapshot() {
     cp "$MEMORY_FILE" "$snapshot_file" || error_exit "Failed to create historical snapshot"
 
     # Verify snapshot integrity
-    local source_count=$(jq -s 'length' "$MEMORY_FILE" 2>/dev/null || echo "0")
-    local snapshot_count=$(jq -s 'length' "$snapshot_file" 2>/dev/null || echo "0")
+    local source_count=$(jq 'length' "$MEMORY_FILE" 2>/dev/null || echo "0")
+    local snapshot_count=$(jq 'length' "$snapshot_file" 2>/dev/null || echo "0")
 
     if [ "$source_count" -ne "$snapshot_count" ]; then
         error_exit "Snapshot verification failed: counts don't match ($source_count vs $snapshot_count)"
@@ -180,12 +180,12 @@ update_current_memory() {
     local old_count=0
 
     if [ -f "$hostname_file" ]; then
-        old_count=$(jq -s 'length' "$hostname_file" 2>/dev/null || echo "0")
+        old_count=$(jq 'length' "$hostname_file" 2>/dev/null || echo "0")
     fi
 
     cp "$MEMORY_FILE" "$hostname_file" || error_exit "Failed to update $hostname_file"
 
-    local new_count=$(jq -s 'length' "$hostname_file" 2>/dev/null || echo "0")
+    local new_count=$(jq 'length' "$hostname_file" 2>/dev/null || echo "0")
     local change=$((new_count - old_count))
 
     log "Updated $hostname_file: $old_count → $new_count entities (change: $change)"
@@ -217,7 +217,7 @@ create_unified_memory() {
     for mem_file in memory-*.json; do
         if [ -f "$mem_file" ] && [[ "$mem_file" =~ ^memory-[^.]+\.json$ ]]; then
             local env_name=$(basename "$mem_file" .json | sed 's/memory-//')
-            local env_entities=$(jq -s 'length' "$mem_file" 2>/dev/null || echo "0")
+            local env_entities=$(jq 'length' "$mem_file" 2>/dev/null || echo "0")
             local env_checksum=$(sha256sum "$mem_file" | cut -d' ' -f1)
 
             echo "# Environment: $env_name ($env_entities entities, checksum: ${env_checksum:0:8})" >> "$temp_unified"
@@ -276,7 +276,7 @@ commit_and_push() {
         # Get counts for commit message
         local unified_count=$(cat .unified_count 2>/dev/null || echo "0")
         local hostname_file="memory-${HOSTNAME}.json"
-        local host_count=$(jq -s 'length' "$hostname_file" 2>/dev/null || echo "0")
+        local host_count=$(jq 'length' "$hostname_file" 2>/dev/null || echo "0")
 
         local commit_msg="Memory backup from ${HOSTNAME}: ${TIMESTAMP}
 

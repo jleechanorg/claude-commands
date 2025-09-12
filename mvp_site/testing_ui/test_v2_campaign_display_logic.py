@@ -6,20 +6,15 @@ Verifies V2 shows campaigns dashboard when campaigns exist (not landing page)
 
 import os
 import sys
-
-from browser_test_base import TestBase
-from playwright.sync_api import sync_playwright
+import unittest
 
 # Set up path for imports
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-sys.path.append(
-    os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "testing_ui"
-    )
-)
+
+from playwright.sync_api import sync_playwright
 
 
-class TestV2CampaignDisplayLogic(TestBase):
+class TestV2CampaignDisplayLogic(unittest.TestCase):
     """Test V2 properly displays campaigns dashboard when campaigns exist"""
 
     def test_v2_shows_campaigns_when_they_exist(self):
