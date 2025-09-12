@@ -5,21 +5,17 @@ Tests the complete workflow including parallel backups.
 """
 
 import json
+import os
+import sys
 import tempfile
+import unittest
 from pathlib import Path
 
-# Import the module we're testing (from parent directory)
-import sys
-import os
-import unittest
-
+# Add parent directory to sys.path and import CRDT module in one block
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
+from memory_backup_crdt import MemoryBackupCRDT, crdt_merge
 
-try:
-    from memory_backup_crdt import MemoryBackupCRDT, crdt_merge
-    CRDT_AVAILABLE = True
-except ImportError:
-    CRDT_AVAILABLE = False
+CRDT_AVAILABLE = True
 
 @unittest.skipUnless(CRDT_AVAILABLE, "memory_backup_crdt module not available")
 

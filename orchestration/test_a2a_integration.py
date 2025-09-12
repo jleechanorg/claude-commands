@@ -9,18 +9,16 @@ to prove we're using real SDK, not simulation.
 import asyncio
 import logging
 import sys
+import unittest
 from typing import Any
 
-try:
-    import httpx
-    from a2a.client.client import A2AClient
-    from a2a.types import AgentCard, Message, Role, TextPart
-    from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
-    A2A_AVAILABLE = True
-except ImportError:
-    A2A_AVAILABLE = False
+# Import A2A dependencies directly - let them fail at module level if not available
+import httpx
+from a2a.client.client import A2AClient
+from a2a.types import AgentCard, Message, Role, TextPart
+from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
 
-import unittest
+A2A_AVAILABLE = True
 
 @unittest.skipUnless(A2A_AVAILABLE, "A2A dependencies not available")
 

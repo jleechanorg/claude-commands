@@ -12,13 +12,16 @@ Tests cover:
 """
 import json
 import os
+import sys
 import tempfile
 import unittest
-from unittest.mock import patch, MagicMock, mock_open
 from datetime import datetime
-import sys
+from unittest.mock import patch, MagicMock, mock_open
 
-# Add scripts directory to path for imports
+# Import coverage if available - let it fail at module level if not available
+import coverage
+
+# Add scripts directory to sys.path and import unified_memory_backup in one block
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'memory_sync'))
 from unified_memory_backup import UnifiedMemoryBackup
 
@@ -385,25 +388,18 @@ if __name__ == '__main__':
     # Create test results directory
     os.makedirs('test_results', exist_ok=True)
 
-    # Run tests with coverage if available
-    try:
-        import coverage
-        cov = coverage.Coverage()
-        cov.start()
+    # Run tests with coverage
+    cov = coverage.Coverage()
+    cov.start()
 
-        unittest.main(verbosity=2, exit=False)
+    unittest.main(verbosity=2, exit=False)
 
-        cov.stop()
-        cov.save()
-        print("\n" + "="*50)
-        print("📊 COVERAGE REPORT")
-        print("="*50)
-        cov.report(show_missing=True)
-
-    except ImportError:
-        # Run without coverage
-        print("⚠️  Coverage package not available, running tests without coverage")
-        unittest.main(verbosity=2)
+    cov.stop()
+    cov.save()
+    print("\n" + "="*50)
+    print("📊 COVERAGE REPORT")
+    print("="*50)
+    cov.report(show_missing=True)
 
     print("\n" + "="*50)
     print("✅ UNIFIED MEMORY BACKUP TESTS COMPLETE")
