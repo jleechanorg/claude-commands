@@ -118,9 +118,16 @@ git diff --stat
 /pushl || { echo "🚨 PUSH FAILED: PR not updated"; exit 1; }
 ```
 
-**Coverage Tracking (delegated):**
+**🚨 MANDATORY COVERAGE VERIFICATION (NO BYPASS):**
 ```bash
+# CRITICAL: Comment coverage verification MUST execute regardless of CI status
 /commentcheck  # authoritative coverage verification & reporting
+# FAILURE MODE PREVENTION: If any unresponded comments found, STOP execution
+if [ $? -ne 0 ]; then
+    echo "🚨 COVERAGE FAILURE: Unresponded comments detected - execution halted"
+    echo "🚨 IMPLEMENTER'S PARADOX PREVENTION: Cannot claim success while missing comment responses"
+    exit 1
+fi
 ```
 
 **Final Timing:**
@@ -169,12 +176,15 @@ fi
 - ✅ **Pattern Detection**: Systematic fixes applied across similar codebase patterns
 - ✅ **Performance**: Execution completed within 2-3 minute target
 
-### **FAILURE CONDITIONS**:
+### **FAILURE CONDITIONS** (ZERO TOLERANCE):
 - ❌ **Coverage Gaps**: <100% ALL comment response rate OR unaddressed human/automated feedback
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
 - ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
 - ❌ **Timing Failures**: Execution time >3 minutes without performance alerts
+- ❌ **🚨 IMPLEMENTER'S PARADOX**: Claiming completion while implementing comment protocols WITHOUT responding to actual comments
+- ❌ **🚨 STATUS BYPASS**: Skipping comment verification based on CI status (green/red irrelevant)
+- ❌ **🚨 COVERAGE BYPASS**: Proceeding past /commentcheck failures without explicit remediation
 
 ## ⚡ **HYBRID EXECUTION OPTIMIZATION**
 
