@@ -13,26 +13,26 @@ service cloud.firestore {
 
     // Campaigns - owner only, NO field restrictions
     match /campaigns/{campaignId} {
-      allow read, write: if request.auth.uid == resource.data.user_id
-                         || request.auth.uid == request.resource.data.user_id;
+      allow create: if request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if request.auth.uid == resource.data.user_id;
     }
 
     // Characters - owner only
     match /campaigns/{campaignId}/characters/{characterId} {
-      allow read, write: if request.auth.uid == resource.data.user_id
-                         || request.auth.uid == request.resource.data.user_id;
+      allow create: if request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if request.auth.uid == resource.data.user_id;
     }
 
     // Sessions - owner only
     match /campaigns/{campaignId}/sessions/{sessionId} {
-      allow read, write: if request.auth.uid == resource.data.user_id
-                         || request.auth.uid == request.resource.data.user_id;
+      allow create: if request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if request.auth.uid == resource.data.user_id;
     }
 
     // Generic pattern for any new collections
     match /{collection}/{document} {
-      allow read, write: if request.auth.uid == resource.data.user_id
-                         || request.auth.uid == request.resource.data.user_id;
+      allow create: if request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if request.auth.uid == resource.data.user_id;
     }
   }
 }
