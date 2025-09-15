@@ -33,7 +33,7 @@
 - ✅ No merge conflicts
 - ✅ No unaddressed comments
 - ✅ CI passing
-- ⏱️ **Hard caps**: max 5 iterations or 30 minutes per run (whichever comes first), exponential backoff between attempts
+- ⏱️ **Hard caps**: max 5 iterations or 30 minutes total runtime for the entire PR processing workflow (whichever comes first), exponential backoff between attempts
 - **Stop** when no-op cycles are detected (no diffs, no new replies), then surface a summary and next actions
 
 ### Phase 7: Push

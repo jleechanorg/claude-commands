@@ -50,11 +50,12 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 - **Start Counter**: Begin counting operations immediately upon task initiation
 - **Operation Tracking**: COUNT EVERY: tool call, file read/write, API request, analysis step
 - **Progress Tracking**: Track completion percentage and key milestones per operation
-- **Graceful Termination**: At 10 operations EXACTLY, immediately stop work and summarize partial results
+- **Graceful Termination**: At 35 operations EXACTLY, immediately stop work and summarize partial results
 - **Result Preservation**: Ensure all partial work is saved to output file before summarization
 - **Operation Reporting**: Include operation count and completion percentage in summary
 
 ### 🔥 CRITICAL OPERATION COUNTING PROTOCOL
+**CONSISTENT 35-OPERATION LIMIT**: All references to operation limits use 35 operations maximum.
 **YOU MUST COUNT AND ANNOUNCE EACH OPERATION:**
 - **Operation 1**: [Describe what you're doing]
 - **Operation 2**: [Describe what you're doing]
