@@ -908,14 +908,18 @@ This is a filtered reference export from a working Claude Code project. Commands
             if item in dirs_mapping:
                 target_path = dirs_mapping[item]
                 if target_path is None:
-                    # Handle infrastructure-scripts specially - copy individual files to repo root
+                    # Handle infrastructure-scripts specially - copy to infrastructure-scripts/ directory
                     if item == 'infrastructure-scripts' and os.path.isdir(src):
+                        # Create infrastructure-scripts directory in target repo
+                        infra_dir = os.path.join(self.repo_dir, 'infrastructure-scripts')
+                        os.makedirs(infra_dir, exist_ok=True)
+
                         for script_file in os.listdir(src):
                             script_src = os.path.join(src, script_file)
-                            script_dst = os.path.join(self.repo_dir, script_file)
+                            script_dst = os.path.join(infra_dir, script_file)
                             if os.path.isfile(script_src):
                                 shutil.copy2(script_src, script_dst)
-                                print(f"   • Added/Updated: {script_file}")
+                                print(f"   • Added/Updated: infrastructure-scripts/{script_file}")
                     continue
                 elif target_path.startswith(claude_dir):
                     # Copy to .claude/ subdirectory
