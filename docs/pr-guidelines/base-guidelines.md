@@ -44,6 +44,12 @@
 - **No inline imports** - All imports at module level
 - **Look for existing functionality first** - Modify before adding new code paths
 
+#### 5. Directory Context Awareness
+- **Always specify directory when reporting git status across multiple repositories**
+- **Never say "we are on branch X" when operating across different repositories**
+- **Use clear language**: "In my working directory: /path/A (branch: X)" vs "In your directory: /path/B (branch: Y)"
+- **Never mix up git status between different repositories** - causes confusion and wrong commands
+
 **Code Priorities (in order):**
 1. Pragmatic
 2. Concise/DRY
