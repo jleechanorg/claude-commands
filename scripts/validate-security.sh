@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Enable strict error handling
+set -e          # Exit immediately if any command fails
+set -u          # Exit if undefined variables are used
+set -o pipefail # Exit if any command in a pipeline fails
+
 echo "🔒 FIRESTORE SECURITY RULES VALIDATION REPORT"
 echo "============================================="
 echo ""

@@ -1,5 +1,10 @@
 #!/bin/bash
 
+# Enable strict error handling
+set -e          # Exit immediately if any command fails
+set -u          # Exit if undefined variables are used
+set -o pipefail # Exit if any command in a pipeline fails
+
 # Deploy Firestore Security Rules Script
 # This script deploys the newly created security rules to Firebase
 

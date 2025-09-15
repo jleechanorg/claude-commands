@@ -31,9 +31,10 @@ service cloud.firestore {
 
     // Campaigns collection - user-owned campaign data
     match /campaigns/{campaignId} {
-      // Users can only read/write campaigns they own
-      allow read, write: if isAuthenticated() &&
-                            isOwner(resource.data.user_id);
+      // Users can only read campaigns they own (check ownership first)
+      allow read: if isAuthenticated() &&
+                     resource != null &&
+                     isOwner(resource.data.user_id);
 
       // Allow creation only if the user_id matches authenticated user
       allow create: if isAuthenticated() &&
