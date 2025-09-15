@@ -12,16 +12,39 @@ service cloud.firestore {
     }
 
     function isValidCampaignData() {
+      // Allowed fields at create time - prevents data injection
+      let allowed = ['user_id', 'title', 'description', 'game_state', 'last_played', 'updated_at', 'created_at', 'character', 'setting'];
       return request.resource.data.keys().hasAll(['user_id', 'title']) &&
+             request.resource.data.keys().hasOnly(allowed) &&
              request.resource.data.user_id is string &&
              request.resource.data.title is string &&
              request.resource.data.title.size() > 0 &&
-             request.resource.data.title.size() <= 200;
+             request.resource.data.title.size() <= 200 &&
+             // Optional fields, if present, must have correct types
+             (request.resource.data.description == null || (request.resource.data.description is string && request.resource.data.description.size() <= 1000)) &&
+             (request.resource.data.game_state == null || request.resource.data.game_state is map) &&
+             (request.resource.data.last_played == null || request.resource.data.last_played is timestamp) &&
+             (request.resource.data.updated_at == null || request.resource.data.updated_at is timestamp) &&
+             (request.resource.data.created_at == null || request.resource.data.created_at is timestamp) &&
+             (request.resource.data.character == null || (request.resource.data.character is string && request.resource.data.character.size() <= 500)) &&
+             (request.resource.data.setting == null || (request.resource.data.setting is string && request.resource.data.setting.size() <= 500));
     }
 
     function isValidStateUpdate() {
-      // Allow state updates that include required fields
-      return request.resource.data.keys().hasAny(['game_state', 'last_played', 'updated_at']);
+      // Use diff-based validation to control which fields can change
+      let changed = request.resource.data.diff(resource.data).changedKeys();
+      // Only allow these specific fields to change during updates
+      return changed.hasOnly(['game_state', 'last_played', 'updated_at', 'description', 'character', 'setting']) &&
+             // Enforce type validation for changed fields
+             (request.resource.data.game_state == null || request.resource.data.game_state is map) &&
+             (request.resource.data.last_played == null || request.resource.data.last_played is timestamp) &&
+             (request.resource.data.updated_at == null || request.resource.data.updated_at is timestamp) &&
+             (request.resource.data.description == null || (request.resource.data.description is string && request.resource.data.description.size() <= 1000)) &&
+             (request.resource.data.character == null || (request.resource.data.character is string && request.resource.data.character.size() <= 500)) &&
+             (request.resource.data.setting == null || (request.resource.data.setting is string && request.resource.data.setting.size() <= 500)) &&
+             // Prevent modification of critical fields
+             request.resource.data.user_id == resource.data.user_id &&
+             request.resource.data.title == resource.data.title;
     }
 
     // Users collection - users can only read/write their own data
@@ -52,6 +75,8 @@ service cloud.firestore {
                        isOwner(resource.data.user_id);
 
       // Subcollections within campaigns (if any)
+      // NOTE: This performs an additional read for each subcollection access
+      // Consider restructuring data model to avoid nested subcollections if performance becomes an issue
       match /{document=**} {
         allow read, write: if isAuthenticated() &&
                               isOwner(get(/databases/$(database)/documents/campaigns/$(campaignId)).data.user_id);
