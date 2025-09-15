@@ -35,7 +35,7 @@ echo "  Project branding: $(grep -r "WorldArchitect\.AI" .claude/commands --incl
 echo ""
 
 echo "🎯 Repository Status:"
-echo "  Target: https://github.com/jleechanorg/claude-commands"
+echo "  Target: $(git config --get remote.origin.url)
 echo "  ✅ Project-specific files removed"
 echo "  ✅ Enhanced filtering rules in place"
 echo "  ✅ Reference-only warnings added"
