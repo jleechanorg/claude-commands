@@ -4,6 +4,22 @@
 **Created**: August 13, 2025
 **Purpose**: Prevent recurring mistakes in AI-assisted development through systematic guidelines
 
+## 🚨 MANDATORY: CLAUDE.MD SYNC PROTOCOL
+
+**⚠️ CRITICAL FIRST STEP**: Before applying any guidelines from this document, you MUST read the latest CLAUDE.md to refresh instructions and ensure alignment with current project protocols.
+
+**REQUIRED WORKFLOW**:
+1. **ALWAYS READ CLAUDE.md FIRST** - Located at project root: `/Users/jleechan/projects/worktree_worker4/CLAUDE.md`
+2. **SYNC INSTRUCTIONS** - Verify current protocols, file creation rules, and project-specific requirements
+3. **APPLY BASE GUIDELINES** - Use this document's patterns in conjunction with CLAUDE.md mandates
+4. **RESOLVE CONFLICTS** - CLAUDE.md rules take precedence over any conflicting guidance in this document
+
+**Why This Matters**:
+- CLAUDE.md contains live project rules that evolve rapidly
+- File creation protocols and branch-specific requirements change frequently
+- This document provides stable patterns; CLAUDE.md provides current enforcement rules
+- Outdated instruction alignment causes protocol violations and workflow breaks
+
 ## Scope & De-duplication
 - This document is the canonical reference for mistake-prevention protocols. Do not duplicate its systematic protocols elsewhere; instead, link to this document to prevent drift.
 - Command/orchestrator docs (e.g., `/plan`, `/execute`) should reference these guidelines rather than restating them.
@@ -242,6 +258,67 @@ Edit existing file using Edit/MultiEdit tools
 Use git branches for experimental changes
 Trust git for version control and rollback
 ```
+
+### **File Justification Protocol Violations**
+
+#### ❌ **CRITICAL: File Creation Without Integration Attempts**
+```bash
+# WRONG - Creating new files without proving integration is impossible
+Write tool: new_helper.py
+Write tool: backup_script.sh
+Write tool: additional_tests.py
+
+# WRONG - Skipping integration-first protocol
+"This feature needs a new file" → immediately create new file
+"Tests need separate file" → create test_new.py without checking existing test files
+```
+
+#### 🚨 **CLAUDE.md FILE JUSTIFICATION PROTOCOL** - MANDATORY ENFORCEMENT
+
+**Reference**: See CLAUDE.md sections "NEW FILE CREATION PROTOCOL" and "FILE JUSTIFICATION & CREATION PROTOCOL"
+
+**🚨 EXTREME ANTI-CREATION BIAS**: Default answer is ALWAYS "NO NEW FILES"
+
+**MANDATORY INTEGRATION-FIRST WORKFLOW**:
+1. **ASSUME NO NEW FILES NEEDED** - Start with assumption that existing files can handle functionality
+2. **IDENTIFY INTEGRATION TARGETS** - List 3+ existing files that could potentially hold this functionality
+3. **ATTEMPT INTEGRATION FIRST** - Actually try adding code to existing files before considering new ones
+4. **PROVE INTEGRATION IMPOSSIBLE** - Document specific reasons why each target file cannot work
+
+**INTEGRATION PREFERENCE HIERARCHY** (MANDATORY ORDER from CLAUDE.md):
+1. Add to existing file with similar purpose (even if file gets larger)
+2. Add to existing utility/helper file (even if not perfect fit)
+3. Add to existing module's `__init__.py` for module-level functionality
+4. Add to existing test file for test code (NEVER create new test files without permission)
+5. Add as method to existing class (even if class gets larger)
+6. Add to existing configuration file for config/settings
+7. **LAST RESORT**: Create new file (only after documenting ALL above failures)
+
+#### ✅ **Correct File Justification Approach**
+```bash
+# RIGHT - Integration-first protocol
+1. Search for existing files: "Where could this function live?"
+2. Attempt integration: "Can I add this to user_utils.py?"
+3. Document impossibility: "user_utils.py would break single responsibility because..."
+4. Try next target: "Can I add this to main_handler.py?"
+5. Only create new file after proving 3+ integration attempts failed
+
+# RIGHT - Explicit justification documentation
+## File Change Justification:
+- **GOAL**: Add validation helper function
+- **INTEGRATION ATTEMPTS**:
+  - user_utils.py: Would violate SRP (user focus vs validation)
+  - validators.py: Already exists! Adding function there instead.
+- **RESULT**: No new file needed, enhanced existing validators.py
+```
+
+#### 🚨 **MANDATORY QUESTIONS FOR EVERY FILE CHANGE** (from CLAUDE.md):
+1. "What specific problem does this file solve that existing files cannot?"
+2. "Have I proven that integration into existing files is impossible?"
+3. "Does this file provide unique value that justifies its existence?"
+4. "Could this functionality be achieved by modifying existing files instead?"
+
+**Enforcement**: Any Write tool usage MUST answer these 4 questions explicitly.
 
 ### **Analysis Mistakes**
 
