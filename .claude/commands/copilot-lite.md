@@ -45,7 +45,7 @@
 - ✅ No merge conflicts
 - ✅ No unaddressed comments (human + automated)
 - ✅ CI passing
-- ⏱️ **Hard caps**: max 5 iterations or 30 minutes total runtime for the entire PR processing workflow (whichever comes first), exponential backoff between attempts
+- ⏱️ **Hard caps**: max 5 iterations or 30 minutes total runtime for the entire PR processing workflow (whichever comes first), with exponential backoff between attempts; on cap, stop and post a summary + next actions
 - **Stop** when no-op cycles are detected (no diffs, no new replies), then surface a summary and next actions
 
 ### Phase 7: Push
@@ -77,7 +77,7 @@
 # FIXES all PR issues until GitHub ready-for-merge
 # POSTS ALL comment replies (human + automated) until 100% coverage
 # RESOLVES all conflicts until clean merge
-# NEVER stops until work is complete
+# Stops when work is complete OR caps are reached; on cap, posts a summary + next actions
 ```
 
 🚨 **WORK-FOCUSED OPERATION**: MUST complete actual work - resolve conflicts, post replies, fix tests. Analysis alone = FAILURE.
