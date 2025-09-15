@@ -6,7 +6,7 @@ echo ""
 
 echo "✅ DEPLOYMENT VERIFICATION"
 echo "-------------------------"
-echo "✓ Rules file exists: $(ls -la firestore.rules | awk '{print $9, $5 " bytes"}')"
+echo "✓ Rules file exists: $(ls -la deployment/firebase/firestore.rules | awk '{print $9, $5 " bytes"}')"
 echo "✓ Firebase config exists: $(ls -la firebase.json | awk '{print $9}')"
 echo "✓ Successfully deployed to: worldarchitecture-ai"
 echo "✓ Project active: $(firebase use)"
@@ -15,13 +15,13 @@ echo ""
 echo "🛡️  SECURITY RULE ANALYSIS"
 echo "-------------------------"
 echo "✓ Authentication required everywhere:"
-grep -n "isAuthenticated()" firestore.rules | head -3
+grep -n "isAuthenticated()" deployment/firebase/firestore.rules | head -3
 echo ""
 echo "✓ User ownership validation:"
-grep -n "isOwner" firestore.rules | head -3
+grep -n "isOwner" deployment/firebase/firestore.rules | head -3
 echo ""
 echo "✓ Data validation functions:"
-grep -n "isValid" firestore.rules | head -3
+grep -n "isValid" deployment/firebase/firestore.rules | head -3
 echo ""
 
 echo "🎯 PROTECTION COVERAGE"

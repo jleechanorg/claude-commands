@@ -9,7 +9,7 @@
 
 Run this command to verify security status:
 ```bash
-./validate-security.sh
+./scripts/validate-security.sh
 ```
 
 ## 🚨 Monitoring & Alerts
@@ -31,20 +31,20 @@ Run this command to verify security status:
 ## 🔧 Common Maintenance Tasks
 
 ### Update Rules
-1. Edit `firestore.rules`
+1. Edit `deployment/firebase/firestore.rules`
 2. Test with: `firebase emulators:start --only firestore`
-3. Deploy with: `firebase deploy --only firestore:rules`
+3. Deploy with: `./scripts/deploy-firestore-rules.sh`
 
 ### Add New Data Collection
-1. Add rules in `firestore.rules` for new collection
+1. Add rules in `deployment/firebase/firestore.rules` for new collection
 2. Follow pattern: authenticate → validate ownership → validate data
 3. Test thoroughly before deploying
 
 ### Emergency Rule Rollback
 ```bash
 # If rules break app functionality
-git checkout HEAD~1 firestore.rules
-firebase deploy --only firestore:rules
+git checkout HEAD~1 deployment/firebase/firestore.rules
+./scripts/deploy-firestore-rules.sh
 ```
 
 ## 🛡️ Security Principles Applied
@@ -71,7 +71,7 @@ firebase emulators:start --only firestore
 
 ### Production Verification
 ```bash
-./validate-security.sh
+./scripts/validate-security.sh
 ```
 
 ## 📚 Rule Documentation
@@ -92,7 +92,7 @@ firebase emulators:start --only firestore
 
 ### If Security Issues Arise
 1. Check Firebase Console error logs
-2. Test with `./validate-security.sh`
+2. Test with `./scripts/validate-security.sh`
 3. Review recent rule changes in git history
 4. Contact Firebase Support if needed
 
