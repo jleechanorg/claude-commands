@@ -24,9 +24,57 @@ fi
 
 # Configuration
 RUNNER_DIR="$HOME/actions-runner"
-REPO_URL="https://github.com/jleechanorg/worldarchitect.ai"
 RUNNER_VERSION="2.311.0"
 LABELS="self-hosted,claude"
+
+# Determine repository URL: argument > env var > git remote > error
+REPO_URL=""
+# Parse --repo argument
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --repo)
+            REPO_URL="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--repo <repository-url>]"
+            echo "  --repo: GitHub repository URL (e.g., https://github.com/user/repo)"
+            echo "  If not specified, will try to detect from git remote origin"
+            exit 0
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# If not set by argument, check environment variable
+if [[ -z "$REPO_URL" && -n "$GITHUB_REPO_URL" ]]; then
+    REPO_URL="$GITHUB_REPO_URL"
+fi
+
+# If still not set, try to get from git remote
+if [[ -z "$REPO_URL" ]]; then
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        REPO_URL="$(git config --get remote.origin.url 2>/dev/null || echo '')"
+        # Convert SSH to HTTPS format if needed
+        if [[ "$REPO_URL" =~ ^git@github\.com:(.+)\.git$ ]]; then
+            REPO_URL="https://github.com/${BASH_REMATCH[1]}"
+        fi
+    fi
+fi
+
+# If still not set, print error and exit
+if [[ -z "$REPO_URL" ]]; then
+    echo -e "${RED}❌ Repository URL not specified.${NC}"
+    echo "Please either:"
+    echo "  1. Run from within a git repository with origin remote"
+    echo "  2. Use --repo <repository-url> argument"
+    echo "  3. Set GITHUB_REPO_URL environment variable"
+    echo ""
+    echo "Example: $0 --repo https://github.com/user/repo"
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'

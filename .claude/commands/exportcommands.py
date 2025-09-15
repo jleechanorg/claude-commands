@@ -386,12 +386,25 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Apply transformations - FIXED: These now perform actual replacements
+            # Apply transformations - Enhanced for portability
             content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
             content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+
+            # New portable patterns
+            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
+            content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'https://github\.com/jleechanorg/[^/\s]+', '$(git config --get remote.origin.url)', content)
+
+            # SOURCE_DIR variable patterns
+            content = re.sub(r'find mvp_site', 'find "$SOURCE_DIR"', content)
+            content = re.sub(r'cd mvp_site', 'cd "$SOURCE_DIR"', content)
+            content = re.sub(r'if \[ ! -d "mvp_site" \]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)

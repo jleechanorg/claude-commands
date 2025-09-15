@@ -55,13 +55,29 @@ fi
 
 echo
 echo "========================================================================"
-echo "📊 Lines of Code Breakdown (mvp_site directory)"
+# Auto-detect source directory
+SOURCE_DIR="${PROJECT_SRC_DIR:-}"
+if [[ -z "$SOURCE_DIR" ]]; then
+    # Try common source directory patterns
+    for dir in src lib app mvp_site source code; do
+        if [[ -d "$dir" ]]; then
+            SOURCE_DIR="$dir"
+            break
+        fi
+    done
+    # Fallback to current directory if no common patterns found
+    if [[ -z "$SOURCE_DIR" ]]; then
+        SOURCE_DIR="."
+    fi
+fi
+
+echo "📊 Lines of Code Breakdown ($SOURCE_DIR directory)"
 echo "========================================================================"
 
 # Function to count lines in files
 count_lines() {
     local pattern="$1"
-    local files=$(find mvp_site -type f -name "$pattern" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null)
+    local files=$(find "$SOURCE_DIR" -type f -name "$pattern" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null)
     if [ -z "$files" ]; then
         echo "0"
     else
@@ -72,8 +88,8 @@ count_lines() {
 # Function to count test vs non-test lines
 count_test_vs_nontest() {
     local ext="$1"
-    local test_lines=$(find mvp_site -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
-    local nontest_lines=$(find mvp_site -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -v -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+    local test_lines=$(find "$SOURCE_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
+    local nontest_lines=$(find "$SOURCE_DIR" -type f -name "*.$ext" ! -path "*/__pycache__/*" ! -path "*/.pytest_cache/*" ! -path "*/node_modules/*" 2>/dev/null | grep -v -i test | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}')
 
     # Handle empty results
     test_lines=${test_lines:-0}

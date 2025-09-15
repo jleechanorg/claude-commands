@@ -44,9 +44,28 @@ print_warning() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Check if we're in the right directory
-if [ ! -d "mvp_site" ]; then
-    print_error "mvp_site directory not found. Please run this script from the project root."
+# Auto-detect source directory for testing
+SOURCE_DIR="${PROJECT_SRC_DIR:-}"
+if [[ -z "$SOURCE_DIR" ]]; then
+    # Try common source directory patterns
+    for dir in src lib app mvp_site source code; do
+        if [[ -d "$dir" ]]; then
+            SOURCE_DIR="$dir"
+            break
+        fi
+    done
+    # Fallback to current directory if no common patterns found
+    if [[ -z "$SOURCE_DIR" ]]; then
+        SOURCE_DIR="."
+        print_warning "No common source directory found, using current directory"
+    fi
+fi
+
+print_status "Using source directory: $SOURCE_DIR"
+
+# Check if source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+    print_error "Source directory '$SOURCE_DIR' not found. Please run this script from the project root or set PROJECT_SRC_DIR environment variable."
     exit 1
 fi
 
@@ -68,15 +87,17 @@ for arg in "$@"; do
     esac
 done
 
-# Create coverage output directory
-mkdir -p "/tmp/worldarchitectai/coverage"
+# Create coverage output directory (use generic project name)
+PROJECT_NAME="$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "project")"
+COVERAGE_DIR="/tmp/${PROJECT_NAME}/coverage"
+mkdir -p "$COVERAGE_DIR"
 
-# Change to mvp_site directory
-cd mvp_site
+# Change to source directory
+cd "$SOURCE_DIR"
 
 print_status "🧪 Running tests with coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
-print_status "HTML output will be saved to: /tmp/worldarchitectai/coverage"
+print_status "HTML output will be saved to: $COVERAGE_DIR"
 
 if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
@@ -226,9 +247,9 @@ fi
 # Generate HTML report if enabled
 if [ "$generate_html" = true ]; then
     print_status "🌐 Generating HTML coverage report..."
-    if source ../venv/bin/activate && coverage html --directory="/tmp/worldarchitectai/coverage"; then
-        print_success "HTML coverage report generated in /tmp/worldarchitectai/coverage/"
-        print_status "Open /tmp/worldarchitectai/coverage/index.html in your browser to view detailed coverage"
+    if source ../venv/bin/activate && coverage html --directory="$COVERAGE_DIR"; then
+        print_success "HTML coverage report generated in $COVERAGE_DIR/"
+        print_status "Open $COVERAGE_DIR/index.html in your browser to view detailed coverage"
     else
         print_error "Failed to generate HTML coverage report"
     fi
