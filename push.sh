@@ -39,9 +39,13 @@ echo "Committing with message: '${COMMIT_MSG}'..."
 git commit -m "${COMMIT_MSG}"
 
 echo "Pushing changes to GitHub..."
-git push
-
-echo "Push complete."
+if git push 2>/dev/null; then
+    echo "✅ Push complete."
+else
+    echo "⚠️  Push failed - likely no git remote configured."
+    echo "   To add a remote: git remote add origin <repository-url>"
+    echo "   Changes have been committed locally."
+fi
 
 # Start test server for current branch (if script exists)
 current_branch=$(git branch --show-current)

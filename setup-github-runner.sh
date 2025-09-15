@@ -6,19 +6,30 @@
 
 set -e
 
-# Auto-install to home directory if running from project
+# Check if --no-install flag is present (quick check before processing)
+NO_AUTO_INSTALL="false"
+for arg in "$@"; do
+    if [[ "$arg" == "--no-install" ]]; then
+        NO_AUTO_INSTALL="true"
+        break
+    fi
+done
+
+# Auto-install to home directory if running from project (unless --no-install)
 SCRIPT_NAME="$(basename "$0")"
 HOME_SCRIPT="$HOME/$SCRIPT_NAME"
 
-if [[ "$0" != "$HOME_SCRIPT" && ! -f "$HOME_SCRIPT" ]]; then
+if [[ "$NO_AUTO_INSTALL" != "true" && "$0" != "$HOME_SCRIPT" && ! -f "$HOME_SCRIPT" ]]; then
     echo "🔄 Installing script to home directory..."
+    echo "   (Use --no-install to skip this behavior)"
     cp "$0" "$HOME_SCRIPT"
     chmod +x "$HOME_SCRIPT"
     echo "✅ Script installed to: $HOME_SCRIPT"
     echo "▶️  Running from home directory..."
     exec "$HOME_SCRIPT" "$@"
-elif [[ "$0" != "$HOME_SCRIPT" && -f "$HOME_SCRIPT" ]]; then
+elif [[ "$NO_AUTO_INSTALL" != "true" && "$0" != "$HOME_SCRIPT" && -f "$HOME_SCRIPT" ]]; then
     echo "🔄 Script already exists in home directory, running from there..."
+    echo "   (Use --no-install to run from current location)"
     exec "$HOME_SCRIPT" "$@"
 fi
 
@@ -37,10 +48,15 @@ while [[ $# -gt 0 ]]; do
             shift 2
             ;;
         --help|-h)
-            echo "Usage: $0 [--repo <repository-url>]"
+            echo "Usage: $0 [--repo <repository-url>] [--no-install]"
             echo "  --repo: GitHub repository URL (e.g., https://github.com/user/repo)"
-            echo "  If not specified, will try to detect from git remote origin"
+            echo "  --no-install: Skip auto-install to home directory"
+            echo "  If repo not specified, will try to detect from git remote origin"
             exit 0
+            ;;
+        --no-install)
+            NO_AUTO_INSTALL="true"
+            shift
             ;;
         *)
             shift

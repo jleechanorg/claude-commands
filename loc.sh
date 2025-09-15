@@ -37,20 +37,37 @@ SINCE_DATE="$1"
 # Check if Python script exists
 PYTHON_SCRIPT="scripts/analyze_git_stats.py"
 if [[ ! -f "$PYTHON_SCRIPT" ]]; then
-    echo "Error: $PYTHON_SCRIPT not found!"
-    echo "Please run this script from the project root directory."
-    exit 1
+    echo "⚠️  Warning: $PYTHON_SCRIPT not found!"
+    echo ""
+    echo "📋 This script requires a dependency for git statistics analysis."
+    echo "💡 Solutions:"
+    echo "   1. Copy analyze_git_stats.py from the source project"
+    echo "   2. Create a simplified version (template available)"
+    echo "   3. Skip git statistics and show only file line counts"
+    echo ""
+    read -p "Continue with file counts only? (y/N): " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "Exiting. Please install the dependency or choose option above."
+        exit 1
+    fi
+    echo "📊 Continuing with file line counts only..."
+    SKIP_GIT_STATS=true
 fi
 
 echo "🚀 Generating Complete GitHub Statistics..."
 echo "========================================================================"
 echo
 
-# Run the comprehensive Python analyzer
-if [[ -n "$SINCE_DATE" ]]; then
-    python3 "$PYTHON_SCRIPT" "$SINCE_DATE"
+# Run the comprehensive Python analyzer (if available)
+if [[ "$SKIP_GIT_STATS" != "true" ]]; then
+    if [[ -n "$SINCE_DATE" ]]; then
+        python3 "$PYTHON_SCRIPT" "$SINCE_DATE"
+    else
+        python3 "$PYTHON_SCRIPT"
+    fi
 else
-    python3 "$PYTHON_SCRIPT"
+    echo "⏭️  Skipping git statistics analysis (dependency not available)"
 fi
 
 echo
@@ -106,17 +123,22 @@ total_test_lines=0
 total_nontest_lines=0
 total_all_lines=0
 
-# Associative arrays for storing results
-declare -A test_lines_by_type
-declare -A nontest_lines_by_type
-declare -A total_lines_by_type
+# Bash 3.x compatible arrays (using parallel arrays instead of associative)
+test_lines_by_type=()
+nontest_lines_by_type=()
+total_lines_by_type=()
+file_type_names=()
 
 # Calculate lines for each file type
-for ext in "${FILE_TYPES[@]}"; do
+for i in "${!FILE_TYPES[@]}"; do
+    ext="${FILE_TYPES[$i]}"
     read test_count nontest_count <<< $(count_test_vs_nontest "$ext")
-    test_lines_by_type[$ext]=$test_count
-    nontest_lines_by_type[$ext]=$nontest_count
-    total_lines_by_type[$ext]=$((test_count + nontest_count))
+
+    # Store in parallel arrays
+    file_type_names[$i]="$ext"
+    test_lines_by_type[$i]=$test_count
+    nontest_lines_by_type[$i]=$nontest_count
+    total_lines_by_type[$i]=$((test_count + nontest_count))
 
     total_test_lines=$((total_test_lines + test_count))
     total_nontest_lines=$((total_nontest_lines + nontest_count))
@@ -129,10 +151,11 @@ echo "-----------------------------------"
 printf "%-12s %10s %10s %10s %8s\n" "Type" "Test" "Non-Test" "Total" "Test %"
 echo "-----------------------------------"
 
-for ext in "${FILE_TYPES[@]}"; do
-    test_count=${test_lines_by_type[$ext]}
-    nontest_count=${nontest_lines_by_type[$ext]}
-    total_count=${total_lines_by_type[$ext]}
+for i in "${!FILE_TYPES[@]}"; do
+    ext="${file_type_names[$i]}"
+    test_count=${test_lines_by_type[$i]}
+    nontest_count=${nontest_lines_by_type[$i]}
+    total_count=${total_lines_by_type[$i]}
 
     if [ $total_count -gt 0 ]; then
         test_percentage=$(( (test_count * 100) / total_count ))
