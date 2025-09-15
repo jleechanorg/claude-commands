@@ -1,0 +1,90 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Helper functions for authentication and authorization
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isValidCampaignData() {
+      return request.resource.data.keys().hasAll(['user_id', 'title']) &&
+             request.resource.data.user_id is string &&
+             request.resource.data.title is string &&
+             request.resource.data.title.size() > 0 &&
+             request.resource.data.title.size() <= 200;
+    }
+
+    function isValidStateUpdate() {
+      // Allow state updates that include required fields
+      return request.resource.data.keys().hasAny(['game_state', 'last_played', 'updated_at']);
+    }
+
+    // Users collection - users can only read/write their own data
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Campaigns collection - user-owned campaign data
+    match /campaigns/{campaignId} {
+      // Users can only read/write campaigns they own
+      allow read, write: if isAuthenticated() &&
+                            isOwner(resource.data.user_id);
+
+      // Allow creation only if the user_id matches authenticated user
+      allow create: if isAuthenticated() &&
+                       isOwner(request.resource.data.user_id) &&
+                       isValidCampaignData();
+
+      // Allow updates if user owns the campaign and data is valid
+      allow update: if isAuthenticated() &&
+                       isOwner(resource.data.user_id) &&
+                       isOwner(request.resource.data.user_id) &&
+                       (isValidCampaignData() || isValidStateUpdate());
+
+      // Allow deletion if user owns the campaign
+      allow delete: if isAuthenticated() &&
+                       isOwner(resource.data.user_id);
+
+      // Subcollections within campaigns (if any)
+      match /{document=**} {
+        allow read, write: if isAuthenticated() &&
+                              isOwner(get(/databases/$(database)/documents/campaigns/$(campaignId)).data.user_id);
+      }
+    }
+
+    // Game states collection (if separate from campaigns)
+    match /game_states/{stateId} {
+      allow read, write: if isAuthenticated() &&
+                            isOwner(resource.data.user_id);
+
+      allow create: if isAuthenticated() &&
+                       isOwner(request.resource.data.user_id);
+    }
+
+    // User settings and preferences
+    match /user_settings/{userId} {
+      allow read, write: if isAuthenticated() && isOwner(userId);
+    }
+
+    // Shared/public content (read-only for authenticated users)
+    match /public_content/{document} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Only admin can write public content
+    }
+
+    // System collections (admin only)
+    match /system/{document=**} {
+      allow read, write: if false; // Only Firebase Functions/Admin SDK can access
+    }
+
+    // Default deny all other paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
