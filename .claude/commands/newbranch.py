@@ -32,6 +32,29 @@ def check_uncommitted_changes():
     return len(stdout.strip()) > 0
 
 
+def auto_commit_changes():
+    """Auto-commit any uncommitted changes with a generic message"""
+    print("🔄 Auto-committing uncommitted changes...")
+
+    # Add all changes
+    stdout, stderr, returncode = run_command(["git", "add", "-A"], check=False)
+    if returncode != 0:
+        print("❌ ERROR: Failed to stage changes")
+        print(f"stderr: {stderr}")
+        return False
+
+    # Create commit with generic message
+    commit_msg = "chore: Auto-commit before branch creation\n\n🔐 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+    stdout, stderr, returncode = run_command(["git", "commit", "-m", commit_msg], check=False)
+    if returncode != 0:
+        print("❌ ERROR: Failed to commit changes")
+        print(f"stderr: {stderr}")
+        return False
+
+    print("✅ Successfully auto-committed changes")
+    return True
+
+
 def main():
     # Get branch name from command line argument or generate timestamp-based name
     if len(sys.argv) > 1:
@@ -46,13 +69,13 @@ def main():
 
     print(f"Creating new branch: {branch_name}")
 
-    # Check for uncommitted changes
+    # Check for uncommitted changes and auto-commit them
     if check_uncommitted_changes():
-        print(
-            "❌ ERROR: You have uncommitted changes. Please commit or stash them before creating a new branch."
-        )
-        print("\nRun: git status")
-        return 1
+        print("⚠️  Uncommitted changes detected. Auto-committing...")
+        if not auto_commit_changes():
+            print("❌ ERROR: Failed to auto-commit changes. Manual intervention required.")
+            print("\nRun: git status")
+            return 1
 
     # Switch to main branch
     print("📍 Switching to main branch...")
