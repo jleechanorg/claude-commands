@@ -50,7 +50,7 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 - **Start Counter**: Begin counting operations immediately upon task initiation
 - **Operation Tracking**: COUNT EVERY: tool call, file read/write, API request, analysis step
 - **Progress Tracking**: Track completion percentage and key milestones per operation
-- **Graceful Termination**: At 35 operations EXACTLY, immediately stop work and summarize partial results
+- **Graceful Termination**: At 34 operations EXACTLY, immediately stop work and summarize partial results (before reaching 35-operation hard limit)
 - **Result Preservation**: Ensure all partial work is saved to output file before summarization
 - **Operation Reporting**: Include operation count and completion percentage in summary
 
@@ -62,11 +62,12 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 - **Operation 3**: [Describe what you're doing]
 - **...**
 - **Operation 30**: [Describe what you're doing] ⚠️ WARNING: Approaching limit
-- **Operation 31-34**: [Continue with caution]
-- **Operation 35**: [Describe what you're doing] 🛑 LIMIT REACHED - TERMINATE IMMEDIATELY
+- **Operation 31-33**: [Continue with caution]
+- **Operation 34**: [Describe what you're doing] 🛑 GRACEFUL TERMINATION - STOP WORK
+- **Operation 35**: HARD LIMIT - NEVER REACH THIS OPERATION
 
 ### 🚨 ABSOLUTE TERMINATION RULE
-**AFTER OPERATION 35, YOU MUST:**
+**AT OPERATION 34, YOU MUST:**
 1. STOP all work immediately
 2. DO NOT perform additional operations
 3. DO NOT continue analysis
@@ -89,7 +90,7 @@ description: Generic agent for medium and long-running tasks (>5 minutes). Execu
 5. **Log Progress**: Write detailed progress, decisions, and findings to output file (counts as 1 operation)
 6. **Handle Dependencies**: Manage external API calls, file operations, and tool coordination (each counts as 1 operation)
 7. **Error Management**: Capture and handle errors with diagnostic information
-8. **Operation Check**: At 35 operations EXACTLY, terminate execution and proceed to Phase 3
+8. **Operation Check**: At 34 operations EXACTLY, terminate execution and proceed to Phase 3 (before reaching 35-operation hard limit)
 9. **Quality Validation**: Verify task completion against success criteria (if operations permit)
 
 ### Phase 3: Summary & Handoff (OPERATION-AWARE)
