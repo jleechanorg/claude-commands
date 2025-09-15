@@ -1,128 +1,41 @@
 rules_version = '2';
 
+// WorldArchitect.AI - ULTRA-SIMPLE Authorization Rules
+// NO field validation = NO maintenance burden when adding fields
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper functions for authentication and authorization
-    function isAuthenticated() {
-      return request.auth != null;
-    }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    function isValidCampaignData() {
-      // Allowed fields at create time - prevents data injection
-      let allowed = ['user_id', 'title', 'description', 'game_state', 'last_played', 'updated_at', 'created_at', 'character', 'setting'];
-      return request.resource.data.keys().hasAll(['user_id', 'title']) &&
-             request.resource.data.keys().hasOnly(allowed) &&
-             request.resource.data.user_id is string &&
-             request.resource.data.title is string &&
-             request.resource.data.title.size() > 0 &&
-             request.resource.data.title.size() <= 200 &&
-             // Optional fields, if present, must have correct types
-             (request.resource.data.description == null || (request.resource.data.description is string && request.resource.data.description.size() <= 1000)) &&
-             (request.resource.data.game_state == null || request.resource.data.game_state is map) &&
-             (request.resource.data.last_played == null || request.resource.data.last_played is timestamp) &&
-             (request.resource.data.updated_at == null || request.resource.data.updated_at is timestamp) &&
-             (request.resource.data.created_at == null || request.resource.data.created_at is timestamp) &&
-             (request.resource.data.character == null || (request.resource.data.character is string && request.resource.data.character.size() <= 500)) &&
-             (request.resource.data.setting == null || (request.resource.data.setting is string && request.resource.data.setting.size() <= 500));
-    }
-
-    function isValidStateUpdate() {
-      // Use diff-based validation to control which fields can change
-      let changed = request.resource.data.diff(resource.data).changedKeys();
-      // Only allow these specific fields to change during updates
-      return changed.hasOnly(['game_state', 'last_played', 'updated_at', 'description', 'character', 'setting']) &&
-             // Enforce type validation for changed fields
-             (request.resource.data.game_state == null || request.resource.data.game_state is map) &&
-             (request.resource.data.last_played == null || request.resource.data.last_played is timestamp) &&
-             (request.resource.data.updated_at == null || request.resource.data.updated_at is timestamp) &&
-             (request.resource.data.description == null || (request.resource.data.description is string && request.resource.data.description.size() <= 1000)) &&
-             (request.resource.data.character == null || (request.resource.data.character is string && request.resource.data.character.size() <= 500)) &&
-             (request.resource.data.setting == null || (request.resource.data.setting is string && request.resource.data.setting.size() <= 500)) &&
-             // Prevent modification of critical fields
-             request.resource.data.user_id == resource.data.user_id &&
-             request.resource.data.title == resource.data.title;
-    }
-
-    // Users collection - users can only read/write their own data
+    // Users can only access their own data
     match /users/{userId} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
+      allow read, write: if request.auth.uid == userId;
     }
 
-    // Campaigns collection - user-owned campaign data
+    // Campaigns - owner only, NO field restrictions
     match /campaigns/{campaignId} {
-      // Users can only read campaigns they own (check ownership first)
-      allow read: if isAuthenticated() &&
-                     resource != null &&
-                     isOwner(resource.data.user_id);
-
-      // Allow creation only if the user_id matches authenticated user
-      allow create: if isAuthenticated() &&
-                       isOwner(request.resource.data.user_id) &&
-                       isValidCampaignData();
-
-      // Allow updates if user owns the campaign and data is valid
-      allow update: if isAuthenticated() &&
-                       isOwner(resource.data.user_id) &&
-                       isOwner(request.resource.data.user_id) &&
-                       (isValidCampaignData() || isValidStateUpdate());
-
-      // Allow deletion if user owns the campaign
-      allow delete: if isAuthenticated() &&
-                       isOwner(resource.data.user_id);
-
-      // Subcollections within campaigns (if any)
-      // NOTE: This performs an additional read for each subcollection access
-      // Consider restructuring data model to avoid nested subcollections if performance becomes an issue
-      match /{document=**} {
-        allow read, write: if isAuthenticated() &&
-                              isOwner(get(/databases/$(database)/documents/campaigns/$(campaignId)).data.user_id);
-      }
+      allow read, write: if request.auth.uid == resource.data.user_id
+                         || request.auth.uid == request.resource.data.user_id;
     }
 
-    // Game states collection (if separate from campaigns)
-    match /game_states/{stateId} {
-      // Users can only read game states they own
-      allow read: if isAuthenticated() &&
-                     resource != null &&
-                     isOwner(resource.data.user_id);
-
-      // Allow creation only if the user_id matches authenticated user
-      allow create: if isAuthenticated() &&
-                       isOwner(request.resource.data.user_id);
-
-      // Allow updates if user owns the game state
-      allow update: if isAuthenticated() &&
-                       isOwner(resource.data.user_id) &&
-                       isOwner(request.resource.data.user_id);
-
-      // Allow deletion if user owns the game state
-      allow delete: if isAuthenticated() &&
-                       isOwner(resource.data.user_id);
+    // Characters - owner only
+    match /campaigns/{campaignId}/characters/{characterId} {
+      allow read, write: if request.auth.uid == resource.data.user_id
+                         || request.auth.uid == request.resource.data.user_id;
     }
 
-    // User settings and preferences
-    match /user_settings/{userId} {
-      allow read, write: if isAuthenticated() && isOwner(userId);
+    // Sessions - owner only
+    match /campaigns/{campaignId}/sessions/{sessionId} {
+      allow read, write: if request.auth.uid == resource.data.user_id
+                         || request.auth.uid == request.resource.data.user_id;
     }
 
-    // Shared/public content (read-only for authenticated users)
-    match /public_content/{document} {
-      allow read: if isAuthenticated();
-      allow write: if false; // Only admin can write public content
-    }
-
-    // System collections (admin only)
-    match /system/{document=**} {
-      allow read, write: if false; // Only Firebase Functions/Admin SDK can access
-    }
-
-    // Default deny all other paths
-    match /{document=**} {
-      allow read, write: if false;
+    // Generic pattern for any new collections
+    match /{collection}/{document} {
+      allow read, write: if request.auth.uid == resource.data.user_id
+                         || request.auth.uid == request.resource.data.user_id;
     }
   }
 }
+
+// ALL VALIDATION IN CLOUD FUNCTIONS - NOT RULES!
+// Add new fields without touching this file ↑
