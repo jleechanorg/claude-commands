@@ -9,7 +9,7 @@
 **⚠️ CRITICAL FIRST STEP**: Before applying any guidelines from this document, you MUST read the latest CLAUDE.md to refresh instructions and ensure alignment with current project protocols.
 
 **REQUIRED WORKFLOW**:
-1. **ALWAYS READ CLAUDE.md FIRST** - Located at project root: `/Users/jleechan/projects/worktree_worker4/CLAUDE.md`
+1. **ALWAYS READ CLAUDE.md FIRST** - Located at project root: `CLAUDE.md`
 2. **SYNC INSTRUCTIONS** - Verify current protocols, file creation rules, and project-specific requirements
 3. **APPLY BASE GUIDELINES** - Use this document's patterns in conjunction with CLAUDE.md mandates
 4. **RESOLVE CONFLICTS** - CLAUDE.md rules take precedence over any conflicting guidance in this document
@@ -275,7 +275,9 @@ Write tool: additional_tests.py
 
 #### 🚨 **CLAUDE.md FILE JUSTIFICATION PROTOCOL** - MANDATORY ENFORCEMENT
 
-**Reference**: See CLAUDE.md sections "NEW FILE CREATION PROTOCOL" and "FILE JUSTIFICATION & CREATION PROTOCOL"
+**Reference**: See CLAUDE.md sections:
+- [🚨 NEW FILE CREATION PROTOCOL](../../CLAUDE.md#-new-file-creation-protocol---extreme-anti-creation-bias)
+- [🚨 FILE JUSTIFICATION & CREATION PROTOCOL](../../CLAUDE.md#-critical-file-justification--creation-protocol)
 
 **🚨 EXTREME ANTI-CREATION BIAS**: Default answer is ALWAYS "NO NEW FILES"
 
