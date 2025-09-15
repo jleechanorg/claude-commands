@@ -927,11 +927,17 @@ This is a filtered reference export from a working Claude Code project. Commands
                         infra_dir = os.path.join(self.repo_dir, 'infrastructure-scripts')
                         os.makedirs(infra_dir, exist_ok=True)
 
-                        for script_file in os.listdir(src):
+                        for script_file in sorted(os.listdir(src)):
                             script_src = os.path.join(src, script_file)
                             script_dst = os.path.join(infra_dir, script_file)
                             if os.path.isfile(script_src):
                                 shutil.copy2(script_src, script_dst)
+                                # Ensure executability for shell/python scripts (Windows-safe)
+                                if script_file.endswith(('.sh', '.py')):
+                                    try:
+                                        os.chmod(script_dst, 0o755)
+                                    except (OSError, NotImplementedError):
+                                        pass
                                 print(f"   • Added/Updated: infrastructure-scripts/{script_file}")
                     continue
                 elif target_path.startswith(claude_dir):
