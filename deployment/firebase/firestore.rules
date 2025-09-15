@@ -60,11 +60,23 @@ service cloud.firestore {
 
     // Game states collection (if separate from campaigns)
     match /game_states/{stateId} {
-      allow read, write: if isAuthenticated() &&
-                            isOwner(resource.data.user_id);
+      // Users can only read game states they own
+      allow read: if isAuthenticated() &&
+                     resource != null &&
+                     isOwner(resource.data.user_id);
 
+      // Allow creation only if the user_id matches authenticated user
       allow create: if isAuthenticated() &&
                        isOwner(request.resource.data.user_id);
+
+      // Allow updates if user owns the game state
+      allow update: if isAuthenticated() &&
+                       isOwner(resource.data.user_id) &&
+                       isOwner(request.resource.data.user_id);
+
+      // Allow deletion if user owns the game state
+      allow delete: if isAuthenticated() &&
+                       isOwner(resource.data.user_id);
     }
 
     // User settings and preferences
