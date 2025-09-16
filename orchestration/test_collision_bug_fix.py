@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from .task_dispatcher import TaskDispatcher
+from orchestration.task_dispatcher import TaskDispatcher
 
 
 class TestCollisionBugFix(unittest.TestCase):

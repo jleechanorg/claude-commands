@@ -11,8 +11,8 @@ import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
-from .orchestrate_unified import UnifiedOrchestration
-from .task_dispatcher import TaskDispatcher
+from orchestration.orchestrate_unified import UnifiedOrchestration
+from orchestration.task_dispatcher import TaskDispatcher
 
 
 class TestUnifiedNaming(unittest.TestCase):

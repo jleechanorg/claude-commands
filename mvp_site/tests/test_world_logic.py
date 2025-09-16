@@ -10,6 +10,10 @@ import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
+import world_logic
+from debug_hybrid_system import convert_json_escape_sequences
+from prompt_utils import _convert_and_format_field
+
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
 os.environ["USE_MOCKS"] = "true"
@@ -80,11 +84,6 @@ except Exception:
     pass  # If mocking fails, continue anyway
 
 # Import proper fakes library (removing unused imports per CodeRabbit feedback)
-
-import world_logic
-
-from mvp_site.debug_hybrid_system import convert_json_escape_sequences
-from mvp_site.prompt_utils import _convert_and_format_field
 
 
 class TestUnifiedAPIStructure(unittest.TestCase):
