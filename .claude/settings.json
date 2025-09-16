@@ -220,6 +220,16 @@
             "description": "Compress slash command outputs to reduce token consumption by 50-70%"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_file_creation_validator.sh\" ] && exec \"$ROOT/.claude/hooks/post_file_creation_validator.sh\"; fi; exit 0'",
+            "description": "Validate file placement after creation using Claude analysis against CLAUDE.md protocols"
+          }
+        ]
       }
     ],
 
