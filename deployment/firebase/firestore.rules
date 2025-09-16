@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// WorldArchitect.AI - ULTRA-SIMPLE Authorization Rules
+// NO field validation = NO maintenance burden when adding fields
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check parent campaign ownership
+    function isOwnerOfCampaign(campaignId) {
+      return get(/databases/$(database)/documents/campaigns/$(campaignId)).data.user_id == request.auth.uid;
+    }
+
+    // Users can only access their own data
+    match /users/{userId} {
+      allow read, write: if request.auth.uid == userId;
+    }
+
+    // Campaigns - owner only, NO field restrictions
+    match /campaigns/{campaignId} {
+      allow create: if request.auth.uid == request.resource.data.user_id;
+      allow read: if resource != null && request.auth.uid == resource.data.user_id;
+      allow update, delete: if request.auth.uid == resource.data.user_id &&
+                               request.resource.data.user_id == resource.data.user_id;
+    }
+
+    // Characters - owner only + parent campaign ownership required
+    match /campaigns/{campaignId}/characters/{characterId} {
+      allow create: if request.auth.uid == request.resource.data.user_id &&
+                       isOwnerOfCampaign(campaignId);
+      allow read: if resource != null && request.auth.uid == resource.data.user_id;
+      allow update, delete: if request.auth.uid == resource.data.user_id &&
+                               request.resource.data.user_id == resource.data.user_id &&
+                               isOwnerOfCampaign(campaignId);
+    }
+
+    // Sessions - owner only + parent campaign ownership required
+    match /campaigns/{campaignId}/sessions/{sessionId} {
+      allow create: if request.auth.uid == request.resource.data.user_id &&
+                       isOwnerOfCampaign(campaignId);
+      allow read: if resource != null && request.auth.uid == resource.data.user_id;
+      allow update, delete: if request.auth.uid == resource.data.user_id &&
+                               request.resource.data.user_id == resource.data.user_id &&
+                               isOwnerOfCampaign(campaignId);
+    }
+
+    // No generic allow rules - everything else explicitly denied by default
+  }
+}
+
+// ALL VALIDATION IN CLOUD FUNCTIONS - NOT RULES!
+// Add new fields without touching this file ↑
