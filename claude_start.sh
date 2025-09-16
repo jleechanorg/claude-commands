@@ -238,8 +238,8 @@ fi
 EOF
         chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
 
-        # Add to cron with proper $HOME expansion
-        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh 2>&1') | crontab -
+        # Add to cron with proper $HOME expansion and error redirection
+        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh >> /tmp/backup.log 2>&1') | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 
@@ -263,9 +263,9 @@ exit 1
 EOF
         chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
 
-        # Add to cron
+        # Add to cron with consistent variable escaping
         current_crontab=$(crontab -l 2>/dev/null || echo "")
-        (echo "$current_crontab"; echo "*/15 * * * * \$HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1") | crontab -
+        (echo "$current_crontab"; echo '*/15 * * * * $HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1') | crontab -
         cron_entries_added=$((cron_entries_added + 1))
     fi
 
@@ -519,12 +519,20 @@ EOF
 
         chmod +x "$CRON_WRAPPER"
 
-        # Add to cron (daily at 2 AM)
-        current_crontab=\$(crontab -l 2>/dev/null || echo "")
-        (echo "\$current_crontab"; echo "0 2 * * * \$HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1") | crontab -
+        # Add to cron (daily at 2 AM) with proper variable handling
+        local current_crontab_mem
+        current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
+        (echo "$current_crontab_mem"; echo '0 2 * * * $HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1') | crontab -
 
         echo -e "${GREEN}✅ Installed unified memory backup cron job (daily at 2 AM)${NC}"
-        BACKUP_ISSUES=($(printf '%s\n' "${BACKUP_ISSUES[@]}" | grep -v "Cron job not configured"))
+        # Remove cron job error from backup issues array safely
+        local temp_array=()
+        for issue in "${BACKUP_ISSUES[@]}"; do
+            if [[ "$issue" != *"Cron job not configured"* ]]; then
+                temp_array+=("$issue")
+            fi
+        done
+        BACKUP_ISSUES=("${temp_array[@]}")
     fi
 fi
 
