@@ -43,8 +43,17 @@ else
     ABSOLUTE_FILE_PATH="$PROJECT_ROOT/$FILE_PATH"
 fi
 
-# Get relative path from project root
-RELATIVE_PATH=$(realpath --relative-to="$PROJECT_ROOT" "$ABSOLUTE_FILE_PATH" 2>/dev/null || echo "$FILE_PATH")
+# Get relative path from project root (cross-platform compatible)
+if command -v realpath >/dev/null 2>&1; then
+    RELATIVE_PATH=$(realpath --relative-to="$PROJECT_ROOT" "$ABSOLUTE_FILE_PATH" 2>/dev/null || true)
+fi
+if [ -z "${RELATIVE_PATH:-}" ]; then
+    RELATIVE_PATH="${ABSOLUTE_FILE_PATH#"$PROJECT_ROOT"/}"
+fi
+
+# Create log file with secure permissions
+touch "$LOG_FILE" 2>/dev/null || true
+chmod 600 "$LOG_FILE" 2>/dev/null || true
 
 # Log the file creation event
 echo "$(date '+%Y-%m-%d %H:%M:%S') - File validation triggered: $RELATIVE_PATH" >> "$LOG_FILE"
@@ -81,10 +90,16 @@ Remember: You are analyzing file placement to prevent violations of CLAUDE.md pr
 
 # Run Claude analysis with specified parameters
 CLAUDE_OUTPUT_FILE="/tmp/claude_file_validation_output_$$.txt"
+CLAUDE_MODEL="${CLAUDE_VALIDATOR_MODEL:-sonnet}"
+CLAUDE_TIMEOUT="${CLAUDE_VALIDATOR_TIMEOUT:-30s}"
 
-# Execute Claude with the specified parameters
+# Execute Claude with the specified parameters and timeout
 if command -v claude >/dev/null 2>&1; then
-    claude --dangerously-skip-permissions --model sonnet -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$CLAUDE_TIMEOUT" claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
+    else
+        claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
+    fi
     CLAUDE_EXIT_CODE=$?
 
     # Read Claude's analysis

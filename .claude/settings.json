@@ -36,6 +36,7 @@
       "Bash(done)",
       "Bash(__NEW_LINE__:*)",
       "Bash(claude --version)",
+      "Bash(claude:*)",
       "Bash(/permissions add read write execute coverage testing)",
       "Bash(/dev/null)",
       "Bash(gcloud meta list-files-for-upload:*)",
