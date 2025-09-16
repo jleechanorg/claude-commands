@@ -4,6 +4,22 @@
 **Created**: August 13, 2025
 **Purpose**: Prevent recurring mistakes in AI-assisted development through systematic guidelines
 
+## 🚨 MANDATORY: CLAUDE.MD SYNC PROTOCOL
+
+**⚠️ CRITICAL FIRST STEP**: Before applying any guidelines from this document, you MUST read the latest CLAUDE.md to refresh instructions and ensure alignment with current project protocols.
+
+**REQUIRED WORKFLOW**:
+1. **ALWAYS READ CLAUDE.md FIRST** - Located at project root: `CLAUDE.md`
+2. **SYNC INSTRUCTIONS** - Verify current protocols, file creation rules, and project-specific requirements
+3. **APPLY BASE GUIDELINES** - Use this document's patterns in conjunction with CLAUDE.md mandates
+4. **RESOLVE CONFLICTS** - CLAUDE.md rules take precedence over any conflicting guidance in this document
+
+**Why This Matters**:
+- CLAUDE.md contains live project rules that evolve rapidly
+- File creation protocols and branch-specific requirements change frequently
+- This document provides stable patterns; CLAUDE.md provides current enforcement rules
+- Outdated instruction alignment causes protocol violations and workflow breaks
+
 ## Scope & De-duplication
 - This document is the canonical reference for mistake-prevention protocols. Do not duplicate its systematic protocols elsewhere; instead, link to this document to prevent drift.
 - Command/orchestrator docs (e.g., `/plan`, `/execute`) should reference these guidelines rather than restating them.
@@ -43,6 +59,12 @@
 - **Do not make new test files unless none exist** - One test file per code file pattern
 - **No inline imports** - All imports at module level
 - **Look for existing functionality first** - Modify before adding new code paths
+
+#### 5. Directory Context Awareness
+- **Always specify directory when reporting git status across multiple repositories**
+- **Never say "we are on branch X" when operating across different repositories**
+- **Use clear language**: "In my working directory: /path/A (branch: X)" vs "In your directory: /path/B (branch: Y)"
+- **Never mix up git status between different repositories** - causes confusion and wrong commands
 
 **Code Priorities (in order):**
 1. Pragmatic
@@ -236,6 +258,14 @@ Edit existing file using Edit/MultiEdit tools
 Use git branches for experimental changes
 Trust git for version control and rollback
 ```
+
+### **File Justification Protocol**
+
+**Authoritative Source**: See [CLAUDE.md File Justification Protocols](../../CLAUDE.md#-critical-file-justification--creation-protocol)
+
+**Key Anti-Pattern**: Creating new files without proving integration into existing files is impossible.
+
+**Essential Rule**: Follow CLAUDE.md's integration-first workflow and extreme anti-creation bias. Any Write tool usage must answer the 4 mandatory justification questions defined in CLAUDE.md before file creation.
 
 ### **Analysis Mistakes**
 
