@@ -9,8 +9,7 @@ This document inherits from the root project documentation. Please refer to `../
 ```
 scripts/
 ├── debug/ # Debugging utilities (3 scripts)
-├── memory_sync/ # Memory synchronization tools (5 scripts)
-├── tests/ # Testing infrastructure (6 scripts)
+├── tests/ # Testing infrastructure (3 scripts)
 └── [root] # Core utility scripts (40+ files)
 ```
 
@@ -42,19 +41,9 @@ scripts/
 - `test_monitor.sh` - Test execution monitoring
 - `test_few_files.sh` - Selective file testing utility
 
-### Memory Sync Module (memory_sync/)
-- `backup_memory_enhanced.py` - Enhanced memory backup with CRDT
-- `fetch_memory.py` - Memory retrieval and synchronization
-- `merge_memory.py` - Memory state merging and conflict resolution
-- `convert_memory_format.py` - Memory format conversion utilities
-- `setup_memory_sync.sh` - Memory synchronization setup
-
 ### Test Infrastructure (tests/)
 - `test_crdt_integration.py` - CRDT system integration testing
-- `test_memory_backup_crdt.py` - Memory backup CRDT validation
 - `test_crdt_properties.py` - CRDT mathematical properties testing
-- `test_concurrent_memory.sh` - Concurrent memory operation testing
-- `test_parallel_memory_backup.sh` - Parallel backup testing
 - `test_race_condition.sh` - Race condition detection
 
 ## Development Guidelines
