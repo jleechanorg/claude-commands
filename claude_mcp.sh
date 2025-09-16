@@ -130,6 +130,13 @@ if [ "$TEST_MODE" = true ]; then
     exit 0
 fi
 
+# Default environment flags to reduce verbose MCP tool discovery and logging
+DEFAULT_MCP_ENV_FLAGS=(
+    --env "MCP_CLAUDE_DEBUG=false"
+    --env "MCP_VERBOSE_TOOLS=false"
+    --env "MCP_AUTO_DISCOVER=false"
+)
+
 # Function to log with timestamp
 log_with_timestamp() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
@@ -371,7 +378,7 @@ add_mcp_server() {
     local name="$1"
     local package="$2"
     shift 2
-    local args="$@"
+    local extra_args=("$@")
 
     update_stats "TOTAL" "$name" ""
     echo -e "${BLUE}  🔧 Setting up $name...${NC}"
@@ -441,7 +448,12 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-    add_output=$(claude mcp add --scope user "$name" "$NPX_PATH" "$package" $args 2>&1)
+    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package")
+    if [ ${#extra_args[@]} -gt 0 ]; then
+        add_output=$("${add_cmd[@]}" "${extra_args[@]}" 2>&1)
+    else
+        add_output=$("${add_cmd[@]}" 2>&1)
+    fi
     local add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -658,14 +670,14 @@ setup_slash_commands_server() {
         echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use slash commands server...${NC}"
 
         # First try direct command approach (current method)
-        add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
+        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
         add_exit_code=$?
 
         # If direct approach fails, try add-json approach
         if [ $add_exit_code -ne 0 ]; then
             echo -e "${BLUE}  🔄 Trying add-json approach for enhanced reliability...${NC}"
             add_output=$(claude mcp add-json --scope user "claude-slash-commands" \
-                "{\"command\":\"uvx\",\"args\":[\"--from\",\"file://$SCRIPT_DIR/mcp_servers/slash_commands\",\"claude-slash-commands-mcp\"]}" 2>&1)
+                "{\"command\":\"uvx\",\"args\":[\"--from\",\"file://$SCRIPT_DIR/mcp_servers/slash_commands\",\"claude-slash-commands-mcp\"],\"env\":{\"MCP_CLAUDE_DEBUG\":\"false\",\"MCP_VERBOSE_TOOLS\":\"false\",\"MCP_AUTO_DISCOVER\":\"false\"}}" 2>&1)
             add_exit_code=$?
 
             if [ $add_exit_code -eq 0 ]; then
@@ -734,7 +746,7 @@ setup_slash_commands_server() {
     echo -e "${BLUE}  🔗 Adding Slash Commands MCP server...${NC}"
     log_with_timestamp "Attempting to add Slash Commands MCP server using: $PY_INTERPRETER"
 
-    add_output=$(claude mcp add --scope user "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" 2>&1)
+    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -915,7 +927,7 @@ install_react_mcp() {
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
+        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
         if [ $? -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1104,7 +1116,7 @@ install_ios_simulator_mcp() {
     claude mcp remove "$name" >/dev/null 2>&1 || true
 
     # Add server using node to run the index.js file
-    add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" 2>&1)
+    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1197,7 +1209,7 @@ claude mcp remove "memory-server" -s user >/dev/null 2>&1 || true
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-add_output=$(claude mcp add --scope user "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" --env "MEMORY_FILE_PATH=$MEMORY_PATH" 2>&1)
+add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "MEMORY_FILE_PATH=$MEMORY_PATH" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" 2>&1)
 add_exit_code=$?
 
 if [ $add_exit_code -eq 0 ]; then
@@ -1215,12 +1227,15 @@ else
     cat > "$WRAPPER_SCRIPT" << 'EOF'
 #!/bin/bash
 export MEMORY_FILE_PATH="$HOME/.cache/mcp-memory/memory.json"
+export MCP_CLAUDE_DEBUG=false
+export MCP_VERBOSE_TOOLS=false
+export MCP_AUTO_DISCOVER=false
 exec npx @modelcontextprotocol/server-memory "$@"
 EOF
     chmod +x "$WRAPPER_SCRIPT"
 
     # Add server using the wrapper script
-    fallback_output=$(claude mcp add --scope user "memory-server" "$WRAPPER_SCRIPT" 2>&1)
+    fallback_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT" 2>&1)
     fallback_exit_code=$?
 
     if [ $fallback_exit_code -eq 0 ]; then
@@ -1263,7 +1278,7 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
 
     # Add Perplexity server with API key
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    add_output=$(claude mcp add --scope user "perplexity-search" "npx" "server-perplexity-ask" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
+    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" "perplexity-search" "npx" "server-perplexity-ask" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1302,7 +1317,7 @@ else
 
     # Add filesystem server with proper directory configuration
     echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
-    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" 2>&1)
+    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1351,7 +1366,7 @@ else
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
         log_with_timestamp "Attempting to add WorldArchitect MCP server"
 
-        add_output=$(claude mcp add --scope user "worldarchitect" "$SCRIPT_DIR/venv/bin/python" "$WORLDARCHITECT_MCP_PATH" 2>&1)
+        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "worldarchitect" "$SCRIPT_DIR/venv/bin/python" "$WORLDARCHITECT_MCP_PATH" 2>&1)
         add_exit_code=$?
 
         if [ $add_exit_code -eq 0 ]; then
@@ -1411,7 +1426,7 @@ else
     log_with_timestamp "Attempting to add Serena MCP server via uvx"
 
     # Use add-json for uvx configuration
-    add_output=$(claude mcp add-json --scope user "serena" '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"]}' 2>&1)
+    add_output=$(claude mcp add-json --scope user "serena" '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"MCP_CLAUDE_DEBUG":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
