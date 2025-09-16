@@ -379,6 +379,18 @@ add_mcp_server() {
     local package="$2"
     shift 2
     local extra_args=("$@")
+<<<<<<< HEAD
+=======
+    local cli_args=()
+    local cmd_args=()
+    for arg in "${extra_args[@]}"; do
+        if [[ "$arg" == --* ]]; then
+            cli_args+=("$arg")
+        else
+            cmd_args+=("$arg")
+        fi
+    done
+>>>>>>> 7c51ddfb (mcp: add DEFAULT_MCP_ENV_FLAGS, fix add_mcp_server arg parsing, reorder claude mcp add to put flags before <name>; apply env to add-json; update memory and Perplexity sections for correct flag order)
 
     update_stats "TOTAL" "$name" ""
     echo -e "${BLUE}  🔧 Setting up $name...${NC}"
@@ -448,12 +460,17 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
+<<<<<<< HEAD
     local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package")
     if [ ${#extra_args[@]} -gt 0 ]; then
         add_output=$("${add_cmd[@]}" "${extra_args[@]}" 2>&1)
     else
         add_output=$("${add_cmd[@]}" 2>&1)
     fi
+=======
+    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+    add_output=$("${add_cmd[@]}" 2>&1)
+>>>>>>> 7c51ddfb (mcp: add DEFAULT_MCP_ENV_FLAGS, fix add_mcp_server arg parsing, reorder claude mcp add to put flags before <name>; apply env to add-json; update memory and Perplexity sections for correct flag order)
     local add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
