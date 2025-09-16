@@ -1,5 +1,7 @@
 # PR #1599 Guidelines - Fix CI test hangs: Add 45-minute memory monitor timeout
 
+> This supplements docs/pr-guidelines/README.md; authoritative rules live there.
+
 ## 🎯 PR-Specific Principles
 
 ### **Infrastructure Reliability First**
@@ -8,7 +10,7 @@
 - **Security Hardening**: Comprehensive subprocess security with `shell=False, timeout=30` pattern
 
 ### **Technical Debt Reduction Excellence**
-- **Code Consolidation**: 49% reduction through elimination of duplicate functionality
+- **Code Consolidation**: Significant reduction through elimination of duplicate functionality
 - **File Organization**: Strategic removal of redundant implementations
 - **Security Standardization**: Consistent application of security patterns across codebase
 
@@ -33,10 +35,10 @@ jobs:
 # RIGHT - Proper timeout cascade
 jobs:
   test:
-    timeout-minutes: 20  # Job level - buffer for cleanup
+    timeout-minutes: 60  # Job level - buffer above step (monitor=45 -> step=50 -> job=60)
     steps:
     - name: Run tests
-      timeout-minutes: 15  # Step level - actual work timeout
+      timeout-minutes: 50  # Step level - must exceed 45-min monitor with buffer
 ```
 
 ### ❌ **Async Resource Leak Pattern**
@@ -79,6 +81,11 @@ subprocess.run(
 )
 ```
 
+**Additional Security Guidelines**:
+- Prefer argv lists: cmd = ["git", "diff", "--name-only"] (never strings).
+- Pass env={...} explicitly when needed; avoid inheriting sensitive vars.
+- Log sanitized command and duration; never log secrets or full stdout on failure.
+
 ## 📋 Implementation Patterns for This PR
 
 ### **Multi-Layer Timeout Strategy**
@@ -87,6 +94,36 @@ subprocess.run(
 3. **CI Step Level**: 15-minute individual step timeouts
 4. **Subprocess Level**: 30-300 second operation-specific timeouts
 5. **Dependency Install**: 300-600 second package installation timeouts
+
+#### Reference: Memory monitor snippets (recommended)
+
+Python:
+```python
+import os, sys, time
+max_monitor_time = 2700  # 45 minutes
+cleanup_file = os.environ.get("CLEANUP_FILE", "/tmp/cleanup.done")
+start = time.monotonic()
+while not os.path.exists(cleanup_file) and (time.monotonic() - start) < max_monitor_time:
+    time.sleep(6)
+if not os.path.exists(cleanup_file):
+    print("Monitor timeout reached (45m); exiting status 2", file=sys.stderr)
+    raise SystemExit(2)
+```
+
+Bash:
+```bash
+set -euo pipefail
+: "${CLEANUP_FILE:=/tmp/cleanup.done}"
+max_monitor_time=2700  # 45 minutes
+SECONDS=0  # bash monotonic counter
+while [ ! -f "$CLEANUP_FILE" ] && [ "$SECONDS" -lt "$max_monitor_time" ]; do
+  sleep 6
+done
+if [ ! -f "$CLEANUP_FILE" ]; then
+  printf '%s\n' "Monitor timeout reached (45m); exiting status 2" >&2
+  exit 2
+fi
+```
 
 ### **Security Hardening Approach**
 1. **Subprocess Security**: Universal `shell=False, timeout=N` pattern
@@ -100,13 +137,23 @@ subprocess.run(
 3. **Configuration Consolidation**: Reduce configuration sprawl through centralization
 4. **Test Organization**: Strategic test file organization and categorization
 
+**Reference Implementation Examples**:
+- Reference script: scripts/run_tests.sh (memory monitor section).
+- Subprocess hardening example: scripts/memory_sync/backup_memory_enhanced.py (TIMEOUT_SEC, TimeoutExpired handling).
+- Tests validating monitor behavior: scripts/tests/test_unified_memory_backup.py.
+
 ## 🔧 Specific Implementation Guidelines
 
 ### **CI Timeout Configuration**
-- **Job Timeout**: Set 5-minute buffer above step timeout for cleanup
-- **Step Timeout**: Match actual expected execution time
+- **Job Timeout**: Set ≥10-minute buffer above step timeout for cleanup (e.g., step=50 → job=60)
+- **Step Timeout**: Set ≥5-minute buffer above monitor timeout (e.g., monitor=45 → step=50)
 - **Subprocess Timeout**: 30 seconds for quick operations, 300+ for complex operations
 - **Dependency Install**: 300-600 seconds based on package complexity
+
+**Follow-ups Checklist**:
+- [ ] Set step timeout to 50m and job timeout to 60m in .github/workflows/test.yml.
+- [ ] Confirm org‑level job timeout isn't overriding repo settings.
+- [ ] Document where to change these in GitHub UI if managed centrally.
 
 ### **Async Resource Management**
 - **Always use context managers** for HTTP clients, file operations, database connections
@@ -118,10 +165,10 @@ subprocess.run(
 - **Apply subprocess security** universally across all script files
 - **Use SHA-pinned Actions** for all GitHub workflow dependencies
 - **Implement timeout protection** for all external operations
-- **Follow solo developer security** focus - real vulnerabilities over theoretical concerns
+- Prioritize concrete, validated risks and document trade‑offs explicitly
 
 ### **Code Quality Gates**
-- **49% code reduction** demonstrates successful consolidation approach
+- Significant code reduction demonstrates successful consolidation approach
 - **Zero test failures** requirement maintained through comprehensive testing
 - **Security pattern consistency** applied across entire codebase
 - **Performance optimization** through intelligent resource usage
@@ -129,10 +176,10 @@ subprocess.run(
 ## 🎯 Success Metrics for This PR Type
 
 ### **Infrastructure Reliability**
-- ✅ **Zero infinite hangs**: Multi-layer timeout protection prevents CI failures
+- ✅ **Eliminates known infinite hang class**: Multi-layer timeout protection prevents CI failures; residual risks are monitored. Track with CI job max duration SLO and alert if exceeded.
 - ✅ **Resource leak prevention**: Proper async context management
 - ✅ **Security hardening**: Universal subprocess security implementation
-- ✅ **Performance improvement**: 49% code reduction through consolidation
+- ✅ **Performance**: Reduced code surface area via consolidation
 
 ### **Technical Debt Reduction**
 - ✅ **Duplicate elimination**: 11 redundant scripts consolidated
@@ -162,6 +209,6 @@ subprocess.run(
 
 ---
 
-**Generated**: 2025-09-12 via comprehensive multi-perspective review (parallel technical analysis + architectural assessment + security analysis)
-**Evidence**: PR #1599 analysis with 36 files changed, 1,983 insertions(+), 3,884 deletions(-)
+**Updated:** 2025-09-12 — via comprehensive multi-perspective review
+**Evidence**: PR #1599 analysis (files changed and LOC deltas per current PR diff)
 **Review Type**: Solo Developer Security Focus with Enterprise Paranoia Filtering
