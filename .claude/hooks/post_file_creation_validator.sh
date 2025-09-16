@@ -110,23 +110,21 @@ if command -v claude >/dev/null 2>&1; then
     echo "$CLAUDE_RESPONSE" >> "$LOG_FILE"
     echo "---" >> "$LOG_FILE"
 
-    # Check if Claude found violations
-    if echo "$CLAUDE_RESPONSE" | grep -q "❌ VIOLATION"; then
-        # Extract warning message for main conversation
-        WARNING_MSG=$(echo "$CLAUDE_RESPONSE" | grep -A 10 "❌ VIOLATION" | head -20)
+    # Always output Claude analysis to chat
+    echo "📋 POST-CREATION VALIDATOR ANALYSIS for $RELATIVE_PATH:"
+    echo "$CLAUDE_RESPONSE"
+    echo ""
 
-        # Create notification for main conversation thread
-        echo "🚨 FILE PLACEMENT VIOLATION DETECTED by post-creation validator hook:"
-        echo "File: $RELATIVE_PATH"
-        echo "Analysis: $WARNING_MSG"
-        echo ""
-        echo "Please review file placement against CLAUDE.md protocols."
+    # Check if Claude found violations and provide additional context
+    if echo "$CLAUDE_RESPONSE" | grep -q "❌ VIOLATION"; then
+        echo "⚠️ VIOLATION DETECTED - Please review file placement against CLAUDE.md protocols."
 
         # Call /learn if Claude recommends it
         if echo "$CLAUDE_RESPONSE" | grep -q "/learn"; then
-            echo "Triggering /learn command due to detected violation pattern..."
-            # Note: In actual implementation, this would trigger /learn through appropriate mechanism
+            echo "📚 /learn command recommended due to detected violation pattern"
         fi
+    elif echo "$CLAUDE_RESPONSE" | grep -q "✅ APPROVED"; then
+        echo "✅ File placement approved by validator"
     fi
 
     # Clean up temporary file
