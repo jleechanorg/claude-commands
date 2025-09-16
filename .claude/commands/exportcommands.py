@@ -401,10 +401,10 @@ class ClaudeCommandsExporter:
             content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
             content = re.sub(r'https://github\.com/jleechanorg/[^/\s]+', '$(git config --get remote.origin.url)', content)
 
-            # SOURCE_DIR variable patterns
-            content = re.sub(r'find mvp_site', 'find "$SOURCE_DIR"', content)
-            content = re.sub(r'cd mvp_site', 'cd "$SOURCE_DIR"', content)
-            content = re.sub(r'if \[ ! -d "mvp_site" \]', 'if [ ! -d "$SOURCE_DIR" ]', content)
+            # SOURCE_DIR variable patterns - improved matching
+            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)

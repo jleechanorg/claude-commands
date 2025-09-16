@@ -114,7 +114,7 @@ activate_venv() {
         "../venv/bin/activate"
         "./venv/bin/activate"
         "$HOME/venv/bin/activate"
-        "${PROJECT_ROOT}/venv/bin/activate"
+        # PROJECT_ROOT variable not defined in this context
     )
 
     for venv_path in "${venv_paths[@]}"; do
@@ -128,7 +128,7 @@ activate_venv() {
 
     print_warning "No virtual environment found. Using system Python."
     print_status "Searched paths: ${venv_paths[*]}"
-    return 1
+    return 0  # Solo developer: graceful fallback to system Python
 }
 
 # Activate virtual environment (optional - fallback to system Python)
