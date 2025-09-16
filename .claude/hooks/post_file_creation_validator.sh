@@ -96,9 +96,9 @@ CLAUDE_TIMEOUT="${CLAUDE_VALIDATOR_TIMEOUT:-30s}"
 # Execute Claude with the specified parameters and timeout
 if command -v claude >/dev/null 2>&1; then
     if command -v timeout >/dev/null 2>&1; then
-        timeout "$CLAUDE_TIMEOUT" claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
+        timeout "$CLAUDE_TIMEOUT" claude --dangerously-skip-permissions --model sonnet -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
     else
-        claude --dangerously-skip-permissions --model "$CLAUDE_MODEL" -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
+        claude --dangerously-skip-permissions --model sonnet -p "$CLAUDE_PROMPT" > "$CLAUDE_OUTPUT_FILE" 2>&1
     fi
     CLAUDE_EXIT_CODE=$?
 
