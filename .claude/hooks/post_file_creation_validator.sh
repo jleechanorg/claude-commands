@@ -89,9 +89,8 @@ Please analyze this file creation against CLAUDE.md protocols:
 Remember: You are analyzing file placement to prevent violations of CLAUDE.md protocols and maintain proper project organization."
 
 # Run Claude analysis with specified parameters
-CLAUDE_OUTPUT_FILE="/tmp/claude_file_validation_output_$$.txt"
-CLAUDE_MODEL="${CLAUDE_VALIDATOR_MODEL:-sonnet}"
 CLAUDE_TIMEOUT="${CLAUDE_VALIDATOR_TIMEOUT:-30s}"
+CLAUDE_OUTPUT_FILE="$(mktemp /tmp/claude_file_validation_output_XXXXXX)"
 
 # Execute Claude with the specified parameters and timeout
 if command -v claude >/dev/null 2>&1; then
@@ -111,20 +110,20 @@ if command -v claude >/dev/null 2>&1; then
     echo "---" >> "$LOG_FILE"
 
     # Always output Claude analysis to chat
-    echo "📋 POST-CREATION VALIDATOR ANALYSIS for $RELATIVE_PATH:"
-    echo "$CLAUDE_RESPONSE"
-    echo ""
+    echo "📋 POST-CREATION VALIDATOR ANALYSIS for $RELATIVE_PATH:" >&2
+    echo "$CLAUDE_RESPONSE" >&2
+    echo "" >&2
 
     # Check if Claude found violations and provide additional context
     if echo "$CLAUDE_RESPONSE" | grep -q "❌ VIOLATION"; then
-        echo "⚠️ VIOLATION DETECTED - Please review file placement against CLAUDE.md protocols."
+        echo "⚠️ VIOLATION DETECTED - Please review file placement against CLAUDE.md protocols." >&2
 
         # Call /learn if Claude recommends it
         if echo "$CLAUDE_RESPONSE" | grep -q "/learn"; then
-            echo "📚 /learn command recommended due to detected violation pattern"
+            echo "📚 /learn command recommended due to detected violation pattern" >&2
         fi
     elif echo "$CLAUDE_RESPONSE" | grep -q "✅ APPROVED"; then
-        echo "✅ File placement approved by validator"
+        echo "✅ File placement approved by validator" >&2
     fi
 
     # Clean up temporary file

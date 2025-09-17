@@ -179,6 +179,16 @@
             "description": "Monitor context usage and provide real-time warnings"
           }
         ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\"; fi; exit 0'",
+            "description": "Block CLAUDE.md violations before file creation - enforce integration-first philosophy"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -225,6 +235,11 @@
       {
         "matcher": "Write",
         "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/auto_fix_placement.sh\" ] && exec \"$ROOT/.claude/hooks/auto_fix_placement.sh\"; fi; exit 0'",
+            "description": "Auto-fix file placement violations and trigger learning"
+          },
           {
             "type": "command",
             "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_file_creation_validator.sh\" ] && exec \"$ROOT/.claude/hooks/post_file_creation_validator.sh\"; fi; exit 0'",
