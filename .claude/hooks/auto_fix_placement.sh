@@ -39,7 +39,7 @@ auto_detect_directories() {
 }
 
 # Auto-detect project directories
-auto_detect_directories()
+auto_detect_directories
 
 # Read JSON input from stdin
 INPUT=$(cat)
