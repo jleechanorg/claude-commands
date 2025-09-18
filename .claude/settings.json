@@ -169,12 +169,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$HOME/.claude/hooks/pre_command_optimize.py\"; exit 0'",
             "description": "Optimize tool selection before command execution"
           },
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/context_monitor.py\" ] && python3 \"$ROOT/.claude/hooks/context_monitor.py\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/context_monitor.py\" ] && python3 \"$ROOT/.claude/hooks/context_monitor.py\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/context_monitor.py\" ] && python3 \"$HOME/.claude/hooks/context_monitor.py\"; exit 0'",
             "description": "Monitor context usage and provide real-time warnings"
           }
         ]
@@ -184,7 +184,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\"; else exit 0; fi'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/pre_creation_blocker.sh\" ] && \"$HOME/.claude/hooks/pre_creation_blocker.sh\"; exit 0'",
             "description": "Block CLAUDE.md violations before file creation - enforce integration-first philosophy"
           }
         ]
@@ -196,7 +196,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\" ] && exec \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\" ] && exec \"$ROOT/.claude/hooks/mcp_slash_command_executor.sh\"; fi; [ -x \"$HOME/.claude/hooks/mcp_slash_command_executor.sh\" ] && exec \"$HOME/.claude/hooks/mcp_slash_command_executor.sh\"; exit 0'",
             "description": "Debug: Test PostToolUse hook triggering for all tools"
           }
         ]
@@ -206,7 +206,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; [ -x \"$HOME/.claude/hooks/post_commit_sync.sh\" ] && exec \"$HOME/.claude/hooks/post_commit_sync.sh\"; exit 0'",
             "description": "Auto-sync commits to remote after git commit operations"
           }
         ]
@@ -216,7 +216,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if [ -n \"$CLAUDE_HOOK_NESTED\" ]; then exit 0; fi; export CLAUDE_HOOK_NESTED=1; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\"; fi; exit 0'",
+            "command": "bash -c 'if [ -n \"$CLAUDE_HOOK_NESTED\" ]; then exit 0; fi; export CLAUDE_HOOK_NESTED=1; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$ROOT/.claude/hooks/detect_speculation_and_fake_code.sh\"; fi; [ -x \"$HOME/.claude/hooks/detect_speculation_and_fake_code.sh\" ] && exec \"$HOME/.claude/hooks/detect_speculation_and_fake_code.sh\"; exit 0'",
             "description": "AGGRESSIVE fake code detection with strong warnings"
           }
         ]
@@ -226,7 +226,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/command_output_trimmer.py\" ] && python3 \"$ROOT/.claude/hooks/command_output_trimmer.py\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/command_output_trimmer.py\" ] && python3 \"$ROOT/.claude/hooks/command_output_trimmer.py\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/command_output_trimmer.py\" ] && python3 \"$HOME/.claude/hooks/command_output_trimmer.py\"; exit 0'",
             "description": "Compress slash command outputs to reduce token consumption by 50-70%"
           }
         ]
@@ -236,25 +236,24 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/auto_fix_placement.sh\" ] && exec \"$ROOT/.claude/hooks/auto_fix_placement.sh\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/auto_fix_placement.sh\" ] && exec \"$ROOT/.claude/hooks/auto_fix_placement.sh\"; fi; [ -x \"$HOME/.claude/hooks/auto_fix_placement.sh\" ] && exec \"$HOME/.claude/hooks/auto_fix_placement.sh\"; exit 0'",
             "description": "Auto-fix file placement violations and trigger learning"
           },
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_file_creation_validator.sh\" ] && exec \"$ROOT/.claude/hooks/post_file_creation_validator.sh\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_file_creation_validator.sh\" ] && exec \"$ROOT/.claude/hooks/post_file_creation_validator.sh\"; fi; [ -x \"$HOME/.claude/hooks/post_file_creation_validator.sh\" ] && exec \"$HOME/.claude/hooks/post_file_creation_validator.sh\"; exit 0'",
             "description": "Validate file placement after creation using Claude analysis against CLAUDE.md protocols"
           }
         ]
       }
     ],
-
     "UserPromptSubmit": [
       {
         "matcher": "*",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; printf %s\\n \"$*\"; exit 0' --",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/compose-commands.sh\" ] && exec \"$ROOT/.claude/hooks/compose-commands.sh\" \"$@\"; fi; [ -x \"$HOME/.claude/hooks/compose-commands.sh\" ] && exec \"$HOME/.claude/hooks/compose-commands.sh\" \"$@\"; printf %s\\n \"$*\"; exit 0' --",
             "description": "Universal command composition for slash command combinations"
           }
         ]
@@ -271,7 +270,7 @@
   "verbose": false,
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only; else echo \"Not in git repo\"; fi'",
+    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
     "padding": 0
   },
   "mcpServers": {}
