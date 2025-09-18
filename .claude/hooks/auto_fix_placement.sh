@@ -4,10 +4,42 @@
 # Triggers /learn for violation patterns
 # Generic script - configurable for any project structure
 
-# Configuration: Define target directories (can be overridden by environment)
-PYTHON_DIR="${PYTHON_TARGET_DIR:-src}"
-TEST_DIR="${TEST_TARGET_DIR:-tests}"
-SCRIPT_DIR="${SCRIPT_TARGET_DIR:-scripts}"
+# Auto-detect project structure based on existing directories
+auto_detect_directories() {
+    # Check for common Python project structures
+    if [ -d "mvp_site" ]; then
+        # WorldArchitect.AI structure
+        PYTHON_DIR="mvp_site"
+        TEST_DIR="mvp_site/tests"
+    elif [ -d "src" ]; then
+        # Standard src/ layout
+        PYTHON_DIR="src"
+        TEST_DIR="tests"
+    elif [ -d "lib" ]; then
+        # Library structure
+        PYTHON_DIR="lib"
+        TEST_DIR="test"
+    elif [ -d "app" ]; then
+        # Flask/Django app structure
+        PYTHON_DIR="app"
+        TEST_DIR="tests"
+    else
+        # Fallback to generic structure
+        PYTHON_DIR="src"
+        TEST_DIR="tests"
+    fi
+
+    # Script directory is usually consistent
+    SCRIPT_DIR="scripts"
+
+    # Allow environment override if needed
+    PYTHON_DIR="${PYTHON_TARGET_DIR:-$PYTHON_DIR}"
+    TEST_DIR="${TEST_TARGET_DIR:-$TEST_DIR}"
+    SCRIPT_DIR="${SCRIPT_TARGET_DIR:-$SCRIPT_DIR}"
+}
+
+# Auto-detect project directories
+auto_detect_directories()
 
 # Read JSON input from stdin
 INPUT=$(cat)
