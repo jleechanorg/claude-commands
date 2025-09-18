@@ -32,13 +32,14 @@ is_claude_bot_running() {
 # Function to start Claude bot server in background
 start_claude_bot_background() {
     local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-    # Check if start script exists
-    if [ -f "$SCRIPT_DIR/start-claude-bot.sh" ]; then
+    # Check if start script exists in project root
+    if [ -f "$PROJECT_ROOT/start-claude-bot.sh" ]; then
         echo -e "${BLUE}🚀 Starting Claude bot server in background...${NC}"
 
         # Start the server in background, redirecting output to log file
-        nohup "$SCRIPT_DIR/start-claude-bot.sh" > "$HOME/.claude-bot-server.log" 2>&1 &
+        nohup "$PROJECT_ROOT/start-claude-bot.sh" > "$HOME/.claude-bot-server.log" 2>&1 &
 
         # Store the PID
         echo $! > "$HOME/.claude-bot-server.pid"
@@ -46,7 +47,7 @@ start_claude_bot_background() {
         echo -e "${BLUE}📋 Logs: tail -f $HOME/.claude-bot-server.log${NC}"
         return 0
     else
-        echo -e "${RED}❌ start-claude-bot.sh not found in $SCRIPT_DIR${NC}"
+        echo -e "${RED}❌ start-claude-bot.sh not found in $PROJECT_ROOT${NC}"
         return 1
     fi
 }

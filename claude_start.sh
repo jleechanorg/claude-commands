@@ -559,7 +559,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     CLAUDE_BACKUP_SCRIPT="$HOME/.local/bin/claude_backup_cron.sh"
     CLAUDE_BACKUP_WRAPPER="$HOME/.local/bin/claude_backup_with_sync.sh"
     CLAUDE_SYNC_SCRIPT="$HOME/.local/bin/sync_backup_to_dropbox.sh"
-    CLAUDE_LAUNCHAGENT="$HOME/Library/LaunchAgents/com.jleechan.claude.backup.plist"
+    CLAUDE_LAUNCHAGENT="$HOME/Library/LaunchAgents/com.$(whoami).claude.backup.plist"
 
     # Check if backup script exists
     if [ ! -f "$CLAUDE_BACKUP_SCRIPT" ]; then
@@ -580,7 +580,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     # Check if LaunchAgent exists and is loaded
     if [ ! -f "$CLAUDE_LAUNCHAGENT" ]; then
         CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not installed")
-    elif ! launchctl list | grep -q "com.jleechan.claude.backup"; then
+    elif ! launchctl list | grep -q "com.$(whoami).claude.backup"; then
         CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not loaded")
     fi
 
@@ -667,7 +667,7 @@ EOF
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.jleechan.claude.backup</string>
+    <string>com.${USER}.claude.backup</string>
     <key>ProgramArguments</key>
     <array>
         <string>$HOME/.local/bin/claude_backup_with_sync.sh</string>
@@ -708,7 +708,7 @@ EOF
                 fi
             done
             CLAUDE_BACKUP_ISSUES=("${temp_claude_array[@]}")
-        elif ! launchctl list | grep -q "com.jleechan.claude.backup"; then
+        elif ! launchctl list | grep -q "com.$(whoami).claude.backup"; then
             echo -e "${YELLOW}⚠️ Loading existing Claude backup LaunchAgent...${NC}"
             launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
             echo -e "${GREEN}✅ Claude backup LaunchAgent loaded${NC}"
