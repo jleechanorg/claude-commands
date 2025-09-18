@@ -75,21 +75,52 @@ Launch specialized agent for file modifications in parallel:
 
 **Response Generation**:
 ```bash
-echo "📝 Generating replies.json from analyzed comments"
-# Orchestrator writes: /tmp/$(git branch --show-current)/replies.json
-# (build from Phase 2 analysis + agent results)
+echo "📝 Generating responses.json from analyzed comments"
+# CRITICAL: Generate responses in commentreply.py expected format
+# Orchestrator writes: /tmp/$(git branch --show-current)/responses.json
 
-# Verify replies.json exists before proceeding
-REPLIES_FILE="/tmp/$(git branch --show-current)/replies.json"
-if [ ! -f "$REPLIES_FILE" ]; then
-    echo "❌ CRITICAL: replies.json not found at $REPLIES_FILE"
-    echo "Orchestrator must generate replies before posting"
+# 🚨 NEW: MANDATORY FORMAT VALIDATION
+echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
+RESPONSES_FILE="/tmp/$(git branch --show-current)/responses.json"
+python3 -c "
+import json
+with open('$RESPONSES_FILE', 'r') as f:
+    data = json.load(f)
+assert 'responses' in data, 'Missing responses array'
+for r in data['responses']:
+    assert 'comment_id' in r, 'Missing comment_id'
+    assert 'reply_text' in r, 'Missing reply_text'
+print('✅ Response format validated')
+" || { echo "❌ CRITICAL: Invalid response format"; exit 1; }
+
+# Verify responses.json exists and is valid before proceeding
+if [ ! -f "$RESPONSES_FILE" ]; then
+    echo "❌ CRITICAL: responses.json not found at $RESPONSES_FILE"
+    echo "Orchestrator must generate responses before posting"
     exit 1
 fi
 
+# 🚨 NEW: MANDATORY INTEGRATION TEST
+echo "🧪 TESTING: End-to-end response posting workflow"
+COMMENTS_BEFORE=$(gh pr view --json comments | jq '.comments | length')
+echo "   Comments before posting: $COMMENTS_BEFORE"
+
 echo "🔄 MANDATORY: Executing /commentreply for all unresponded comments"
 /commentreply || { echo "🚨 CRITICAL: Comment response failed"; exit 1; }
-echo "✅ Comment responses posted successfully"
+
+# 🚨 NEW: VERIFY ACTUAL POSTING SUCCESS
+echo "🔍 VERIFYING: Actual GitHub comment posting"
+sleep 5  # Allow GitHub API propagation
+COMMENTS_AFTER=$(gh pr view --json comments | jq '.comments | length')
+echo "   Comments after posting: $COMMENTS_AFTER"
+
+if [ "$COMMENTS_AFTER" -le "$COMMENTS_BEFORE" ]; then
+    echo "❌ CRITICAL: No new comments detected on GitHub"
+    echo "Response posting failed - workflow cannot continue"
+    exit 1
+fi
+
+echo "✅ Comment responses posted successfully ($((COMMENTS_AFTER - COMMENTS_BEFORE)) new)"
 ```
 Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 
@@ -126,9 +157,26 @@ git diff --stat
 
 **Coverage Tracking (MANDATORY GATE):**
 ```bash
-# HARD VERIFICATION GATE - Must pass before proceeding
+# HARD VERIFICATION GATE with RECOVERY - Must pass before proceeding
 echo "🔍 MANDATORY: Verifying 100% comment coverage"
-/commentcheck || { echo "🚨 CRITICAL: Comment coverage failed - workflow blocked"; exit 1; }
+if ! /commentcheck; then
+    echo "🚨 CRITICAL: Comment coverage failed - attempting recovery"
+    echo "🔧 RECOVERY: Re-running comment response workflow"
+
+    # Attempt recovery by re-running comment responses
+    /commentreply || {
+        echo "🚨 CRITICAL: Recovery failed - manual intervention required";
+        echo "📊 DIAGNOSTIC: Check /tmp/$(git branch --show-current)/responses.json format";
+        echo "📊 DIAGNOSTIC: Verify GitHub API permissions and rate limits";
+        exit 1;
+    }
+
+    # Re-verify after recovery attempt
+    /commentcheck || {
+        echo "🚨 CRITICAL: Comment coverage still failing after recovery";
+        exit 1;
+    }
+fi
 echo "✅ Comment coverage verification passed - proceeding with completion"
 ```
 
@@ -203,3 +251,39 @@ fi
 - **Proven Components**: Use only verified working tools and patterns
 - **Result Integration**: Direct access to agent file changes for accurate response generation
 - **Streamlined Workflow**: Single coordination point with specialized file operation support
+
+## 🚨 **RESPONSE DATA FORMAT SPECIFICATION**
+
+### **MANDATORY**: responses.json Format
+The orchestrator MUST generate responses.json in this exact format:
+
+```json
+{
+  "responses": [
+    {
+      "comment_id": "2357534669",     // STRING format required
+      "reply_text": "[AI responder] ✅ **Issue Fixed**...",
+      "in_reply_to": "optional_parent_id"
+    }
+  ]
+}
+```
+
+### **CRITICAL FORMAT REQUIREMENTS**:
+- `comment_id` MUST be STRING (not integer)
+- `reply_text` MUST contain substantial technical response
+- `responses` array MUST contain entry for each actionable comment
+- File location: `/tmp/{branch_name}/responses.json`
+
+### **INTEGRATION CONTRACT**:
+- commentreply.py expects `responses` array with `comment_id` and `reply_text`
+- Matching uses `str(response_item.get("comment_id")) == comment_id`
+- Missing or malformed responses cause posting failures
+- Format validation is MANDATORY before attempting to post responses
+
+### **RESPONSE QUALITY STANDARDS**:
+- Each response must address specific technical content from the comment
+- Use `[AI responder] ✅ **Issue Fixed**` or `❌ **Not Done**` prefixes
+- Include commit SHA when fixes are implemented
+- Provide technical analysis explaining the resolution
+- No generic acknowledgments ("Thanks!" or "Will consider" are insufficient)
