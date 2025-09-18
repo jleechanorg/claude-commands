@@ -54,8 +54,8 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 
 ```bash
 # Clone the repository
-git clone https://github.com/jleechan2015/worldarchitect.ai.git
-cd worldarchitect-ai
+git clone https://github.com/jleechanorg/worldarchitect.ai.git
+cd worldarchitect.ai
 
 # Set up virtual environment (see VENV_SETUP.md for detailed instructions)
 python3 -m venv venv

@@ -507,8 +507,8 @@ if [ ${#test_files[@]} -eq 0 ]; then
 
     print_status "🔍 Discovering all test files (traditional mode)"
 
-    # Standard test discovery - find all test_*.py files
-    test_files=($(find mvp_site -name "test_*.py" -type f 2>/dev/null | sort))
+    # Standard test discovery - find all test_*.py files (excluding slow UI tests)
+    test_files=($(find mvp_site -name "test_*.py" -type f -not -path "*/testing_ui/*" 2>/dev/null | sort))
 
     # Add .claude/commands tests if directory exists
     if [ -d ".claude/commands/tests" ]; then

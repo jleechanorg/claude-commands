@@ -70,6 +70,7 @@ jobs:
 
     # Step 5: Run test group based on matrix strategy
     - name: Run test group - ${{ matrix.test-group }}
+      timeout-minutes: 15  # Step-level timeout for individual test group execution
       run: |
         # Activate the virtual environment
         source venv/bin/activate
@@ -87,6 +88,9 @@ jobs:
         export ENABLE_BUILD_TESTS=0
         export ENABLE_NETWORK_TESTS=0
         export GITHUB_ACTIONS=true
+
+        # Set Python path for proper module imports
+        export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site"
 
         # Run specific test group based on matrix
         chmod +x run_tests.sh
