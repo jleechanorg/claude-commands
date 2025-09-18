@@ -236,18 +236,7 @@
       }
     ],
 
-    "AssistantMessageSubmit": [
-      {
-        "matcher": "*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/custom_metrics_hook.py\" ] && python3 \"$ROOT/.claude/hooks/custom_metrics_hook.py\" \"$@\"; fi; exit 0' --",
-            "description": "Custom metrics monitoring for Claude responses"
-          }
-        ]
-      }
-    ]
+    "AssistantMessageSubmit": []
   },
   "env": {
     "BASH_MAX_OUTPUT_LENGTH": "5000",
