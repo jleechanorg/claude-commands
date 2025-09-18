@@ -269,7 +269,7 @@
   "verbose": false,
   "statusLine": {
     "type": "command",
-    "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only; else echo \"Not in git repo\"; fi'",
+    "command": "bash -c 'if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
     "padding": 0
   },
   "mcpServers": {}
