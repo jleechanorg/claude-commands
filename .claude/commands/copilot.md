@@ -100,27 +100,10 @@ if [ ! -f "$RESPONSES_FILE" ]; then
     exit 1
 fi
 
-# 🚨 NEW: MANDATORY INTEGRATION TEST
-echo "🧪 TESTING: End-to-end response posting workflow"
-COMMENTS_BEFORE=$(gh pr view --json comments | jq '.comments | length')
-echo "   Comments before posting: $COMMENTS_BEFORE"
-
-echo "🔄 MANDATORY: Executing /commentreply for all unresponded comments"
+echo "🔄 Executing /commentreply for all unresponded comments"
 /commentreply || { echo "🚨 CRITICAL: Comment response failed"; exit 1; }
-
-# 🚨 NEW: VERIFY ACTUAL POSTING SUCCESS
-echo "🔍 VERIFYING: Actual GitHub comment posting"
-sleep 5  # Allow GitHub API propagation
-COMMENTS_AFTER=$(gh pr view --json comments | jq '.comments | length')
-echo "   Comments after posting: $COMMENTS_AFTER"
-
-if [ "$COMMENTS_AFTER" -le "$COMMENTS_BEFORE" ]; then
-    echo "❌ CRITICAL: No new comments detected on GitHub"
-    echo "Response posting failed - workflow cannot continue"
-    exit 1
-fi
-
-echo "✅ Comment responses posted successfully ($((COMMENTS_AFTER - COMMENTS_BEFORE)) new)"
+echo "🔍 Verifying coverage via /commentcheck"
+/commentcheck || { echo "🚨 CRITICAL: Comment coverage failed"; exit 1; }
 ```
 Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 

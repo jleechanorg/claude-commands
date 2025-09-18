@@ -639,8 +639,14 @@ if [ -d "$SOURCE_DIR" ]; then
     # Create destination if it doesn't exist
     mkdir -p "$DEST_DIR"
 
-    # Sync with rsync
-    rsync -av --delete "$SOURCE_DIR/" "$DEST_DIR/"
+    # Sync with rsync (with destructive operation safeguards)
+    MARKER="$DEST_DIR/.allow_destructive_sync"
+    if [ ! -f "$MARKER" ]; then
+        echo "First run: performing dry-run. Create $MARKER to enable deletes." >&2
+        rsync -av --delete --dry-run "$SOURCE_DIR/" "$DEST_DIR/"
+        exit 0
+    fi
+    rsync -av --delete --itemize-changes "$SOURCE_DIR/" "$DEST_DIR/"
 
     echo "[$(date)] Sync completed successfully"
     echo "[$(date)] Files in destination: $(find "$DEST_DIR" -type f | wc -l)"
