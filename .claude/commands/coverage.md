@@ -45,7 +45,7 @@ Overall Coverage: 67%
 2. Test edge cases in planning block JSON validation
 3. Add integration tests for full planning block flow
 
-📂 HTML Report: file:///tmp/worldarchitectai/coverage/index.html
+📂 HTML Report: file:///tmp/$PROJECT_NAME/coverage/index.html
 ```
 
 **Integration with CI**:

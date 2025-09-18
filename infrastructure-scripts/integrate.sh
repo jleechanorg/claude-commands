@@ -18,6 +18,30 @@
 
 set -euo pipefail  # Exit on any error with stricter error handling
 
+# Graceful terminator: exits when executed directly; returns when sourced.
+# Optional args: die [exit_code] [message]
+die() {
+    local code="${1:-1}"
+    local msg="${2:-}"
+    # Tolerate unset color vars if called before they're defined
+    local red="${RED:-}"
+    local nc="${NC:-}"
+    if [[ -n "$msg" ]]; then
+      echo -e "${red}❌ ERROR: $msg${nc}" >&2
+    fi
+    # Only prompt in interactive TTYs (skip in CI/non-interactive shells)
+    if [[ -t 1 && -z "${CI:-}" && -z "${NONINTERACTIVE:-}" ]]; then
+      echo "Press Enter to continue or Ctrl+C to abort..."
+      # Avoid failing set -e pipelines on read errors
+      read -r || true
+    fi
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+      return "$code"
+    else
+      exit "$code"
+    fi
+}
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -196,11 +220,10 @@ while (( $# )); do
             ;;
         -h|--help)
             show_help
-            exit 0
+            die 0
             ;;
         --*)
-            echo "Unknown flag: $1" >&2
-            exit 1
+            die 1 "Unknown flag: $1"
             ;;
         *)
             if [[ -z "$CUSTOM_BRANCH_NAME" ]]; then
@@ -214,6 +237,27 @@ while (( $# )); do
 done
 
 echo -e "${GREEN}🔄 Starting integration process...${NC}"
+
+# Fetch latest changes from origin/main first to ensure accurate comparisons
+echo "📡 Fetching latest changes from origin/main..."
+err_file="$(mktemp -t integrate_fetch_err.XXXXXX)"
+if ! GIT_TERMINAL_PROMPT=0 git fetch --prune origin main 2>"$err_file"; then
+    echo "❌ Error: Failed to fetch updates from origin/main."
+    echo "   Possible causes: network issues, authentication problems, or repository unavailability."
+    # Try to provide more specific error information
+    if ! git ls-remote --exit-code origin >/dev/null 2>&1; then
+        echo "   Remote 'origin' appears to be unreachable."
+    fi
+    if grep -qi 'auth' "$err_file"; then
+        echo "   Authentication seems to be required or failing. Try: gh auth login or reconfigure your git credentials."
+    fi
+    echo "   Details (last 10 lines):"
+    tail -n 10 "$err_file" || true
+    rm -f "$err_file"
+    die 1 "Fetch failed; cannot safely compare against origin/main."
+else
+    rm -f "$err_file"
+fi
 
 # Stop test server for current branch if running
 current_branch=$(git branch --show-current)
@@ -241,15 +285,13 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
                 echo "   ✅ Changes stashed successfully"
                 echo "   To recover: git stash pop"
             else
-                echo "   ❌ Failed to stash changes"
-                exit 1
+                die 1 "Failed to stash changes"
             fi
         else
             echo "   Please commit or stash your changes before integrating."
             echo "   Use: git add -A && git commit -m \"your message\""
             echo "   Or:  git stash"
-            echo "   Or:  ./integrate.sh --force (to abandon changes)"
-            exit 1
+            die 1 "Uncommitted changes must be handled before integration"
         fi
     fi
 
@@ -290,8 +332,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
                 echo "   • If PR merged: Branch is likely safe to delete with --force"
                 echo "   • Pull latest: git pull origin $current_branch"
                 echo "   • Push changes: git push origin HEAD:$current_branch"
-                echo "   • Force proceed: ./integrate.sh --force (ignores sync status)"
-                exit 1
+                die 1 "Branch '$current_branch' has unsynced commits with remote"
             fi
         fi
     else
@@ -321,8 +362,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
                 echo "   • If already merged via PR: Changes were likely squash-merged, safe to proceed with --force"
                 echo "   • If not merged: Push changes first: git push origin HEAD:$current_branch"
                 echo "   • Create PR: gh pr create"
-                echo "   • Force proceed: ./integrate.sh --force (abandons commits)"
-                exit 1
+                die 1 "Branch '$current_branch' has unmerged commits"
             fi
         else
             # Branch is clean (no uncommitted changes, no commits not in origin/main)
@@ -336,19 +376,7 @@ echo -e "\n${GREEN}1. Switching to main branch...${NC}"
 git checkout main
 
 echo -e "\n${GREEN}2. Smart sync with origin/main...${NC}"
-# Suppress credential helper errors that don't affect core functionality
-if ! git fetch origin main 2>/dev/null; then
-    echo "❌ Error: Failed to fetch updates from origin/main."
-    echo "   Possible causes: network issues, authentication problems, or repository unavailability."
-    
-    # Try to provide more specific error information
-    if ! git ls-remote --exit-code origin >/dev/null 2>&1; then
-        echo "   Remote 'origin' appears to be unreachable."
-    fi
-    
-    echo "   Please check your connection and credentials, and try again."
-    exit 1
-fi
+# Skip fetch here - origin/main was already fetched at script start to ensure accurate branch comparisons
 
 # Helper function to extract GitHub repository URL from git remote
 get_github_repo_url() {
@@ -392,8 +420,7 @@ check_existing_sync_pr() {
                 else
                     echo "   Please merge these PRs first, then re-run integrate.sh"
                 fi
-                echo "   Or use: ./integrate.sh --force (to proceed anyway)"
-                exit 1
+                die 1 "Active sync PRs must be handled before creating new branch"
             fi
         fi
 
@@ -435,8 +462,7 @@ if git merge-base --is-ancestor HEAD origin/main; then
     # Local main is behind origin/main → safe fast-forward
     echo -e "${GREEN}✅ Fast-forwarding to latest origin/main${NC}"
     if ! git merge --ff-only origin/main; then
-        echo "❌ Error: Fast-forward merge with origin/main failed. Please resolve manually." >&2
-        exit 1
+        die 1 "Fast-forward merge with origin/main failed. Please resolve manually."
     fi
 
 elif git merge-base --is-ancestor origin/main HEAD; then
@@ -453,13 +479,11 @@ elif git merge-base --is-ancestor origin/main HEAD; then
     echo "   Creating sync branch: $sync_branch"
 
     if ! git checkout -b "$sync_branch"; then
-        echo "❌ Error: Failed to create sync branch" >&2
-        exit 1
+        die 1 "Failed to create sync branch"
     fi
 
     if ! git push -u origin HEAD; then
-        echo "❌ Error: Failed to push sync branch" >&2
-        exit 1
+        die 1 "Failed to push sync branch"
     fi
 
     # Create PR if gh is available
@@ -487,18 +511,18 @@ Please review and merge to complete the integration process."
         if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
             echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
             echo "   Please review and merge the PR, then re-run integrate.sh"
-            exit 0
+            die 0
         else
             echo "⚠️  Could not create PR automatically. Please create one manually:"
             echo "   Branch: $sync_branch"
             echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-            exit 1
+            die 1 "Could not create PR automatically. Please create one manually using the URL above"
         fi
     else
         echo "⚠️  gh CLI not available. Please create PR manually:"
         echo "   Branch: $sync_branch"
         echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-        exit 1
+        die 1 "gh CLI not available. Please create PR manually using the URL above"
     fi
 
 else
@@ -557,15 +581,13 @@ else
         echo -e "${RED}🚨 FORCE MODE: Would normally stop here, but --force was used${NC}"
         echo "   Performing merge to resolve divergence..."
         if ! git merge --no-ff origin/main -m "integrate.sh: Force merge divergent main histories (--force mode)"; then
-            echo "❌ Error: Force merge failed. Please resolve conflicts manually." >&2
-            exit 1
+            die 1 "Force merge failed. Please resolve conflicts manually."
         fi
         echo "   ✅ Force merge completed"
     else
         echo -e "${RED}🛑 Integration stopped to prevent branch contamination${NC}"
         echo "   Choose one of the resolution options above, then re-run integrate.sh"
-        echo "   Or use: ./integrate.sh --force (to auto-merge, may create contaminated branches)"
-        exit 1
+        die 1 "Integration stopped to prevent branch contamination"
     fi
 fi
 

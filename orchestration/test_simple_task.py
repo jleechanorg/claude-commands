@@ -4,6 +4,7 @@
 import json
 import sys
 import time
+import unittest
 from dataclasses import asdict
 from datetime import datetime
 
@@ -13,6 +14,17 @@ from message_broker import MessageBroker, MessageType, TaskMessage
 def test_simple_flow():
     """Test basic task flow"""
     broker = MessageBroker()
+
+    # Check if Redis is available
+    try:
+        if not hasattr(broker, 'redis_client') or broker.redis_client is None:
+            print("❌ Redis client not available - test requires Redis")
+            return False
+        # Test Redis connectivity
+        broker.redis_client.ping()
+    except Exception as e:
+        print(f"❌ Redis not available: {e}")
+        return False
 
     print("=== Simple Task Flow Test ===\n")
 

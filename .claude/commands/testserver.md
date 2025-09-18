@@ -30,4 +30,4 @@
 - `/push` automatically starts server for current branch
 - `/integrate` automatically stops server for current branch
 - Servers persist across development sessions
-- Logs stored in `/tmp/worldarchitectai_logs/[branch].log`
+- Logs stored in `/tmp/$PROJECT_NAME_logs/[branch].log`
