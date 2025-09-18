@@ -128,7 +128,7 @@ The command orchestrates a complete production-ready push workflow:
 
 **Server Accessibility**:
 - Server accessible at `http://localhost:[allocated_port]`
-- Logs stored in `/tmp/worldarchitectai_logs/[branch].log`
+- Logs stored in `/tmp/$PROJECT_NAME_logs/[branch].log`
 - Real-time monitoring and health checking
 - Automatic restart on critical failures
 
