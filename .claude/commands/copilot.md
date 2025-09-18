@@ -82,16 +82,26 @@ echo "📝 Generating responses.json from analyzed comments"
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
 RESPONSES_FILE="/tmp/$(git branch --show-current)/responses.json"
-python3 -c "
+python3 -c '
+import os, sys
+responses_file = os.environ.get("RESPONSES_FILE", "")
+if not responses_file:
+    print("❌ RESPONSES_FILE environment variable not set")
+    sys.exit(1)
+
 import json
-with open('$RESPONSES_FILE', 'r') as f:
-    data = json.load(f)
-assert 'responses' in data, 'Missing responses array'
-for r in data['responses']:
-    assert 'comment_id' in r, 'Missing comment_id'
-    assert 'reply_text' in r, 'Missing reply_text'
-print('✅ Response format validated')
-" || { echo "❌ CRITICAL: Invalid response format"; exit 1; }
+try:
+    with open(responses_file, "r") as f:
+        data = json.load(f)
+    assert "responses" in data, "Missing responses array"
+    for r in data["responses"]:
+        assert "comment_id" in r, "Missing comment_id"
+        assert "reply_text" in r, "Missing reply_text"
+    print("✅ Response format validated")
+except Exception as e:
+    print(f"❌ CRITICAL: Response validation failed: {e}")
+    sys.exit(1)
+' || { echo "❌ CRITICAL: Invalid response format"; exit 1; }
 
 # Verify responses.json exists and is valid before proceeding
 if [ ! -f "$RESPONSES_FILE" ]; then
