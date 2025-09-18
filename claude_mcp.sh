@@ -232,12 +232,25 @@ declare -A PARALLEL_RESULTS
 # Server installation queue for parallel processing
 declare -a SERVER_QUEUE
 
-# Function to check if npm package exists
+# Function to check if package is a pip package
+is_pip_package() {
+    local package="$1"
+    case "$package" in
+        "claude-slash-commands-mcp")
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Function to check if package exists in remote registry
 package_exists() {
     local package="$1"
-    # Special handling for claude-slash-commands-mcp (pip package)
-    if [ "$package" = "claude-slash-commands-mcp" ]; then
-        pip show "$package" >/dev/null 2>&1
+    if is_pip_package "$package"; then
+        # Check PyPI registry (not local installation)
+        python3 -c "import requests; import sys; response = requests.get(f'https://pypi.org/pypi/{sys.argv[1]}/json'); sys.exit(0 if response.status_code == 200 else 1)" "$package" 2>/dev/null
     else
         npm view "$package" version >/dev/null 2>&1
     fi
@@ -248,8 +261,8 @@ install_package() {
     local package="$1"
     log_with_timestamp "Attempting to install package: $package"
 
-    # Special handling for claude-slash-commands-mcp
-    if [ "$package" = "claude-slash-commands-mcp" ]; then
+    # Special handling for pip packages
+    if is_pip_package "$package"; then
         echo -e "${BLUE}  📦 Installing $package globally via pip...${NC}"
         local install_output
         install_output=$(pip install "$package" 2>&1)
@@ -409,15 +422,15 @@ add_mcp_server() {
     fi
 
     # Check if package exists in registry
-    if [ "$package" = "claude-slash-commands-mcp" ]; then
+    if is_pip_package "$package"; then
         echo -e "${BLUE}  🔍 Checking if package $package exists in PyPI registry...${NC}"
         local registry_check
-        registry_check=$(pip show "$package" 2>&1)
+        registry_check=$(python3 -c "import requests; import sys; response = requests.get(f'https://pypi.org/pypi/{sys.argv[1]}/json'); print('Package found' if response.status_code == 200 else 'Package not found'); sys.exit(0 if response.status_code == 200 else 1)" "$package" 2>&1)
         local registry_exit_code=$?
 
         if [ $registry_exit_code -ne 0 ]; then
             echo -e "${RED}  ❌ Package $package not found in PyPI registry${NC}"
-            log_error_details "pip show" "$package" "$registry_check"
+            log_error_details "PyPI check" "$package" "$registry_check"
             INSTALL_RESULTS["$name"]="PACKAGE_NOT_FOUND"
             FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
             return 1
@@ -445,7 +458,7 @@ add_mcp_server() {
 
     # Check if package is installed globally (only if using global mode)
     if [ "$USE_GLOBAL" = true ]; then
-        if [ "$package" = "claude-slash-commands-mcp" ]; then
+        if is_pip_package "$package"; then
             echo -e "${BLUE}  🔍 Checking global pip installation...${NC}"
             local global_check
             global_check=$(pip show "$package" 2>&1)
@@ -503,8 +516,8 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-    if [ "$package" = "claude-slash-commands-mcp" ]; then
-        add_output=$(claude mcp add --scope user "$name" "claude-slash-commands-mcp" $args 2>&1)
+    if is_pip_package "$package"; then
+        add_output=$(claude mcp add --scope user "$name" "$package" $args 2>&1)
     else
         add_output=$(claude mcp add --scope user "$name" "$NPX_PATH" "$package" $args 2>&1)
     fi
