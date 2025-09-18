@@ -772,15 +772,15 @@ run_single_test() {
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
 
         if [ "$enable_coverage" = true ]; then
-            # Run with coverage
-            if timeout 300 python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
+            # Run with coverage and proper Python path
+            if timeout 300 env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
                 echo "RESULT: FAIL"
             fi
         else
-            # Run normally
-            if timeout 300 python3 "$test_file" 2>&1; then
+            # Run normally with proper Python path
+            if timeout 300 env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
                 echo "RESULT: FAIL"
