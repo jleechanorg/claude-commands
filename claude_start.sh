@@ -522,12 +522,12 @@ EOF
         chmod +x "$CRON_WRAPPER"
 
         # Add to cron (daily at 2 AM) with proper variable handling
-        current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
+        local current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
         (echo "$current_crontab_mem"; echo '0 2 * * * $HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1') | crontab -
 
         echo -e "${GREEN}✅ Installed unified memory backup cron job (daily at 2 AM)${NC}"
         # Remove cron job error from backup issues array safely
-        temp_array=()
+        local temp_array=()
         for issue in "${BACKUP_ISSUES[@]}"; do
             if [[ "$issue" != *"Cron job not configured"* ]]; then
                 temp_array+=("$issue")

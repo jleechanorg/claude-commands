@@ -1,5 +1,13 @@
 #!/bin/bash
-set -euo pipefail
+# Guard against setting strict mode when sourced in incompatible shells
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Script is being executed directly, apply strict mode
+    set -euo pipefail
+elif [[ -z "${STRICT_MODE_SET:-}" ]]; then
+    # Script is being sourced and strict mode not yet applied
+    set -euo pipefail
+    export STRICT_MODE_SET=1
+fi
 
 # Claude bot management functions
 # Source this file to make functions available in current shell:
