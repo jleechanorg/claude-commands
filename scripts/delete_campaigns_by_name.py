@@ -188,8 +188,13 @@ def main():
                 "would_delete": len(campaigns_to_delete)
             }
             
-            print("📁 Saving dry-run results to docs/deletion_preview.json")
-            with open("docs/deletion_preview.json", "w") as f:
+            # Use configurable output directory
+            output_dir = os.environ.get("OUTPUT_DIR", "docs")
+            output_file = os.path.join(output_dir, "deletion_preview.json")
+            os.makedirs(output_dir, exist_ok=True)
+            
+            print(f"📁 Saving dry-run results to {output_file}")
+            with open(output_file, "w") as f:
                 json.dump(results, f, indent=2)
             
             return
@@ -250,8 +255,13 @@ def main():
             "failed_campaign_ids": failed_ids
         }
         
-        print("📁 Saving deletion results to docs/deletion_results.json")
-        with open("docs/deletion_results.json", "w") as f:
+        # Use configurable output directory
+        output_dir = os.environ.get("OUTPUT_DIR", "docs")
+        output_file = os.path.join(output_dir, "deletion_results.json")
+        os.makedirs(output_dir, exist_ok=True)
+        
+        print(f"📁 Saving deletion results to {output_file}")
+        with open(output_file, "w") as f:
             json.dump(results, f, indent=2)
         
         print("✅ Deletion process completed.")
