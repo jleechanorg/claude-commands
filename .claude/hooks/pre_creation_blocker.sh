@@ -24,6 +24,24 @@ fi
 FILENAME=$(basename "$FILE_PATH")
 EXTENSION="${FILENAME##*.}"
 
+# 🚀 FAST PRE-SCREENING: Only check root-level violations for cross-repo compatibility
+# Quick pattern-based check for obvious violations (instant response)
+if [[ "$FILE_PATH" =~ ^[^/]+\.(py|sh|md)$ ]]; then
+    # File is in project root - this is a clear violation, block immediately
+    cat << EOF
+{
+  "decision": "block",
+  "reason": "🚨 CLAUDE.md VIOLATION BLOCKED\\n\\n**REASON:** Creating '$FILENAME' in project root violates file placement rules.\\n\\n✅ **QUICK FIX**: Place files in appropriate directories:\\n- Python files (.py) → mvp_site/ or module directories\\n- Shell scripts (.sh) → scripts/ directory\\n- Documentation (.md) → docs/ directory\\n\\nFILE: $FILE_PATH\\n\\nPer CLAUDE.md INTEGRATION PREFERENCE HIERARCHY:\\n1. Add to existing file with similar purpose\\n2. Add to existing utility/helper file\\n3. Add to existing test file (NEVER create new test files)\\n4. LAST RESORT: Create new file (requires justification)\\n\\nTo override: Document why integration into existing files failed.",
+  "hookSpecificOutput": {
+    "hookEventName": "PreToolUse",
+    "additionalContext": "File creation blocked due to root directory violation. Fast pre-screening detected obvious placement violation."
+  }
+}
+EOF
+    exit 1  # Block the operation
+fi
+
+# File passed fast pre-screening - only run Claude CLI for complex analysis
 # 🤖 INTELLIGENT CLAUDE CLI ANALYSIS for file placement violations
 CLAUDE_PROMPT="Analyze if creating file '$FILE_PATH' violates CLAUDE.md file placement rules:
 
@@ -49,9 +67,9 @@ INTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]
 
 Be concise and direct."
 
-# Execute Claude CLI analysis
-CLAUDE_OUTPUT=$(echo "$CLAUDE_PROMPT" | claude --dangerously-skip-permissions --model sonnet 2>/dev/null || echo "VIOLATION: NO
-REASON: Claude CLI not available, allowing creation
+# Execute Claude CLI analysis with 15-second timeout
+CLAUDE_OUTPUT=$(echo "$CLAUDE_PROMPT" | timeout 15s claude --dangerously-skip-permissions --model sonnet 2>/dev/null || echo "VIOLATION: NO
+REASON: Claude CLI not available or timed out, allowing creation
 INTEGRATION_TARGETS: NONE")
 
 # Parse Claude analysis (more flexible parsing)
