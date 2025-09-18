@@ -807,31 +807,24 @@ run_tests_with_timeout() {
             run_single_test "$test_file"
         done
     else
-        # Parallel execution
-        printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
+        # Parallel execution - use shell function with environment properly inherited
+        for test_file in "${test_files[@]}"; do
+            (run_single_test "$test_file") &
+            # Limit concurrent processes
+            while [ $(jobs -r | wc -l) -ge $max_workers ]; do
+                sleep 0.1
+            done
+        done
+        # Wait for all background jobs to complete
+        wait
     fi
 }
 
-# Export functions for use with xargs and timeout wrapper
-export -f run_single_test run_tests_with_timeout
-export tmp_dir enable_coverage max_workers
+# Note: Using bash subshells for parallel execution, so no exports needed
 
-# Execute tests with timeout
+# Execute tests (timeout handling moved to individual test level)
 suite_timed_out=false
-if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
-    echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
-    echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
-    echo "  - Infinite loops in test code" >&2
-    echo "  - Network timeouts or external service dependencies" >&2
-    echo "  - Memory leaks causing system slowdown" >&2
-    echo "  - Tests waiting for user input or external events" >&2
-
-    # Kill any remaining test processes
-    pkill -f "python.*test_" || true
-
-    # Mark as timed out to prevent result processing from overriding
-    suite_timed_out=true
-fi
+run_tests_with_timeout
 
 # Wait for all background jobs to complete
 wait
