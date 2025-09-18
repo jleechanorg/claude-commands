@@ -7,8 +7,10 @@ to prove we're using real SDK, not simulation.
 """
 
 import asyncio
+import importlib.util
 import logging
 import sys
+import unittest
 from typing import Any
 
 import httpx
@@ -16,20 +18,29 @@ from a2a.client.client import A2AClient
 from a2a.types import AgentCard, Message, Role, TextPart
 from a2a_integration import WorldArchitectA2AAgent, create_real_agent_card
 
+# Check A2A availability using importlib to avoid crashing on missing dependencies
+A2A_AVAILABLE = (
+    importlib.util.find_spec("httpx") is not None
+    and importlib.util.find_spec("a2a") is not None
+)
 
-class RealA2AClientTester:
+
+class RealA2AClientTester(unittest.TestCase):
     """Test real A2A integration using authentic SDK client"""
 
-    def __init__(self, server_url: str = "http://localhost:8000"):
+    def setUp(self):
+        """Set up test environment"""
+        if not A2A_AVAILABLE:
+            self.skipTest("A2A dependencies not available")
+
+        server_url = "http://localhost:8000"
         self.server_url = server_url
         self.rpc_url = f"{server_url}/rpc"
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
 
         # Create real A2A client from SDK
-
         self.httpx_client = httpx.AsyncClient()
         self.a2a_client = A2AClient(httpx_client=self.httpx_client, url=server_url)
-
         self.logger = logging.getLogger(__name__)
 
     async def test_real_agent_discovery(self) -> dict[str, Any]:

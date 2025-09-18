@@ -10,10 +10,10 @@ import sys
 import tempfile
 import time
 
-from .a2a_agent_wrapper import create_a2a_wrapper
-from .a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
-from .a2a_monitor import A2AMonitor
-from .task_dispatcher import TaskDispatcher
+from orchestration.a2a_agent_wrapper import create_a2a_wrapper
+from orchestration.a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
+from orchestration.a2a_monitor import A2AMonitor
+from orchestration.task_dispatcher import TaskDispatcher
 
 # Set test A2A directory after imports
 test_dir = tempfile.mkdtemp()

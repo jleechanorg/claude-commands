@@ -1,4 +1,4 @@
-# /copilot - Fast Direct Orchestrated PR Processing
+# /copilot - Fast PR Processing
 
 ## 🚨 Mandatory Comment Coverage Tracking
 This command automatically tracks comment coverage and warns about missing responses:
@@ -20,9 +20,9 @@ fi
 ```
 
 ## 🎯 Purpose
-Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Uses hybrid orchestrator with copilot-fixpr agent by default for comprehensive coverage and quality assurance.
+Ultra-fast PR processing using hybrid orchestration with comprehensive coverage and quality assurance. Uses hybrid orchestrator with copilot-fixpr agent by default for maximum reliability.
 
-## ⚡ **PERFORMANCE ARCHITECTURE: Hybrid Orchestrator with Selective Task Agents**
+## ⚡ Core Workflow
 
 🚨 **OPTIMIZED HYBRID PATTERN**: /copilot uses direct execution + selective task agents for maximum reliability
 
@@ -46,8 +46,7 @@ Ultra-fast PR processing using ALWAYS-ON parallel agent orchestration. Uses hybr
 COPILOT_START_TIME=$(date +%s)
 ```
 
-### Phase 1: Hybrid Coordination Launch
-**Direct orchestration with selective task agent for maximum reliability**:
+### Phase 1: Analysis & Agent Launch
 
 **🎯 Direct Comment Analysis**:
 Execute comment processing workflow directly for reliable GitHub operations:
@@ -96,58 +95,35 @@ Launch specialized agent for file modifications in parallel:
 
 **Final Completion Steps**:
 ```bash
-# Final integration and verification
-/pushl
+# Show evidence of changes
+echo "📊 COPILOT EXECUTION EVIDENCE:"
+echo "🔧 FILES MODIFIED:"
+git diff --name-only | sed 's/^/  - /'
+echo "📈 CHANGE SUMMARY:"
+git diff --stat
 
+# Push changes to PR
+/pushl || { echo "🚨 PUSH FAILED: PR not updated"; exit 1; }
+```
+
+**Coverage Tracking (delegated):**
+```bash
+/commentcheck  # authoritative coverage verification & reporting
+```
+
+**Final Timing:**
+```bash
 # Calculate and report timing (only if performance targets exceeded)
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-
-# Coverage verification and warnings (automatic)
-# Resolve repo/PR once; prefer nameWithOwner to avoid manual owner parsing
-REPO="${REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)}"
-PR_NUMBER="${PR_NUMBER:-$(gh pr view --json number -q .number 2>/dev/null)}"
-
-# Input validation to prevent injection attacks
-if [[ ! "$REPO" =~ ^[a-zA-Z0-9._/-]+$ ]] || [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
-    echo "🚨 SECURITY ERROR: Invalid repository or PR number format"
-    exit 1
+if [ $COPILOT_DURATION -gt 180 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
 fi
 
-# Aggregate all pages, then compute counts with correct coverage math
-REV_JSON="$(gh api "repos/$REPO/pulls/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'add // []' 2>/dev/null)"
-REV_ORIGINAL="$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<"$REV_JSON")"
-# Count unique original comments that have replies (not raw reply count)
-UNIQUE_REPLIED_ORIGINALS="$(jq -r '[.[] | select(.in_reply_to_id != null) | .in_reply_to_id] | unique | length' <<<"$REV_JSON")"
-ISSUE_COMMENTS="$(gh api "repos/$REPO/issues/$PR_NUMBER/comments" --paginate 2>/dev/null | jq -s 'map(length) | add // 0' 2>/dev/null)" || ISSUE_COMMENTS=0
-
-# Threadable coverage (review comments); issue comments tracked separately
-ORIGINAL_COMMENTS="${REV_ORIGINAL:-0}"
-REPLIED_ORIGINALS="${UNIQUE_REPLIED_ORIGINALS:-0}"
-
-# Validate numeric values to prevent arithmetic errors
-if [[ ! "$ORIGINAL_COMMENTS" =~ ^[0-9]+$ ]]; then ORIGINAL_COMMENTS=0; fi
-if [[ ! "$REPLIED_ORIGINALS" =~ ^[0-9]+$ ]]; then REPLIED_ORIGINALS=0; fi
-
-if [ "${ORIGINAL_COMMENTS:-0}" -gt 0 ]; then
-  COVERAGE_PERCENT=$(( REPLIED_ORIGINALS * 100 / ORIGINAL_COMMENTS ))
-  if [ "$COVERAGE_PERCENT" -lt 100 ]; then
-    missing=$(( ORIGINAL_COMMENTS - REPLIED_ORIGINALS ))
-    [ "$missing" -lt 0 ] && missing=0
-    echo "🚨 WARNING: INCOMPLETE REVIEW-COMMENT COVERAGE: ${COVERAGE_PERCENT}% (${REPLIED_ORIGINALS}/${ORIGINAL_COMMENTS} originals replied, missing: ${missing})"
-  fi
-fi
-echo "ℹ️ Issue comments (not threadable): ${ISSUE_COMMENTS:-0} tracked separately."
-
-if [ "${COPILOT_DURATION:-0}" -gt 180 ]; then
-  echo "⚠️ PERFORMANCE: Duration exceeded 3m target: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s"
-fi
-
-# Pattern capture and learning
 /guidelines
 ```
 
-## 🔧 **HYBRID ORCHESTRATION BOUNDARIES**
+## 🚨 Agent Boundaries
 
 ### copilot-fixpr Agent Responsibilities:
 - **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures
@@ -156,23 +132,22 @@ fi
 - **FOCUS**: Make PR mergeable first, then actual code changes with File Justification Protocol compliance
 - **BOUNDARY**: File operations and PR mergeability - never handles GitHub comment responses
 
-### Direct Orchestrator Responsibilities:
-- **PRIMARY**: Comment processing, GitHub operations, workflow coordination
-- **TOOLS**: /commentfetch, /commentreply, GitHub MCP for API operations
-- **FOCUS**: Communication workflow and agent coordination
-- **BOUNDARY**: Delegates file operations to copilot-fixpr agent
-
-### Coordination Protocol:
-- **HYBRID EXECUTION**: Direct orchestrator coordinates while agent handles file operations
-- **PROVEN RELIABILITY**: Uses only components verified to work correctly
-- **IMPLEMENTATION FOCUS**: Agent makes actual file changes, orchestrator handles responses
-- **SIMPLIFIED WORKFLOW**: Eliminates broken components for 100% working system
+**Direct Orchestrator:**
+- Comment processing (/commentfetch, /commentreply)
+- GitHub operations and workflow coordination
+- Verification checkpoints and evidence collection
 
 ## 🎯 **SUCCESS CRITERIA**
 
 ### **HYBRID VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
 1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr agent
 2. **Communication Coverage**: 100% comment response rate with direct orchestrator /commentreply execution
+
+**FAILURE CONDITIONS:**
+- No file changes after agent execution
+- Missing comment responses
+- Push failures
+- Skipped verification checkpoints
 
 ### **QUALITY GATES**:
 - ✅ **File Justification Protocol**: All code changes properly documented and justified

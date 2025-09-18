@@ -588,7 +588,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting: A Cognitive Capital Management System
 
-This export contains **156 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
+This export contains **157 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
 
 > **Note**: Command count is automatically updated during export to reflect the actual number of commands, libraries, and utilities included.
 
@@ -697,6 +697,35 @@ The productivity gains available right now represent the largest arbitrage oppor
 This isn't just command sharing - it's **cognitive capital transformation** through the power of systematic AI orchestration.
 
 ## 📚 Version History
+
+### v1.9.0 (2025-09-17)
+
+**Export Statistics**:
+- **157 Commands**: Complete workflow orchestration system
+- **30 Hooks**: Claude Code automation and workflow hooks
+- **17 Scripts**: Infrastructure and development environment scripts (expanded allowlist)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to infrastructure export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Infrastructure Scripts**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Infrastructure**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated infrastructure script export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
 
 ### v1.8.0 (2025-09-10)
 
