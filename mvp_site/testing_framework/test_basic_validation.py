@@ -17,7 +17,7 @@ from testing_framework.fixtures import get_test_client_for_mode
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from testing_framework.integration_utils import TestServiceProvider
+from testing_framework.service_provider import TestServiceProvider
 
 # Set testing environment
 os.environ["TESTING"] = "true"
