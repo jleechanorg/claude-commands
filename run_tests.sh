@@ -518,12 +518,14 @@ if [ ${#test_files[@]} -eq 0 ]; then
         done < <(find .claude/commands -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 
-    # Add orchestration tests if directory exists
-    if [ -d "orchestration/tests" ]; then
+    # Add orchestration tests if directory exists (only for integration test mode)
+    if [ -d "orchestration/tests" ] && [ "$include_integration" = true ]; then
         print_status "Including orchestration tests..."
         while IFS= read -r -d '' test_file; do
             test_files+=("$test_file")
         done < <(find orchestration -name "test_*.py" -type f -print0 2>/dev/null)
+    elif [ -d "orchestration/tests" ]; then
+        print_status "Skipping orchestration tests (require --integration flag)"
     fi
 
     # Add claude_command_scripts tests if directory exists
