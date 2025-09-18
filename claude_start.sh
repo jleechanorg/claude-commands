@@ -72,8 +72,10 @@ fi
 # These are now handled by the dedicated claude_llm_proxy repository
 # See: https://github.com/jleechanorg/claude_llm_proxy
 
-# SSH tunnel PID file
-SSH_TUNNEL_PID_FILE="/tmp/cerebras_ssh_tunnel.pid"
+# SSH tunnel and proxy PID files
+SSH_TUNNEL_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_ssh_tunnel.pid"
+PROXY_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_proxy.pid"
+mkdir -p "$(dirname "$SSH_TUNNEL_PID_FILE")"
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -253,7 +255,7 @@ EOF
 # Find any available WorldArchitect worktree with orchestration
 for worktree in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
     if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
-        cd "$worktree" && python3 orchestration/cleanup_completed_agents.py
+        PYTHONPATH="$worktree" python3 "$worktree/orchestration/cleanup_completed_agents.py"
         exit $?
     fi
 done
@@ -510,8 +512,7 @@ MEMORY_BACKUP_REPO="\$HOME/projects/worldarchitect-memory-backups"
 BACKUP_SCRIPT="\$MEMORY_BACKUP_REPO/scripts/unified_memory_backup.py"
 
 if [ -f "\$BACKUP_SCRIPT" ]; then
-    cd "\$MEMORY_BACKUP_REPO"
-    python3 "\$BACKUP_SCRIPT" --mode=cron
+    PYTHONPATH="\$MEMORY_BACKUP_REPO" python3 "\$BACKUP_SCRIPT" --mode=cron
 else
     echo "\$(date): Unified memory backup script not found at \$BACKUP_SCRIPT" >> /tmp/memory_backup_errors.log
 fi
@@ -1138,7 +1139,7 @@ if [ -n "$MODE" ]; then
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
+                    echo $PROXY_PID > $PROXY_PID_FILE
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1267,7 +1268,7 @@ if [ -n "$MODE" ]; then
             fi
 
             # Store proxy PID for cleanup
-            echo $PROXY_PID > /tmp/cerebras_proxy.pid
+            echo $PROXY_PID > $PROXY_PID_FILE
 
             # Set environment variables to redirect Claude CLI to our proxy
             export ANTHROPIC_BASE_URL="http://localhost:8002"
@@ -1414,7 +1415,7 @@ else
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
+                    echo $PROXY_PID > $PROXY_PID_FILE
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1820,7 +1821,7 @@ EOF
         fi
 
         # Store proxy PID for cleanup
-        echo $PROXY_PID > /tmp/cerebras_proxy.pid
+        echo $PROXY_PID > $PROXY_PID_FILE
 
         # Set environment variables to redirect Claude CLI to our proxy
         export ANTHROPIC_BASE_URL="http://localhost:8002"
