@@ -75,6 +75,18 @@ Launch specialized agent for file modifications in parallel:
 
 **Response Generation**:
 ```bash
+echo "📝 Generating replies.json from analyzed comments"
+# Orchestrator writes: /tmp/$(git branch --show-current)/replies.json
+# (build from Phase 2 analysis + agent results)
+
+# Verify replies.json exists before proceeding
+REPLIES_FILE="/tmp/$(git branch --show-current)/replies.json"
+if [ ! -f "$REPLIES_FILE" ]; then
+    echo "❌ CRITICAL: replies.json not found at $REPLIES_FILE"
+    echo "Orchestrator must generate replies before posting"
+    exit 1
+fi
+
 echo "🔄 MANDATORY: Executing /commentreply for all unresponded comments"
 /commentreply || { echo "🚨 CRITICAL: Comment response failed"; exit 1; }
 echo "✅ Comment responses posted successfully"
