@@ -44,9 +44,28 @@ print_warning() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Check if we're in the right directory
-if [ ! -d "mvp_site" ]; then
-    print_error "mvp_site directory not found. Please run this script from the project root."
+# Auto-detect source directory for testing
+SOURCE_DIR="${PROJECT_SRC_DIR:-}"
+if [[ -z "$SOURCE_DIR" ]]; then
+    # Try common source directory patterns
+    for dir in src lib app mvp_site source code; do
+        if [[ -d "$dir" ]]; then
+            SOURCE_DIR="$dir"
+            break
+        fi
+    done
+    # Fallback to current directory if no common patterns found
+    if [[ -z "$SOURCE_DIR" ]]; then
+        SOURCE_DIR="."
+        print_warning "No common source directory found, using current directory"
+    fi
+fi
+
+print_status "Using source directory: $SOURCE_DIR"
+
+# Check if source directory exists
+if [ ! -d "$SOURCE_DIR" ]; then
+    print_error "Source directory '$SOURCE_DIR' not found. Please run this script from the project root or set PROJECT_SRC_DIR environment variable."
     exit 1
 fi
 
@@ -68,15 +87,17 @@ for arg in "$@"; do
     esac
 done
 
-# Create coverage output directory
-mkdir -p "/tmp/worldarchitectai/coverage"
+# Create coverage output directory (use generic project name)
+PROJECT_NAME="$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "project")"
+COVERAGE_DIR="/tmp/${PROJECT_NAME}/coverage"
+mkdir -p "$COVERAGE_DIR"
 
-# Change to mvp_site directory
-cd mvp_site
+# Change to source directory
+cd "$SOURCE_DIR"
 
 print_status "🧪 Running tests with coverage analysis..."
 print_status "Setting TESTING=true for faster AI model usage"
-print_status "HTML output will be saved to: /tmp/worldarchitectai/coverage"
+print_status "HTML output will be saved to: $COVERAGE_DIR"
 
 if [ "$include_integration" = true ]; then
     print_status "Integration tests enabled (--integration flag specified)"
@@ -87,11 +108,31 @@ fi
 # Check if coverage is installed
 print_status "Checking coverage installation..."
 
-# First, activate the virtual environment
-if ! source ../venv/bin/activate; then
-    print_error "Failed to activate virtual environment"
-    exit 1
-fi
+# Try to activate virtual environment from multiple possible locations
+activate_venv() {
+    local venv_paths=(
+        "../venv/bin/activate"
+        "./venv/bin/activate"
+        "$HOME/venv/bin/activate"
+        # PROJECT_ROOT variable not defined in this context
+    )
+
+    for venv_path in "${venv_paths[@]}"; do
+        if [[ -f "$venv_path" ]]; then
+            print_status "Activating virtual environment: $venv_path"
+            if source "$venv_path"; then
+                return 0
+            fi
+        fi
+    done
+
+    print_warning "No virtual environment found. Using system Python."
+    print_status "Searched paths: ${venv_paths[*]}"
+    return 0  # Solo developer: graceful fallback to system Python
+}
+
+# Activate virtual environment (optional - fallback to system Python)
+activate_venv
 
 # Then check if coverage is importable
 if ! python -c "import coverage" 2>/dev/null; then
@@ -154,7 +195,7 @@ start_time=$(date +%s)
 print_status "⏱️  Starting coverage analysis at $(date)"
 
 # Clear any previous coverage data
-source ../venv/bin/activate && coverage erase
+activate_venv && coverage erase
 
 # Initialize counters
 total_tests=0
@@ -168,7 +209,7 @@ for test_file in "${test_files[@]}"; do
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
 
-        if TESTING=true source ../venv/bin/activate && coverage run --append --source=. "$VPYTHON" "$test_file" >/dev/null 2>&1; then
+        if TESTING=true activate_venv && coverage run --append --source=. "$VPYTHON" "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             print_success "✓"
         else
@@ -191,7 +232,7 @@ print_status "📊 Generating coverage report..."
 coverage_start_time=$(date +%s)
 
 # Generate terminal coverage report
-source ../venv/bin/activate && coverage report > coverage_report.txt
+activate_venv && coverage report > coverage_report.txt
 coverage_report_exit_code=$?
 
 # Display key coverage metrics
@@ -226,9 +267,9 @@ fi
 # Generate HTML report if enabled
 if [ "$generate_html" = true ]; then
     print_status "🌐 Generating HTML coverage report..."
-    if source ../venv/bin/activate && coverage html --directory="/tmp/worldarchitectai/coverage"; then
-        print_success "HTML coverage report generated in /tmp/worldarchitectai/coverage/"
-        print_status "Open /tmp/worldarchitectai/coverage/index.html in your browser to view detailed coverage"
+    if activate_venv && coverage html --directory="$COVERAGE_DIR"; then
+        print_success "HTML coverage report generated in $COVERAGE_DIR/"
+        print_status "Open $COVERAGE_DIR/index.html in your browser to view detailed coverage"
     else
         print_error "Failed to generate HTML coverage report"
     fi

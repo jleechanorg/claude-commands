@@ -6,27 +6,96 @@
 
 set -e
 
-# Auto-install to home directory if running from project
+# Check if --no-install flag is present (quick check before processing)
+NO_AUTO_INSTALL="false"
+for arg in "$@"; do
+    if [[ "$arg" == "--no-install" ]]; then
+        NO_AUTO_INSTALL="true"
+        break
+    fi
+done
+
+# Auto-install to home directory if running from project (unless --no-install)
 SCRIPT_NAME="$(basename "$0")"
 HOME_SCRIPT="$HOME/$SCRIPT_NAME"
 
-if [[ "$0" != "$HOME_SCRIPT" && ! -f "$HOME_SCRIPT" ]]; then
+if [[ "$NO_AUTO_INSTALL" != "true" && "$0" != "$HOME_SCRIPT" && ! -f "$HOME_SCRIPT" ]]; then
     echo "🔄 Installing script to home directory..."
+    echo "   (Use --no-install to skip this behavior)"
     cp "$0" "$HOME_SCRIPT"
     chmod +x "$HOME_SCRIPT"
     echo "✅ Script installed to: $HOME_SCRIPT"
     echo "▶️  Running from home directory..."
     exec "$HOME_SCRIPT" "$@"
-elif [[ "$0" != "$HOME_SCRIPT" && -f "$HOME_SCRIPT" ]]; then
+elif [[ "$NO_AUTO_INSTALL" != "true" && "$0" != "$HOME_SCRIPT" && -f "$HOME_SCRIPT" ]]; then
     echo "🔄 Script already exists in home directory, running from there..."
+    echo "   (Use --no-install to run from current location)"
     exec "$HOME_SCRIPT" "$@"
 fi
 
 # Configuration
 RUNNER_DIR="$HOME/actions-runner"
-REPO_URL="https://github.com/jleechanorg/worldarchitect.ai"
 RUNNER_VERSION="2.311.0"
 LABELS="self-hosted,claude"
+
+# Determine repository URL: argument > env var > git remote > error
+REPO_URL=""
+# Parse --repo argument
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --repo)
+            REPO_URL="$2"
+            shift 2
+            ;;
+        --token)
+            RUNNER_TOKEN="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Usage: $0 [--repo <repository-url>] [--token <runner-token>] [--no-install]"
+            echo "  --repo: GitHub repository URL (e.g., https://github.com/user/repo)"
+            echo "  --token: GitHub runner token"
+            echo "  --no-install: Skip auto-install to home directory"
+            echo "  If repo not specified, will try to detect from git remote origin"
+            exit 0
+            ;;
+        --no-install)
+            NO_AUTO_INSTALL="true"
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+
+# If not set by argument, check environment variable
+if [[ -z "$REPO_URL" && -n "$GITHUB_REPO_URL" ]]; then
+    REPO_URL="$GITHUB_REPO_URL"
+fi
+
+# If still not set, try to get from git remote
+if [[ -z "$REPO_URL" ]]; then
+    if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+        REPO_URL="$(git config --get remote.origin.url 2>/dev/null || echo '')"
+        # Convert SSH to HTTPS format if needed
+        if [[ "$REPO_URL" =~ ^git@github\.com:(.+)\.git$ ]]; then
+            REPO_URL="https://github.com/${BASH_REMATCH[1]}"
+        fi
+    fi
+fi
+
+# If still not set, print error and exit
+if [[ -z "$REPO_URL" ]]; then
+    echo -e "${RED}❌ Repository URL not specified.${NC}"
+    echo "Please either:"
+    echo "  1. Run from within a git repository with origin remote"
+    echo "  2. Use --repo <repository-url> argument"
+    echo "  3. Set GITHUB_REPO_URL environment variable"
+    echo ""
+    echo "Example: $0 --repo https://github.com/user/repo"
+    exit 1
+fi
 
 # Colors for output
 RED='\033[0;31m'
@@ -139,14 +208,21 @@ echo "4. Copy the token from the configuration command"
 echo ""
 print_step "Waiting for runner token..."
 
-while true; do
-    read -p "Enter your GitHub runner token: " RUNNER_TOKEN
-    if [[ -n "$RUNNER_TOKEN" ]]; then
-        break
-    else
-        print_error "Token cannot be empty. Please try again."
-    fi
-done
+# Check for token from environment or command line arguments first
+if [[ -n "${RUNNER_TOKEN:-}" ]]; then
+    print_success "Using RUNNER_TOKEN (environment or command line)"
+else
+    # Only prompt interactively if no token provided
+    while true; do
+        read -s -p "Enter your GitHub runner token: " RUNNER_TOKEN
+        echo  # Print newline since -s suppresses echo
+        if [[ -n "$RUNNER_TOKEN" ]]; then
+            break
+        else
+            print_error "Token cannot be empty. Please try again."
+        fi
+    done
+fi
 
 # Configure runner
 print_step "Configuring GitHub runner..."

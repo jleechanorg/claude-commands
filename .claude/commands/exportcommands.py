@@ -386,12 +386,25 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Apply transformations - FIXED: These now perform actual replacements
+            # Apply transformations - Enhanced for portability
             content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
             content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+
+            # New portable patterns
+            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
+            content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'https://github\.com/jleechanorg/[^/\s]+', '$(git config --get remote.origin.url)', content)
+
+            # SOURCE_DIR variable patterns - improved matching
+            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -908,14 +921,24 @@ This is a filtered reference export from a working Claude Code project. Commands
             if item in dirs_mapping:
                 target_path = dirs_mapping[item]
                 if target_path is None:
-                    # Handle infrastructure-scripts specially - copy individual files to repo root
+                    # Handle infrastructure-scripts specially - copy to infrastructure-scripts/ directory
                     if item == 'infrastructure-scripts' and os.path.isdir(src):
-                        for script_file in os.listdir(src):
+                        # Create infrastructure-scripts directory in target repo
+                        infra_dir = os.path.join(self.repo_dir, 'infrastructure-scripts')
+                        os.makedirs(infra_dir, exist_ok=True)
+
+                        for script_file in sorted(os.listdir(src)):
                             script_src = os.path.join(src, script_file)
-                            script_dst = os.path.join(self.repo_dir, script_file)
+                            script_dst = os.path.join(infra_dir, script_file)
                             if os.path.isfile(script_src):
                                 shutil.copy2(script_src, script_dst)
-                                print(f"   • Added/Updated: {script_file}")
+                                # Ensure executability for shell/python scripts (Windows-safe)
+                                if script_file.endswith(('.sh', '.py')):
+                                    try:
+                                        os.chmod(script_dst, 0o755)
+                                    except (OSError, NotImplementedError):
+                                        pass
+                                print(f"   • Added/Updated: infrastructure-scripts/{script_file}")
                     continue
                 elif target_path.startswith(claude_dir):
                     # Copy to .claude/ subdirectory
