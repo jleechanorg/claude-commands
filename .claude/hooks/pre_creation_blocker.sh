@@ -26,7 +26,11 @@ EXTENSION="${FILENAME##*.}"
 
 # 🚀 FAST PRE-SCREENING: Only check root-level violations for cross-repo compatibility
 # Quick pattern-based check for obvious violations (instant response)
-if [[ "$FILE_PATH" =~ ^[^/]+\.(py|sh|md)$ ]]; then
+# Check if file is in project root (handle absolute paths from Claude Code)
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+RELATIVE_FILE_PATH="${FILE_PATH#$PROJECT_ROOT/}"
+
+if [[ "$RELATIVE_FILE_PATH" =~ ^[^/]+\.(py|sh|md)$ ]]; then
     # File is in project root - this is a clear violation, block immediately
     cat << EOF
 {
