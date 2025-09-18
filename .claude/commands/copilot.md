@@ -86,7 +86,7 @@ echo "📝 Generating responses.json from analyzed comments"
 echo "🔍 ORCHESTRATOR RESPONSIBILITY: Analyzing ALL comments for response generation"
 BRANCH_NAME=$(git branch --show-current)
 COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
-RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
+export RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
 
 # Verify we have comment data from commentfetch
 if [ ! -f "$COMMENTS_FILE" ]; then
@@ -102,7 +102,7 @@ echo "📊 Processing $TOTAL_COMMENTS comments for response generation"
 
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
-RESPONSES_FILE="/tmp/$(git branch --show-current)/responses.json"
+export RESPONSES_FILE="/tmp/$(git branch --show-current)/responses.json"
 python3 -c '
 import os, sys
 responses_file = os.environ.get("RESPONSES_FILE", "")

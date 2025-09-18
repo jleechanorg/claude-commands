@@ -989,8 +989,8 @@ if [ -n "$MODE" ]; then
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
                     # shellcheck disable=SC2086
-                    read -r -d '' CMD <<'EOC'
-vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label "qwen-$(date +%Y%m%d-%H%M)" "$ENV_VARS" --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                    read -r -d '' CMD <<EOC
+vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label "qwen-$(date +%Y%m%d-%H%M)" $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'
 EOC
                     INSTANCE_RESULT=$(bash -lc "$CMD")
                     # Handle both JSON and Python dict formats for new_contract
@@ -1513,8 +1513,8 @@ else
                 echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
                 # shellcheck disable=SC2086
-                read -r -d '' CMD <<'EOC'
-vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh "$ENV_VARS" --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                read -r -d '' CMD <<EOC
+vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'
 EOC
                 INSTANCE_RESULT=$(bash -lc "$CMD")
                 INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
