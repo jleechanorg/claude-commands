@@ -21,8 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-import sys
-from pathlib import Path
+# Add parent directory to path for base module import
 sys.path.append(str(Path(__file__).parent))
 from base import CopilotCommandBase
 
