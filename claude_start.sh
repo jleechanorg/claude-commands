@@ -195,24 +195,25 @@ setup_cron_jobs() {
 set -euo pipefail
 
 # First try to find backup script in any worktree
-for wt in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
-  if [ -x "$wt/scripts/claude_backup.sh" ]; then
+for wt_pattern in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
+  wt="$(realpath "$wt_pattern" 2>/dev/null || true)"
+  if [[ -n "$wt" && "$wt" == "$HOME/projects/"* && -x "$wt/scripts/claude_backup.sh" ]]; then
     # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
     if [[ "$OSTYPE" == "darwin"* ]]; then
         # macOS: Use CloudStorage Dropbox path
-        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
+        "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"; exit $?
     elif [[ "$OSTYPE" == "linux"* ]]; then
         # Linux/Ubuntu: Try common Dropbox locations
         if [ -d "$HOME/Dropbox" ]; then
-            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+            "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"; exit $?
         elif [ -d "$HOME/Documents" ]; then
-            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+            "$wt/scripts/claude_backup.sh" "$HOME/Documents"; exit $?
         else
-            exec "$wt/scripts/claude_backup.sh" "$HOME"
+            "$wt/scripts/claude_backup.sh" "$HOME"; exit $?
         fi
     else
         # Other systems: fallback to home directory
-        exec "$wt/scripts/claude_backup.sh" "$HOME"
+        "$wt/scripts/claude_backup.sh" "$HOME"; exit $?
     fi
   fi
 done
@@ -600,9 +601,9 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
 
 set -euo pipefail
 
-BACKUP_SCRIPT="/Users/jleechan/.local/bin/claude_backup_cron.sh"
-SYNC_SCRIPT="/Users/jleechan/.local/bin/sync_backup_to_dropbox.sh"
-DOCUMENTS_BASE="/Users/jleechan/Documents"
+BACKUP_SCRIPT="$HOME/.local/bin/claude_backup_cron.sh"
+SYNC_SCRIPT="$HOME/.local/bin/sync_backup_to_dropbox.sh"
+DOCUMENTS_BASE="$HOME/Documents"
 
 echo "[$(date)] Starting Claude backup with Dropbox sync..."
 
@@ -628,8 +629,9 @@ EOF
 
 set -euo pipefail
 
-SOURCE_DIR="/Users/jleechan/Documents/claude_backup_jeffreys-macbook-pro"
-DEST_DIR="/Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_jeffreys-macbook-pro"
+HOST_SUFFIX="$(scutil --get ComputerName 2>/dev/null | tr '[:upper:] ' '[:lower:]-' || hostname)"
+SOURCE_DIR="$HOME/Documents/claude_backup_${HOST_SUFFIX}"
+DEST_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_${HOST_SUFFIX}"
 
 echo "[$(date)] Starting sync from Documents to Dropbox CloudStorage..."
 
@@ -659,7 +661,7 @@ EOF
             fi
 
             # Create LaunchAgent plist
-            cat > "$CLAUDE_LAUNCHAGENT" << 'EOF'
+            cat > "$CLAUDE_LAUNCHAGENT" << EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -668,7 +670,7 @@ EOF
     <string>com.jleechan.claude.backup</string>
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/jleechan/.local/bin/claude_backup_with_sync.sh</string>
+        <string>$HOME/.local/bin/claude_backup_with_sync.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>14400</integer>
@@ -681,13 +683,13 @@ EOF
     <key>KeepAlive</key>
     <false/>
     <key>WorkingDirectory</key>
-    <string>/Users/jleechan</string>
+    <string>$HOME</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
         <string>/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
-        <string>/Users/jleechan</string>
+        <string>$HOME</string>
     </dict>
 </dict>
 </plist>
@@ -986,9 +988,11 @@ if [ -n "$MODE" ]; then
                     # Create the instance with qwen label
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
-
-                    INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                    # shellcheck disable=SC2086
+                    read -r -d '' CMD <<'EOC'
+vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label "qwen-$(date +%Y%m%d-%H%M)" "$ENV_VARS" --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+EOC
+                    INSTANCE_RESULT=$(bash -lc "$CMD")
                     # Handle both JSON and Python dict formats for new_contract
                     INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o "'new_contract': [0-9]*" | grep -o '[0-9]*' || echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
@@ -1508,15 +1512,11 @@ else
                 # Create the instance
                 echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                INSTANCE_CMD="vastai create instance $BEST_INSTANCE \\
-                    --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel \\
-                    --disk 60 \\
-                    --ssh \\
-                    $ENV_VARS \\
-                    --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git \\
-                    --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
-
-                INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                # shellcheck disable=SC2086
+                read -r -d '' CMD <<'EOC'
+vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh "$ENV_VARS" --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+EOC
+                INSTANCE_RESULT=$(bash -lc "$CMD")
                 INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
                 if [ -z "$INSTANCE_ID" ]; then
@@ -1914,5 +1914,6 @@ claude_bot_status() {
 }
 
 
-# Export functions so they're available in the shell
-export -f stop_claude_bot restart_claude_bot claude_bot_status is_claude_bot_running start_claude_bot_background
+# To use helper functions in the current shell:
+#   source scripts/claude_functions.sh
+# (Runtime execution of this script does not persist function exports.)
