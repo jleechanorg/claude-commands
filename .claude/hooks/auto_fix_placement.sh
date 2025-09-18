@@ -2,6 +2,12 @@
 # Auto-Fix File Placement Hook
 # Automatically detects and fixes file placement violations
 # Triggers /learn for violation patterns
+# Generic script - configurable for any project structure
+
+# Configuration: Define target directories (can be overridden by environment)
+PYTHON_DIR="${PYTHON_TARGET_DIR:-src}"
+TEST_DIR="${TEST_TARGET_DIR:-tests}"
+SCRIPT_DIR="${SCRIPT_TARGET_DIR:-scripts}"
 
 # Read JSON input from stdin
 INPUT=$(cat)
@@ -46,19 +52,19 @@ fi
 VIOLATION_DETECTED=false
 CORRECTIVE_ACTION=""
 
-# Python files should be in mvp_site/ not project root
-if [[ "$EXTENSION" == "py" && "$FILE_PATH" != mvp_site/* && "$FILE_PATH" != .claude/* ]]; then
+# Python files should be in designated directory not project root
+if [[ "$EXTENSION" == "py" && "$FILE_PATH" != $PYTHON_DIR/* && "$FILE_PATH" != .claude/* ]]; then
     if [[ "$FILE_PATH" =~ ^[^/]+\.py$ ]]; then
         # File is in project root - VIOLATION!
         VIOLATION_DETECTED=true
 
-        # Test files go to mvp_site/tests/, others to mvp_site/
+        # Test files go to test directory, others to python directory
         if [[ "$FILENAME" == test_* || "$FILENAME" == *_test.py || "$FILENAME" == TEST_* ]]; then
-            NEW_PATH="mvp_site/tests/$FILENAME"
-            DEST_DIR="mvp_site/tests/"
+            NEW_PATH="$TEST_DIR/$FILENAME"
+            DEST_DIR="$TEST_DIR/"
         else
-            NEW_PATH="mvp_site/$FILENAME"
-            DEST_DIR="mvp_site/"
+            NEW_PATH="$PYTHON_DIR/$FILENAME"
+            DEST_DIR="$PYTHON_DIR/"
         fi
 
         # Auto-fix: Move file to correct location
@@ -77,27 +83,27 @@ if [[ "$EXTENSION" == "py" && "$FILE_PATH" != mvp_site/* && "$FILE_PATH" != .cla
             # Output correction to chat (for PostToolUse hooks this goes to transcript)
             echo "🚨 AUTO-CORRECTED FILE PLACEMENT VIOLATION"
             echo "Moved: $FILE_PATH → $NEW_PATH"
-            echo "Reason: Python files must be in mvp_site/ per CLAUDE.md protocol"
+            echo "Reason: Python files must be in $PYTHON_DIR/ per CLAUDE.md protocol"
             echo ""
         fi
     fi
 fi
 
-# Shell scripts should be in scripts/ not project root
-if [[ "$EXTENSION" == "sh" && "$FILE_PATH" != scripts/* && "$FILE_PATH" != .claude/* ]]; then
+# Shell scripts should be in designated directory not project root
+if [[ "$EXTENSION" == "sh" && "$FILE_PATH" != $SCRIPT_DIR/* && "$FILE_PATH" != .claude/* ]]; then
     if [[ "$FILE_PATH" =~ ^[^/]+\.sh$ ]]; then
         VIOLATION_DETECTED=true
-        NEW_PATH="scripts/$FILENAME"
+        NEW_PATH="$SCRIPT_DIR/$FILENAME"
 
         if [ -f "$FILE_PATH" ]; then
-            mkdir -p scripts/
+            mkdir -p "$SCRIPT_DIR/"
             mv "$FILE_PATH" "$NEW_PATH"
             chmod +x "$NEW_PATH"  # Make executable
             CORRECTIVE_ACTION="MOVED: $FILE_PATH → $NEW_PATH (made executable)"
 
             echo "🚨 AUTO-CORRECTED FILE PLACEMENT VIOLATION"
             echo "Moved: $FILE_PATH → $NEW_PATH"
-            echo "Reason: Shell scripts must be in scripts/ per CLAUDE.md protocol"
+            echo "Reason: Shell scripts must be in $SCRIPT_DIR/ per CLAUDE.md protocol"
             echo ""
         fi
     fi
@@ -111,8 +117,9 @@ if [ "$VIOLATION_DETECTED" = true ]; then
     echo "Note: This violation was automatically fixed per CLAUDE.md protocols"
     echo ""
 
-    # Log learning to memory system directly
-    LEARNING_LOG="/tmp/claude_placement_violations.log"
+    # Log learning to memory system directly (with branch isolation)
+    BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+    LEARNING_LOG="/tmp/claude_placement_violations_${BRANCH_NAME}.log"
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $CORRECTIVE_ACTION" >> "$LEARNING_LOG"
 fi
 

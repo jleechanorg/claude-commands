@@ -17,7 +17,9 @@ find_project_root() {
 }
 
 PROJECT_ROOT=$(find_project_root)
-LOG_FILE="/tmp/claude_file_validator_log.txt"
+# Use branch name in log file for isolation
+BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
+LOG_FILE="/tmp/claude_file_validator_${BRANCH_NAME}.log"
 
 # Read JSON input from stdin
 INPUT=$(cat)
@@ -90,7 +92,7 @@ Remember: You are analyzing file placement to prevent violations of CLAUDE.md pr
 
 # Run Claude analysis with specified parameters
 CLAUDE_TIMEOUT="${CLAUDE_VALIDATOR_TIMEOUT:-60s}"
-CLAUDE_OUTPUT_FILE="$(mktemp /tmp/claude_file_validation_output_XXXXXX)"
+CLAUDE_OUTPUT_FILE="$(mktemp /tmp/claude_file_validation_${BRANCH_NAME}_XXXXXX)"
 
 # Execute Claude with the specified parameters and timeout
 if command -v claude >/dev/null 2>&1; then
