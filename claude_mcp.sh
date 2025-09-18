@@ -1150,12 +1150,15 @@ install_github_mcp() {
         # Remove any old deprecated GitHub server first
         claude mcp remove "github-server" >/dev/null 2>&1 || true
 
-        # Add the new official GitHub HTTP MCP server (secure: token via stdin)
-        add_output=$(claude mcp add-json --scope user "github-server" - 2>&1 <<EOF
+        # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
+        local temp_config=$(mktemp -t github_mcp.XXXXXX)
+        chmod 600 "$temp_config"
+        cat > "$temp_config" <<EOF
 {"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
 EOF
-)
+        add_output=$(claude mcp add-json --scope user "github-server" - < "$temp_config" 2>&1)
         add_exit_code=$?
+        rm -f "$temp_config"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
