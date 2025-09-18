@@ -13,11 +13,14 @@ from testing_framework.factory import (
     reset_global_provider,
 )
 from testing_framework.fixtures import get_test_client_for_mode
+from testing_framework.integration_utils import (
+    get_test_mode_info,
+    validate_test_environment,
+)
+from testing_framework.service_provider import TestServiceProvider
 
 # Add the project root to the path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-from testing_framework.service_provider import TestServiceProvider
 
 # Set testing environment
 os.environ["TESTING"] = "true"
@@ -130,26 +133,17 @@ class TestBackwardCompatibility(unittest.TestCase):
 
     def test_integration_utils_import(self):
         """Test that integration utilities can be imported."""
-        try:
-            from testing_framework.integration_utils import (
-                get_test_mode_info,
-                validate_test_environment,
-            )
+        # Test validation function
+        result = validate_test_environment()
+        assert isinstance(result, bool)
 
-            # Test validation function
-            result = validate_test_environment()
-            assert isinstance(result, bool)
+        # Test mode info
+        info = get_test_mode_info()
+        assert isinstance(info, dict)
+        assert "mode" in info
+        assert "is_real" in info
 
-            # Test mode info
-            info = get_test_mode_info()
-            assert isinstance(info, dict)
-            assert "mode" in info
-            assert "is_real" in info
-
-            print("✅ Integration utilities working")
-
-        except ImportError as e:
-            print(f"⚠️ Some integration utilities not available: {e}")
+        print("✅ Integration utilities working")
 
 
 class TestServiceOperations(unittest.TestCase):
