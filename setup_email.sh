@@ -26,9 +26,19 @@ echo 'export EMAIL_USER="<your-email@gmail.com>"'
 echo 'export EMAIL_PASS="your-16-char-app-password"'
 echo 'export BACKUP_EMAIL="<your-email@gmail.com>"'
 echo ""
-echo "Add to ~/.bashrc to persist (replace <your-email> with your Gmail address):"
+echo "🔐 SECURE SETUP (RECOMMENDED):"
+echo "Use the secure credential setup script instead of plaintext environment variables:"
+echo "  ./scripts/setup_secure_credentials.sh"
+echo ""
+echo "🔓 INSECURE SETUP (NOT RECOMMENDED - Security Risk):"
+echo "If you must use environment variables (NOT RECOMMENDED due to security risks):"
 echo 'echo "export EMAIL_USER=\"<your-email@gmail.com>\"" >> ~/.bashrc'
 echo 'echo "export EMAIL_PASS=\"your-app-password\"" >> ~/.bashrc'
 echo 'echo "export BACKUP_EMAIL=\"<your-email@gmail.com>\"" >> ~/.bashrc'
+echo ""
+echo "⚠️  WARNING: Storing passwords in ~/.bashrc is a security risk"
+echo "   - Files can be accidentally committed to version control"
+echo "   - Passwords are visible in plaintext to anyone with file access"
+echo "   - Better to use secure credential storage (keychain/secret service)"
 echo ""
 echo "Test with: ./scripts/backup_validation.sh"

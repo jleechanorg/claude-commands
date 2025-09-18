@@ -203,14 +203,24 @@ echo "4. Copy the token from the configuration command"
 echo ""
 print_step "Waiting for runner token..."
 
-while true; do
-    read -p "Enter your GitHub runner token: " RUNNER_TOKEN
-    if [[ -n "$RUNNER_TOKEN" ]]; then
-        break
-    else
-        print_error "Token cannot be empty. Please try again."
-    fi
-done
+# Check for token from environment or command line arguments first
+if [[ -n "${RUNNER_TOKEN:-}" ]]; then
+    print_success "Using RUNNER_TOKEN from environment"
+elif [[ "$1" == "--token" && -n "${2:-}" ]]; then
+    RUNNER_TOKEN="$2"
+    print_success "Using token from command line argument"
+else
+    # Only prompt interactively if no token provided
+    while true; do
+        read -s -p "Enter your GitHub runner token: " RUNNER_TOKEN
+        echo  # Print newline since -s suppresses echo
+        if [[ -n "$RUNNER_TOKEN" ]]; then
+            break
+        else
+            print_error "Token cannot be empty. Please try again."
+        fi
+    done
+fi
 
 # Configure runner
 print_step "Configuring GitHub runner..."

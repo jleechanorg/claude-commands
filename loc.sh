@@ -174,5 +174,10 @@ for i in "${!FILE_TYPES[@]}"; do
 done
 
 echo "-----------------------------------"
-printf "%-12s %10d %10d %10d %7d%%\n" "TOTAL" "$total_test_lines" "$total_nontest_lines" "$total_all_lines" "$(( (total_test_lines * 100) / total_all_lines ))"
+if [ "$total_all_lines" -gt 0 ]; then
+  total_pct=$(( (total_test_lines * 100) / total_all_lines ))
+else
+  total_pct=0
+fi
+printf "%-12s %10d %10d %10d %7d%%\n" "TOTAL" "$total_test_lines" "$total_nontest_lines" "$total_all_lines" "$total_pct"
 echo "========================================================================"

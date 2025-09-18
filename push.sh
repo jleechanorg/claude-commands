@@ -22,12 +22,12 @@ cd "$PROJECT_ROOT" || {
 TIMESTAMP=$(TZ='America/Los_Angeles' date '+%Y-%m-%d %H:%M:%S %Z')
 
 # Check if a commit message argument was provided.
-if [ -z "$1" ]; then
+if [ "$#" -eq 0 ]; then
   # If no argument, create the default message.
   COMMIT_MSG="commit at this time ${TIMESTAMP}"
 else
   # If an argument exists, combine it with the timestamp.
-  COMMIT_MSG="$1 ${TIMESTAMP}"
+  COMMIT_MSG="$* ${TIMESTAMP}"
 fi
 # --- End New Logic ---
 
