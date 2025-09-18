@@ -72,13 +72,13 @@ CLAUDE_OUTPUT=$(echo "$CLAUDE_PROMPT" | timeout 15s claude --dangerously-skip-pe
 REASON: Claude CLI not available or timed out, allowing creation
 INTEGRATION_TARGETS: NONE")
 
-# Parse Claude analysis (more flexible parsing)
-VIOLATION_DETECTED=$(echo "$CLAUDE_OUTPUT" | grep -i "violation.*yes\|**violation.*yes" | head -1)
+# Parse Claude analysis (fixed regex and logic)
+VIOLATION_DETECTED=$(echo "$CLAUDE_OUTPUT" | grep -i "violation.*yes\|violation:\s*yes" | head -1)
 VIOLATION_REASON=$(echo "$CLAUDE_OUTPUT" | grep -i "reason\|creating.*violates" | head -1)
 INTEGRATION_SUGGESTIONS=$(echo "$CLAUDE_OUTPUT" | grep -A 5 -i "integration.*target\|suggested.*files" | tail -3)
 
-# Convert to boolean
-if [[ -n "$VIOLATION_DETECTED" && "$VIOLATION_DETECTED" =~ [Yy][Ee][Ss] ]]; then
+# Convert to boolean - check if violation line contains "yes"
+if [[ -n "$VIOLATION_DETECTED" ]] && echo "$VIOLATION_DETECTED" | grep -qi "yes"; then
     VIOLATION_DETECTED=true
 else
     VIOLATION_DETECTED=false

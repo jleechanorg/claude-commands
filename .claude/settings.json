@@ -36,7 +36,6 @@
       "Bash(done)",
       "Bash(__NEW_LINE__:*)",
       "Bash(claude --version)",
-      "Bash(claude:*)",
       "Bash(/permissions add read write execute coverage testing)",
       "Bash(/dev/null)",
       "Bash(gcloud meta list-files-for-upload:*)",
@@ -185,7 +184,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\"; else exit 0; fi'",
             "description": "Block CLAUDE.md violations before file creation - enforce integration-first philosophy"
           }
         ]
