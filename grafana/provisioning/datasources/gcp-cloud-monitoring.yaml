@@ -1,0 +1,18 @@
+apiVersion: 1
+
+datasources:
+  - name: GCP Cloud Monitoring
+    type: stackdriver
+    access: proxy
+    uid: gcp-monitoring-uid
+    jsonData:
+      authenticationType: jwt
+      defaultProject: custom-metrics-20250918002102
+      clientEmail: mistake-detection-monitor@custom-metrics-20250918002102.iam.gserviceaccount.com
+    secureJsonData:
+      privateKey: |
+        # Replace this with your actual service account private key
+        # Get from ~/.config/gcp/mistake-detection-service-account.json
+        # Copy the private_key field content here (including -----BEGIN/END PRIVATE KEY-----)
+    isDefault: false
+    editable: true
