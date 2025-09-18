@@ -520,7 +520,6 @@ EOF
         chmod +x "$CRON_WRAPPER"
 
         # Add to cron (daily at 2 AM) with proper variable handling
-        current_crontab_mem
         current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
         (echo "$current_crontab_mem"; echo '0 2 * * * $HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1') | crontab -
 
@@ -549,6 +548,184 @@ else
 fi
 
 echo ""
+
+# Claude backup LaunchAgent system checks and setup (macOS only)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${BLUE}☁️ Verifying Claude backup LaunchAgent system status...${NC}"
+
+    CLAUDE_BACKUP_ISSUES=()
+    CLAUDE_BACKUP_SCRIPT="$HOME/.local/bin/claude_backup_cron.sh"
+    CLAUDE_BACKUP_WRAPPER="$HOME/.local/bin/claude_backup_with_sync.sh"
+    CLAUDE_SYNC_SCRIPT="$HOME/.local/bin/sync_backup_to_dropbox.sh"
+    CLAUDE_LAUNCHAGENT="$HOME/Library/LaunchAgents/com.jleechan.claude.backup.plist"
+
+    # Check if backup script exists
+    if [ ! -f "$CLAUDE_BACKUP_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup script not found at $CLAUDE_BACKUP_SCRIPT")
+    elif [ ! -x "$CLAUDE_BACKUP_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup script not executable")
+    fi
+
+    # Check if wrapper and sync scripts exist
+    if [ ! -f "$CLAUDE_BACKUP_WRAPPER" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup wrapper script missing")
+    fi
+
+    if [ ! -f "$CLAUDE_SYNC_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude sync script missing")
+    fi
+
+    # Check if LaunchAgent exists and is loaded
+    if [ ! -f "$CLAUDE_LAUNCHAGENT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not installed")
+    elif ! launchctl list | grep -q "com.jleechan.claude.backup"; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not loaded")
+    fi
+
+    # Auto-install LaunchAgent if backup script exists but LaunchAgent is missing
+    if [ -f "$CLAUDE_BACKUP_SCRIPT" ] && [ -x "$CLAUDE_BACKUP_SCRIPT" ]; then
+        if [ ! -f "$CLAUDE_LAUNCHAGENT" ]; then
+            echo -e "${YELLOW}⚠️ Installing missing Claude backup LaunchAgent...${NC}"
+
+            # Create LaunchAgents directory
+            mkdir -p "$HOME/Library/LaunchAgents"
+
+            # Create wrapper script if missing
+            if [ ! -f "$CLAUDE_BACKUP_WRAPPER" ]; then
+                cat > "$CLAUDE_BACKUP_WRAPPER" << 'EOF'
+#!/bin/bash
+# Claude backup wrapper that backs up to Documents and syncs to Dropbox
+# This runs with user permissions so can access both locations
+
+set -euo pipefail
+
+BACKUP_SCRIPT="/Users/jleechan/.local/bin/claude_backup_cron.sh"
+SYNC_SCRIPT="/Users/jleechan/.local/bin/sync_backup_to_dropbox.sh"
+DOCUMENTS_BASE="/Users/jleechan/Documents"
+
+echo "[$(date)] Starting Claude backup with Dropbox sync..."
+
+# Step 1: Run backup to Documents
+echo "[$(date)] Step 1: Running backup to Documents..."
+"$BACKUP_SCRIPT" "$DOCUMENTS_BASE"
+
+# Step 2: Sync to Dropbox
+echo "[$(date)] Step 2: Syncing to Dropbox CloudStorage..."
+"$SYNC_SCRIPT"
+
+echo "[$(date)] Complete: Backup and sync finished successfully"
+EOF
+                chmod +x "$CLAUDE_BACKUP_WRAPPER"
+            fi
+
+            # Create sync script if missing
+            if [ ! -f "$CLAUDE_SYNC_SCRIPT" ]; then
+                cat > "$CLAUDE_SYNC_SCRIPT" << 'EOF'
+#!/bin/bash
+# Sync claude backup from Documents to Dropbox CloudStorage
+# This runs with user permissions so can access both locations
+
+set -euo pipefail
+
+SOURCE_DIR="/Users/jleechan/Documents/claude_backup_jeffreys-macbook-pro"
+DEST_DIR="/Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_jeffreys-macbook-pro"
+
+echo "[$(date)] Starting sync from Documents to Dropbox CloudStorage..."
+
+if [ -d "$SOURCE_DIR" ]; then
+    echo "[$(date)] Source backup found: $SOURCE_DIR"
+
+    # Create destination if it doesn't exist
+    mkdir -p "$DEST_DIR"
+
+    # Sync with rsync
+    rsync -av --delete "$SOURCE_DIR/" "$DEST_DIR/"
+
+    echo "[$(date)] Sync completed successfully"
+    echo "[$(date)] Files in destination: $(find "$DEST_DIR" -type f | wc -l)"
+else
+    echo "[$(date)] ERROR: Source backup not found at $SOURCE_DIR"
+    exit 1
+fi
+EOF
+                chmod +x "$CLAUDE_SYNC_SCRIPT"
+            fi
+
+            # Create LaunchAgent plist
+            cat > "$CLAUDE_LAUNCHAGENT" << 'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.jleechan.claude.backup</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/jleechan/.local/bin/claude_backup_with_sync.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>14400</integer>
+    <key>StandardOutPath</key>
+    <string>/tmp/claude_backup_launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/claude_backup_launchd_error.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>WorkingDirectory</key>
+    <string>/Users/jleechan</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>/Users/jleechan</string>
+    </dict>
+</dict>
+</plist>
+EOF
+
+            # Load LaunchAgent
+            launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
+
+            echo -e "${GREEN}✅ Installed Claude backup LaunchAgent (runs every 4 hours)${NC}"
+
+            # Remove LaunchAgent error from issues array
+            temp_claude_array=()
+            for issue in "${CLAUDE_BACKUP_ISSUES[@]}"; do
+                if [[ "$issue" != *"LaunchAgent not installed"* ]] && [[ "$issue" != *"LaunchAgent not loaded"* ]]; then
+                    temp_claude_array+=("$issue")
+                fi
+            done
+            CLAUDE_BACKUP_ISSUES=("${temp_claude_array[@]}")
+        elif ! launchctl list | grep -q "com.jleechan.claude.backup"; then
+            echo -e "${YELLOW}⚠️ Loading existing Claude backup LaunchAgent...${NC}"
+            launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
+            echo -e "${GREEN}✅ Claude backup LaunchAgent loaded${NC}"
+        fi
+    fi
+
+    # Check for old cron job that should be removed
+    if crontab -l 2>/dev/null | grep -q "claude_backup_cron.sh"; then
+        echo -e "${YELLOW}⚠️ Old cron job detected - recommend removing:${NC}"
+        echo -e "${YELLOW}   Run: (crontab -l | grep -v claude_backup) | crontab -${NC}"
+    fi
+
+    # Report status
+    if [ ${#CLAUDE_BACKUP_ISSUES[@]} -eq 0 ]; then
+        echo -e "${GREEN}✅ Claude backup LaunchAgent system is properly configured${NC}"
+        echo -e "${GREEN}   📅 Backs up every 4 hours to Documents + Dropbox${NC}"
+        echo -e "${GREEN}   📝 Logs: /tmp/claude_backup_launchd.log${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Claude backup system issues detected:${NC}"
+        for issue in "${CLAUDE_BACKUP_ISSUES[@]}"; do
+            echo -e "${YELLOW}  $issue${NC}"
+        done
+    fi
+
+    echo ""
+fi
 
 # Enhanced conversation detection
 PROJECT_DIR_NAME=$(pwd | sed 's/[\/._]/-/g')
