@@ -1150,9 +1150,15 @@ install_github_mcp() {
         # Remove any old deprecated GitHub server first
         claude mcp remove "github-server" >/dev/null 2>&1 || true
 
-        # Add the new official GitHub HTTP MCP server
-        add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
+        # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
+        local temp_config=$(mktemp -t github_mcp.XXXXXX)
+        chmod 600 "$temp_config"
+        cat > "$temp_config" <<EOF
+{"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
+EOF
+        add_output=$(claude mcp add-json --scope user "github-server" - < "$temp_config" 2>&1)
         add_exit_code=$?
+        rm -f "$temp_config"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
@@ -1325,7 +1331,7 @@ install_react_mcp
 
 display_step "Setting up WorldArchitect MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🎮 Configuring WorldArchitect MCP server for D&D game mechanics...${NC}"
+echo -e "${BLUE}  🎮 Configuring project MCP server for application mechanics...${NC}"
 log_with_timestamp "Setting up MCP server: worldarchitect (local: mvp_site/mcp_api.py)"
 
 # Check if server already exists
