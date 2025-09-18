@@ -70,10 +70,10 @@ fi
 
 # Removed: Self-hosted LLM helper functions
 # These are now handled by the dedicated claude_llm_proxy repository
-# See: https://github.com/jleechanorg/claude_llm_proxy
+# See: $(git config --get remote.origin.url)
 
 # SSH tunnel PID file
-SSH_TUNNEL_PID_FILE="/tmp/qwen_ssh_tunnel.pid"
+SSH_TUNNEL_PID_FILE="/tmp/cerebras_ssh_tunnel.pid"
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -129,7 +129,7 @@ start_orchestration_background() {
         # Start orchestration agents in quiet mode
         ./start_system.sh --quiet start &> /dev/null
     ) &
-    
+
     # Store the background process PID for monitoring
     local START_PID=$!
 
@@ -137,7 +137,7 @@ start_orchestration_background() {
     local max_wait=10
     local wait_time=0
     local startup_success=false
-    
+
     while [ $wait_time -lt $max_wait ]; do
         # Check if the orchestration monitor is running
         if pgrep -f "agent_monitor.py" > /dev/null 2>&1; then
@@ -148,7 +148,7 @@ start_orchestration_background() {
                 break
             fi
         fi
-        
+
         # Also check if the start script is still running
         if ! kill -0 $START_PID 2>/dev/null; then
             # Start script exited, check if it was successful
@@ -159,7 +159,7 @@ start_orchestration_background() {
                 return 1
             fi
         fi
-        
+
         sleep 1
         wait_time=$((wait_time + 1))
     done
@@ -172,9 +172,132 @@ start_orchestration_background() {
     fi
 }
 
+# Function to setup all required cron jobs with Linux/Ubuntu compatibility
+setup_cron_jobs() {
+    echo -e "${BLUE}🔍 Verifying cron job configuration...${NC}"
+
+    # Ensure wrapper scripts directory exists
+    mkdir -p "$HOME/.local/bin"
+
+    local cron_entries_added=0
+    local current_crontab=$(crontab -l 2>/dev/null || echo "")
+
+    # 1. Claude Backup Cron (every 4 hours) - Cross-platform and worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
+        echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
+
+        # Create worktree-agnostic wrapper with cross-platform compatibility
+        cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
+set -euo pipefail
+
+# First try to find backup script in any worktree
+for wt in "$HOME/projects/your-project.com" "$HOME/projects/worktree_"*; do
+  if [ -x "$wt/scripts/claude_backup.sh" ]; then
+    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: Use CloudStorage Dropbox path
+        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux/Ubuntu: Try common Dropbox locations
+        if [ -d "$HOME/Dropbox" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+        else
+            exec "$wt/scripts/claude_backup.sh" "$HOME"
+        fi
+    else
+        # Other systems: fallback to home directory
+        exec "$wt/scripts/claude_backup.sh" "$HOME"
+    fi
+  fi
+done
+
+# If no worktree backup script found, try legacy approach
+if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Platform-specific Dropbox paths for legacy script
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
+    elif [[ "$OSTYPE" == "linux"* ]]; then
+        if [ -d "$HOME/Dropbox" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Dropbox"
+        elif [ -d "$HOME/Documents" ]; then
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Documents"
+        else
+            "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+        fi
+    else
+        "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
+    fi
+else
+    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    exit 1
+fi
+EOF
+        chmod +x "$HOME/.local/bin/claude_backup_wrapper.sh"
+
+        # Add to cron with proper $HOME expansion and error redirection
+        (echo "$current_crontab"; echo '0 */4 * * * $HOME/.local/bin/claude_backup_wrapper.sh >> /tmp/backup.log 2>&1') | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 2. TMux Cleanup (every 15 minutes) - Worktree-agnostic
+    if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
+        echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
+
+        # Create tmux cleanup wrapper that works across worktrees
+        cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
+#!/bin/bash
+# Find any available WorldArchitect worktree with orchestration
+for worktree in "$HOME/projects/your-project.com" "$HOME/projects/worktree_"*; do
+    if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
+        cd "$worktree" && python3 orchestration/cleanup_completed_agents.py
+        exit $?
+    fi
+done
+# Fallback: if no worktree found, log the issue
+echo "$(date): No WorldArchitect worktree with orchestration found" >> /tmp/tmux_cleanup.log
+exit 1
+EOF
+        chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
+
+        # Add to cron with consistent variable escaping
+        current_crontab=$(crontab -l 2>/dev/null || echo "")
+        (echo "$current_crontab"; echo '*/15 * * * * $HOME/.local/bin/tmux_cleanup_wrapper.sh >> /tmp/tmux_cleanup.log 2>&1') | crontab -
+        cron_entries_added=$((cron_entries_added + 1))
+    fi
+
+    # 3. Agent Monitor Disabled (remove problematic hardcoded entries)
+    echo -e "${BLUE}💡 Agent monitor disabled to prevent resource conflicts${NC}"
+
+    # Remove any existing agent monitor cron entries with hardcoded paths
+    current_crontab=$(crontab -l 2>/dev/null || echo "")
+    if echo "$current_crontab" | grep -q "agent_monitor.py"; then
+        echo -e "${YELLOW}⚠️  Removing existing agent monitor cron entries (hardcoded paths)${NC}"
+        # Filter out agent monitor entries
+        echo "$current_crontab" | grep -v "agent_monitor.py" | crontab -
+    fi
+
+    # Display results
+    if [ $cron_entries_added -gt 0 ]; then
+        echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) with Linux/Ubuntu compatibility${NC}"
+    else
+        echo -e "${GREEN}✅ All required cron jobs already configured${NC}"
+    fi
+
+    echo -e "${BLUE}📋 Current cron configuration:${NC}"
+    crontab -l 2>/dev/null | grep -E "(claude_backup|tmux_cleanup|cleanup_completed_agents)" || echo "  (no matching entries)"
+}
+
 # Function to check and start orchestration for non-worker modes
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
+
+    # First check comprehensive cron setup
+    setup_cron_jobs
+
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
     else
@@ -187,6 +310,40 @@ check_orchestration() {
         fi
     fi
 }
+
+# Check development environment setup (only if needed)
+if [ ! -d "venv" ] || [ ! -f "venv/bin/activate" ]; then
+    echo -e "${YELLOW}⚠️  Virtual environment not found - setting up development environment...${NC}"
+    if [ -f "scripts/setup-dev-env.sh" ]; then
+        ./scripts/setup-dev-env.sh
+        echo -e "${GREEN}✅ Development environment setup complete${NC}"
+    else
+        echo -e "${YELLOW}⚠️  setup-dev-env.sh not found - you may need to run it manually${NC}"
+    fi
+else
+    # Check if FastMCP is installed in the virtual environment (any Python version)
+    if [ -f "venv/bin/activate" ]; then
+        if source venv/bin/activate 2>/dev/null; then
+            if ! python -c "import fastmcp" >/dev/null 2>&1; then
+                echo -e "${YELLOW}⚠️  FastMCP not found in virtual environment - installing MCP dependencies...${NC}"
+                if [ -f "mcp_servers/slash_commands/requirements.txt" ]; then
+                    if pip install -r mcp_servers/slash_commands/requirements.txt; then
+                        echo -e "${GREEN}✅ MCP dependencies installed successfully${NC}"
+                    else
+                        echo -e "${RED}❌ Failed to install MCP dependencies${NC}"
+                        echo -e "${YELLOW}💡 Try running: ./scripts/setup-dev-env.sh${NC}"
+                    fi
+                else
+                    echo -e "${YELLOW}⚠️  Cannot auto-install MCP dependencies - you may need to run setup-dev-env.sh${NC}"
+                fi
+            fi
+        else
+            echo -e "${YELLOW}⚠️  Cannot check FastMCP - virtual environment activation failed${NC}"
+        fi
+    else
+        echo -e "${YELLOW}⚠️  Virtual environment activate script not found${NC}"
+    fi
+fi
 
 # Enhanced MCP server detection with better error handling
 echo -e "${BLUE}🔍 Checking MCP servers...${NC}"
@@ -303,42 +460,92 @@ else
 fi
 
 
-# Claude projects backup system checks
-echo -e "${BLUE}🧠 Verifying Claude projects backup system status...${NC}"
+# Memory backup system checks and setup
+echo -e "${BLUE}🧠 Verifying Memory MCP backup system status...${NC}"
 
-# Check if backup script exists
-BACKUP_SCRIPT="$HOME/projects/claude-commands/backup-scripts/claude_projects_backup.sh"
+# Use unified memory backup script from dedicated memory backup repository
+MEMORY_BACKUP_REPO="$HOME/projects/worldarchitect-memory-backups"
+MEMORY_BACKUP_SCRIPT="$MEMORY_BACKUP_REPO/scripts/unified_memory_backup.py"
 
 BACKUP_ISSUES=()
 
-# Check if backup script exists
-if [ ! -f "$BACKUP_SCRIPT" ]; then
-    BACKUP_ISSUES+=("❌ Backup script not found at $BACKUP_SCRIPT")
-elif [ ! -x "$BACKUP_SCRIPT" ]; then
-    BACKUP_ISSUES+=("❌ Backup script not executable")
+# Check if memory backup repository exists
+if [ ! -d "$MEMORY_BACKUP_REPO" ]; then
+    BACKUP_ISSUES+=("❌ Memory backup repository not found at $MEMORY_BACKUP_REPO")
 fi
 
-# Check if cron job exists for projects backup
-if ! crontab -l 2>/dev/null | grep -q "claude_projects_backup.sh"; then
-    BACKUP_ISSUES+=("❌ Cron job not configured for Claude projects backup")
+# Check if unified backup script exists in memory backup repository
+if [ ! -f "$MEMORY_BACKUP_SCRIPT" ]; then
+    BACKUP_ISSUES+=("❌ Unified backup script not found at $MEMORY_BACKUP_SCRIPT")
+elif [ ! -x "$MEMORY_BACKUP_SCRIPT" ]; then
+    BACKUP_ISSUES+=("❌ Unified backup script not executable")
 fi
 
-# Check if source directory exists
-if [ ! -d "$HOME/.claude/projects" ]; then
-    BACKUP_ISSUES+=("❌ Claude projects directory not found")
+# Check if memory directory exists
+if [ ! -d "$HOME/.cache/mcp-memory" ]; then
+    BACKUP_ISSUES+=("❌ Memory cache directory not found")
 fi
 
-# Report status and offer to fix
-if [ ${#BACKUP_ISSUES[@]} -eq 0 ]; then
-    echo -e "${GREEN}✅ Claude projects backup system is properly configured${NC}"
+# Check if cron job exists for unified backup script
+if ! crontab -l 2>/dev/null | grep -q "worldarchitect-memory-backups/scripts/unified_memory_backup.py"; then
+    BACKUP_ISSUES+=("❌ Cron job not configured for unified memory backup")
+fi
+
+# Auto-install cron job if missing but script exists
+if [ -f "$MEMORY_BACKUP_SCRIPT" ] && [ -x "$MEMORY_BACKUP_SCRIPT" ]; then
+    if ! crontab -l 2>/dev/null | grep -q "worldarchitect-memory-backups/scripts/unified_memory_backup.py"; then
+        echo -e "${YELLOW}⚠️ Installing missing memory backup cron job...${NC}"
+
+        # Create wrapper script for cron execution
+        CRON_WRAPPER="$HOME/.local/bin/unified_memory_backup_wrapper.sh"
+        mkdir -p "$HOME/.local/bin"
+
+        cat > "$CRON_WRAPPER" << EOF
+#!/bin/bash
+# Unified Memory Backup Cron Wrapper
+# Auto-generated by claude_start.sh
+
+# Use dedicated memory backup repository
+MEMORY_BACKUP_REPO="\$HOME/projects/worldarchitect-memory-backups"
+BACKUP_SCRIPT="\$MEMORY_BACKUP_REPO/scripts/unified_memory_backup.py"
+
+if [ -f "\$BACKUP_SCRIPT" ]; then
+    cd "\$MEMORY_BACKUP_REPO"
+    python3 "\$BACKUP_SCRIPT" --mode=cron
 else
-    echo -e "${YELLOW}⚠️ Claude projects backup system issues detected:${NC}"
+    echo "\$(date): Unified memory backup script not found at \$BACKUP_SCRIPT" >> /tmp/memory_backup_errors.log
+fi
+EOF
+
+        chmod +x "$CRON_WRAPPER"
+
+        # Add to cron (daily at 2 AM) with proper variable handling
+        local current_crontab_mem
+        current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
+        (echo "$current_crontab_mem"; echo '0 2 * * * $HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1') | crontab -
+
+        echo -e "${GREEN}✅ Installed unified memory backup cron job (daily at 2 AM)${NC}"
+        # Remove cron job error from backup issues array safely
+        local temp_array=()
+        for issue in "${BACKUP_ISSUES[@]}"; do
+            if [[ "$issue" != *"Cron job not configured"* ]]; then
+                temp_array+=("$issue")
+            fi
+        done
+        BACKUP_ISSUES=("${temp_array[@]}")
+    fi
+fi
+
+# Report final status
+if [ ${#BACKUP_ISSUES[@]} -eq 0 ]; then
+    echo -e "${GREEN}✅ Memory backup system is properly configured with dedicated repository${NC}"
+else
+    echo -e "${YELLOW}⚠️ Memory backup system issues detected:${NC}"
     for issue in "${BACKUP_ISSUES[@]}"; do
         echo -e "${YELLOW}  $issue${NC}"
     done
 
-    echo -e "${YELLOW}📝 Backup script location: $BACKUP_SCRIPT${NC}"
-    echo -e "${YELLOW}💡 To setup cron job: crontab -e${NC}"
+    echo -e "${YELLOW}📝 To install: git clone $(git config --get remote.origin.url) ~/projects/worldarchitect-memory-backups${NC}"
 fi
 
 echo ""
@@ -429,8 +636,8 @@ if [ -n "$MODE" ]; then
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
                 echo -e "${BLUE}💡 LLM proxy (for Qwen and Cerebras) is maintained in the separate claude_llm_proxy repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)
+                echo -e "${BLUE}💡 Repository: $(git config --get remote.origin.url)
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -595,7 +802,7 @@ if [ -n "$MODE" ]; then
                     # Create the instance with qwen label
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
+                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=$(git config --get remote.origin.url) --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                     INSTANCE_RESULT=$(eval $INSTANCE_CMD)
                     # Handle both JSON and Python dict formats for new_contract
@@ -712,7 +919,7 @@ if [ -n "$MODE" ]; then
             API_PROXY_PATH="$HOME/projects/claude_llm_proxy/api_proxy.py"
             if [ ! -f "$API_PROXY_PATH" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)
                 echo -e "${YELLOW}⚠️  Cannot continue without repository. Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -754,7 +961,7 @@ if [ -n "$MODE" ]; then
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -836,8 +1043,8 @@ if [ -n "$MODE" ]; then
             if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
                 echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
                 echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate claude_llm_proxy repository${NC}"
-                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
-                echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
+                echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)
+                echo -e "${BLUE}💡 Repository: $(git config --get remote.origin.url)
                 echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
                 read -p ""
                 echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -960,8 +1167,8 @@ else
         if [ ! -f "$API_PROXY_PATH" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
             echo -e "${BLUE}💡 LLM proxy (for Qwen and Cerebras modes) is maintained in the separate claude_llm_proxy repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)
+            echo -e "${BLUE}💡 Repository: $(git config --get remote.origin.url)
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1030,7 +1237,7 @@ else
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/qwen_proxy.pid
+                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1122,7 +1329,7 @@ else
                     --disk 60 \\
                     --ssh \\
                     $ENV_VARS \\
-                    --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git \\
+                    --env GIT_REPO=$(git config --get remote.origin.url) \\
                     --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
 
                 INSTANCE_RESULT=$(eval $INSTANCE_CMD)
@@ -1389,8 +1596,8 @@ EOF
         if [ ! -f "$LLM_SELFHOST_PROXY" ]; then
             echo -e "${RED}❌ LLM self-hosting repository not found${NC}"
             echo -e "${BLUE}💡 Cerebras proxy is maintained in the separate claude_llm_proxy repository${NC}"
-            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone https://github.com/jleechanorg/claude_llm_proxy.git${NC}"
-            echo -e "${BLUE}💡 Repository: https://github.com/jleechanorg/claude_llm_proxy${NC}"
+            echo -e "${BLUE}💡 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)
+            echo -e "${BLUE}💡 Repository: $(git config --get remote.origin.url)
             echo -e "${YELLOW}⚠️  Press Enter to return to default mode...${NC}"
             read -p ""
             echo -e "${BLUE}Falling back to default mode...${NC}"
@@ -1495,7 +1702,7 @@ restart_claude_bot() {
     echo -e "${BLUE}🔄 Restarting Claude bot server...${NC}"
     stop_claude_bot
     sleep 2
-    
+
     if start_claude_bot_background; then
         sleep 3
         if is_claude_bot_running; then
