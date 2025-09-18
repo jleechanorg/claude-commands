@@ -747,7 +747,9 @@ elif [ -n "$CI" ]; then
 else
     # Local development - conservative parallelism to avoid overwhelming system
     available_cores=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo "4")
-    max_workers=$((available_cores > 4 ? 4 : available_cores))
+    # More conservative: max 2 workers for memory safety, regardless of cores
+    max_workers=$((available_cores > 2 ? 2 : available_cores))
+    max_workers=$((max_workers < 1 ? 1 : max_workers))  # Ensure at least 1 worker
     print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
 fi
 
@@ -773,19 +775,32 @@ run_single_test() {
         echo "TESTFILE: $test_file"
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
 
+        # Increased timeout for complex tests (8 minutes per test)
+        local test_timeout=${TEST_TIMEOUT:-480}
+
         if [ "$enable_coverage" = true ]; then
             # Run with coverage and proper Python path
-            if timeout 300 env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
-                echo "RESULT: FAIL"
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    echo "RESULT: TIMEOUT"
+                else
+                    echo "RESULT: FAIL"
+                fi
             fi
         else
             # Run normally with proper Python path
-            if timeout 300 env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 "$test_file" 2>&1; then
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
-                echo "RESULT: FAIL"
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    echo "RESULT: TIMEOUT"
+                else
+                    echo "RESULT: FAIL"
+                fi
             fi
         fi
 

@@ -188,39 +188,45 @@ setup_cron_jobs() {
     if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
         echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
 
-        # Create worktree-agnostic wrapper with cross-platform compatibility
+        # Install scripts to permanent location (no worktree dependencies)
+        WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+        mkdir -p "$WORLDARCHITECT_HOME"
+
+        # Copy essential scripts from current project to permanent location
+        CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if [ -f "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" ]; then
+            cp "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" "$WORLDARCHITECT_HOME/"
+            chmod +x "$WORLDARCHITECT_HOME/claude_backup.sh"
+            echo -e "${GREEN}✅ Installed claude_backup.sh to permanent location${NC}"
+        fi
+
+        # Create permanent wrapper (no worktree dependencies)
         cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
+# Claude backup wrapper - permanent installation, no worktree dependencies
 set -euo pipefail
 
-# First try to find backup script in any worktree
-for wt_pattern in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
-  wt="$(realpath "$wt_pattern" 2>/dev/null || true)"
-  if [[ -n "$wt" && "$wt" == "$HOME/projects/"* && -x "$wt/scripts/claude_backup.sh" ]]; then
-    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+# Use permanent installation location
+WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+BACKUP_SCRIPT="$WORLDARCHITECT_HOME/claude_backup.sh"
+
+if [ -f "$BACKUP_SCRIPT" ]; then
+    # Platform-specific Dropbox paths
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS: Use CloudStorage Dropbox path
-        "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"; exit $?
+        exec "$BACKUP_SCRIPT" "$HOME/Library/CloudStorage/Dropbox"
     elif [[ "$OSTYPE" == "linux"* ]]; then
-        # Linux/Ubuntu: Try common Dropbox locations
         if [ -d "$HOME/Dropbox" ]; then
-            "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"; exit $?
+            exec "$BACKUP_SCRIPT" "$HOME/Dropbox"
         elif [ -d "$HOME/Documents" ]; then
-            "$wt/scripts/claude_backup.sh" "$HOME/Documents"; exit $?
+            exec "$BACKUP_SCRIPT" "$HOME/Documents"
         else
-            "$wt/scripts/claude_backup.sh" "$HOME"; exit $?
+            exec "$BACKUP_SCRIPT" "$HOME"
         fi
     else
-        # Other systems: fallback to home directory
-        "$wt/scripts/claude_backup.sh" "$HOME"; exit $?
+        exec "$BACKUP_SCRIPT" "$HOME"
     fi
-  fi
-done
-
-# If no worktree backup script found, try legacy approach
-if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
-    # Platform-specific Dropbox paths for legacy script
+elif [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Fallback to legacy script
     if [[ "$OSTYPE" == "darwin"* ]]; then
         "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
     elif [[ "$OSTYPE" == "linux"* ]]; then
@@ -235,7 +241,7 @@ if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
         "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
     fi
 else
-    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    echo "$(date): No backup script found at $BACKUP_SCRIPT or ~/.local/bin/claude_backup_cron.sh" >> /tmp/backup_errors.log
     exit 1
 fi
 EOF
@@ -250,19 +256,28 @@ EOF
     if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
         echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
 
-        # Create tmux cleanup wrapper that works across worktrees
+        # Install orchestration cleanup script to permanent location
+        CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if [ -f "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" ]; then
+            mkdir -p "$WORLDARCHITECT_HOME/orchestration"
+            cp "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" "$WORLDARCHITECT_HOME/orchestration/"
+            chmod +x "$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"
+            echo -e "${GREEN}✅ Installed orchestration cleanup script to permanent location${NC}"
+        fi
+
+        # Create tmux cleanup wrapper (no worktree dependencies)
         cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Find any available WorldArchitect worktree with orchestration
-for worktree in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
-    if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
-        PYTHONPATH="$worktree" python3 "$worktree/orchestration/cleanup_completed_agents.py"
-        exit $?
-    fi
-done
-# Fallback: if no worktree found, log the issue
-echo "$(date): No WorldArchitect worktree with orchestration found" >> /tmp/tmux_cleanup.log
-exit 1
+# TMux cleanup wrapper - permanent installation, no worktree dependencies
+WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+CLEANUP_SCRIPT="$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"
+
+if [ -f "$CLEANUP_SCRIPT" ]; then
+    PYTHONPATH="$WORLDARCHITECT_HOME" python3 "$CLEANUP_SCRIPT"
+else
+    echo "$(date): No cleanup script found at $CLEANUP_SCRIPT" >> /tmp/tmux_cleanup.log
+    exit 1
+fi
 EOF
         chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
 
@@ -989,10 +1004,22 @@ if [ -n "$MODE" ]; then
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
                     # shellcheck disable=SC2086
-                    read -r -d '' CMD <<EOC
-vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label "qwen-$(date +%Y%m%d-%H%M)" $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'
-EOC
-                    INSTANCE_RESULT=$(bash -lc "$CMD")
+                    CMD_ARGS=(
+                        "vastai" "create" "instance" "$BEST_INSTANCE"
+                        "--image" "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel"
+                        "--disk" "60" "--ssh"
+                        "--label" "qwen-$(date +%Y%m%d-%H%M)"
+                    )
+                    # Add ENV_VARS if not empty
+                    if [ -n "$ENV_VARS" ]; then
+                        # Split ENV_VARS safely and add to array
+                        eval "CMD_ARGS+=(${ENV_VARS})"
+                    fi
+                    CMD_ARGS+=(
+                        "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
+                        "--onstart-cmd" 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                    )
+                    INSTANCE_RESULT=$("${CMD_ARGS[@]}")
                     # Handle both JSON and Python dict formats for new_contract
                     INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o "'new_contract': [0-9]*" | grep -o '[0-9]*' || echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
@@ -1513,10 +1540,21 @@ else
                 echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
                 # shellcheck disable=SC2086
-                read -r -d '' CMD <<EOC
-vastai create instance "$BEST_INSTANCE" --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'
-EOC
-                INSTANCE_RESULT=$(bash -lc "$CMD")
+                CMD_ARGS=(
+                    "vastai" "create" "instance" "$BEST_INSTANCE"
+                    "--image" "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel"
+                    "--disk" "60" "--ssh"
+                )
+                # Add ENV_VARS if not empty
+                if [ -n "$ENV_VARS" ]; then
+                    # Split ENV_VARS safely and add to array
+                    eval "CMD_ARGS+=(${ENV_VARS})"
+                fi
+                CMD_ARGS+=(
+                    "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
+                    "--onstart-cmd" 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                )
+                INSTANCE_RESULT=$("${CMD_ARGS[@]}")
                 INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
                 if [ -z "$INSTANCE_ID" ]; then
