@@ -73,11 +73,32 @@ Launch specialized agent for file modifications in parallel:
 - Direct orchestrator handles: Comment processing, response generation, GitHub API operations, coverage tracking
 - Coordination maintains: File operation delegation while ensuring reliable communication workflow
 
-**Response Generation**:
+**Response Generation** (MANDATORY ORCHESTRATOR RESPONSIBILITY):
 ```bash
 echo "📝 Generating responses.json from analyzed comments"
 # CRITICAL: Generate responses in commentreply.py expected format
 # Orchestrator writes: /tmp/$(git branch --show-current)/responses.json
+
+# 🚨 MANDATORY: Orchestrator must generate responses for ALL comments
+# The copilot-fixpr agent handles ONLY file operations, NOT comment responses
+# Orchestrator MUST analyze all comments from commentfetch and create technical responses
+
+echo "🔍 ORCHESTRATOR RESPONSIBILITY: Analyzing ALL comments for response generation"
+BRANCH_NAME=$(git branch --show-current)
+COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
+RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
+
+# Verify we have comment data from commentfetch
+if [ ! -f "$COMMENTS_FILE" ]; then
+    echo "❌ CRITICAL: No comment data from commentfetch at $COMMENTS_FILE"
+    exit 1
+fi
+
+TOTAL_COMMENTS=$(jq '.comments | length' "$COMMENTS_FILE")
+echo "📊 Processing $TOTAL_COMMENTS comments for response generation"
+
+# Generate responses for ALL unresponded comments
+# This is ORCHESTRATOR responsibility, not agent responsibility
 
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
@@ -192,12 +213,22 @@ fi
 - **PRIMARY**: Security vulnerability detection and code implementation
 - **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis, `/fixpr` command
 - **FOCUS**: Make PR mergeable first, then actual code changes with File Justification Protocol compliance
-- **BOUNDARY**: File operations and PR mergeability - never handles GitHub comment responses
+- **BOUNDARY**: File operations and PR mergeability - **NEVER handles GitHub comment responses**
 
-**Direct Orchestrator:**
+🚨 **CRITICAL AGENT BOUNDARY**: The copilot-fixpr agent must NEVER attempt to:
+- Generate responses.json entries
+- Handle comment response generation
+- Execute /commentreply
+- Manage GitHub comment posting
+- Handle comment coverage verification
+
+**Direct Orchestrator (EXCLUSIVE RESPONSIBILITIES):**
+- **MANDATORY**: Generate ALL comment responses after agent completes
 - Comment processing (/commentfetch, /commentreply)
+- Response generation for every fetched comment
 - GitHub operations and workflow coordination
 - Verification checkpoints and evidence collection
+- Ensuring 100% comment coverage before completion
 
 ## 🎯 **SUCCESS CRITERIA**
 
