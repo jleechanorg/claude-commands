@@ -21,9 +21,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-# Add parent directory to path for base module import
-sys.path.append(str(Path(__file__).parent))
-from base import CopilotCommandBase
+from .base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
