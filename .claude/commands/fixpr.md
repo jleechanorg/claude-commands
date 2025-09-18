@@ -292,6 +292,7 @@ gh pr view <PR> --json statusCheckRollup
 # ❌ test-unit: FAILING - AssertionError: Expected 'foo' but got 'FOO'
 
 # 3. Call the real /redgreen slash command to reproduce the GitHub failure locally BEFORE editing anything
+PR_NUMBER=<PR>  # Replace with the numeric PR identifier
 failing_check="test-unit"  # Replace with actual failing check name from GitHub
 ci_failure_log=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
   (.statusCheckRollup // [])
