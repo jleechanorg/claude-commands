@@ -73,7 +73,25 @@ Launch specialized agent for file modifications in parallel:
 - Direct orchestrator handles: Comment processing, response generation, GitHub API operations, coverage tracking
 - Coordination maintains: File operation delegation while ensuring reliable communication workflow
 
-**Response Generation**: Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
+**Response Generation**:
+```bash
+echo "📝 Generating replies.json from analyzed comments"
+# Orchestrator writes: /tmp/$(git branch --show-current)/replies.json
+# (build from Phase 2 analysis + agent results)
+
+# Verify replies.json exists before proceeding
+REPLIES_FILE="/tmp/$(git branch --show-current)/replies.json"
+if [ ! -f "$REPLIES_FILE" ]; then
+    echo "❌ CRITICAL: replies.json not found at $REPLIES_FILE"
+    echo "Orchestrator must generate replies before posting"
+    exit 1
+fi
+
+echo "🔄 MANDATORY: Executing /commentreply for all unresponded comments"
+/commentreply || { echo "🚨 CRITICAL: Comment response failed"; exit 1; }
+echo "✅ Comment responses posted successfully"
+```
+Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 
 ### Phase 3: Verification & Completion (AUTOMATIC)
 **Results verified by agent coordination**:
@@ -106,9 +124,12 @@ git diff --stat
 /pushl || { echo "🚨 PUSH FAILED: PR not updated"; exit 1; }
 ```
 
-**Coverage Tracking (delegated):**
+**Coverage Tracking (MANDATORY GATE):**
 ```bash
-/commentcheck  # authoritative coverage verification & reporting
+# HARD VERIFICATION GATE - Must pass before proceeding
+echo "🔍 MANDATORY: Verifying 100% comment coverage"
+/commentcheck || { echo "🚨 CRITICAL: Comment coverage failed - workflow blocked"; exit 1; }
+echo "✅ Comment coverage verification passed - proceeding with completion"
 ```
 
 **Final Timing:**
@@ -152,7 +173,7 @@ fi
 ### **QUALITY GATES**:
 - ✅ **File Justification Protocol**: All code changes properly documented and justified
 - ✅ **Security Priority**: Critical vulnerabilities addressed first with actual fixes
-- ✅ **GitHub Threading**: Proper comment threading API usage for all responses
+- ✅ **GitHub Response Management**: Proper comment response handling for all feedback
 - ✅ **Pattern Detection**: Systematic fixes applied across similar codebase patterns
 - ✅ **Performance**: Execution completed within 2-3 minute target
 

@@ -23,7 +23,7 @@
        {
          "comment_id": "comment_id_from_fetch",
          "reply_text": "[AI responder] ✅ **Issue Fixed** (Commit: abc1234)\n\n> Original comment text...\n\n**Analysis**: ...\n**Fix Applied**: ...",
-         "in_reply_to_id": "parent_comment_id_if_threaded"
+         "in_reply_to": "parent_comment_id_if_threaded"
        }
      ]
    }
@@ -59,6 +59,15 @@ python3 commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
 - **Shell script**: User-friendly interface with intelligent defaults
 - **Markdown file**: Complete Claude workflow specification and instructions
 - **Python script**: Secure API implementation with proper error handling
+
+**🔧 GitHub API Endpoints**:
+GitHub provides two methods for posting replies to PR review comments:
+1. **Dedicated replies endpoint**: `POST /repos/{owner}/{repo}/pulls/{pull_number}/comments/{comment_id}/replies`
+   - **Usage**: Direct replies with just `body` parameter
+   - **Benefits**: Simpler payload, automatic threading
+2. **Standard comments endpoint**: `POST /repos/{owner}/{repo}/pulls/{pull_number}/comments`
+   - **Usage**: Replies using `body` and `in_reply_to` parameters
+   - **Constraints**: Positioning fields ignored when using `in_reply_to`, replies-to-replies not supported
 
 **✅ DONE: Parameter Alignment Fixed** (Commit: ab82741b)
 
@@ -241,7 +250,7 @@ graph TD
 - **✅ 100% Comment Coverage**: Every comment gets a technical response
 - **✅ Real Fixes Implemented**: Actual file changes for code issues
 - **✅ Technical Quality**: Specific analysis, not generic templates
-- **✅ GitHub Threading**: Proper in_reply_to_id threading via Python
+- **✅ GitHub Threading**: Proper in_reply_to threading via Python
 - **✅ Verification**: All responses include commit hash references
 
 ## 🛠️ INTEGRATION
