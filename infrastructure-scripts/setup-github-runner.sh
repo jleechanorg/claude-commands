@@ -47,9 +47,14 @@ while [[ $# -gt 0 ]]; do
             REPO_URL="$2"
             shift 2
             ;;
+        --token)
+            RUNNER_TOKEN="$2"
+            shift 2
+            ;;
         --help|-h)
-            echo "Usage: $0 [--repo <repository-url>] [--no-install]"
+            echo "Usage: $0 [--repo <repository-url>] [--token <runner-token>] [--no-install]"
             echo "  --repo: GitHub repository URL (e.g., https://github.com/user/repo)"
+            echo "  --token: GitHub runner token"
             echo "  --no-install: Skip auto-install to home directory"
             echo "  If repo not specified, will try to detect from git remote origin"
             exit 0
@@ -205,10 +210,7 @@ print_step "Waiting for runner token..."
 
 # Check for token from environment or command line arguments first
 if [[ -n "${RUNNER_TOKEN:-}" ]]; then
-    print_success "Using RUNNER_TOKEN from environment"
-elif [[ "$1" == "--token" && -n "${2:-}" ]]; then
-    RUNNER_TOKEN="$2"
-    print_success "Using token from command line argument"
+    print_success "Using RUNNER_TOKEN (environment or command line)"
 else
     # Only prompt interactively if no token provided
     while true; do
