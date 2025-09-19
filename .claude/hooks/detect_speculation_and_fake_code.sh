@@ -152,7 +152,7 @@ get_regex_pattern() {
         "DURING_PROCESS") echo "during.*process" ;;
         "AS_RUNS") echo "as.*runs" ;;
         "ONCE_COMPLETE") echo "once.*complete" ;;
-        "TODO_IMPLEMENT") echo "TODO.*implement" ;;
+        "TODO_IMPLEMENT") echo "TODO:.*implement" ;;
         "PLACEHOLDER") echo "placeholder" ;;
         "IMPLEMENT_LATER") echo "implement.*later" ;;
         "DUMMY_VALUE") echo "dummy.*value" ;;
