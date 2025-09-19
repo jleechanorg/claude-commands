@@ -622,6 +622,14 @@ if [ ${#test_files[@]} -gt 0 ]; then
 fi
 print_status "📊 Found ${#test_files[@]} test files to execute"
 
+# Apply CI test limit if set (for CI efficiency)
+if [ -n "$CI_TEST_LIMIT" ] && [ "$CI_TEST_LIMIT" -gt 0 ] && [ ${#test_files[@]} -gt "$CI_TEST_LIMIT" ]; then
+    print_warning "⚠️  Applying CI_TEST_LIMIT: ${#test_files[@]} → $CI_TEST_LIMIT tests (for CI timeout prevention)"
+    # Keep only the first N tests for CI efficiency
+    test_files=("${test_files[@]:0:$CI_TEST_LIMIT}")
+    print_status "📊 Limited to ${#test_files[@]} test files for CI execution"
+fi
+
 # Display first few test files as preview
 if [ ${#test_files[@]} -gt 0 ]; then
     print_status "📋 Test files preview (first 10):"

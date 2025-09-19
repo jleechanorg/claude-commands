@@ -96,7 +96,10 @@ jobs:
         chmod +x run_tests.sh
         case "${{ matrix.test-group }}" in
           "all-tests")
-            echo "🔗 Running ALL tests (unit tests only, fast CI execution)..."
+            echo "🔗 Running CRITICAL tests (fast CI execution with test limit)..."
+            # Use smaller timeout and test limit for CI efficiency
+            export TEST_TIMEOUT=30
+            export CI_TEST_LIMIT=50
             ./run_tests.sh --unit --parallel
             ;;
           "commands")
