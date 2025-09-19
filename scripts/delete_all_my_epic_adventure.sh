@@ -9,7 +9,7 @@ elif [ -n "$USER_ID" ]; then
 else
     echo "❌ Error: USER_ID not provided. Please provide as the first argument or set the USER_ID environment variable."
     echo "Usage: $0 <USER_ID> [CAMPAIGN_NAME]"
-    echo "Example: $0 vnLp2G3m21PJL6kxcuAqmWSOtm73 'My Epic Adventure'"
+    echo "Example: $0 [EXAMPLE_UID] 'My Epic Adventure'"
     exit 1
 fi
 
@@ -38,18 +38,18 @@ echo ""
 batch=1
 while true; do
     echo "🔄 Running batch $batch..."
-    
+
     # Run deletion script
     GOOGLE_APPLICATION_CREDENTIALS="$CREDENTIALS_PATH" python3 scripts/delete_campaigns_by_name.py "$USER_ID" "$CAMPAIGN_NAME" --confirm --force
-    
+
     # Check if any campaigns were found to delete
     if [ $? -eq 0 ]; then
         echo "✅ Batch $batch completed"
-        
+
         # Quick check to see if there are more campaigns
         echo "🔍 Checking for remaining campaigns..."
         GOOGLE_APPLICATION_CREDENTIALS="$CREDENTIALS_PATH" python3 scripts/query_campaigns_by_name.py "$USER_ID" "$CAMPAIGN_NAME" 2>/dev/null | grep -q "🎯 Found 0 campaigns"
-        
+
         if [ $? -eq 0 ]; then
             echo "✅ All campaigns deleted! No more 'My Epic Adventure' campaigns found."
             break

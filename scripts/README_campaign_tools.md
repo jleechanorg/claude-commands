@@ -24,31 +24,31 @@ Automated batch deletion script for repetitive operations.
 ### 1. Find User UID
 ```bash
 # Find Firebase UID from email
-python3 scripts/campaign_manager.py find-user jleechan@gmail.com
+python3 scripts/campaign_manager.py find-user [EXAMPLE_EMAIL]
 ```
 
 ### 2. Query Campaigns
 ```bash
 # Query campaigns by exact name
-python3 scripts/campaign_manager.py query vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic Adventure"
+python3 scripts/campaign_manager.py query [EXAMPLE_UID] "My Epic Adventure"
 ```
 
 ### 3. Safe Deletion
 ```bash
 # Dry-run first (safe preview)
-python3 scripts/campaign_manager.py delete vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic Adventure"
+python3 scripts/campaign_manager.py delete [EXAMPLE_UID] "My Epic Adventure"
 
 # Actual deletion with confirmation
-python3 scripts/campaign_manager.py delete vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic Adventure" --confirm
+python3 scripts/campaign_manager.py delete [EXAMPLE_UID] "My Epic Adventure" --confirm
 
 # Force deletion (no interactive prompt)
-python3 scripts/campaign_manager.py delete vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic Adventure" --confirm --force
+python3 scripts/campaign_manager.py delete [EXAMPLE_UID] "My Epic Adventure" --confirm --force
 ```
 
 ### 4. Batch Operations
 ```bash
 # Automated batch deletion
-./scripts/delete_all_my_epic_adventure.sh vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic Adventure"
+./scripts/delete_all_my_epic_adventure.sh [EXAMPLE_UID] "My Epic Adventure"
 ```
 
 ## Safety Features
@@ -78,7 +78,7 @@ python3 scripts/campaign_manager.py delete vnLp2G3m21PJL6kxcuAqmWSOtm73 "My Epic
 ```bash
 export GOOGLE_APPLICATION_CREDENTIALS="$HOME/serviceAccountKey.json"
 export OUTPUT_DIR="./campaign_results"
-export USER_ID="vnLp2G3m21PJL6kxcuAqmWSOtm73"
+export USER_ID="[EXAMPLE_UID]"
 ```
 
 ## Output Files
@@ -136,12 +136,12 @@ ls -la $GOOGLE_APPLICATION_CREDENTIALS
 ### From Individual Scripts
 ```bash
 # Old way
-python3 scripts/find_user_by_email.py jleechan@gmail.com
+python3 scripts/find_user_by_email.py [EXAMPLE_EMAIL]
 python3 scripts/query_campaigns_by_name.py uid "campaign name"
 python3 scripts/delete_campaigns_by_name.py uid "campaign name" --confirm
 
 # New way
-python3 scripts/campaign_manager.py find-user jleechan@gmail.com
+python3 scripts/campaign_manager.py find-user [EXAMPLE_EMAIL]
 python3 scripts/campaign_manager.py query uid "campaign name"
 python3 scripts/campaign_manager.py delete uid "campaign name" --confirm
 ```
