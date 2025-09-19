@@ -29,6 +29,16 @@ def _safe_print(message: str) -> None:
 
 
 def _load_payload() -> dict | None:
+    # Avoid blocking if no payload is piped (stdin is a TTY or closed)
+    if sys.stdin is None or sys.stdin.closed:
+        return None
+    try:
+        is_tty = sys.stdin.isatty()
+    except (AttributeError, ValueError):
+        is_tty = False
+    if is_tty:
+        return None
+
     raw_input = sys.stdin.read()
     if not raw_input.strip():
         return None

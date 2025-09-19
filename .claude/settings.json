@@ -246,7 +246,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/python_async_lint.py\" ] && python3 \"$ROOT/.claude/hooks/python_async_lint.py\"; fi; [ -x \"$HOME/.claude/hooks/python_async_lint.py\" ] && python3 \"$HOME/.claude/hooks/python_async_lint.py\"; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -f \"$ROOT/.claude/hooks/python_async_lint.py\" ]; then python3 \"$ROOT/.claude/hooks/python_async_lint.py\" && exit 0; fi; fi; if [ -f \"$HOME/.claude/hooks/python_async_lint.py\" ]; then python3 \"$HOME/.claude/hooks/python_async_lint.py\"; fi; exit 0'",
             "description": "Launch async Python presubmit linting after file writes"
           }
         ]
