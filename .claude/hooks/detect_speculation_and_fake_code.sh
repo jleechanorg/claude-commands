@@ -197,7 +197,7 @@ get_regex_pattern() {
 # Check for speculation patterns (performance optimized - single grep)
 for pattern_key in "${!SPECULATION_PATTERNS[@]}"; do
     regex_pattern=$(get_regex_pattern "$pattern_key")
-    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
+    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1) && [[ -n "$match_line" ]]; then
         FOUND_SPECULATION=true
         ((SPECULATION_COUNT++))
 
@@ -214,7 +214,7 @@ done
 # Check for fake code patterns (performance optimized - single grep)
 for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
     regex_pattern=$(get_regex_pattern "$pattern_key")
-    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
+    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1) && [[ -n "$match_line" ]]; then
         FOUND_FAKE_CODE=true
         ((FAKE_CODE_COUNT++))
 
@@ -302,7 +302,7 @@ EOF
     echo "" >> "$TEMP_WARNING_FILE"
     for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
         regex_pattern=$(get_regex_pattern "$pattern_key")
-        if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
+        if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1) && [[ -n "$match_line" ]]; then
             description="${FAKE_CODE_PATTERNS[$pattern_key]}"
             # Escape backticks to avoid breaking Markdown
             matching_text="$(printf '%s' "$match_line" | sed 's/`/\\`/g')"
