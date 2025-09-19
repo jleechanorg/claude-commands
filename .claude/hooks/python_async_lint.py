@@ -16,7 +16,8 @@ import shlex
 import shutil
 import subprocess
 import sys
-from typing import Iterable, List
+import tempfile
+from typing import List, Sequence
 
 
 def _safe_print(message: str) -> None:
@@ -56,17 +57,37 @@ def _is_python_file(path: str) -> bool:
     return path.endswith(".py")
 
 
-def _is_safe_path(path: str) -> bool:
-    return not (path.startswith("/") or ".." in path or any(ch in path for ch in "\n\r\t"))
+def _is_safe_path(path: str, root: str) -> bool:
+    """Return True if *path* stays within *root* after normalization."""
+
+    if not path or any(ch in path for ch in "\n\r\t"):
+        return False
+
+    root_abs = os.path.abspath(root)
+    # Reject absolute paths outright so they cannot escape the repository root.
+    if os.path.isabs(path):
+        return False
+
+    normalized = os.path.normpath(path)
+
+    # Paths that backtrack beyond the repository ("../") are disallowed.
+    if normalized.startswith(".."):
+        return False
+
+    candidate = os.path.abspath(os.path.join(root_abs, normalized))
+    try:
+        common = os.path.commonpath([root_abs, candidate])
+    except ValueError:
+        return False
+    return common == root_abs
 
 
-def _build_commands(root: str, rel_path: str) -> List[str]:
+def _build_commands(root: str, rel_path: str) -> List[List[str]]:
     pre_commit = shutil.which("pre-commit")
-    quoted_rel = shlex.quote(rel_path)
-    commands: List[str] = []
+    commands: List[List[str]] = []
 
     if pre_commit:
-        commands.append(f"{shlex.quote(pre_commit)} run --files {quoted_rel}")
+        commands.append([pre_commit, "run", "--files", rel_path])
         return commands
 
     ruff = shutil.which("ruff")
@@ -75,43 +96,113 @@ def _build_commands(root: str, rel_path: str) -> List[str]:
     bandit = shutil.which("bandit")
 
     if ruff:
-        commands.append(f"{shlex.quote(ruff)} check {quoted_rel}")
-        commands.append(f"{shlex.quote(ruff)} format --check {quoted_rel}")
+        commands.append([ruff, "check", rel_path])
+        commands.append([ruff, "format", "--check", rel_path])
     if isort:
-        commands.append(f"{shlex.quote(isort)} {quoted_rel} --check-only --diff")
+        commands.append([isort, rel_path, "--check-only", "--diff"])
     if mypy:
-        commands.append(f"{shlex.quote(mypy)} {quoted_rel}")
+        commands.append([mypy, rel_path])
     if bandit:
         # Use repository-level configuration if present
         config_path = os.path.join(root, "pyproject.toml")
         if os.path.exists(config_path):
-            commands.append(
-                f"{shlex.quote(bandit)} -c {shlex.quote(config_path)} -r {quoted_rel}"
-            )
+            commands.append([bandit, "-c", config_path, "-r", rel_path])
         else:
-            commands.append(f"{shlex.quote(bandit)} -r {quoted_rel}")
+            commands.append([bandit, "-r", rel_path])
 
     return commands
 
 
-def _launch_async(commands: Iterable[str], root: str, log_file: str) -> None:
-    script_lines = ["set -e", f"cd {shlex.quote(root)}"]
-    script_lines.extend(commands)
-    script_content = "\n".join(script_lines)
+def _log_write(handle, text: str) -> None:
+    handle.write(text.encode("utf-8", errors="replace"))
+
+
+def _run_worker(payload_path: str) -> int:
+    try:
+        with open(payload_path, "r", encoding="utf-8") as payload_handle:
+            payload = json.load(payload_handle)
+    except (OSError, json.JSONDecodeError) as exc:
+        _safe_print(f"python_async_lint worker: failed to load payload: {exc}")
+        return 1
+    finally:
+        try:
+            os.unlink(payload_path)
+        except OSError:
+            pass
+
+    root = payload.get("root")
+    commands = payload.get("commands") or []
+    log_file = payload.get("log_file")
+    if not root or not log_file:
+        _safe_print("python_async_lint worker: missing root or log_file")
+        return 1
+
+    root = os.path.abspath(root)
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+    exit_code = 0
+    with open(log_file, "ab", buffering=0) as log_handle:
+        start_msg = (
+            f"=== Async Python lint started {datetime.datetime.now().isoformat()} ===\n"
+        )
+        _log_write(log_handle, start_msg)
+
+        for raw_command in commands:
+            if not isinstance(raw_command, list) or not raw_command:
+                continue
+            command = [str(part) for part in raw_command]
+            display = "$ " + shlex.join(command) + "\n"
+            _log_write(log_handle, display)
+            completed = subprocess.run(
+                command,
+                cwd=root,
+                stdout=log_handle,
+                stderr=log_handle,
+            )
+            result_line = f"[exit code {completed.returncode}]\n"
+            _log_write(log_handle, result_line)
+            if completed.returncode != 0 and exit_code == 0:
+                exit_code = completed.returncode
+
+        finish_status = (
+            "succeeded" if exit_code == 0 else "finished with errors"
+        )
+        end_msg = (
+            f"=== Async Python lint {finish_status} at "
+            f"{datetime.datetime.now().isoformat()} ===\n"
+        )
+        _log_write(log_handle, end_msg)
+
+    return exit_code
+
+
+def _launch_async(commands: Sequence[Sequence[str]], root: str, log_file: str) -> None:
+    payload = {
+        "root": root,
+        "commands": commands,
+        "log_file": log_file,
+    }
 
     os.makedirs(os.path.dirname(log_file), exist_ok=True)
-    header = (
-        f"=== Async Python lint started {datetime.datetime.now().isoformat()} ===\n"
-    )
-    with open(log_file, "ab", buffering=0) as log_handle:
-        log_handle.write(header.encode("utf-8"))
+    with tempfile.NamedTemporaryFile("w", delete=False, encoding="utf-8") as temp:
+        json.dump(payload, temp)
+        payload_path = temp.name
+
+    python_executable = sys.executable or shutil.which("python3") or "python3"
+
+    try:
         subprocess.Popen(  # noqa: PLW1510 - we intentionally detach the process
-            ["bash", "-lc", script_content],
-            stdout=log_handle,
-            stderr=log_handle,
-            cwd=root,
+            [python_executable, os.path.abspath(__file__), "--worker", payload_path],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
+    except OSError as exc:
+        _safe_print(f"python_async_lint: failed to launch async worker: {exc}")
+        try:
+            os.unlink(payload_path)
+        except OSError:
+            pass
 
 
 def main() -> int:
@@ -127,16 +218,25 @@ def main() -> int:
     if not file_path:
         return 0
 
-    if not _is_safe_path(file_path):
-        _safe_print(f"python_async_lint: unsafe path '{file_path}' - skipping")
-        return 0
-
     if not _is_python_file(file_path):
         return 0
 
-    root = _get_repo_root()
-    abs_path = os.path.abspath(os.path.join(root, file_path))
-    if not abs_path.startswith(root):
+    root = os.path.abspath(_get_repo_root())
+
+    if not _is_safe_path(file_path, root):
+        _safe_print(f"python_async_lint: unsafe path '{file_path}' - skipping")
+        return 0
+
+    normalized_rel = os.path.normpath(file_path)
+    abs_path = os.path.abspath(os.path.join(root, normalized_rel))
+    try:
+        common = os.path.commonpath([root, abs_path])
+    except ValueError:
+        _safe_print(
+            f"python_async_lint: resolved path outside repository ({abs_path}) - skipping"
+        )
+        return 0
+    if common != root:
         _safe_print(
             f"python_async_lint: resolved path outside repository ({abs_path}) - skipping"
         )
@@ -164,4 +264,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == "--worker":
+        if len(sys.argv) != 3:
+            sys.exit(1)
+        sys.exit(_run_worker(sys.argv[2]))
     sys.exit(main())
