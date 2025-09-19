@@ -22,12 +22,13 @@ if PROJECT_ROOT_FROM_GIT=$(git rev-parse --show-toplevel 2>/dev/null); then
         exit 0
     fi
 else
-    # Use PROJECT_ROOT environment variable if set, otherwise fallback
+    # Use PROJECT_ROOT environment variable if set, otherwise handle CI case
     if [ -n "$PROJECT_ROOT" ]; then
         # PROJECT_ROOT was set by environment - use it (for testing)
         echo "Using PROJECT_ROOT from environment: $PROJECT_ROOT" >&2
-    elif [ -f "/home/user/projects/worldarchitect.ai/worktree_human/CLAUDE.md" ]; then
-        PROJECT_ROOT="/home/user/projects/worldarchitect.ai/worktree_human"
+    elif [ -n "$CI" ]; then
+        echo "Warning: PROJECT_ROOT not set in CI; skipping detection." >&2
+        exit 0
     else
         echo "Warning: Cannot determine project root and fallback path invalid" >&2
         exit 0
@@ -35,9 +36,9 @@ else
 fi
 
 # SECURITY: Early path validation to prevent attacks
-# Enhanced path validation - reject dangerous patterns (only actual traversal sequences)
+# Enhanced path validation - reject dangerous patterns (including trailing traversal)
 case "$PROJECT_ROOT" in
-    *'/../'*|*'/..')
+    *'/../'*|*'/..'|*'/../')
         echo "❌ Security error: Path traversal pattern detected: $PROJECT_ROOT" >&2
         exit 1
         ;;
@@ -51,7 +52,11 @@ if [[ ! "$PROJECT_ROOT" =~ ^/ ]] || [[ ! -d "$PROJECT_ROOT" ]]; then
     echo "❌ Error: Invalid project root path: $PROJECT_ROOT" >&2
     exit 1
 fi
-LOG_FILE="/tmp/claude_detection_log.txt"
+
+# Hardened log file permissions (CodeRabbit security suggestion)
+LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/claude"
+mkdir -p "$LOG_DIR" && chmod 700 "$LOG_DIR"
+LOG_FILE="$LOG_DIR/detection.log"
 
 # Read response text
 RESPONSE_TEXT="${1:-$(cat)}"
@@ -127,74 +132,77 @@ declare -A FAKE_CODE_PATTERNS=(
     ["ESTIMATED_LINES"]="Line count estimation"
 )
 
+# Regex map for all tokens (CodeRabbit suggestion implemented)
+declare -A REGEX_MAP=(
+  [LET_ME_WAIT]="[Ll]et me wait"
+  [WAIT_FOR_COMPLET]="[Ww]ait for.*complet"
+  [ILL_WAIT_FOR]="I'll wait for"
+  [WAITING_FOR_FINISH]="[Ww]aiting for.*finish"
+  [LET_FINISH]="[Ll]et.*finish"
+  [COMMAND_RUNNING]="command.*running"
+  [THE_COMMAND_EXECUT]="[Tt]he command.*execut"
+  [RUNNING_COMPLET]="[Rr]unning.*complet"
+  [SYSTEM_PROCESSING]="system.*processing"
+  [WHILE_EXECUT]="while.*execut"
+  [SHOULD_SEE]="should.*see"
+  [WILL_RESULT]="will.*result"
+  [EXPECT_TO]="expect.*to"
+  [LIKELY_THAT]="likely.*that"
+  [DURING_PROCESS]="during.*process"
+  [AS_RUNS]="as.*runs"
+  [ONCE_COMPLETE]="once.*complete"
+  [TODO_IMPLEMENT]="TODO:.*implement"
+  [FIXME]="FIXME"
+  [PLACEHOLDER]="placeholder"
+  [IMPLEMENT_LATER]="implement.*later"
+  [DUMMY_VALUE]="dummy.*value"
+  [RETURN_NULL_STUB]="return.*null.*#.*stub"
+  [THROW_NOT_IMPLEMENTED]="throw.*NotImplemented"
+  [CONSOLE_LOG_TEST]="console\.log.*test"
+  [ALERT_DEBUG]="alert.*debug"
+  [EXAMPLE_IMPLEMENTATION]="Example.*implementation"
+  [SAMPLE_CODE]="Sample.*code"
+  [THIS_EXAMPLE]="This.*example"
+  [BASIC_TEMPLATE]="Basic.*template"
+  [COPY_FROM]="copy.*from"
+  [SIMILAR_TO]="similar.*to"
+  [BASED_ON_EXISTING]="based.*on.*existing"
+  [CREATE_NEW_INSTEAD]="create.*new.*instead"
+  [REPLACE_EXISTING_WITH]="replace.*existing.*with"
+  [SIMPLER_VERSION_OF]="simpler.*version.*of"
+  [SIMULATE_CALL]="[Ss]imulate.*call"
+  [IN_PRODUCTION_WOULD]="in production.*would"
+  [WOULD_GO_HERE]="would go here"
+  [FOR_NOW_RETURN_NONE]="For now.*return.*None"
+  [ADD_PERFORMANCE_MARKER]="add.*performance.*marker"
+  [THEORETICAL_PERFORMANCE]="theoretical.*performance"
+  [ESTIMATED_LINE_COUNT]="~[[:space:]]*[0-9]+.*lines"
+  [APPROXIMATELY_NUMERIC]="approximately.*[0-9]+"
+  [AROUND_LINES]="around.*[0-9]+.*lines"
+  [ROUGHLY_NUMERIC]="roughly.*[0-9]+"
+  [TABLE_ESTIMATION]="\\|.*~.*\\|"
+  [ESTIMATED_LINES]="estimated.*[0-9]+.*lines"
+)
+
 FOUND_SPECULATION=false
 FOUND_FAKE_CODE=false
 SPECULATION_COUNT=0
 FAKE_CODE_COUNT=0
 
-# Function to get regex pattern from key
+# Simplified regex pattern lookup using associative map (CodeRabbit suggestion)
 get_regex_pattern() {
-    case $1 in
-        "LET_ME_WAIT") echo "[Ll]et me wait" ;;
-        "WAIT_FOR_COMPLET") echo "[Ww]ait for.*complet" ;;
-        "ILL_WAIT_FOR") echo "I'll wait for" ;;
-        "WAITING_FOR_FINISH") echo "[Ww]aiting for.*finish" ;;
-        "LET_FINISH") echo "[Ll]et.*finish" ;;
-        "COMMAND_RUNNING") echo "command.*running" ;;
-        "THE_COMMAND_EXECUT") echo "[Tt]he command.*execut" ;;
-        "RUNNING_COMPLET") echo "[Rr]unning.*complet" ;;
-        "SYSTEM_PROCESSING") echo "system.*processing" ;;
-        "WHILE_EXECUT") echo "while.*execut" ;;
-        "SHOULD_SEE") echo "should.*see" ;;
-        "WILL_RESULT") echo "will.*result" ;;
-        "EXPECT_TO") echo "expect.*to" ;;
-        "LIKELY_THAT") echo "likely.*that" ;;
-        "DURING_PROCESS") echo "during.*process" ;;
-        "AS_RUNS") echo "as.*runs" ;;
-        "ONCE_COMPLETE") echo "once.*complete" ;;
-        "TODO_IMPLEMENT") echo "TODO:.*implement" ;;
-        "PLACEHOLDER") echo "placeholder" ;;
-        "IMPLEMENT_LATER") echo "implement.*later" ;;
-        "DUMMY_VALUE") echo "dummy.*value" ;;
-        "RETURN_NULL_STUB") echo "return.*null.*#.*stub" ;;
-        "THROW_NOT_IMPLEMENTED") echo "throw.*NotImplemented" ;;
-        "CONSOLE_LOG_TEST") echo "console\.log.*test" ;;
-        "ALERT_DEBUG") echo "alert.*debug" ;;
-        "EXAMPLE_IMPLEMENTATION") echo "Example.*implementation" ;;
-        "SAMPLE_CODE") echo "Sample.*code" ;;
-        "THIS_EXAMPLE") echo "This.*example" ;;
-        "BASIC_TEMPLATE") echo "Basic.*template" ;;
-        "COPY_FROM") echo "copy.*from" ;;
-        "SIMILAR_TO") echo "similar.*to" ;;
-        "BASED_ON_EXISTING") echo "based.*on.*existing" ;;
-        "CREATE_NEW_INSTEAD") echo "create.*new.*instead" ;;
-        "REPLACE_EXISTING_WITH") echo "replace.*existing.*with" ;;
-        "SIMPLER_VERSION_OF") echo "simpler.*version.*of" ;;
-        "SIMULATE_CALL") echo "[Ss]imulate.*call" ;;
-        "IN_PRODUCTION_WOULD") echo "in production.*would" ;;
-        "WOULD_GO_HERE") echo "would go here" ;;
-        "FOR_NOW_RETURN_NONE") echo "For now.*return.*None" ;;
-        "ADD_PERFORMANCE_MARKER") echo "add.*performance.*marker" ;;
-        "THEORETICAL_PERFORMANCE") echo "theoretical.*performance" ;;
-        "ESTIMATED_LINE_COUNT") echo "~[0-9]+.*lines" ;;
-        "APPROXIMATELY_NUMERIC") echo "approximately.*[0-9]+" ;;
-        "AROUND_LINES") echo "around.*[0-9]+.*lines" ;;
-        "ROUGHLY_NUMERIC") echo "roughly.*[0-9]+" ;;
-        "TABLE_ESTIMATION") echo "\\|.*~.*\\|" ;;
-        "ESTIMATED_LINES") echo "estimated.*[0-9]+.*lines" ;;
-        *) echo "$1" ;;
-    esac
+    echo "${REGEX_MAP[$1]:-$1}"
 }
 
-# Check for speculation patterns
+# Check for speculation patterns (performance optimized - single grep)
 for pattern_key in "${!SPECULATION_PATTERNS[@]}"; do
     regex_pattern=$(get_regex_pattern "$pattern_key")
-    if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
+    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
         FOUND_SPECULATION=true
         ((SPECULATION_COUNT++))
 
         description="${SPECULATION_PATTERNS[$pattern_key]}"
-        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
+        matching_text="$match_line"
 
         echo -e "${YELLOW}$(emoji "⚠️" "!") SPECULATION DETECTED${NC}: $description"
         echo -e "   ${RED}Pattern${NC}: $regex_pattern"
@@ -203,15 +211,15 @@ for pattern_key in "${!SPECULATION_PATTERNS[@]}"; do
     fi
 done
 
-# Check for fake code patterns
+# Check for fake code patterns (performance optimized - single grep)
 for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
     regex_pattern=$(get_regex_pattern "$pattern_key")
-    if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
+    if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
         FOUND_FAKE_CODE=true
         ((FAKE_CODE_COUNT++))
 
         description="${FAKE_CODE_PATTERNS[$pattern_key]}"
-        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
+        matching_text="$match_line"
 
         echo -e "${RED}$(emoji "🚨" "!") FAKE CODE DETECTED${NC}: $description"
         echo -e "   ${RED}Pattern${NC}: $regex_pattern"
@@ -294,9 +302,10 @@ EOF
     echo "" >> "$TEMP_WARNING_FILE"
     for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
         regex_pattern=$(get_regex_pattern "$pattern_key")
-        if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
+        if match_line=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1); then
             description="${FAKE_CODE_PATTERNS[$pattern_key]}"
-            matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
+            # Escape backticks to avoid breaking Markdown
+            matching_text="$(printf '%s' "$match_line" | sed 's/`/\\`/g')"
             echo "- **${description}**: \`${matching_text}\`" >> "$TEMP_WARNING_FILE"
         fi
     done
