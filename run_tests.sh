@@ -716,9 +716,10 @@ trap "rm -rf $tmp_dir" EXIT
 monitor_file="$tmp_dir/memory_monitor.lock"
 touch "$monitor_file"
 
-# Start background memory monitoring
-memory_monitor "$monitor_file" &
-monitor_pid=$!
+# Start background memory monitoring (disabled for debugging hang issue)
+# memory_monitor "$monitor_file" &
+# monitor_pid=$!
+monitor_pid=""
 
 # Function to cleanup background processes
 cleanup() {
@@ -831,41 +832,33 @@ print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TES
 
 # Run tests with overall timeout wrapper
 run_tests_with_timeout() {
-    if [ $max_workers -eq 1 ]; then
-        # Sequential execution
-        for test_file in "${test_files[@]}"; do
-            run_single_test "$test_file"
-        done
-    else
-        # Parallel execution with proper concurrency control
-        local active_jobs=0
-        for test_file in "${test_files[@]}"; do
-            # Wait if we've reached max workers
-            while [ $active_jobs -ge $max_workers ]; do
-                # Check for completed jobs
-                if wait -n 2>/dev/null; then
-                    active_jobs=$((active_jobs - 1))
-                else
-                    # If wait -n not supported, use polling
-                    sleep 0.1
-                    active_jobs=$(jobs -r | wc -l)
-                fi
-            done
-
-            # Start new test
-            (run_single_test "$test_file") &
-            active_jobs=$((active_jobs + 1))
-        done
-        # Wait for all remaining jobs to complete
-        wait
-    fi
+    # Force sequential execution for now to debug hanging issue
+    print_status "🔧 DEBUG: Running tests sequentially to avoid parallel hang"
+    for test_file in "${test_files[@]}"; do
+        print_status "🧪 Running test: $test_file"
+        run_single_test "$test_file"
+        print_status "✅ Completed test: $test_file"
+    done
 }
 
 # Note: Using bash subshells for parallel execution, so no exports needed
 
-# Execute tests with overall timeout wrapper (restored critical timeout)
+# Execute tests with timeout (direct function call)
 suite_timed_out=false
-if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
+(
+    # Set a timeout alarm
+    (sleep "$TEST_SUITE_TIMEOUT" && echo "TIMEOUT" && pkill -f "run_tests.sh" 2>/dev/null) &
+    timeout_pid=$!
+
+    # Run the tests
+    run_tests_with_timeout
+    test_exit_code=$?
+
+    # Kill the timeout alarm
+    kill "$timeout_pid" 2>/dev/null
+    exit $test_exit_code
+)
+if [ $? -ne 0 ]; then
     echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
     echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
     echo "  - Infinite loops in test code" >&2
