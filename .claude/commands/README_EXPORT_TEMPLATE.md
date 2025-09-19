@@ -710,7 +710,7 @@ This isn't just command sharing - it's **cognitive capital transformation** thro
      **Export Statistics**:
      - Commands: N command definitions
      - Hooks: N Claude Code automation hooks  
-     - Scripts: N infrastructure scripts
+     - Scripts: N reusable scripts (scripts/ directory)
      
      **Changes**:
      - Key change summaries based on actual modifications
