@@ -1029,8 +1029,11 @@ if [ -n "$MODE" ]; then
                     )
                     # Add ENV_VARS if not empty
                     if [ -n "$ENV_VARS" ]; then
-                        # Split ENV_VARS safely and add to array
-                        eval "CMD_ARGS+=(${ENV_VARS})"
+                        # Split ENV_VARS safely and add to array (avoid eval for security)
+                        IFS=' ' read -ra ENV_ARRAY <<< "$ENV_VARS"
+                        for env_var in "${ENV_ARRAY[@]}"; do
+                            CMD_ARGS+=("$env_var")
+                        done
                     fi
                     CMD_ARGS+=(
                         "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
@@ -1564,8 +1567,11 @@ else
                 )
                 # Add ENV_VARS if not empty
                 if [ -n "$ENV_VARS" ]; then
-                    # Split ENV_VARS safely and add to array
-                    eval "CMD_ARGS+=(${ENV_VARS})"
+                    # Split ENV_VARS safely and add to array (avoid eval for security)
+                    IFS=' ' read -ra ENV_ARRAY <<< "$ENV_VARS"
+                    for env_var in "${ENV_ARRAY[@]}"; do
+                        CMD_ARGS+=("$env_var")
+                    done
                 fi
                 CMD_ARGS+=(
                     "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
