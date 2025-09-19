@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Advanced Speculation & Fake Code Detection Hook for Claude Code
 # Lightweight but comprehensive detection using pattern matching and heuristics
 
@@ -41,7 +41,7 @@ case "$PROJECT_ROOT" in
         echo "❌ Security error: Path traversal pattern detected: $PROJECT_ROOT" >&2
         exit 1
         ;;
-    *) 
+    *)
         # Path looks safe, continue
         ;;
 esac
@@ -73,78 +73,58 @@ fi
 
 # SPECULATION PATTERNS - Enhanced from research
 declare -A SPECULATION_PATTERNS=(
-    # Temporal Speculation
-    ["[Ll]et me wait"]="Waiting assumption"
-    ["[Ww]ait for.*complet"]="Command completion speculation"
-    ["I'll wait for"]="Future waiting speculation"
-    ["[Ww]aiting for.*finish"]="Finish waiting assumption"
-    ["[Ll]et.*finish"]="Finish assumption"
-    
-    # State Assumptions  
-    ["command.*running"]="Running state assumption"
-    ["[Tt]he command.*execut"]="Execution state speculation"
-    ["[Rr]unning.*complet"]="Running completion speculation"
-    ["system.*processing"]="System processing assumption"
-    ["while.*execut"]="Execution process speculation"
-    
-    # Outcome Predictions
-    ["should.*see"]="Outcome prediction"
-    ["will.*result"]="Result prediction"
-    ["expect.*to"]="Expectation speculation"
-    ["likely.*that"]="Probability speculation"
-    
-    # Process Speculation
-    ["during.*process"]="Process timing assumption"
-    ["as.*runs"]="Runtime state assumption"
-    ["once.*complete"]="Completion timing speculation"
+    ["LET_ME_WAIT"]="Waiting assumption"
+    ["WAIT_FOR_COMPLET"]="Command completion speculation"
+    ["ILL_WAIT_FOR"]="Future waiting speculation"
+    ["WAITING_FOR_FINISH"]="Finish waiting assumption"
+    ["LET_FINISH"]="Finish assumption"
+    ["COMMAND_RUNNING"]="Running state assumption"
+    ["THE_COMMAND_EXECUT"]="Execution state speculation"
+    ["RUNNING_COMPLET"]="Running completion speculation"
+    ["SYSTEM_PROCESSING"]="System processing assumption"
+    ["WHILE_EXECUT"]="Execution process speculation"
+    ["SHOULD_SEE"]="Outcome prediction"
+    ["WILL_RESULT"]="Result prediction"
+    ["EXPECT_TO"]="Expectation speculation"
+    ["LIKELY_THAT"]="Probability speculation"
+    ["DURING_PROCESS"]="Process timing assumption"
+    ["AS_RUNS"]="Runtime state assumption"
+    ["ONCE_COMPLETE"]="Completion timing speculation"
 )
 
 # FAKE CODE PATTERNS - Based on research insights
 declare -A FAKE_CODE_PATTERNS=(
-    # Placeholder Code
-    ["TODO:.*implement"]="Placeholder implementation"
+    ["TODO_IMPLEMENT"]="Placeholder implementation"
     ["FIXME"]="Incomplete code marker"
-    ["placeholder"]="Explicit placeholder"
-    ["implement.*later"]="Deferred implementation"
-    ["dummy.*value"]="Dummy/hardcoded values"
-    
-    # Non-functional Logic
-    ["return.*null.*#.*stub"]="Stub function"
-    ["throw.*NotImplemented"]="Not implemented exception"
-    ["console\.log.*test"]="Debug/test code left in"
-    ["alert.*debug"]="Debug alert code"
-    
-    # Template/Demo Code
-    ["Example.*implementation"]="Example/demo code"
-    ["Sample.*code"]="Sample code pattern"
-    ["This.*example"]="Example code indicator"
-    ["Basic.*template"]="Template code"
-    
-    # Duplicate Logic Indicators
-    ["copy.*from"]="Copied code indication"
-    ["similar.*to"]="Code similarity admission"
-    ["based.*on.*existing"]="Duplicate logic pattern"
-    
-    # Parallel Inferior Systems
-    ["create.*new.*instead"]="Parallel system creation"
-    ["replace.*existing.*with"]="Unnecessary replacement"
-    ["simpler.*version.*of"]="Inferior parallel implementation"
-    
-    # Advanced Fake Patterns (MCP lesson learned)
-    ["[Ss]imulate.*call"]="Simulated function call"
-    ["in production.*would"]="Production disclaimer"  
-    ["would go here"]="Placeholder location marker"
-    ["For now.*return.*None"]="Fake null return"
-    ["add.*performance.*marker"]="Fake performance tracking"
-    ["theoretical.*performance"]="Theoretical simulation"
-    
-    # Data Fabrication Patterns (August 2025 benchmark lesson)
-    ["~[0-9]+.*lines"]="Estimated line count"
-    ["approximately.*[0-9]+"]="Numeric approximation"
-    ["around.*[0-9]+.*lines"]="Line count estimation"
-    ["roughly.*[0-9]+"]="Rough numeric estimate"
-    ["\\|.*~.*\\|"]="Table estimation marker"
-    ["estimated.*[0-9]+.*lines"]="Line count estimation"
+    ["PLACEHOLDER"]="Explicit placeholder"
+    ["IMPLEMENT_LATER"]="Deferred implementation"
+    ["DUMMY_VALUE"]="Dummy/hardcoded values"
+    ["RETURN_NULL_STUB"]="Stub function"
+    ["THROW_NOT_IMPLEMENTED"]="Not implemented exception"
+    ["CONSOLE_LOG_TEST"]="Debug/test code left in"
+    ["ALERT_DEBUG"]="Debug alert code"
+    ["EXAMPLE_IMPLEMENTATION"]="Example/demo code"
+    ["SAMPLE_CODE"]="Sample code pattern"
+    ["THIS_EXAMPLE"]="Example code indicator"
+    ["BASIC_TEMPLATE"]="Template code"
+    ["COPY_FROM"]="Copied code indication"
+    ["SIMILAR_TO"]="Code similarity admission"
+    ["BASED_ON_EXISTING"]="Duplicate logic pattern"
+    ["CREATE_NEW_INSTEAD"]="Parallel system creation"
+    ["REPLACE_EXISTING_WITH"]="Unnecessary replacement"
+    ["SIMPLER_VERSION_OF"]="Inferior parallel implementation"
+    ["SIMULATE_CALL"]="Simulated function call"
+    ["IN_PRODUCTION_WOULD"]="Production disclaimer"
+    ["WOULD_GO_HERE"]="Placeholder location marker"
+    ["FOR_NOW_RETURN_NONE"]="Fake null return"
+    ["ADD_PERFORMANCE_MARKER"]="Fake performance tracking"
+    ["THEORETICAL_PERFORMANCE"]="Theoretical simulation"
+    ["ESTIMATED_LINE_COUNT"]="Estimated line count"
+    ["APPROXIMATELY_NUMERIC"]="Numeric approximation"
+    ["AROUND_LINES"]="Line count estimation"
+    ["ROUGHLY_NUMERIC"]="Rough numeric estimate"
+    ["TABLE_ESTIMATION"]="Table estimation marker"
+    ["ESTIMATED_LINES"]="Line count estimation"
 )
 
 FOUND_SPECULATION=false
@@ -152,33 +132,89 @@ FOUND_FAKE_CODE=false
 SPECULATION_COUNT=0
 FAKE_CODE_COUNT=0
 
+# Function to get regex pattern from key
+get_regex_pattern() {
+    case $1 in
+        "LET_ME_WAIT") echo "[Ll]et me wait" ;;
+        "WAIT_FOR_COMPLET") echo "[Ww]ait for.*complet" ;;
+        "ILL_WAIT_FOR") echo "I'll wait for" ;;
+        "WAITING_FOR_FINISH") echo "[Ww]aiting for.*finish" ;;
+        "LET_FINISH") echo "[Ll]et.*finish" ;;
+        "COMMAND_RUNNING") echo "command.*running" ;;
+        "THE_COMMAND_EXECUT") echo "[Tt]he command.*execut" ;;
+        "RUNNING_COMPLET") echo "[Rr]unning.*complet" ;;
+        "SYSTEM_PROCESSING") echo "system.*processing" ;;
+        "WHILE_EXECUT") echo "while.*execut" ;;
+        "SHOULD_SEE") echo "should.*see" ;;
+        "WILL_RESULT") echo "will.*result" ;;
+        "EXPECT_TO") echo "expect.*to" ;;
+        "LIKELY_THAT") echo "likely.*that" ;;
+        "DURING_PROCESS") echo "during.*process" ;;
+        "AS_RUNS") echo "as.*runs" ;;
+        "ONCE_COMPLETE") echo "once.*complete" ;;
+        "TODO_IMPLEMENT") echo "TODO.*implement" ;;
+        "PLACEHOLDER") echo "placeholder" ;;
+        "IMPLEMENT_LATER") echo "implement.*later" ;;
+        "DUMMY_VALUE") echo "dummy.*value" ;;
+        "RETURN_NULL_STUB") echo "return.*null.*#.*stub" ;;
+        "THROW_NOT_IMPLEMENTED") echo "throw.*NotImplemented" ;;
+        "CONSOLE_LOG_TEST") echo "console\.log.*test" ;;
+        "ALERT_DEBUG") echo "alert.*debug" ;;
+        "EXAMPLE_IMPLEMENTATION") echo "Example.*implementation" ;;
+        "SAMPLE_CODE") echo "Sample.*code" ;;
+        "THIS_EXAMPLE") echo "This.*example" ;;
+        "BASIC_TEMPLATE") echo "Basic.*template" ;;
+        "COPY_FROM") echo "copy.*from" ;;
+        "SIMILAR_TO") echo "similar.*to" ;;
+        "BASED_ON_EXISTING") echo "based.*on.*existing" ;;
+        "CREATE_NEW_INSTEAD") echo "create.*new.*instead" ;;
+        "REPLACE_EXISTING_WITH") echo "replace.*existing.*with" ;;
+        "SIMPLER_VERSION_OF") echo "simpler.*version.*of" ;;
+        "SIMULATE_CALL") echo "[Ss]imulate.*call" ;;
+        "IN_PRODUCTION_WOULD") echo "in production.*would" ;;
+        "WOULD_GO_HERE") echo "would go here" ;;
+        "FOR_NOW_RETURN_NONE") echo "For now.*return.*None" ;;
+        "ADD_PERFORMANCE_MARKER") echo "add.*performance.*marker" ;;
+        "THEORETICAL_PERFORMANCE") echo "theoretical.*performance" ;;
+        "ESTIMATED_LINE_COUNT") echo "~[0-9]+.*lines" ;;
+        "APPROXIMATELY_NUMERIC") echo "approximately.*[0-9]+" ;;
+        "AROUND_LINES") echo "around.*[0-9]+.*lines" ;;
+        "ROUGHLY_NUMERIC") echo "roughly.*[0-9]+" ;;
+        "TABLE_ESTIMATION") echo "\\|.*~.*\\|" ;;
+        "ESTIMATED_LINES") echo "estimated.*[0-9]+.*lines" ;;
+        *) echo "$1" ;;
+    esac
+}
+
 # Check for speculation patterns
-for pattern in "${!SPECULATION_PATTERNS[@]}"; do
-    if echo "$RESPONSE_TEXT" | grep -i -E "$pattern" > /dev/null 2>&1; then
+for pattern_key in "${!SPECULATION_PATTERNS[@]}"; do
+    regex_pattern=$(get_regex_pattern "$pattern_key")
+    if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
         FOUND_SPECULATION=true
         ((SPECULATION_COUNT++))
 
-        description="${SPECULATION_PATTERNS[$pattern]}"
-        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$pattern" | head -1)
+        description="${SPECULATION_PATTERNS[$pattern_key]}"
+        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
 
         echo -e "${YELLOW}$(emoji "⚠️" "!") SPECULATION DETECTED${NC}: $description"
-        echo -e "   ${RED}Pattern${NC}: $pattern"
+        echo -e "   ${RED}Pattern${NC}: $regex_pattern"
         echo -e "   ${RED}Match${NC}: $matching_text"
         echo ""
     fi
 done
 
 # Check for fake code patterns
-for pattern in "${!FAKE_CODE_PATTERNS[@]}"; do
-    if echo "$RESPONSE_TEXT" | grep -i -E "$pattern" > /dev/null 2>&1; then
+for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
+    regex_pattern=$(get_regex_pattern "$pattern_key")
+    if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
         FOUND_FAKE_CODE=true
         ((FAKE_CODE_COUNT++))
 
-        description="${FAKE_CODE_PATTERNS[$pattern]}"
-        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$pattern" | head -1)
+        description="${FAKE_CODE_PATTERNS[$pattern_key]}"
+        matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
 
         echo -e "${RED}$(emoji "🚨" "!") FAKE CODE DETECTED${NC}: $description"
-        echo -e "   ${RED}Pattern${NC}: $pattern"
+        echo -e "   ${RED}Pattern${NC}: $regex_pattern"
         echo -e "   ${RED}Match${NC}: $matching_text"
         echo ""
     fi
@@ -228,17 +264,17 @@ fi
 # Show final status if any issues were detected
 if [ "$FOUND_SPECULATION" = true ] || [ "$FOUND_FAKE_CODE" = true ]; then
     echo -e "${YELLOW}$(emoji "ℹ️" "i") NOTE${NC}: This is an advisory system. The hook is functioning correctly."
-    
+
     # Log incidents
     echo "$(date '+%Y-%m-%d %H:%M:%S') - Speculation: $SPECULATION_COUNT, Fake Code: $FAKE_CODE_COUNT patterns" >> "$LOG_FILE"
-    
+
     # Create visible warning file in docs directory (CLAUDE.md compliant)
     # Secure warning file creation: validate path and write atomically (addresses CodeRabbit comment #2266139945)
     # Path validation already done at startup for security
-    
+
     mkdir -p "$PROJECT_ROOT/docs"
     WARNING_FILE="$PROJECT_ROOT/docs/CRITICAL_FAKE_CODE_WARNING.md"
-    
+
     # Atomic write using temporary file to prevent partial writes
     WARNING_DIR=$(dirname "$WARNING_FILE")
     TEMP_WARNING_FILE=$(mktemp -p "$WARNING_DIR" 'FAKE_CODE_WARNING.XXXXXX.md')
@@ -252,7 +288,7 @@ if [ "$FOUND_SPECULATION" = true ] || [ "$FOUND_FAKE_CODE" = true ]; then
 ## 🛑 VIOLATIONS DETECTED
 
 EOF
-    
+
     # Add detected patterns to temporary file
     echo "**Detected $FAKE_CODE_COUNT fake code pattern(s):**" >> "$TEMP_WARNING_FILE"
     echo "" >> "$TEMP_WARNING_FILE"
@@ -263,7 +299,7 @@ EOF
             echo "- **${description}**: \`${matching_text}\`" >> "$TEMP_WARNING_FILE"
         fi
     done
-    
+
     # Generate date outside heredoc for security
     GEN_DATE="$(date)"
     cat >> "$TEMP_WARNING_FILE" << 'EOF'
@@ -271,7 +307,7 @@ EOF
 ## 🚨 CLAUDE.md RULE VIOLATIONS
 
 - **Rule**: 'NO FAKE IMPLEMENTATIONS' - Always build real, functional code
-- **Rule**: 'Real implementation > No implementation > Fake implementation'  
+- **Rule**: 'Real implementation > No implementation > Fake implementation'
 - **Rule**: 'NEVER create placeholder/demo code or duplicate existing protocols'
 
 ## ⚡ IMMEDIATE ACTIONS REQUIRED
@@ -303,7 +339,7 @@ rm "docs/CRITICAL_FAKE_CODE_WARNING.md"
 EOF
     echo "**Generated**: $GEN_DATE" >> "$TEMP_WARNING_FILE"
     echo "**Hook Version**: Advanced Speculation & Fake Code Detection v2.0" >> "$TEMP_WARNING_FILE"
-    
+
     # Atomically move temporary file to final location
     if mv "$TEMP_WARNING_FILE" "$WARNING_FILE"; then
         trap - EXIT
@@ -314,10 +350,10 @@ EOF
     fi
 
     # Try multiple output methods for maximum visibility
-    
+
     # Method 1: stdout (might be visible in some cases)
     echo "🚨 FAKE CODE WARNING FILE CREATED: Check docs/CRITICAL_FAKE_CODE_WARNING.md"
-    
+
     # Method 2: stderr with exit 2 (BLOCKS operation and sends to Claude AI)
     echo -e "\n${RED}$(emoji "🛑" "BLOCKING") FAKE CODE DETECTED - OPERATION BLOCKED${NC}" >&2
     echo -e "${RED}📄 See: docs/CRITICAL_FAKE_CODE_WARNING.md${NC}" >&2
