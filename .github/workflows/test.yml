@@ -10,7 +10,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # Extended timeout for comprehensive test suites
+    timeout-minutes: 20  # Balanced timeout for comprehensive test suites
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
@@ -70,7 +70,7 @@ jobs:
 
     # Step 5: Run test group based on matrix strategy
     - name: Run test group - ${{ matrix.test-group }}
-      timeout-minutes: 25  # Step-level timeout for individual test group execution
+      timeout-minutes: 20  # Step-level timeout for individual test group execution
       run: |
         # Activate the virtual environment
         source venv/bin/activate
