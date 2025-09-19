@@ -775,8 +775,13 @@ run_single_test() {
         echo "TESTFILE: $test_file"
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
 
-        # Increased timeout for complex tests (8 minutes per test)
-        local test_timeout=${TEST_TIMEOUT:-480}
+        # Reasonable timeout for CI tests (2 minutes per test, configurable)
+        # Use shorter timeout for FAST_TESTS mode (CI optimization)
+        if [ "$FAST_TESTS" = "1" ] && [ -z "$TEST_TIMEOUT" ]; then
+            local test_timeout=60  # 1 minute for fast CI tests
+        else
+            local test_timeout=${TEST_TIMEOUT:-120}  # 2 minutes default
+        fi
 
         if [ "$enable_coverage" = true ]; then
             # Run with coverage and proper Python path
