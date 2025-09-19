@@ -5,6 +5,10 @@ Execute test specifications directly as an LLM without generating intermediate s
 
 ## Usage Patterns
 ```bash
+# Default Directory Suite (No Arguments)
+/testllm
+/testllm verified
+
 # Single-Agent Testing (Traditional)
 /testllm path/to/test_file.md
 /testllm path/to/test_file.md with custom user input
@@ -15,6 +19,11 @@ Execute test specifications directly as an LLM without generating intermediate s
 /testllm verified path/to/test_file.md with custom input
 /testllm verified "natural language test description"
 ```
+
+### Default Behavior (No Arguments Provided)
+- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
+- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
+- **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
 
 ## Core Principles
 - **LLM-Native Execution**: Drive tests directly as Claude, no script generation
@@ -70,6 +79,8 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 ## 🚨 DIRECTORY TESTING PROTOCOL - MANDATORY FOR ALL DIRECTORY-BASED TESTS
 
 ### When User Requests "testing_llm/ test cases" or Similar Directory-Based Testing:
+
+**Default Invocation Note**: Running `/testllm` with no additional arguments automatically triggers this full protocol for the `testing_llm/` directory.
 
 **🚨 CRITICAL RULE: NEVER TEST JUST ONE FILE WHEN DIRECTORY REQUESTED**
 
@@ -273,7 +284,11 @@ Task(
 
 ### Execution Flow Selection Logic
 ```
-if "verified" in command_args:
+if not command_args:
+    execute_directory_suite("testing_llm", mode="single_agent")
+elif command_args == ["verified"]:
+    execute_directory_suite("testing_llm", mode="dual_agent")
+elif "verified" in command_args:
     execute_dual_agent_mode()
     spawn_testexecutor_agent()
     wait_for_evidence_package()
