@@ -75,7 +75,12 @@ fi
 # SSH tunnel and proxy PID files
 SSH_TUNNEL_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_ssh_tunnel.pid"
 PROXY_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_proxy.pid"
-mkdir -p "$(dirname "$SSH_TUNNEL_PID_FILE")"
+# Create PID directory safely (handles concurrent access)
+PID_DIR="$(dirname "$SSH_TUNNEL_PID_FILE")"
+if ! mkdir -p "$PID_DIR" 2>/dev/null; then
+    echo -e "${RED}❌ Failed to create PID directory: $PID_DIR${NC}" >&2
+    exit 1
+fi
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -195,9 +200,15 @@ setup_cron_jobs() {
         # Copy essential scripts from current project to permanent location
         CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         if [ -f "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" ]; then
-            cp "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" "$WORLDARCHITECT_HOME/"
-            chmod +x "$WORLDARCHITECT_HOME/claude_backup.sh"
-            echo -e "${GREEN}✅ Installed claude_backup.sh to permanent location${NC}"
+            if cp "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" "$WORLDARCHITECT_HOME/" && \
+               chmod +x "$WORLDARCHITECT_HOME/claude_backup.sh"; then
+                echo -e "${GREEN}✅ Installed claude_backup.sh to permanent location${NC}"
+            else
+                echo -e "${RED}❌ Failed to install claude_backup.sh${NC}" >&2
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  claude_backup.sh not found, skipping installation${NC}" >&2
         fi
 
         # Create permanent wrapper (no worktree dependencies)
@@ -259,10 +270,16 @@ EOF
         # Install orchestration cleanup script to permanent location
         CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
         if [ -f "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" ]; then
-            mkdir -p "$WORLDARCHITECT_HOME/orchestration"
-            cp "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" "$WORLDARCHITECT_HOME/orchestration/"
-            chmod +x "$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"
-            echo -e "${GREEN}✅ Installed orchestration cleanup script to permanent location${NC}"
+            if mkdir -p "$WORLDARCHITECT_HOME/orchestration" && \
+               cp "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" "$WORLDARCHITECT_HOME/orchestration/" && \
+               chmod +x "$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"; then
+                echo -e "${GREEN}✅ Installed orchestration cleanup script to permanent location${NC}"
+            else
+                echo -e "${RED}❌ Failed to install orchestration cleanup script${NC}" >&2
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  orchestration cleanup script not found, skipping installation${NC}" >&2
         fi
 
         # Create tmux cleanup wrapper (no worktree dependencies)
