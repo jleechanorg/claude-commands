@@ -824,24 +824,48 @@ run_tests_with_timeout() {
             run_single_test "$test_file"
         done
     else
-        # Parallel execution - use shell function with environment properly inherited
+        # Parallel execution with proper concurrency control
+        local active_jobs=0
         for test_file in "${test_files[@]}"; do
-            (run_single_test "$test_file") &
-            # Limit concurrent processes
-            while [ $(jobs -r | wc -l) -ge $max_workers ]; do
-                sleep 0.1
+            # Wait if we've reached max workers
+            while [ $active_jobs -ge $max_workers ]; do
+                # Check for completed jobs
+                if wait -n 2>/dev/null; then
+                    active_jobs=$((active_jobs - 1))
+                else
+                    # If wait -n not supported, use polling
+                    sleep 0.1
+                    active_jobs=$(jobs -r | wc -l)
+                fi
             done
+
+            # Start new test
+            (run_single_test "$test_file") &
+            active_jobs=$((active_jobs + 1))
         done
-        # Wait for all background jobs to complete
+        # Wait for all remaining jobs to complete
         wait
     fi
 }
 
 # Note: Using bash subshells for parallel execution, so no exports needed
 
-# Execute tests (timeout handling moved to individual test level)
+# Execute tests with overall timeout wrapper (restored critical timeout)
 suite_timed_out=false
-run_tests_with_timeout
+if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
+    echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
+    echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
+    echo "  - Infinite loops in test code" >&2
+    echo "  - Network timeouts or external service dependencies" >&2
+    echo "  - Memory leaks causing system slowdown" >&2
+    echo "  - Tests waiting for user input or external events" >&2
+
+    # Kill any remaining test processes
+    pkill -f "python.*test_" || true
+
+    # Mark as timed out to prevent result processing from overriding
+    suite_timed_out=true
+fi
 
 # Wait for all background jobs to complete
 wait
