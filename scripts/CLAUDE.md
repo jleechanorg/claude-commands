@@ -43,7 +43,7 @@ scripts/
 
 ### Test Infrastructure (tests/)
 - `test_crdt_integration.py` - CRDT system integration testing
-- `test_crdt_properties.py` - CRDT mathematical properties testing
+- `scripts/tests/test_crdt_validation.py` - Consolidated CRDT validation suite (properties, edge, production, performance, security)
 - `test_race_condition.sh` - Race condition detection
 
 ## Development Guidelines

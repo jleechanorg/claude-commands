@@ -78,7 +78,7 @@ Our comprehensive analysis of the WorldArchitect.AI codebase revealed **167 inli
 **Quick wins identified**:
 - `scripts/context_monitor.py`: Move `import argparse` to top
 - `scripts/crdt_merge.py`: Move `import sys` to top
-- `scripts/test_crdt_*.py`: Move stdlib imports to top
+- `scripts/tests/crdt_validation.py`: Consolidated harness with imports at module top
 
 ### Phase 2: MVP Site Core (MEDIUM RISK)
 - **Branch**: `fix/inline-imports-mvp-core`
