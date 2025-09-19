@@ -14,10 +14,10 @@ Unified campaign management script with all operations:
 ### 🚀 Batch Script: `delete_all_my_epic_adventure.sh`
 Automated batch deletion script for repetitive operations.
 
-### 📁 Legacy Scripts (Individual Tools)
-- `query_campaigns_by_name.py` - Individual query tool
-- `delete_campaigns_by_name.py` - Individual deletion tool  
-- `find_user_by_email.py` - Individual user lookup tool
+### 📁 Legacy Scripts (Individual Tools) - REMOVED ✅
+- ~~`query_campaigns_by_name.py`~~ - Consolidated into campaign_manager.py
+- ~~`delete_campaigns_by_name.py`~~ - Consolidated into campaign_manager.py
+- ~~`find_user_by_email.py`~~ - Consolidated into campaign_manager.py
 
 ## Quick Start
 
