@@ -15,23 +15,23 @@
 
 **MANDATORY**: Fixed copilot skip detection bug that was ignoring inline review comments:
 ```bash
-# 🚨 COMPREHENSIVE COMMENT DETECTION FUNCTION 
+# 🚨 COMPREHENSIVE COMMENT DETECTION FUNCTION
 # CRITICAL FIX: Include ALL comment sources (inline review comments were missing)
 get_comprehensive_comment_count() {
     local pr_number=$1
     local owner_repo=$(gh repo view --json owner,name | jq -r '.owner.login + "/" + .name')
-    
+
     # Get all three comment sources
     local general_comments=$(gh pr view $pr_number --json comments | jq '.comments | length')
     local review_comments=$(gh pr view $pr_number --json reviews | jq '.reviews | length')
     # Robust pagination-safe counting for inline comments
     local inline_comments=$(gh api "repos/$owner_repo/pulls/$pr_number/comments" --paginate --jq '.[].id' 2>/dev/null | wc -l | tr -d ' ')
     inline_comments=${inline_comments:-0}
-    
+
     local total=$((general_comments + review_comments + inline_comments))
-    
+
     # Silent operation - only output on errors or warnings
-    
+
     echo "$total"
 }
 ```
@@ -40,7 +40,7 @@ get_comprehensive_comment_count() {
 
 ## Description
 
-Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources AND GitHub CI status. Uses GitHub API `in_reply_to_id` field analysis to filter out already-replied comments. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
+Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources AND GitHub CI status. Uses GitHub API `in_reply_to` field analysis to filter out already-replied comments. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
 
 ## Output Format
 
@@ -106,8 +106,8 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 🚨 **CRITICAL EFFICIENCY ENHANCEMENT**: The command automatically identifies and filters unresponded comments:
 
 ### 1. Already-Replied Detection (PRIMARY FILTER)
-- **Method**: Analyze GitHub API `in_reply_to_id` field to identify threaded responses
-- **Logic**: If comment #12345 has any replies with `in_reply_to_id: 12345`, mark as ALREADY_REPLIED
+- **Method**: Analyze GitHub API `in_reply_to` field to identify threaded responses
+- **Logic**: If comment #12345 has any replies with `in_reply_to: 12345`, mark as ALREADY_REPLIED
 - **Efficiency**: Skip already-replied comments from downstream processing entirely
 
 ### 2. Response Requirement Analysis (SECONDARY FILTER)
@@ -133,7 +133,7 @@ For comments that are NOT already replied, determine if they need responses base
 ARGS="$*"
 echo "📝 Processing instruction: $ARGS"
 
-# Extract PR number from current branch if not specified  
+# Extract PR number from current branch if not specified
 # Fixed: Only match explicit PR patterns (PR123, pr#123, #123) to avoid matching standalone numbers
 if ! echo "$ARGS" | grep -qE '([Pp][Rr][#[:space:]]*|#)[0-9]+'; then
     PR_NUMBER=$(gh pr list --head $(git branch --show-current) --json number --jq '.[0].number' 2>/dev/null)
@@ -174,12 +174,12 @@ python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER"
 if [ "$PRINT_INLINE" = "true" ]; then
     BRANCH_NAME=$(git branch --show-current)
     COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
-    
+
     if [ -f "$COMMENTS_FILE" ]; then
         echo ""
         echo "📋 UNRESPONDED COMMENTS (Last fetched: $(date)):"
         echo "=================================================="
-        
+
         if [ -n "$LIMIT" ]; then
             # Show limited number of recent comments
             echo "🔍 Showing last $LIMIT unresponded comments:"
@@ -212,7 +212,7 @@ This command is typically the first step in the `/copilot` workflow, providing f
 
 ## CI Status Integration
 
-**Enhanced with /fixpr methodology**: 
+**Enhanced with /fixpr methodology**:
 - Uses `gh pr view --json statusCheckRollup,mergeable,mergeStateStatus` for authoritative GitHub CI data
 - Implements defensive programming patterns (statusCheckRollup is a LIST, safe access)
 - Provides overall state assessment (FAILING/PASSING/PENDING/ERROR)

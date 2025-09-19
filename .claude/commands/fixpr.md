@@ -291,8 +291,17 @@ Examine the collected data to understand what needs fixing:
 gh pr view <PR> --json statusCheckRollup
 # ❌ test-unit: FAILING - AssertionError: Expected 'foo' but got 'FOO'
 
-# 3. AUTO-TRIGGER /redgreen methodology for this specific failure
-# This should be handled by the enhanced fixpr logic
+# 3. Call the real /redgreen slash command to reproduce the GitHub failure locally BEFORE editing anything
+PR_NUMBER=<PR>  # Replace with the numeric PR identifier
+failing_check="test-unit"  # Replace with actual failing check name from GitHub
+ci_failure_log=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
+  (.statusCheckRollup // [])
+  | map(select((.state == "FAILURE") or (.conclusion == "FAILURE")))
+  | map("\(.context // .name): \(.description // "no description")")
+  | join("\n")
+')
+/redgreen --pr "$PR_NUMBER" --check "$failing_check" --gh-log "$ci_failure_log" --local "./run_tests.sh"
+# ✅ fixpr MUST wait for /redgreen to finish and confirm a matching local failure before attempting any fixes
 ```
 
 ### Step 5: Apply Fixes Intelligently
@@ -300,6 +309,8 @@ gh pr view <PR> --json statusCheckRollup
 🎯 **FOCUSED APPROACH**: Apply fixes to the immediate issues identified in the current PR
 
 Based on the analysis, apply appropriate fixes:
+
+- **MANDATORY PRECONDITION**: Do not modify code until the `/redgreen` command above has produced the matching local failure and marked the RED phase complete.
 
 **For CI Failures**:
 - **Environment issues**: Update dependencies, fix missing environment variables, adjust timeouts
@@ -315,6 +326,8 @@ Based on the analysis, apply appropriate fixes:
 ### 🚨 Integrated `/redgreen` Workflow for CI Discrepancies
 
 **AUTOMATIC ACTIVATION**: When GitHub CI fails but local tests pass, `/fixpr` automatically implements this workflow:
+
+**MANDATORY COMMAND INVOCATION**: `/fixpr` must explicitly call the real `/redgreen` slash command (no aliases) to recreate the GitHub failure locally **before** touching any source files. The run must complete and show the failing local test that mirrors GitHub prior to entering the fix phase.
 
 #### RED PHASE: Reproduce GitHub Failure Locally
 ```bash
@@ -574,6 +587,9 @@ For every fix applied:
 /fixpr 1234
 # → Automatically detects discrepancy
 # → Triggers RED-GREEN workflow
+# → Immediately issues the real /redgreen slash command to reproduce the CI failure locally
+/redgreen --pr 1234 --check "test-unit" --gh-log "AssertionError: Expected 'foo' but got 'FOO'" --local "./run_tests.sh"
+# → Waits for /redgreen to finish establishing a failing local test that matches GitHub
 # → Creates failing test locally
 # → Fixes code to work in both environments
 # → Verifies GitHub CI passes
