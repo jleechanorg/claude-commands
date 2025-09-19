@@ -42,7 +42,7 @@
   - `scripts/memory_backup_crdt.py` (~350 lines)
   - `scripts/test_memory_backup_crdt.py` (~250 lines)
   - `scripts/crdt_merge.py` (~150 lines)
-  - `scripts/test_crdt_properties.py` (~150 lines)
+  - `scripts/tests/test_crdt_validation.py` (~150 lines)
   - `scripts/memory_backup.sh` (~50 lines - wrapper)
 - **Modified Files**:
   - `.github/workflows/memory-backup.yml` (~20 lines)
@@ -68,7 +68,7 @@
 **Duration**: 15 minutes (2 parallel agents)
 **Files**:
 - `scripts/test_memory_backup_crdt.sh`
-- `scripts/test_crdt_properties.sh`
+- `scripts/tests/crdt_validation.py`
 **Dependencies**: Phase 1 & 2 complete
 
 ### Phase 4: Integration & Migration (~100 lines)
@@ -142,7 +142,7 @@
 - **Test**: Verify no data loss
 
 #### SM3.2: Property-Based Tests (~100 lines)
-**Files**: `scripts/test_crdt_properties.py` (new, 100 lines)
+**Files**: `scripts/tests/test_crdt_validation.py` (new, 100 lines)
 **Commit**: `test(crdt): add CRDT property verification tests with hypothesis`
 **TDD Approach**:
 - **Red**: Define CRDT mathematical properties
@@ -331,7 +331,7 @@ pip install hypothesis pytest-cov
 
 # Test execution
 pytest scripts/test_memory_backup_crdt.py -v
-pytest scripts/test_crdt_properties.py -v
+pytest scripts/tests/test_crdt_validation.py -v
 
 # Performance validation
 python3 -m timeit -s "from scripts.crdt_merge import crdt_merge" "crdt_merge(['memory-*.json'])"

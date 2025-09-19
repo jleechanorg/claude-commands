@@ -188,7 +188,7 @@ def main():
             'roadmap/tests/test_ai_content_personalization_fix.py'
         ],
         'dependencies': [
-            'scripts/tests/test_crdt_properties.py'
+            'scripts/tests/test_crdt_validation.py'
         ]
     }
     
