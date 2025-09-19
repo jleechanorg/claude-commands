@@ -35,8 +35,8 @@ class FirebaseAuthValidator:
 
     def test_firebase_config_files(self) -> bool:
         """Test Firebase configuration files exist and are valid."""
-        env_file = "/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env"
-        service_account = "/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json"
+        env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
+        service_account = os.path.join(os.path.expanduser("~"), "serviceAccountKey.json")
 
         # Check .env file
         if not os.path.exists(env_file):
@@ -53,7 +53,7 @@ class FirebaseAuthValidator:
 
     def test_firebase_env_variables(self) -> bool:
         """Test Firebase environment variables are properly configured."""
-        env_file = "/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env"
+        env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
 
         try:
             with open(env_file, 'r') as f:
@@ -105,8 +105,8 @@ class FirebaseAuthValidator:
 
     def test_project_id_consistency(self) -> bool:
         """Test project ID consistency between frontend and backend."""
-        env_file = "/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env"
-        service_account = "/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json"
+        env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
+        service_account = os.path.join(os.path.expanduser("~"), "serviceAccountKey.json")
 
         try:
             # Get project ID from .env
@@ -146,7 +146,7 @@ class FirebaseAuthValidator:
 
     def test_firebase_api_key_validity(self) -> bool:
         """Test Firebase API key validity by making a request to Firebase REST API."""
-        env_file = "/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env"
+        env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
 
         try:
             with open(env_file, 'r') as f:

@@ -77,6 +77,24 @@ When I say these phrases, I'm recognizing a mistake:
 
 ## Recent Self-Learnings
 
+### 2025-09-17 - CRITICAL FILE PLACEMENT VIOLATION PATTERN
+- ❌ **VIOLATION**: Created `serviceAccountKey.json` outside project structure (`../../`)
+- ❌ **CLAUDE.MD RULES VIOLATED**:
+  - FILE PLACEMENT PROTOCOL (lines 84-88) - Never create files in project root or outside structure
+  - NEW FILE CREATION PROTOCOL (lines 76-80) - Extreme anti-creation bias not followed
+  - INTEGRATION PREFERENCE HIERARCHY not attempted
+- ❌ **ANTI-PATTERNS IDENTIFIED**:
+  - Placing sensitive files outside project boundaries
+  - Not checking existing config files for credential storage patterns
+  - Ignoring environment variable options
+  - Bypassing integration-first protocol
+- ✅ **CORRECT APPROACH FOR CREDENTIALS**:
+  1. Check existing config files for credential patterns (`mvp_site/config/`, `.env` files)
+  2. Use environment variables for sensitive data
+  3. Store config files in proper project directories (`config/`, `credentials/`)
+  4. Follow INTEGRATION PREFERENCE HIERARCHY before creating new files
+- 🚨 **ENFORCEMENT**: This pattern MUST be prevented in all future file creation decisions
+
 ### 2025-01-09
 - ✅ **REPEATED MISTAKES IN PR #447**: Import statements, unused CSS, inline styles
 - ✅ **PATTERN**: Same types of mistakes appear across multiple files in single PR
@@ -145,6 +163,7 @@ When I say these phrases, I'm recognizing a mistake:
 - ❌ "Costs too much money" → TESTING WITH REAL APIS IS PERMITTED
 - ❌ "Conflicts are resolved locally" → CHECK GITHUB FOR REAL STATUS
 - ❌ "Local merge worked" → GITHUB MIGHT STILL SHOW CONFLICTS
+- ❌ "Need to create new file for this" → CHECK EXISTING FILES FIRST FOR INTEGRATION
 
 ## Coverage Analysis
 
