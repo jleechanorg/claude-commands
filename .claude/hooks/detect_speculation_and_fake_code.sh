@@ -292,10 +292,11 @@ EOF
     # Add detected patterns to temporary file
     echo "**Detected $FAKE_CODE_COUNT fake code pattern(s):**" >> "$TEMP_WARNING_FILE"
     echo "" >> "$TEMP_WARNING_FILE"
-    for pattern in "${!FAKE_CODE_PATTERNS[@]}"; do
-        if echo "$RESPONSE_TEXT" | grep -i -E "$pattern" > /dev/null 2>&1; then
-            description="${FAKE_CODE_PATTERNS[$pattern]}"
-            matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$pattern" | head -1)
+    for pattern_key in "${!FAKE_CODE_PATTERNS[@]}"; do
+        regex_pattern=$(get_regex_pattern "$pattern_key")
+        if echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" > /dev/null 2>&1; then
+            description="${FAKE_CODE_PATTERNS[$pattern_key]}"
+            matching_text=$(echo "$RESPONSE_TEXT" | grep -i -E "$regex_pattern" | head -1)
             echo "- **${description}**: \`${matching_text}\`" >> "$TEMP_WARNING_FILE"
         fi
     done
