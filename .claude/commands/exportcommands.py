@@ -46,7 +46,7 @@ class ClaudeCommandsExporter:
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
         # Export configuration - all directories will be exported automatically
-        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'infrastructure-scripts', 'orchestration']
+        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'scripts', 'orchestration']
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -94,7 +94,7 @@ class ClaudeCommandsExporter:
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
 
-        print("🔍 Using comprehensive directory export (commands, hooks, agents, infrastructure-scripts, orchestration)")
+        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, orchestration)")
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
@@ -115,8 +115,8 @@ class ClaudeCommandsExporter:
         # Export agents
         self._export_agents(staging_dir)
 
-        # Export infrastructure scripts
-        self._export_infrastructure_scripts(staging_dir)
+        # Export scripts
+        self._export_scripts(staging_dir)
 
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
@@ -291,11 +291,11 @@ class ClaudeCommandsExporter:
 
         print(f"✅ Exported {self.agents_count} agents")
 
-    def _export_infrastructure_scripts(self, staging_dir):
-        """Export root-level infrastructure scripts (both Claude Code specific and generally useful development tools)"""
-        print("🚀 Exporting infrastructure scripts...")
+    def _export_scripts(self, staging_dir):
+        """Export reusable scripts (both Claude Code specific and generally useful development tools)"""
+        print("🚀 Exporting scripts...")
 
-        target_dir = os.path.join(staging_dir, 'infrastructure-scripts')
+        target_dir = os.path.join(staging_dir, 'scripts')
 
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
@@ -325,7 +325,7 @@ class ClaudeCommandsExporter:
                 print(f"   • {script_name}")
                 self.scripts_count += 1
 
-        print(f"✅ Exported {self.scripts_count} infrastructure scripts")
+        print(f"✅ Exported {self.scripts_count} scripts")
 
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
@@ -386,12 +386,25 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Apply transformations - FIXED: These now perform actual replacements
+            # Apply transformations - Enhanced for portability
             content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
             content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+
+            # New portable patterns
+            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
+            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
+            content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+            content = re.sub(r'https://github\.com/jleechanorg/[^/\s]+', '$(git config --get remote.origin.url)', content)
+
+            # SOURCE_DIR variable patterns - improved matching
+            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -536,17 +549,17 @@ class ClaudeCommandsExporter:
 **Export Statistics**:
 - **{self.commands_count} Commands**: Complete workflow orchestration system
 - **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks
-- **{self.scripts_count} Scripts**: Infrastructure and development environment scripts (expanded allowlist)
+- **{self.scripts_count} Scripts**: Development and automation tools (scripts/ directory)
 
 **Major Changes**:
-- **Script Allowlist Expansion**: Added 12 generally useful development scripts to infrastructure export
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
 - **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
 - **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
 
-**New Infrastructure Scripts**:
+**New Scripts Included**:
 - **Git Workflow**: create_worktree.sh, push.sh for branch management
 - **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
-- **Testing Infrastructure**: run_tests_with_coverage.sh, run_lint.sh
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
 - **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
 - **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
 
@@ -556,7 +569,7 @@ class ClaudeCommandsExporter:
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
-- Updated infrastructure script export description
+- Updated scripts export description
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage'''
 
@@ -575,7 +588,7 @@ class ClaudeCommandsExporter:
 **Export Statistics**:
 - **118 Commands**: Complete workflow orchestration system
 - **21 Hooks**: Claude Code automation and workflow hooks
-- **5 Scripts**: Infrastructure and development environment scripts
+- **5 Scripts**: Development and automation tools (scripts/ directory)
 
 **Major Changes**:
 - **Enhanced Export System**: Fixed LLM placeholder replacement for proper version generation
@@ -670,7 +683,7 @@ class ClaudeCommandsExporter:
 
 - **{self.commands_count} commands** workflow orchestration commands
 - **{self.hooks_count} hooks** Claude Code automation hooks
-- **{self.scripts_count} scripts** infrastructure management scripts
+- **{self.scripts_count} scripts** reusable automation scripts (scripts/)
 
 ## MANUAL INSTALLATION
 
@@ -680,7 +693,7 @@ Copy the exported commands and hooks to your project's `.claude/` directory:
 - Commands → `.claude/commands/`
 - Hooks → `.claude/hooks/`
 - Agents → `.claude/agents/`
-- Infrastructure scripts → Project root
+- Scripts → `scripts/` in your project root
 
 ## 📊 **Export Contents**
 
@@ -688,7 +701,7 @@ This comprehensive export includes:
 - **📋 {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
 - **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
 - **🤖 {self.agents_count} Agent Definitions** - Specialized task agents for autonomous workflows (.claude/agents/)
-- **🔧 {self.scripts_count} Infrastructure Scripts** - Development environment management
+- **🔧 {self.scripts_count} Scripts** - Development environment management (scripts/)
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
 - **📚 Complete Documentation** - Setup guide with adaptation examples
 
@@ -891,7 +904,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             'hooks': os.path.join(claude_dir, 'hooks'),
             'agents': os.path.join(claude_dir, 'agents'),
             'orchestration': 'orchestration',  # Goes to repo root
-            'infrastructure-scripts': None     # Goes to repo root individually
+            'scripts': None                    # Goes to repo root within scripts/
         }
 
         # Create the .claude/ subdirectories
@@ -908,14 +921,23 @@ This is a filtered reference export from a working Claude Code project. Commands
             if item in dirs_mapping:
                 target_path = dirs_mapping[item]
                 if target_path is None:
-                    # Handle infrastructure-scripts specially - copy individual files to repo root
-                    if item == 'infrastructure-scripts' and os.path.isdir(src):
-                        for script_file in os.listdir(src):
+                    # Handle scripts specially - copy to scripts/ directory in repo root
+                    if item == 'scripts' and os.path.isdir(src):
+                        scripts_dir = os.path.join(self.repo_dir, 'scripts')
+                        os.makedirs(scripts_dir, exist_ok=True)
+
+                        for script_file in sorted(os.listdir(src)):
                             script_src = os.path.join(src, script_file)
-                            script_dst = os.path.join(self.repo_dir, script_file)
+                            script_dst = os.path.join(scripts_dir, script_file)
                             if os.path.isfile(script_src):
                                 shutil.copy2(script_src, script_dst)
-                                print(f"   • Added/Updated: {script_file}")
+                                # Ensure executability for shell/python scripts (Windows-safe)
+                                if script_file.endswith(('.sh', '.py')):
+                                    try:
+                                        os.chmod(script_dst, 0o755)
+                                    except (OSError, NotImplementedError):
+                                        pass
+                                print(f"   • Added/Updated: scripts/{script_file}")
                     continue
                 elif target_path.startswith(claude_dir):
                     # Copy to .claude/ subdirectory
@@ -1003,7 +1025,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 ✅ EXPORT CONTENTS:
 - 📋 Commands: {self.commands_count} command definitions with content filtering
 - 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure
-- 🚀 Infrastructure: {self.scripts_count} scripts for development environment management
+- 🚀 Scripts: {self.scripts_count} reusable automation scripts (scripts/ directory)
 - 🤖 Orchestration: Multi-agent task delegation system (core components only)
 - 📚 Documentation: Complete README with installation guide and adaptation examples
 
@@ -1043,7 +1065,7 @@ This export **excludes** the following project-specific directories:
 ## ✅ Export Contents
 - **📋 {self.commands_count} Commands**: Complete workflow orchestration system
 - **📎 {self.hooks_count} Hooks**: Essential Claude Code workflow automation
-- **🚀 {self.scripts_count} Infrastructure Scripts**: Development environment management
+- **🚀 {self.scripts_count} Scripts**: Development environment management (scripts/ directory)
 - **🤖 Orchestration System**: Core multi-agent task delegation (WIP prototype)
 - **📚 Complete Documentation**: Setup guide with adaptation examples
 
@@ -1051,11 +1073,12 @@ This export **excludes** the following project-specific directories:
 From your project root:
 ```bash
 mkdir -p .claude/{{commands,hooks,agents}}
+mkdir -p scripts
 cp -R commands/. .claude/commands/
 cp -R hooks/. .claude/hooks/
 cp -R agents/. .claude/agents/
-# Optional infrastructure scripts
-cp -n infrastructure-scripts/* .
+# Optional scripts directory
+cp -n scripts/* ./scripts/
 ```
 
 ## 🔄 Content Filtering Applied

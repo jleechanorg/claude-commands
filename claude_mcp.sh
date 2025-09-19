@@ -239,16 +239,52 @@ declare -A PARALLEL_RESULTS
 # Server installation queue for parallel processing
 declare -a SERVER_QUEUE
 
-# Function to check if npm package exists
+# Function to check if package is a pip package
+is_pip_package() {
+    local package="$1"
+    case "$package" in
+        "claude-slash-commands-mcp")
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+# Function to check if package exists in remote registry
 package_exists() {
     local package="$1"
-    npm view "$package" version >/dev/null 2>&1
+    if is_pip_package "$package"; then
+        # Check PyPI registry (not local installation)
+        python3 -c "import requests; import sys; response = requests.get(f'https://pypi.org/pypi/{sys.argv[1]}/json'); sys.exit(0 if response.status_code == 200 else 1)" "$package" 2>/dev/null
+    else
+        npm view "$package" version >/dev/null 2>&1
+    fi
 }
 
 # Function to install npm package with permission-aware method
 install_package() {
     local package="$1"
     log_with_timestamp "Attempting to install package: $package"
+
+    # Special handling for pip packages
+    if is_pip_package "$package"; then
+        echo -e "${BLUE}  📦 Installing $package globally via pip...${NC}"
+        local install_output
+        install_output=$(pip install "$package" 2>&1)
+        local exit_code=$?
+
+        if [ $exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Package $package installed globally via pip${NC}"
+            log_with_timestamp "SUCCESS: Package $package installed globally via pip"
+            return 0
+        else
+            echo -e "${RED}  ❌ Failed to install $package via pip${NC}"
+            log_error_details "pip install" "$package" "$install_output"
+            return 1
+        fi
+    fi
 
     if [ "$USE_GLOBAL" = true ]; then
         echo -e "${BLUE}  📦 Installing $package globally...${NC}"
@@ -379,8 +415,6 @@ add_mcp_server() {
     local package="$2"
     shift 2
     local extra_args=("$@")
-<<<<<<< HEAD
-=======
     local cli_args=()
     local cmd_args=()
     for arg in "${extra_args[@]}"; do
@@ -390,7 +424,6 @@ add_mcp_server() {
             cmd_args+=("$arg")
         fi
     done
->>>>>>> 7c51ddfb (mcp: add DEFAULT_MCP_ENV_FLAGS, fix add_mcp_server arg parsing, reorder claude mcp add to put flags before <name>; apply env to add-json; update memory and Perplexity sections for correct flag order)
 
     update_stats "TOTAL" "$name" ""
     echo -e "${BLUE}  🔧 Setting up $name...${NC}"
@@ -404,47 +437,86 @@ add_mcp_server() {
         return 0
     fi
 
-    # Check if package exists in npm registry
-    echo -e "${BLUE}  🔍 Checking if package $package exists in npm registry...${NC}"
-    local registry_check
-    registry_check=$(npm view "$package" version 2>&1)
-    local registry_exit_code=$?
+    # Check if package exists in registry
+    if is_pip_package "$package"; then
+        echo -e "${BLUE}  🔍 Checking if package $package exists in PyPI registry...${NC}"
+        local registry_check
+        registry_check=$(python3 -c "import requests; import sys; response = requests.get(f'https://pypi.org/pypi/{sys.argv[1]}/json'); print('Package found' if response.status_code == 200 else 'Package not found'); sys.exit(0 if response.status_code == 200 else 1)" "$package" 2>&1)
+        local registry_exit_code=$?
 
-    if [ $registry_exit_code -ne 0 ]; then
-        echo -e "${RED}  ❌ Package $package not found in npm registry${NC}"
-        log_error_details "npm view" "$package" "$registry_check"
-        INSTALL_RESULTS["$name"]="PACKAGE_NOT_FOUND"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        return 1
+        if [ $registry_exit_code -ne 0 ]; then
+            echo -e "${RED}  ❌ Package $package not found in PyPI registry${NC}"
+            log_error_details "PyPI check" "$package" "$registry_check"
+            INSTALL_RESULTS["$name"]="PACKAGE_NOT_FOUND"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            return 1
+        else
+            echo -e "${GREEN}  ✅ Package $package exists in PyPI${NC}"
+            log_with_timestamp "Package $package exists in PyPI registry"
+        fi
     else
-        echo -e "${GREEN}  ✅ Package $package exists (version: $(echo "$registry_check" | head -1))${NC}"
-        log_with_timestamp "Package $package exists in registry"
+        echo -e "${BLUE}  🔍 Checking if package $package exists in npm registry...${NC}"
+        local registry_check
+        registry_check=$(npm view "$package" version 2>&1)
+        local registry_exit_code=$?
+
+        if [ $registry_exit_code -ne 0 ]; then
+            echo -e "${RED}  ❌ Package $package not found in npm registry${NC}"
+            log_error_details "npm view" "$package" "$registry_check"
+            INSTALL_RESULTS["$name"]="PACKAGE_NOT_FOUND"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            return 1
+        else
+            echo -e "${GREEN}  ✅ Package $package exists (version: $(echo "$registry_check" | head -1))${NC}"
+            log_with_timestamp "Package $package exists in registry"
+        fi
     fi
 
     # Check if package is installed globally (only if using global mode)
     if [ "$USE_GLOBAL" = true ]; then
-        echo -e "${BLUE}  🔍 Checking global npm installation...${NC}"
-        local global_check
-        global_check=$(npm list -g "$package" 2>&1)
-        local global_exit_code=$?
+        if is_pip_package "$package"; then
+            echo -e "${BLUE}  🔍 Checking global pip installation...${NC}"
+            local global_check
+            global_check=$(pip show "$package" 2>&1)
+            local global_exit_code=$?
 
-        if [ $global_exit_code -ne 0 ]; then
-            echo -e "${YELLOW}  📦 Package $package not installed globally, installing...${NC}"
-            log_with_timestamp "Package $package not installed globally, attempting installation"
-            if ! install_package "$package"; then
-                # If global install failed due to permissions, continue with npx
-                if [ "$USE_GLOBAL" = false ]; then
-                    echo -e "${BLUE}  🔄 Continuing with npx direct execution${NC}"
-                else
+            if [ $global_exit_code -ne 0 ]; then
+                echo -e "${YELLOW}  📦 Package $package not installed globally, installing...${NC}"
+                log_with_timestamp "Package $package not installed globally, attempting installation"
+                if ! install_package "$package"; then
                     INSTALL_RESULTS["$name"]="INSTALL_FAILED"
                     FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
                     return 1
                 fi
+            else
+                echo -e "${GREEN}  ✅ Package $package already installed globally via pip${NC}"
+                log_with_timestamp "Package $package already installed globally via pip"
+                echo "Global package check: $global_check" >> "$LOG_FILE"
             fi
         else
-            echo -e "${GREEN}  ✅ Package $package already installed globally${NC}"
-            log_with_timestamp "Package $package already installed globally"
-            echo "Global package check: $global_check" >> "$LOG_FILE"
+            echo -e "${BLUE}  🔍 Checking global npm installation...${NC}"
+            local global_check
+            global_check=$(npm list -g "$package" 2>&1)
+            local global_exit_code=$?
+
+            if [ $global_exit_code -ne 0 ]; then
+                echo -e "${YELLOW}  📦 Package $package not installed globally, installing...${NC}"
+                log_with_timestamp "Package $package not installed globally, attempting installation"
+                if ! install_package "$package"; then
+                    # If global install failed due to permissions, continue with npx
+                    if [ "$USE_GLOBAL" = false ]; then
+                        echo -e "${BLUE}  🔄 Continuing with npx direct execution${NC}"
+                    else
+                        INSTALL_RESULTS["$name"]="INSTALL_FAILED"
+                        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                        return 1
+                    fi
+                fi
+            else
+                echo -e "${GREEN}  ✅ Package $package already installed globally${NC}"
+                log_with_timestamp "Package $package already installed globally"
+                echo "Global package check: $global_check" >> "$LOG_FILE"
+            fi
         fi
     else
         echo -e "${BLUE}  🔄 Using npx direct execution - no global installation required${NC}"
@@ -460,17 +532,8 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-<<<<<<< HEAD
-    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package")
-    if [ ${#extra_args[@]} -gt 0 ]; then
-        add_output=$("${add_cmd[@]}" "${extra_args[@]}" 2>&1)
-    else
-        add_output=$("${add_cmd[@]}" 2>&1)
-    fi
-=======
     local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     add_output=$("${add_cmd[@]}" 2>&1)
->>>>>>> 7c51ddfb (mcp: add DEFAULT_MCP_ENV_FLAGS, fix add_mcp_server arg parsing, reorder claude mcp add to put flags before <name>; apply env to add-json; update memory and Perplexity sections for correct flag order)
     local add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -810,7 +873,9 @@ declare -A BATCH_2=(
     ["ddg-search"]="@oevortex/ddg_search"
 )
 
-declare -A BATCH_3=()
+declare -A BATCH_3=(
+    ["claude-slash-commands-mcp"]="claude-slash-commands-mcp"
+)
 
 # Function to install server batch in parallel
 install_batch_parallel() {
@@ -1179,9 +1244,15 @@ install_github_mcp() {
         # Remove any old deprecated GitHub server first
         claude mcp remove "github-server" >/dev/null 2>&1 || true
 
-        # Add the new official GitHub HTTP MCP server
-        add_output=$(claude mcp add-json --scope user "github-server" '{"type": "http", "url": "https://api.githubcopilot.com/mcp/", "authorization_token": "Bearer '"$GITHUB_PERSONAL_ACCESS_TOKEN"'"}' 2>&1)
+        # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
+        local temp_config=$(mktemp -t github_mcp.XXXXXX)
+        chmod 600 "$temp_config"
+        cat > "$temp_config" <<EOF
+{"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
+EOF
+        add_output=$(claude mcp add-json --scope user "github-server" - < "$temp_config" 2>&1)
         add_exit_code=$?
+        rm -f "$temp_config"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
@@ -1357,7 +1428,7 @@ install_react_mcp
 
 display_step "Setting up WorldArchitect MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🎮 Configuring WorldArchitect MCP server for D&D game mechanics...${NC}"
+echo -e "${BLUE}  🎮 Configuring project MCP server for application mechanics...${NC}"
 log_with_timestamp "Setting up MCP server: worldarchitect (local: mvp_site/mcp_api.py)"
 
 # Check if server already exists

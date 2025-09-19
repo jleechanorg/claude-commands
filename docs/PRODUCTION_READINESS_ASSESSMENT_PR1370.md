@@ -211,10 +211,10 @@ logger.error(f"Invalid JSON in {memory_file_path}: {e}")
 **Continuous Validation:**
 ```bash
 # Test execution for production validation
-python3 test_crdt_formal_verification.py      # Mathematical properties
-python3 test_crdt_production_scenarios.py     # Production readiness  
-python3 test_crdt_security_audit.py          # Security validation
-python3 test_crdt_performance_load.py        # Performance certification
+python3 -m scripts.tests.crdt_validation --group properties   # Mathematical properties
+python3 -m scripts.tests.crdt_validation --group production    # Production readiness  
+python3 -m scripts.tests.crdt_validation --group security      # Security validation
+python3 -m scripts.tests.crdt_validation --group performance   # Performance certification
 ```
 
 ---
@@ -442,16 +442,16 @@ export MEMORY_BACKUP_HOST_ID=$(hostname -f)
 **Regular Maintenance:**
 ```bash
 # Monthly: Validate CRDT properties still hold
-python3 test_crdt_formal_verification.py
+python3 -m scripts.tests.crdt_validation --group properties
 
 # Quarterly: Performance benchmark validation
-python3 test_crdt_performance_load.py
+python3 -m scripts.tests.crdt_validation --group performance
 
 # Semi-annually: Security audit
-python3 test_crdt_security_audit.py
+python3 -m scripts.tests.crdt_validation --group security
 
 # Annually: Full production scenario validation
-python3 test_crdt_production_scenarios.py
+python3 -m scripts.tests.crdt_validation --group production
 ```
 
 **Capacity Planning:**

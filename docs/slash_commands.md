@@ -91,4 +91,19 @@ The system supports arbitrary command combinations using Claude's natural langua
 - Includes Claude API usage statistics (remaining sessions out of 50)
 - Fallback mechanisms for missing git configuration or network issues
 
+### `/deploy`
+
+**Description**: Execute the repository's `deploy.sh` workflow regardless of whether the script lives in the project root or the `scripts/` directory.
+
+**Usage Syntax**:
+- `/deploy`
+- `/deploy staging`
+- `/deploy stable`
+
+**Implementation Notes**:
+- Uses `./claude_command_scripts/commands/deploy.sh` to locate and run `deploy.sh`
+- Forwards all arguments directly to the underlying deploy script
+- Prints the resolved script path for transparency before execution
+- Exits with a clear error if `deploy.sh` cannot be found in expected locations
+
 For detailed command specifications, see the individual command files in `.claude/commands/`.

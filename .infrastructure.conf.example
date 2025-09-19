@@ -1,0 +1,37 @@
+# Infrastructure Configuration File
+# Copy this to .infrastructure.conf and customize for your project
+
+# Project Configuration
+PROJECT_NAME="your-project-name"
+PROJECT_SRC_DIR="src"  # Source directory: src, lib, app, mvp_site, etc.
+PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+
+# Email Configuration
+EMAIL_USER="${EMAIL_USER:-$(git config user.email 2>/dev/null)}"
+EMAIL_PASS=""  # Set your app password
+BACKUP_EMAIL="${EMAIL_USER}"
+
+# GitHub Configuration
+GITHUB_REPO_URL="${GITHUB_REPO_URL:-$(git config --get remote.origin.url 2>/dev/null)}"
+GITHUB_RUNNER_DIR="$HOME/actions-runner"
+GITHUB_RUNNER_LABELS="self-hosted,claude"
+
+# Coverage Configuration
+COVERAGE_DIR="/tmp/${PROJECT_NAME}/coverage"
+
+# Test Configuration
+TEST_TIMEOUT="300"  # 5 minutes
+INCLUDE_INTEGRATION="false"
+GENERATE_HTML="true"
+
+# Paths
+VPYTHON_PATH="${PROJECT_ROOT}/vpython"
+TEST_SERVER_SCRIPT="${PROJECT_ROOT}/test_server_manager.sh"
+
+# Auto-detection settings
+AUTO_DETECT_SOURCE_DIR="true"
+AUTO_DETECT_REPO_URL="true"
+AUTO_DETECT_EMAIL="true"
+
+# Export settings
+EXPORT_EXCLUDE_DIRS="analysis,automation,claude-bot-commands,coding_prompts,prototype"
