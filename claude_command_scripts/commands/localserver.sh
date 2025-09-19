@@ -33,6 +33,14 @@ fi
 
 echo "🚀 Starting local development server via: $TARGET_SCRIPT"
 
+if [ "$#" -gt 0 ]; then
+    printf "ℹ️ Passing arguments:"
+    printf " %q" "$@"
+    printf '\n'
+else
+    echo "ℹ️ Passing arguments: (none)"
+fi
+
 if [ -x "$TARGET_SCRIPT" ]; then
     exec "$TARGET_SCRIPT" "$@"
 else
