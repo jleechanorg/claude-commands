@@ -2,6 +2,12 @@
 # Advanced Speculation & Fake Code Detection Hook for Claude Code
 # Lightweight but comprehensive detection using pattern matching and heuristics
 
+# Bash version requirement check for associative arrays
+if [ -n "${BASH_VERSINFO:-}" ] && [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    echo "Warning: detect_speculation_and_fake_code.sh requires Bash >= 4; skipping (found Bash ${BASH_VERSINFO[*]-unknown})." >&2
+    exit 0
+fi
+
 # Color codes (defined early to fix initialization order - addresses CodeRabbit comment #2266139941)
 RED='\033[0;31m'
 YELLOW='\033[1;33m'

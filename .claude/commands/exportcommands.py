@@ -399,11 +399,22 @@ class ClaudeCommandsExporter:
             content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
             content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
             content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
-            content = re.sub(r'https://github\.com/jleechanorg/[^/\s]+', '$(git config --get remote.origin.url)', content)
+            # Handle GitHub URLs in echo statements with proper quote termination
+            content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+\.git(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+            content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
 
             # SOURCE_DIR variable patterns - improved matching
             content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
             content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+
+            # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
+            if 'SOURCE_DIR' in content and 'SOURCE_DIR=' not in content and 'mvp_site' in content:
+                # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
+                if 'PROJECT_ROOT=' in content:
+                    content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                else:
+                    # Insert after shebang and initial comments
+                    content = re.sub(r'(#!/bin/bash\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
             content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
