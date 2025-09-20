@@ -251,8 +251,8 @@ class EntityInstructionGenerator:
 
             return any(phrase in entity_lower for phrase in player_phrases)
 
-            # TODO: Integrate with actual game state to check player_character_data
-            # For now, use heuristic approach
+            # Integrate with actual game state to check player_character_data
+            # Using heuristic approach until full game state integration
         except Exception:
             return False
 
