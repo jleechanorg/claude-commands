@@ -11,7 +11,7 @@
 ## 🚨 CLAUDE.md RULE VIOLATIONS
 
 - **Rule**: 'NO FAKE IMPLEMENTATIONS' - Always build real, functional code
-- **Rule**: 'Real implementation > No implementation > Fake implementation'  
+- **Rule**: 'Real implementation > No implementation > Fake implementation'
 - **Rule**: 'NEVER create placeholder/demo code or duplicate existing protocols'
 
 ## ⚡ IMMEDIATE ACTIONS REQUIRED
