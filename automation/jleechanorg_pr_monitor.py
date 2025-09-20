@@ -332,17 +332,27 @@ class JleechanorgPRMonitor:
                     )
 
                     if git_status.stdout.strip():
-                        self.logger.info(f"📝 Changes detected, pushing to remote")
+                        self.logger.info(f"📝 Changes detected, preparing to push")
 
-                        # Add, commit and push changes
+                        # Add changes
                         subprocess.run(["git", "add", "-A"], check=True)
-                        subprocess.run([
-                            "git", "commit", "-m",
-                            f"🤖 Automated fixes for PR #{pr_number}\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-                        ], check=True)
-                        subprocess.run(["git", "push", "origin", metadata["branch_name"]], check=True)
 
-                        self.logger.info(f"🚀 Changes pushed to {metadata['branch_name']}")
+                        # Check if there are still staged changes after pre-commit hooks
+                        git_staged = subprocess.run(
+                            ["git", "diff", "--cached", "--name-only"],
+                            capture_output=True, text=True
+                        )
+
+                        if git_staged.stdout.strip():
+                            self.logger.info(f"📝 Staged changes confirmed, committing")
+                            subprocess.run([
+                                "git", "commit", "-m",
+                                f"🤖 Automated fixes for PR #{pr_number}\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
+                            ], check=True)
+                            subprocess.run(["git", "push", "origin", metadata["branch_name"]], check=True)
+                            self.logger.info(f"🚀 Changes pushed to {metadata['branch_name']}")
+                        else:
+                            self.logger.info(f"📝 No staged changes after pre-commit hooks - changes were auto-fixed")
                     else:
                         self.logger.info(f"📝 No changes to push for PR #{pr_number}")
 
