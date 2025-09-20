@@ -244,6 +244,8 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 
 **Work Approach:** Clarify before acting | User instructions = law | Focus on primary goal
 
+⚠️ **USER SUGGESTION TESTING PROTOCOL**: When user suggests a solution and says "it should work", test their suggestion immediately rather than theorizing about potential issues. Respect user knowledge by trying their approach first.
+
 **Testing:** Red-green methodology (`/tdd` or `/rg`): Write failing tests → Confirm fail → Minimal code to pass → Refactor
 
 ## Development Guidelines
@@ -286,6 +288,8 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - No main push: ❌ `git push origin main` | ✅ `git push origin HEAD:feature`
 - ALL changes require PR (including docs)
 - Never switch branches without request
+
+⚠️ **GITHUB TOKEN SCOPES**: For gh CLI scope errors, use `GITHUB_TOKEN=$(cat ~/.token) gh command` - admin scopes (admin:org) encompass read scopes (read:org)
 
 ## GitHub Actions Security
 
