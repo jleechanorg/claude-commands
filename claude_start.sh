@@ -81,6 +81,8 @@ if ! mkdir -p "$PID_DIR" 2>/dev/null; then
     echo -e "${RED}❌ Failed to create PID directory: $PID_DIR${NC}" >&2
     exit 1
 fi
+# Set secure permissions on PID directory
+chmod 700 "$PID_DIR" 2>/dev/null || true
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -330,8 +332,14 @@ EOF
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
 
-    # First check comprehensive cron setup
-    setup_cron_jobs
+    # Platform-specific automation setup
+    if [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux: Use cron for automation
+        setup_cron_jobs
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: LaunchAgent setup handled separately in the macOS-specific section
+        echo -e "${BLUE}💡 macOS detected - LaunchAgent automation handled separately${NC}"
+    fi
 
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
@@ -692,17 +700,16 @@ EOF
                 chmod +x "$CLAUDE_SYNC_SCRIPT"
             fi
 
-            # Create LaunchAgent plist
-            cat > "$CLAUDE_LAUNCHAGENT" << EOF
-<?xml version="1.0" encoding="UTF-8"?>
+            # Create LaunchAgent plist with proper variable expansion using printf
+            printf '<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.${USER}.claude.backup</string>
+    <string>com.%s.claude.backup</string>
     <key>ProgramArguments</key>
     <array>
-        <string>$HOME/.local/bin/claude_backup_with_sync.sh</string>
+        <string>%s/.local/bin/claude_backup_with_sync.sh</string>
     </array>
     <key>StartInterval</key>
     <integer>14400</integer>
@@ -715,17 +722,17 @@ EOF
     <key>KeepAlive</key>
     <false/>
     <key>WorkingDirectory</key>
-    <string>$HOME</string>
+    <string>%s</string>
     <key>EnvironmentVariables</key>
     <dict>
         <key>PATH</key>
         <string>/usr/local/bin:/usr/bin:/bin</string>
         <key>HOME</key>
-        <string>$HOME</string>
+        <string>%s</string>
     </dict>
 </dict>
 </plist>
-EOF
+' "$(whoami)" "$HOME" "$HOME" "$HOME" > "$CLAUDE_LAUNCHAGENT"
 
             # Load LaunchAgent
             launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
