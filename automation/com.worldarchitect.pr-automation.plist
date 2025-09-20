@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Job identification -->
+    <key>Label</key>
+    <string>com.worldarchitect.pr-automation</string>
+
+    <!-- Program to run -->
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/jleechan/projects/worktree_worker2/automation/automation_safety_wrapper.py</string>
+    </array>
+
+    <!-- Working directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/jleechan/projects/worktree_worker2</string>
+
+    <!-- Schedule: Every 10 minutes -->
+    <key>StartInterval</key>
+    <integer>600</integer>
+
+    <!-- Auto-start on load -->
+    <key>RunAtLoad</key>
+    <true/>
+
+    <!-- Keep the job alive if it exits -->
+    <key>KeepAlive</key>
+    <false/>
+
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/Users/jleechan/.pyenv/shims</string>
+        <key>HOME</key>
+        <string>/Users/jleechan</string>
+        <key>USER</key>
+        <string>jleechan</string>
+    </dict>
+
+    <!-- Standard output and error paths -->
+    <key>StandardOutPath</key>
+    <string>/Users/jleechan/Library/Logs/worldarchitect-automation/launchd.out</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/jleechan/Library/Logs/worldarchitect-automation/launchd.err</string>
+
+    <!-- Process limits -->
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <!-- Throttle settings (prevent rapid restart) -->
+    <key>ThrottleInterval</key>
+    <integer>60</integer>
+
+    <!-- Only run when user is logged in -->
+    <key>LimitLoadToSessionType</key>
+    <array>
+        <string>Aqua</string>
+    </array>
+
+    <!-- Resource limits -->
+    <key>SoftResourceLimits</key>
+    <dict>
+        <key>NumberOfFiles</key>
+        <integer>1024</integer>
+    </dict>
+
+    <!-- Nice value (lower priority) -->
+    <key>Nice</key>
+    <integer>10</integer>
+</dict>
+</plist>
