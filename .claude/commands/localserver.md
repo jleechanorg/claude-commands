@@ -8,7 +8,7 @@ Starts the local development server for testing with health verification.
 ```
 
 ## What it does
-Executes the enhanced `./run_local_server.sh` script which provides:
+Executes the dedicated `./claude_command_scripts/commands/localserver.sh` launcher which locates and runs `run_local_server.sh` from either the project root or `scripts/` directory. The launcher provides:
 
 1. **Dual Server Setup**: Flask backend + React v2 frontend on separate ports
 2. **Aggressive Cleanup**: Interactive server cleanup with options to kill all servers or specific ports
@@ -40,8 +40,24 @@ Executes the enhanced `./run_local_server.sh` script which provides:
 - **Port conflict resolution**: Clears target ports before finding alternatives
 - **Reliable assignment**: Uses server-utils.sh functions for robust port management
 
+## Execution Logic
+
+The `/localserver` launcher performs the following steps before starting the servers:
+
+1. **Project Root Detection**: Changes into the repository root so relative paths behave correctly.
+2. **Script Discovery**: Checks for `run_local_server.sh` in:
+   - `<project-root>/run_local_server.sh`
+   - `<project-root>/scripts/run_local_server.sh`
+3. **Validation**: Exits with a clear error if neither location exists.
+4. **Execution**: Runs the discovered script (forwarding any arguments) using its executable bit if set, or via `bash` otherwise.
+
+This ensures `/localserver` works whether the helper script lives at the repository root or inside the `scripts/` directory.
+
 ## Implementation
-Simply executes: `./run_local_server.sh`
+
+```bash
+./claude_command_scripts/commands/localserver.sh [optional-args]
+```
 
 All the enhanced features (cleanup, health checks, port management) are now integrated into the main server launcher script, providing a single, robust solution for local development.
 
