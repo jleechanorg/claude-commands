@@ -6,7 +6,7 @@ Comprehensive PR processing with integrated comment analysis, code fixes, securi
 ## ⚡ Core Workflow - Self-Contained Implementation
 
 ### Phase 1: Analysis & Assessment
-**Initial Assessment:** Gather branch status, commit history, merge conflicts, and GitHub comments using git/gh CLI. Parse and categorize feedback by priority: Security, Runtime errors, Test failures, Quality, Style. Focus on 30 most recent actionable comments for efficiency.
+**Initial Assessment:** Gather branch status, commit history, merge conflicts, and GitHub comments using git/gh CLI. Parse and categorize feedback by priority: Security, Runtime errors, Test failures, Quality, Style. Use configurable comment processing with smart filtering for optimal efficiency.
 
 **Security & Quality Scan:** Identify vulnerabilities (injection, auth), performance bottlenecks, code quality issues, test coverage gaps, and systematic improvement opportunities.
 
@@ -48,10 +48,13 @@ Comprehensive PR processing with integrated comment analysis, code fixes, securi
 ## ⚡ Optimization & Efficiency Features
 
 **Context Management:**
-- Process only recent, actionable comments for maximum efficiency
+- Process only recent, actionable comments for maximum efficiency:
+    - "Recent" comments are configurable (default: last 7 days or 30 most recent, whichever is fewer) with smart scaling for high-activity PRs
+    - "Actionable" comments include code change requests, bug reports, security/performance concerns, test failures
+    - Non-actionable comments (general praise, off-topic discussion) are deprioritized automatically
 - Use targeted file reads and semantic search to minimize context usage
-- Batch similar changes together to reduce total tool invocations
-- Focus on high-impact changes that address multiple concerns
+- Batch similar changes together to reduce total tool invocations (max 3-4 edits per MultiEdit operation)
+- Focus on high-impact changes that address multiple concerns simultaneously
 
 **Intelligent Prioritization:**
 - Security vulnerabilities receive highest priority and immediate attention
