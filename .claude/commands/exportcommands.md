@@ -4,7 +4,7 @@
 
 🚨 **REPOSITORY SAFETY RULE**: Export operations NEVER delete, move, or modify files in the current repository. Export only copies files for external sharing. The current repository remains completely unchanged.
 
-**Purpose**: Export your complete command composition system to $(git config --get remote.origin.url) for reference and sharing
+**Purpose**: Export your complete command composition system to https://github.com/jleechanorg/claude-commands for reference and sharing
 
 **Implementation**: This command delegates all technical operations to the Python implementation (`exportcommands.py`) while providing LLM-driven README generation and intelligent export analysis.
 
