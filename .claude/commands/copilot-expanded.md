@@ -1,12 +1,22 @@
 # /copilot-expanded - Complete Self-Contained PR Analysis & Enhancement
 
 ## 🚨 Purpose
-Comprehensive PR processing with integrated comment analysis, code fixes, security review, and quality enhancement. A complete standalone workflow that combines analysis, implementation, and GitHub integration without external dependencies.
+Comprehensive PR processing with integrated comment analysis, code fixes, security review, and quality enhancement. A complete workflow that integrates with existing project protocols and tools for seamless PR enhancement.
 
 ## ⚡ Core Workflow - Self-Contained Implementation
 
 ### Phase 1: Analysis & Assessment
-**Initial Assessment:** Gather branch status, commit history, merge conflicts, and GitHub comments using git/gh CLI. Parse and categorize feedback by priority: Security, Runtime errors, Test failures, Quality, Style. Use configurable comment processing with smart filtering for optimal efficiency.
+**Initial Assessment:** Gather branch status, commit history, merge conflicts, and GitHub comments using git/gh CLI. Parse and categorize feedback using keyword-based priority classification:
+- **Security**: Keywords 'vulnerability', 'injection', 'auth', 'XSS', 'SQL', 'CSRF', 'security'
+- **Runtime errors**: Keywords 'error', 'exception', 'crash', 'timeout', 'hang', 'fail'
+- **Test failures**: Keywords 'test', 'failing', 'assertion', 'coverage', 'CI', 'build'
+- **Quality**: Keywords 'refactor', 'clean', 'improve', 'optimize', 'pattern'
+- **Style**: Keywords 'format', 'lint', 'style', 'spacing', 'naming'
+Use configurable comment processing with smart filtering algorithm:
+  - **Actionable detection**: Comments containing question marks, imperative verbs ('fix', 'change', 'add'), or action keywords
+  - **Priority scoring**: Security keywords (+3), runtime errors (+2), test failures (+2), quality (+1), style (+0)
+  - **Recency weighting**: Comments from last 24 hours (×2 weight), last 7 days (×1.5 weight), older (×1 weight)
+  - **Author filtering**: Bot comments (CodeRabbit, Copilot) always processed, human reviewers prioritized over contributors
 
 **Security & Quality Scan:** Identify vulnerabilities (injection, auth), performance bottlenecks, code quality issues, test coverage gaps, and systematic improvement opportunities.
 
@@ -37,7 +47,11 @@ Comprehensive PR processing with integrated comment analysis, code fixes, securi
 - Every PR comment receives detailed technical response
 - All code changes include proper justification and documentation
 - Security fixes explained with vulnerability details and mitigation strategy
-- Performance improvements quantified with before/after metrics
+- Performance improvements quantified with before/after metrics:
+    - Execution time tracking: `start_time=$(date +%s)` and `end_time=$(date +%s)` with duration calculation
+    - File change metrics: `git diff --stat` for quantified modification counts
+    - Comment response rate: `(responses_posted / total_actionable_comments) * 100`
+    - Memory usage tracking: Monitor context consumption and tool invocation counts
 
 **Quality Assurance Checkpoints:**
 - No regressions introduced by changes (verified through testing)
