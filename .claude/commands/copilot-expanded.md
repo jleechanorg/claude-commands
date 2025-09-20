@@ -104,11 +104,11 @@ EOF
 }
 
 calculate_response_rate() {
-    if [ -f "$COMMENTS_FILE" ]; then
-        local total_comments=$(jq '.comments | length' "$COMMENTS_FILE" 2>/dev/null || echo 0)
-        local responded_comments=$(jq '[.responses[] | select(.posted == true)] | length' "$RESPONSES_FILE" 2>/dev/null || echo 0)
-        if [ "$total_comments" -gt 0 ]; then
-            echo $(( responded_comments * 100 / total_comments ))
+    if [ -f "$COMMENTS_FILE" ] && [ -f "$RESPONSES_FILE" ]; then
+        local actionable_comments=$(jq '.metadata.actionable // 0' "$COMMENTS_FILE" 2>/dev/null || echo 0)
+        local responded_comments=$(jq '.metadata.posted // 0' "$RESPONSES_FILE" 2>/dev/null || echo 0)
+        if [ "$actionable_comments" -gt 0 ]; then
+            echo $(( responded_comments * 100 / actionable_comments ))
         else
             echo 100
         fi
@@ -161,7 +161,7 @@ echo "📊 Phase 1: Analysis & Assessment"
 log_operation "Starting Phase 1: Analysis & Assessment"
 
 # Initialize data files with proper structure
-echo '{"comments": [], "metadata": {"total": 0, "fetched_at": "'$(date -Iseconds)'"}}' > "$COMMENTS_FILE"
+echo '{"comments": [], "metadata": {"total": 0, "unresponded_count": 0, "actionable": 0, "fetched_at": "'$(date -Iseconds)'"}}' > "$COMMENTS_FILE"
 echo '{"responses": [], "metadata": {"posted": 0, "failed": 0}}' > "$RESPONSES_FILE"
 echo '{"vulnerabilities": [], "performance": [], "quality": [], "processed_at": "'$(date -Iseconds)'"}' > "$ANALYSIS_FILE"
 
@@ -231,6 +231,7 @@ jq --arg pr_number "$PR_NUMBER" '
     metadata: {
         total: length,
         actionable: [.[] | select(.requires_response == true)] | length,
+        unresponded_count: [.[] | select(.requires_response == true and .responded == false)] | length,
         pr_number: $pr_number,
         fetched_at: now | strftime("%Y-%m-%dT%H:%M:%SZ")
     }
@@ -514,8 +515,13 @@ echo "📄 Operations log: $OPERATIONS_LOG"
 echo "🔍 Running validation gates"
 
 # Gate 1: Response coverage check
-UNRESPONDED_ACTIONABLE=$(jq '[.comments[] | select(.requires_response == true)] | length' "$COMMENTS_FILE")
-COVERAGE_RATIO=$((POSTED_RESPONSES * 100 / (UNRESPONDED_ACTIONABLE > 0 ? UNRESPONDED_ACTIONABLE : 1)))
+UNRESPONDED_ACTIONABLE=$(jq '.metadata.unresponded_count // 0' "$COMMENTS_FILE")
+TOTAL_ACTIONABLE=$(jq '.metadata.actionable // 0' "$COMMENTS_FILE")
+if [ "$TOTAL_ACTIONABLE" -gt 0 ]; then
+    COVERAGE_RATIO=$(( (TOTAL_ACTIONABLE - UNRESPONDED_ACTIONABLE) * 100 / TOTAL_ACTIONABLE ))
+else
+    COVERAGE_RATIO=100
+fi
 
 if [ "$COVERAGE_RATIO" -lt 80 ]; then
     echo "⚠️ WARNING: Response coverage below 80% ($COVERAGE_RATIO%)"
