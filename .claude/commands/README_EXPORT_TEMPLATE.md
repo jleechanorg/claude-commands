@@ -31,7 +31,7 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 
 ```bash
 # Point Claude Code to this repository and let it set up what you need
-"I want to use the commands from $(git config --get remote.origin.url) - please analyze what's available and set up the ones that would be useful for my project"
+"I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
 Claude Code will intelligently analyze your project, recommend relevant commands, and configure everything automatically.
@@ -612,7 +612,7 @@ This export contains **144 commands** that transform Claude Code from a producti
 ### Intelligent Self-Setup (Recommended)
 ```bash
 # Let Claude Code analyze and set up what you need
-"I want to use the commands from $(git config --get remote.origin.url) - please analyze what's available and set up the ones that would be useful for my project"
+"I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
 Claude Code will:
@@ -710,7 +710,7 @@ This isn't just command sharing - it's **cognitive capital transformation** thro
      **Export Statistics**:
      - Commands: N command definitions
      - Hooks: N Claude Code automation hooks  
-     - Scripts: N infrastructure scripts
+     - Scripts: N reusable scripts (scripts/ directory)
      
      **Changes**:
      - Key change summaries based on actual modifications
