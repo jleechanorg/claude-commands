@@ -103,7 +103,7 @@ echo "📊 Processing $TOTAL_COMMENTS comments for response generation"
 
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
-export RESPONSES_FILE="/tmp/$(git branch --show-current | tr -cd '[:alnum:]_-')/responses.json"
+# Use already sanitized BRANCH_NAME variable for consistency
 python3 -c '
 import os, sys
 responses_file = os.environ.get("RESPONSES_FILE", "")

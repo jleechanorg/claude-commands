@@ -843,22 +843,36 @@ run_tests_with_timeout() {
 
 # Note: Using bash subshells for parallel execution, so no exports needed
 
-# Execute tests with timeout (direct function call)
+# Execute tests with timeout (internal deadline approach)
 suite_timed_out=false
-(
-    # Set a timeout alarm
-    (sleep "$TEST_SUITE_TIMEOUT" && echo "TIMEOUT" && pkill -f "run_tests.sh" 2>/dev/null) &
-    timeout_pid=$!
+suite_deadline=$(( $(date +%s) + TEST_SUITE_TIMEOUT ))
+print_status "⏱️  Enforcing suite deadline at: $(date -r "$suite_deadline" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$suite_deadline")"
 
-    # Run the tests
-    run_tests_with_timeout
-    test_exit_code=$?
+# Wrap sequential executor with deadline checks
+run_tests_with_timeout() {
+    local now
+    for test_file in "${test_files[@]}"; do
+        now=$(date +%s)
+        if [ "$now" -ge "$suite_deadline" ]; then
+            print_error "⏰ Suite deadline reached before running: $test_file"
+            suite_timed_out=true
+            break
+        fi
+        print_status "🧪 Running test: $test_file"
+        run_single_test "$test_file"
+        print_status "✅ Completed test: $test_file"
+        # Check deadline between tests as well
+        now=$(date +%s)
+        if [ "$now" -ge "$suite_deadline" ]; then
+            suite_timed_out=true
+            break
+        fi
+    done
+}
 
-    # Kill the timeout alarm
-    kill "$timeout_pid" 2>/dev/null
-    exit $test_exit_code
-)
-if [ $? -ne 0 ]; then
+# Execute with internal deadline
+run_tests_with_timeout
+if [ "$suite_timed_out" = true ]; then
     echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
     echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
     echo "  - Infinite loops in test code" >&2
@@ -866,11 +880,8 @@ if [ $? -ne 0 ]; then
     echo "  - Memory leaks causing system slowdown" >&2
     echo "  - Tests waiting for user input or external events" >&2
 
-    # Kill any remaining test processes
-    pkill -f "python.*test_" || true
-
-    # Mark as timed out to prevent result processing from overriding
-    suite_timed_out=true
+    # Kill any remaining test processes safely
+    pkill -f "python.*test_" 2>/dev/null || true
 fi
 
 # Wait for all background jobs to complete
