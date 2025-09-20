@@ -312,7 +312,7 @@ class JleechanorgPRMonitor:
                 # Execute /copilot command
                 copilot_cmd = [
                     "claude", "--dangerously-skip-permissions", "--model", "sonnet",
-                    f"/copilot {pr_number} --workspace-isolation"
+                    f"/copilot {pr_number}"
                 ]
 
                 result = subprocess.run(
