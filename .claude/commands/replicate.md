@@ -8,7 +8,7 @@ Analyze a GitHub PR and intelligently apply its missing functionality to the cur
 ```
 
 ## Examples
-- `/replicate $(git config --get remote.origin.url)/pull/693`
+- `/replicate https://github.com/jleechanorg/your-project.com/pull/693`
 - `/replicate PR#693`
 - `/replicate 693`
 
