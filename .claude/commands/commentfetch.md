@@ -168,7 +168,12 @@ if echo "$ARGS" | grep -o '[0-9]\+' | head -2 | tail -1 | grep -q .; then
 fi
 
 echo "🚀 Fetching comments for PR #$PR_NUMBER..."
-python3 .claude/commands/_copilot_modules/commentfetch.py "$PR_NUMBER"
+cd .claude/commands && python3 -c "
+import _copilot_modules.commentfetch as cf
+import sys
+fetch = cf.CommentFetch(sys.argv[1])
+fetch.execute()
+" "$PR_NUMBER"
 
 # If user requested inline display, show the results
 if [ "$PRINT_INLINE" = "true" ]; then
@@ -200,7 +205,7 @@ fi
 ```bash
 # Fetch all fresh comments for PR 820
 /commentfetch 820
-# Internally runs: python3 .claude/commands/_copilot_modules/commentfetch.py 820
+# Internally runs: cd .claude/commands && python3 -c "import _copilot_modules.commentfetch as cf; ..."
 
 # Saves comments to /tmp/{branch_name}/comments.json
 # Downstream commands read from the saved file
