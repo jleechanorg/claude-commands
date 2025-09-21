@@ -36,7 +36,7 @@ if [[ "$RELATIVE_FILE_PATH" =~ ^[^/]+\.(py|sh|md|mjs|js|ts)$ ]]; then
 {
   "decision": "block",
   "reason": "🚨 CLAUDE.md VIOLATION BLOCKED\\n\\n**REASON:** Creating '$FILENAME' in project root violates file placement rules.\\n\\n✅ **QUICK FIX**: Place files in appropriate directories:\\n- Python files (.py) → mvp_site/ or module directories\\n- Shell scripts (.sh) → scripts/ directory\\n- Documentation (.md) → docs/ directory
-- Test files (.mjs, .js, .ts) → backend/src/test/ or scripts/ directory\\n\\nFILE: $FILE_PATH\\n\\nPer CLAUDE.md INTEGRATION PREFERENCE HIERARCHY:\\n1. Add to existing file with similar purpose\\n2. Add to existing utility/helper file\\n3. Add to existing test file (NEVER create new test files)\\n4. LAST RESORT: Create new file (requires justification)\\n\\nTo override: Document why integration into existing files failed.",
+- JavaScript/TypeScript files (.mjs, .js, .ts) → backend/src/test/ or scripts/ directory\\n\\nFILE: $FILE_PATH\\n\\nPer CLAUDE.md INTEGRATION PREFERENCE HIERARCHY:\\n1. Add to existing file with similar purpose\\n2. Add to existing utility/helper file\\n3. Add to existing test file (NEVER create new test files)\\n4. LAST RESORT: Create new file (requires justification)\\n\\nTo override: Document why integration into existing files failed.",
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "additionalContext": "File creation blocked due to root directory violation. Fast pre-screening detected obvious placement violation."
