@@ -32,10 +32,21 @@ local_status=""
 
 # Check for uncommitted changes (always check, regardless of remote)
 # Check both modified tracked files AND untracked files
-if ! git diff-index --quiet HEAD -- 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
-    uncommitted=" +uncommitted"
+# Handle fresh repos without HEAD gracefully
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    # Normal repo with commits: check diff-index and untracked files
+    if ! git diff-index --quiet HEAD -- 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
+        uncommitted=" +uncommitted"
+    else
+        uncommitted=""
+    fi
 else
-    uncommitted=""
+    # Fresh repo without commits: only check for any files
+    if [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
+        uncommitted=" +uncommitted"
+    else
+        uncommitted=""
+    fi
 fi
 
 if [ "$remote" != "no upstream" ]; then

@@ -66,10 +66,9 @@ class TestGitHeaderStatusline:
     @pytest.fixture()
     def git_header_script(self):
         """Path to git-header.sh script"""
-        # Find the script relative to test file
+        # Find the script relative to test file (now in .claude/hooks/tests/)
         test_dir = Path(__file__).parent
-        project_root = test_dir.parent.parent.parent
-        script_path = project_root / ".claude" / "hooks" / "git-header.sh"
+        script_path = test_dir.parent / "git-header.sh"
 
         if not script_path.exists():
             pytest.skip(f"git-header.sh not found at {script_path}")
@@ -225,8 +224,7 @@ class TestGitHeaderIntegration:
     def test_red_script_exists_and_executable(self):
         """RED: Test git-header.sh script exists and is executable"""
         test_dir = Path(__file__).parent
-        project_root = test_dir.parent.parent.parent
-        script_path = project_root / ".claude" / "hooks" / "git-header.sh"
+        script_path = test_dir.parent / "git-header.sh"
 
         assert script_path.exists(), f"git-header.sh not found at {script_path}"
         assert os.access(
@@ -236,8 +234,7 @@ class TestGitHeaderIntegration:
     def test_red_status_only_flag_supported(self):
         """RED: Test --status-only flag is supported"""
         test_dir = Path(__file__).parent
-        project_root = test_dir.parent.parent.parent
-        script_path = project_root / ".claude" / "hooks" / "git-header.sh"
+        script_path = test_dir.parent / "git-header.sh"
 
         if script_path.exists():
             result = subprocess.run(
