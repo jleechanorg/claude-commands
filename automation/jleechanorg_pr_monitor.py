@@ -65,7 +65,7 @@ class JleechanorgPRMonitor:
         try:
             # Get all repositories in the organization
             repos_cmd = ["gh", "repo", "list", self.organization, "--limit", "100", "--json", "name,owner"]
-            repos_result = subprocess.run(repos_cmd, capture_output=True, text=True, check=True)
+            repos_result = subprocess.run(repos_cmd, capture_output=True, text=True, check=True, timeout=30)
             repositories = json.loads(repos_result.stdout)
 
             self.logger.info(f"📚 Found {len(repositories)} repositories")
@@ -85,7 +85,7 @@ class JleechanorgPRMonitor:
                         "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author"
                     ]
 
-                    prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True)
+                    prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30)
                     prs = json.loads(prs_result.stdout)
 
                     # Add repository context to each PR
@@ -146,12 +146,12 @@ class JleechanorgPRMonitor:
 
             try:
                 # Fetch latest changes
-                subprocess.run(["git", "fetch", "--all"], check=True, capture_output=True)
+                subprocess.run(["git", "fetch", "--all"], check=True, capture_output=True, timeout=30)
 
                 # Check if branch exists locally
                 local_branches = subprocess.run(
                     ["git", "branch", "--list", branch_name],
-                    capture_output=True, text=True
+                    capture_output=True, text=True, timeout=30
                 ).stdout.strip()
 
                 # Create worktree
@@ -166,7 +166,7 @@ class JleechanorgPRMonitor:
                     # Check if remote branch exists
                     remote_branches = subprocess.run(
                         ["git", "branch", "-r", "--list", remote_branch],
-                        capture_output=True, text=True
+                        capture_output=True, text=True, timeout=30
                     ).stdout.strip()
 
                     if remote_branches:
@@ -178,7 +178,7 @@ class JleechanorgPRMonitor:
 
                 # Execute worktree creation
                 try:
-                    result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True)
+                    result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True, timeout=30)
                     self.logger.info(f"✅ Worktree created successfully")
                 except subprocess.CalledProcessError as e:
                     # Handle branch already checked out error
@@ -197,7 +197,7 @@ class JleechanorgPRMonitor:
                             unique_worktree_cmd = ["git", "worktree", "add", "-b", unique_branch, str(workspace_path), remote_branch]
 
                         # Try again with unique branch
-                        result = subprocess.run(unique_worktree_cmd, capture_output=True, text=True, check=True)
+                        result = subprocess.run(unique_worktree_cmd, capture_output=True, text=True, check=True, timeout=30)
                         self.logger.info(f"✅ Worktree created successfully with unique branch: {unique_branch}")
                     else:
                         # Re-raise if it's a different error
@@ -223,8 +223,21 @@ class JleechanorgPRMonitor:
                 }
 
                 metadata_file = workspace_path / ".pr-metadata.json"
-                with open(metadata_file, 'w') as f:
-                    json.dump(metadata, f, indent=2)
+                # Atomic write for metadata to prevent corruption
+                import tempfile
+                with tempfile.NamedTemporaryFile(
+                    mode='w',
+                    dir=workspace_path,
+                    prefix=".pr-metadata.",
+                    suffix=".tmp",
+                    delete=False
+                ) as temp_file:
+                    json.dump(metadata, temp_file, indent=2)
+                    temp_file.flush()
+                    os.fsync(temp_file.fileno())
+                    temp_path = temp_file.name
+
+                os.rename(temp_path, str(metadata_file))
 
                 self.logger.info(f"📝 PR metadata saved: {metadata_file}")
                 return workspace_path
@@ -326,19 +339,19 @@ class JleechanorgPRMonitor:
                     # Check if there are changes to push
                     git_status = subprocess.run(
                         ["git", "status", "--porcelain"],
-                        capture_output=True, text=True
+                        capture_output=True, text=True, timeout=30
                     )
 
                     if git_status.stdout.strip():
                         self.logger.info(f"📝 Changes detected, preparing to push")
 
                         # Add changes
-                        subprocess.run(["git", "add", "-A"], check=True)
+                        subprocess.run(["git", "add", "-A"], check=True, timeout=30)
 
                         # Check if there are still staged changes after pre-commit hooks
                         git_staged = subprocess.run(
                             ["git", "diff", "--cached", "--name-only"],
-                            capture_output=True, text=True
+                            capture_output=True, text=True, timeout=30
                         )
 
                         if git_staged.stdout.strip():
@@ -346,8 +359,8 @@ class JleechanorgPRMonitor:
                             subprocess.run([
                                 "git", "commit", "-m",
                                 f"🤖 Automated fixes for PR #{pr_number}\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-                            ], check=True)
-                            subprocess.run(["git", "push", "origin", metadata["branch_name"]], check=True)
+                            ], check=True, timeout=30)
+                            subprocess.run(["git", "push", "origin", metadata["branch_name"]], check=True, timeout=30)
                             self.logger.info(f"🚀 Changes pushed to {metadata['branch_name']}")
                         else:
                             self.logger.info(f"📝 No staged changes after pre-commit hooks - changes were auto-fixed")
@@ -393,7 +406,7 @@ class JleechanorgPRMonitor:
                         # Remove worktree
                         subprocess.run(
                             ["git", "worktree", "remove", str(workspace_path), "--force"],
-                            check=True, capture_output=True
+                            check=True, capture_output=True, timeout=30
                         )
                         self.logger.info(f"🧹 Worktree removed: {workspace_path}")
                     finally:

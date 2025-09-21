@@ -15,6 +15,7 @@ import json
 import os
 import threading
 import smtplib
+import tempfile
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -68,9 +69,26 @@ class AutomationSafetyManager:
             return {}
 
     def _write_json_file(self, file_path: str, data: dict):
-        """Safely write JSON file"""
-        with open(file_path, 'w') as f:
-            json.dump(data, f, indent=2)
+        """Atomically write JSON file to prevent corruption"""
+        # Use temporary file with atomic rename for safety
+        dir_path = os.path.dirname(file_path)
+        file_name = os.path.basename(file_path)
+
+        # Create temporary file in same directory to ensure atomic rename works
+        with tempfile.NamedTemporaryFile(
+            mode='w',
+            dir=dir_path,
+            prefix=f".{file_name}.",
+            suffix=".tmp",
+            delete=False
+        ) as temp_file:
+            json.dump(data, temp_file, indent=2)
+            temp_file.flush()
+            os.fsync(temp_file.fileno())  # Force write to disk
+            temp_path = temp_file.name
+
+        # Atomic rename - this operation is atomic on POSIX systems
+        os.rename(temp_path, file_path)
 
     def can_process_pr(self, pr_number: int) -> bool:
         """Check if PR can be processed (under attempt limit)"""
