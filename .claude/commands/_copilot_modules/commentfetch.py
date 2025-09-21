@@ -259,14 +259,14 @@ class CommentFetch(CopilotCommandBase):
 
         return False
 
-    def _check_already_replied_general(self, comment: Dict[str, Any]) -> bool:
-        """Check if a general comment has been replied to via GitHub API.
+    def _check_already_replied_general(self, comment: Dict[str, Any], all_comments: List[Dict[str, Any]] = None) -> bool:
+        """Check if a general comment has been replied to.
 
-        For general comments, we need to check if there are threaded responses.
-        Since these are issue comments, we look for responses that reference this comment.
+        Enhanced detection using cross-comment type checking and robust AI responder pattern matching.
 
         Args:
             comment: The comment to check
+            all_comments: All comments from all sources to search for replies
 
         Returns:
             True if comment has replies, False otherwise
@@ -275,45 +275,135 @@ class CommentFetch(CopilotCommandBase):
         if not comment_id:
             return False
 
-        # Check if comment body indicates it's a response (contains reply markers)
+        # Check if comment body indicates it's a response using robust pattern matching
         body = str(comment.get("body", ""))
         author = comment.get("author", "")
 
-        # If this comment is from our responder, don't count it as needing a reply
-        if author == "jleechan2015" and "[AI responder]" in body:
+        # Enhanced AI responder detection with robust pattern matching
+        if self._is_ai_responder_comment(body, author):
             return True
 
-        # For now, we'll fetch live threading data from GitHub API to be accurate
-        try:
-            # Quick check if there are any responses to this comment by looking for references
-            cmd = [
-                "gh", "api",
-                f"repos/{self.repo}/issues/{self.pr_number}/comments",
-                "--jq", f'.[] | select(.body | contains("#{comment_id}"))'
-            ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
-            if result.returncode == 0 and result.stdout.strip():
-                return True
-        except Exception:
-            pass  # Fall back to simple logic
+        # Cross-comment type threading detection
+        if all_comments:
+            for other_comment in all_comments:
+                # Check direct threading via in_reply_to_id
+                if str(other_comment.get("in_reply_to_id", "")) == comment_id:
+                    return True
+
+                # Check if other comment references this comment ID
+                other_body = str(other_comment.get("body", ""))
+                if f"#{comment_id}" in other_body or f"comment #{comment_id}" in other_body:
+                    return True
+
+                # Check if it's an AI responder reply to this comment's content
+                if (self._is_ai_responder_comment(other_body, other_comment.get("author", "")) and
+                    other_comment.get("created_at", "") > comment.get("created_at", "")):
+                    # Look for content similarity or reply patterns
+                    if self._appears_to_be_reply_to(other_comment, comment):
+                        return True
 
         return False
 
-    def _check_already_replied_review(self, review: Dict[str, Any]) -> bool:
+    def _check_already_replied_review(self, review: Dict[str, Any], all_comments: List[Dict[str, Any]] = None) -> bool:
         """Check if a review comment has been replied to.
+
+        Enhanced detection using cross-comment type checking and robust pattern matching.
 
         Args:
             review: The review to check
+            all_comments: All comments from all sources to search for replies
 
         Returns:
             True if review has replies, False otherwise
         """
-        # Similar logic to general comments - check for response patterns
+        review_id = str(review.get("id", ""))
         author = review.get("author", "")
         body = str(review.get("body", ""))
 
-        # If this is from our responder, mark as replied
-        if author == "jleechan2015" and "[AI responder]" in body:
+        # Enhanced AI responder detection
+        if self._is_ai_responder_comment(body, author):
+            return True
+
+        # Cross-comment type threading detection
+        if all_comments:
+            for other_comment in all_comments:
+                # Check direct threading
+                if str(other_comment.get("in_reply_to_id", "")) == review_id:
+                    return True
+
+                # Check for AI responder replies
+                other_body = str(other_comment.get("body", ""))
+                if (self._is_ai_responder_comment(other_body, other_comment.get("author", "")) and
+                    other_comment.get("created_at", "") > review.get("created_at", "")):
+                    if self._appears_to_be_reply_to(other_comment, review):
+                        return True
+
+        return False
+
+    def _is_ai_responder_comment(self, body: str, author: str) -> bool:
+        """Enhanced AI responder detection with robust pattern matching.
+
+        Args:
+            body: Comment body text
+            author: Comment author
+
+        Returns:
+            True if this appears to be an AI responder comment
+        """
+        if not body or not author:
+            return False
+
+        # Normalize text for pattern matching
+        normalized_body = body.strip().lower()
+
+        # Check for our specific author and AI responder patterns
+        if author == "jleechan2015":
+            # Multiple pattern variations to catch all AI responder formats
+            ai_patterns = [
+                "[ai responder]",
+                "[ ai responder ]",
+                "[ai responder] ✅",
+                "✅ **",  # Common pattern in our responses
+                "**analysis**:",  # Common technical response pattern
+                "**fix applied**:",  # Common fix response pattern
+                "**security analysis complete**",  # Security response pattern
+                "**test infrastructure verified**"  # Test response pattern
+            ]
+
+            for pattern in ai_patterns:
+                if pattern in normalized_body:
+                    return True
+
+        return False
+
+    def _appears_to_be_reply_to(self, potential_reply: Dict[str, Any], original_comment: Dict[str, Any]) -> bool:
+        """Check if a comment appears to be a reply to another comment.
+
+        Args:
+            potential_reply: Comment that might be a reply
+            original_comment: Original comment being replied to
+
+        Returns:
+            True if potential_reply appears to be responding to original_comment
+        """
+        reply_body = str(potential_reply.get("body", "")).lower()
+        original_body = str(original_comment.get("body", "")).lower()
+
+        # Check for direct references to original comment
+        original_id = str(original_comment.get("id", ""))
+        if f"#{original_id}" in reply_body or f"comment #{original_id}" in reply_body:
+            return True
+
+        # Check for quoted content from original comment
+        original_lines = original_body.split('\n')[:3]  # First few lines
+        for line in original_lines:
+            line = line.strip()
+            if len(line) > 10 and line in reply_body:
+                return True
+
+        # Check for author references
+        original_author = original_comment.get("author", "")
+        if original_author and f"@{original_author}" in reply_body:
             return True
 
         return False
@@ -478,6 +568,19 @@ class CommentFetch(CopilotCommandBase):
 
         # Sort by created_at (most recent first)
         self.comments.sort(key=lambda c: c.get("created_at", ""), reverse=True)
+
+        # ENHANCED: Re-process already_replied status using cross-comment detection
+        # This fixes the threading detection issue by checking all comment types together
+        for comment in self.comments:
+            if comment["type"] == "general":
+                comment["already_replied"] = self._check_already_replied_general(comment, self.comments)
+            elif comment["type"] == "review":
+                comment["already_replied"] = self._check_already_replied_review(comment, self.comments)
+            elif comment["type"] == "inline":
+                comment["already_replied"] = self._check_already_replied(comment, self.comments)
+            # copilot comments use the same logic as general comments
+            elif comment["type"] == "copilot":
+                comment["already_replied"] = self._check_already_replied_general(comment, self.comments)
 
         # Count comments needing responses that haven't been replied to yet
         unresponded_count = sum(1 for c in self.comments
