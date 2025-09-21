@@ -151,4 +151,4 @@ python3 mvp_site/main.py
 
 ---
 
-**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` starts with reproducing actual bugs/errors and systematically fixing them with verification, concluding with `/consensus` validation of the entire debugging flow.
+**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` starts with reproducing actual bugs or errors. It then systematically fixes them with verification, concluding with `/consensus` validation of the entire debugging flow.
