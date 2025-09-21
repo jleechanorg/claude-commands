@@ -180,19 +180,49 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context:
 3. **Solo MVP Context**: No team coordination, practical deployment focus
 4. **Rollback Safety**: GitHub provides recovery, allow measured risk-taking
 
-**CODE REVIEW BOT CAPABILITIES** (Required Analysis):
-- **Command Logic**: Bash operators, `||` chains, failure masking detection
-- **Error Handling**: Silent failures, false positives, graceful degradation
-- **Edge Cases**: Package.json parsing, command availability, regex patterns
-- **Control Flow**: Conditional logic, variable substitution, timeout handling
-- **Implementation Bugs**: Logic errors, typos, incorrect assumptions
+**2025 CODE REVIEW BOT CAPABILITIES** (Required Analysis):
 
-**IMPLEMENTATION FOCUS AREAS** (In Addition to Strategic):
-- Examine actual code execution behavior vs documentation
-- Identify shell scripting issues and command chain problems
-- Review error propagation and failure handling mechanisms
-- Validate configuration detection and auto-selection logic
-- Check for silent failures that could cause false confidence
+**Security & Vulnerability Assessment**:
+- **OWASP Compliance**: Injection attacks, XSS, broken authentication, data exposure
+- **AI Security**: Prompt injection, model context leaks, training data exposure
+- **Supply Chain**: Dependency vulnerabilities, package integrity, SBOM validation
+- **API Security**: Endpoint validation, input sanitization, authorization patterns
+
+**Framework & Technology Intelligence**:
+- **React/Next.js**: Hook patterns, component boundaries, SSR/CSR optimization
+- **Python/Django**: N+1 queries, ORM usage, async patterns, import structure
+- **Node.js**: Event loop efficiency, callback patterns, stream handling
+- **Database**: Query optimization, indexing strategies, connection management
+
+**Performance & Resource Analysis**:
+- **Memory Management**: Leak detection, object lifecycle, garbage collection
+- **Algorithm Efficiency**: Complexity analysis, iteration patterns, data structures
+- **Caching Strategies**: Cache policies, invalidation, performance bottlenecks
+- **Resource Utilization**: Connection pooling, file handles, system resources
+
+**Code Quality & Architecture**:
+- **Maintainability**: Complexity metrics, technical debt, refactoring opportunities
+- **Organization**: Separation of concerns, coupling analysis, modularity
+- **Documentation**: Code comments, API documentation, architectural decisions
+- **Patterns**: Design patterns, anti-patterns, best practices adherence
+
+**Testing & Quality Assurance**:
+- **Test Coverage**: Logic paths, edge cases, boundary conditions, error scenarios
+- **Test Quality**: Assertion effectiveness, mock strategies, isolation patterns
+- **CI/CD Integration**: Pipeline optimization, deployment safety, automation
+- **Performance Testing**: Load patterns, stress testing, monitoring strategies
+
+**AI-Enhanced Development**:
+- **Generated Code Review**: AI output quality, security assessment, logic validation
+- **Context Consistency**: Naming conventions, style alignment, pattern matching
+- **Workflow Integration**: Tool compatibility, automation effectiveness
+- **Code Generation**: Template quality, customization, maintenance considerations
+
+**Modern Development Standards**:
+- **Accessibility**: WCAG compliance, inclusive design, assistive technology
+- **Cloud-Native**: Container optimization, microservices, observability patterns
+- **DevOps**: Infrastructure as code, deployment strategies, monitoring
+- **Documentation**: Standards compliance, completeness, maintainability
 
 **Output Required**:
 - PASS/REWORK verdict with confidence score (1-10)

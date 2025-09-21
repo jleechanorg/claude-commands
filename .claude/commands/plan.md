@@ -194,13 +194,49 @@ fi
 5. **Edge Cases**: Package.json parsing, command availability, timeout handling
 6. **Runtime Behavior**: Actual execution flow vs documented intent
 
-**CODE REVIEW BOT CAPABILITIES** (Line-by-Line Analysis):
-- Examine bash command chains for failure masking (e.g., `cmd1 || cmd2`)
-- Validate regex patterns and string matching logic
-- Check error handling and graceful degradation
-- Analyze conditional logic and command detection
-- Identify potential silent failures or false positives
-- Review variable substitution and templating
+**2025 CODE REVIEW BOT CAPABILITIES** (Comprehensive Analysis):
+
+**Security & Vulnerabilities**:
+- OWASP patterns: Injection, XSS, broken auth, data exposure, access control
+- AI-specific security: Prompt injection, model context leaks, training data privacy
+- Supply chain: Dependency vulnerabilities, package hijacking, SBOM issues
+- API security: Insecure endpoints, input validation, authorization bypass
+
+**Framework-Specific Intelligence**:
+- React: Hook misuse, dependency arrays, unnecessary re-renders, component boundaries
+- Next.js: Client/server directives, data fetching patterns, SSR/CSR optimization
+- Python: N+1 queries, ORM inefficiencies, async/await patterns, import organization
+- Node.js: Event loop blocking, callback patterns, stream handling, memory management
+
+**Performance & Efficiency**:
+- Resource management: Memory leaks, connection pooling, file handle management
+- Algorithm efficiency: Complexity analysis, unnecessary iterations, object creation
+- Database optimization: Query performance, indexing, connection management
+- Caching strategies: Cache invalidation, TTL patterns, stampede prevention
+
+**Code Quality & Architecture**:
+- Complexity metrics: Cyclomatic complexity, cognitive load, method decomposition
+- Technical debt: Legacy patterns, deprecated APIs, refactoring opportunities
+- Organization: Separation of concerns, coupling analysis, modularity assessment
+- Documentation: Inline comments, API docs, architectural decision records
+
+**Testing Strategy Analysis**:
+- Coverage quality: Logic paths, edge cases, boundary conditions, error scenarios
+- Test effectiveness: Assertion depth, mock quality, test isolation, data management
+- Pattern detection: Flaky tests, over-mocking, integration strategy, performance tests
+- AI test quality: Generated test assessment, edge case coverage, maintainability
+
+**AI-Assisted Development**:
+- Context consistency: Naming conventions, style alignment, pattern matching
+- Generated code quality: AI output assessment, security review, logic validation
+- Workflow integration: Tool compatibility, prompt effectiveness, output reliability
+- Ghost code detection: Unused imports, dead code, unnecessary dependencies
+
+**Modern Development Practices**:
+- DevOps integration: CI/CD optimization, deployment safety, infrastructure as code
+- Accessibility: WCAG compliance, semantic HTML, keyboard navigation, screen reader support
+- Cloud-native: Container optimization, microservice patterns, observability, scaling
+- Documentation standards: README quality, API documentation, change logs
 
 **Output Required**:
 - PASS/REWORK verdict with confidence (1-10)
