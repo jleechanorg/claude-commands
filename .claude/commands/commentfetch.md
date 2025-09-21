@@ -2,13 +2,13 @@
 
 **Usage**: `/commentfetch <PR_NUMBER>` or `/commentfetch [natural language instruction]`
 
-**Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Also fetches GitHub CI status using /fixpr methodology. Always fetches fresh data from GitHub API - no caching.
+**Purpose**: Fetch ALL comments from a GitHub PR including inline code reviews, general comments, review comments, and Copilot suggestions. Also fetches GitHub CI status using /fixpr methodology. Always fetches fresh data from GitHub API - no caching.
 
 ## 🤖 ENHANCED: Intelligent Natural Language Processing
 
 **NEW CAPABILITY**: Parse natural language instructions like:
-- `/commentfetch print last 30 unresponded here`
-- `/commentfetch get recent unresponded comments`
+- `/commentfetch print all comments here`
+- `/commentfetch get all comments`
 - `/commentfetch show me unresponded from PR 1436`
 
 ## 🚨 CRITICAL: Comprehensive Comment Detection Function
@@ -40,7 +40,7 @@ get_comprehensive_comment_count() {
 
 ## Description
 
-Pure Python implementation that collects UNRESPONDED comments from all GitHub PR sources AND GitHub CI status. Uses GitHub API `in_reply_to` field analysis to filter out already-replied comments. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
+Pure Python implementation that collects ALL comments from all GitHub PR sources AND GitHub CI status. Marks comments starting with '[AI responder]' as our responses. Implements /fixpr CI status methodology with defensive programming patterns. Always fetches fresh data on each execution and saves to `/tmp/{branch_name}/comments.json` for downstream processing by `/commentreply`.
 
 ## Output Format
 
@@ -101,28 +101,26 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 - **review**: Review summary comments
 - **copilot**: GitHub Copilot suggestions (including suppressed)
 
-## Unresponded Comment Filtering
+## Simple Comment Processing
 
-🚨 **CRITICAL EFFICIENCY ENHANCEMENT**: The command automatically identifies and filters unresponded comments:
+🚨 **ZERO TOLERANCE APPROACH**: Process ALL comments without complex filtering:
 
-### 1. Already-Replied Detection (PRIMARY FILTER)
-- **Method**: Analyze GitHub API `in_reply_to` field to identify threaded responses
-- **Logic**: If comment #12345 has any replies with `in_reply_to: 12345`, mark as ALREADY_REPLIED
-- **Efficiency**: Skip already-replied comments from downstream processing entirely
+### 1. AI Responder Detection (ONLY FILTER)
+- **Method**: Check if comment body starts with '[AI responder]'
+- **Logic**: If comment starts with '[AI responder]', mark as our response
+- **Simple Rule**: Everything else requires response - NO EXCEPTIONS
 
-### 2. Response Requirement Analysis (SECONDARY FILTER)
-For comments that are NOT already replied, determine if they need responses based on:
-- Question marks in the comment text
-- Keywords like "please", "could you", "fix", "issue", "suggestion"
-- Review states (CHANGES_REQUESTED, COMMENTED)
-- Bot comments (Copilot, CodeRabbit) - ALWAYS require responses
-- Human reviewer feedback - ALWAYS require responses
+### 2. No Complex Classification
+- No bot detection patterns
+- No keyword analysis
+- No threading analysis
+- No reply-to field processing
 
-### 3. Output Optimization
-- **JSON field**: `"already_replied": false` (only unresponded comments included)
-- **Metadata**: `"unresponded_count": X` for quick verification
-- **Fresh Data**: Always fetches current GitHub state, no stale cache issues
-- **Efficiency**: Downstream commands process only comments needing responses
+### 3. Output Simplification
+- **JSON field**: `"is_ai_responder": true/false` (simple boolean)
+- **Metadata**: `"requires_response_count": X` for verification
+- **Fresh Data**: Always fetches current GitHub state
+- **Principle**: Address everything except our own '[AI responder]' comments
 
 ## Implementation
 

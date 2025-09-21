@@ -106,7 +106,7 @@ Ultra-fast PR processing using hybrid orchestration with comprehensive coverage 
 - **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
 - **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
 - **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
-- **30 recent comments focus** - Process only actionable recent feedback
+- **Complete comment coverage** - Process ALL comments without filtering
 - **Expected time**: **5-15 minutes** with reliable hybrid coordination (realistic for comprehensive analysis)
 
 ## 🚀 Core Workflow - Hybrid Orchestrator Pattern
@@ -569,7 +569,7 @@ cleanup_temp_files
 ## ⚡ **HYBRID EXECUTION OPTIMIZATION**
 
 ### **Context Management**:
-- **Recent Comments Focus**: Process 30 most recent comments for 90%+ efficiency
+- **Complete Comment Coverage**: Process ALL comments without filtering for 100% coverage
 - **GitHub MCP Primary**: Strategic tool usage for minimal context consumption
 - **Semantic Search**: Use Serena MCP for targeted analysis before file operations
 - **Hybrid Coordination**: Efficient orchestration with selective task delegation

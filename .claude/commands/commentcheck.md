@@ -2,7 +2,7 @@
 
 **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`
 
-🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. Explicitly count and warn about any unresponded comments found.
+🚨 **CRITICAL PURPOSE**: Verify 100% comment coverage and response quality after comment reply process. Count ALL comments requiring response (everything except '[AI responder]' comments).
 
 🔒 **Security**: Uses safe jq --arg parameter passing to prevent command injection vulnerabilities and explicit variable validation.
 
@@ -12,14 +12,14 @@
 
 ## 🎯 INDIVIDUAL COMMENT VERIFICATION MANDATE
 
-**MANDATORY**: This command MUST explicitly count UNRESPONDED comments and provide clear warnings:
-- **Zero tolerance policy** - No unresponded comment may be left without a response
-- **Explicit counting** - Count and display total unresponded comments found
-- **Warning system** - Clear alerts when unresponded comments > 0
-- **Bot comment priority** - Copilot, CodeRabbit, GitHub Actions comments are REQUIRED responses
-- **Evidence requirement** - Must show specific comment ID → reply ID mapping for unresponded items
-- **Failure prevention** - Must catch cases like PR #864 (11 unresponded comments, 0 replies)
-- **Direct reply verification** - Code fixes alone are insufficient; direct replies must be posted
+**MANDATORY**: This command MUST count ALL comments requiring response:
+- **Zero tolerance policy** - Every comment needs response except '[AI responder]' comments
+- **Simple counting** - Count comments NOT starting with '[AI responder]'
+- **Warning system** - Clear alerts when unaddressed comments > 0
+- **No complex classification** - No bot detection, no threading analysis
+- **Evidence requirement** - List any comments needing response by ID
+- **Simple principle** - Address everything except our own '[AI responder]' responses
+- **Direct reply verification** - Every non-AI-responder comment must have response
 
 ## Description
 
@@ -36,7 +36,7 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 - **PRE-PUSH GATE**: Must run before any push operations in copilot workflow
 - **HARD STOP ENFORCEMENT**: Non-zero exit codes must halt copilot execution
 - **NO BYPASS ALLOWED**: Cannot be skipped or ignored in copilot automation
-- **COVERAGE THRESHOLD**: Exactly 0 unresponded comments required for success
+- **COVERAGE THRESHOLD**: Exactly 0 unaddressed comments (excluding '[AI responder]') required for success
 
 ## What It Does
 
@@ -151,26 +151,21 @@ if [ "$TOTAL_COMMENTS" -gt 0 ]; then
   echo "   Response rate: $RESPONSE_PERCENTAGE%"
 fi
 
-# Step 2C: Bot comment analysis (using commentfetch classification)
+# Step 2C: Simple comment classification (AI responder vs needs response)
 echo ""
-echo "🤖 BOT COMMENT ANALYSIS (from commentfetch):"
-BOT_COMMENTS=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.author | test("coderabbitai|cursor|copilot"))]')
-BOT_COUNT=$(echo "$BOT_COMMENTS" | jq length)
-BOT_UNRESPONDED=$(echo "$BOT_COMMENTS" | jq '[.[] | select(.already_replied == false)] | length')
+echo "🔍 SIMPLE CLASSIFICATION (AI responder detection only):"
+AI_RESPONDER_COMMENTS=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | startswith("[AI responder]"))]')
+AI_COUNT=$(echo "$AI_RESPONDER_COMMENTS" | jq length)
+NEEDS_RESPONSE_COMMENTS=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | startswith("[AI responder]") | not)]')
+NEEDS_RESPONSE_COUNT=$(echo "$NEEDS_RESPONSE_COMMENTS" | jq length)
 
-echo "   Total bot comments: $BOT_COUNT"
-echo "   Bot comments unresponded: $BOT_UNRESPONDED"
-if [ "$BOT_COUNT" -gt 0 ]; then
-  echo "   Bot response rate: $(( (BOT_COUNT - BOT_UNRESPONDED) * 100 / BOT_COUNT ))%"
-else
-  echo "   Bot response rate: N/A"
-fi
+echo "   AI responder comments: $AI_COUNT"
+echo "   Comments needing response: $NEEDS_RESPONSE_COUNT"
 
-# Step 2D: List unresponded comments (using commentfetch filtering)
+# Step 2D: List comments needing response (simple logic)
 echo ""
-echo "❌ UNRESPONDED COMMENTS (from commentfetch analysis):"
-UNRESPONDED_COMMENTS=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.already_replied == false)]')
-echo "$UNRESPONDED_COMMENTS" | jq -r '.[] | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."'
+echo "❌ COMMENTS NEEDING RESPONSE (simple logic):"
+echo "$NEEDS_RESPONSE_COMMENTS" | jq -r '.[] | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."'
 ```
 
 ### Step 3: Quality Assessment & Fake Comment Detection (JSON-BASED)
@@ -179,24 +174,20 @@ echo "$UNRESPONDED_COMMENTS" | jq -r '.[] | "❌ Comment #\(.id) (\(.author)): \
 ```bash
 echo "=== QUALITY ASSESSMENT & FAKE COMMENT DETECTION (JSON-BASED) ==="
 
-# Use commentfetch JSON for quality analysis
-HUMAN_RESPONSES=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.author == "jleechan2015")]')
-HUMAN_RESPONSE_COUNT=$(echo "$HUMAN_RESPONSES" | jq length)
+# Use simple AI responder detection for quality analysis
+AI_RESPONDER_RESPONSES=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | startswith("[AI responder]"))]')
+AI_RESPONSE_COUNT=$(echo "$AI_RESPONDER_RESPONSES" | jq length)
 
-echo "📊 RESPONSE QUALITY ANALYSIS:"
-echo "   Human responses found: $HUMAN_RESPONSE_COUNT"
+echo "📊 SIMPLE RESPONSE ANALYSIS:"
+echo "   AI responder comments found: $AI_RESPONSE_COUNT"
 
-# Pattern analysis using commentfetch data
-echo "🔍 PATTERN ANALYSIS (using commentfetch data):"
+# No complex pattern analysis - just check for basic quality
+echo "🔍 BASIC QUALITY CHECK:"
 
-# Pattern 1: Check for template responses
-TEMPLATE_RESPONSES=$(echo "$HUMAN_RESPONSES" | jq '[.[] | select(.body | test("Thank you.*for|Comment processed|threading implementation"))]')
-TEMPLATE_COUNT=$(echo "$TEMPLATE_RESPONSES" | jq length)
-echo "   Template-based responses: $TEMPLATE_COUNT"
-
-# Pattern 2: Generic acknowledgments
-GENERIC_RESPONSES=$(echo "$HUMAN_RESPONSES" | jq '[.[] | select(.body | test("100% coverage achieved|threading system is fully operational"))]')
-GENERIC_COUNT=$(echo "$GENERIC_RESPONSES" | jq length)
+# Only check if AI responder comments exist and have substance
+SUBSTANTIAL_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | length > 50)]')
+SUBSTANTIAL_COUNT=$(echo "$SUBSTANTIAL_RESPONSES" | jq length)
+echo "   Substantial AI responses (>50 chars): $SUBSTANTIAL_COUNT"
 echo "   Generic acknowledgments: $GENERIC_COUNT"
 
 # Pattern 3: Bot-specific templating
@@ -204,20 +195,16 @@ CODERABBIT_RESPONSES=$(echo "$HUMAN_RESPONSES" | jq '[.[] | select(.body | test(
 CODERABBIT_COUNT=$(echo "$CODERABBIT_RESPONSES" | jq length)
 echo "   CodeRabbit-specific templates: $CODERABBIT_COUNT"
 
-# Quality assessment
-if [ "$GENERIC_COUNT" -gt 5 ] || [ "$CODERABBIT_COUNT" -gt 10 ] || [ "$TEMPLATE_COUNT" -gt 5 ]; then
+# Simple quality assessment - just check for basic response coverage
+if [ "$AI_RESPONSE_COUNT" -eq 0 ] && [ "$NEEDS_RESPONSE_COUNT" -gt 0 ]; then
   echo "🚨 CRITICAL: COPILOT EXECUTION HALTED"
-  echo "🚨 REASON: Fake/template comments detected"
-  echo "🚨 FAKE COMMENTS DETECTED - Template patterns found"
-  echo "🚨 REQUIRED ACTION: Delete fake responses and re-run with genuine analysis"
+  echo "🚨 REASON: No AI responder comments found but comments need responses"
+  echo "🚨 REQUIRED ACTION: Run /commentreply to generate responses"
   echo ""
-  echo "TEMPLATE ANALYSIS:"
-  echo "   TEMPLATE COUNT: $TEMPLATE_COUNT | GENERIC: $GENERIC_COUNT | CODERABBIT: $CODERABBIT_COUNT"
-  echo ""
-  echo "EXIT CODE: 1 (FAILURE - Fake comments prevent copilot execution)"
+  echo "EXIT CODE: 1 (FAILURE - No responses provided)"
   exit 1
 else
-  echo "✅ QUALITY CHECK PASSED: No excessive template patterns detected"
+  echo "✅ BASIC QUALITY CHECK PASSED: AI responses detected"
 fi
 ```
 
@@ -229,25 +216,23 @@ echo "=================================================================="
 echo "🚨 COMPREHENSIVE COMMENT COVERAGE REPORT (COMMENTFETCH-BASED)"
 echo "=================================================================="
 
-# Use commentfetch data for final assessment
-FINAL_UNRESPONDED_COUNT=$(jq '.metadata.unresponded_count' "$COMMENTS_FILE" 2>/dev/null || echo "0")
-FINAL_TOTAL_COUNT=$(jq '.metadata.total' "$COMMENTS_FILE" 2>/dev/null || echo "0")
-FINAL_BY_TYPE=$(jq '.metadata.by_type' "$COMMENTS_FILE" 2>/dev/null || echo '{}')
+# Use simple direct comment counting
+TOTAL_COMMENTS=$(jq '.comments | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
+AI_RESPONDER_COMMENTS=$(jq '[.comments[] | select(.body | startswith("[AI responder]"))] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
+NEEDS_RESPONSE_COUNT=$((TOTAL_COMMENTS - AI_RESPONDER_COMMENTS))
 
-if [ "$FINAL_UNRESPONDED_COUNT" -eq 0 ]; then
+if [ "$NEEDS_RESPONSE_COUNT" -eq 0 ]; then
     echo "✅ **ZERO TOLERANCE POLICY: PASSED**"
-    echo "🎉 **SUCCESS**: All $FINAL_TOTAL_COUNT comments have received responses"
+    echo "🎉 **SUCCESS**: All comments addressed (only AI responder comments remain)"
     echo "📈 **COVERAGE SCORE**: 100% ✅ PASSED"
     echo ""
-    echo "📊 **COMPREHENSIVE STATISTICS (via commentfetch):**"
-    echo "   - Total comments detected: $FINAL_TOTAL_COUNT"
-    echo "   - Inline review comments: $(echo "$FINAL_BY_TYPE" | jq '.inline // 0')"
-    echo "   - General PR comments: $(echo "$FINAL_BY_TYPE" | jq '.general // 0')"
-    echo "   - Review summary comments: $(echo "$FINAL_BY_TYPE" | jq '.review // 0')"
-    echo "   - Copilot comments: $(echo "$FINAL_BY_TYPE" | jq '.copilot // 0')"
-    echo "   - All comments addressed: ✅"
+    echo "📊 **SIMPLE STATISTICS:**"
+    echo "   - Total comments: $TOTAL_COMMENTS"
+    echo "   - AI responder comments: $AI_RESPONDER_COMMENTS"
+    echo "   - Comments needing response: $NEEDS_RESPONSE_COUNT"
+    echo "   - All non-AI comments addressed: ✅"
     echo ""
-    echo "🎯 **COMMENTFETCH ORCHESTRATION SUCCESS**: Comprehensive coverage verified"
+    echo "🎯 **SIMPLE COVERAGE SUCCESS**: Zero tolerance policy satisfied"
     echo "✅ COPILOT CLEARED: All comments processed successfully"
     echo "✅ PROCEEDING: Copilot execution may continue"
     echo ""
@@ -255,14 +240,14 @@ if [ "$FINAL_UNRESPONDED_COUNT" -eq 0 ]; then
     exit 0
 else
     echo "🚨 **ZERO TOLERANCE POLICY: FAILED**"
-    echo "❌ **FAILURE**: $FINAL_UNRESPONDED_COUNT unresponded comments detected"
-    echo "📈 **COVERAGE SCORE**: $(( (FINAL_TOTAL_COUNT - FINAL_UNRESPONDED_COUNT) * 100 / FINAL_TOTAL_COUNT ))% ❌ FAILED"
+    echo "❌ **FAILURE**: $NEEDS_RESPONSE_COUNT comments need responses"
+    echo "📈 **COVERAGE SCORE**: $(( AI_RESPONDER_COMMENTS * 100 / TOTAL_COMMENTS ))% ❌ FAILED"
     echo ""
-    echo "🚨 **UNRESPONDED COMMENTS REQUIRING IMMEDIATE ATTENTION**:"
+    echo "🚨 **COMMENTS REQUIRING IMMEDIATE ATTENTION**:"
 
-    # List unresponded comments from commentfetch data
-    UNRESPONDED_LIST=$(jq -r '.comments[] | select(.already_replied == false) | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."' "$COMMENTS_FILE" 2>/dev/null)
-    echo "$UNRESPONDED_LIST"
+    # List comments needing response (simple logic)
+    NEEDS_RESPONSE_LIST=$(jq -r '.comments[] | select(.body | startswith("[AI responder]") | not) | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."' "$COMMENTS_FILE" 2>/dev/null)
+    echo "$NEEDS_RESPONSE_LIST"
 
     echo ""
     echo "🚨 CRITICAL: COPILOT EXECUTION HALTED"

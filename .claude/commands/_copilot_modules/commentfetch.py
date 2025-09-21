@@ -82,6 +82,7 @@ class CommentFetch(CopilotCommandBase):
                     "position": comment.get("position"),
                     "in_reply_to_id": comment.get("in_reply_to_id"),
                     "requires_response": self._requires_response(comment),
+                    "already_replied": self._check_already_replied(comment, comments),
                 }
             )
 
@@ -113,6 +114,7 @@ class CommentFetch(CopilotCommandBase):
                     "author": comment.get("user", {}).get("login", "unknown"),
                     "created_at": comment.get("created_at", ""),
                     "requires_response": self._requires_response(comment),
+                    "already_replied": self._check_already_replied_general(comment),
                 }
             )
 
@@ -146,6 +148,7 @@ class CommentFetch(CopilotCommandBase):
                         "created_at": review.get("submitted_at", ""),
                         "state": review.get("state"),
                         "requires_response": self._requires_response(review),
+                        "already_replied": self._check_already_replied_review(review),
                     }
                 )
 
@@ -190,6 +193,7 @@ class CommentFetch(CopilotCommandBase):
                             "line": comment.get("line"),
                             "suppressed": True,
                             "requires_response": True,  # Copilot comments usually need attention
+                            "already_replied": False,  # Copilot comments are typically unresponded
                         }
                     )
 
@@ -233,6 +237,86 @@ class CommentFetch(CopilotCommandBase):
 
         # Include actual technical comments that need responses
         return True
+
+    def _check_already_replied(self, comment: Dict[str, Any], all_comments: List[Dict[str, Any]]) -> bool:
+        """Check if an inline comment has been replied to.
+
+        Args:
+            comment: The comment to check
+            all_comments: All comments to search for replies
+
+        Returns:
+            True if comment has replies, False otherwise
+        """
+        comment_id = str(comment.get("id", ""))
+        if not comment_id:
+            return False
+
+        # Check if any comment has this comment as in_reply_to
+        for other_comment in all_comments:
+            if str(other_comment.get("in_reply_to_id", "")) == comment_id:
+                return True
+
+        return False
+
+    def _check_already_replied_general(self, comment: Dict[str, Any]) -> bool:
+        """Check if a general comment has been replied to via GitHub API.
+
+        For general comments, we need to check if there are threaded responses.
+        Since these are issue comments, we look for responses that reference this comment.
+
+        Args:
+            comment: The comment to check
+
+        Returns:
+            True if comment has replies, False otherwise
+        """
+        comment_id = str(comment.get("id", ""))
+        if not comment_id:
+            return False
+
+        # Check if comment body indicates it's a response (contains reply markers)
+        body = str(comment.get("body", ""))
+        author = comment.get("author", "")
+
+        # If this comment is from our responder, don't count it as needing a reply
+        if author == "jleechan2015" and "[AI responder]" in body:
+            return True
+
+        # For now, we'll fetch live threading data from GitHub API to be accurate
+        try:
+            # Quick check if there are any responses to this comment by looking for references
+            cmd = [
+                "gh", "api",
+                f"repos/{self.repo}/issues/{self.pr_number}/comments",
+                "--jq", f'.[] | select(.body | contains("#{comment_id}"))'
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, check=False)
+            if result.returncode == 0 and result.stdout.strip():
+                return True
+        except Exception:
+            pass  # Fall back to simple logic
+
+        return False
+
+    def _check_already_replied_review(self, review: Dict[str, Any]) -> bool:
+        """Check if a review comment has been replied to.
+
+        Args:
+            review: The review to check
+
+        Returns:
+            True if review has replies, False otherwise
+        """
+        # Similar logic to general comments - check for response patterns
+        author = review.get("author", "")
+        body = str(review.get("body", ""))
+
+        # If this is from our responder, mark as replied
+        if author == "jleechan2015" and "[AI responder]" in body:
+            return True
+
+        return False
 
     def _get_ci_status(self) -> Dict[str, Any]:
         """Fetch GitHub CI status using /fixpr methodology.
@@ -395,9 +479,9 @@ class CommentFetch(CopilotCommandBase):
         # Sort by created_at (most recent first)
         self.comments.sort(key=lambda c: c.get("created_at", ""), reverse=True)
 
-        # Count comments needing responses
-        # After filtering, all remaining comments are unresponded
-        unresponded_count = sum(1 for c in self.comments if c.get("requires_response"))
+        # Count comments needing responses that haven't been replied to yet
+        unresponded_count = sum(1 for c in self.comments
+                               if c.get("requires_response") and not c.get("already_replied", False))
 
         # Prepare data to save
         data = {
