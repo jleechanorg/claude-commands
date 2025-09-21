@@ -6,6 +6,15 @@
 
 ## 🔬 RESEARCH PROTOCOL
 
+### Current Date Awareness (macOS + Ubuntu)
+Before any research actions, capture today's date with a portable shell command and use it when checking source freshness or framing search queries:
+
+```bash
+CURRENT_DATE=$(date "+%Y-%m-%d")
+```
+
+The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fails (very rare), fall back to `python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"`. Reference `CURRENT_DATE` explicitly when summarizing findings to flag material that may already be stale relative to today.
+
 ### Integrated Command Composition
 **Default Execution**: `/research` automatically combines:
 1. **`/thinku`** - Ultra-depth sequential thinking for research planning and analysis

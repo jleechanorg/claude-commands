@@ -14,6 +14,15 @@
 
 ## Protocol
 
+### Current Date Awareness (macOS + Ubuntu)
+Before validating facts or citing data, determine today's date so the presentation highlights recency and calls out outdated sources:
+
+```bash
+CURRENT_DATE=$(date "+%Y-%m-%d")
+```
+
+The POSIX `date` syntax above runs on both macOS and Ubuntu. If `date` is unavailable, use `python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"` instead. Incorporate `CURRENT_DATE` into research queries and explicitly note when statistics or references are older than today.
+
 This command follows a structured multi-phase approach:
 
 ### Phase 1: Initial Outline Creation
