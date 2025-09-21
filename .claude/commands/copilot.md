@@ -210,27 +210,11 @@ echo "📊 Processing $TOTAL_COMMENTS comments for response generation"
 
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
-# Use already sanitized BRANCH_NAME variable for consistency
-python3 -c '
-import os, sys
-responses_file = os.environ.get("RESPONSES_FILE", "")
-if not responses_file:
-    print("❌ RESPONSES_FILE environment variable not set")
-    sys.exit(1)
-
-import json
-try:
-    with open(responses_file, "r") as f:
-        data = json.load(f)
-    assert "responses" in data, "Missing responses array"
-    for r in data["responses"]:
-        assert "comment_id" in r, "Missing comment_id"
-        assert "reply_text" in r, "Missing reply_text"
-    print("✅ Response format validated")
-except Exception as e:
-    print(f"❌ CRITICAL: Response validation failed: {e}")
-    sys.exit(1)
-' || { echo "❌ CRITICAL: Invalid response format"; exit 1; }
+# Use dedicated validation script for better maintainability
+python3 "$PROJECT_ROOT/.claude/commands/validate_response_format.py" || {
+    echo "❌ CRITICAL: Invalid response format";
+    exit 1;
+}
 
 # Verify responses.json exists and is valid before proceeding
 if [ ! -f "$RESPONSES_FILE" ]; then
