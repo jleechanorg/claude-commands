@@ -236,7 +236,7 @@ class TestUnifiedRouterCore:
         assert cerebras_tool.inputSchema['properties']['args']['type'] == 'array'
 
 
-@pytest.mark.skip("TODO: Fix import issues for sanitize_args function")
+@pytest.mark.skip("Skipped: Fix import issues for sanitize_args function")
 class TestArgumentSanitization:
     """Test argument sanitization functionality."""
 
@@ -289,7 +289,7 @@ class TestArgumentSanitization:
         assert "True" in result
 
 
-@pytest.mark.skip("TODO: Aspirational tests - implementation not complete")
+@pytest.mark.skip("Skipped: Aspirational tests - implementation not complete")
 class TestDirectCommandExecution:
     """Test direct command execution functionality."""
 
@@ -338,7 +338,7 @@ class TestDirectCommandExecution:
             assert "failed with exit code 1" in result
 
 
-@pytest.mark.skip("TODO: Aspirational tests - implementation not complete")
+@pytest.mark.skip("Skipped: Aspirational tests - implementation not complete")
 class TestToolCallHandling:
     """Test the main tool call handling logic."""
 
@@ -477,7 +477,7 @@ class TestToolCallHandling:
             assert "Too many arguments" in result[0].text
 
 
-@pytest.mark.skip("TODO: Aspirational tests - implementation not complete")
+@pytest.mark.skip("Skipped: Aspirational tests - implementation not complete")
 class TestMainServerSetup:
     """Test the main FastMCP server setup."""
 
@@ -508,7 +508,7 @@ class TestMainServerSetup:
                 mock_server.run_stdio_async.assert_called_once()
 
 
-@pytest.mark.skip("TODO: Aspirational tests - designed to fail until refactoring")
+@pytest.mark.skip("Skipped: Aspirational tests - designed to fail until refactoring")
 class TestSpecialCaseRemoval:
     """Tests that validate removal of hardcoded special cases."""
 
