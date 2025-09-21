@@ -11,23 +11,16 @@ Extracts comments from all sources:
 Based on copilot_comment_fetch.py from PR #796 but adapted for modular architecture.
 """
 
+import sys
+import os
 import argparse
 import json
-import os
 import subprocess
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
-
-try:
-    # Package context
-    from .base import CopilotCommandBase
-except ImportError:
-    # Script context (e.g., `python commentfetch.py`)
-    sys.path.append(os.path.dirname(__file__))
-    from base import CopilotCommandBase
+from base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
