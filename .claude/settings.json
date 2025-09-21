@@ -270,7 +270,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/scripts/slack_notify.sh\" ] && exec \"$ROOT/scripts/slack_notify.sh\" \"✅ Claude Code: Work completed - awaiting next instruction\"; fi; exit 0'",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/scripts/slack_notify.sh\" ] && \"$ROOT/scripts/slack_notify.sh\" \"✅ Claude Code: Work completed - awaiting next instruction\" || true; fi; exit 0'",
             "description": "Send Slack notification when Claude Code stops and awaits next command"
           }
         ]

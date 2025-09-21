@@ -16,10 +16,11 @@ fi
 
 echo "✅ SLACK_WEBHOOK_URL is configured"
 
-# Check if slack_notify.sh exists and is executable
-if [ ! -x "scripts/slack_notify.sh" ]; then
+# Get repository root and check if slack_notify.sh exists and is executable
+ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd -P)
+if [ ! -x "$ROOT/scripts/slack_notify.sh" ]; then
     echo "❌ scripts/slack_notify.sh not found or not executable"
-    echo "Run: chmod +x scripts/slack_notify.sh"
+    echo "Run: chmod +x $ROOT/scripts/slack_notify.sh"
     exit 1
 fi
 
@@ -36,7 +37,7 @@ echo "✅ jq is available for JSON processing"
 
 # Test the webhook with a simple message
 echo "🚀 Sending test notification..."
-./scripts/slack_notify.sh "🧪 Test notification from Claude Code setup verification"
+"$ROOT/scripts/slack_notify.sh" "🧪 Test notification from Claude Code setup verification"
 
 echo ""
 echo "✅ Test completed! Check your Slack channel for the notification."

@@ -14,6 +14,12 @@ if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
     exit 0
 fi
 
+# Check if jq is available
+if ! command -v jq >/dev/null 2>&1; then
+    echo "⚠️  jq not found; skipping Slack notification"
+    exit 0
+fi
+
 # Get current branch and timestamp
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
@@ -36,7 +42,7 @@ FULL_MESSAGE="$MESSAGE
 echo "📤 Sending Slack notification..."
 curl -X POST -H 'Content-type: application/json' \
     --data "{\"text\":$(printf '%s' "$FULL_MESSAGE" | jq -Rs .)}" \
-    --silent --show-error \
+    --silent --show-error --fail-with-body \
     "$SLACK_WEBHOOK_URL" || {
     echo "❌ Failed to send Slack notification"
     exit 1

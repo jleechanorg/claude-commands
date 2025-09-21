@@ -42,6 +42,11 @@ source ~/.bashrc  # or ~/.zshrc, etc.
 
 ### 3. Test the Setup
 
+Make sure the script is executable (run this once):
+```bash
+chmod +x scripts/slack_notify.sh
+```
+
 Test the notification script directly:
 ```bash
 ./scripts/slack_notify.sh "Test notification from Claude Code"
@@ -157,4 +162,4 @@ Slack's free tier includes:
 - Unlimited apps and integrations
 - 10,000 most recent messages visible
 - No additional cost for webhook notifications
-- No rate limiting for normal usage patterns
+- Webhooks are rate limited (typically ~1 message/second per webhook). See [Slack's rate limits documentation](https://api.slack.com/docs/rate-limits) for details.
