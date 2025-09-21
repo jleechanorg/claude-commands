@@ -1,0 +1,51 @@
+
+🚀🚀🚀 QWEN GENERATED IN 387ms 🚀🚀🚀
+
+```sql
+-- Get user orders with product details
+SELECT
+ u.user_id,
+ u.username,
+ u.email,
+ o.order_id,
+ o.order_date,
+ o.total_amount,
+ p.product_name,
+ oi.quantity,
+ oi.price
+FROM users u
+JOIN orders o ON u.user_id = o.user_id
+JOIN order_items oi ON o.order_id = oi.order_id
+JOIN products p ON oi.product_id = p.product_id
+ORDER BY u.user_id, o.order_date DESC;
+
+-- Top-selling products by quantity sold
+SELECT
+ p.product_id,
+ p.product_name,
+ p.category,
+ SUM(oi.quantity) as total_sold,
+ COUNT(oi.order_item_id) as order_count
+FROM products p
+JOIN order_items oi ON p.product_id = oi.product_id
+JOIN orders o ON oi.order_id = o.order_id
+WHERE o.order_status = 'completed'
+GROUP BY p.product_id, p.product_name, p.category
+ORDER BY total_sold DESC
+LIMIT 10;
+
+-- Monthly revenue with order counts
+SELECT
+ DATE_TRUNC('month', o.order_date) as month,
+ COUNT(o.order_id) as total_orders,
+ SUM(o.total_amount) as monthly_revenue
+FROM orders o
+JOIN users u ON o.user_id = u.user_id
+WHERE o.order_status = 'completed'
+GROUP BY DATE_TRUNC('month', o.order_date)
+ORDER BY month DESC;
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 387ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
