@@ -65,8 +65,13 @@ echo "🚀 ORCHESTRATING: Fetching comprehensive comment data via /commentfetch.
 echo "🔍 COMPREHENSIVE COMMENT ANALYSIS FOR PR #$PR_NUMBER"
 echo "=================================================================="
 
-# 2. Execute /commentfetch for comprehensive multi-API comment fetching
-/commentfetch $PR_NUMBER
+# 2. Execute commentfetch Python implementation for comprehensive multi-API comment fetching
+cd .claude/commands && python3 -c "
+import _copilot_modules.commentfetch as cf
+import sys
+fetch = cf.CommentFetch(sys.argv[1])
+fetch.execute()
+" "$PR_NUMBER"
 
 # 3. Use structured JSON output from commentfetch
 BRANCH_NAME=$(git branch --show-current)
