@@ -76,7 +76,14 @@ else
                    sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
                    head -1 2>/dev/null)
         if [ -n "$pr_number" ]; then
-            pr_text="#$pr_number"
+            # Extract repo info to build PR URL
+            repo_url=$(git remote get-url origin 2>/dev/null)
+            if [[ "$repo_url" =~ github\.com[:/]([^/]+/[^/]+)\.git ]]; then
+                repo_path="${BASH_REMATCH[1]}"
+                pr_text="#$pr_number https://github.com/$repo_path/pull/$pr_number"
+            else
+                pr_text="#$pr_number"
+            fi
         fi
     fi
 fi
