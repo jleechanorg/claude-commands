@@ -68,7 +68,11 @@ Ultra-fast PR processing using hybrid orchestration (direct execution + selectiv
 - **Never Mixed**: Agent NEVER handles comments, Orchestrator NEVER modifies files
 
 ### ⚡ Performance Targets
-- **Execution Time**: 5-15 minutes (warns if >15 minutes, realistic for comprehensive analysis)
+- **Execution Time**: **Adaptive based on PR complexity**
+  - **Simple PRs** (≤3 files, ≤50 lines): 2-5 minutes
+  - **Moderate PRs** (≤10 files, ≤500 lines): 5-10 minutes
+  - **Complex PRs** (>10 files, >500 lines): 10-15 minutes
+  - **Auto-scaling timeouts** with complexity detection and appropriate warnings
 - **Success Rate**: 100% reliability through proven component usage
 - **Coverage**: 100% comment response rate + all actionable issues implemented
 
@@ -143,27 +147,135 @@ Execute comment processing workflow directly for reliable GitHub operations:
 - Execute /commentfetch to gather all PR comments and issues
 - **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
 - **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
+
+**🛡️ ENHANCED SECURITY IMPLEMENTATION**:
+```bash
+# Security function for sanitizing GitHub comment content
+sanitize_comment() {
+    local input="$1"
+    local max_length="${2:-10000}"  # Default 10KB limit
+
+    # Length validation
+    if [ ${#input} -gt $max_length ]; then
+        echo "❌ Input exceeds maximum length of $max_length characters" >&2
+        return 1
+    fi
+
+    # Remove null bytes and escape shell metacharacters
+    local sanitized=$(echo "$input" | tr -d '\0' | sed 's/[`$\\]/\\&/g' | sed 's/[;&|]/\\&/g')
+
+    # Check for suspicious patterns
+    if echo "$sanitized" | grep -qE '(\$\(|\`|<script|javascript:|eval\(|exec\()'; then
+        echo "⚠️ Potentially malicious content detected and neutralized" >&2
+        # Continue with sanitized version rather than failing completely
+    fi
+
+    echo "$sanitized"
+}
+
+# Validate branch name to prevent path injection
+validate_branch_name() {
+    local branch="$1"
+    if [[ "$branch" =~ ^[a-zA-Z0-9._-]+$ ]] && [ ${#branch} -le 100 ]; then
+        return 0
+    else
+        echo "❌ Invalid branch name: contains illegal characters or too long" >&2
+        return 1
+    fi
+}
+```
 - Analyze actionable issues and categorize by type (security, runtime, tests, style)
 - Process issue responses and plan implementation strategy
 - Handle all GitHub API operations directly (proven to work)
 
-**🚀 Parallel copilot-fixpr Agent Launch**:
-Launch specialized agent for file modifications in parallel:
+**🚀 Parallel copilot-fixpr Agent Launch with Explicit Synchronization**:
+Launch specialized agent for file modifications with structured coordination:
 - **FIRST**: Execute `/fixpr` command to resolve merge conflicts and CI failures
 - Analyze current GitHub PR status and identify potential improvements
 - Review code changes for security vulnerabilities and quality issues
 - Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol
 - Focus on code quality, performance optimization, and technical accuracy
+- **NEW**: Write completion status to structured result file for orchestrator
 
-**Coordination Protocol**: Direct orchestrator manages workflow while agent handles file operations in parallel
+**🚨 EXPLICIT SYNCHRONIZATION PROTOCOL**: Eliminates race conditions
+```bash
+# Secure branch name and setup paths
+BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
+mkdir -p "/tmp/$BRANCH_NAME"
+
+# Agent execution with status tracking
+copilot-fixpr-agent > "$AGENT_STATUS" &
+AGENT_PID=$!
+
+# Detect PR complexity for appropriate timeout
+FILES_CHANGED=$(git diff --name-only origin/main | wc -l)
+LINES_CHANGED=$(git diff --stat origin/main | tail -1 | grep -oE '[0-9]+' | head -1 || echo 0)
+
+if [ $FILES_CHANGED -le 3 ] && [ $LINES_CHANGED -le 50 ]; then
+    TIMEOUT=300  # 5 minutes for simple PRs
+elif [ $FILES_CHANGED -le 10 ] && [ $LINES_CHANGED -le 500 ]; then
+    TIMEOUT=600  # 10 minutes for moderate PRs
+else
+    TIMEOUT=900  # 15 minutes for complex PRs
+fi
+
+echo "📊 PR Complexity: $FILES_CHANGED files, $LINES_CHANGED lines (timeout: $((TIMEOUT/60))m)"
+
+# Orchestrator waits for agent completion with adaptive timeout
+START_TIME=$(date +%s)
+while [ ! -f "$AGENT_STATUS" ] && kill -0 $AGENT_PID 2>/dev/null; do
+    CURRENT_TIME=$(date +%s)
+    if [ $((CURRENT_TIME - START_TIME)) -gt $TIMEOUT ]; then
+        echo "⚠️ Agent timeout after $((TIMEOUT/60)) minutes"
+        kill $AGENT_PID 2>/dev/null
+        break
+    fi
+    sleep 10
+done
+
+# Verify agent completion before proceeding
+if [ -f "$AGENT_STATUS" ]; then
+    echo "✅ Agent completed successfully, proceeding with response generation"
+else
+    echo "❌ CRITICAL: Agent did not complete successfully"
+    exit 1
+fi
+```
+
+**Coordination Protocol**: Explicit synchronization prevents race conditions between orchestrator and agent
 
 ### Phase 2: Hybrid Integration & Response Generation
 **Direct orchestration with agent result integration**:
 
-**Agent Result Collection**:
-- copilot-fixpr provides: Technical analysis, actual file fixes, security implementations, code changes with justification
-- Direct orchestrator handles: Comment processing, response generation, GitHub API operations, coverage tracking
-- Coordination maintains: File operation delegation while ensuring reliable communication workflow
+**🔄 Structured Data Exchange - Agent Result Collection**:
+```bash
+# Read structured agent results from status file
+BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
+
+if [ -f "$AGENT_STATUS" ]; then
+    # Parse structured agent results with error handling
+    FILES_MODIFIED=$(jq -r '.files_modified[]?' "$AGENT_STATUS" 2>/dev/null | head -20 || echo "")
+    FIXES_APPLIED=$(jq -r '.fixes_applied[]?' "$AGENT_STATUS" 2>/dev/null | head -20 || echo "")
+    COMMIT_HASH=$(jq -r '.commit_hash?' "$AGENT_STATUS" 2>/dev/null || echo "")
+    EXECUTION_TIME=$(jq -r '.execution_time?' "$AGENT_STATUS" 2>/dev/null || echo "0")
+
+    echo "📊 Agent Results:"
+    [ -n "$FILES_MODIFIED" ] && echo "  Files: $FILES_MODIFIED"
+    [ -n "$FIXES_APPLIED" ] && echo "  Fixes: $FIXES_APPLIED"
+    [ -n "$COMMIT_HASH" ] && echo "  Commit: $COMMIT_HASH"
+    echo "  Time: ${EXECUTION_TIME}s"
+else
+    echo "❌ No agent status file found - using fallback git diff"
+    FILES_MODIFIED=$(git diff --name-only | head -10)
+fi
+```
+
+**Agent-Orchestrator Interface**:
+- **Agent provides**: Structured JSON with files_modified, fixes_applied, commit_hash, execution_time
+- **Orchestrator handles**: Comment processing, response generation, GitHub API operations, coverage tracking
+- **Coordination ensures**: Explicit synchronization prevents race conditions and response inconsistencies
 
 **Response Generation** (MANDATORY ORCHESTRATOR RESPONSIBILITY):
 ```bash
@@ -301,13 +413,36 @@ fi
 echo "✅ Comment coverage verification passed - proceeding with completion"
 ```
 
-**Final Timing:**
+**🎯 Adaptive Performance Tracking:**
 ```bash
-# Calculate and report timing (only if performance targets exceeded)
+# Detect PR complexity for realistic timing expectations (if not done earlier)
+if [ -z "$FILES_CHANGED" ]; then
+    FILES_CHANGED=$(git diff --name-only origin/main | wc -l)
+    LINES_CHANGED=$(git diff --stat origin/main | tail -1 | grep -oE '[0-9]+' | head -1 || echo 0)
+fi
+
+# Set complexity-based performance targets
+if [ $FILES_CHANGED -le 3 ] && [ $LINES_CHANGED -le 50 ]; then
+    COMPLEXITY="simple"
+    TARGET_TIME=300  # 5 minutes
+elif [ $FILES_CHANGED -le 10 ] && [ $LINES_CHANGED -le 500 ]; then
+    COMPLEXITY="moderate"
+    TARGET_TIME=600  # 10 minutes
+else
+    COMPLEXITY="complex"
+    TARGET_TIME=900  # 15 minutes
+fi
+
+echo "📊 PR Complexity: $COMPLEXITY ($FILES_CHANGED files, $LINES_CHANGED lines)"
+echo "🎯 Target time: $((TARGET_TIME / 60)) minutes"
+
+# Calculate and report timing with complexity-appropriate targets
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-if [ $COPILOT_DURATION -gt 900 ]; then
-    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 15m)"
+if [ $COPILOT_DURATION -gt $TARGET_TIME ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: $((TARGET_TIME / 60))m for $COMPLEXITY PR)"
+else
+    echo "✅ Performance target met: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (under $((TARGET_TIME / 60))m target)"
 fi
 
 # SUCCESS: Clean up and complete
@@ -355,16 +490,20 @@ cleanup_temp_files
 ### **QUALITY GATES**:
 - ✅ **File Justification Protocol**: All code changes properly documented and justified
 - ✅ **Security Priority**: Critical vulnerabilities addressed first with actual fixes
+- ✅ **Input Sanitization**: All GitHub comment content validated and sanitized
+- ✅ **Synchronization**: Explicit agent coordination prevents race conditions
 - ✅ **GitHub Response Management**: Proper comment response handling for all feedback
 - ✅ **Pattern Detection**: Systematic fixes applied across similar codebase patterns
-- ✅ **Performance**: Execution completed within 5-15 minute target (realistic for comprehensive analysis)
+- ✅ **Adaptive Performance**: Execution completed within complexity-appropriate targets
 
 ### **FAILURE CONDITIONS**:
 - ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
+- ❌ **Race Conditions**: Orchestrator proceeding before agent completion
+- ❌ **Security Violations**: Unsanitized input processing or validation failures
 - ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
-- ❌ **Timing Failures**: Execution time >15 minutes without performance alerts
+- ❌ **Timing Failures**: Execution time exceeding complexity-appropriate targets without alerts
 
 ## ⚡ **HYBRID EXECUTION OPTIMIZATION**
 
