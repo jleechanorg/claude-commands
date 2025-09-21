@@ -27,7 +27,7 @@
 
 **Tool Selection Hierarchy** (Context-Optimized):
 1. **Serena MCP** - Semantic analysis for efficient context usage
-2. **Targeted Reads** - Limited file reads based on context capacity  
+2. **Targeted Reads** - Limited file reads based on context capacity
 3. **Focused Implementation** - Claude direct or /cerebras based on task size
 4. **Context Preservation** - Reserve capacity for execution and validation
 
@@ -52,7 +52,7 @@
 - **Parallel Tasks** (0 additional tokens): For simple, independent operations <30 seconds
   * Method: Background processes (&), GNU parallel, xargs, or batched tool calls
   * Best for: File searches, test runs, lint operations, data aggregation
-- **Sequential Tasks**: For complex workflows requiring coordination >5 minutes  
+- **Sequential Tasks**: For complex workflows requiring coordination >5 minutes
   * Method: Step-by-step with context monitoring
   * Best for: Feature implementation, architectural changes, complex integrations
 - **Reference**: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full decision criteria
@@ -79,6 +79,142 @@ User must respond with "APPROVED" or specific modifications before execution beg
 - Use universal composition with other commands naturally
 - Preserve context for testing and validation
 
+### Phase 5: Consensus Validation Loop (3 Rounds Max)
+
+**🎯 Multi-Agent Quality Assurance with Test Validation**
+
+After Phase 4 execution, automatically initiate consensus validation to ensure code quality and system stability.
+
+#### Round Structure (Repeat up to 3 times):
+
+**1. Parallel Agent Consensus** (2-3 minutes)
+- Launch 4 specialized agents simultaneously using Task tool:
+  - `code-review`: Architecture, correctness, maintainability
+  - `codex-consultant`: System design and scaling considerations
+  - `gemini-consultant`: Best practices and optimization patterns
+  - `grok-consultant`: Contrarian analysis and practical reality checks
+- Each agent provides: PASS/REWORK + confidence (1-10) + specific issues with file:line references
+- Early termination on architectural blockers or critical bugs
+
+**2. Immediate Code Changes** (1-2 minutes)
+- Apply highest-confidence fixes from agent recommendations
+- Focus on clear, actionable changes with specific file:line references
+- Skip complex architectural refactoring in favor of quick wins
+- Document all changes made during this round
+
+**3. Automated Test Validation** (1-3 minutes)
+- **Syntax Validation**: Quick linting/parsing checks
+  ```bash
+  # Auto-detect and run project-specific linters
+  npm run lint || eslint . || flake8 . || ruff check .
+  ```
+- **Unit Tests**: Focused tests for modified components
+  ```bash
+  # Auto-detect test framework and run relevant tests
+  npm test || TESTING=true vpython -m pytest || python -m pytest
+  ```
+- **Integration Tests**: If APIs/interfaces changed
+  ```bash
+  # Run integration test suite if available
+  npm run test:integration || ./run_tests.sh || ./run_ui_tests.sh mock
+  ```
+- **Manual Validation**: User-guided spot checks if automated tests insufficient
+
+**4. Round Completion Decision**
+- **CONSENSUS_PASS**: All agents PASS + average confidence >7 + all tests pass
+- **CONSENSUS_REWORK**: Any agent critical issues OR test failures OR average confidence <5
+- **TEST_FAILURE_ABORT**: Critical test failures that prevent continuation
+- **ROUND_LIMIT_REACHED**: Maximum 3 rounds completed
+
+#### Consensus Calculation Rules:
+
+- **✅ SUCCESS**: CONSENSUS_PASS achieved (workflow complete)
+- **🔄 CONTINUE**: REWORK status + round < 3 + tests pass (next round)
+- **❌ ABORT**: TEST_FAILURE_ABORT or critical agent blockers (stop immediately)
+- **⚠️ LIMIT**: ROUND_LIMIT_REACHED (document remaining issues)
+
+#### Test Strategy per Round:
+
+**Context-Aware Test Selection**:
+- **High Context**: Full test suite validation
+- **Medium Context**: Targeted test execution based on changed files
+- **Low Context**: Essential syntax and unit tests only
+
+**Auto-Detection of Test Commands**:
+```bash
+# Project test command detection hierarchy
+if [ -f "package.json" ] && grep -q "test" package.json; then
+    npm test
+elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
+    TESTING=true vpython -m pytest
+elif [ -f "run_tests.sh" ]; then
+    ./run_tests.sh
+elif [ -f "Makefile" ] && grep -q "test" Makefile; then
+    make test
+else
+    echo "No automated tests detected - manual validation required"
+fi
+```
+
+#### Integration with /consensus Infrastructure:
+
+**Agent Context Template** (Applied to each agent):
+```markdown
+[Agent Role] analysis for /plan execution validation in solo MVP context.
+
+**Execution Context**:
+- Phase 4 implementation completed
+- Changes made: [list of files modified]
+- Test results: [previous round test outcomes]
+- Round: [1-3] of consensus validation
+
+**Validation Focus**:
+1. Code quality of Phase 4 implementation
+2. Integration with existing codebase
+3. Potential runtime issues or regressions
+4. Architecture alignment with project patterns
+
+**Output Required**:
+- PASS/REWORK verdict with confidence (1-10)
+- Specific issues with file:line references
+- Test coverage recommendations
+- Risk assessment for deployment
+
+**MVP Context**: Focus on practical deployment readiness over enterprise security theater.
+```
+
+#### Early Termination Triggers:
+
+- **✅ CONSENSUS_PASS**: All agents agree + high confidence + tests pass
+- **❌ CRITICAL_BUG**: Any agent reports severity 9-10 issue
+- **❌ TEST_FAILURE**: Core functionality broken by Phase 4 changes
+- **❌ COMPILATION_ERROR**: Code doesn't compile/parse after changes
+
+#### Output Integration:
+
+**Enhanced Plan Completion Report**:
+```
+# /plan Execution Complete
+
+## Phase 4: Implementation Summary
+- [Implementation details from Phase 4]
+
+## Phase 5: Consensus Validation Results
+- Rounds completed: [1-3]
+- Final status: [PASS/REWORK_LIMIT/ABORT]
+- Test validation: [PASS/FAIL with details]
+- Agent consensus: [confidence scores and key findings]
+
+## Quality Assurance Actions Taken:
+- Round 1: [agent recommendations + code changes + test results]
+- Round 2: [agent recommendations + code changes + test results]
+- Round 3: [agent recommendations + code changes + test results]
+
+## Remaining Items:
+- [Any unresolved agent concerns or test failures]
+- [Follow-up recommendations for future iterations]
+```
+
 ## 🔗 UNIVERSAL COMPOSITION PRINCIPLES
 
 **Command Integration**: `/plan` naturally composes with:
@@ -86,6 +222,7 @@ User must respond with "APPROVED" or specific modifications before execution beg
 - `/guidelines` - Mistake prevention and protocol compliance
 - `/context` - Continuous context monitoring
 - `/cerebras` - High-speed code generation for appropriate tasks
+- `/consensus` - Multi-agent validation and quality assurance (Phase 5)
 - Memory MCP - Pattern recognition and preference application
 
 **Adaptive Workflow**: The planning process adapts based on:
@@ -109,7 +246,7 @@ User must respond with "APPROVED" or specific modifications before execution beg
 
 **Context Preservation**:
 - ❌ Avoid unnecessary file reads
-- ❌ Minimize redundant operations  
+- ❌ Minimize redundant operations
 - ❌ Skip verbose output when planning
 - ✅ Reserve context for execution and validation
 
@@ -118,14 +255,14 @@ User must respond with "APPROVED" or specific modifications before execution beg
 **Context-Aware `/plan` Flow**:
 ```
 User: /plan implement user authentication
-Assistant: 
+Assistant:
 
 Phase 0 - Context Assessment:
 /context → 45% remaining → Medium Context Strategy
 
 Phase 1 - Strategic Analysis:
 [Memory consultation for auth patterns]
-[Guidelines check for security requirements]  
+[Guidelines check for security requirements]
 [Serena MCP discovery for efficient analysis]
 
 Phase 2 - Execution Plan:
@@ -149,3 +286,6 @@ Assistant: [Executes context-optimized implementation]
 - ✅ **User approval required before execution**
 - ✅ **Memory and guidelines integration**
 - ✅ **Efficient execution with context preservation**
+- ✅ **Multi-agent consensus validation with automated testing**
+- ✅ **Quality assurance loop with early termination**
+- ✅ **Test-driven validation per consensus round**
