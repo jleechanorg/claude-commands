@@ -68,18 +68,15 @@ if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 else
-    # Try fast network lookup with timeout (only for --status-only mode performance)
-    if [ "$1" != "--status-only" ]; then
-        # Full mode: try network lookup with reasonable timeout
-        current_commit=$(git rev-parse HEAD 2>/dev/null)
-        if [ -n "$current_commit" ]; then
-            pr_number=$(timeout 2 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
-                       grep "$current_commit" | \
-                       sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
-                       head -1 2>/dev/null)
-            if [ -n "$pr_number" ]; then
-                pr_text="#$pr_number"
-            fi
+    # Always try network lookup with fast timeout for PR detection
+    current_commit=$(git rev-parse HEAD 2>/dev/null)
+    if [ -n "$current_commit" ]; then
+        pr_number=$(timeout 1 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
+                   grep "$current_commit" | \
+                   sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
+                   head -1 2>/dev/null)
+        if [ -n "$pr_number" ]; then
+            pr_text="#$pr_number"
         fi
     fi
 fi
