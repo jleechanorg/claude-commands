@@ -29,6 +29,48 @@
 ## Parallel Agent Execution (2025 Optimization)
 Run all 4 agents simultaneously using Task tool parallel execution with proper context and role definitions:
 
+### Consultant Supermajority Overlay
+
+To unlock the "consultant consensus supermajority" workflow referenced in recent playbooks, layer the
+standard `/consensus` flow with an explicit PASS/REWORK vote tally across the consultant agents. The
+goal is to require broad agreement from the external specialist agents before declaring success.
+
+- **Eligible voters**: `codex-consultant`, `gemini-consultant`, and `grok-consultant`. The internal
+  `code-review` agent still runs for architecture validation, but it is not counted toward the
+  consultant supermajority. (Rationale: keep architectural authority with Claude core while treating
+  external tools as an advisory bloc.)
+- **Threshold**: Minimum 2-of-3 consultant votes must return `PASS` with confidence ≥7. If any
+  consultant requests `REWORK`, require another round unless the remaining two consultants both
+  register `PASS` with confidence ≥9.
+- **Escalation rule**: If two consecutive rounds fail to achieve the consultant supermajority, halt
+  automatic approvals and surface the conflicting findings verbatim in the report. This ensures
+  humans review disagreements rather than forcing another automated round.
+
+Implementation guidance:
+
+1. Run the three consultant agents in parallel (as already done for `/consensus`).
+2. Capture each agent's PASS/REWORK verdict and numeric confidence.
+3. After collecting responses, compute the supermajority state:
+   ```python
+   passes = [a for a in consultant_agents if a.verdict == "PASS" and a.confidence >= 7]
+   high_confidence = [a for a in passes if a.confidence >= 9]
+   if len(passes) >= 2:
+       consultant_supermajority = True
+   elif len(high_confidence) == 2 and all(b.verdict == "REWORK" for b in consultant_agents if b not in high_confidence):
+       consultant_supermajority = True
+   else:
+       consultant_supermajority = False
+   ```
+4. Annotate the round summary with `Consultant Supermajority: PASS|FAIL` so downstream tooling can
+   react automatically.
+5. Only mark the overall round as PASS when both conditions hold:
+   - Core consensus rules (all agents PASS + average confidence >7)
+   - Consultant supermajority evaluated to `True`
+
+This overlay keeps `/consensus` fast while ensuring the external consultant network (Codex, Gemini,
+Grok) broadly agrees before a change moves forward. Treat the supermajority flag as a hard gate for
+automation and as a status indicator to highlight conflicting consultant guidance.
+
 ### Agent Context & Execution Framework
 
 **Agent Infrastructure**: Uses existing `Task` tool with `subagent_type` parameter for parallel multi-agent coordination. This is the same infrastructure used successfully by `/reviewdeep` and `/arch` commands.
