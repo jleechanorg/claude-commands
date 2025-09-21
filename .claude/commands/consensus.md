@@ -94,7 +94,7 @@ Streamlined workflow optimized for speed and simplicity:
    - **Syntax Validation**: Quick linting/parsing checks
      ```bash
      # Auto-detect and run project-specific linters
-     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  lint$"; then
+     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent 2>/dev/null | grep -q "lint"; then
        npm run lint
      elif command -v eslint >/dev/null 2>&1; then
        eslint .
@@ -109,12 +109,14 @@ Streamlined workflow optimized for speed and simplicity:
    - **Unit Tests**: Focused tests for modified components
      ```bash
      # Auto-detect test framework and run relevant tests
-     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  test$"; then
+     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent 2>/dev/null | grep -q "test"; then
        npm test
      elif command -v vpython >/dev/null 2>&1; then
        TESTING=true vpython -m pytest
+     elif command -v python3 >/dev/null 2>&1; then
+       TESTING=true python3 -m pytest
      elif command -v python >/dev/null 2>&1; then
-       python -m pytest
+       TESTING=true python -m pytest
      else
        echo "No recognized test runner found - manual validation required"
      fi
@@ -134,13 +136,19 @@ Streamlined workflow optimized for speed and simplicity:
 **Auto-Detection of Test Commands**:
 ```bash
 # Project test command detection hierarchy
-if [ -f "package.json" ] && npm run --silent | grep -q "^  test$"; then
+if [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
     npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
-    TESTING=true vpython -m pytest
+    if command -v vpython >/dev/null 2>&1; then
+        TESTING=true vpython -m pytest
+    elif command -v python3 >/dev/null 2>&1; then
+        TESTING=true python3 -m pytest
+    else
+        TESTING=true python -m pytest
+    fi
 elif [ -f "run_tests.sh" ]; then
     ./run_tests.sh
-elif [ -f "Makefile" ] && grep -q "test" Makefile; then
+elif [ -f "Makefile" ] && grep -q "^test:" Makefile; then
     make test
 else
     echo "No automated tests detected - manual validation required"
