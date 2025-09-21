@@ -1,6 +1,10 @@
 # /consensus Command - Multi-Agent Agreement Code Review
 
-**Purpose**: Run a consensus-building review loop that uses the subagents defined under [`.claude/agents`](../agents/) to validate the current work-in-progress. The command inspects the active Git state (latest commit, local unstaged/staged changes) and the currently checked-out PR on GitHub, then drives iterative fixes until all agents agree no major issues remain or the maximum of three review rounds is reached.
+**Purpose**: Fast consensus-building review for solo MVP projects using 2025 multi-agent protocols. Simple 3-round maximum with early termination when agents agree. Focus on architecture and practical outcomes over enterprise-grade security.
+
+**⚡ Performance**: 2-5 minutes total with parallel agent execution and smart early termination.
+
+**🚀 Solo MVP Context**: Optimized for pre-launch projects where rollbacks are easy via GitHub, enterprise security is overkill, and speed/architecture quality matter most.
 
 ## Usage
 ```
@@ -19,62 +23,92 @@
 4. **Verify synchronization with GitHub**:
    - Fetch PR files: `gh pr view <pr> --json files,headRefName,baseRefName`.
    - Confirm branch alignment (`git rev-parse HEAD` vs PR head SHA).
-5. **Assemble review bundle** containing: PR description, latest commit message, diff summaries, and local-only edits.
+5. **Basic credential filtering**: Remove obvious API keys/passwords from context (solo MVP appropriate)
+6. **Assemble review bundle** containing: PR description, latest commit message, diff summaries, and local-only edits.
 
-## Agent Line-Up (All Agents Participate Every Round)
-Run the same context bundle through the following `.claude/agents` profiles every round:
+## Parallel Agent Execution (2025 Optimization)
+Run all 4 agents simultaneously using Task tool parallel execution with proper context and role definitions:
 
-- `code-review`
-- `codex-consultant`
-- `gemini-consultant`
-- `grok-consultant`
+### Agent Context & Execution Framework
 
-They do **not** get special roles. Everyone checks for serious correctness, security, performance, or stability problems. When any agent finds a major or critical problem they should literally say `LOL SERIOUS ISSUE:` before their explanation so the whole group snaps to it. All feedback should be tagged with severity (`critical`, `major`, `minor`, `nit`).
+**Agent Infrastructure**: Uses existing `Task` tool with `subagent_type` parameter for parallel multi-agent coordination. This is the same infrastructure used successfully by `/reviewdeep` and `/arch` commands.
 
-## Iterative Consensus Loop
-The `/consensus` workflow is strictly limited to **three rounds**. Each round executes the following phases via `/execute` or `/orch`:
+### Agent Role Definitions:
 
-1. **Consultation Phase (Parallel)**
-   - Run `/guidelines`.
-   - Use `/execute` (or any orchestrator you prefer) to fan out the same brief to `code-review`, `codex-consultant`, `gemini-consultant`, and `grok-consultant` in parallel.
-   - Remind each agent to call out serious problems with the `LOL SERIOUS ISSUE:` prefix and to keep the rest of their notes short.
-   - Collect structured feedback (issue lists, severity, recommended fixes).
-   - Use `/think` or `/thinku` as needed for synthesis.
+- **`code-review`** - Architecture, correctness, maintainability (MVP-focused)
+  - **Context**: Solo MVP project, GitHub rollback safety net available
+  - **Focus**: Architecture quality, real bugs, maintainability over enterprise security theater
+  - **Implementation**: `Task(subagent_type="code-review", description="...", prompt="...")`
 
-2. **Synthesis & Priority Mapping**
-   - Aggregate all findings into a single matrix keyed by file and issue type.
-   - Highlight disagreements where any agent flags a `critical` or `major` issue that others do not.
-   - Determine "consensus status" for the round:
-    - **PASS**: No agent reports `critical` or `major` issues.
-    - **REWORK**: Any `critical`/`major` items remain or agents disagree on fix completeness.
+- **`codex-consultant`** - System design and scaling considerations
+  - **Context**: Pre-launch MVP, architecture decisions can break without user impact
+  - **Focus**: System design patterns, scalability foundations, technical architecture
+  - **Implementation**: `Task(subagent_type="codex-consultant", description="...", prompt="...")`
 
-3. **Remediation Planning (If REWORK)**
-   - Generate a fix plan referencing offending files/lines.
-   - Prioritize fixes by severity and cross-agent agreement.
-   - Decide required validations (tests, linters) before next round.
+- **`gemini-consultant`** - Best practices and optimization patterns
+  - **Context**: 2025 best practices adapted for solo developer workflow
+  - **Focus**: Modern patterns, performance optimization, framework alignment
+  - **Implementation**: `Task(subagent_type="gemini-consultant", description="...", prompt="...")`
 
-4. **Fix Application**
-   - Apply code changes using natural language edits (`apply_patch`, file rewrites, or existing fix commands like `/fix`, `/execute` operations).
-   - After **every individual change**, immediately run the relevant local automated tests (unit, integration, lint, type checks) and repair any failing tests before proceeding.
-   - Update or create tests as required by agent feedback.
-   - Document all modifications in an interim change log, including which tests were executed.
+- **`grok-consultant`** - Contrarian analysis and practical reality checks
+  - **Context**: Solo developer reality vs enterprise theoretical concerns
+  - **Focus**: Practical deployment concerns, real-world failure modes, pragmatic tradeoffs
+  - **Implementation**: `Task(subagent_type="grok-consultant", description="...", prompt="...")`
 
-5. **Revalidation**
-   - Re-run any quick sanity checks (e.g., `git diff`, `pytest`, build commands) to ensure fixes pass locally.
-   - Proceed to the next round only after local validation succeeds and there are no outstanding failing tests.
+**Speed Optimizations**:
+- **Parallel execution**: All agents run simultaneously (not sequential)
+- **Early termination**: Stop on architectural blockers or critical bugs
+- **Simple consensus**: Agents provide PASS/REWORK verdict with confidence (1-10)
+- **Evidence required**: Findings must include file:line references
+- **MVP Context**: GitHub rollbacks available, focus on architecture over security paranoia
 
-6. **Round Retrospective**
-   - Summarize the primary conversation highlights in the main thread so future readers can follow the resolution path.
-   - Provide a per-agent recap that captures each consultant's stance, especially any `LOL SERIOUS ISSUE` flags and how they were addressed.
-   - Store these notes with the interim change log for traceability before launching the next loop.
+## Fast Consensus Loop (3 Rounds Max)
+Streamlined workflow optimized for speed and simplicity:
+
+1. **Parallel Agent Consultation** (2-3 minutes)
+   - Launch all 4 agents simultaneously using Task tool with full context
+   - **Context Provided to Each Agent**:
+     - Solo MVP project status (pre-launch, rollback safety available)
+     - Current PR/branch context and file changes
+     - Architecture focus over enterprise security concerns
+     - GitHub rollback strategy as primary safety mechanism
+     - 2025 best practices adapted for solo developer workflow
+   - Each agent provides: PASS/REWORK + confidence (1-10) + specific issues
+   - Early termination if any agent finds architectural blockers or critical bugs
+   - Collect findings in structured format with file:line evidence
+   - **Agent Context Awareness**: Each agent understands the working multi-agent system and MVP context
+
+2. **Simple Consensus Calculation** (30 seconds)
+   - **CONSENSUS_PASS**: All agents PASS + average confidence >7
+   - **CONSENSUS_REWORK**: Any agent critical issues OR average confidence <5
+   - **MIXED_SIGNALS**: Disagreement between agents - document conflicts
+
+3. **Quick Fix Application** (If REWORK, 1-2 minutes)
+   - Apply highest-confidence architectural fixes with clear file:line references
+   - Skip complex remediation planning - fix obvious issues immediately
+   - Run basic validation (syntax check, basic tests)
+   - GitHub rollback available if issues arise
+
+4. **Streamlined Validation**
+   - Run essential tests only (not full suite per change)
+   - Document changes with simple before/after summary
+   - No complex test creation - focus on fixing existing issues
+
+5. **Next Round Decision**
+   - If CONSENSUS_PASS: workflow complete
+   - If round < 3: continue with remaining issues
+   - If round = 3: document final status and unresolved items
 
 The loop stops immediately when a round achieves PASS status or after three rounds (whichever occurs first).
 
-## Consensus Rule Set
-- **Hard stop** on deployment/merge suggestions; output remains advisory.
-- **Major issue definition**: Anything labeled `critical` or `major` by any agent, including security vulnerabilities, correctness bugs, significant architectural flaws, or blocking test failures.
-- **Minor disagreements** (nitpicks, stylistic suggestions) do not prevent consensus but are documented for follow-up.
-- **Second opinions**: When agents disagree on severity, automatically trigger a focused re-review of the disputed section (e.g., ping the specific agent that said `LOL SERIOUS ISSUE:` and one other peer) within the same round before deciding.
+## Simple Consensus Rules (2025 MVP Optimization)
+- **Speed First**: Parallel execution, early termination, 3-round limit
+- **Evidence Based**: All findings require file:line references + confidence scores
+- **Clear Thresholds**: PASS >7 confidence, REWORK <5 confidence, mixed signals documented
+- **Architecture First**: Focus on system design, scalability, maintainability
+- **Practical Focus**: Fix obvious issues, document complex disagreements for later
+- **Basic Safety**: Filter obvious credentials, but don't over-engineer for solo MVP
+- **GitHub Safety Net**: Easy rollbacks available for any problematic changes
 
 ## Output Format
 ```
@@ -104,7 +138,64 @@ The loop stops immediately when a round achieves PASS status or after three roun
 ```
 Include references to executed test commands and link to generated guideline docs if applicable.
 
+## 🛡️ Solo MVP Developer Focus
+
+Following reviewdeep.md patterns for solo developer optimization:
+
+### **Practical Focus Areas**
+- **Architecture Quality**: SOLID principles, design patterns, scalability
+- **Real Bugs**: Logic errors, null pointers, race conditions, performance issues
+- **Maintainability**: Code clarity, modular design, technical debt
+- **Integration Issues**: API contracts, dependency management, data flow
+
+### **Filtered Out (Not MVP Critical)**
+- **Enterprise Security Theater**: Over-engineered input validation for trusted sources
+- **Complex Compliance**: SOX, HIPAA, PCI-DSS (unless specifically needed)
+- **Theoretical Attack Vectors**: Low-probability scenarios with minimal real-world risk
+- **Over-Architected Patterns**: Complex enterprise patterns for simple MVP needs
+
+### **Solo Developer Context Detection**
+- **Trusted Sources**: GitHub API, npm registry, official documentation
+- **Basic Validation**: Focus on user input, file uploads, dynamic queries
+- **Rollback Strategy**: Leverage git/GitHub for quick recovery vs complex prevention
+
+## 🔧 Agent Prompt Structure (Implementation Details)
+
+Following `/reviewdeep` and `/arch` patterns for proper agent context:
+
+### **Standard Agent Prompt Template**
+```markdown
+[Agent Role] analysis of [target] for solo MVP project context.
+
+**Context**:
+- Solo MVP project (pre-launch, GitHub rollbacks available)
+- Current PR: [PR details]
+- Modified files: [file list]
+- Focus: Architecture quality over enterprise security theater
+- Infrastructure: This is a working multi-agent system using Task tool parallel execution
+
+**Analysis Framework**:
+1. [Role-specific focus areas]
+2. MVP Context Considerations: Speed vs perfection balance
+3. Solo Developer Constraints: Single maintainer, no team coordination
+4. Rollback Safety: GitHub provides easy recovery for issues
+
+**Output Required**:
+- PASS/REWORK verdict with confidence score (1-10)
+- Specific issues with file:line references
+- MVP-appropriate recommendations
+
+Provide [role] perspective on deployment readiness and architectural quality.
+```
+
+### **Context Variables Populated**
+- `{PR_NUMBER}`: Auto-detected from current branch context
+- `{FILE_LIST}`: From git diff and PR analysis
+- `{TARGET_SCOPE}`: User-specified scope or default PR context
+- `{MVP_STAGE}`: Pre-launch, rollback-safe development phase
+
 ## Post-Run Clean Up
 1. Ensure working tree cleanliness (`git status --short`).
 2. If changes were made, restate next steps (commit, push, or request manual review).
-3. Update memory systems with any new learnings or architectural decisions discovered during the run.
+3. Update Memory MCP with consensus patterns and successful issue resolutions.
+4. Note: GitHub rollbacks available if any issues discovered post-merge.
