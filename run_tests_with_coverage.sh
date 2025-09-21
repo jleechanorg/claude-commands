@@ -11,8 +11,8 @@
 #
 # This script runs tests SEQUENTIALLY (not parallel) to ensure accurate coverage tracking
 
-# Note: Using virtual environment activation instead of vpython wrapper
-# Tests will be run with python directly after venv activation
+# Note: This script prefers using the Python interpreter from an activated virtual environment instead of the vpython wrapper.
+# If no virtual environment is activated, it will fall back to using 'python' from the system PATH.
 
 # Colors for output
 RED='\033[0;31m'
