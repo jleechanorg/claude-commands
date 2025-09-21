@@ -1,5 +1,77 @@
 # /copilot - Fast PR Processing
 
+## 📑 Table of Contents
+- [Command Overview & Structure](#-command-overview--structure)
+  - [Purpose](#-purpose)
+  - [Architecture Pattern: Hybrid Orchestrator](#️-architecture-pattern-hybrid-orchestrator)
+  - [Three-Phase Workflow](#-three-phase-workflow)
+  - [Key Composed Commands Integration](#️-key-composed-commands-integration)
+  - [Critical Boundaries](#-critical-boundaries)
+  - [Performance Targets](#-performance-targets)
+- [Mandatory Comment Coverage Tracking](#-mandatory-comment-coverage-tracking)
+- [Automatic Timing Protocol](#️-automatic-timing-protocol)
+- [Core Workflow](#-core-workflow)
+- [Core Workflow - Hybrid Orchestrator Pattern](#-core-workflow---hybrid-orchestrator-pattern)
+  - [Phase 1: Analysis & Agent Launch](#phase-1-analysis--agent-launch)
+  - [Phase 2: Hybrid Integration & Response Generation](#phase-2-hybrid-integration--response-generation)
+  - [Phase 3: Verification & Completion](#phase-3-verification--completion-automatic)
+- [Agent Boundaries](#-agent-boundaries)
+- [Success Criteria](#-success-criteria)
+- [Hybrid Execution Optimization](#-hybrid-execution-optimization)
+
+## 📋 COMMAND OVERVIEW & STRUCTURE
+
+### 🎯 Purpose
+Ultra-fast PR processing using hybrid orchestration (direct execution + selective task agents) for comprehensive coverage and quality assurance. Targets 2-3 minute completion with 100% reliability.
+
+### 🏗️ Architecture Pattern: Hybrid Orchestrator
+**HYBRID DESIGN**: Direct orchestration + specialized agent for maximum reliability
+- **Direct Orchestrator**: Handles comment analysis, GitHub operations, workflow coordination
+- **copilot-fixpr Agent**: Specialized for file modifications, security fixes, merge conflicts
+- **Proven Strategy**: Uses only verified working components, eliminates broken patterns
+
+### 🔄 Three-Phase Workflow
+
+#### **Phase 1: Analysis & Agent Launch**
+- **Direct Operations**: Execute `/gstatus`, `/commentfetch` for PR status and comment analysis
+- **Agent Launch**: Deploy `copilot-fixpr` agent for parallel file operations
+- **Composed Commands**:
+  - `/gstatus` - Get comprehensive PR status
+  - `/commentfetch` - Gather all PR comments
+  - `/fixpr` - Resolve merge conflicts and CI failures (via agent)
+
+#### **Phase 2: Hybrid Integration & Response Generation**
+- **Agent Collection**: Gather file changes and technical implementations from copilot-fixpr
+- **Response Generation**: Orchestrator analyzes all comments and generates `responses.json`
+- **GitHub Operations**: Execute `/commentreply` with validated response format
+- **Composed Commands**:
+  - `/commentreply` - Post responses to GitHub comments
+  - `/commentcheck` - Verify 100% comment coverage
+
+#### **Phase 3: Verification & Completion**
+- **File Justification Protocol**: Validate all changes follow integration-first protocol
+- **Quality Gates**: Security → Runtime → Tests → Style priority enforcement
+- **Final Operations**: Evidence collection, push to PR, coverage verification
+- **Composed Commands**:
+  - `/pushl` - Push changes with automated labeling
+  - `/guidelines` - Update PR guidelines documentation
+
+### 🎛️ Key Composed Commands Integration
+- **Status Commands**: `/gstatus` (PR status), `/commentcheck` (coverage verification)
+- **GitHub Commands**: `/commentfetch` (comment collection), `/commentreply` (response posting)
+- **Agent Commands**: `/fixpr` (via copilot-fixpr agent for file operations)
+- **Workflow Commands**: `/pushl` (automated push), `/guidelines` (documentation update)
+
+### 🚨 Critical Boundaries
+- **Orchestrator**: Comment processing, GitHub API, workflow coordination
+- **Agent**: File modifications, security fixes, technical implementations
+- **Never Mixed**: Agent NEVER handles comments, Orchestrator NEVER modifies files
+
+### ⚡ Performance Targets
+- **Execution Time**: 2-3 minutes (warns if >3 minutes)
+- **Success Rate**: 100% reliability through proven component usage
+- **Coverage**: 100% comment response rate + all actionable issues implemented
+
 ## 🚨 Mandatory Comment Coverage Tracking
 This command automatically tracks comment coverage and warns about missing responses:
 ```bash
