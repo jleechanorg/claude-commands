@@ -21,7 +21,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-import sys; sys.path.append(os.path.dirname(__file__)); from base import CopilotCommandBase
+try:
+    # Package context
+    from .base import CopilotCommandBase
+except ImportError:
+    # Script context (e.g., `python commentfetch.py`)
+    sys.path.append(os.path.dirname(__file__))
+    from base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
