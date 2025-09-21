@@ -114,7 +114,7 @@ class CommentFetch(CopilotCommandBase):
                     "author": comment.get("user", {}).get("login", "unknown"),
                     "created_at": comment.get("created_at", ""),
                     "requires_response": self._requires_response(comment),
-                    "already_replied": self._check_already_replied_general(comment),
+                    "already_replied": self._check_already_replied_general(comment, self.comments),
                 }
             )
 
@@ -148,7 +148,7 @@ class CommentFetch(CopilotCommandBase):
                         "created_at": review.get("submitted_at", ""),
                         "state": review.get("state"),
                         "requires_response": self._requires_response(review),
-                        "already_replied": self._check_already_replied_review(review),
+                        "already_replied": self._check_already_replied_review(review, self.comments),
                     }
                 )
 
