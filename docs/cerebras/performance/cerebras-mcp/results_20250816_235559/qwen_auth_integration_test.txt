@@ -1,0 +1,116 @@
+
+🚀🚀🚀 QWEN GENERATED IN 735ms 🚀🚀🚀
+
+src/tests/integration/auth.test.js
+```javascript
+const request = require('supertest');
+const app = require('../../app');
+const { User } = require('../../models');
+const { sequelize } = require('../../config/database');
+
+describe('User Authentication Integration', () => {
+ let testUser;
+ let agent;
+
+ beforeAll(async () => {
+ await sequelize.sync({ force: true });
+ testUser = await User.create({
+ username: 'testuser',
+ email: 'test@example.com',
+ password: 'password123'
+ });
+ agent = request.agent(app);
+ });
+
+ afterAll(async () => {
+ await sequelize.close();
+ });
+
+ describe('POST /api/auth/login', () => {
+ it('should login user with valid credentials and create session', async () => {
+ const response = await agent
+ .post('/api/auth/login')
+ .send({
+ email: 'test@example.com',
+ password: 'password123'
+ })
+ .expect(200);
+
+ expect(response.body.user).toBeDefined();
+ expect(response.body.user.id).toBe(testUser.id);
+ expect(response.body.user.username).toBe(testUser.username);
+ expect(response.body.token).toBeDefined();
+ });
+
+ it('should reject login with invalid credentials', async () => {
+ await agent
+ .post('/api/auth/login')
+ .send({
+ email: 'test@example.com',
+ password: 'wrongpassword'
+ })
+ .expect(401);
+ });
+ });
+
+ describe('GET /api/auth/session', () => {
+ it('should return user data for authenticated session', async () => {
+ // First login
+ await agent
+ .post('/api/auth/login')
+ .send({
+ email: 'test@example.com',
+ password: 'password123'
+ })
+ .expect(200);
+
+ // Then check session
+ const response = await agent
+ .get('/api/auth/session')
+ .expect(200);
+
+ expect(response.body.user).toBeDefined();
+ expect(response.body.user.id).toBe(testUser.id);
+ });
+
+ it('should return 401 for unauthenticated session', async () => {
+ await request(app)
+ .get('/api/auth/session')
+ .expect(401);
+ });
+ });
+
+ describe('POST /api/auth/logout', () => {
+ it('should logout authenticated user and destroy session', async () => {
+ // Login first
+ await agent
+ .post('/api/auth/login')
+ .send({
+ email: 'test@example.com',
+ password: 'password123'
+ })
+ .expect(200);
+
+ // Logout
+ await agent
+ .post('/api/auth/logout')
+ .expect(204);
+
+ // Session should be destroyed
+ await agent
+ .get('/api/auth/session')
+ .expect(401);
+ });
+
+ it('should return 401 when logging out unauthenticated user', async () => {
+ await request(app)
+ .post('/api/auth/logout')
+ .expect(401);
+ });
+ });
+});
+```
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 735ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀

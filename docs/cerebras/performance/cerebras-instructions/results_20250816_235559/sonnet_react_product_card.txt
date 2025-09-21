@@ -1,0 +1,367 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
+import './ProductCard.css';
+
+/**
+ * ProductCard Component
+ *
+ * A reusable product card component with image, title, price, and add-to-cart functionality.
+ * Features include quantity selection, loading states, error handling, and accessibility.
+ */
+const ProductCard = ({
+  product,
+  onAddToCart,
+  onImageClick,
+  className = '',
+  showQuantitySelector = true,
+  maxQuantity = 10,
+  discountPercentage = null,
+  isInWishlist = false,
+  onToggleWishlist = null,
+  imageClassName = '',
+  priceClassName = '',
+  titleClassName = ''
+}) => {
+  // State management
+  const [quantity, setQuantity] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
+  // Memoized calculations
+  const discountedPrice = useMemo(() => {
+    if (discountPercentage && discountPercentage > 0) {
+      return product.price * (1 - discountPercentage / 100);
+    }
+    return product.price;
+  }, [product.price, discountPercentage]);
+
+  const savings = useMemo(() => {
+    if (discountPercentage && discountPercentage > 0) {
+      return product.price - discountedPrice;
+    }
+    return 0;
+  }, [product.price, discountedPrice, discountPercentage]);
+
+  const formattedPrice = useMemo(() => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(discountedPrice);
+  }, [discountedPrice]);
+
+  const formattedOriginalPrice = useMemo(() => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(product.price);
+  }, [product.price]);
+
+  // Event handlers
+  const handleQuantityChange = useCallback((e) => {
+    const newQuantity = parseInt(e.target.value, 10);
+    if (newQuantity >= 1 && newQuantity <= maxQuantity) {
+      setQuantity(newQuantity);
+    }
+  }, [maxQuantity]);
+
+  const handleAddToCart = useCallback(async () => {
+    if (isLoading || !onAddToCart) return;
+
+    setIsLoading(true);
+    try {
+      await onAddToCart({
+        product,
+        quantity,
+        totalPrice: discountedPrice * quantity
+      });
+    } catch (error) {
+      console.error('Failed to add item to cart:', error);
+      // You might want to show an error toast here
+    } finally {
+      setIsLoading(false);
+    }
+  }, [isLoading, onAddToCart, product, quantity, discountedPrice]);
+
+  const handleImageLoad = useCallback(() => {
+    setImageLoading(false);
+  }, []);
+
+  const handleImageError = useCallback(() => {
+    setImageError(true);
+    setImageLoading(false);
+  }, []);
+
+  const handleImageClick = useCallback(() => {
+    if (onImageClick) {
+      onImageClick(product);
+    }
+  }, [onImageClick, product]);
+
+  const handleWishlistToggle = useCallback(() => {
+    if (onToggleWishlist) {
+      onToggleWishlist(product);
+    }
+  }, [onToggleWishlist, product]);
+
+  const handleKeyPress = useCallback((e, action) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      action();
+    }
+  }, []);
+
+  // Render helpers
+  const renderImage = () => (
+    <div className="product-card__image-container">
+      {imageLoading && (
+        <div className="product-card__image-skeleton" aria-hidden="true">
+          <div className="skeleton-shimmer" />
+        </div>
+      )}
+
+      {imageError ? (
+        <div className="product-card__image-placeholder">
+          <svg
+            className="product-card__placeholder-icon"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+            />
+          </svg>
+          <span>Image unavailable</span>
+        </div>
+      ) : (
+        <img
+          src={product.image}
+          alt={product.title}
+          className={`product-card__image ${imageClassName}`}
+          onLoad={handleImageLoad}
+          onError={handleImageError}
+          onClick={handleImageClick}
+          onKeyPress={(e) => handleKeyPress(e, handleImageClick)}
+          tabIndex={onImageClick ? 0 : -1}
+          role={onImageClick ? 'button' : undefined}
+          style={{ display: imageLoading ? 'none' : 'block' }}
+        />
+      )}
+
+      {onToggleWishlist && (
+        <button
+          className={`product-card__wishlist-btn ${isInWishlist ? 'active' : ''}`}
+          onClick={handleWishlistToggle}
+          aria-label={isInWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
+          type="button"
+        >
+          <svg
+            className="wishlist-icon"
+            fill={isInWishlist ? "currentColor" : "none"}
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"
+            />
+          </svg>
+        </button>
+      )}
+
+      {discountPercentage && discountPercentage > 0 && (
+        <div className="product-card__discount-badge">
+          -{discountPercentage}%
+        </div>
+      )}
+    </div>
+  );
+
+  const renderPricing = () => (
+    <div className={`product-card__pricing ${priceClassName}`}>
+      <div className="price-container">
+        <span className="current-price" aria-label={`Current price: ${formattedPrice}`}>
+          {formattedPrice}
+        </span>
+
+        {discountPercentage && discountPercentage > 0 && (
+          <>
+            <span className="original-price" aria-label={`Original price: ${formattedOriginalPrice}`}>
+              {formattedOriginalPrice}
+            </span>
+            <span className="savings" aria-label={`You save: ${new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(savings)}`}>
+              Save ${savings.toFixed(2)}
+            </span>
+          </>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderQuantitySelector = () => {
+    if (!showQuantitySelector) return null;
+
+    return (
+      <div className="product-card__quantity">
+        <label htmlFor={`quantity-${product.id}`} className="quantity-label">
+          Quantity:
+        </label>
+        <select
+          id={`quantity-${product.id}`}
+          value={quantity}
+          onChange={handleQuantityChange}
+          className="quantity-select"
+          disabled={isLoading}
+          aria-describedby={`quantity-help-${product.id}`}
+        >
+          {Array.from({ length: maxQuantity }, (_, i) => i + 1).map((num) => (
+            <option key={num} value={num}>
+              {num}
+            </option>
+          ))}
+        </select>
+        <span id={`quantity-help-${product.id}`} className="sr-only">
+          Select quantity from 1 to {maxQuantity}
+        </span>
+      </div>
+    );
+  };
+
+  return (
+    <article
+      className={`product-card ${className}`}
+      role="group"
+      aria-labelledby={`product-title-${product.id}`}
+    >
+      {renderImage()}
+
+      <div className="product-card__content">
+        <h3
+          id={`product-title-${product.id}`}
+          className={`product-card__title ${titleClassName}`}
+          title={product.title}
+        >
+          {product.title}
+        </h3>
+
+        {product.description && (
+          <p className="product-card__description">
+            {product.description.length > 100
+              ? `${product.description.substring(0, 100)}...`
+              : product.description
+            }
+          </p>
+        )}
+
+        {product.rating && (
+          <div className="product-card__rating" aria-label={`Rating: ${product.rating.rate} out of 5 stars`}>
+            <div className="rating-stars">
+              {[...Array(5)].map((_, i) => (
+                <svg
+                  key={i}
+                  className={`star ${i < Math.floor(product.rating.rate) ? 'filled' : ''}`}
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                  aria-hidden="true"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              ))}
+            </div>
+            <span className="rating-text">
+              {product.rating.rate} ({product.rating.count} reviews)
+            </span>
+          </div>
+        )}
+
+        {renderPricing()}
+
+        <div className="product-card__actions">
+          {renderQuantitySelector()}
+
+          <button
+            type="button"
+            className={`product-card__add-to-cart ${isLoading ? 'loading' : ''}`}
+            onClick={handleAddToCart}
+            disabled={isLoading || !product.inStock}
+            aria-describedby={`cart-help-${product.id}`}
+          >
+            {isLoading ? (
+              <>
+                <span className="spinner" aria-hidden="true" />
+                Adding...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="cart-icon"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-2.5 5M7 13l2.5 5m0 0h8m-8 0a2 2 0 100 4 2 2 0 000-4zm8 0a2 2 0 100 4 2 2 0 000-4z"
+                  />
+                </svg>
+                {showQuantitySelector && quantity > 1 ? `Add ${quantity} to Cart` : 'Add to Cart'}
+              </>
+            )}
+          </button>
+
+          <span id={`cart-help-${product.id}`} className="sr-only">
+            {!product.inStock
+              ? 'This item is currently out of stock'
+              : `Add ${quantity} ${quantity === 1 ? 'item' : 'items'} to your shopping cart`
+            }
+          </span>
+        </div>
+
+        {!product.inStock && (
+          <div className="product-card__out-of-stock" role="alert">
+            Out of Stock
+          </div>
+        )}
+      </div>
+    </article>
+  );
+};
+
+// PropTypes for type checking
+ProductCard.propTypes = {
+  product: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
+    title: PropTypes.string.isRequired,
+    price: PropTypes.number.isRequired,
+    image: PropTypes.string.isRequired,
+    description: PropTypes.string,
+    rating: PropTypes.shape({
+      rate: PropTypes.number,
+      count: PropTypes.number
+    }),
+    inStock: PropTypes.bool
+  }).isRequired,
+  onAddToCart: PropTypes.func,
+  onImageClick: PropTypes.func,
+  className: PropTypes.string,
+  showQuantitySelector: PropTypes.bool,
+  maxQuantity: PropTypes.number,
+  discountPercentage: PropTypes.number,
+  isInWishlist: PropTypes.bool,
+  onToggleWishlist: PropTypes.func,
+  imageClassName: PropTypes.string,
+  priceClassName: PropTypes.string,
+  titleClassName: PropTypes.string
+};
+
+export default ProductCard;

@@ -1,0 +1,80 @@
+
+🚀🚀🚀 QWEN GENERATED IN 467ms 🚀🚀🚀
+
+I'll create a Python script for CSV sales data analysis. Since no existing project structure was provided, I'll create a standalone script using common data analysis libraries.
+
+sales_data_analyzer.py
+```python
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from datetime import datetime
+import calendar
+
+def analyze_sales_data(csv_file):
+ # Read the CSV file
+ df = pd.read_csv(csv_file)
+
+ # Convert date column to datetime
+ df['date'] = pd.to_datetime(df['date'])
+
+ # Extract month and year for grouping
+ df['year_month'] = df['date'].dt.to_period('M')
+
+ # Calculate monthly sales trends
+ monthly_sales = df.groupby('year_month')['amount'].sum().reset_index()
+ monthly_sales['year_month'] = monthly_sales['year_month'].astype(str)
+
+ # Plot monthly sales trends
+ plt.figure(figsize=(12, 6))
+ sns.lineplot(data=monthly_sales, x='year_month', y='amount', marker='o')
+ plt.title('Monthly Sales Trends')
+ plt.xlabel('Month')
+ plt.ylabel('Sales Amount')
+ plt.xticks(rotation=45)
+ plt.tight_layout()
+ plt.savefig('monthly_trends.png')
+
+ # Calculate top customers by total sales
+ customer_sales = df.groupby('customer')['amount'].sum().sort_values(ascending=False)
+ top_customers = customer_sales.head(10)
+
+ # Plot top customers
+ plt.figure(figsize=(10, 6))
+ sns.barplot(x=top_customers.values, y=top_customers.index)
+ plt.title('Top 10 Customers by Sales')
+ plt.xlabel('Total Sales Amount')
+ plt.ylabel('Customer')
+ plt.tight_layout()
+ plt.savefig('top_customers.png')
+
+ # Return results
+ return {
+ 'monthly_trends': monthly_sales,
+ 'top_customers': top_customers
+ }
+
+if __name__ == "__main__":
+ # Example usage
+ results = analyze_sales_data('sales_data.csv')
+ print("Monthly Sales Trends:")
+ print(results['monthly_trends'])
+ print("\nTop Customers:")
+ print(results['top_customers'])
+```
+
+This script:
+1. Reads CSV sales data using pandas
+2. Converts date strings to datetime objects
+3. Groups data by month to calculate sales trends
+4. Creates a line plot of monthly sales trends
+5. Groups data by customer to find top spenders
+6. Creates a bar chart of top 10 customers
+7. Saves both visualizations as PNG files
+8. Returns the calculated data for further use
+
+The script assumes the CSV has columns: 'date', 'amount', and 'customer'. If your data has different column names, you'll need to modify the script accordingly.
+
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀
+⚡ QWEN BLAZING FAST: 467ms (vs Sonnet comparison)
+🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀🚀

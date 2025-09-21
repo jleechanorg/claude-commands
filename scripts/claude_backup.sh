@@ -221,12 +221,12 @@ check_prerequisites() {
     fi
 }
 
-# Perform rsync backup
+# Perform atomic rsync backup with proper error handling
 backup_to_destination() {
     local dest_dir="$1"
     local dest_name="$2"
 
-    backup_log "=== Backing up to $dest_name ==="
+    backup_log "=== Starting atomic backup to $dest_name ==="
 
     # Create destination directory if it doesn't exist
     if ! mkdir -p "$dest_dir" 2>/dev/null; then
@@ -234,14 +234,31 @@ backup_to_destination() {
         return 1
     fi
 
-    # First, backup ~/.claude directory with selective rsync
+    # Create atomic backup directory (temp location)
+    local temp_backup_dir="${dest_dir}/.claude_backup_tmp_$$"
+    local final_backup_dir="${dest_dir}/.claude"
+
+    # Setup cleanup trap for temporary directory
+    cleanup_temp_backup() {
+        rm -rf "$temp_backup_dir"
+    }
+    trap cleanup_temp_backup EXIT
+
+    # Create temporary backup directory
+    if ! mkdir -p "$temp_backup_dir"; then
+        add_result "ERROR" "$dest_name Setup" "Cannot create temporary backup directory"
+        return 1
+    fi
+
+    # First, backup ~/.claude directory with selective rsync to temp location
     local rsync_log="$SECURE_TEMP/rsync_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
     local rsync_errors="$SECURE_TEMP/rsync_errors_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
 
-    # Run rsync with proper error logging and extended attributes support
+    # Run rsync with atomic temp-dir and proper error logging
     # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
     rsync -av \
         --xattrs \
+        --temp-dir="$SECURE_TEMP" \
         --include='settings.json' \
         --include='settings.json.backup*' \
         --include='settings.local.json' \
@@ -252,13 +269,41 @@ backup_to_destination() {
         --include='hooks' \
         --include='hooks/**' \
         --exclude='*' \
-        "$SOURCE_DIR/" "$dest_dir/.claude/" > "$rsync_log" 2>"$rsync_errors"
+        "$SOURCE_DIR/" "$temp_backup_dir/" > "$rsync_log" 2>"$rsync_errors"
 
     local rsync_exit=$?
 
     if [ $rsync_exit -eq 0 ]; then
-        # Complete success
-        backup_log "rsync completed successfully for .claude directory"
+        # Complete success - perform atomic move
+        backup_log "rsync completed successfully for .claude directory to temp location"
+
+        # Atomic move: rename temp to final location
+        if [ -d "$final_backup_dir" ]; then
+            # Backup existing directory before replacement
+            local backup_old_dir="${final_backup_dir}.old.$$"
+            if ! mv "$final_backup_dir" "$backup_old_dir"; then
+                add_result "ERROR" "$dest_name Atomic Move" "Failed to backup existing directory"
+                return 1
+            fi
+
+            # Move temp to final location
+            if mv "$temp_backup_dir" "$final_backup_dir"; then
+                backup_log "Atomic move completed successfully"
+                rm -rf "$backup_old_dir"  # Remove old backup
+            else
+                add_result "ERROR" "$dest_name Atomic Move" "Failed to move temp backup to final location"
+                mv "$backup_old_dir" "$final_backup_dir"  # Restore old backup
+                return 1
+            fi
+        else
+            # Simple move if no existing directory
+            if mv "$temp_backup_dir" "$final_backup_dir"; then
+                backup_log "Atomic move completed successfully (new backup location)"
+            else
+                add_result "ERROR" "$dest_name Atomic Move" "Failed to move temp backup to final location"
+                return 1
+            fi
+        fi
     elif [ $rsync_exit -eq 23 ]; then
         # Partial transfer due to errors - log specific failures
         local failed_count=$(grep -c "failed:" "$rsync_errors" 2>/dev/null || echo "0")

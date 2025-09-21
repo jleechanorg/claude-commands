@@ -1,0 +1,318 @@
+-- E-commerce Database Queries
+-- Comprehensive SQL queries for user orders, top-selling products, and monthly revenue analysis
+
+-- =============================================================================
+-- 1. GET USER ORDERS WITH DETAILED INFORMATION
+-- =============================================================================
+
+-- Query to get all orders for a specific user with order details, products, and totals
+SELECT
+    o.order_id,
+    o.order_date,
+    o.order_status,
+    o.total_amount,
+    o.shipping_address,
+    o.billing_address,
+    oi.quantity,
+    oi.unit_price,
+    oi.line_total,
+    p.product_id,
+    p.product_name,
+    p.category,
+    p.brand,
+    COALESCE(p.image_url, '/images/default-product.jpg') as product_image,
+    u.first_name,
+    u.last_name,
+    u.email
+FROM orders o
+INNER JOIN users u ON o.user_id = u.user_id
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+WHERE u.user_id = :user_id
+ORDER BY o.order_date DESC, o.order_id, oi.order_item_id;
+
+-- Query to get user orders with aggregated information (summary view)
+SELECT
+    o.order_id,
+    o.order_date,
+    o.order_status,
+    o.total_amount,
+    COUNT(oi.order_item_id) as total_items,
+    SUM(oi.quantity) as total_quantity,
+    STRING_AGG(p.product_name, ', ' ORDER BY p.product_name) as products_list,
+    CASE
+        WHEN o.order_status = 'delivered' THEN 'Completed'
+        WHEN o.order_status = 'shipped' THEN 'In Transit'
+        WHEN o.order_status = 'processing' THEN 'Processing'
+        WHEN o.order_status = 'cancelled' THEN 'Cancelled'
+        ELSE 'Pending'
+    END as status_display
+FROM orders o
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+WHERE o.user_id = :user_id
+    AND o.order_date >= CURRENT_DATE - INTERVAL '1 year'
+GROUP BY o.order_id, o.order_date, o.order_status, o.total_amount
+ORDER BY o.order_date DESC;
+
+-- Query to get user's order history with pagination and filtering
+SELECT
+    o.order_id,
+    o.order_date,
+    o.order_status,
+    o.total_amount,
+    COUNT(oi.order_item_id) as item_count,
+    MIN(p.product_name) as first_product,
+    CASE
+        WHEN COUNT(oi.order_item_id) > 1
+        THEN CONCAT(MIN(p.product_name), ' + ', (COUNT(oi.order_item_id) - 1), ' more')
+        ELSE MIN(p.product_name)
+    END as order_summary
+FROM orders o
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+WHERE o.user_id = :user_id
+    AND (:status_filter IS NULL OR o.order_status = :status_filter)
+    AND (:date_from IS NULL OR o.order_date >= :date_from)
+    AND (:date_to IS NULL OR o.order_date <= :date_to)
+GROUP BY o.order_id, o.order_date, o.order_status, o.total_amount
+ORDER BY o.order_date DESC
+LIMIT :page_size OFFSET :offset;
+
+-- =============================================================================
+-- 2. TOP-SELLING PRODUCTS ANALYSIS
+-- =============================================================================
+
+-- Query to get top-selling products by quantity sold
+SELECT
+    p.product_id,
+    p.product_name,
+    p.category,
+    p.brand,
+    p.unit_price,
+    SUM(oi.quantity) as total_quantity_sold,
+    SUM(oi.line_total) as total_revenue,
+    COUNT(DISTINCT oi.order_id) as total_orders,
+    AVG(oi.quantity) as avg_quantity_per_order,
+    ROUND(AVG(pr.rating), 2) as avg_rating,
+    COUNT(pr.review_id) as review_count,
+    RANK() OVER (ORDER BY SUM(oi.quantity) DESC) as sales_rank
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+LEFT JOIN product_reviews pr ON p.product_id = pr.product_id
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND o.order_date >= CURRENT_DATE - INTERVAL '6 months'
+GROUP BY p.product_id, p.product_name, p.category, p.brand, p.unit_price
+HAVING SUM(oi.quantity) >= 5  -- Minimum sales threshold
+ORDER BY total_quantity_sold DESC
+LIMIT 50;
+
+-- Query to get top-selling products by revenue
+SELECT
+    p.product_id,
+    p.product_name,
+    p.category,
+    p.brand,
+    p.unit_price,
+    SUM(oi.line_total) as total_revenue,
+    SUM(oi.quantity) as total_quantity_sold,
+    COUNT(DISTINCT oi.order_id) as total_orders,
+    ROUND(SUM(oi.line_total) / SUM(oi.quantity), 2) as avg_selling_price,
+    ROUND((SUM(oi.line_total) / SUM(oi.quantity)) / p.unit_price * 100, 2) as price_realization_percent,
+    RANK() OVER (ORDER BY SUM(oi.line_total) DESC) as revenue_rank
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND o.order_date >= CURRENT_DATE - INTERVAL '3 months'
+GROUP BY p.product_id, p.product_name, p.category, p.brand, p.unit_price
+ORDER BY total_revenue DESC
+LIMIT 25;
+
+-- Query to get top-selling products by category
+SELECT
+    p.category,
+    p.product_id,
+    p.product_name,
+    p.brand,
+    SUM(oi.quantity) as quantity_sold,
+    SUM(oi.line_total) as revenue,
+    RANK() OVER (PARTITION BY p.category ORDER BY SUM(oi.quantity) DESC) as category_rank,
+    ROUND(
+        SUM(oi.quantity) * 100.0 /
+        SUM(SUM(oi.quantity)) OVER (PARTITION BY p.category), 2
+    ) as category_share_percent
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND o.order_date >= CURRENT_DATE - INTERVAL '1 year'
+GROUP BY p.category, p.product_id, p.product_name, p.brand
+QUALIFY RANK() OVER (PARTITION BY p.category ORDER BY SUM(oi.quantity) DESC) <= 5
+ORDER BY p.category, category_rank;
+
+-- =============================================================================
+-- 3. MONTHLY REVENUE ANALYSIS
+-- =============================================================================
+
+-- Query to get monthly revenue trends with year-over-year comparison
+WITH monthly_revenue AS (
+    SELECT
+        EXTRACT(YEAR FROM o.order_date) as order_year,
+        EXTRACT(MONTH FROM o.order_date) as order_month,
+        TO_CHAR(o.order_date, 'YYYY-MM') as year_month,
+        SUM(o.total_amount) as revenue,
+        COUNT(DISTINCT o.order_id) as order_count,
+        COUNT(DISTINCT o.user_id) as unique_customers,
+        AVG(o.total_amount) as avg_order_value
+    FROM orders o
+    WHERE o.order_status NOT IN ('cancelled', 'refunded')
+        AND o.order_date >= CURRENT_DATE - INTERVAL '24 months'
+    GROUP BY
+        EXTRACT(YEAR FROM o.order_date),
+        EXTRACT(MONTH FROM o.order_date),
+        TO_CHAR(o.order_date, 'YYYY-MM')
+),
+revenue_with_growth AS (
+    SELECT
+        *,
+        LAG(revenue, 1) OVER (ORDER BY order_year, order_month) as prev_month_revenue,
+        LAG(revenue, 12) OVER (ORDER BY order_year, order_month) as same_month_prev_year,
+        ROUND(
+            (revenue - LAG(revenue, 1) OVER (ORDER BY order_year, order_month)) /
+            NULLIF(LAG(revenue, 1) OVER (ORDER BY order_year, order_month), 0) * 100, 2
+        ) as month_over_month_growth,
+        ROUND(
+            (revenue - LAG(revenue, 12) OVER (ORDER BY order_year, order_month)) /
+            NULLIF(LAG(revenue, 12) OVER (ORDER BY order_year, order_month), 0) * 100, 2
+        ) as year_over_year_growth
+    FROM monthly_revenue
+)
+SELECT
+    year_month,
+    order_year,
+    order_month,
+    TO_CHAR(revenue, 'FM$999,999,999.00') as formatted_revenue,
+    revenue,
+    order_count,
+    unique_customers,
+    ROUND(avg_order_value, 2) as avg_order_value,
+    month_over_month_growth,
+    year_over_year_growth,
+    CASE
+        WHEN month_over_month_growth > 10 THEN 'Strong Growth'
+        WHEN month_over_month_growth > 0 THEN 'Growth'
+        WHEN month_over_month_growth > -5 THEN 'Stable'
+        ELSE 'Decline'
+    END as growth_category
+FROM revenue_with_growth
+ORDER BY order_year DESC, order_month DESC;
+
+-- Query to get quarterly revenue analysis with breakdown by categories
+SELECT
+    EXTRACT(YEAR FROM o.order_date) as year,
+    EXTRACT(QUARTER FROM o.order_date) as quarter,
+    CONCAT('Q', EXTRACT(QUARTER FROM o.order_date), ' ', EXTRACT(YEAR FROM o.order_date)) as quarter_label,
+    p.category,
+    SUM(oi.line_total) as category_revenue,
+    COUNT(DISTINCT o.order_id) as orders_count,
+    SUM(oi.quantity) as items_sold,
+    ROUND(AVG(oi.unit_price), 2) as avg_item_price,
+    ROUND(
+        SUM(oi.line_total) * 100.0 /
+        SUM(SUM(oi.line_total)) OVER (
+            PARTITION BY EXTRACT(YEAR FROM o.order_date), EXTRACT(QUARTER FROM o.order_date)
+        ), 2
+    ) as category_revenue_share
+FROM orders o
+INNER JOIN order_items oi ON o.order_id = oi.order_id
+INNER JOIN products p ON oi.product_id = p.product_id
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND o.order_date >= CURRENT_DATE - INTERVAL '2 years'
+GROUP BY
+    EXTRACT(YEAR FROM o.order_date),
+    EXTRACT(QUARTER FROM o.order_date),
+    p.category
+ORDER BY year DESC, quarter DESC, category_revenue DESC;
+
+-- Query to get daily revenue trends for the current month
+SELECT
+    DATE(o.order_date) as order_date,
+    EXTRACT(DOW FROM o.order_date) as day_of_week,
+    TO_CHAR(o.order_date, 'Day') as day_name,
+    SUM(o.total_amount) as daily_revenue,
+    COUNT(DISTINCT o.order_id) as daily_orders,
+    COUNT(DISTINCT o.user_id) as daily_customers,
+    ROUND(AVG(o.total_amount), 2) as avg_order_value,
+    SUM(SUM(o.total_amount)) OVER (
+        ORDER BY DATE(o.order_date)
+        ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) as cumulative_revenue,
+    ROW_NUMBER() OVER (ORDER BY SUM(o.total_amount) DESC) as revenue_rank
+FROM orders o
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND EXTRACT(YEAR FROM o.order_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+    AND EXTRACT(MONTH FROM o.order_date) = EXTRACT(MONTH FROM CURRENT_DATE)
+GROUP BY DATE(o.order_date), EXTRACT(DOW FROM o.order_date), TO_CHAR(o.order_date, 'Day')
+ORDER BY order_date DESC;
+
+-- =============================================================================
+-- 4. ADVANCED ANALYTICS QUERIES
+-- =============================================================================
+
+-- Customer Lifetime Value by cohorts
+WITH customer_cohorts AS (
+    SELECT
+        u.user_id,
+        DATE_TRUNC('month', MIN(o.order_date)) as cohort_month,
+        SUM(o.total_amount) as total_spent,
+        COUNT(o.order_id) as total_orders,
+        MAX(o.order_date) as last_order_date
+    FROM users u
+    INNER JOIN orders o ON u.user_id = o.user_id
+    WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    GROUP BY u.user_id
+)
+SELECT
+    cohort_month,
+    COUNT(user_id) as customers_acquired,
+    ROUND(AVG(total_spent), 2) as avg_clv,
+    ROUND(AVG(total_orders), 2) as avg_orders_per_customer,
+    COUNT(CASE WHEN total_orders > 1 THEN 1 END) as repeat_customers,
+    ROUND(
+        COUNT(CASE WHEN total_orders > 1 THEN 1 END) * 100.0 / COUNT(user_id), 2
+    ) as repeat_rate_percent
+FROM customer_cohorts
+WHERE cohort_month >= CURRENT_DATE - INTERVAL '12 months'
+GROUP BY cohort_month
+ORDER BY cohort_month DESC;
+
+-- Product performance matrix
+SELECT
+    p.category,
+    p.product_name,
+    SUM(oi.quantity) as units_sold,
+    SUM(oi.line_total) as revenue,
+    COUNT(DISTINCT oi.order_id) as order_frequency,
+    ROUND(AVG(pr.rating), 2) as avg_rating,
+    NTILE(4) OVER (ORDER BY SUM(oi.quantity)) as sales_quartile,
+    NTILE(4) OVER (ORDER BY SUM(oi.line_total)) as revenue_quartile,
+    CASE
+        WHEN NTILE(4) OVER (ORDER BY SUM(oi.quantity)) >= 3
+         AND NTILE(4) OVER (ORDER BY SUM(oi.line_total)) >= 3
+        THEN 'Star'
+        WHEN NTILE(4) OVER (ORDER BY SUM(oi.quantity)) >= 3
+        THEN 'High Volume'
+        WHEN NTILE(4) OVER (ORDER BY SUM(oi.line_total)) >= 3
+        THEN 'High Value'
+        ELSE 'Regular'
+    END as product_category
+FROM products p
+INNER JOIN order_items oi ON p.product_id = oi.product_id
+INNER JOIN orders o ON oi.order_id = o.order_id
+LEFT JOIN product_reviews pr ON p.product_id = pr.product_id
+WHERE o.order_status NOT IN ('cancelled', 'refunded')
+    AND o.order_date >= CURRENT_DATE - INTERVAL '6 months'
+GROUP BY p.category, p.product_name, p.product_id
+ORDER BY revenue DESC;

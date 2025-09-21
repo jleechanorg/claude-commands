@@ -72,8 +72,17 @@ fi
 # These are now handled by the dedicated claude_llm_proxy repository
 # See: https://github.com/jleechanorg/claude_llm_proxy
 
-# SSH tunnel PID file
-SSH_TUNNEL_PID_FILE="/tmp/cerebras_ssh_tunnel.pid"
+# SSH tunnel and proxy PID files
+SSH_TUNNEL_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_ssh_tunnel.pid"
+PROXY_PID_FILE="${XDG_RUNTIME_DIR:-$HOME/.cache}/worldarchitect/cerebras_proxy.pid"
+# Create PID directory safely (handles concurrent access)
+PID_DIR="$(dirname "$SSH_TUNNEL_PID_FILE")"
+if ! mkdir -p "$PID_DIR" 2>/dev/null; then
+    echo -e "${RED}❌ Failed to create PID directory: $PID_DIR${NC}" >&2
+    exit 1
+fi
+# Set secure permissions on PID directory
+chmod 700 "$PID_DIR" 2>/dev/null || true
 
 # Cleanup function for SSH tunnels
 cleanup_ssh_tunnel() {
@@ -186,38 +195,51 @@ setup_cron_jobs() {
     if ! echo "$current_crontab" | grep -q "claude_backup_cron.sh\|claude_backup_wrapper.sh"; then
         echo -e "${YELLOW}⚠️  Claude backup cron job missing - adding it${NC}"
 
-        # Create worktree-agnostic wrapper with cross-platform compatibility
+        # Install scripts to permanent location (no worktree dependencies)
+        WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+        mkdir -p "$WORLDARCHITECT_HOME"
+
+        # Copy essential scripts from current project to permanent location
+        CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if [ -f "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" ]; then
+            if cp "$CURRENT_PROJECT_ROOT/scripts/claude_backup.sh" "$WORLDARCHITECT_HOME/" && \
+               chmod +x "$WORLDARCHITECT_HOME/claude_backup.sh"; then
+                echo -e "${GREEN}✅ Installed claude_backup.sh to permanent location${NC}"
+            else
+                echo -e "${RED}❌ Failed to install claude_backup.sh${NC}" >&2
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  claude_backup.sh not found, skipping installation${NC}" >&2
+        fi
+
+        # Create permanent wrapper (no worktree dependencies)
         cat > "$HOME/.local/bin/claude_backup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Claude backup wrapper - worktree-agnostic with Linux/Ubuntu compatibility
+# Claude backup wrapper - permanent installation, no worktree dependencies
 set -euo pipefail
 
-# First try to find backup script in any worktree
-for wt in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
-  if [ -x "$wt/scripts/claude_backup.sh" ]; then
-    # Platform-specific Dropbox paths (matches scripts/claude_backup.sh logic)
+# Use permanent installation location
+WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+BACKUP_SCRIPT="$WORLDARCHITECT_HOME/claude_backup.sh"
+
+if [ -f "$BACKUP_SCRIPT" ]; then
+    # Platform-specific Dropbox paths
     if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS: Use CloudStorage Dropbox path
-        exec "$wt/scripts/claude_backup.sh" "$HOME/Library/CloudStorage/Dropbox"
+        exec "$BACKUP_SCRIPT" "$HOME/Library/CloudStorage/Dropbox"
     elif [[ "$OSTYPE" == "linux"* ]]; then
-        # Linux/Ubuntu: Try common Dropbox locations
         if [ -d "$HOME/Dropbox" ]; then
-            exec "$wt/scripts/claude_backup.sh" "$HOME/Dropbox"
+            exec "$BACKUP_SCRIPT" "$HOME/Dropbox"
         elif [ -d "$HOME/Documents" ]; then
-            exec "$wt/scripts/claude_backup.sh" "$HOME/Documents"
+            exec "$BACKUP_SCRIPT" "$HOME/Documents"
         else
-            exec "$wt/scripts/claude_backup.sh" "$HOME"
+            exec "$BACKUP_SCRIPT" "$HOME"
         fi
     else
-        # Other systems: fallback to home directory
-        exec "$wt/scripts/claude_backup.sh" "$HOME"
+        exec "$BACKUP_SCRIPT" "$HOME"
     fi
-  fi
-done
-
-# If no worktree backup script found, try legacy approach
-if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
-    # Platform-specific Dropbox paths for legacy script
+elif [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
+    # Fallback to legacy script
     if [[ "$OSTYPE" == "darwin"* ]]; then
         "$HOME/.local/bin/claude_backup_cron.sh" "$HOME/Library/CloudStorage/Dropbox"
     elif [[ "$OSTYPE" == "linux"* ]]; then
@@ -232,7 +254,7 @@ if [ -f "$HOME/.local/bin/claude_backup_cron.sh" ]; then
         "$HOME/.local/bin/claude_backup_cron.sh" "$HOME"
     fi
 else
-    echo "$(date): No backup script found in worktrees or ~/.local/bin" >> /tmp/backup_errors.log
+    echo "$(date): No backup script found at $BACKUP_SCRIPT or ~/.local/bin/claude_backup_cron.sh" >> /tmp/backup_errors.log
     exit 1
 fi
 EOF
@@ -247,19 +269,34 @@ EOF
     if ! echo "$current_crontab" | grep -q "cleanup_completed_agents.py\|tmux_cleanup"; then
         echo -e "${YELLOW}⚠️  TMux cleanup cron job missing - adding it${NC}"
 
-        # Create tmux cleanup wrapper that works across worktrees
+        # Install orchestration cleanup script to permanent location
+        CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+        if [ -f "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" ]; then
+            if mkdir -p "$WORLDARCHITECT_HOME/orchestration" && \
+               cp "$CURRENT_PROJECT_ROOT/orchestration/cleanup_completed_agents.py" "$WORLDARCHITECT_HOME/orchestration/" && \
+               chmod +x "$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"; then
+                echo -e "${GREEN}✅ Installed orchestration cleanup script to permanent location${NC}"
+            else
+                echo -e "${RED}❌ Failed to install orchestration cleanup script${NC}" >&2
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}⚠️  orchestration cleanup script not found, skipping installation${NC}" >&2
+        fi
+
+        # Create tmux cleanup wrapper (no worktree dependencies)
         cat > "$HOME/.local/bin/tmux_cleanup_wrapper.sh" << 'EOF'
 #!/bin/bash
-# Find any available WorldArchitect worktree with orchestration
-for worktree in "$HOME/projects/worldarchitect.ai" "$HOME/projects/worktree_"*; do
-    if [ -f "$worktree/orchestration/cleanup_completed_agents.py" ]; then
-        cd "$worktree" && python3 orchestration/cleanup_completed_agents.py
-        exit $?
-    fi
-done
-# Fallback: if no worktree found, log the issue
-echo "$(date): No WorldArchitect worktree with orchestration found" >> /tmp/tmux_cleanup.log
-exit 1
+# TMux cleanup wrapper - permanent installation, no worktree dependencies
+WORLDARCHITECT_HOME="$HOME/.local/bin/worldarchitect"
+CLEANUP_SCRIPT="$WORLDARCHITECT_HOME/orchestration/cleanup_completed_agents.py"
+
+if [ -f "$CLEANUP_SCRIPT" ]; then
+    PYTHONPATH="$WORLDARCHITECT_HOME" python3 "$CLEANUP_SCRIPT"
+else
+    echo "$(date): No cleanup script found at $CLEANUP_SCRIPT" >> /tmp/tmux_cleanup.log
+    exit 1
+fi
 EOF
         chmod +x "$HOME/.local/bin/tmux_cleanup_wrapper.sh"
 
@@ -295,8 +332,14 @@ EOF
 check_orchestration() {
     echo -e "${BLUE}🔍 Verifying orchestration system status...${NC}"
 
-    # First check comprehensive cron setup
-    setup_cron_jobs
+    # Platform-specific automation setup
+    if [[ "$OSTYPE" == "linux"* ]]; then
+        # Linux: Use cron for automation
+        setup_cron_jobs
+    elif [[ "$OSTYPE" == "darwin"* ]]; then
+        # macOS: LaunchAgent setup handled separately in the macOS-specific section
+        echo -e "${BLUE}💡 macOS detected - LaunchAgent automation handled separately${NC}"
+    fi
 
     if is_orchestration_running; then
         echo -e "${GREEN}✅ Orchestration system already running (no restart needed)${NC}"
@@ -510,8 +553,7 @@ MEMORY_BACKUP_REPO="\$HOME/projects/worldarchitect-memory-backups"
 BACKUP_SCRIPT="\$MEMORY_BACKUP_REPO/scripts/unified_memory_backup.py"
 
 if [ -f "\$BACKUP_SCRIPT" ]; then
-    cd "\$MEMORY_BACKUP_REPO"
-    python3 "\$BACKUP_SCRIPT" --mode=cron
+    PYTHONPATH="\$MEMORY_BACKUP_REPO" python3 "\$BACKUP_SCRIPT" --mode=cron
 else
     echo "\$(date): Unified memory backup script not found at \$BACKUP_SCRIPT" >> /tmp/memory_backup_errors.log
 fi
@@ -520,8 +562,7 @@ EOF
         chmod +x "$CRON_WRAPPER"
 
         # Add to cron (daily at 2 AM) with proper variable handling
-        local current_crontab_mem
-        current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
+        local current_crontab_mem=$(crontab -l 2>/dev/null || echo "")
         (echo "$current_crontab_mem"; echo '0 2 * * * $HOME/.local/bin/unified_memory_backup_wrapper.sh >> /tmp/memory_backup.log 2>&1') | crontab -
 
         echo -e "${GREEN}✅ Installed unified memory backup cron job (daily at 2 AM)${NC}"
@@ -549,6 +590,190 @@ else
 fi
 
 echo ""
+
+# Claude backup LaunchAgent system checks and setup (macOS only)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    echo -e "${BLUE}☁️ Verifying Claude backup LaunchAgent system status...${NC}"
+
+    CLAUDE_BACKUP_ISSUES=()
+    CLAUDE_BACKUP_SCRIPT="$HOME/.local/bin/claude_backup_cron.sh"
+    CLAUDE_BACKUP_WRAPPER="$HOME/.local/bin/claude_backup_with_sync.sh"
+    CLAUDE_SYNC_SCRIPT="$HOME/.local/bin/sync_backup_to_dropbox.sh"
+    CLAUDE_LAUNCHAGENT="$HOME/Library/LaunchAgents/com.$(whoami).claude.backup.plist"
+
+    # Check if backup script exists
+    if [ ! -f "$CLAUDE_BACKUP_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup script not found at $CLAUDE_BACKUP_SCRIPT")
+    elif [ ! -x "$CLAUDE_BACKUP_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup script not executable")
+    fi
+
+    # Check if wrapper and sync scripts exist
+    if [ ! -f "$CLAUDE_BACKUP_WRAPPER" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup wrapper script missing")
+    fi
+
+    if [ ! -f "$CLAUDE_SYNC_SCRIPT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude sync script missing")
+    fi
+
+    # Check if LaunchAgent exists and is loaded
+    if [ ! -f "$CLAUDE_LAUNCHAGENT" ]; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not installed")
+    elif ! launchctl list | grep -q "com.$(whoami).claude.backup"; then
+        CLAUDE_BACKUP_ISSUES+=("❌ Claude backup LaunchAgent not loaded")
+    fi
+
+    # Auto-install LaunchAgent if backup script exists but LaunchAgent is missing
+    if [ -f "$CLAUDE_BACKUP_SCRIPT" ] && [ -x "$CLAUDE_BACKUP_SCRIPT" ]; then
+        if [ ! -f "$CLAUDE_LAUNCHAGENT" ]; then
+            echo -e "${YELLOW}⚠️ Installing missing Claude backup LaunchAgent...${NC}"
+
+            # Create LaunchAgents directory
+            mkdir -p "$HOME/Library/LaunchAgents"
+
+            # Create wrapper script if missing
+            if [ ! -f "$CLAUDE_BACKUP_WRAPPER" ]; then
+                cat > "$CLAUDE_BACKUP_WRAPPER" << 'EOF'
+#!/bin/bash
+# Claude backup wrapper that backs up to Documents and syncs to Dropbox
+# This runs with user permissions so can access both locations
+
+set -euo pipefail
+
+BACKUP_SCRIPT="$HOME/.local/bin/claude_backup_cron.sh"
+SYNC_SCRIPT="$HOME/.local/bin/sync_backup_to_dropbox.sh"
+DOCUMENTS_BASE="$HOME/Documents"
+
+echo "[$(date)] Starting Claude backup with Dropbox sync..."
+
+# Step 1: Run backup to Documents
+echo "[$(date)] Step 1: Running backup to Documents..."
+"$BACKUP_SCRIPT" "$DOCUMENTS_BASE"
+
+# Step 2: Sync to Dropbox
+echo "[$(date)] Step 2: Syncing to Dropbox CloudStorage..."
+"$SYNC_SCRIPT"
+
+echo "[$(date)] Complete: Backup and sync finished successfully"
+EOF
+                chmod +x "$CLAUDE_BACKUP_WRAPPER"
+            fi
+
+            # Create sync script if missing
+            if [ ! -f "$CLAUDE_SYNC_SCRIPT" ]; then
+                cat > "$CLAUDE_SYNC_SCRIPT" << 'EOF'
+#!/bin/bash
+# Sync claude backup from Documents to Dropbox CloudStorage
+# This runs with user permissions so can access both locations
+
+set -euo pipefail
+
+HOST_SUFFIX="$(scutil --get ComputerName 2>/dev/null | tr '[:upper:] ' '[:lower:]-' || hostname)"
+SOURCE_DIR="$HOME/Documents/claude_backup_${HOST_SUFFIX}"
+DEST_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_${HOST_SUFFIX}"
+
+echo "[$(date)] Starting sync from Documents to Dropbox CloudStorage..."
+
+if [ -d "$SOURCE_DIR" ]; then
+    echo "[$(date)] Source backup found: $SOURCE_DIR"
+
+    # Create destination if it doesn't exist
+    mkdir -p "$DEST_DIR"
+
+    # Sync with rsync (with destructive operation safeguards)
+    MARKER="$DEST_DIR/.allow_destructive_sync"
+    if [ ! -f "$MARKER" ]; then
+        echo "First run: performing dry-run. Create $MARKER to enable deletes." >&2
+        rsync -av --delete --dry-run "$SOURCE_DIR/" "$DEST_DIR/"
+        exit 0
+    fi
+    rsync -av --delete --itemize-changes "$SOURCE_DIR/" "$DEST_DIR/"
+
+    echo "[$(date)] Sync completed successfully"
+    echo "[$(date)] Files in destination: $(find "$DEST_DIR" -type f | wc -l)"
+else
+    echo "[$(date)] ERROR: Source backup not found at $SOURCE_DIR"
+    exit 1
+fi
+EOF
+                chmod +x "$CLAUDE_SYNC_SCRIPT"
+            fi
+
+            # Create LaunchAgent plist with proper variable expansion using printf
+            printf '<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.%s.claude.backup</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>%s/.local/bin/claude_backup_with_sync.sh</string>
+    </array>
+    <key>StartInterval</key>
+    <integer>14400</integer>
+    <key>StandardOutPath</key>
+    <string>/tmp/claude_backup_launchd.log</string>
+    <key>StandardErrorPath</key>
+    <string>/tmp/claude_backup_launchd_error.log</string>
+    <key>RunAtLoad</key>
+    <false/>
+    <key>KeepAlive</key>
+    <false/>
+    <key>WorkingDirectory</key>
+    <string>%s</string>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin</string>
+        <key>HOME</key>
+        <string>%s</string>
+    </dict>
+</dict>
+</plist>
+' "$(whoami)" "$HOME" "$HOME" "$HOME" > "$CLAUDE_LAUNCHAGENT"
+
+            # Load LaunchAgent
+            launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
+
+            echo -e "${GREEN}✅ Installed Claude backup LaunchAgent (runs every 4 hours)${NC}"
+
+            # Remove LaunchAgent error from issues array
+            temp_claude_array=()
+            for issue in "${CLAUDE_BACKUP_ISSUES[@]}"; do
+                if [[ "$issue" != *"LaunchAgent not installed"* ]] && [[ "$issue" != *"LaunchAgent not loaded"* ]]; then
+                    temp_claude_array+=("$issue")
+                fi
+            done
+            CLAUDE_BACKUP_ISSUES=("${temp_claude_array[@]}")
+        elif ! launchctl list | grep -q "com.$(whoami).claude.backup"; then
+            echo -e "${YELLOW}⚠️ Loading existing Claude backup LaunchAgent...${NC}"
+            launchctl load "$CLAUDE_LAUNCHAGENT" 2>/dev/null || true
+            echo -e "${GREEN}✅ Claude backup LaunchAgent loaded${NC}"
+        fi
+    fi
+
+    # Check for old cron job that should be removed
+    if crontab -l 2>/dev/null | grep -q "claude_backup_cron.sh"; then
+        echo -e "${YELLOW}⚠️ Old cron job detected - recommend removing:${NC}"
+        echo -e "${YELLOW}   Run: (crontab -l | grep -v claude_backup) | crontab -${NC}"
+    fi
+
+    # Report status
+    if [ ${#CLAUDE_BACKUP_ISSUES[@]} -eq 0 ]; then
+        echo -e "${GREEN}✅ Claude backup LaunchAgent system is properly configured${NC}"
+        echo -e "${GREEN}   📅 Backs up every 4 hours to Documents + Dropbox${NC}"
+        echo -e "${GREEN}   📝 Logs: /tmp/claude_backup_launchd.log${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Claude backup system issues detected:${NC}"
+        for issue in "${CLAUDE_BACKUP_ISSUES[@]}"; do
+            echo -e "${YELLOW}  $issue${NC}"
+        done
+    fi
+
+    echo ""
+fi
 
 # Enhanced conversation detection
 PROJECT_DIR_NAME=$(pwd | sed 's/[\/._]/-/g')
@@ -802,9 +1027,26 @@ if [ -n "$MODE" ]; then
                     # Create the instance with qwen label
                     echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                    INSTANCE_CMD="vastai create instance $BEST_INSTANCE --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel --disk 60 --ssh --label qwen-$(date +%Y%m%d-%H%M) $ENV_VARS --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
-
-                    INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                    # shellcheck disable=SC2086
+                    CMD_ARGS=(
+                        "vastai" "create" "instance" "$BEST_INSTANCE"
+                        "--image" "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel"
+                        "--disk" "60" "--ssh"
+                        "--label" "qwen-$(date +%Y%m%d-%H%M)"
+                    )
+                    # Add ENV_VARS if not empty
+                    if [ -n "$ENV_VARS" ]; then
+                        # Split ENV_VARS safely and add to array (avoid eval for security)
+                        IFS=' ' read -ra ENV_ARRAY <<< "$ENV_VARS"
+                        for env_var in "${ENV_ARRAY[@]}"; do
+                            CMD_ARGS+=("$env_var")
+                        done
+                    fi
+                    CMD_ARGS+=(
+                        "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
+                        "--onstart-cmd" 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                    )
+                    INSTANCE_RESULT=$("${CMD_ARGS[@]}")
                     # Handle both JSON and Python dict formats for new_contract
                     INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o "'new_contract': [0-9]*" | grep -o '[0-9]*' || echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
@@ -961,7 +1203,7 @@ if [ -n "$MODE" ]; then
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
+                    echo $PROXY_PID > $PROXY_PID_FILE
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1090,7 +1332,7 @@ if [ -n "$MODE" ]; then
             fi
 
             # Store proxy PID for cleanup
-            echo $PROXY_PID > /tmp/cerebras_proxy.pid
+            echo $PROXY_PID > $PROXY_PID_FILE
 
             # Set environment variables to redirect Claude CLI to our proxy
             export ANTHROPIC_BASE_URL="http://localhost:8002"
@@ -1237,7 +1479,7 @@ else
                 if curl -s http://localhost:8000/health > /dev/null 2>&1; then
                     echo -e "${GREEN}✅ Local Qwen API proxy started successfully${NC}"
                     API_BASE_URL="http://localhost:8000"
-                    echo $PROXY_PID > /tmp/cerebras_proxy.pid
+                    echo $PROXY_PID > $PROXY_PID_FILE
                 else
                     echo -e "${RED}❌ Failed to start local proxy${NC}"
                     echo -e "${BLUE}💡 Check if Ollama is running and qwen3-coder model is available${NC}"
@@ -1324,15 +1566,25 @@ else
                 # Create the instance
                 echo -e "${BLUE}🏗️  Creating vast.ai instance...${NC}"
 
-                INSTANCE_CMD="vastai create instance $BEST_INSTANCE \\
-                    --image pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel \\
-                    --disk 60 \\
-                    --ssh \\
-                    $ENV_VARS \\
-                    --env GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git \\
-                    --onstart-cmd 'git clone \$GIT_REPO /app && cd /app && bash startup_llm.sh'"
-
-                INSTANCE_RESULT=$(eval $INSTANCE_CMD)
+                # shellcheck disable=SC2086
+                CMD_ARGS=(
+                    "vastai" "create" "instance" "$BEST_INSTANCE"
+                    "--image" "pytorch/pytorch:2.1.0-cuda12.1-cudnn8-devel"
+                    "--disk" "60" "--ssh"
+                )
+                # Add ENV_VARS if not empty
+                if [ -n "$ENV_VARS" ]; then
+                    # Split ENV_VARS safely and add to array (avoid eval for security)
+                    IFS=' ' read -ra ENV_ARRAY <<< "$ENV_VARS"
+                    for env_var in "${ENV_ARRAY[@]}"; do
+                        CMD_ARGS+=("$env_var")
+                    done
+                fi
+                CMD_ARGS+=(
+                    "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
+                    "--onstart-cmd" 'git clone $GIT_REPO /app && cd /app && bash startup_llm.sh'
+                )
+                INSTANCE_RESULT=$("${CMD_ARGS[@]}")
                 INSTANCE_ID=$(echo "$INSTANCE_RESULT" | grep -o '"new_contract": [0-9]*' | grep -o '[0-9]*')
 
                 if [ -z "$INSTANCE_ID" ]; then
@@ -1643,7 +1895,7 @@ EOF
         fi
 
         # Store proxy PID for cleanup
-        echo $PROXY_PID > /tmp/cerebras_proxy.pid
+        echo $PROXY_PID > $PROXY_PID_FILE
 
         # Set environment variables to redirect Claude CLI to our proxy
         export ANTHROPIC_BASE_URL="http://localhost:8002"
@@ -1730,5 +1982,6 @@ claude_bot_status() {
 }
 
 
-# Export functions so they're available in the shell
-export -f stop_claude_bot restart_claude_bot claude_bot_status is_claude_bot_running start_claude_bot_background
+# To use helper functions in the current shell:
+#   source scripts/claude_functions.sh
+# (Runtime execution of this script does not persist function exports.)
