@@ -232,29 +232,6 @@ format_tokens() {
     fi
 }
 
-# Function to show balloon notification
-show_balloon() {
-    local title="$1"
-    local message="$2"
-    powershell.exe -Command "
-Add-Type -AssemblyName System.Windows.Forms;
-\$balloon = New-Object System.Windows.Forms.NotifyIcon;
-\$balloon.Icon = [System.Drawing.SystemIcons]::Warning;
-\$balloon.BalloonTipTitle = \$('$title');
-\$balloon.BalloonTipText = \$('$message');
-\$balloon.Visible = \$true;
-\$balloon.ShowBalloonTip(5000);
-Start-Sleep -Seconds 1;
-\$balloon.Dispose()
-" >/dev/null 2>&1 &
-}
-
-# Function to show popup alert
-show_popup() {
-    local message="$1"
-    powershell.exe -Command "[System.Windows.Forms.MessageBox]::Show(\$('$message'), \$('Claude API Critical Alert'), \$('OK'), \$('Warning'))" >/dev/null 2>&1 &
-}
-
 # Check for bashrc alias setup
 check_bashrc_alias() {
     local git_root=$(git rev-parse --show-toplevel 2>/dev/null)
@@ -333,67 +310,10 @@ show_context_info() {
     fi
 }
 
-# Get Claude API rate limit info if requested
+# Maintain compatibility when legacy flags are provided but omit API usage stats
 if [ "$1" = "--with-api" ] || [ "$1" = "--monitor" ]; then
-
-    # Check for API key in environment (needed for API calls)
-    if [ -z "$CLAUDE_API_KEY" ]; then
-        echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
-        echo "[API: Error - CLAUDE_API_KEY environment variable not set]"
-        show_context_info
-        exit 0
-    fi
-
-    response=$(curl -s -D /tmp/claude_headers.tmp https://api.anthropic.com/v1/messages \
-      --header "x-api-key: $CLAUDE_API_KEY" \
-      --header "anthropic-version: 2023-06-01" \
-      --header "content-type: application/json" \
-      --data '{
-        "model": "claude-3-opus-20240229",
-        "max_tokens": 10,
-        "messages": [{"role": "user", "content": "test"}]
-      }' 2>/dev/null)
-
-    # Check for authentication errors
-    if echo "$response" | grep -q "authentication_error"; then
-        echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
-        echo "[API: Authentication failed - Get valid API key from console.anthropic.com]"
-        show_context_info
-        rm -f /tmp/claude_headers.tmp
-        exit 0
-    fi
-
-    if [ -f /tmp/claude_headers.tmp ]; then
-        requests_reset=$(grep -i 'anthropic-ratelimit-requests-reset:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
-        requests_remaining=$(grep -i 'anthropic-ratelimit-requests-remaining:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
-        requests_limit=$(grep -i 'anthropic-ratelimit-requests-limit:' /tmp/claude_headers.tmp | cut -d' ' -f2- | tr -d '\r')
-
-        # Calculate usage percentage
-        if [ -n "$requests_remaining" ] && [ -n "$requests_limit" ]; then
-            requests_used=$((requests_limit - requests_remaining))
-            usage_percent=$((requests_used * 100 / requests_limit))
-            remaining_percent=$((requests_remaining * 100 / requests_limit))
-
-            # Show alerts based on remaining percentage
-            if [ "$1" = "--monitor" ] && [ "$remaining_percent" -le 25 ]; then
-                show_popup "CRITICAL: Only $remaining_percent% API quota remaining ($requests_remaining/$requests_limit requests)"
-            elif [ "$1" = "--monitor" ] && [ "$remaining_percent" -le 50 ]; then
-                show_balloon "Claude API Alert" "Warning: Only $remaining_percent% quota remaining ($requests_remaining/$requests_limit)"
-            elif [ "$1" = "--monitor" ] && [ "$remaining_percent" -le 75 ]; then
-                show_balloon "Claude API Notice" "Info: $remaining_percent% quota remaining ($requests_remaining/$requests_limit)"
-            fi
-        fi
-
-        echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
-        echo "[API: ${requests_remaining:-?}/${requests_limit:-50} requests (${remaining_percent:-?}% remaining) | Reset: $(format_time "$requests_reset")]"
-        show_context_info
-
-        rm -f /tmp/claude_headers.tmp
-    else
-        echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
-        echo "[API: Error getting rate limits]"
-        show_context_info
-    fi
+    echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
+    show_context_info
 elif [ "$status_only" = true ]; then
     # Only output the header lines for statusLine - no git status or other output
     echo -e "\033[1;36m[Dir: $working_dir | Local: $local_branch$local_status | Remote: $remote | PR: $pr_text]\033[0m"
