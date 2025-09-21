@@ -164,8 +164,8 @@ sanitize_comment() {
     # Remove null bytes and escape shell metacharacters
     local sanitized=$(echo "$input" | tr -d '\0' | sed 's/[`$\\]/\\&/g' | sed 's/[;&|]/\\&/g')
 
-    # Check for suspicious patterns
-    if echo "$sanitized" | grep -qE '(\$\(|\`|<script|javascript:|eval\(|exec\()'; then
+    # Check for suspicious patterns in original input (before escaping)
+    if echo "$input" | grep -qE '(\$\(|`|<script|javascript:|eval\(|exec\()'; then
         echo "⚠️ Potentially malicious content detected and neutralized" >&2
         # Continue with sanitized version rather than failing completely
     fi
@@ -224,7 +224,13 @@ echo "📊 PR Complexity: $FILES_CHANGED files, $LINES_CHANGED lines (timeout: $
 
 # Orchestrator waits for agent completion with adaptive timeout
 START_TIME=$(date +%s)
-while [ ! -f "$AGENT_STATUS" ] && kill -0 $AGENT_PID 2>/dev/null; do
+while [ ! -f "$AGENT_STATUS" ]; do
+    # Check if agent is still running
+    if ! kill -0 $AGENT_PID 2>/dev/null; then
+        echo "⚠️ Agent process terminated unexpectedly"
+        break
+    fi
+
     CURRENT_TIME=$(date +%s)
     if [ $((CURRENT_TIME - START_TIME)) -gt $TIMEOUT ]; then
         echo "⚠️ Agent timeout after $((TIMEOUT/60)) minutes"
