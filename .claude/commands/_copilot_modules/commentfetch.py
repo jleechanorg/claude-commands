@@ -11,17 +11,16 @@ Extracts comments from all sources:
 Based on copilot_comment_fetch.py from PR #796 but adapted for modular architecture.
 """
 
+import sys
+import os
 import argparse
 import json
-import os
 import subprocess
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
-
-from .base import CopilotCommandBase
+from base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):
@@ -114,7 +113,7 @@ class CommentFetch(CopilotCommandBase):
                     "author": comment.get("user", {}).get("login", "unknown"),
                     "created_at": comment.get("created_at", ""),
                     "requires_response": self._requires_response(comment),
-                    "already_replied": self._check_already_replied_general(comment),
+                    "already_replied": self._check_already_replied_general(comment, self.comments),
                 }
             )
 
@@ -148,7 +147,7 @@ class CommentFetch(CopilotCommandBase):
                         "created_at": review.get("submitted_at", ""),
                         "state": review.get("state"),
                         "requires_response": self._requires_response(review),
-                        "already_replied": self._check_already_replied_review(review),
+                        "already_replied": self._check_already_replied_review(review, self.comments),
                     }
                 )
 
