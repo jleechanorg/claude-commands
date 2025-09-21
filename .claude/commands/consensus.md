@@ -163,7 +163,7 @@ Following reviewdeep.md patterns for solo developer optimization:
 
 Following `/reviewdeep` and `/arch` patterns for proper agent context:
 
-### **Standard Agent Prompt Template**
+### **Enhanced Agent Prompt Template** (Bot-Level Implementation Analysis)
 ```markdown
 [Agent Role] analysis of [target] for solo MVP project context.
 
@@ -171,21 +171,37 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context:
 - Solo MVP project (pre-launch, GitHub rollbacks available)
 - Current PR: [PR details]
 - Modified files: [file list]
-- Focus: Architecture quality over enterprise security theater
+- Focus: Implementation correctness AND architecture quality
 - Infrastructure: This is a working multi-agent system using Task tool parallel execution
 
-**Analysis Framework**:
-1. [Role-specific focus areas]
-2. MVP Context Considerations: Speed vs perfection balance
-3. Solo Developer Constraints: Single maintainer, no team coordination
-4. Rollback Safety: GitHub provides easy recovery for issues
+**DUAL-LAYER ANALYSIS FRAMEWORK**:
+1. **Strategic Layer**: [Role-specific focus areas], architecture, patterns
+2. **Tactical Layer**: Implementation logic, shell scripting, error handling
+3. **Solo MVP Context**: No team coordination, practical deployment focus
+4. **Rollback Safety**: GitHub provides recovery, allow measured risk-taking
+
+**CODE REVIEW BOT CAPABILITIES** (Required Analysis):
+- **Command Logic**: Bash operators, `||` chains, failure masking detection
+- **Error Handling**: Silent failures, false positives, graceful degradation
+- **Edge Cases**: Package.json parsing, command availability, regex patterns
+- **Control Flow**: Conditional logic, variable substitution, timeout handling
+- **Implementation Bugs**: Logic errors, typos, incorrect assumptions
+
+**IMPLEMENTATION FOCUS AREAS** (In Addition to Strategic):
+- Examine actual code execution behavior vs documentation
+- Identify shell scripting issues and command chain problems
+- Review error propagation and failure handling mechanisms
+- Validate configuration detection and auto-selection logic
+- Check for silent failures that could cause false confidence
 
 **Output Required**:
 - PASS/REWORK verdict with confidence score (1-10)
-- Specific issues with file:line references
-- MVP-appropriate recommendations
+- Specific issues with file:line references (MANDATORY)
+- Both strategic AND tactical concerns
+- Implementation bugs and logic errors
+- Solo developer deployment readiness assessment
 
-Provide [role] perspective on deployment readiness and architectural quality.
+Provide [role] perspective covering BOTH architecture AND implementation correctness.
 ```
 
 ### **Context Variables Populated**

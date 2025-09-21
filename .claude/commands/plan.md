@@ -186,19 +186,30 @@ fi
 - Test results: [previous round test outcomes]
 - Round: [1-3] of consensus validation
 
-**Validation Focus**:
-1. Code quality of Phase 4 implementation
-2. Integration with existing codebase
-3. Potential runtime issues or regressions
-4. Architecture alignment with project patterns
+**ENHANCED VALIDATION FOCUS** (Include Implementation Details):
+1. **Architecture & Integration**: System design, patterns, codebase alignment
+2. **Implementation Logic**: Command chains, error handling, edge cases
+3. **Shell/Script Analysis**: Bash operators, command detection, failure masking
+4. **Error Propagation**: Test failures, silent errors, `||` operator behavior
+5. **Edge Cases**: Package.json parsing, command availability, timeout handling
+6. **Runtime Behavior**: Actual execution flow vs documented intent
+
+**CODE REVIEW BOT CAPABILITIES** (Line-by-Line Analysis):
+- Examine bash command chains for failure masking (e.g., `cmd1 || cmd2`)
+- Validate regex patterns and string matching logic
+- Check error handling and graceful degradation
+- Analyze conditional logic and command detection
+- Identify potential silent failures or false positives
+- Review variable substitution and templating
 
 **Output Required**:
 - PASS/REWORK verdict with confidence (1-10)
-- Specific issues with file:line references
-- Test coverage recommendations
-- Risk assessment for deployment
+- Specific issues with file:line references (MANDATORY)
+- Implementation-level concerns (not just architectural)
+- Shell scripting and logic errors
+- Risk assessment for solo developer deployment
 
-**MVP Context**: Focus on practical deployment readiness over enterprise security theater.
+**Solo MVP Context**: No team coordination concerns, focus on practical implementation correctness.
 ```
 
 #### Early Termination Triggers:
