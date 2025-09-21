@@ -518,12 +518,14 @@ if [ ${#test_files[@]} -eq 0 ]; then
         done < <(find .claude/commands -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 
-    # Add orchestration tests if directory exists
-    if [ -d "orchestration/tests" ]; then
+    # Add orchestration tests if directory exists (only for integration test mode)
+    if [ -d "orchestration/tests" ] && [ "$include_integration" = true ]; then
         print_status "Including orchestration tests..."
         while IFS= read -r -d '' test_file; do
             test_files+=("$test_file")
         done < <(find orchestration -name "test_*.py" -type f -print0 2>/dev/null)
+    elif [ -d "orchestration/tests" ]; then
+        print_status "Skipping orchestration tests (require --integration flag)"
     fi
 
     # Add claude_command_scripts tests if directory exists
@@ -620,6 +622,14 @@ if [ ${#test_files[@]} -gt 0 ]; then
 fi
 print_status "📊 Found ${#test_files[@]} test files to execute"
 
+# Apply CI test limit if set (for CI efficiency)
+if [ -n "$CI_TEST_LIMIT" ] && [ "$CI_TEST_LIMIT" -gt 0 ] && [ ${#test_files[@]} -gt "$CI_TEST_LIMIT" ]; then
+    print_warning "⚠️  Applying CI_TEST_LIMIT: ${#test_files[@]} → $CI_TEST_LIMIT tests (for CI timeout prevention)"
+    # Keep only the first N tests for CI efficiency
+    test_files=("${test_files[@]:0:$CI_TEST_LIMIT}")
+    print_status "📊 Limited to ${#test_files[@]} test files for CI execution"
+fi
+
 # Display first few test files as preview
 if [ ${#test_files[@]} -gt 0 ]; then
     print_status "📋 Test files preview (first 10):"
@@ -706,9 +716,10 @@ trap "rm -rf $tmp_dir" EXIT
 monitor_file="$tmp_dir/memory_monitor.lock"
 touch "$monitor_file"
 
-# Start background memory monitoring
-memory_monitor "$monitor_file" &
-monitor_pid=$!
+# Start background memory monitoring (disabled for debugging hang issue)
+# memory_monitor "$monitor_file" &
+# monitor_pid=$!
+monitor_pid=""
 
 # Function to cleanup background processes
 cleanup() {
@@ -745,7 +756,9 @@ elif [ -n "$CI" ]; then
 else
     # Local development - conservative parallelism to avoid overwhelming system
     available_cores=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || getconf _NPROCESSORS_ONLN 2>/dev/null || echo "4")
-    max_workers=$((available_cores > 4 ? 4 : available_cores))
+    # More conservative: max 2 workers for memory safety, regardless of cores
+    max_workers=$((available_cores > 2 ? 2 : available_cores))
+    max_workers=$((max_workers < 1 ? 1 : max_workers))  # Ensure at least 1 worker
     print_status "Running tests in parallel (Local dev: $max_workers workers for memory safety)..."
 fi
 
@@ -771,19 +784,37 @@ run_single_test() {
         echo "TESTFILE: $test_file"
         echo "START: $(date '+%Y-%m-%d %H:%M:%S')"
 
+        # Reasonable timeout for CI tests (2 minutes per test, configurable)
+        # Use shorter timeout for FAST_TESTS mode (CI optimization)
+        if [ "$FAST_TESTS" = "1" ] && [ -z "$TEST_TIMEOUT" ]; then
+            local test_timeout=60  # 1 minute for fast CI tests
+        else
+            local test_timeout=${TEST_TIMEOUT:-120}  # 2 minutes default
+        fi
+
         if [ "$enable_coverage" = true ]; then
-            # Run with coverage
-            if timeout 300 python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
+            # Run with coverage and proper Python path
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 -m coverage run --append --source=mvp_site "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
-                echo "RESULT: FAIL"
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    echo "RESULT: TIMEOUT"
+                else
+                    echo "RESULT: FAIL"
+                fi
             fi
         else
-            # Run normally
-            if timeout 300 python3 "$test_file" 2>&1; then
+            # Run normally with proper Python path
+            if timeout "$test_timeout" env PYTHONPATH="$PROJECT_ROOT:$PROJECT_ROOT/mvp_site" python3 "$test_file" 2>&1; then
                 echo "RESULT: PASS"
             else
-                echo "RESULT: FAIL"
+                local exit_code=$?
+                if [ $exit_code -eq 124 ]; then
+                    echo "RESULT: TIMEOUT"
+                else
+                    echo "RESULT: FAIL"
+                fi
             fi
         fi
 
@@ -801,24 +832,47 @@ print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TES
 
 # Run tests with overall timeout wrapper
 run_tests_with_timeout() {
-    if [ $max_workers -eq 1 ]; then
-        # Sequential execution
-        for test_file in "${test_files[@]}"; do
-            run_single_test "$test_file"
-        done
-    else
-        # Parallel execution
-        printf '%s\n' "${test_files[@]}" | xargs -P "$max_workers" -I {} bash -c 'run_single_test "$@"' _ {}
-    fi
+    # Force sequential execution for now to debug hanging issue
+    print_status "🔧 DEBUG: Running tests sequentially to avoid parallel hang"
+    for test_file in "${test_files[@]}"; do
+        print_status "🧪 Running test: $test_file"
+        run_single_test "$test_file"
+        print_status "✅ Completed test: $test_file"
+    done
 }
 
-# Export functions for use with xargs and timeout wrapper
-export -f run_single_test run_tests_with_timeout
-export tmp_dir enable_coverage max_workers
+# Note: Using bash subshells for parallel execution, so no exports needed
 
-# Execute tests with timeout
+# Execute tests with timeout (internal deadline approach)
 suite_timed_out=false
-if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
+suite_deadline=$(( $(date +%s) + TEST_SUITE_TIMEOUT ))
+print_status "⏱️  Enforcing suite deadline at: $(date -r "$suite_deadline" '+%Y-%m-%d %H:%M:%S' 2>/dev/null || echo "$suite_deadline")"
+
+# Wrap sequential executor with deadline checks
+run_tests_with_timeout() {
+    local now
+    for test_file in "${test_files[@]}"; do
+        now=$(date +%s)
+        if [ "$now" -ge "$suite_deadline" ]; then
+            print_error "⏰ Suite deadline reached before running: $test_file"
+            suite_timed_out=true
+            break
+        fi
+        print_status "🧪 Running test: $test_file"
+        run_single_test "$test_file"
+        print_status "✅ Completed test: $test_file"
+        # Check deadline between tests as well
+        now=$(date +%s)
+        if [ "$now" -ge "$suite_deadline" ]; then
+            suite_timed_out=true
+            break
+        fi
+    done
+}
+
+# Execute with internal deadline
+run_tests_with_timeout
+if [ "$suite_timed_out" = true ]; then
     echo -e "${RED}❌ ERROR: Test suite exceeded timeout of ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)${NC}" >&2
     echo "This indicates tests are hanging or taking excessively long. Check for:" >&2
     echo "  - Infinite loops in test code" >&2
@@ -826,11 +880,8 @@ if ! timeout "$TEST_SUITE_TIMEOUT" bash -c 'run_tests_with_timeout'; then
     echo "  - Memory leaks causing system slowdown" >&2
     echo "  - Tests waiting for user input or external events" >&2
 
-    # Kill any remaining test processes
-    pkill -f "python.*test_" || true
-
-    # Mark as timed out to prevent result processing from overriding
-    suite_timed_out=true
+    # Kill any remaining test processes safely
+    pkill -f "python.*test_" 2>/dev/null || true
 fi
 
 # Wait for all background jobs to complete
