@@ -1036,11 +1036,36 @@ if [ -n "$MODE" ]; then
                     )
                     # Add ENV_VARS if not empty
                     if [ -n "$ENV_VARS" ]; then
-                        # Split ENV_VARS safely and add to array (avoid eval for security)
-                        IFS=' ' read -ra ENV_ARRAY <<< "$ENV_VARS"
-                        for env_var in "${ENV_ARRAY[@]}"; do
-                            CMD_ARGS+=("$env_var")
-                        done
+                        # Parse ENV_VARS safely - handle quoted strings and spaces
+                        # Expected format: "--env VAR1=value1 --env VAR2=value2" or "--env VAR1='value with spaces'"
+                        local current_arg=""
+                        local in_quotes=false
+                        local quote_char=""
+
+                        # Process each character to handle quoted strings properly
+                        while IFS= read -r -n1 char; do
+                            if [[ "$char" == "'" || "$char" == '"' ]] && [[ "$in_quotes" == false ]]; then
+                                in_quotes=true
+                                quote_char="$char"
+                                current_arg+="$char"
+                            elif [[ "$char" == "$quote_char" ]] && [[ "$in_quotes" == true ]]; then
+                                in_quotes=false
+                                quote_char=""
+                                current_arg+="$char"
+                            elif [[ "$char" == " " ]] && [[ "$in_quotes" == false ]]; then
+                                if [[ -n "$current_arg" ]]; then
+                                    CMD_ARGS+=("$current_arg")
+                                    current_arg=""
+                                fi
+                            else
+                                current_arg+="$char"
+                            fi
+                        done <<< "$ENV_VARS"
+
+                        # Add final argument if any
+                        if [[ -n "$current_arg" ]]; then
+                            CMD_ARGS+=("$current_arg")
+                        fi
                     fi
                     CMD_ARGS+=(
                         "--env" "GIT_REPO=https://github.com/jleechanorg/claude_llm_proxy.git"
