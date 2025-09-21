@@ -116,13 +116,39 @@ python3 mvp_site/main.py
 # ✅ Confirmed: Application starts successfully
 ```
 
+## 🔍 Phase 4: CONSENSUS - Flow Validation
+
+**Validation**: Verify the entire red-green debug flow was legitimate and properly executed
+
+### Step 1: Consensus Check
+- Run `/consensus` to validate the debugging approach was sound
+- Ensure all phases were properly executed with evidence
+- Confirm the fix addresses the root issue comprehensively
+
+### Step 2: Documentation Review
+- Validate that error reproduction was genuine and accurate
+- Confirm the fix is minimal and targeted as required
+- Verify testing demonstrates complete resolution
+
+### Step 3: Flow Legitimacy
+```bash
+# Must confirm legitimate debugging process:
+# ✅ RED phase: Actual error reproduced with evidence
+# ✅ CODE phase: Minimal, targeted fix implemented
+# ✅ GREEN phase: Complete resolution verified
+# ✅ CONSENSUS: Flow integrity validated
+```
+
+**CRITICAL RULE**: Phase 4 provides final validation that the red-green process was executed with integrity and produces genuine bug fixes, not superficial changes.
+
 ## Integration Points
 
 - **Inherits test patterns from `/tdd`**: Use matrix testing and systematic coverage
 - **Focuses on specific bugs**: Unlike `/tdd` which is feature-driven, this is error-driven
 - **Minimal fix approach**: Targeted fixes rather than comprehensive refactoring
 - **Error reproduction requirement**: Must reproduce exact error before fixing
+- **Flow validation via `/consensus`**: Ensures debugging integrity and legitimacy
 
 ---
 
-**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` starts with reproducing actual bugs/errors and systematically fixing them with verification.
+**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` starts with reproducing actual bugs/errors and systematically fixing them with verification, concluding with `/consensus` validation of the entire debugging flow.
