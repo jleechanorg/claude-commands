@@ -9,7 +9,7 @@
 ### Current Date Awareness (macOS + Ubuntu)
 Before any research actions, capture today's date with a portable shell command and use it when checking source freshness or framing search queries:
 
-```bash
+```sh
 CURRENT_DATE=$(date "+%Y-%m-%d")
 ```
 

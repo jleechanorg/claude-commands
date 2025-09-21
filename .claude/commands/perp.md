@@ -9,11 +9,19 @@
 ### Current Date Awareness (macOS + Ubuntu)
 Always establish today's date before running any searches so results can be evaluated for freshness:
 
-```bash
+```sh
 CURRENT_DATE=$(date "+%Y-%m-%d")
 ```
 
-This command is portable across macOS and Ubuntu shells. If `date` is unexpectedly unavailable, run `python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"` as a fallback. Use `CURRENT_DATE` when crafting queries (e.g., adding `2025` or "as of $CURRENT_DATE") and call out any sources that predate today to prevent stale guidance.
+This command is portable across macOS and Ubuntu shells.
+
+If `date` is unexpectedly unavailable, run the following Python fallback command:
+
+```python
+python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"
+```
+
+Use `CURRENT_DATE` when crafting queries (e.g., adding `2025` or "as of $CURRENT_DATE") and call out any sources that predate today to prevent stale guidance.
 
 This command combines four powerful search capabilities:
 1. **Claude Default Search** (WebSearch) - Claude's built-in web search
