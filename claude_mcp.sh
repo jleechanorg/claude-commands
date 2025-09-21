@@ -871,6 +871,7 @@ declare -A BATCH_1=(
 declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
+    ["grok-mcp"]="grok-mcp"
 )
 
 declare -A BATCH_3=(

@@ -29,9 +29,9 @@ You MUST use the actual Grok MCP tools to obtain genuine xAI Grok model response
 NEVER skip the external consultation. If you find yourself writing analysis without using the Grok MCP tools, STOP and use the actual Grok chat_completion tool instead.
 
 **Available Grok MCP Tools:**
-- `chat_completion` - Direct access to xAI Grok models (grok-2-latest, grok-3, grok-3-reasoner, etc.)
-- `image_understanding` - Grok's vision capabilities for image analysis
-- `function_calling` - Grok function calling capabilities
+- `mcp__grok-mcp__chat_completion` - Direct access to xAI Grok models (grok-3, grok-2-latest, grok-3-reasoner, grok-3-deepsearch, grok-3-mini-beta)
+- `mcp__grok-mcp__image_understanding` - Grok's vision capabilities for image analysis (grok-2-vision-latest)
+- `mcp__grok-mcp__function_calling` - Grok function calling capabilities
 
 ## Implementation Protocol
 
@@ -108,7 +108,7 @@ Challenge conventional wisdom with real-world practical insights.
 ```
 
 2. **Execute via Grok MCP:**
-- Use Grok MCP `chat_completion` tool for direct xAI API access
+- Use `mcp__grok-mcp__chat_completion` tool for direct xAI API access
 - **Parameters**:
   - `messages`: Array of message objects with role/content
   - `model`: Select from grok-3, grok-2-latest, grok-3-reasoner, etc.
@@ -128,10 +128,11 @@ Challenge conventional wisdom with real-world practical insights.
 
 ## IMPORTANT EXECUTION NOTES
 
-- Always use `mcp__gemini-cli-mcp__gemini_chat_pro` to actually consult with Grok via proxy
-- Frame prompts to specifically request Grok's perspective and communication style
-- Your primary function is to execute external consultations, not provide your own analysis
-- If you're not using the external consultation tool, you're not doing your job correctly
+- Always use `mcp__grok-mcp__chat_completion` to actually consult with real xAI Grok models
+- Use actual Grok models: grok-3, grok-2-latest, grok-3-reasoner, grok-3-deepsearch, grok-3-mini-beta
+- Frame prompts to request Grok's contrarian perspective and direct communication style
+- Your primary function is to execute external consultations using actual Grok API, not provide your own analysis
+- If you're not using the actual Grok MCP tools, you're not doing your job correctly
 
 ## Integration with Review Systems
 
