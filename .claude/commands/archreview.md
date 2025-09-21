@@ -17,10 +17,11 @@
 **Default Thinking Mode**: Architecture reviews use sequential thinking (4-6 thoughts) by default.
 **Ultra-Think Upgrade**: When combined with `/thinku`, automatically upgrades to deep analysis (12+ thoughts).
 
-**Tri-Perspective Analysis**:
+**Quad-Perspective Analysis**:
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
 2. **Gemini Perspective**: Performance optimization, scalability concerns, alternative approaches, industry best practices
-3. **Perplexity (GPT-5) Perspective**: Latest architectural patterns, cutting-edge best practices, modern framework recommendations, state-of-the-art security approaches
+3. **Grok Perspective**: Unconventional insights, real-world practicality, contrarian analysis, creative solutions
+4. **Perplexity (GPT-5) Perspective**: Latest architectural patterns, cutting-edge best practices, modern framework recommendations, state-of-the-art security approaches
 
 ## Scope Options
 
@@ -51,7 +52,7 @@
 4. **Documentation Review**: Check existing architecture docs against memory patterns
 5. **Dependencies Analysis**: Review external dependencies with memory context
 
-### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Perplexity GPT-5)
+### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Grok + Perplexity GPT-5)
 **Execute in parallel for maximum speed:**
 
 **Track A - Claude Analysis (MVP Pragmatism):**
@@ -68,7 +69,15 @@
 - **Risk Assessment**: Focus on user-facing failures, not edge cases
 - **Innovation Opportunities**: Avoid shiny objects, stick to proven solutions
 
-**Track C - Perplexity GPT-5 Analysis (Cutting-Edge Insights):**
+**Track C - Grok Analysis (Unconventional Insights):**
+- **Implementation**: Use `grok-consultant` agent for xAI Grok perspective via Gemini MCP proxy
+- **Reality Check**: What will actually break in production vs theoretical concerns
+- **Unconventional Solutions**: Creative approaches that conventional analysis misses
+- **Contrarian Assessment**: Challenge established best practices and assumptions
+- **Practical Innovation**: Real-world optimizations and non-obvious improvements
+- **Direct Feedback**: Unfiltered assessment of architectural decisions
+
+**Track D - Perplexity GPT-5 Analysis (Cutting-Edge Insights):**
 - **Implementation**: `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: architecture_query, model: "gpt-5"}])`
 - **Latest Patterns**: Modern architectural patterns from 2024-2025
 - **Security Standards**: Most recent security best practices and vulnerabilities
@@ -76,8 +85,8 @@
 - **Performance Optimization**: State-of-the-art optimization techniques
 - **Future-Proofing**: Architectural decisions that prepare for scaling
 
-### Phase 3: Tri-Perspective Synthesis & MVP-Focused Recommendations
-All three AI perspectives synthesized for MVP shipping priorities:
+### Phase 3: Quad-Perspective Synthesis & MVP-Focused Recommendations
+All four AI perspectives synthesized for MVP shipping priorities:
 - **MVP ROI**: Time to ship vs feature value for users
 - **Complexity Assessment**: Can one developer maintain this?
 - **Ship vs Perfect**: Balance "good enough" vs "done right"
