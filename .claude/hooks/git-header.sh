@@ -29,17 +29,19 @@ remote=$(git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>/dev/null || e
 
 # Get sync status and unpushed changes
 local_status=""
+
+# Check for uncommitted changes (always check, regardless of remote)
+# Check both modified tracked files AND untracked files
+if ! git diff-index --quiet HEAD -- 2>/dev/null || [ -n "$(git ls-files --others --exclude-standard 2>/dev/null)" ]; then
+    uncommitted=" +uncommitted"
+else
+    uncommitted=""
+fi
+
 if [ "$remote" != "no upstream" ]; then
     # Count commits ahead and behind
     ahead_count=$(git rev-list --count "$remote"..HEAD 2>/dev/null || echo "0")
     behind_count=$(git rev-list --count HEAD.."$remote" 2>/dev/null || echo "0")
-
-    # Check for uncommitted changes
-    if ! git diff-index --quiet HEAD -- 2>/dev/null; then
-        uncommitted=" +uncommitted"
-    else
-        uncommitted=""
-    fi
 
     if [ "$ahead_count" -eq 0 ] && [ "$behind_count" -eq 0 ]; then
         local_status=" (synced$uncommitted)"
@@ -51,19 +53,35 @@ if [ "$remote" != "no upstream" ]; then
         local_status=" (diverged +$ahead_count -$behind_count$uncommitted)"
     fi
 else
-    local_status=" (no remote)"
+    local_status=" (no remote$uncommitted)"
 fi
 
-# Fast PR detection without GitHub API calls
-# Skip slow gh CLI operations for statusline performance
-pr_text="none"
+# Smart PR detection with fast-first fallback strategy
+# 1. Branch name patterns (instant)
+# 2. Cached network lookup (fast)
+# 3. Real-time network lookup with timeout (fallback)
 
-# Optional: Fast git-only PR inference from branch naming patterns
-# Look for common PR branch patterns (pr-123, feature/pr-456, etc.)
+# Fast detection from branch naming patterns
+pr_text="none"
 if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
+else
+    # Try fast network lookup with timeout (only for --status-only mode performance)
+    if [ "$1" != "--status-only" ]; then
+        # Full mode: try network lookup with reasonable timeout
+        current_commit=$(git rev-parse HEAD 2>/dev/null)
+        if [ -n "$current_commit" ]; then
+            pr_number=$(timeout 2 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
+                       grep "$current_commit" | \
+                       sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
+                       head -1 2>/dev/null)
+            if [ -n "$pr_number" ]; then
+                pr_text="#$pr_number"
+            fi
+        fi
+    fi
 fi
 
 
