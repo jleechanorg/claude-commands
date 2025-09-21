@@ -13,9 +13,6 @@ import os
 import subprocess
 import logging
 from pathlib import Path
-
-# Add current directory to path for imports
-sys.path.insert(0, os.path.dirname(__file__))
 from automation_safety_manager import AutomationSafetyManager
 
 

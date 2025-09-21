@@ -6,6 +6,7 @@ Discovers and processes ALL open PRs across jleechanorg organization
 with worktree isolation and safety limits integration.
 """
 
+import argparse
 import os
 import sys
 import json
@@ -16,9 +17,6 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
-
-# Add automation directory to path
-sys.path.insert(0, os.path.dirname(__file__))
 from automation_safety_manager import AutomationSafetyManager
 
 
@@ -484,7 +482,6 @@ class JleechanorgPRMonitor:
 
 def main():
     """CLI interface for jleechanorg PR monitor"""
-    import argparse
 
     parser = argparse.ArgumentParser(description='jleechanorg PR Monitor')
     parser.add_argument('--workspace-base',

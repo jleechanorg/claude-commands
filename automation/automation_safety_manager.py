@@ -10,6 +10,7 @@ Minimal implementation to pass the RED phase tests with:
 - Email notifications
 """
 
+import argparse
 import json
 import os
 import threading
@@ -221,7 +222,6 @@ This is an automated notification from the WorldArchitect.AI automation system.
 
 def main():
     """CLI interface for safety manager"""
-    import argparse
 
     parser = argparse.ArgumentParser(description='Automation Safety Manager')
     parser.add_argument('--data-dir', default='/tmp/automation_safety',
