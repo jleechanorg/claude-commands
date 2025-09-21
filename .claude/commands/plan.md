@@ -95,6 +95,7 @@ After Phase 4 execution, automatically initiate consensus validation to ensure c
   - `grok-consultant`: Contrarian analysis and practical reality checks
 - Each agent provides: PASS/REWORK + confidence (1-10) + specific issues with file:line references
 - Early termination on architectural blockers or critical bugs
+- **Execution Guards**: 180-second timeout per agent, 5000 token cap, max 10 findings per round
 
 **2. Immediate Code Changes** (1-2 minutes)
 - Apply highest-confidence fixes from agent recommendations
@@ -141,7 +142,7 @@ After Phase 4 execution, automatically initiate consensus validation to ensure c
 **4. Round Completion Decision**
 - **CONSENSUS_PASS**: All agents PASS + average confidence >7 + all tests pass
 - **CONSENSUS_REWORK**: Any agent critical issues OR test failures OR average confidence <5
-- **TEST_FAILURE_ABORT**: Critical test failures that prevent continuation
+- **TEST_FAILURE_ABORT**: Any non-zero test/lint exit (critical or blocking) aborts the round immediately
 - **ROUND_LIMIT_REACHED**: Maximum 3 rounds completed
 
 #### Consensus Calculation Rules:
@@ -228,7 +229,7 @@ fi
 
 **Output Required**:
 - PASS/REWORK verdict with confidence (1-10)
-- Specific issues with file:line references (MANDATORY)
+- Specific issues with file:line@commit-sha references (MANDATORY) plus 3-5 line snippet anchors
 - Implementation-level concerns (not just architectural)
 - Shell scripting and logic errors
 - Risk assessment for solo developer deployment

@@ -33,6 +33,8 @@ Run all 4 agents simultaneously using Task tool parallel execution with proper c
 
 **Agent Infrastructure**: Uses existing `Task` tool with `subagent_type` parameter for parallel multi-agent coordination. This is the same infrastructure used successfully by `/reviewdeep` and `/arch` commands.
 
+**Execution Guards**: Per-agent timeout (180 seconds), token caps (5000 tokens max), and maximum 10 findings per round to prevent runaway executions.
+
 ### Agent Role Definitions:
 
 - **`code-review`** - Architecture, correctness, maintainability (MVP-focused)
@@ -222,7 +224,7 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context:
 
 **Output Required**:
 - PASS/REWORK verdict with confidence score (1-10)
-- Specific issues with file:line references (MANDATORY)
+- Specific issues with file:line@commit-sha references (MANDATORY) plus 3-5 line snippet anchors
 - Both strategic AND tactical concerns
 - Implementation bugs and logic errors
 - Solo developer deployment readiness assessment
