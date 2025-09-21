@@ -88,20 +88,86 @@ Streamlined workflow optimized for speed and simplicity:
 3. **Quick Fix Application** (If REWORK, 1-2 minutes)
    - Apply highest-confidence architectural fixes with clear file:line references
    - Skip complex remediation planning - fix obvious issues immediately
-   - Run basic validation (syntax check, basic tests)
-   - GitHub rollback available if issues arise
+   - Document all changes made during this round
 
-4. **Streamlined Validation**
-   - Run essential tests only (not full suite per change)
-   - Document changes with simple before/after summary
-   - No complex test creation - focus on fixing existing issues
+4. **Automated Test Validation** (1-3 minutes)
+   - **Syntax Validation**: Quick linting/parsing checks
+     ```bash
+     # Auto-detect and run project-specific linters
+     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  lint$"; then
+       npm run lint
+     elif command -v eslint >/dev/null 2>&1; then
+       eslint .
+     elif command -v flake8 >/dev/null 2>&1; then
+       flake8 .
+     elif command -v ruff >/dev/null 2>&1; then
+       ruff check .
+     else
+       echo "No supported linter found - manual validation required"
+     fi
+     ```
+   - **Unit Tests**: Focused tests for modified components
+     ```bash
+     # Auto-detect test framework and run relevant tests
+     if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  test$"; then
+       npm test
+     elif command -v vpython >/dev/null 2>&1; then
+       TESTING=true vpython -m pytest
+     elif command -v python >/dev/null 2>&1; then
+       python -m pytest
+     else
+       echo "No recognized test runner found - manual validation required"
+     fi
+     ```
+   - **Integration Tests**: If APIs/interfaces changed
+     ```bash
+     # Run integration test suite if available
+     npm run test:integration || ./run_tests.sh || ./run_ui_tests.sh mock
+     ```
+   - **Manual Validation**: User-guided spot checks if automated tests insufficient
 
-5. **Next Round Decision**
-   - If CONSENSUS_PASS: workflow complete
-   - If round < 3: continue with remaining issues
-   - If round = 3: document final status and unresolved items
+**Context-Aware Test Selection**:
+- **High Context**: Full test suite validation
+- **Medium Context**: Targeted test execution based on changed files
+- **Low Context**: Essential syntax and unit tests only
+
+**Auto-Detection of Test Commands**:
+```bash
+# Project test command detection hierarchy
+if [ -f "package.json" ] && npm run --silent | grep -q "^  test$"; then
+    npm test
+elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
+    TESTING=true vpython -m pytest
+elif [ -f "run_tests.sh" ]; then
+    ./run_tests.sh
+elif [ -f "Makefile" ] && grep -q "test" Makefile; then
+    make test
+else
+    echo "No automated tests detected - manual validation required"
+fi
+```
+
+5. **Round Completion Decision**
+   - **CONSENSUS_PASS**: All agents PASS + average confidence >7 + all tests pass
+   - **CONSENSUS_REWORK**: Any agent critical issues OR test failures OR average confidence <5
+   - **TEST_FAILURE_ABORT**: Any non-zero test/lint exit (critical or blocking) aborts the round immediately
+   - **ROUND_LIMIT_REACHED**: Maximum 3 rounds completed
+
+#### Consensus Calculation Rules:
+
+- **✅ SUCCESS**: CONSENSUS_PASS achieved (workflow complete)
+- **🔄 CONTINUE**: REWORK status + round < 3 + tests pass (next round)
+- **❌ ABORT**: TEST_FAILURE_ABORT or critical agent blockers (stop immediately)
+- **⚠️ LIMIT**: ROUND_LIMIT_REACHED (document remaining issues)
 
 The loop stops immediately when a round achieves PASS status or after three rounds (whichever occurs first).
+
+#### Early Termination Triggers:
+
+- **✅ CONSENSUS_PASS**: All agents agree + high confidence + tests pass
+- **❌ CRITICAL_BUG**: Any agent reports severity 9-10 issue
+- **❌ TEST_FAILURE**: Core functionality broken by Phase 4 changes
+- **❌ COMPILATION_ERROR**: Code doesn't compile/parse after changes
 
 ## Simple Consensus Rules (2025 MVP Optimization)
 - **Speed First**: Parallel execution, early termination, 3-round limit
