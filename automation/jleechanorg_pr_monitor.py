@@ -177,6 +177,7 @@ class JleechanorgPRMonitor:
                         return None
 
                 # Execute worktree creation
+                actual_branch = branch_name  # Track actual worktree branch
                 try:
                     result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True, timeout=30)
                     self.logger.info(f"✅ Worktree created successfully")
@@ -185,6 +186,7 @@ class JleechanorgPRMonitor:
                     if "already checked out" in e.stderr:
                         # Create unique branch name for this worktree
                         unique_branch = f"{branch_name}-automation-{pr_number}"
+                        actual_branch = unique_branch  # Update actual branch used
                         self.logger.info(f"🔄 Branch conflict, creating unique branch: {unique_branch}")
 
                         # Check if we have local or remote branch to base from
@@ -213,7 +215,9 @@ class JleechanorgPRMonitor:
                     "pr_number": pr_number,
                     "repository": repo_name,
                     "repository_full_name": pr["repositoryFullName"],
-                    "branch_name": branch_name,
+                    "branch_name": branch_name,              # Original PR branch name
+                    "target_branch": branch_name,            # Remote branch to update
+                    "worktree_branch": actual_branch,        # Actual branch checked out in worktree
                     "base_branch": pr["baseRefName"],
                     "pr_url": pr["url"],
                     "author": pr["author"]["login"],
@@ -224,7 +228,6 @@ class JleechanorgPRMonitor:
 
                 metadata_file = workspace_path / ".pr-metadata.json"
                 # Atomic write for metadata to prevent corruption
-                import tempfile
                 with tempfile.NamedTemporaryFile(
                     mode='w',
                     dir=workspace_path,
@@ -360,8 +363,13 @@ class JleechanorgPRMonitor:
                                 "git", "commit", "-m",
                                 f"🤖 Automated fixes for PR #{pr_number}\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
                             ], check=True, timeout=30)
-                            subprocess.run(["git", "push", "origin", metadata["branch_name"]], check=True, timeout=30)
-                            self.logger.info(f"🚀 Changes pushed to {metadata['branch_name']}")
+                            # Use target_branch for push to ensure correct remote branch update
+                            target_branch = metadata.get("target_branch") or metadata["branch_name"]
+                            subprocess.run(
+                                ["git", "push", "origin", f"HEAD:refs/heads/{target_branch}"],
+                                check=True, timeout=30
+                            )
+                            self.logger.info(f"🚀 Changes pushed to {target_branch}")
                         else:
                             self.logger.info(f"📝 No staged changes after pre-commit hooks - changes were auto-fixed")
                     else:
@@ -417,8 +425,11 @@ class JleechanorgPRMonitor:
 
         # Force remove directory if it still exists
         if workspace_path.exists():
-            shutil.rmtree(workspace_path)
-            self.logger.info(f"🗑️ Workspace directory removed: {workspace_path}")
+            try:
+                shutil.rmtree(workspace_path)
+                self.logger.info(f"🗑️ Workspace directory removed: {workspace_path}")
+            except Exception as e:
+                self.logger.warning(f"⚠️ Failed to remove workspace dir {workspace_path}: {e}")
 
     def run_monitoring_cycle(self, single_repo=None, max_prs=10):
         """Run a complete monitoring cycle"""
