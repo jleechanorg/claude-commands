@@ -10,14 +10,17 @@ RED Phase: All tests should FAIL initially
 
 import sys
 import os
-# Add automation directory to path first thing
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'automation'))
-
 import unittest
 import tempfile
 import json
+import shutil
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+
+# Add automation directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'automation'))
+
+# Import after path modification
 from automation_safety_manager import AutomationSafetyManager
 
 
@@ -41,7 +44,6 @@ class TestAutomationSafetyLimits(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test files"""
-        import shutil
         shutil.rmtree(self.test_dir)
 
     # Matrix 1: PR Attempt Limits (5 attempts per PR)
