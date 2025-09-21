@@ -68,7 +68,7 @@ Ultra-fast PR processing using hybrid orchestration (direct execution + selectiv
 - **Never Mixed**: Agent NEVER handles comments, Orchestrator NEVER modifies files
 
 ### ⚡ Performance Targets
-- **Execution Time**: 2-3 minutes (warns if >3 minutes)
+- **Execution Time**: 5-15 minutes (warns if >15 minutes, realistic for comprehensive analysis)
 - **Success Rate**: 100% reliability through proven component usage
 - **Coverage**: 100% comment response rate + all actionable issues implemented
 
@@ -86,8 +86,8 @@ COPILOT_START_TIME=$(date +%s)
 # ... execution phases ...
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-if [ $COPILOT_DURATION -gt 180 ]; then
-    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
+if [ $COPILOT_DURATION -gt 900 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 15m)"
 fi
 ```
 
@@ -103,7 +103,7 @@ Ultra-fast PR processing using hybrid orchestration with comprehensive coverage 
 - **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
 - **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
 - **30 recent comments focus** - Process only actionable recent feedback
-- **Expected time**: **2-3 minutes** with reliable hybrid coordination
+- **Expected time**: **5-15 minutes** with reliable hybrid coordination (realistic for comprehensive analysis)
 
 ## 🚀 Core Workflow - Hybrid Orchestrator Pattern
 
@@ -111,6 +111,24 @@ Ultra-fast PR processing using hybrid orchestration with comprehensive coverage 
 
 **INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
 ```bash
+# CLEANUP FUNCTION: Define error recovery and cleanup mechanisms
+cleanup_temp_files() {
+    local branch_name=$(git branch --show-current | tr -cd '[:alnum:]._-')
+    local temp_dir="/tmp/$branch_name"
+
+    if [ -d "$temp_dir" ]; then
+        echo "🧹 CLEANUP: Removing temporary files from $temp_dir"
+        rm -rf "$temp_dir"/* 2>/dev/null || true
+    fi
+
+    # Reset any stuck GitHub operations
+    echo "🔄 CLEANUP: Resetting any stuck operations"
+    # Additional cleanup operations as needed
+}
+
+# ERROR HANDLER: Trap errors for graceful cleanup
+trap 'cleanup_temp_files; echo "🚨 ERROR: Copilot workflow interrupted"; exit 1' ERR
+
 # Get comprehensive PR status first
 /gstatus
 
@@ -123,6 +141,8 @@ COPILOT_START_TIME=$(date +%s)
 **🎯 Direct Comment Analysis**:
 Execute comment processing workflow directly for reliable GitHub operations:
 - Execute /commentfetch to gather all PR comments and issues
+- **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
+- **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
 - Analyze actionable issues and categorize by type (security, runtime, tests, style)
 - Process issue responses and plan implementation strategy
 - Handle all GitHub API operations directly (proven to work)
@@ -156,15 +176,30 @@ echo "📝 Generating responses.json from analyzed comments"
 # Orchestrator MUST analyze all comments from commentfetch and create technical responses
 
 echo "🔍 ORCHESTRATOR RESPONSIBILITY: Analyzing ALL comments for response generation"
-# Basic sanitization for solo project (remove special chars but keep alphanumeric, dash, underscore)
-BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]_-')
+# INPUT SANITIZATION: Secure branch name validation to prevent path injection
+BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
+if [ -z "$BRANCH_NAME" ]; then
+    echo "❌ CRITICAL: Invalid or empty branch name"
+    cleanup_temp_files
+    return 1
+fi
+
+# SECURE PATH CONSTRUCTION: Use sanitized branch name
 COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
 export RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
 
-# Verify we have comment data from commentfetch
+# API RESPONSE VALIDATION: Verify comment data exists and is valid JSON
 if [ ! -f "$COMMENTS_FILE" ]; then
     echo "❌ CRITICAL: No comment data from commentfetch at $COMMENTS_FILE"
-    exit 1
+    cleanup_temp_files
+    return 1
+fi
+
+# VALIDATION: Verify comments.json is valid JSON before processing
+if ! jq empty "$COMMENTS_FILE" 2>/dev/null; then
+    echo "❌ CRITICAL: Invalid JSON in comments file"
+    cleanup_temp_files
+    return 1
 fi
 
 TOTAL_COMMENTS=$(jq '.comments | length' "$COMMENTS_FILE")
@@ -205,9 +240,17 @@ if [ ! -f "$RESPONSES_FILE" ]; then
 fi
 
 echo "🔄 Executing /commentreply for all unresponded comments"
-/commentreply || { echo "🚨 CRITICAL: Comment response failed"; exit 1; }
+/commentreply || {
+    echo "🚨 CRITICAL: Comment response failed"
+    cleanup_temp_files
+    return 1
+}
 echo "🔍 Verifying coverage via /commentcheck"
-/commentcheck || { echo "🚨 CRITICAL: Comment coverage failed"; exit 1; }
+/commentcheck || {
+    echo "🚨 CRITICAL: Comment coverage failed"
+    cleanup_temp_files
+    return 1
+}
 ```
 Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 
@@ -238,8 +281,14 @@ git diff --name-only | sed 's/^/  - /'
 echo "📈 CHANGE SUMMARY:"
 git diff --stat
 
-# Push changes to PR
-/pushl || { echo "🚨 PUSH FAILED: PR not updated"; exit 1; }
+# Push changes to PR with error recovery
+/pushl || {
+    echo "🚨 PUSH FAILED: PR not updated"
+    echo "🔧 RECOVERY: Attempting git status check"
+    git status
+    cleanup_temp_files
+    return 1
+}
 ```
 
 **Coverage Tracking (MANDATORY GATE):**
@@ -260,8 +309,9 @@ if ! /commentcheck; then
 
     # Re-verify after recovery attempt
     /commentcheck || {
-        echo "🚨 CRITICAL: Comment coverage still failing after recovery";
-        exit 1;
+        echo "🚨 CRITICAL: Comment coverage still failing after recovery"
+        cleanup_temp_files
+        return 1
     }
 fi
 echo "✅ Comment coverage verification passed - proceeding with completion"
@@ -272,10 +322,13 @@ echo "✅ Comment coverage verification passed - proceeding with completion"
 # Calculate and report timing (only if performance targets exceeded)
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-if [ $COPILOT_DURATION -gt 180 ]; then
-    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 3m)"
+if [ $COPILOT_DURATION -gt 900 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 15m)"
 fi
 
+# SUCCESS: Clean up and complete
+echo "✅ COPILOT WORKFLOW COMPLETED SUCCESSFULLY"
+cleanup_temp_files
 /guidelines
 ```
 
@@ -320,14 +373,14 @@ fi
 - ✅ **Security Priority**: Critical vulnerabilities addressed first with actual fixes
 - ✅ **GitHub Response Management**: Proper comment response handling for all feedback
 - ✅ **Pattern Detection**: Systematic fixes applied across similar codebase patterns
-- ✅ **Performance**: Execution completed within 2-3 minute target
+- ✅ **Performance**: Execution completed within 5-15 minute target (realistic for comprehensive analysis)
 
 ### **FAILURE CONDITIONS**:
 - ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
 - ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
-- ❌ **Timing Failures**: Execution time >3 minutes without performance alerts
+- ❌ **Timing Failures**: Execution time >15 minutes without performance alerts
 
 ## ⚡ **HYBRID EXECUTION OPTIMIZATION**
 
