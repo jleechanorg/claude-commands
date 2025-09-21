@@ -11,14 +11,8 @@
 #
 # This script runs tests SEQUENTIALLY (not parallel) to ensure accurate coverage tracking
 
-# Auto-detect Python interpreter (vpython fallback to python)
-if [ -f "$PWD/vpython" ]; then
-    PYTHON_CMD="$PWD/vpython"
-    echo "Using project vpython wrapper"
-else
-    PYTHON_CMD="python3"
-    echo "Using system python3 (vpython not found)"
-fi
+# Note: This script prefers using the Python interpreter from an activated virtual environment instead of the vpython wrapper.
+# If no virtual environment is activated, it will fall back to using 'python' from the system PATH.
 
 # Colors for output
 RED='\033[0;31m'
@@ -195,7 +189,7 @@ start_time=$(date +%s)
 print_status "⏱️  Starting coverage analysis at $(date)"
 
 # Clear any previous coverage data
-activate_venv && coverage erase
+activate_venv && python -m coverage erase
 
 # Initialize counters
 total_tests=0
@@ -209,7 +203,7 @@ for test_file in "${test_files[@]}"; do
         total_tests=$((total_tests + 1))
         echo -n "[$total_tests/${#test_files[@]}] Running: $test_file ... "
 
-        if TESTING=true activate_venv && coverage run --append --source=. "$PYTHON_CMD" "$test_file" >/dev/null 2>&1; then
+        if TESTING=true activate_venv && python -m coverage run --append --source=. "$test_file" >/dev/null 2>&1; then
             passed_tests=$((passed_tests + 1))
             print_success "✓"
         else
@@ -232,7 +226,7 @@ print_status "📊 Generating coverage report..."
 coverage_start_time=$(date +%s)
 
 # Generate terminal coverage report
-activate_venv && coverage report > coverage_report.txt
+activate_venv && python -m coverage report > coverage_report.txt
 coverage_report_exit_code=$?
 
 # Display key coverage metrics
@@ -267,7 +261,7 @@ fi
 # Generate HTML report if enabled
 if [ "$generate_html" = true ]; then
     print_status "🌐 Generating HTML coverage report..."
-    if activate_venv && coverage html --directory="$COVERAGE_DIR"; then
+    if activate_venv && python -m coverage html --directory="$COVERAGE_DIR"; then
         print_success "HTML coverage report generated in $COVERAGE_DIR/"
         print_status "Open $COVERAGE_DIR/index.html in your browser to view detailed coverage"
     else

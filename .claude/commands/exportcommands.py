@@ -402,12 +402,6 @@ class ClaudeCommandsExporter:
             # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
             content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
 
-            # Transform vpython hard dependencies to auto-detection
-            content = re.sub(r'VPYTHON="\$PWD/vpython"', 'PYTHON_CMD="python3"  # Auto-detect: use vpython if exists, fallback to python3', content)
-            content = re.sub(r'if \[ ! -f "\$PYTHON_CMD" \]; then\s*echo "Error: vpython script not found[^}]+exit 1\s*fi',
-                           'if [ -f "$PWD/vpython" ]; then PYTHON_CMD="$PWD/vpython"; else PYTHON_CMD="python3"; fi', content, flags=re.DOTALL)
-            content = re.sub(r'\$PYTHON_CMD', '$PYTHON_CMD', content)
-
             # SOURCE_DIR variable patterns - improved matching
             content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
             content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
