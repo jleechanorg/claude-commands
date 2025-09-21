@@ -107,7 +107,7 @@ After Phase 4 execution, automatically initiate consensus validation to ensure c
 - **Syntax Validation**: Quick linting/parsing checks
   ```bash
   # Auto-detect and run project-specific linters
-  if command -v npm >/dev/null 2>&1 && npm run | grep -q 'lint'; then
+  if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  lint$"; then
     npm run lint
   elif command -v eslint >/dev/null 2>&1; then
     eslint .
@@ -122,7 +122,7 @@ After Phase 4 execution, automatically initiate consensus validation to ensure c
 - **Unit Tests**: Focused tests for modified components
   ```bash
   # Auto-detect test framework and run relevant tests
-  if command -v npm >/dev/null 2>&1 && [ -f package.json ] && node -e "p=require('./package.json');process.exit(p.scripts&&p.scripts.test?0:1)" 2>/dev/null; then
+  if command -v npm >/dev/null 2>&1 && [ -f package.json ] && npm run --silent | grep -q "^  test$"; then
     npm test
   elif command -v vpython >/dev/null 2>&1; then
     TESTING=true vpython -m pytest
@@ -162,7 +162,7 @@ After Phase 4 execution, automatically initiate consensus validation to ensure c
 **Auto-Detection of Test Commands**:
 ```bash
 # Project test command detection hierarchy
-if [ -f "package.json" ] && node -e "p=require('./package.json');process.exit(p.scripts&&p.scripts.test?0:1)" 2>/dev/null; then
+if [ -f "package.json" ] && npm run --silent | grep -q "^  test$"; then
     npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
     TESTING=true vpython -m pytest
