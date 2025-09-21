@@ -180,49 +180,45 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context:
 3. **Solo MVP Context**: No team coordination, practical deployment focus
 4. **Rollback Safety**: GitHub provides recovery, allow measured risk-taking
 
-**2025 CODE REVIEW BOT CAPABILITIES** (Required Analysis):
+**FOCUSED ANALYSIS FOR SOLO MVP** (Bugs, Correctness, Critical Security Only):
 
-**Security & Vulnerability Assessment**:
-- **OWASP Compliance**: Injection attacks, XSS, broken authentication, data exposure
-- **AI Security**: Prompt injection, model context leaks, training data exposure
-- **Supply Chain**: Dependency vulnerabilities, package integrity, SBOM validation
-- **API Security**: Endpoint validation, input sanitization, authorization patterns
+**CRITICAL BUG DETECTION**:
+- **Logic Errors**: Incorrect conditionals, off-by-one errors, null pointer exceptions
+- **Runtime Failures**: Unhandled exceptions, type mismatches, missing error handling
+- **Data Corruption**: Race conditions, concurrent access issues, state inconsistencies
+- **Silent Failures**: Operations that fail without notification, masked errors
 
-**Framework & Technology Intelligence**:
-- **React/Next.js**: Hook patterns, component boundaries, SSR/CSR optimization
-- **Python/Django**: N+1 queries, ORM usage, async patterns, import structure
-- **Node.js**: Event loop efficiency, callback patterns, stream handling
-- **Database**: Query optimization, indexing strategies, connection management
+**MAJOR SECURITY VULNERABILITIES**:
+- **Injection Risks**: SQL injection, command injection, code injection in user inputs
+- **Authentication Bypasses**: Login failures, session hijacking, token misuse
+- **Data Exposure**: Hardcoded secrets, logging sensitive data, insecure storage
+- **Input Validation**: Missing sanitization, buffer overflows, file upload dangers
 
-**Performance & Resource Analysis**:
-- **Memory Management**: Leak detection, object lifecycle, garbage collection
-- **Algorithm Efficiency**: Complexity analysis, iteration patterns, data structures
-- **Caching Strategies**: Cache policies, invalidation, performance bottlenecks
-- **Resource Utilization**: Connection pooling, file handles, system resources
+**CORRECTNESS ISSUES**:
+- **API Contract Violations**: Wrong HTTP codes, malformed responses, missing parameters
+- **Database Problems**: Incorrect queries, transaction failures, constraint violations
+- **File Operations**: Path traversal, permission errors, encoding issues
+- **Configuration Errors**: Missing environment variables, incorrect defaults, broken connections
 
-**Code Quality & Architecture**:
-- **Maintainability**: Complexity metrics, technical debt, refactoring opportunities
-- **Organization**: Separation of concerns, coupling analysis, modularity
-- **Documentation**: Code comments, API documentation, architectural decisions
-- **Patterns**: Design patterns, anti-patterns, best practices adherence
+**CRITICAL DESIGN FLAWS** (Only Major Problems):
+- **Single Points of Failure**: No fallbacks for critical operations
+- **Broken Error Recovery**: Application crashes instead of graceful degradation
+- **Security Architecture**: Fundamental auth/authorization design flaws
+- **Data Loss Risks**: Operations that could permanently corrupt or lose user data
 
-**Testing & Quality Assurance**:
-- **Test Coverage**: Logic paths, edge cases, boundary conditions, error scenarios
-- **Test Quality**: Assertion effectiveness, mock strategies, isolation patterns
-- **CI/CD Integration**: Pipeline optimization, deployment safety, automation
-- **Performance Testing**: Load patterns, stress testing, monitoring strategies
+**PRODUCTION BLOCKERS**:
+- **Deployment Failures**: Broken builds, missing dependencies, environment issues
+- **Performance Killers**: Infinite loops, memory leaks, blocking operations
+- **User Experience Breakers**: Crashes, data loss, complete feature failures
+- **Security Holes**: Immediate exploit risks, credential exposure, admin bypasses
 
-**AI-Enhanced Development**:
-- **Generated Code Review**: AI output quality, security assessment, logic validation
-- **Context Consistency**: Naming conventions, style alignment, pattern matching
-- **Workflow Integration**: Tool compatibility, automation effectiveness
-- **Code Generation**: Template quality, customization, maintenance considerations
-
-**Modern Development Standards**:
-- **Accessibility**: WCAG compliance, inclusive design, assistive technology
-- **Cloud-Native**: Container optimization, microservices, observability patterns
-- **DevOps**: Infrastructure as code, deployment strategies, monitoring
-- **Documentation**: Standards compliance, completeness, maintainability
+**SKIP THESE (Not Critical for Solo MVP)**:
+- ❌ Code style preferences and formatting
+- ❌ Complex architecture patterns and enterprise design
+- ❌ Performance micro-optimizations and premature scaling
+- ❌ Comprehensive documentation and process improvements
+- ❌ Team workflow and collaboration patterns
+- ❌ Advanced accessibility and compliance requirements
 
 **Output Required**:
 - PASS/REWORK verdict with confidence score (1-10)

@@ -194,49 +194,37 @@ fi
 5. **Edge Cases**: Package.json parsing, command availability, timeout handling
 6. **Runtime Behavior**: Actual execution flow vs documented intent
 
-**2025 CODE REVIEW BOT CAPABILITIES** (Comprehensive Analysis):
+**FOCUSED BUG & SECURITY ANALYSIS** (Solo MVP Priority):
 
-**Security & Vulnerabilities**:
-- OWASP patterns: Injection, XSS, broken auth, data exposure, access control
-- AI-specific security: Prompt injection, model context leaks, training data privacy
-- Supply chain: Dependency vulnerabilities, package hijacking, SBOM issues
-- API security: Insecure endpoints, input validation, authorization bypass
+**CRITICAL BUG DETECTION**:
+- Logic errors: Incorrect conditionals, off-by-one errors, null pointer exceptions
+- Runtime failures: Unhandled exceptions, type mismatches, missing error handling
+- Data corruption: Race conditions, concurrent access issues, state inconsistencies
+- Silent failures: Operations that fail without notification, masked errors
 
-**Framework-Specific Intelligence**:
-- React: Hook misuse, dependency arrays, unnecessary re-renders, component boundaries
-- Next.js: Client/server directives, data fetching patterns, SSR/CSR optimization
-- Python: N+1 queries, ORM inefficiencies, async/await patterns, import organization
-- Node.js: Event loop blocking, callback patterns, stream handling, memory management
+**MAJOR SECURITY VULNERABILITIES**:
+- Injection risks: SQL injection, command injection, code injection in user inputs
+- Authentication bypasses: Login failures, session hijacking, token misuse
+- Data exposure: Hardcoded secrets, logging sensitive data, insecure storage
+- Input validation: Missing sanitization, buffer overflows, file upload dangers
 
-**Performance & Efficiency**:
-- Resource management: Memory leaks, connection pooling, file handle management
-- Algorithm efficiency: Complexity analysis, unnecessary iterations, object creation
-- Database optimization: Query performance, indexing, connection management
-- Caching strategies: Cache invalidation, TTL patterns, stampede prevention
+**CORRECTNESS ISSUES**:
+- API contract violations: Wrong HTTP codes, malformed responses, missing parameters
+- Database problems: Incorrect queries, transaction failures, constraint violations
+- File operations: Path traversal, permission errors, encoding issues
+- Configuration errors: Missing environment variables, incorrect defaults, broken connections
 
-**Code Quality & Architecture**:
-- Complexity metrics: Cyclomatic complexity, cognitive load, method decomposition
-- Technical debt: Legacy patterns, deprecated APIs, refactoring opportunities
-- Organization: Separation of concerns, coupling analysis, modularity assessment
-- Documentation: Inline comments, API docs, architectural decision records
+**PRODUCTION BLOCKERS**:
+- Deployment failures: Broken builds, missing dependencies, environment issues
+- Performance killers: Infinite loops, memory leaks, blocking operations
+- User experience breakers: Crashes, data loss, complete feature failures
+- Security holes: Immediate exploit risks, credential exposure, admin bypasses
 
-**Testing Strategy Analysis**:
-- Coverage quality: Logic paths, edge cases, boundary conditions, error scenarios
-- Test effectiveness: Assertion depth, mock quality, test isolation, data management
-- Pattern detection: Flaky tests, over-mocking, integration strategy, performance tests
-- AI test quality: Generated test assessment, edge case coverage, maintainability
-
-**AI-Assisted Development**:
-- Context consistency: Naming conventions, style alignment, pattern matching
-- Generated code quality: AI output assessment, security review, logic validation
-- Workflow integration: Tool compatibility, prompt effectiveness, output reliability
-- Ghost code detection: Unused imports, dead code, unnecessary dependencies
-
-**Modern Development Practices**:
-- DevOps integration: CI/CD optimization, deployment safety, infrastructure as code
-- Accessibility: WCAG compliance, semantic HTML, keyboard navigation, screen reader support
-- Cloud-native: Container optimization, microservice patterns, observability, scaling
-- Documentation standards: README quality, API documentation, change logs
+**CRITICAL DESIGN FLAWS** (Only Major Problems):
+- Single points of failure: No fallbacks for critical operations
+- Broken error recovery: Application crashes instead of graceful degradation
+- Security architecture: Fundamental auth/authorization design flaws
+- Data loss risks: Operations that could permanently corrupt or lose user data
 
 **Output Required**:
 - PASS/REWORK verdict with confidence (1-10)
