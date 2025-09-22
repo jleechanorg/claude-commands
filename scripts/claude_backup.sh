@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Claude Directory Backup Script
-# Backs up ~/.claude to Dropbox folder with device-specific naming
+# Claude Projects Backup Script
+# Backs up ~/.claude/projects to Dropbox folder with consistent naming
 # Runs hourly via cron and sends email alerts on failure
 #
 # USAGE:
@@ -33,8 +33,8 @@ backup_log() {
     echo "[$timestamp] $message" | tee -a "$LOG_FILE"
 }
 
-# Source directory
-SOURCE_DIR="$HOME/.claude"
+# Source directory - only backup conversation projects
+SOURCE_DIR="$HOME/.claude/projects"
 
 # Security: Hostname validation function
 validate_hostname() {
@@ -169,11 +169,11 @@ check_prerequisites() {
 
     # Check if source directory exists
     if [ ! -d "$SOURCE_DIR" ]; then
-        add_result "ERROR" "Source Check" "Claude directory $SOURCE_DIR does not exist"
+        add_result "ERROR" "Source Check" "Claude projects directory $SOURCE_DIR does not exist"
         return 1
     fi
 
-    add_result "SUCCESS" "Source Check" "Claude directory found at $SOURCE_DIR"
+    add_result "SUCCESS" "Source Check" "Claude projects directory found at $SOURCE_DIR"
 
     # Check if rsync is available
     if ! command -v rsync >/dev/null 2>&1; then
@@ -209,18 +209,8 @@ backup_to_destination() {
         return 1
     fi
 
-    # Perform selective rsync backup (only essential directories and files)
+    # Perform simple rsync backup of projects directory only
     if rsync -av \
-        --include='settings.json' \
-        --include='settings.json.backup*' \
-        --include='settings.local.json' \
-        --include='projects' \
-        --include='projects/**' \
-        --include='local' \
-        --include='local/**' \
-        --include='hooks' \
-        --include='hooks/**' \
-        --exclude='*' \
         "$SOURCE_DIR/" "$dest_dir/" >/dev/null 2>&1; then
 
         local file_count=$(find "$dest_dir" -type f | wc -l)
@@ -367,18 +357,14 @@ BACKUP TARGETS:
     Default: ~/Library/CloudStorage/Dropbox/claude_conversations
     Custom: Specify any destination as first parameter
 
-SELECTIVE SYNC INCLUDES:
-    ✅ settings.json (Claude Code configuration)
-    ✅ projects/ (all project sessions - 2.4GB)
-    ✅ local/ (Claude installations and packages - 179MB)
-    ✅ hooks/ (custom hooks)
-    ❌ Excludes: shell-snapshots, todos, conversations, cache files
+BACKUP CONTENT:
+    📁 ~/.claude/projects directory only (all conversation history)
 
 FEATURES:
     ✅ Automated backups via cron every hour (0 * * * *)
-    ✅ rsync selective sync (no --delete for safety)
+    ✅ rsync sync (no --delete for safety)
     ✅ Email alerts on backup failures only
-    ✅ Selective sync of essential data only
+    ✅ Projects-only backup (conversation history)
     ✅ Comprehensive backup_logging
 
 LOGS:
