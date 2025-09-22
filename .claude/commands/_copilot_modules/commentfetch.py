@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
-from base import CopilotCommandBase
+from .base import CopilotCommandBase
 
 
 class CommentFetch(CopilotCommandBase):

@@ -79,9 +79,31 @@ if [[ "$local_branch" =~ pr-([0-9]+) ]]; then
 elif [[ "$local_branch" =~ /pr-([0-9]+) ]]; then
     pr_text="#${BASH_REMATCH[1]} (inferred)"
 else
-    # Always try network lookup with fast timeout for PR detection
+    # Check for cached PR lookup first (5-minute cache)
     current_commit=$(git rev-parse HEAD 2>/dev/null)
-    if [ -n "$current_commit" ]; then
+    cache_file="/tmp/git-header-pr-${current_commit:0:8}"
+    cache_valid=false
+
+    # Check if cache exists and is less than 5 minutes old
+    if [ -f "$cache_file" ] && [ -n "$current_commit" ]; then
+        # Portable file modification time detection
+        if command -v perl >/dev/null 2>&1; then
+            # Use perl for maximum portability
+            cache_mtime=$(perl -e 'print((stat($ARGV[0]))[9])' "$cache_file" 2>/dev/null || echo "0")
+        else
+            # Fallback to platform-specific stat commands
+            cache_mtime=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")
+        fi
+
+        cache_age=$(($(date +%s) - cache_mtime))
+        if [ "$cache_age" -lt 300 ]; then  # 300 seconds = 5 minutes
+            cache_valid=true
+            pr_text=$(cat "$cache_file" 2>/dev/null || echo "none")
+        fi
+    fi
+
+    # If no valid cache, perform network lookup with timeout
+    if [ "$cache_valid" = false ] && [ -n "$current_commit" ]; then
         pr_number=$(timeout 1 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
                    grep "$current_commit" | \
                    sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
@@ -95,7 +117,12 @@ else
             else
                 pr_text="#$pr_number"
             fi
+        else
+            pr_text="none"
         fi
+
+        # Cache the result
+        echo "$pr_text" > "$cache_file" 2>/dev/null
     fi
 fi
 
