@@ -552,7 +552,7 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-    local add_cmd=(claude mcp add --scope user "$name" "$NPX_PATH" "$package" "${cmd_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}")
+    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     add_output=$("${add_cmd[@]}" 2>&1)
     local add_exit_code=$?
 

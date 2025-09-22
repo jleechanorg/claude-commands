@@ -188,10 +188,14 @@ echo "🔍 BASIC QUALITY CHECK:"
 SUBSTANTIAL_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | length > 50)]')
 SUBSTANTIAL_COUNT=$(echo "$SUBSTANTIAL_RESPONSES" | jq length)
 echo "   Substantial AI responses (>50 chars): $SUBSTANTIAL_COUNT"
+
+# Calculate generic acknowledgments from AI responses
+GENERIC_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | length <= 50)]')
+GENERIC_COUNT=$(echo "$GENERIC_RESPONSES" | jq length)
 echo "   Generic acknowledgments: $GENERIC_COUNT"
 
-# Pattern 3: Bot-specific templating
-CODERABBIT_RESPONSES=$(echo "$HUMAN_RESPONSES" | jq '[.[] | select(.body | test("Thank you CodeRabbit"))]')
+# Pattern 3: Bot-specific templating - use AI_RESPONDER_RESPONSES instead of undefined HUMAN_RESPONSES
+CODERABBIT_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | test("Thank you CodeRabbit"))]')
 CODERABBIT_COUNT=$(echo "$CODERABBIT_RESPONSES" | jq length)
 echo "   CodeRabbit-specific templates: $CODERABBIT_COUNT"
 
