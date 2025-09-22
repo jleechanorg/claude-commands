@@ -303,7 +303,8 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
     responses = responses_data.get("responses", [])
     for response_item in responses:
         if str(response_item.get("comment_id")) == comment_id:
-            return response_item.get("response", "")
+            # Backward compatibility: support both 'reply_text' and legacy 'response' keys
+            return response_item.get("reply_text") or response_item.get("response", "")
 
     # CRITICAL FIX: Never post placeholder comments - return empty string to skip posting
     print(f"⚠️ SKIP: No Claude response found for comment #{comment_id} - will not post placeholder")
