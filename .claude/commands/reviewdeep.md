@@ -33,11 +33,12 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
                                   - Filter out enterprise paranoia (JSON schema validation for trusted APIs)
-   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis + gemini-consultant + codex-consultant
+   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis + gemini-consultant + grok-consultant + codex-consultant
                                   - System design and scalability analysis
                                   - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
                                   - Comprehensive multi-dimensional analysis (Gemini CLI consultation)
+                                  - Unconventional insights and contrarian analysis (Grok consultation)
                                   - Multi-stage deep code analysis (Codex CLI consultation)
    Track C (AI Research):         Perplexity MCP comprehensive review [target] (gpt-5 model)
                                   - OWASP security standards and latest vulnerability research
@@ -130,11 +131,12 @@ PARALLEL EXECUTION (Speed Optimized):
     │   ├─ Solo developer focus: Functional bugs, hangs, and real vulnerabilities only
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
-    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + codex-consultant
+    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + grok-consultant + codex-consultant
     │   ├─ System design and scalability assessment
     │   ├─ Integration patterns and dependencies
     │   ├─ Code quality and maintainability analysis
     │   ├─ Comprehensive multi-dimensional analysis (Gemini CLI consultation)
+    │   ├─ Unconventional insights and contrarian analysis (Grok consultation)
     │   └─ Multi-stage deep code analysis (Codex CLI consultation)
     └─ Track C (AI Research): Perplexity MCP review (gpt-5)
         ├─ OWASP security standards and vulnerability research
@@ -150,6 +152,7 @@ SYNTHESIS & GUIDELINES:
     ├─ Combines technical and strategic findings from all tracks
     ├─ **MANDATORY Agent Output Integration**:
     │   ├─ Gemini CLI Consultation Summary (correctness, architecture, security findings)
+    │   ├─ Grok Consultation Summary (unconventional insights, practical reality checks)
     │   ├─ Codex CLI Deep Analysis Summary (bugs, vulnerabilities, performance issues)
     │   └─ External AI Perspective Synthesis (alternative viewpoints and validation)
     ├─ Generates prioritized recommendations across all analysis dimensions
