@@ -77,7 +77,9 @@ Until: Success criteria fully met
 - All plans proceed autonomously - no human approval gates
 
 #### Step 5: Execution Phase
-**Command**: `/cerebras` to execute (or appropriate command based on goal type)
+**Command**: `/cerebras` - Fast high-quality code generation using direct Cerebras API script (NOT Gemini MCP)
+- **Script Location**: `cerebras/cerebras_direct.sh` (relative to cerebras.md location)
+- **Note**: Uses Cerebras API directly, not mcp__gemini-cli-mcp tools
 - Execute plan using optimal slash command selection
 - Monitor progress and adapt execution as needed
 - Handle errors and obstacles with intelligent retry
@@ -252,7 +254,7 @@ Result: Builds feature incrementally with validation at each step
 
 ### Universal Composition Execution
 **Command Selection Protocol**: Choose appropriate slash command for each task type:
-- **Code/Script Generation**: **Command**: `/cerebras` - Fast high-quality code generation
+- **Code/Script Generation**: **Command**: `/cerebras` - Fast high-quality code generation via direct Cerebras API script (`cerebras/cerebras_direct.sh` relative to cerebras.md) - NOT Gemini MCP
 - **PR Review Processing**: **Command**: `/copilot` - Complete PR comment processing
 - **Test Suite Management**: **Command**: `/test` - Run and fix failing tests
 - **Complex Multi-Step**: **Command**: `/orch` - Delegate to orchestration agents
@@ -348,7 +350,7 @@ Result: Builds feature incrementally with validation at each step
 
 ### Primary Command Arsenal
 - **`/execute`**: Planning, analysis, validation, and coordination
-- **`/cerebras`**: High-speed code/script/document generation
+- **`/cerebras`**: High-speed code/script/document generation via direct Cerebras API script (`cerebras/cerebras_direct.sh` relative to cerebras.md) - NOT Gemini MCP
 - **`/copilot`**: Complete PR review and comment processing
 - **`/test`**: Test execution and failure resolution
 - **`/orch`**: Complex multi-agent task orchestration
