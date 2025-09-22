@@ -48,8 +48,10 @@ fi
 
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Construct full message starting with directory/worktree info
-FULL_MESSAGE="[Local: $BRANCH | Remote: $REMOTE | PR: $PR_INFO]
+# Construct full message with simplified worktree:branch format
+# Truncate branch to first 8 characters for readability
+BRANCH_SHORT=$(echo "$BRANCH" | cut -c1-8)
+FULL_MESSAGE="[$REPO:$BRANCH_SHORT...]
 $MESSAGE
 ⏰ $TIMESTAMP"
 
