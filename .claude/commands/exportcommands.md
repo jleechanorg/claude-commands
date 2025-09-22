@@ -554,6 +554,79 @@ fi
 - **Executable Permissions**: Automatic permission setting for shell scripts
 - **Documentation**: Clear adaptation requirements and functionality descriptions
 
+**🚨 Agents Export** (`.claude/agents/` → `agents/`) - **SPECIALIZED AI AGENT CONFIGURATIONS**:
+```bash
+# Export Claude Code agent configurations with comprehensive filtering
+echo "🤖 Exporting Claude Code agent configurations..."
+
+# Create agents destination directory
+mkdir -p staging/agents
+
+# Check if source agents directory exists
+if [[ ! -d ".claude/agents" ]]; then
+    echo "⚠️  Warning: .claude/agents directory not found - skipping agents export"
+else
+    echo "📁 Found .claude/agents directory - proceeding with export"
+
+    # Enable nullglob to handle cases where no files match patterns
+    shopt -s nullglob
+
+    # Export agent configuration files with filtering
+    find .claude/agents -type f \( -name "*.md" -o -name "*.py" -o -name "*.json" \) -print0 | while IFS= read -r -d '' agent_file; do
+        agent_name=$(basename "$agent_file")
+        relative_path="${agent_file#.claude/agents/}"
+
+        # Skip test and example files
+        case "$agent_name" in
+            *test*|*example*|debug_agent.md)
+                echo "   ⏭ Skipping $agent_name (test/debug file)"
+                continue
+                ;;
+        esac
+
+        echo "   🤖 Copying: $relative_path"
+
+        # Create subdirectory structure if needed
+        agent_dir=$(dirname "staging/agents/$relative_path")
+        mkdir -p "$agent_dir"
+
+        # Copy and transform agent files
+        cp "$agent_file" "staging/agents/$relative_path"
+
+        # Apply comprehensive content transformations
+        sed -i 's|$PROJECT_ROOT/|$PROJECT_ROOT/|g' "staging/agents/$relative_path"
+        sed -i 's|worldarchitect\.ai|your-project.com|g' "staging/agents/$relative_path"
+        sed -i 's|$USER|${USER}|g' "staging/agents/$relative_path"
+        sed -i 's|TESTING=true python|TESTING=true python|g' "staging/agents/$relative_path"
+        sed -i 's|/home/${USER}/projects/worldarchitect\.ai/[^/]*||g' "staging/agents/$relative_path"
+
+        # Add agent configuration header for markdown files
+        case "$agent_name" in
+            *.md)
+                # Add adaptation header only if file doesn't start with existing header
+                if ! head -5 "staging/agents/$relative_path" | grep -q '🚨 CLAUDE CODE AGENT'; then
+                    sed -i '1i\# 🚨 CLAUDE CODE AGENT CONFIGURATION\n# ⚠️ REQUIRES PROJECT ADAPTATION - Contains project-specific configurations\n# This agent provides specialized AI capabilities for Claude Code workflows\n# Adapt project references and configurations for your environment\n' "staging/agents/$relative_path"
+                fi
+                ;;
+        esac
+    done
+
+    # Restore nullglob setting
+    shopt -u nullglob
+
+    echo "✅ Agents export completed successfully"
+fi
+```
+- **🤖 Specialized AI Agent System**: Agent configurations for different AI models and tasks
+- **Code Review Agents**: Automated code analysis and quality assessment (code-review.md)
+- **Consultant Agents**: Integration with various AI models (cerebras-consultant.md, gemini-consultant.md, grok-consultant.md, codex-consultant.md)
+- **Testing Agents**: Test execution and validation (testexecutor.md, testvalidator.md)
+- **Long-Running Task Agents**: Complex multi-step task execution (long-runner.md)
+- **PR Fix Agents**: Automated pull request issue resolution (copilot-fixpr.md)
+- **Project Adaptation**: Comprehensive filtering of project-specific paths and references
+- **Configuration Templates**: Ready-to-use agent configurations for different workflow needs
+- **Documentation**: Clear adaptation requirements and agent capability descriptions
+
 **🚨 Root-Level Infrastructure Scripts Export** (Root → `infrastructure-scripts/`):
 ```bash
 # Export development environment infrastructure scripts

@@ -122,6 +122,10 @@ else
     fi
 fi
 
+# Initialize variables for cleanup
+AUTO_CONTEXT_FILE=""
+DEBUG_FILE=""
+
 # Guaranteed cleanup for auto-extracted context and debug files (handles errors/interrupts)
 cleanup() {
   if [ -n "$AUTO_CONTEXT_FILE" ] && [ -f "$AUTO_CONTEXT_FILE" ]; then
@@ -158,14 +162,14 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CO
             if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
                 # Capture extractor exit code and emit minimal diagnostics when debug is on
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
                 if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
                     echo "DEBUG: Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
                 fi
             else
                 # Mirror debug error handling to maintain invisible operation
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
                 # Continue silently regardless of extraction success - invisible operation maintained
             fi
 
@@ -350,34 +354,94 @@ START_TIME=$(date +%s%N)
 CURL_EXIT=0
 
 # Prepare messages array - include system prompt only if it's not empty
-if [ -n "$SYSTEM_PROMPT" ]; then
-    MESSAGES="[
-      {\"role\": \"system\", \"content\": $(echo "$SYSTEM_PROMPT" | jq -Rs .)},
-      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-    ]"
-else
-    MESSAGES="[
-      {\"role\": \"user\", \"content\": $(echo "$USER_PROMPT" | jq -Rs .)}
-    ]"
+# Add debug output for complex prompts
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: Preparing messages array..." >&2
+    echo "DEBUG: User prompt length: ${#USER_PROMPT}" >&2
 fi
 
-# Build request body with jq -n for safer JSON construction
-MAX_TOKENS=${CEREBRAS_MAX_TOKENS:-1000000}
-MODEL="${CEREBRAS_MODEL:-qwen-3-coder-480b}"
-TEMPERATURE="${CEREBRAS_TEMPERATURE:-0.1}"
+# Create temporary file for large JSON to avoid bash variable size limits
+CURRENT_BRANCH_FOR_TEMP="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
+[ -z "$CURRENT_BRANCH_FOR_TEMP" ] && CURRENT_BRANCH_FOR_TEMP="main"
+JSON_TEMP_FILE="$(mktemp "/tmp/cerebras_request_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.json" 2>/dev/null)"
+if [ -z "$JSON_TEMP_FILE" ]; then
+    echo "Error: Could not create temporary file for request" >&2
+    exit 4
+fi
 
-REQUEST_BODY="$(jq -n \
-  --arg model "$MODEL" \
-  --argjson messages "$MESSAGES" \
-  --argjson max_tokens "$MAX_TOKENS" \
-  --argjson temperature "$TEMPERATURE" \
-  '{model:$model, messages:$messages, max_tokens:$max_tokens, temperature:$temperature, stream:false}')"
+# Build request body using temporary files to handle large prompts and system prompts
+if [ -n "$SYSTEM_PROMPT" ]; then
+    # For large system prompts, use separate temp files to avoid bash variable size limits
+    SYSTEM_TEMP_FILE="$(mktemp "/tmp/cerebras_system_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.txt")"
+    USER_TEMP_FILE="$(mktemp "/tmp/cerebras_user_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.txt")"
 
-HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 10 --max-time 60 \
+    echo "$SYSTEM_PROMPT" > "$SYSTEM_TEMP_FILE"
+    echo "$USER_PROMPT" > "$USER_TEMP_FILE"
+
+    # Build JSON using file inputs to avoid command line length limits
+    jq -n \
+        --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
+        --rawfile system_content "$SYSTEM_TEMP_FILE" \
+        --rawfile user_content "$USER_TEMP_FILE" \
+        --argjson max_tokens "${CEREBRAS_MAX_TOKENS:-1000000}" \
+        --argjson temperature "${CEREBRAS_TEMPERATURE:-0.1}" \
+        '{
+            model: $model,
+            messages: [
+                {role: "system", content: $system_content},
+                {role: "user", content: $user_content}
+            ],
+            max_tokens: $max_tokens,
+            temperature: $temperature,
+            stream: false
+        }' > "$JSON_TEMP_FILE"
+
+    # Clean up temp files immediately
+    rm -f "$SYSTEM_TEMP_FILE" "$USER_TEMP_FILE"
+else
+    jq -n \
+        --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
+        --arg user_content "$USER_PROMPT" \
+        --argjson max_tokens "${CEREBRAS_MAX_TOKENS:-1000000}" \
+        --argjson temperature "${CEREBRAS_TEMPERATURE:-0.1}" \
+        '{
+            model: $model,
+            messages: [
+                {role: "user", content: $user_content}
+            ],
+            max_tokens: $max_tokens,
+            temperature: $temperature,
+            stream: false
+        }' > "$JSON_TEMP_FILE"
+fi
+
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: Messages array prepared successfully" >&2
+    echo "DEBUG: Making API call to Cerebras..." >&2
+    echo "DEBUG: Request body size: $(wc -c < "$JSON_TEMP_FILE")" >&2
+    echo "DEBUG: Using timeout of 600 seconds" >&2
+fi
+
+# Cleanup function for temporary request file
+cleanup_request() {
+    if [ -n "$JSON_TEMP_FILE" ] && [ -f "$JSON_TEMP_FILE" ]; then
+        rm -f "$JSON_TEMP_FILE" 2>/dev/null
+    fi
+}
+trap cleanup_request EXIT INT TERM
+
+HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 30 --max-time 600 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
-  -d "$REQUEST_BODY") || CURL_EXIT=$?
+  -d "@$JSON_TEMP_FILE") || CURL_EXIT=$?
+
+# Clean up request file immediately after use
+cleanup_request
+
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: API call completed with exit code: $CURL_EXIT" >&2
+fi
 
 # On transport or HTTP-level failures, emit the raw body (if any) and standardize exit code
 if [ "$CURL_EXIT" -ne 0 ]; then
@@ -393,7 +457,13 @@ HTTP_BODY="${HTTP_RESPONSE%HTTPSTATUS:*}"
 # Check for API errors
 if [ "$HTTP_STATUS" -ne 200 ]; then
     ERROR_MSG=$(echo "$HTTP_BODY" | jq -r '.error.message // .message // "Unknown error"')
-    echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
+    if [ "$HTTP_STATUS" -eq 503 ]; then
+        echo "Cerebras API Overloaded (503): $ERROR_MSG" >&2
+        echo "The script is working correctly - this is a temporary API capacity issue." >&2
+        echo "Please try again in a few minutes." >&2
+    else
+        echo "API Error ($HTTP_STATUS): $ERROR_MSG" >&2
+    fi
     exit 3
 fi
 
@@ -403,16 +473,20 @@ RESPONSE="$HTTP_BODY"
 END_TIME=$(date +%s%N)
 ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
 
-# Debug: Save raw response for analysis (branch-safe)
-BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
-[ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
-DEBUG_FILE="$(mktemp "/tmp/cerebras_debug_response_${BRANCH_NAME}_XXXXXX.json" 2>/dev/null)"
-if [ -n "$DEBUG_FILE" ]; then
-    echo "$RESPONSE" > "$DEBUG_FILE"
+# Debug: Save raw response for analysis (branch-safe) - skip for now to avoid hanging
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: Response received successfully (length: ${#RESPONSE})" >&2
 fi
+DEBUG_FILE=""  # Skip debug file creation to avoid hanging issue
 
 # Extract and display the response (OpenAI format)
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: Extracting content from response..." >&2
+fi
 CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].message.content // empty')
+if [ -n "${CEREBRAS_DEBUG:-}" ]; then
+    echo "DEBUG: Content extraction completed. Length: ${#CONTENT}" >&2
+fi
 
 # Debug: If content extraction fails, try alternative parsing
 if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then

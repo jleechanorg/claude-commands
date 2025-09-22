@@ -1,3 +1,7 @@
+---
+name: "Claude Code Agent System Documentation"
+---
+
 # Claude Code Agent System Documentation
 
 **Purpose**: Reference documentation for understanding and using the custom agent system implemented in this project's `.claude/agents/` directory.
