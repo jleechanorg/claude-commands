@@ -24,19 +24,35 @@ fi
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     BRANCH=$(git branch --show-current 2>/dev/null || echo "detached")
     REPO=$(basename "$(git rev-parse --show-toplevel)")
+
+    # Get remote info
+    REMOTE=$(git remote get-url origin 2>/dev/null | sed 's/.*github.com[:/]//' | sed 's/\.git$//' || echo "N/A")
+
+    # Get PR info if available
+    PR_INFO="N/A"
+    if command -v gh >/dev/null 2>&1; then
+        PR_NUMBER=$(gh pr view --json number --jq '.number' 2>/dev/null || echo "")
+        if [ -n "$PR_NUMBER" ]; then
+            PR_URL=$(gh pr view --json url --jq '.url' 2>/dev/null || echo "")
+            if [ -n "$PR_URL" ]; then
+                PR_INFO="$PR_NUMBER $PR_URL"
+            fi
+        fi
+    fi
 else
     BRANCH="N/A"
     REPO=$(basename "$(pwd)")
+    REMOTE="N/A"
+    PR_INFO="N/A"
 fi
 
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Construct full message with context
+# Construct full message with statusline-style context
 FULL_MESSAGE="$MESSAGE
 
-📁 Repository: $REPO
-🌿 Branch: $BRANCH
-⏰ Time: $TIMESTAMP"
+[Local: $BRANCH | Remote: $REMOTE | PR: $PR_INFO]
+⏰ $TIMESTAMP"
 
 # Send notification to Slack
 echo "📤 Sending Slack notification..."
