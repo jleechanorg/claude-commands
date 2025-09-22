@@ -1,7 +1,7 @@
 #!/bin/bash
 
-# Claude Directory Backup Script
-# Backs up ~/.claude to Dropbox folder with device-specific naming
+# Claude Projects Backup Script
+# Backs up ~/.claude/projects to Dropbox folder with consistent naming
 # Runs hourly via cron and sends email alerts on failure
 #
 # USAGE:
@@ -24,24 +24,25 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Security: Create secure temp directory with proper permissions (700)
 SECURE_TEMP=$(mktemp -d)
 chmod 700 "$SECURE_TEMP"
-LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).log"
+LOG_FILE="$SECURE_TEMP/claude_backup_$(date +%Y%m%d).backup_log"
 
-# Source directory
-SOURCE_DIR="$HOME/.claude"
+# Logging function (defined early to avoid ordering issues)
+backup_log() {
+    local message="$1"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] $message" | tee -a "$LOG_FILE"
+}
 
-# Exit codes
-SUCCESS=0
-ERROR=1
-PARTIAL_SUCCESS=23
+# Source directory - only backup conversation projects
+SOURCE_DIR="$HOME/.claude/projects"
 
 # Security: Hostname validation function
 validate_hostname() {
     local host="$1"
     if [[ ! "$host" =~ ^[a-zA-Z0-9.-]+$ ]]; then
-        echo "ERROR: Invalid hostname detected: $host" >&2
-        return 1
+        backup_log "ERROR: Invalid hostname detected: $host"
+        exit 1
     fi
-    return 0
 }
 
 # Security: Path validation function to prevent path traversal attacks
@@ -49,19 +50,16 @@ validate_path() {
     local path="$1"
     local context="$2"
 
-    # Check for path traversal patterns
-    if [[ "$path" =~ \.\./|/\.\. ]]; then
-        echo "ERROR: Path traversal attempt detected in $context: $path" >&2
-        return 1
+    # Check for path traversal patterns (fixed regex)
+    if [[ "$path" =~ \.\./ ]] || [[ "$path" =~ /\.\. ]]; then
+        backup_log "ERROR: Path traversal attempt detected in $context: $path"
+        exit 1
     fi
 
-    # Check for null bytes.
-    # Previous approach used a regex to detect null bytes, but this could
-    # incorrectly flag valid paths containing certain escape sequences or binary data,
-    # resulting in false positives. This approach uses byte length comparison for reliability.
-    if [ "${#path}" -ne "$(printf '%s' "$path" | wc -c)" ]; then
-        echo "ERROR: Null byte detected in $context: $path" >&2
-        return 1
+    # Check for null bytes (fixed detection method)
+    if [[ -n "$path" && ${#path} -ne $(printf '%s' "$path" | wc -c) ]]; then
+        backup_log "ERROR: Null byte detected in $context: $path"
+        exit 1
     fi
 
     # Canonicalize path if it exists, otherwise validate parent
@@ -69,8 +67,8 @@ validate_path() {
     if [[ -e "$path" ]]; then
         canonical_path=$(realpath "$path" 2>/dev/null)
         if [[ $? -ne 0 ]]; then
-            echo "ERROR: Failed to canonicalize existing path in $context: $path" >&2
-            return 1
+            backup_log "ERROR: Failed to canonicalize existing path in $context: $path"
+            exit 1
         fi
     else
         # For non-existing paths, validate the parent directory structure
@@ -78,14 +76,13 @@ validate_path() {
         if [[ -e "$parent_dir" ]]; then
             canonical_path=$(realpath "$parent_dir" 2>/dev/null)
             if [[ $? -ne 0 ]]; then
-                echo "ERROR: Failed to canonicalize parent directory in $context: $parent_dir" >&2
-                return 1
+                backup_log "ERROR: Failed to canonicalize parent directory in $context: $parent_dir"
+                exit 1
             fi
         fi
     fi
 
-    # Path validation completed successfully
-    return 0
+    # Path validation successful (removed backup_log call to fix ordering issue)
 }
 
 # Portable function to get cleaned hostname (Mac and PC compatible)
@@ -111,47 +108,30 @@ get_clean_hostname() {
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
 
-# Initialize backup destination - called lazily to prevent sourcing issues
-init_destination() {
-    DEVICE_NAME="$(get_clean_hostname)" || return 1
+# Use hardcoded folder name for consistency across all devices
+BACKUP_FOLDER_NAME="claude_conversations"
 
-    # Platform-specific default backup directories
-    if [[ "$OSTYPE" == "darwin"* ]]; then
-        # macOS: Use CloudStorage Dropbox path
-        DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
-    elif [[ "$OSTYPE" == "linux"* ]]; then
-        # Linux/Ubuntu: Try common Dropbox locations, fallback to Documents
-        if [ -d "$HOME/Dropbox" ]; then
-            DEFAULT_BACKUP_DIR="$HOME/Dropbox/claude_backup_$DEVICE_NAME"
-        elif [ -d "$HOME/Documents" ]; then
-            DEFAULT_BACKUP_DIR="$HOME/Documents/claude_backup_$DEVICE_NAME"
-        else
-            DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
-        fi
+# Destination directory - now supports parameter override with consistent folder name
+# If parameter provided, append folder name to it, otherwise use default
+DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/$BACKUP_FOLDER_NAME"
+if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
+    # Parameter provided and it's not a flag - append device suffix
+    # Security: Validate input parameter to prevent path traversal
+    validate_path "${1}" "command line destination parameter"
+    BACKUP_DESTINATION="${1%/}/$BACKUP_FOLDER_NAME"
+else
+    # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
+    if [ -n "${DROPBOX_DIR:-}" ]; then
+        # Security: Validate environment variable path
+        validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
+        BACKUP_DESTINATION="${DROPBOX_DIR%/}/$BACKUP_FOLDER_NAME"
     else
-        # Other systems: fallback to home directory
-        DEFAULT_BACKUP_DIR="$HOME/claude_backup_$DEVICE_NAME"
+        BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
     fi
+fi
 
-    if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
-        # Parameter provided and it's not a flag - append device suffix
-        # Security: Validate input parameter to prevent path traversal
-        validate_path "${1}" "command line destination parameter" || return 2
-        BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
-    else
-        # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
-        if [ -n "${DROPBOX_DIR:-}" ]; then
-            # Security: Validate environment variable path
-            validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable" || return 2
-            BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
-        else
-            BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
-        fi
-    fi
-
-    # Security: Validate final destination path
-    validate_path "$BACKUP_DESTINATION" "final backup destination" || return 2
-}
+# Security: Validate final destination path
+validate_path "$BACKUP_DESTINATION" "final backup destination"
 
 # Email configuration
 SMTP_SERVER="smtp.gmail.com"
@@ -166,12 +146,7 @@ EMAIL_FROM="claude-backup@worldarchitect.ai"
 BACKUP_STATUS="SUCCESS"
 declare -a BACKUP_RESULTS=()
 
-# Logging function (renamed to avoid conflict with system log command)
-backup_log() {
-    local message="$1"
-    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] $message" | tee -a "$LOG_FILE"
-}
+# (backup_log function moved to top of script)
 
 # Add backup result
 add_result() {
@@ -194,11 +169,11 @@ check_prerequisites() {
 
     # Check if source directory exists
     if [ ! -d "$SOURCE_DIR" ]; then
-        add_result "ERROR" "Source Check" "Claude directory $SOURCE_DIR does not exist"
+        add_result "ERROR" "Source Check" "Claude projects directory $SOURCE_DIR does not exist"
         return 1
     fi
 
-    add_result "SUCCESS" "Source Check" "Claude directory found at $SOURCE_DIR"
+    add_result "SUCCESS" "Source Check" "Claude projects directory found at $SOURCE_DIR"
 
     # Check if rsync is available
     if ! command -v rsync >/dev/null 2>&1; then
@@ -221,12 +196,12 @@ check_prerequisites() {
     fi
 }
 
-# Perform atomic rsync backup with proper error handling
+# Perform rsync backup
 backup_to_destination() {
     local dest_dir="$1"
     local dest_name="$2"
 
-    backup_log "=== Starting atomic backup to $dest_name ==="
+    backup_log "=== Backing up to $dest_name ==="
 
     # Create destination directory if it doesn't exist
     if ! mkdir -p "$dest_dir" 2>/dev/null; then
@@ -234,132 +209,13 @@ backup_to_destination() {
         return 1
     fi
 
-    # Create atomic backup directory (temp location)
-    local temp_backup_dir="${dest_dir}/.claude_backup_tmp_$$"
-    local final_backup_dir="${dest_dir}/.claude"
+    # Perform simple rsync backup of projects directory only
+    if rsync -av \
+        "$SOURCE_DIR/" "$dest_dir/" >/dev/null 2>&1; then
 
-    # Setup cleanup trap for temporary directory
-    cleanup_temp_backup() {
-        rm -rf "$temp_backup_dir"
-    }
-    trap cleanup_temp_backup EXIT
-
-    # Create temporary backup directory
-    if ! mkdir -p "$temp_backup_dir"; then
-        add_result "ERROR" "$dest_name Setup" "Cannot create temporary backup directory"
-        return 1
-    fi
-
-    # First, backup ~/.claude directory with selective rsync to temp location
-    local rsync_log="$SECURE_TEMP/rsync_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
-    local rsync_errors="$SECURE_TEMP/rsync_errors_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
-
-    # Run rsync with atomic temp-dir and proper error logging
-    # Note: macOS rsync doesn't support --log-file, so we capture verbose output instead
-    rsync -av \
-        --xattrs \
-        --temp-dir="$SECURE_TEMP" \
-        --include='settings.json' \
-        --include='settings.json.backup*' \
-        --include='settings.local.json' \
-        --include='projects' \
-        --include='projects/**' \
-        --include='local' \
-        --include='local/**' \
-        --include='hooks' \
-        --include='hooks/**' \
-        --exclude='*' \
-        "$SOURCE_DIR/" "$temp_backup_dir/" > "$rsync_log" 2>"$rsync_errors"
-
-    local rsync_exit=$?
-
-    if [ $rsync_exit -eq 0 ]; then
-        # Complete success - perform atomic move
-        backup_log "rsync completed successfully for .claude directory to temp location"
-
-        # Atomic move: rename temp to final location
-        if [ -d "$final_backup_dir" ]; then
-            # Backup existing directory before replacement
-            local backup_old_dir="${final_backup_dir}.old.$$"
-            if ! mv "$final_backup_dir" "$backup_old_dir"; then
-                add_result "ERROR" "$dest_name Atomic Move" "Failed to backup existing directory"
-                return 1
-            fi
-
-            # Move temp to final location
-            if mv "$temp_backup_dir" "$final_backup_dir"; then
-                backup_log "Atomic move completed successfully"
-                rm -rf "$backup_old_dir"  # Remove old backup
-            else
-                add_result "ERROR" "$dest_name Atomic Move" "Failed to move temp backup to final location"
-                mv "$backup_old_dir" "$final_backup_dir"  # Restore old backup
-                return 1
-            fi
-        else
-            # Simple move if no existing directory
-            if mv "$temp_backup_dir" "$final_backup_dir"; then
-                backup_log "Atomic move completed successfully (new backup location)"
-            else
-                add_result "ERROR" "$dest_name Atomic Move" "Failed to move temp backup to final location"
-                return 1
-            fi
-        fi
-    elif [ $rsync_exit -eq 23 ]; then
-        # Partial transfer due to errors - log specific failures
-        local failed_count=$(grep -c "failed:" "$rsync_errors" 2>/dev/null || echo "0")
-        backup_log "rsync partial transfer: $failed_count files failed"
-        backup_log "Failed files details:"
-        cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
-        add_result "WARNING" "$dest_name Rsync" "Partial transfer: $failed_count files failed (see log for details)"
-    elif [ $rsync_exit -ne 0 ]; then
-        # Complete failure
-        backup_log "rsync failed with exit code $rsync_exit"
-        backup_log "Error details:"
-        cat "$rsync_errors" >> "$LOG_FILE" 2>/dev/null
-        add_result "ERROR" "$dest_name Backup" "rsync failed with exit code $rsync_exit (see log for details)"
-        return 1
-    fi
-
-    # Continue with second rsync for .claude.json files if first was successful or partial
-    if [ $rsync_exit -eq 0 ] || [ $rsync_exit -eq 23 ]; then
-
-        # Second, backup ~/.claude.json files from home directory
-        local rsync_log2="$SECURE_TEMP/rsync_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
-        local rsync_errors2="$SECURE_TEMP/rsync_errors_claude_json_${dest_name}_$(date +%Y%m%d_%H%M%S).log"
-
-        rsync -av \
-            --xattrs \
-            --include='.claude.json' \
-            --include='.claude.json.backup*' \
-            --exclude='*' \
-            "$HOME/" "$dest_dir/" > "$rsync_log2" 2>"$rsync_errors2"
-
-        local rsync_exit2=$?
         local file_count=$(find "$dest_dir" -type f | wc -l)
-
-        if [ $rsync_exit2 -eq 0 ]; then
-            backup_log "rsync completed successfully for .claude.json files"
-            if [ $rsync_exit -eq 0 ]; then
-                add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
-                return $SUCCESS
-            else
-                add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files, some .claude directory files failed)"
-                return $PARTIAL_SUCCESS
-            fi
-        elif [ $rsync_exit2 -eq 23 ]; then
-            local failed_count2=$(grep -c "failed:" "$rsync_errors2" 2>/dev/null || echo "0")
-            backup_log "rsync partial transfer for .claude.json: $failed_count2 files failed"
-            cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "WARNING" "$dest_name .claude.json Backup" "Partial transfer: $failed_count2 .claude.json files failed"
-            add_result "PARTIAL" "$dest_name Backup" "Partial sync to $dest_dir ($file_count files)"
-            return $PARTIAL_SUCCESS
-        else
-            backup_log "rsync failed for .claude.json files with exit code $rsync_exit2"
-            cat "$rsync_errors2" >> "$LOG_FILE" 2>/dev/null
-            add_result "ERROR" "$dest_name .claude.json Backup" "Complete failure of .claude.json backup (exit code $rsync_exit2)"
-            add_result "PARTIAL" "$dest_name Backup" "Main .claude directory synced, but .claude.json files completely failed"
-            return $ERROR
-        fi
+        add_result "SUCCESS" "$dest_name Backup" "Synced to $dest_dir ($file_count files)"
+        return 0
     else
         add_result "ERROR" "$dest_name Backup" "rsync failed to $dest_dir"
         return 1
@@ -402,11 +258,10 @@ Log File: $LOG_FILE
 
 TROUBLESHOOTING:
 ===============
-- Verify backup path (macOS): ls -la "$HOME/Library/CloudStorage/Dropbox"
-- Verify backup path (Linux): ls -la "$HOME/Dropbox" or "$HOME/Documents"
+- Verify macOS CloudStorage path: ls -la "$HOME/Library/CloudStorage/Dropbox"
 - Verify rsync installation: which rsync
 - Check source directory: ls -la $SOURCE_DIR
-- Review full log: cat $LOG_FILE
+- Review full backup_log: cat $LOG_FILE
 
 ========================================
 Generated by Claude Backup System
@@ -454,16 +309,6 @@ send_failure_email() {
 run_backup() {
     backup_log "Starting Claude backup at $(date)"
 
-    # Initialize backup destination
-    if ! init_destination "$@"; then
-        backup_log "Destination initialization failed"
-        BACKUP_STATUS="FAILURE"
-        local report_file
-        report_file="$(generate_failure_email)"
-        send_failure_email "$report_file"
-        return 1
-    fi
-
     # Check prerequisites
     if ! check_prerequisites; then
         backup_log "Prerequisites check failed, aborting backup"
@@ -495,7 +340,7 @@ show_help() {
 Claude Directory Backup Script (runs every 4 hours by default)
 
 USAGE:
-    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME)
+    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_conversations)
     $0 --setup-cron [destination] # Setup cron job with destination
     $0 --remove-cron             # Remove cron job
     $0 --help                    # Show this help
@@ -508,30 +353,23 @@ EMAIL SETUP (for failure alerts):
     For Gmail App Password: https://myaccount.google.com/apppasswords
 
 BACKUP TARGETS:
-    Source: ~/.claude/ + ~/.claude.json* (dual selective sync)
-    Default (macOS): ~/Library/CloudStorage/Dropbox/claude_backup_HOSTNAME
-    Default (Linux): ~/Dropbox/claude_backup_HOSTNAME or ~/Documents/claude_backup_HOSTNAME
+    Source: ~/.claude (selective sync)
+    Default: ~/Library/CloudStorage/Dropbox/claude_conversations
     Custom: Specify any destination as first parameter
 
-SELECTIVE SYNC INCLUDES:
-    ✅ ~/.claude.json (Claude Code configuration file - 1.7MB)
-    ✅ ~/.claude.json.backup* (configuration backups)
-    ✅ ~/.claude/settings.json (Claude Code configuration)
-    ✅ ~/.claude/projects/ (all project sessions - 2.4GB)
-    ✅ ~/.claude/local/ (Claude installations and packages - 179MB)
-    ✅ ~/.claude/hooks/ (custom hooks)
-    ❌ Excludes: shell-snapshots, todos, conversations, cache files
+BACKUP CONTENT:
+    📁 ~/.claude/projects directory only (all conversation history)
 
 FEATURES:
     ✅ Automated backups via cron every hour (0 * * * *)
-    ✅ rsync selective sync (no --delete for safety)
+    ✅ rsync sync (no --delete for safety)
     ✅ Email alerts on backup failures only
-    ✅ Selective sync of essential data only
-    ✅ Comprehensive logging
+    ✅ Projects-only backup (conversation history)
+    ✅ Comprehensive backup_logging
 
 LOGS:
-    Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.log (secure)
-    Cron:   $PROJECT_ROOT/tmp/claude_backup_cron.log (secure)
+    Backup: $SECURE_TEMP/claude_backup_YYYYMMDD.backup_log (secure)
+    Cron: $SECURE_TEMP/claude_backup_cron.backup_log (secure)
     Alerts: ./tmp/backup_alerts/ (when email fails)
 
 From: claude-backup@worldarchitect.ai
@@ -565,11 +403,11 @@ extract_base_directory() {
 
 # Setup cron job
 setup_cron() {
-    local cron_destination="$2"
+    local cron_destination="${2:-}"
 
     # If no destination provided, extract base directory to avoid double suffix bug
     # The main script always appends the device suffix, so we must pass the parent directory
-    # Example problem: DEFAULT_BACKUP_DIR="/path/claude_backup_device" + main script suffix = "/path/claude_backup_device/claude_backup_device"
+    # Example problem: DEFAULT_BACKUP_DIR="/path/claude_conversations" + main script suffix = "/path/claude_conversations/claude_conversations"
     if [[ -z "$cron_destination" ]]; then
         cron_destination="$(extract_base_directory "$BACKUP_DESTINATION")"
         if [[ $? -ne 0 ]] || [[ -z "$cron_destination" ]]; then
@@ -578,7 +416,7 @@ setup_cron() {
         fi
     fi
 
-    echo "Setting up 4-hour Claude backup cron job with device-specific naming..."
+    echo "Setting up hourly Claude backup cron job with consistent folder naming..."
 
     # Create wrapper script for cron environment
     local wrapper_script="$SCRIPT_DIR/claude_backup_cron.sh"
@@ -623,9 +461,9 @@ EOF
         (crontab -l | grep -v "claude_backup") | crontab - 2>/dev/null || true
     fi
 
-    # Add new cron job for hourly backup (handle empty crontab gracefully)
-    # Security: Use deterministic secure log path accessible from cron
-    local cron_entry="0 * * * * $wrapper_script 2>&1"
+    # Add new cron job for every 4 hours (handle empty crontab gracefully)
+    # Security: Use secure temp directory for backup_logs
+    local cron_entry="0 * * * * $wrapper_script > \$SECURE_TEMP/claude_backup_cron.backup_log 2>&1"
     {
         crontab -l 2>/dev/null || true
         echo "$cron_entry"
@@ -635,8 +473,8 @@ EOF
     echo "   Schedule: Every hour (0 * * * *)"
     echo "   Script: $wrapper_script"
     echo "   Destination: $cron_destination"
-    echo "   Device suffix: $DEVICE_NAME"
-    echo "   Log: Handled by cron wrapper script (secure location)"
+    echo "   Backup folder: $BACKUP_FOLDER_NAME"
+    echo "   Log: \$SECURE_TEMP/claude_backup_cron.backup_log (secure location)"
     echo ""
     echo "To configure failure email alerts:"
     echo "   export EMAIL_USER=\"your-email@gmail.com\""
@@ -658,29 +496,6 @@ remove_cron() {
 
 # Only run CLI when script is executed directly (not when sourced)
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-    # Auto-report on unexpected errors during CLI execution
-    on_error() {
-        local exit_code=$?
-        local line_number=$1
-
-        # Create error report file for email notification
-        local error_report="$SECURE_TEMP/error_report_$(date +%s).txt"
-        {
-            echo "UNEXPECTED SCRIPT FAILURE"
-            echo "========================"
-            echo "Script: $(basename "${BASH_SOURCE[0]}")"
-            echo "Line: $line_number"
-            echo "Exit Code: $exit_code"
-            echo "Time: $(date)"
-            echo "Command: ${BASH_COMMAND:-unknown}"
-        } > "$error_report"
-
-        add_result "ERROR" "Unexpected Failure" "Script failed at line $line_number with exit code $exit_code"
-        send_failure_email "$error_report" 2>/dev/null || true  # Use correct function name with parameter
-        exit $exit_code
-    }
-    trap 'on_error $LINENO' ERR
-
     # Parse command line arguments
     case "${1:-}" in
         --setup-cron)
@@ -703,7 +518,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
             ;;
         *)
             # Run backup (default or with destination parameter)
-            run_backup "$@"
+            run_backup
             ;;
     esac
 fi
