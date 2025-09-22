@@ -263,6 +263,22 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 - ✅ ALWAYS use `shell=False, timeout=30` for security
 - ❌ NEVER use shell=True with user input - shell injection risk
 
+## 🚨 CRITICAL: DANGEROUS COMMAND SAFETY PROTOCOL
+**❌ NEVER suggest these system-destroying commands:**
+```bash
+# Real incident: This command broke entire system
+sudo chown -R $USER:$(id -gn) $(npm -g config get prefix)  # Can expand to: sudo chown -R jeff:jeff /usr
+sudo chown -R user:group /usr /bin /sbin /lib /etc        # Makes sudo/su unusable
+sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destruction
+```
+
+**✅ Safe npm fix:** `mkdir ~/.npm-global && npm config set prefix ~/.npm-global`
+**✅ Safe file ownership:** Check first with `ls -la`, then target specific files only
+**🚨 AI Safety Rules:**
+- ❌ NEVER suggest recursive chown/chmod on system directories
+- ✅ ALWAYS verify what variables expand to before suggesting commands
+- ✅ ALWAYS provide safe alternatives first
+
 🚨 **IMPORT STANDARDS:** ⚠️ MANDATORY - ZERO TOLERANCE IMPORT POLICY
 - ❌ **ABSOLUTELY FORBIDDEN**: try/except around imports (ANY context, ANY reason)
 - ❌ **ABSOLUTELY FORBIDDEN**: inline imports inside functions
