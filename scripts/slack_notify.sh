@@ -49,9 +49,7 @@ fi
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
 # Construct full message with simplified worktree:branch format
-# Truncate branch to first 8 characters for readability
-BRANCH_SHORT=$(echo "$BRANCH" | cut -c1-8)
-FULL_MESSAGE="[$REPO:$BRANCH_SHORT...]
+FULL_MESSAGE="[$REPO:$BRANCH]
 $MESSAGE
 ⏰ $TIMESTAMP"
 
