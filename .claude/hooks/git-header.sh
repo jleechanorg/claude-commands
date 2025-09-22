@@ -86,7 +86,16 @@ else
 
     # Check if cache exists and is less than 5 minutes old
     if [ -f "$cache_file" ] && [ -n "$current_commit" ]; then
-        cache_age=$(($(date +%s) - $(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")))
+        # Portable file modification time detection
+        if command -v perl >/dev/null 2>&1; then
+            # Use perl for maximum portability
+            cache_mtime=$(perl -e 'print((stat($ARGV[0]))[9])' "$cache_file" 2>/dev/null || echo "0")
+        else
+            # Fallback to platform-specific stat commands
+            cache_mtime=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")
+        fi
+
+        cache_age=$(($(date +%s) - cache_mtime))
         if [ "$cache_age" -lt 300 ]; then  # 300 seconds = 5 minutes
             cache_valid=true
             pr_text=$(cat "$cache_file" 2>/dev/null || echo "none")
