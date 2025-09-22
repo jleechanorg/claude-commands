@@ -1,12 +1,14 @@
 {
-  "pr_number": 1658,
+  "pr_number": 1708,
   "repository": "worldarchitect.ai",
   "repository_full_name": "jleechanorg/worldarchitect.ai",
-  "branch_name": "codex/update-existing-consensus.md-file",
+  "branch_name": "codex/update-gemini-consultant-to-use-flash-for-pro-quota",
+  "target_branch": "codex/update-gemini-consultant-to-use-flash-for-pro-quota",
+  "worktree_branch": "codex/update-gemini-consultant-to-use-flash-for-pro-quota",
   "base_branch": "main",
-  "pr_url": "https://github.com/jleechanorg/worldarchitect.ai/pull/1658",
+  "pr_url": "https://github.com/jleechanorg/worldarchitect.ai/pull/1708",
   "author": "jleechan2015",
-  "title": "Add Cerebras consultant agent and document consensus supermajority",
-  "created_at": "2025-09-21T14:14:07.479887",
+  "title": "Gemini Consultant: add Flash fallback for pro quota",
+  "created_at": "2025-09-22T03:04:37.326891",
   "local_repo_path": "/Users/jleechan/projects/worldarchitect.ai"
 }
