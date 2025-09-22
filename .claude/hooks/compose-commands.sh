@@ -4,7 +4,17 @@
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
 # Read input from stdin (can be JSON or plain text)
-raw_input=$(cat)
+# Handle both interactive and non-interactive modes without hanging
+# CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
+# but the parent process context is different
+if [ -t 0 ]; then
+    # stdin is a terminal (true interactive mode), no input expected
+    raw_input=""
+else
+    # stdin has data, read it all with timeout to prevent hanging
+    # Use cat with timeout to preserve full input without truncation
+    raw_input=$(timeout 5s cat 2>/dev/null || echo "")
+fi
 
 # CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
 # Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
