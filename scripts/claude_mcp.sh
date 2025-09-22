@@ -157,6 +157,26 @@ log_error_details() {
 NODE_PATH=$(which node 2>/dev/null)
 NPX_PATH=$(which npx 2>/dev/null)
 
+# Mac homebrew specific detection if not found
+if [ -z "$NODE_PATH" ] && [ "$MACHINE" = "Mac" ]; then
+    echo -e "${BLUE}🔍 Checking Mac homebrew Node.js locations...${NC}"
+    for potential_node in \
+        "/opt/homebrew/bin/node" \
+        "/usr/local/bin/node" \
+        "$HOME/.nvm/current/bin/node"
+    do
+        if [ -x "$potential_node" ]; then
+            NODE_PATH="$potential_node"
+            # Find npx alongside node
+            NODE_DIR=$(dirname "$NODE_PATH")
+            if [ -x "$NODE_DIR/npx" ]; then
+                NPX_PATH="$NODE_DIR/npx"
+            fi
+            break
+        fi
+    done
+fi
+
 # Windows/Git Bash specific path detection
 if [ -z "$NODE_PATH" ] && { [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ] || [ "$MACHINE" = "Cygwin" ]; }; then
     echo -e "${BLUE}🔍 Checking Windows-specific Node.js locations...${NC}"
@@ -750,7 +770,7 @@ setup_slash_commands_server() {
         echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use slash commands server...${NC}"
 
         # First try direct command approach (current method)
-        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "claude-slash-commands" "claude-slash-commands-mcp" 2>&1)
+        add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
         add_exit_code=$?
 
         # If direct approach fails, try add-json approach
@@ -826,7 +846,7 @@ setup_slash_commands_server() {
     echo -e "${BLUE}  🔗 Adding Slash Commands MCP server...${NC}"
     log_with_timestamp "Attempting to add Slash Commands MCP server using: $PY_INTERPRETER"
 
-    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" 2>&1)
+    add_output=$(claude mcp add --scope user "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1010,7 +1030,7 @@ install_react_mcp() {
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" 2>&1)
+        add_output=$(claude mcp add --scope user "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
         if [ $? -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1199,7 +1219,7 @@ install_ios_simulator_mcp() {
     claude mcp remove "$name" >/dev/null 2>&1 || true
 
     # Add server using node to run the index.js file
-    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" 2>&1)
+    add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1298,7 +1318,7 @@ claude mcp remove "memory-server" -s user >/dev/null 2>&1 || true
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "MEMORY_FILE_PATH=$MEMORY_PATH" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" 2>&1)
+add_output=$(claude mcp add --scope user "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "MEMORY_FILE_PATH=$MEMORY_PATH" 2>&1)
 add_exit_code=$?
 
 if [ $add_exit_code -eq 0 ]; then
@@ -1324,7 +1344,7 @@ EOF
     chmod +x "$WRAPPER_SCRIPT"
 
     # Add server using the wrapper script
-    fallback_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT" 2>&1)
+    fallback_output=$(claude mcp add --scope user "memory-server" "$WRAPPER_SCRIPT" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
     fallback_exit_code=$?
 
     if [ $fallback_exit_code -eq 0 ]; then
@@ -1367,7 +1387,7 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
 
     # Add Perplexity server with API key
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" "perplexity-search" "npx" "server-perplexity-ask" 2>&1)
+    add_output=$(claude mcp add --scope user "perplexity-search" "npx" "server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1406,7 +1426,7 @@ else
 
     # Add filesystem server with proper directory configuration
     echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
-    add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" 2>&1)
+    add_output=$(claude mcp add --scope user "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1455,7 +1475,7 @@ else
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
         log_with_timestamp "Attempting to add WorldArchitect MCP server"
 
-        add_output=$(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "worldarchitect" "$SCRIPT_DIR/venv/bin/python" "$WORLDARCHITECT_MCP_PATH" 2>&1)
+        add_output=$(claude mcp add --scope user "worldarchitect" "$SCRIPT_DIR/venv/bin/python" "$WORLDARCHITECT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
         add_exit_code=$?
 
         if [ $add_exit_code -eq 0 ]; then
