@@ -30,12 +30,13 @@ EXTENSION="${FILENAME##*.}"
 PROJECT_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 RELATIVE_FILE_PATH="${FILE_PATH#$PROJECT_ROOT/}"
 
-if [[ "$RELATIVE_FILE_PATH" =~ ^[^/]+\.(py|sh|md)$ ]]; then
+if [[ "$RELATIVE_FILE_PATH" =~ ^[^/]+\.(py|sh|md|mjs|js|ts)$ ]]; then
     # File is in project root - this is a clear violation, block immediately
     cat << EOF
 {
   "decision": "block",
-  "reason": "🚨 CLAUDE.md VIOLATION BLOCKED\\n\\n**REASON:** Creating '$FILENAME' in project root violates file placement rules.\\n\\n✅ **QUICK FIX**: Place files in appropriate directories:\\n- Python files (.py) → $PROJECT_ROOT/ or module directories\\n- Shell scripts (.sh) → scripts/ directory\\n- Documentation (.md) → docs/ directory\\n\\nFILE: $FILE_PATH\\n\\nPer CLAUDE.md INTEGRATION PREFERENCE HIERARCHY:\\n1. Add to existing file with similar purpose\\n2. Add to existing utility/helper file\\n3. Add to existing test file (NEVER create new test files)\\n4. LAST RESORT: Create new file (requires justification)\\n\\nTo override: Document why integration into existing files failed.",
+  "reason": "🚨 CLAUDE.md VIOLATION BLOCKED\\n\\n**REASON:** Creating '$FILENAME' in project root violates file placement rules.\\n\\n✅ **QUICK FIX**: Place files in appropriate directories:\\n- Python files (.py) → $PROJECT_ROOT/ or module directories\\n- Shell scripts (.sh) → scripts/ directory\\n- Documentation (.md) → docs/ directory
+- JavaScript/TypeScript files (.mjs, .js, .ts) → backend/src/test/ or scripts/ directory\\n\\nFILE: $FILE_PATH\\n\\nPer CLAUDE.md INTEGRATION PREFERENCE HIERARCHY:\\n1. Add to existing file with similar purpose\\n2. Add to existing utility/helper file\\n3. Add to existing test file (NEVER create new test files)\\n4. LAST RESORT: Create new file (requires justification)\\n\\nTo override: Document why integration into existing files failed.",
   "hookSpecificOutput": {
     "hookEventName": "PreToolUse",
     "additionalContext": "File creation blocked due to root directory violation. Fast pre-screening detected obvious placement violation."
