@@ -18,7 +18,7 @@ from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
 
 # Add automation directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'automation'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 # Import after path modification
 from automation_safety_manager import AutomationSafetyManager
