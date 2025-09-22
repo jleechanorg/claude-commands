@@ -63,6 +63,8 @@ class ImportValidator(ast.NodeVisitor):
             'helpers', 'mcp_api', 'mcp_test_client', 'commentreply',
             'mvp_site.logging_util', 'psutil', 'importlib.util', 'datetime',
             'unified_router', 'mvp_site.testing_framework',
+            # Automation modules that need sys.path manipulation
+            'automation_safety_manager',
             # Testing framework integration utilities (optional for test stability)
             'testing_framework.integration_utils'
         }

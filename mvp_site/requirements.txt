@@ -9,6 +9,7 @@ grpcio>=1.62.0,<2.0.0
 grpcio-status>=1.62.0,<2.0.0
 # Updated for compatibility between protobuf, grpcio, and firestore
 Flask-Cors==6.0.0
+Flask-Limiter>=3.5.0
 fpdf2
 python-docx
 google-cloud-secret-manager
