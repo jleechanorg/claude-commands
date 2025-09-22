@@ -546,7 +546,33 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+    local add_cmd
+
+    # Special handling for grok-mcp which requires direct node execution
+    if [ "$name" = "grok-mcp" ]; then
+        echo -e "${BLUE}  🔧 Special setup for grok-mcp using direct node execution...${NC}"
+        local grok_path
+        if command -v npm >/dev/null 2>&1; then
+            grok_path="$(npm root -g)/grok-mcp/build/index.js"
+            if [ ! -f "$grok_path" ]; then
+                echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path, attempting global install...${NC}"
+                npm install -g grok-mcp >/dev/null 2>&1 || true
+            fi
+        else
+            grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
+        fi
+
+        # Add XAI_API_KEY environment variable for grok-mcp
+        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+        if [ -n "${XAI_API_KEY:-}" ] || [ -n "${GROK_API_KEY:-}" ]; then
+            local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
+            grok_env_flags+=(--env "XAI_API_KEY=$api_key")
+        fi
+        add_cmd=(claude mcp add --scope user "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+    else
+        add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+    fi
+
     add_output=$("${add_cmd[@]}" 2>&1)
     local add_exit_code=$?
 
@@ -728,7 +754,7 @@ echo ""
 # Group servers that can be installed concurrently without conflicts
 
 # Environment flags for optional MCP servers (disabled by default for context optimization)
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
