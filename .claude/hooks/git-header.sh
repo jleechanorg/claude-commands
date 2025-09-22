@@ -104,24 +104,39 @@ else
 
     # If no valid cache, perform network lookup with timeout
     if [ "$cache_valid" = false ] && [ -n "$current_commit" ]; then
-        pr_number=$(timeout 1 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
-                   grep "$current_commit" | \
-                   sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
-                   head -1 2>/dev/null)
-        if [ -n "$pr_number" ]; then
-            # Extract repo info to build PR URL
-            repo_url=$(git remote get-url origin 2>/dev/null)
-            if [[ "$repo_url" =~ github\.com[:/]([^/]+/[^/]+)\.git ]]; then
-                repo_path="${BASH_REMATCH[1]}"
-                pr_text="#$pr_number https://github.com/$repo_path/pull/$pr_number"
-            else
-                pr_text="#$pr_number"
+        pr_text="none"
+        if command -v gh >/dev/null 2>&1; then
+            pr_info=""
+
+            # First try to look up by branch name (works for local branches tied to PRs)
+            if [ -n "$local_branch" ]; then
+                pr_info=$(timeout 5 gh pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
             fi
-        else
-            pr_text="none"
+
+            # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
+            if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
+                pr_info=$(timeout 5 gh pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+            fi
+
+            if [ -n "$pr_info" ]; then
+                # Split the PR info into number and URL (preserve $1)
+                pr_number="${pr_info%% *}"
+                pr_url="${pr_info#* }"
+                # Handle case where there's no URL (only number)
+                if [ "$pr_number" = "$pr_url" ]; then
+                    pr_url=""
+                fi
+                if [ -n "$pr_number" ]; then
+                    if [ -n "$pr_url" ]; then
+                        pr_text="#$pr_number $pr_url"
+                    else
+                        pr_text="#$pr_number"
+                    fi
+                fi
+            fi
         fi
 
-        # Cache the result
+        # Cache the result (even if none to avoid repeated lookups)
         echo "$pr_text" > "$cache_file" 2>/dev/null
     fi
 fi
