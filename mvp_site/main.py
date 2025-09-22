@@ -80,6 +80,8 @@ from flask import (
     url_for,
 )
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 # MCP client import
 from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
@@ -90,7 +92,17 @@ from firestore_service import json_default_serializer
 
 # --- CONSTANTS ---
 # API Configuration
-CORS_RESOURCES = {r"/api/*": {"origins": "*"}}
+CORS_RESOURCES = {
+    r"/api/*": {
+        "origins": [
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "https://worldarchitect.ai",
+        ],
+        "methods": ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+    }
+}
 
 # Request Headers
 HEADER_AUTH = "Authorization"
@@ -169,6 +181,24 @@ def safe_jsonify(data: Any) -> Response:
     return jsonify(clean_data)
 
 
+def generic_error_response(
+    operation: str, status_code: int = 500
+) -> tuple[Response, int]:
+    """
+    Return a generic error response without exposing internal details.
+
+    Args:
+        operation: Brief description of what failed (e.g., "create campaign", "authentication")
+        status_code: HTTP status code to return
+
+    Returns:
+        Tuple of JSON response and status code
+    """
+    return jsonify(
+        {"error": f"Failed to {operation}. Please try again.", "status": "error"}
+    ), status_code
+
+
 def create_app() -> Flask:
     """
     Create and configure the Flask application.
@@ -201,6 +231,29 @@ def create_app() -> Flask:
 
     app = Flask(__name__)
     CORS(app, resources=CORS_RESOURCES)
+
+    # Configure rate limiting
+    limiter = Limiter(
+        app=app,
+        key_func=get_remote_address,
+        default_limits=["200 per day", "50 per hour", "10 per minute"],
+        storage_uri="memory://",
+    )
+
+    # Add security headers
+    @app.after_request
+    def add_security_headers(response):
+        """Add security headers to all responses."""
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=31536000; includeSubDomains"
+        )
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+        )
+        return response
 
     # Defer MCP client initialization until first use to avoid race condition
     # with command-line argument configuration
@@ -341,10 +394,32 @@ def create_app() -> Flask:
     @async_route
     async def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
         try:
-            # Get query parameters with proper error handling
+            # Get query parameters with proper validation
             limit = request.args.get("limit")
+            if limit is not None:
+                try:
+                    limit = int(limit)
+                    if limit < 1 or limit > 100:
+                        return jsonify(
+                            {
+                                "error": "Invalid limit parameter. Must be between 1 and 100."
+                            }
+                        ), 400
+                except ValueError:
+                    return jsonify(
+                        {"error": "Invalid limit parameter. Must be a number."}
+                    ), 400
+
             sort_by = request.args.get("sort_by")
-            
+            # Whitelist allowed sort fields for security
+            allowed_sort_fields = ["created_at", "last_played", "title"]
+            if sort_by is not None and sort_by not in allowed_sort_fields:
+                return jsonify(
+                    {
+                        "error": f"Invalid sort_by parameter. Must be one of: {', '.join(allowed_sort_fields)}"
+                    }
+                ), 400
+
             data = {
                 "user_id": user_id,
                 "limit": limit,
@@ -515,7 +590,7 @@ def create_app() -> Flask:
             return handle_mcp_errors(e)
         except Exception as e:
             logging_util.error(f"Failed to create campaign: {e}")
-            return jsonify({KEY_ERROR: f"Failed to create campaign: {str(e)}"}), 500
+            return generic_error_response("create campaign")
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
     @check_token
@@ -559,28 +634,22 @@ def create_app() -> Flask:
             return jsonify(response_data)
         except MCPClientError as e:
             return handle_mcp_errors(e)
-        except Exception as e:
+        except Exception:
             logging_util.error(traceback.format_exc())
-            return jsonify(
-                {KEY_ERROR: "Failed to update campaign", KEY_DETAILS: str(e)}
-            ), 500
+            return generic_error_response("update campaign")
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
+    @limiter.limit("30 per hour, 5 per minute")  # Stricter for AI interactions
     @check_token
     @async_route
     async def handle_interaction(
         user_id: UserId, campaign_id: CampaignId
     ) -> Response | tuple[Response, int]:
         try:
-            print("DEBUG PRINT: handle_interaction START - testing mode removed")
             logging_util.info("DEBUG: handle_interaction START - testing mode removed")
             data = request.get_json()
-            print(f"DEBUG PRINT: request data = {data}")
             logging_util.info(f"DEBUG: request data = {data}")
             user_input = data.get(KEY_USER_INPUT)
-            print(
-                f"DEBUG PRINT: user_input = {user_input} (KEY_USER_INPUT='{KEY_USER_INPUT}')"
-            )
             logging_util.info(
                 f"DEBUG: user_input = {user_input} (KEY_USER_INPUT='{KEY_USER_INPUT}')"
             )
@@ -750,12 +819,7 @@ def create_app() -> Flask:
         except Exception as e:
             logging_util.error(f"Export failed: {e}")
             traceback.print_exc()
-            return jsonify(
-                {
-                    KEY_ERROR: "An unexpected error occurred during export.",
-                    KEY_DETAILS: str(e),
-                }
-            ), 500
+            return generic_error_response("export campaign")
 
     # --- Time Sync Route for Clock Skew Detection ---
     @app.route("/api/time", methods=["GET"])
@@ -1095,7 +1159,7 @@ if __name__ == "__main__":
             logging_util.info(
                 f"Development server running: http://localhost:{port} (MCP: {mode})"
             )
-            app.run(host="0.0.0.0", port=port, debug=True)
+            app.run(host="0.0.0.0", port=port, debug=False)
         elif args.command in ["testui", "testuif", "testhttp", "testhttpf"]:
             run_test_command(args.command)
         else:
