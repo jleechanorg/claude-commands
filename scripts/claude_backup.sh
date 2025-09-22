@@ -108,23 +108,23 @@ get_clean_hostname() {
     echo "$HOSTNAME" | tr ' ' '-' | tr '[:upper:]' '[:lower:]'
 }
 
-# Get device name for backup folder suffix using portable function
-DEVICE_NAME=$(get_clean_hostname)
+# Use hardcoded folder name for consistency across all devices
+BACKUP_FOLDER_NAME="claude_conversations"
 
-# Destination directory - now supports parameter override with device suffix
-# If parameter provided, append device suffix to it, otherwise use default
-DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME"
+# Destination directory - now supports parameter override with consistent folder name
+# If parameter provided, append folder name to it, otherwise use default
+DEFAULT_BACKUP_DIR="$HOME/Library/CloudStorage/Dropbox/$BACKUP_FOLDER_NAME"
 if [ -n "${1:-}" ] && [[ "${1:-}" != --* ]]; then
     # Parameter provided and it's not a flag - append device suffix
     # Security: Validate input parameter to prevent path traversal
     validate_path "${1}" "command line destination parameter"
-    BACKUP_DESTINATION="${1%/}/claude_backup_$DEVICE_NAME"
+    BACKUP_DESTINATION="${1%/}/$BACKUP_FOLDER_NAME"
 else
     # No parameter or it's a flag - use env base dir (if set) WITH device suffix, else default
     if [ -n "${DROPBOX_DIR:-}" ]; then
         # Security: Validate environment variable path
         validate_path "${DROPBOX_DIR}" "DROPBOX_DIR environment variable"
-        BACKUP_DESTINATION="${DROPBOX_DIR%/}/claude_backup_$DEVICE_NAME"
+        BACKUP_DESTINATION="${DROPBOX_DIR%/}/$BACKUP_FOLDER_NAME"
     else
         BACKUP_DESTINATION="$DEFAULT_BACKUP_DIR"
     fi
@@ -350,7 +350,7 @@ show_help() {
 Claude Directory Backup Script (runs every 4 hours by default)
 
 USAGE:
-    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME)
+    $0 [destination]              # Run backup to destination (default: ~/Library/CloudStorage/Dropbox/claude_conversations)
     $0 --setup-cron [destination] # Setup cron job with destination
     $0 --remove-cron             # Remove cron job
     $0 --help                    # Show this help
@@ -364,7 +364,7 @@ EMAIL SETUP (for failure alerts):
 
 BACKUP TARGETS:
     Source: ~/.claude (selective sync)
-    Default: ~/Library/CloudStorage/Dropbox/claude_backup_$DEVICE_NAME
+    Default: ~/Library/CloudStorage/Dropbox/claude_conversations
     Custom: Specify any destination as first parameter
 
 SELECTIVE SYNC INCLUDES:
@@ -421,7 +421,7 @@ setup_cron() {
 
     # If no destination provided, extract base directory to avoid double suffix bug
     # The main script always appends the device suffix, so we must pass the parent directory
-    # Example problem: DEFAULT_BACKUP_DIR="/path/claude_backup_device" + main script suffix = "/path/claude_backup_device/claude_backup_device"
+    # Example problem: DEFAULT_BACKUP_DIR="/path/claude_conversations" + main script suffix = "/path/claude_conversations/claude_conversations"
     if [[ -z "$cron_destination" ]]; then
         cron_destination="$(extract_base_directory "$BACKUP_DESTINATION")"
         if [[ $? -ne 0 ]] || [[ -z "$cron_destination" ]]; then
@@ -430,7 +430,7 @@ setup_cron() {
         fi
     fi
 
-    echo "Setting up 4-hour Claude backup cron job with device-specific naming..."
+    echo "Setting up hourly Claude backup cron job with consistent folder naming..."
 
     # Create wrapper script for cron environment
     local wrapper_script="$SCRIPT_DIR/claude_backup_cron.sh"
@@ -487,7 +487,7 @@ EOF
     echo "   Schedule: Every hour (0 * * * *)"
     echo "   Script: $wrapper_script"
     echo "   Destination: $cron_destination"
-    echo "   Device suffix: $DEVICE_NAME"
+    echo "   Backup folder: $BACKUP_FOLDER_NAME"
     echo "   Log: \$SECURE_TEMP/claude_backup_cron.backup_log (secure location)"
     echo ""
     echo "To configure failure email alerts:"
