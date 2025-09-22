@@ -48,10 +48,9 @@ fi
 
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Construct full message with statusline-style context
-FULL_MESSAGE="$MESSAGE
-
-[Local: $BRANCH | Remote: $REMOTE | PR: $PR_INFO]
+# Construct full message starting with directory/worktree info
+FULL_MESSAGE="[Local: $BRANCH | Remote: $REMOTE | PR: $PR_INFO]
+$MESSAGE
 ⏰ $TIMESTAMP"
 
 # Send notification to Slack
