@@ -3,18 +3,29 @@
 # Multi-Player Intelligent Command Combination System
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
+# Source cross-platform timeout utilities
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [ -r "$SCRIPT_DIR/timeout-utils.sh" ]; then
+  # shellcheck source=/dev/null
+  source "$SCRIPT_DIR/timeout-utils.sh"
+else
+  echo "compose-commands: timeout-utils.sh not found; proceeding without portable timeouts" >&2
+  safe_read_stdin() {
+    if [ -t 0 ]; then
+      printf ''
+    else
+      # Best-effort fallback without timeout enforcement
+      cat
+    fi
+  }
+fi
+
 # Read input from stdin (can be JSON or plain text)
 # Handle both interactive and non-interactive modes without hanging
 # CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
 # but the parent process context is different
-if [ -t 0 ]; then
-    # stdin is a terminal (true interactive mode), no input expected
-    raw_input=""
-else
-    # stdin has data, read it all with timeout to prevent hanging
-    # Use cat with timeout to preserve full input without truncation
-    raw_input=$(timeout 5s cat 2>/dev/null || echo "")
-fi
+# FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat
+raw_input=$(safe_read_stdin 5)
 
 # CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
 # Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
