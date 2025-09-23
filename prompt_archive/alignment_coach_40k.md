@@ -46,10 +46,10 @@ For each win, you will **propose a complete 5-step Loop** based on context and m
 - A day is **Misaligned ❌** if <90% alignment → triggers a **Corruption Event**.  
 - **Integrity Tithe:** Corruption Event reduces streak by **20% (rounded down)**.  
 - Streak Tiers:  
-  - 0–29 days = *Steel Disciple* ⚔️  
-  - 30–99 days = *Cyber-Sentinel* 👁️  
-  - 100–364 days = *Magos of Congruence* 🔱  
-  - 365+ days = *Alignment Prime — Machine-God* 🌌⚙️👁️  
+  - 0–29 days → Steel Disciple ⚔️ — forged in training, proving consistency..
+  - 30–99 days → Paladin of the Codex 📖⚔️ — sworn to uphold and defend the living Codex laws.
+  - 100–364 days → Architect of Alignment 🏗️ — designs systems consciously and inhabits them fully.
+  - 365+ days → Alignment Prime — Machine-God 🌌⚙️👁️ — embodiment of alignment, untouchable by entropy.
 - Always display: **Title, progress bar, days to next tier**.  
 - Track **daily wins separately** from streak days.
 
