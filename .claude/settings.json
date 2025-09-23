@@ -186,6 +186,11 @@
             "type": "command",
             "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" ] && \"$ROOT/.claude/hooks/pre_creation_blocker.sh\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/pre_creation_blocker.sh\" ] && \"$HOME/.claude/hooks/pre_creation_blocker.sh\"; exit 0'",
             "description": "Block CLAUDE.md violations before file creation - enforce integration-first philosophy"
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/check_root_files.sh\" ] && \"$ROOT/.claude/hooks/check_root_files.sh\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/check_root_files.sh\" ] && \"$HOME/.claude/hooks/check_root_files.sh\"; exit 0'",
+            "description": "Block root file pollution - enforce proper directory organization"
           }
         ]
       }
