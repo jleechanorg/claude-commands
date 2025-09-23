@@ -285,8 +285,8 @@ class JleechanorgPRMonitor:
 
         return None
 
-    def process_pr_with_copilot(self, workspace_path: Path) -> bool:
-        """Process PR using /copilot command in isolated workspace"""
+    def post_codex_instruction(self, workspace_path: Path) -> bool:
+        """Post codex instruction comment in isolated workspace"""
         metadata_file = workspace_path / ".pr-metadata.json"
 
         if not metadata_file.exists():
@@ -299,79 +299,53 @@ class JleechanorgPRMonitor:
         pr_number = metadata["pr_number"]
         repo_name = metadata["repository"]
 
-        self.logger.info(f"🤖 Processing {repo_name} PR #{pr_number} with /copilot")
+        self.logger.info(f"💬 Requesting Codex support for {repo_name} PR #{pr_number}")
 
         try:
-            # Change to workspace directory
             original_cwd = os.getcwd()
             os.chdir(workspace_path)
 
             try:
-                # Execute /copilot command
-                copilot_cmd = [
-                    "claude", "--dangerously-skip-permissions", "--model", "sonnet",
-                    f"/copilot {pr_number}"
+                comment_body = (
+                    "@codex use your judgement to fix comments from everyone or explain why it should not be "
+                    "fixed. Follow binary response protocol every comment needs done or not done classification "
+                    "explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+                )
+                comment_cmd = [
+                    "gh", "pr", "comment",
+                    str(pr_number),
+                    "--repo", metadata["repository_full_name"],
+                    "--body", comment_body,
                 ]
 
                 result = subprocess.run(
-                    copilot_cmd,
+                    comment_cmd,
                     capture_output=True,
                     text=True,
-                    timeout=1800  # 30 minutes timeout
+                    timeout=120,
+                    check=True,
                 )
 
-                if result.returncode == 0:
-                    self.logger.info(f"✅ /copilot completed successfully for PR #{pr_number}")
-
-                    # Check if there are changes to push
-                    git_status = subprocess.run(
-                        ["git", "status", "--porcelain"],
-                        capture_output=True, text=True, timeout=30
+                stdout = result.stdout.strip()
+                if stdout:
+                    self.logger.info(
+                        f"✅ Posted codex instruction comment for PR #{pr_number}: {stdout}"
                     )
-
-                    if git_status.stdout.strip():
-                        self.logger.info(f"📝 Changes detected, preparing to push")
-
-                        # Add changes
-                        subprocess.run(["git", "add", "-A"], check=True, timeout=30, shell=False)
-
-                        # Check if there are still staged changes after pre-commit hooks
-                        git_staged = subprocess.run(
-                            ["git", "diff", "--cached", "--name-only"],
-                            capture_output=True, text=True, timeout=30
-                        )
-
-                        if git_staged.stdout.strip():
-                            self.logger.info(f"📝 Staged changes confirmed, committing")
-                            subprocess.run([
-                                "git", "commit", "-m",
-                                f"🤖 Automated fixes for PR #{pr_number}\n\nCo-Authored-By: Claude <noreply@anthropic.com>"
-                            ], check=True, timeout=30)
-                            # Use target_branch for push to ensure correct remote branch update
-                            target_branch = metadata.get("target_branch") or metadata["branch_name"]
-                            subprocess.run(
-                                ["git", "push", "origin", f"HEAD:refs/heads/{target_branch}"],
-                                check=True, timeout=30
-                            )
-                            self.logger.info(f"🚀 Changes pushed to {target_branch}")
-                        else:
-                            self.logger.info(f"📝 No staged changes after pre-commit hooks - changes were auto-fixed")
-                    else:
-                        self.logger.info(f"📝 No changes to push for PR #{pr_number}")
-
-                    return True
                 else:
-                    self.logger.error(f"❌ /copilot failed for PR #{pr_number}: {result.stderr}")
-                    return False
+                    self.logger.info(f"✅ Posted codex instruction comment for PR #{pr_number}")
 
+                return True
             finally:
                 os.chdir(original_cwd)
 
         except subprocess.TimeoutExpired:
-            self.logger.error(f"⏰ /copilot timed out for PR #{pr_number}")
+            self.logger.error(f"⏰ Posting codex instruction comment timed out for PR #{pr_number}")
             return False
         except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ Command failed for PR #{pr_number}: {e}")
+            error_message = e.stderr.strip() if e.stderr else str(e)
+            self.logger.error(
+                f"❌ Failed to post codex instruction comment for PR #{pr_number}: {error_message}"
+            )
             return False
         except Exception as e:
             self.logger.error(f"💥 Unexpected error processing PR #{pr_number}: {e}")
@@ -481,8 +455,8 @@ class JleechanorgPRMonitor:
                 workspace_path = self.create_worktree_for_pr(pr_dict)
                 if workspace_path:
 
-                    # Process with copilot
-                    success = self.process_pr_with_copilot(workspace_path)
+                    # Post codex instruction comment
+                    success = self.post_codex_instruction(workspace_path)
 
                     # Record PR processing attempt with result
                     result = "success" if success else "failure"
@@ -561,8 +535,8 @@ class JleechanorgPRMonitor:
                 continue
 
             try:
-                # Process with /copilot
-                success = self.process_pr_with_copilot(workspace)
+                # Post codex instruction comment
+                success = self.post_codex_instruction(workspace)
 
                 # Record attempt
                 result = "success" if success else "failure"

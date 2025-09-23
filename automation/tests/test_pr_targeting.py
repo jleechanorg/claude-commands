@@ -36,7 +36,7 @@ class TestPRTargeting(unittest.TestCase):
         monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
 
         # Mock the dependencies for process_single_pr_by_number
-        with patch.object(monitor, 'process_pr_with_copilot', return_value=True) as mock_copilot, \
+        with patch.object(monitor, 'post_codex_instruction', return_value=True) as mock_codex, \
              patch.object(monitor, 'create_worktree_for_pr', return_value=True) as mock_worktree, \
              patch.object(monitor, 'cleanup_workspace') as mock_cleanup, \
              patch('subprocess.run') as mock_subprocess:
@@ -47,7 +47,7 @@ class TestPRTargeting(unittest.TestCase):
             result = monitor.process_single_pr_by_number(1702, "worldarchitect.ai")
 
             self.assertTrue(result)
-            mock_copilot.assert_called_once()
+            mock_codex.assert_called_once()
             mock_worktree.assert_called_once()
             mock_cleanup.assert_called()
 
