@@ -1,0 +1,1998 @@
+{
+  "batch_number": 46,
+  "total_batches": 50,
+  "agent_id": "agent_008",
+  "processing_timestamp": "2025-09-22T04:36:04.997828Z",
+  "prompts_in_batch": 20,
+  "authenticity_target": 0.87,
+  "prompts": [
+    {
+      "prompt_id": "chunk_008_prompt_901",
+      "raw_prompt": "lets add the real API keys",
+      "timestamp": "2025-09-12T03:18:55.757Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7858,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "development_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.893,
+        "information_density": 1.0,
+        "technical_specificity": 0.17,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_902",
+      "raw_prompt": "you can read me keps from bashrc add them for me",
+      "timestamp": "2025-09-12T03:24:34.718Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7859,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "development_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.853,
+        "information_density": 0.91,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_903",
+      "raw_prompt": "test this key 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",
+      "timestamp": "2025-09-12T03:34:34.645Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7860,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "brief_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.883,
+        "information_density": 1.0,
+        "technical_specificity": 0.25,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_904",
+      "raw_prompt": "dont be sloppy figure out whats wrong with charcer encoding. Total failure until all models are working using the cloud deploment",
+      "timestamp": "2025-09-12T03:40:36.839Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7861,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "system_failure",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "high",
+          "technical_precision": "low",
+          "emotional_tone": "negative",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": [
+          "success_signal"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.859,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.48
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_905",
+      "raw_prompt": "lets test the second opinion thing from that server",
+      "timestamp": "2025-09-12T04:02:33.200Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7862,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.919,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_906",
+      "raw_prompt": "whats the reset window?",
+      "timestamp": "2025-09-12T04:06:52.674Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7863,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "brief_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.901,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_907",
+      "raw_prompt": "is there a way to use gcp to manage configs? i wanna change things like ratelimits without redeploying the server",
+      "timestamp": "2025-09-12T04:07:51.367Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7864,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "deployment"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "deployment_action",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "deployment",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 0.95,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.5
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_908",
+      "raw_prompt": "maket he rate limit 100 requests per 5 min",
+      "timestamp": "2025-09-12T04:16:13.281Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7865,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_909",
+      "raw_prompt": "why do we need 1?",
+      "timestamp": "2025-09-12T04:19:18.061Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7866,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.866,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_910",
+      "raw_prompt": "what are the iam permission?",
+      "timestamp": "2025-09-12T04:20:11.488Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7867,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.887,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_911",
+      "raw_prompt": "ok did you do the IAM perm?",
+      "timestamp": "2025-09-12T04:22:27.586Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7868,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.867,
+        "information_density": 1.0,
+        "technical_specificity": 0.14,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_912",
+      "raw_prompt": "test it now, it should be refreshed right?",
+      "timestamp": "2025-09-12T04:25:21.524Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7869,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.927,
+        "information_density": 0.88,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_913",
+      "raw_prompt": "how can we override it? do we need to redploy?",
+      "timestamp": "2025-09-12T04:26:43.180Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7870,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "high"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.852,
+        "information_density": 0.9,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_914",
+      "raw_prompt": "dont be sloppy. /debugp why you cant redeploy",
+      "timestamp": "2025-09-12T04:35:14.621Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7871,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "debugp"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "problem_solving",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "high",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Problem-Solving",
+          "description": "Request for debugging or issue resolution",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "debugging",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.881,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_915",
+      "raw_prompt": "dont be sloppy. /debugp why you cant redeploy. Add some functionality to reset the rate limit too",
+      "timestamp": "2025-09-12T04:35:32.357Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7872,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "debugp"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "problem_solving",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "high",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Problem-Solving",
+          "description": "Request for debugging or issue resolution",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_916",
+      "raw_prompt": "should we remove redis? i think we arent using it",
+      "timestamp": "2025-09-12T04:39:04.495Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7873,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.889,
+        "information_density": 0.9,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_917",
+      "raw_prompt": "ok lets test the server now",
+      "timestamp": "2025-09-12T04:40:36.705Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7874,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.903,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_918",
+      "raw_prompt": "I do not want to wait. figure out how to reset the limit with the script. Why doesnt the script work?",
+      "timestamp": "2025-09-12T04:41:47.953Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7875,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "expressing_need",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "beginner",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.894,
+        "information_density": 0.86,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.48
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_919",
+      "raw_prompt": "stop I WILL NOT WAIT> FIX THIS",
+      "timestamp": "2025-09-12T04:45:11.395Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7876,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "debugging",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "problem_solving",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "problem_resolution",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Problem-Solving",
+          "description": "Request for debugging or issue resolution",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "debugging",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "problem_resolution",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "debug_issue"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.893,
+        "information_density": 1.0,
+        "technical_specificity": 0.71,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_920",
+      "raw_prompt": "did redeploy?",
+      "timestamp": "2025-09-12T05:21:55.362Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7877,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "deployment"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "deployment_action",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "deployment",
+          "sub_themes": [],
+          "pattern_family": "brief_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.899,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    }
+  ]
+}

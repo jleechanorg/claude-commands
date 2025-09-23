@@ -1,0 +1,2016 @@
+{
+  "batch_number": 22,
+  "total_batches": 50,
+  "agent_id": "agent_004",
+  "processing_timestamp": "2025-09-22T04:13:40.487508Z",
+  "prompts_in_batch": 20,
+  "authenticity_target": 0.87,
+  "prompts": [
+    {
+      "prompt_id": "chunk_004_prompt_421",
+      "raw_prompt": "where do i find them? i wanna view them first. Can I see them in the UI?",
+      "timestamp": "2025-08-25T02:51:48.542Z",
+      "project_context": "-Users-jleechan",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.851,
+        "information_density": 0.82,
+        "technical_specificity": 0.06,
+        "action_orientation": 0.59
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_422",
+      "raw_prompt": "i did this and didnt see any snapshots. Time Machine local (APFS) snapshots are not visible in Finder or most standard macOS UI, but they can be viewed and managed directly in the macOS Disk Utility app in recent versions of macOS (Monterey or later).\n\nSee Snapshots in the UI\nOpen the Disk Utility app (found in Applications > Utilities).\n\nFrom the menu bar, select View > Show APFS Snapshots.\n\nSelect your boot/data volume in the sidebar.\n\nA table listing all APFS snapshots for that volume appears at the bottom of the window. You can view the name, creation date, cumulative size, and other metada incorporate this into web search and /research",
+      "timestamp": "2025-08-25T02:53:44.013Z",
+      "project_context": "-Users-jleechan",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [
+            "boot/data"
+          ],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_prompt",
+            "code_heavy"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "advanced"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.883,
+        "information_density": 0.71,
+        "technical_specificity": 0.1,
+        "action_orientation": 0.09
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_423",
+      "raw_prompt": "ccusage blocks",
+      "timestamp": "2025-08-25T04:50:08.459Z",
+      "project_context": "-Users-jleechan",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "brief_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.859,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_424",
+      "raw_prompt": "look at the prs i merged last 3 days, what are my daily stats",
+      "timestamp": "2025-09-22T05:52:59.055Z",
+      "project_context": "-Users-jleechan",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_425",
+      "raw_prompt": "<user-prompt-submit-hook>look at the prs i merged last 3 days, what are my daily stats</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T05:52:59.260Z",
+      "project_context": "-Users-jleechan",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.853,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_426",
+      "raw_prompt": "look for a slash command run analyzes pr stats and git stats",
+      "timestamp": "2025-08-24T04:20:00.287Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "analysis"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "analysis",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "analysis",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.89,
+        "information_density": 0.92,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.83
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_427",
+      "raw_prompt": "<user-prompt-submit-hook>look for a slash command run analyzes pr stats and git stats</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:20:00.790Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "analysis"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "analysis",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "analysis",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.83
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_428",
+      "raw_prompt": "no thats for a single pr",
+      "timestamp": "2025-08-24T04:22:18.217Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.882,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_429",
+      "raw_prompt": "<user-prompt-submit-hook>no thats for a single pr</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:22:18.290Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_430",
+      "raw_prompt": "what generates this? docs/github_stats.md",
+      "timestamp": "2025-08-24T04:22:53.717Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [
+            "docs/github_stats.md",
+            "docs/github_stats"
+          ],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "brief_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.868,
+        "information_density": 1.0,
+        "technical_specificity": 0.25,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_431",
+      "raw_prompt": "<user-prompt-submit-hook>what generates this? docs/github_stats.md</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:22:53.799Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [
+            "docs/github_stats.md",
+            "docs/github_stats"
+          ],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.895,
+        "information_density": 1.0,
+        "technical_specificity": 0.25,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_432",
+      "raw_prompt": "will this do it? analyze_git_stats.py",
+      "timestamp": "2025-08-24T04:23:12.738Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "analysis"
+        },
+        "technical_context": {
+          "file_references": [
+            "analyze_git_stats.py"
+          ],
+          "technology_stack": [
+            "python",
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "analysis",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "analysis",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.878,
+        "information_density": 1.0,
+        "technical_specificity": 0.2,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_433",
+      "raw_prompt": "<user-prompt-submit-hook>will this do it? analyze_git_stats.py</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:23:12.804Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "analysis"
+        },
+        "technical_context": {
+          "file_references": [
+            "analyze_git_stats.py"
+          ],
+          "technology_stack": [
+            "python",
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "analysis",
+          "sub_themes": [
+            "version_control"
+          ],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "analysis",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis"
+        ],
+        "command_probability": {
+          "git": 0.8
+        },
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.91,
+        "information_density": 1.0,
+        "technical_specificity": 0.2,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_434",
+      "raw_prompt": "Ok run it and append new stats to the top of the file and at the first line of the file link this script",
+      "timestamp": "2025-08-24T04:25:44.181Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 0.75,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.42
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_435",
+      "raw_prompt": "<user-prompt-submit-hook>Ok run it and append new stats to the top of the file and at the first line of the file link this script</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:25:44.294Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.852,
+        "information_density": 0.75,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.42
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_436",
+      "raw_prompt": "make a pr for latest stats",
+      "timestamp": "2025-08-24T04:29:34.647Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.85,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_437",
+      "raw_prompt": "<user-prompt-submit-hook>make a pr for latest stats</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:29:34.715Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.863,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_438",
+      "raw_prompt": "the change failure rate is wrong because of label misattribution. Just remove it for now from the py script and report",
+      "timestamp": "2025-08-24T04:32:19.265Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "explicit_reasoning_provided",
+          "trigger_event": "system_failure",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "negative",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.87,
+        "information_density": 0.95,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_439",
+      "raw_prompt": "<user-prompt-submit-hook>the change failure rate is wrong because of label misattribution. Just remove it for now from the py script and report</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T04:32:19.354Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "explicit_reasoning_provided",
+          "trigger_event": "system_failure",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "negative",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.872,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_004_prompt_440",
+      "raw_prompt": "Bug: Incorrect Analysis Period Causes Metric Inflation\nThe analysis period from 2024-12-25 to 2025-08-23 is listed as 70 days, but it actually spans approximately 241 days. This incorrect day count causes all daily average metrics throughout the document (e.g., commits/day, PRs/day) to be significantly inflated.",
+      "timestamp": "2025-08-24T04:38:10.519Z",
+      "project_context": "-Users-jleechan-projects-worldarchitect-ai-worktree-stats",
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [
+            "commits/day",
+            "PRs/day"
+          ],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "development",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "deployment_action",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "planned_development",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": [
+          "ready_to_commit"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.882,
+        "information_density": 0.87,
+        "technical_specificity": 0.07,
+        "action_orientation": 0.22
+      }
+    }
+  ]
+}

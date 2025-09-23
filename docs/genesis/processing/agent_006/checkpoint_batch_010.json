@@ -1,0 +1,1194 @@
+{
+  "batch_number": 10,
+  "processed_count": 200,
+  "total_target": 994,
+  "progress_percentage": 20.12,
+  "timestamp": "2025-09-22T04:23:23.866502",
+  "average_authenticity": 0.736,
+  "results": [
+    {
+      "prompt_id": 5151,
+      "timestamp": "2025-09-21T07:23:40.447Z",
+      "content_preview": "ok just remove the hardcoded model names from the frontend for now",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5157,
+      "timestamp": "2025-09-21T07:32:48.437Z",
+      "content_preview": "still says claude synthesis. look more carefully for hardcoded strings [Image #1]",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.66
+        }
+      }
+    },
+    {
+      "prompt_id": 5153,
+      "timestamp": "2025-09-21T07:25:46.659Z",
+      "content_preview": "make a pr and run local server",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5155,
+      "timestamp": "2025-09-21T07:28:14.834Z",
+      "content_preview": "http://localhost:3000/ is not running",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "web_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.8,
+          "overall_score": 0.74
+        }
+      }
+    },
+    {
+      "prompt_id": 5159,
+      "timestamp": "2025-09-21T07:35:48.652Z",
+      "content_preview": "i still see this in incognito window. /redgreen fix it [Image #1]",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.73
+        }
+      }
+    },
+    {
+      "prompt_id": 5158,
+      "timestamp": "2025-09-21T07:32:48.625Z",
+      "content_preview": "<user-prompt-submit-hook>still says claude synthesis. look more carefully for hardcoded strings [Ima...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.66
+        }
+      }
+    },
+    {
+      "prompt_id": 5154,
+      "timestamp": "2025-09-21T07:25:46.848Z",
+      "content_preview": "<user-prompt-submit-hook>make a pr and run local server</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5152,
+      "timestamp": "2025-09-21T07:23:40.638Z",
+      "content_preview": "<user-prompt-submit-hook>ok just remove the hardcoded model names from the frontend for now</user-pr...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5156,
+      "timestamp": "2025-09-21T07:28:15.052Z",
+      "content_preview": "<user-prompt-submit-hook>http://localhost:3000/ is not running</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "web_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.8,
+          "overall_score": 0.74
+        }
+      }
+    },
+    {
+      "prompt_id": 5160,
+      "timestamp": "2025-09-21T07:36:38.409Z",
+      "content_preview": "ok thats fine link me the pr",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5161,
+      "timestamp": "2025-09-21T07:36:38.608Z",
+      "content_preview": "<user-prompt-submit-hook>ok thats fine link me the pr</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5162,
+      "timestamp": "2025-09-22T04:43:33.311Z",
+      "content_preview": "just test using browser mcp",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5163,
+      "timestamp": "2025-09-22T04:43:33.500Z",
+      "content_preview": "<user-prompt-submit-hook>just test using browser mcp</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5164,
+      "timestamp": "2025-09-19T21:45:44.198Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/docs/SYN...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "python_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5165,
+      "timestamp": "2025-09-18T23:57:11.861Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test-mcp...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "js",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5166,
+      "timestamp": "2025-09-22T02:26:19.912Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/roadmap/...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5167,
+      "timestamp": "2025-09-21T05:39:32.087Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test_rea...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "js",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5168,
+      "timestamp": "2025-09-21T06:22:05.344Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test_dep...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python",
+            "cloud"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5169,
+      "timestamp": "2025-09-22T08:51:35.451Z",
+      "content_preview": "Analyze if creating file '/Users/jleechan/projects/worktree_ralph/ralph/goal_refiner.py' violates CL...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    },
+    {
+      "prompt_id": 5170,
+      "timestamp": "2025-09-22T08:51:35.771Z",
+      "content_preview": "<user-prompt-submit-hook>Analyze if creating file '/Users/jleechan/projects/worktree_ralph/ralph/goa...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "py",
+            "md",
+            "sh"
+          ],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "python_execution",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "python_development",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.855
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,2631 @@
+[
+  {
+    "prompt_id": "chunk_002_prompt_1715",
+    "raw_prompt": "delete this .claude/settings.json.backup and see if this is a real issue @cursor cursor bot 2 hours ago\nBug: Syntax Error in Bash Hooks\nThe && exit 0 placed before the fi statement introduces a bash syntax error, causing all hooks to fail execution. For hooks that use exec, this && exit 0 is also unreachable because exec replaces the current shell process, preventing the intended fallback to $HOME/.claude/hooks/ from ever being attempted.",
+    "timestamp": "2025-09-18T22:24:37.718Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1715_minutes",
+        "recent_errors": [],
+        "work_focus": "problem_resolution"
+      },
+      "technical_context": {
+        "file_references": [
+          "claude/settings.json"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/settings",
+          "/hooks"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "problem_resolution",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.8,
+      "information_density": 1.44,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1716",
+    "raw_prompt": "<user-prompt-submit-hook>delete this .claude/settings.json.backup and see if this is a real issue @cursor cursor bot 2 hours ago\nBug: Syntax Error in Bash Hooks\nThe && exit 0 placed before the fi statement introduces a bash syntax error, causing all hooks to fail execution. For hooks that use exec, this && exit 0 is also unreachable because exec replaces the current shell process, preventing the intended fallback to $HOME/.claude/hooks/ from ever being attempted.\n\ndelete this .claude/settings.json.backup and see if this is a real issue @cursor cursor bot 2 hours ago\nBug: Syntax Error in Bash Hooks\nThe && exit 0 placed before the fi statement introduces a bash syntax error, causing all hooks to fail execution. For hooks that use exec, this && exit 0 is also unreachable because exec replaces the current shell process, preventing the intended fallback to $HOME/.claude/hooks/ from ever being attempted.</user-prompt-submit-hook>",
+    "timestamp": "2025-09-18T22:24:38.217Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1716_minutes",
+        "recent_errors": [],
+        "work_focus": "problem_resolution"
+      },
+      "technical_context": {
+        "file_references": [
+          "claude/settings.json",
+          "claude/settings.json"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/settings",
+          "/hooks",
+          "/settings",
+          "/hooks",
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "problem_resolution",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 3,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "moderate",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.85,
+      "information_density": 2.88,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1717",
+    "raw_prompt": "<user-prompt-submit-hook>push to pr\n\npush to pr</user-prompt-submit-hook>",
+    "timestamp": "2025-09-18T22:33:42.032Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1717_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.12,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1718",
+    "raw_prompt": "run related local tests",
+    "timestamp": "2025-09-18T22:35:33.631Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1718_minutes",
+        "recent_errors": [],
+        "work_focus": "workflow_continuation"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "general"
+        ],
+        "command_history": [],
+        "complexity_indicators": [
+          "has_path",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "workflow_continuation",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.6,
+      "information_density": 0.08,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1719",
+    "raw_prompt": "<user-prompt-submit-hook>run related local tests\n\nrun related local tests</user-prompt-submit-hook>",
+    "timestamp": "2025-09-18T22:35:33.827Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1719_minutes",
+        "recent_errors": [],
+        "work_focus": "workflow_continuation"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "workflow_continuation",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.6,
+      "information_density": 0.16,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1720",
+    "raw_prompt": "make context usage default enabled",
+    "timestamp": "2025-09-02T03:23:15.334Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1720_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "general"
+        ],
+        "command_history": [],
+        "complexity_indicators": [
+          "has_path",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.1,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1721",
+    "raw_prompt": "<user-prompt-submit-hook>make context usage default enabled</user-prompt-submit-hook>",
+    "timestamp": "2025-09-02T03:23:15.566Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1721_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.1,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1722",
+    "raw_prompt": "wait did you replace the whole header? now I only see context info and nothing else like branch or PR",
+    "timestamp": "2025-09-02T06:21:53.421Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1722_minutes",
+        "recent_errors": [],
+        "work_focus": "information_seeking"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git"
+        ],
+        "command_history": [],
+        "complexity_indicators": [
+          "has_path",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "information_seeking",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "medium",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.6,
+      "information_density": 0.4,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1723",
+    "raw_prompt": "<user-prompt-submit-hook>wait did you replace the whole header? now I only see context info and nothing else like branch or PR</user-prompt-submit-hook>",
+    "timestamp": "2025-09-02T06:21:53.597Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1723_minutes",
+        "recent_errors": [],
+        "work_focus": "information_seeking"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "information_seeking",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "medium",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.6,
+      "information_density": 0.4,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1724",
+    "raw_prompt": "only see context",
+    "timestamp": "2025-09-02T06:23:48.843Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1724_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "general"
+        ],
+        "command_history": [],
+        "complexity_indicators": [
+          "has_path",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.06,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1725",
+    "raw_prompt": "<user-prompt-submit-hook>only see context</user-prompt-submit-hook>",
+    "timestamp": "2025-09-02T06:23:49.015Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1725_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.06,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1726",
+    "raw_prompt": "i see this in the status line \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502\u00a0>\u00a0                                                                                                                                 \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n  [Context: 135.9k tokens (67% of 200k, 84% usable)]\n  \u23f5\u23f5 bypass permissions on (shift+tab to cycle)",
+    "timestamp": "2025-09-02T06:25:23.777Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1726_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "general"
+        ],
+        "command_history": [],
+        "complexity_indicators": [
+          "has_path",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 3,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "moderate",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.75,
+      "information_density": 0.54,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1727",
+    "raw_prompt": "<user-prompt-submit-hook>i see this in the status line \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502\u00a0>\u00a0                                                                                                                                 \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n  [Context: 135.9k tokens (67% of 200k, 84% usable)]\n  \u23f5\u23f5 bypass permissions on (shift+tab to cycle)</user-prompt-submit-hook>",
+    "timestamp": "2025-09-02T06:25:23.960Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1727_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 3,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "moderate",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.75,
+      "information_density": 0.54,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1728",
+    "raw_prompt": "wtf the branch and pr info is missing. total failure. And when i run it myself i see this which seems wrong too   bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \n>   \"$ROOT/.claude/hooks/git-header.sh\" ] && exec \"$ROOT/.claude/hooks/git-header.sh\"; fi; exit 0'\nbash: line 1: [: missing `]'\n=== Git Status ===\nOn branch context-header-enhancement\nYour branch is up to date with 'origin/context-header-enhancement'.\n\nnothing to commit, working tree clean\n\n[Local: context-header-enhancement (synced) | Remote: origin/context-header-enhancement | PR: #1523 https://github.com/jleechanorg/worldarchitect.ai/pull/1523]",
+    "timestamp": "2025-09-02T06:26:20.435Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1728_minutes",
+        "recent_errors": [],
+        "work_focus": "information_seeking"
+      },
+      "technical_context": {
+        "file_references": [
+          "claude/hooks/git-header.sh",
+          "claude/hooks/git-header.sh"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/dev",
+          "/null",
+          "/hooks",
+          "/git",
+          "/hooks",
+          "/git",
+          "/context",
+          "/context",
+          "/github",
+          "/jleechanorg",
+          "/worldarchitect",
+          "/pull"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "information_seeking",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 3,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "moderate",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.75,
+      "information_density": 1.66,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1729",
+    "raw_prompt": "<user-prompt-submit-hook>wtf the branch and pr info is missing. total failure. And when i run it myself i see this which seems wrong too   bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \n>   \"$ROOT/.claude/hooks/git-header.sh\" ] && exec \"$ROOT/.claude/hooks/git-header.sh\"; fi; exit 0'\nbash: line 1: [: missing `]'\n=== Git Status ===\nOn branch context-header-enhancement\nYour branch is up to date with 'origin/context-header-enhancement'.\n\nnothing to commit, working tree clean\n\n[Local: context-header-enhancement (synced) | Remote: origin/context-header-enhancement | PR: #1523 https://github.com/jleechanorg/worldarchitect.ai/pull/1523]</user-prompt-submit-hook>",
+    "timestamp": "2025-09-02T06:26:20.729Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1729_minutes",
+        "recent_errors": [],
+        "work_focus": "information_seeking"
+      },
+      "technical_context": {
+        "file_references": [
+          "claude/hooks/git-header.sh",
+          "claude/hooks/git-header.sh"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/dev",
+          "/null",
+          "/hooks",
+          "/git",
+          "/hooks",
+          "/git",
+          "/context",
+          "/context",
+          "/github",
+          "/jleechanorg",
+          "/worldarchitect",
+          "/pull",
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "information_seeking",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 3,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "moderate",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.75,
+      "information_density": 1.66,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1730",
+    "raw_prompt": "its totally not working and your fault/ /research to see if it can handle multiple lines",
+    "timestamp": "2025-09-02T06:31:31.906Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1730_minutes",
+        "recent_errors": [],
+        "work_focus": "directive"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [
+          "general"
+        ],
+        "command_history": [
+          "/research"
+        ],
+        "complexity_indicators": [
+          "has_path",
+          "is_directive"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "directive",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 1,
+        "complexity_factors": {
+          "information_density": "low",
+          "decision_complexity": "simple",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.5,
+      "information_density": 0.32,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.4
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1731",
+    "raw_prompt": "Analyze if creating file 'mvp_site/test_file.py' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does 'mvp_site/test_file.py' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+    "timestamp": "2025-09-19T07:44:33.546Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1731_minutes",
+        "recent_errors": [],
+        "work_focus": "workflow_continuation"
+      },
+      "technical_context": {
+        "file_references": [
+          "mvp_site/test_file.py",
+          "CLAUDE.md",
+          "mvp_site/test_file.py"
+        ],
+        "technology_stack": [
+          "python",
+          "bash",
+          "git"
+        ],
+        "command_history": [
+          "/test_file",
+          "/tests",
+          "/test_file",
+          "/NO"
+        ],
+        "complexity_indicators": [
+          "has_path",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "workflow_continuation",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 4,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "complex",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.9,
+      "information_density": 2.56,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1732",
+    "raw_prompt": "<user-prompt-submit-hook>Analyze if creating file 'mvp_site/test_file.py' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does 'mvp_site/test_file.py' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+    "timestamp": "2025-09-19T07:44:33.814Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1732_minutes",
+        "recent_errors": [],
+        "work_focus": "workflow_continuation"
+      },
+      "technical_context": {
+        "file_references": [
+          "mvp_site/test_file.py",
+          "CLAUDE.md",
+          "mvp_site/test_file.py"
+        ],
+        "technology_stack": [
+          "python",
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/test_file",
+          "/tests",
+          "/test_file",
+          "/NO",
+          "/user"
+        ],
+        "complexity_indicators": [
+          "has_hook",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "workflow_continuation",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 4,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "complex",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.9,
+      "information_density": 2.56,
+      "technical_specificity": 0.0,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1733",
+    "raw_prompt": "Execute the /reviewdeep command for the current feature branch (feature/home-directory-script-support) and PR #1581. This should:\n\n1. Run /guidelines for mistake prevention\n2. Execute parallel technical analysis tracks:\n   - Track A: Use /cerebras for fast technical analysis focused on solo developer security\n   - Track B: Use /arch for deep system design analysis with multi-consultant synthesis\n   - Track C: Use Perplexity MCP for AI research on security standards\n3. Run /reviewe for enhanced code review\n4. Synthesize results and generate PR guidelines\n\nFocus on the home directory script support feature we just implemented, specifically:\n- Universal project detector functionality\n- Script fixes for detect_speculation_and_fake_code.sh and post_commit_sync.sh  \n- Cross-repository compatibility testing\n- Security implications of path detection and script execution\n\nTarget: PR #1581 (feature/home-directory-script-support)\n\nPlease execute this comprehensive review process and provide the synthesis.",
+    "timestamp": "2025-09-18T07:18:31.917Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1733_minutes",
+        "recent_errors": [],
+        "work_focus": "problem_resolution"
+      },
+      "technical_context": {
+        "file_references": [
+          "detect_speculation_and_fake_code.sh",
+          "post_commit_sync.sh"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/reviewdeep",
+          "/home",
+          "/guidelines",
+          "/cerebras",
+          "/arch",
+          "/reviewe",
+          "/home"
+        ],
+        "complexity_indicators": [
+          "has_path",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "problem_resolution",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 4,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "complex",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.95,
+      "information_density": 2.62,
+      "technical_specificity": 0.031,
+      "action_orientation": 0.8
+    }
+  },
+  {
+    "prompt_id": "chunk_002_prompt_1734",
+    "raw_prompt": "Execute copilot-fixpr operations to address the critical security vulnerabilities identified in /reviewdeep for PR #1581:\n\n**CRITICAL SECURITY FIXES REQUIRED:**\n\n1. **Path Traversal Vulnerability**: Fix `validate_project_root()` function in `scripts/universal_project_detector.sh`\n   - Add `realpath` canonicalization: `project_root=\"$(realpath -e -- \"$1\" 2>/dev/null)\"`\n   - Add regex validation: `[[ \"$project_root\" =~ ^/[^[:cntrl:]]+$ ]]`\n   - Add ownership validation: `[ \"$(stat -c '%u' \"$project_root\")\" -eq \"$(id -u)\" ]`\n\n2. **Performance Bottleneck**: Remove Strategy #5 completely from `find_project_root()` function\n   - Delete lines 49-56 (the find $HOME command and loop)\n   - This prevents system slowdown from filesystem traversal\n\n3. **Strategy Reordering**: Reorder strategies for better performance and security:\n   - Strategy 1: Environment variable check (move current Strategy 3 to first)\n   - Strategy 2: Git repository detection (current Strategy 1)\n   - Strategy 3: Directory traversal (current Strategy 2)\n   - Strategy 4: Common locations (current Strategy 4)\n   - Remove Strategy 5 entirely\n\n4. **Error Handling**: Enhance error messages and add logging context\n\n**File to modify**: `/Users/jleechan/projects/orch_worldarchitect.ai/task-agent-fix-autono-conver/scripts/universal_project_detector.sh`\n\nApply OWASP-compliant security patterns and ensure all fixes maintain backward compatibility. Test the fixes to ensure they work correctly across different directory contexts.\n\nPlease implement these security fixes and commit them to the feature branch.",
+    "timestamp": "2025-09-18T07:28:25.811Z",
+    "project_context": "-Users-jleechan-projects-worktree-worker1",
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": [
+          "investigation"
+        ],
+        "current_branch": "development",
+        "session_duration": "1734_minutes",
+        "recent_errors": [],
+        "work_focus": "problem_resolution"
+      },
+      "technical_context": {
+        "file_references": [
+          "scripts/universal_project_detector.sh",
+          "/task-agent-fix-autono-conver/scripts/universal_project_detector.sh"
+        ],
+        "technology_stack": [
+          "bash",
+          "git",
+          "hooks"
+        ],
+        "command_history": [
+          "/reviewdeep",
+          "/universal_project_detector",
+          "/dev",
+          "/null",
+          "/Users",
+          "/jleechan",
+          "/projects",
+          "/orch_worldarchitect",
+          "/task",
+          "/scripts",
+          "/universal_project_detector"
+        ],
+        "complexity_indicators": [
+          "has_path",
+          "is_error"
+        ],
+        "urgency_signals": []
+      },
+      "environmental_context": {
+        "time_of_day": "development_hours",
+        "project_phase": "active_development",
+        "team_context": "solo",
+        "deployment_state": "dev"
+      }
+    },
+    "cognitive_analysis": {
+      "intent_classification": {
+        "primary_intent": "problem_resolution",
+        "secondary_intents": [
+          "efficiency",
+          "quality"
+        ],
+        "implicit_expectations": [
+          "execution",
+          "reliability"
+        ]
+      },
+      "cognitive_load": {
+        "hp_score": 4,
+        "complexity_factors": {
+          "information_density": "high",
+          "decision_complexity": "complex",
+          "technical_depth": "surface"
+        }
+      },
+      "reasoning_analysis": {
+        "why_said": "Development workflow execution",
+        "trigger_event": "Task requirement",
+        "expected_outcome": "Successful completion",
+        "workflow_position": "execution_phase"
+      }
+    },
+    "behavioral_classification": {
+      "communication_style": {
+        "directness_level": "ultra_direct",
+        "technical_precision": "medium",
+        "emotional_tone": "focused",
+        "command_preference": "cli"
+      },
+      "user_persona_indicators": {
+        "expertise_level": "expert",
+        "workflow_preference": "automated",
+        "quality_standards": "strict",
+        "risk_tolerance": "balanced"
+      }
+    },
+    "taxonomic_classification": {
+      "core_tenet": {
+        "category": "Technical-Precision",
+        "description": "Systematic development approach",
+        "evidence": [
+          "technical_content",
+          "structured_approach"
+        ]
+      },
+      "theme_classification": {
+        "primary_theme": "Development_Automation",
+        "sub_themes": [
+          "Testing",
+          "Quality"
+        ],
+        "pattern_family": "expert_workflow"
+      },
+      "goal_hierarchy": {
+        "immediate_goal": "Execute task",
+        "session_goal": "Complete feature",
+        "project_goal": "System improvement",
+        "meta_goal": "Development excellence"
+      }
+    },
+    "predictive_modeling": {
+      "next_likely_actions": [
+        "execute",
+        "validate",
+        "test"
+      ],
+      "command_probability": {
+        "/execute": 0.4,
+        "/tdd": 0.25,
+        "/redgreen": 0.2,
+        "/orch": 0.15
+      },
+      "workflow_trajectory": "execution -> validation -> completion",
+      "completion_indicators": [
+        "success",
+        "tests_pass",
+        "no_errors"
+      ]
+    },
+    "quality_metrics": {
+      "authenticity_score": 0.95,
+      "information_density": 3.0,
+      "technical_specificity": 0.021,
+      "action_orientation": 0.8
+    }
+  }
+]

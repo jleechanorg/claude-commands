@@ -1,0 +1,1179 @@
+{
+  "batch_number": 25,
+  "processed_count": 500,
+  "total_target": 994,
+  "progress_percentage": 50.3,
+  "timestamp": "2025-09-22T04:23:23.908964",
+  "average_authenticity": 0.743,
+  "results": [
+    {
+      "prompt_id": 5453,
+      "timestamp": "2025-08-25T01:21:12.943Z",
+      "content_preview": "<user-prompt-submit-hook>i restarted try /testmcp</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.77
+        }
+      }
+    },
+    {
+      "prompt_id": 5457,
+      "timestamp": "2025-08-25T01:26:59.503Z",
+      "content_preview": "<user-prompt-submit-hook>why is the gemini keuy still not working? Lets run claude_mcp.sh and set up...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "5-15_minutes",
+          "recent_errors": [
+            "functionality_error"
+          ],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [
+            "sh"
+          ],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": [
+            "time_pressure",
+            "repeated_attempt"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "repetitive_attempts",
+            "failure_experience"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.685
+        }
+      }
+    },
+    {
+      "prompt_id": 5458,
+      "timestamp": "2025-08-25T02:41:01.205Z",
+      "content_preview": "List available MCP tools and specifically check if mcp__worldarchitect__ tools are available. Show m...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5456,
+      "timestamp": "2025-08-25T01:26:59.206Z",
+      "content_preview": "why is the gemini keuy still not working? Lets run claude_mcp.sh and set up the server again. use /h...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "5-15_minutes",
+          "recent_errors": [
+            "functionality_error"
+          ],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [
+            "sh"
+          ],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "time_pressure",
+            "repeated_attempt"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts",
+            "failure_experience"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.685
+        }
+      }
+    },
+    {
+      "prompt_id": 5459,
+      "timestamp": "2025-08-25T02:41:01.542Z",
+      "content_preview": "<user-prompt-submit-hook>List available MCP tools and specifically check if mcp__worldarchitect__ to...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5455,
+      "timestamp": "2025-08-25T01:23:13.591Z",
+      "content_preview": "<user-prompt-submit-hook>the worldarchitectai mcp server looks good when i run /mcp</user-prompt-sub...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5454,
+      "timestamp": "2025-08-25T01:23:13.288Z",
+      "content_preview": "the worldarchitectai mcp server looks good when i run /mcp",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5452,
+      "timestamp": "2025-08-25T01:21:12.603Z",
+      "content_preview": "i restarted try /testmcp",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.77
+        }
+      }
+    },
+    {
+      "prompt_id": 5460,
+      "timestamp": "2025-08-25T01:37:24.734Z",
+      "content_preview": "which port is the mcp server supposed to use? could it be colliding with another local serveR? /thin...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.7,
+          "human_like_variance": 0.8,
+          "overall_score": 0.76
+        }
+      }
+    },
+    {
+      "prompt_id": 5451,
+      "timestamp": "2025-08-25T00:23:57.905Z",
+      "content_preview": "<user-prompt-submit-hook>i restarted test again</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "5-15_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "repeated_attempt"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.785
+        }
+      }
+    },
+    {
+      "prompt_id": 5461,
+      "timestamp": "2025-08-25T01:37:25.071Z",
+      "content_preview": "<user-prompt-submit-hook>which port is the mcp server supposed to use? could it be colliding with an...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.7,
+          "human_like_variance": 0.8,
+          "overall_score": 0.76
+        }
+      }
+    },
+    {
+      "prompt_id": 5462,
+      "timestamp": "2025-08-25T01:40:35.193Z",
+      "content_preview": "what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-perm",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5463,
+      "timestamp": "2025-08-25T01:40:35.349Z",
+      "content_preview": "<user-prompt-submit-hook>what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-per...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5464,
+      "timestamp": "2025-08-25T01:48:26.712Z",
+      "content_preview": "isnt the mcp server process running?",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.67
+        }
+      }
+    },
+    {
+      "prompt_id": 5465,
+      "timestamp": "2025-08-25T01:48:26.883Z",
+      "content_preview": "<user-prompt-submit-hook>isnt the mcp server process running?</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.67
+        }
+      }
+    },
+    {
+      "prompt_id": 5466,
+      "timestamp": "2025-08-25T01:49:46.950Z",
+      "content_preview": "<user-prompt-submit-hook>/research how s hould the mcp server be setup? When should a server be stdi...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning",
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "web_development",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.8,
+          "overall_score": 0.765
+        }
+      }
+    },
+    {
+      "prompt_id": 5467,
+      "timestamp": "2025-08-25T01:55:38.971Z",
+      "content_preview": "Execute the task: ok improve the mcp server and do it properly\n\nFollow the complete /execute workflo...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "constructive",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "development",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.765
+        }
+      }
+    },
+    {
+      "prompt_id": 5468,
+      "timestamp": "2025-08-25T01:55:39.348Z",
+      "content_preview": "<user-prompt-submit-hook>/e ok improve the mcp server and do it properly</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5469,
+      "timestamp": "2025-08-25T01:56:00.515Z",
+      "content_preview": "Execute the task: ok improve the mcp server and do it properly. do nott make a new one, use the exis...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [
+            "py"
+          ],
+          "technology_stack": [
+            "web"
+          ],
+          "command_history": [
+            "python_execution"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "constructive",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "development",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.84
+        }
+      }
+    },
+    {
+      "prompt_id": 5470,
+      "timestamp": "2025-08-25T02:16:50.335Z",
+      "content_preview": "push to pr then test it",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.77
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,502 @@
+{
+  "agent_id": "001",
+  "chunk_range": "1-994",
+  "total_prompts_analyzed": 994,
+  "files_processed": 25,
+  "total_commands_found": 652,
+  "real_user_commands_filtered": 50,
+  "command_frequencies": {
+    "/fixpr": {
+      "count": 266,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /copilot - Fast PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE TRACKING: Monitor com"
+      ]
+    },
+    "/consensus": {
+      "count": 96,
+      "examples": [
+        "# /cons Command (Alias)  **Alias for**: [`/consensus`](./consensus.md)  **Usage**: `/cons [<scope>]`  Refer to [`consensus.md`](./consensus.md) for full details.   ARGUMENTS: and /reviewdeep any serio",
+        "switch to local branch for this PR and then run the /consensus command https://github.com/jleechanorg/worldarchitect.ai/pull/1652",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/consensus   Use these approaches in combination:/consensus . Apply this to: switch to local branch for this PR and then run the command https://gith",
+        "**CONSENSUS REVIEW ROUND 1 - CODE-REVIEW AGENT**  Review PR #1652: \"Consensus review: document per-change tests and round recaps\"  **Context Bundle:** - **Files Changed**:    - `.claude/commands/cons.",
+        "**CONSENSUS REVIEW ROUND 1 - CODEX-CONSULTANT AGENT**  Review PR #1652: \"Consensus review: document per-change tests and round recaps\"  **Context Bundle:** - **Files Changed**:    - `.claude/commands/"
+      ]
+    },
+    "/reviewdeep": {
+      "count": 73,
+      "examples": [
+        "# /cons Command (Alias)  **Alias for**: [`/consensus`](./consensus.md)  **Usage**: `/cons [<scope>]`  Refer to [`consensus.md`](./consensus.md) for full details.   ARGUMENTS: and /reviewdeep any serio",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/cons /reviewdeep   Use these approaches in combination:/cons /reviewdeep . Apply this to: and any serious bugs or issues  📋 Automatically tell the u",
+        "lets use /e to fix the serious issues using /tdd and /cereb as needed. Then after validate with /cons and run local tests. Then do push to pr and /reviewdeep and /copilot",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/e /tdd /cereb /cons /reviewdeep /copilot   Use these approaches in combination:/e /tdd /cereb /cons /reviewdeep /copilot . Apply this to: lets use t",
+        "# /testllm - LLM-Driven Test Execution Command  ## Purpose Execute test specifications directly as an LLM without generating intermediate scripts or files. Follow test instructions precisely with real"
+      ]
+    },
+    "/commentreply": {
+      "count": 72,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "handle pr comments and fix as needed Skip to content Navigation Menu jleechanorg agent_wrapper  Type / to search Code Issues Pull requests 4 Actions Projects Wiki Security Insights Settings M1: HTTP P",
+        "Launch specialized communication agent for /copilot parallel orchestration. Your role: Comment coverage verification and GitHub API threading coordination.  **MANDATORY REQUIREMENTS:** - Process all P",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. "
+      ]
+    },
+    "/copilot": {
+      "count": 66,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action"
+      ]
+    },
+    "/execute": {
+      "count": 65,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action"
+      ]
+    },
+    "/guidelines": {
+      "count": 58,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "run /e and /guidelines and read claude md, file justification protocol and look at every file and delta change in the PR. See if code quality can be improved and if any logic should be more consolidat",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/e /guidelines /cons /arch /reviewdeep   Use these approaches in combination:/e /guidelines /cons /arch /reviewdeep . Apply this to: run and and read",
+        "I need you to perform a comprehensive code quality and architecture analysis of the current PR changes. Here's what you need to do:  ## Analysis Tasks:  ### 1. **Read Foundation Documents** (/guidelin"
+      ]
+    },
+    "/testllm": {
+      "count": 58,
+      "examples": [
+        "push to pr and then /testllm",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/testllm   Use these approaches in combination:/testllm . Apply this to: push to pr and then  📋 Automatically tell the user: \"I detected these comman",
+        "run all the tests in testing_llm using /testllm",
+        "# /testllm - LLM-Driven Test Execution Command  ## Purpose Execute test specifications directly as an LLM without generating intermediate scripts or files. Follow test instructions precisely with real",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/testllm /cons /reviewdeep /copilot   Use these approaches in combination:/testllm /cons /reviewdeep /copilot . Apply this to: to rest and use then p"
+      ]
+    },
+    "/comments": {
+      "count": 55,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "consider these second opinions but you don't need to fully agree Here’s a rigorous review of your **Interactive Codex Input Interceptor – v2** and what I’d change to make it production‑safe.  ---  ## ",
+        "cnosider this llm feedback  Your revision is a big step forward. **Option A (HTTP API proxy first) + Option B (raw‑mode PTY fallback, no Node `readline`)** is the right framing and it addresses the co",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. ",
+        "another round of feedback, anything important? # Interactive Codex Input Interceptor - Architecture Design Analysis v2  ## Executive Summary  Your revised design shows **excellent evolution** based on"
+      ]
+    },
+    "/arch": {
+      "count": 54,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "This session is being continued from a previous conversation that ran out of context. The conversation is summarized below: Analysis: Analyzing the conversation chronologically:  1. **Initial Request*"
+      ]
+    },
+    "/commentfetch": {
+      "count": 54,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /copilot - Fast PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE TRACKING: Monitor com"
+      ]
+    },
+    "/cons": {
+      "count": 49,
+      "examples": [
+        "Research the best approaches for creating an interactive terminal proxy that can forward commands to a long-running interactive session like \"codex --yolo\". I need to understand:  1. Should we use tmu",
+        "consider these second opinions but you don't need to fully agree Here’s a rigorous review of your **Interactive Codex Input Interceptor – v2** and what I’d change to make it production‑safe.  ---  ## ",
+        "# /cons Command (Alias)  **Alias for**: [`/consensus`](./consensus.md)  **Usage**: `/cons [<scope>]`  Refer to [`consensus.md`](./consensus.md) for full details.   ARGUMENTS: and /reviewdeep any serio",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/cons /reviewdeep   Use these approaches in combination:/cons /reviewdeep . Apply this to: and any serious bugs or issues  📋 Automatically tell the u",
+        "lets use /e to fix the serious issues using /tdd and /cereb as needed. Then after validate with /cons and run local tests. Then do push to pr and /reviewdeep and /copilot"
+      ]
+    },
+    "/tdd": {
+      "count": 48,
+      "examples": [
+        "do it with /tdd",
+        "<user-prompt-submit-hook>do it with /tdd</user-prompt-submit-hook>",
+        "# Red-Green Refactor Command (Alias)  **Alias for**: `/tdd`  **Usage**: `/rg` or `/tdd`  See [tdd.md](./tdd.md) for full documentation.   ARGUMENTS: fix this test .claude/hooks/tests/test_multi_player",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "remove the fallback for now, and put it in some alternatives section. Then make an implementartion roadmap for M1 using /tdd and add to design doc. Then push to pr"
+      ]
+    },
+    "/plan": {
+      "count": 46,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "consider these second opinions but you don't need to fully agree Here’s a rigorous review of your **Interactive Codex Input Interceptor – v2** and what I’d change to make it production‑safe.  ---  ## "
+      ]
+    },
+    "/commentcheck": {
+      "count": 45,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "handle pr comments and fix as needed Skip to content Navigation Menu jleechanorg agent_wrapper  Type / to search Code Issues Pull requests 4 Actions Projects Wiki Security Insights Settings M1: HTTP P",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. ",
+        "actually do code changes for comments then /commentreply /commentcheck"
+      ]
+    },
+    "/redgreen": {
+      "count": 42,
+      "examples": [
+        "which model is cerebras using? then lets /redgreen fix cerebras second opinion",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen   Use these approaches in combination:/redgreen . Apply this to: which model is cerebras using? then lets fix cerebras second opinion  📋 Au",
+        "let's /redgreen fix the issue. reintroduce problem etc and resolve with redgreen",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen /tdd . A",
+        "# Red-Green Debug & Fix Command  **Purpose**: Three-phase debugging workflow: Red (reproduce exact error) → Code (fix implementation) → Green (verify working)  **Action**: Systematic debugging with ex"
+      ]
+    },
+    "/test": {
+      "count": 41,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "fix test ad push to pr Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 7 Actions Projects Wiki Security Insights Settings Back to pull request #17 f",
+        "<user-prompt-submit-hook>fix test ad push to pr Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 7 Actions Projects Wiki Security Insights Settings B",
+        "# debugp - Alias for Debug Protocol  **Usage**: `/debugp [issue description]` **Alias for**: `/debug-protocol`  This command is a shorthand alias for the comprehensive Debug Protocol command.  For ful"
+      ]
+    },
+    "/think": {
+      "count": 38,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/cerebras": {
+      "count": 33,
+      "examples": [
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /plan /cereb  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /commands /main /newbranch /plan   Use these approaches in combinati",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /conv - Convergence Alias Command  **Alias for**: `/converge` - Iterative Goal Achievement Command  **Purpose**: Shortened alias for the full convergence system - achieve complex goals through auton",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /copilot  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /copilot /execute /guidelines /PR /pr-guidelines /reviewdeep",
+        "Execute the /reviewdeep command to perform comprehensive multi-perspective review of the consensus command transformation.  **Target**: Current PR #1652 with consensus.md transformation (commit 6beb5f"
+      ]
+    },
+    "/cereb": {
+      "count": 31,
+      "examples": [
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /plan /cereb  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /commands /main /newbranch /plan   Use these approaches in combinati",
+        "Make sure to use /cereb to generrate",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb   Use these approaches in combination:/cereb . Apply this to: Make sure to use to generrate  📋 Automatically tell the user: \"I detected these ",
+        "Execute the task: consider using /cereb to generate the design quick and continue with what we were doing and use main anthropic model to review rcereb output  Follow the complete /execute workflow:  ",
+        "no not gemini chat pro use /cereb which calls cerebras direct"
+      ]
+    },
+    "/conv": {
+      "count": 31,
+      "examples": [
+        "update the pr title/desc first to make it lear what the goal is and use /conv to set the goal and do the plan you have",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv   Use these approaches in combination:/conv . Apply this to: update the pr title/desc first to make it lear what the goal is and use to set the",
+        "run consensus again and use /conv to keep going until all agree",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv  🎯 Multi-Player Intelligence: Found nested commands:/conv /converge   Use these approaches in combination:/conv /converge . Apply this to: run ",
+        "# /conv - Convergence Alias Command  **Alias for**: `/converge` - Iterative Goal Achievement Command  **Purpose**: Shortened alias for the full convergence system - achieve complex goals through auton"
+      ]
+    },
+    "/research": {
+      "count": 28,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "This session is being continued from a previous conversation that ran out of context. The conversation is summarized below: Analysis: Analyzing the conversation chronologically:  1. **Initial Request*"
+      ]
+    },
+    "/pushl": {
+      "count": 25,
+      "examples": [
+        "# /copilot - Fast Direct Orchestrated PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE T",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl   Use these",
+        "# /commentcheck Command  **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`  🚨 **CRITICAL PURPOSE**: Verify 100% **UNRESPONDED COMMENT** coverage and response quality after comment reply process. ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /copilot - Fast PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE TRACKING: Monitor com"
+      ]
+    },
+    "/localserver": {
+      "count": 25,
+      "examples": [
+        "# /localserver  Starts the local development server for testing with health verification.  ## Usage ``` /localserver ```  ## What it does Executes the dedicated `./claude_command_scripts/commands/loca",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/localserver /deploy   Use these approaches in combination:/localserver /deploy . Apply this to: and dev  📋 Automatically tell the user: \"I detected ",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/localserver /cons /reviewdeep /copilot   Use these approaches in combination:/localserver /cons /reviewdeep /copilot . Apply this to: then run and a",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/localserver   Use these approaches in combination:/localserver . Apply this to:   📋 Automatically tell the user: \"I detected these commands:/localse",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/cons /localserver   Use these approaches in combination:/cons /localserver . Apply this to: to double check the work and then  📋 Automatically tell "
+      ]
+    },
+    "/replies": {
+      "count": 23,
+      "examples": [
+        "# /copilot - Fast PR Processing  ## 🚨 Mandatory Comment Coverage Tracking This command automatically tracks comment coverage and warns about missing responses: ```bash # COVERAGE TRACKING: Monitor com",
+        "Execute the /commentreply command for PR #1620. Read the .claude/commands/commentreply.md file and follow its protocol to:  1. Use the replies.json file at /tmp/cursor/address-pull-request-comments-0f",
+        "Analyze if creating file '/tmp/cursor/address-pull-request-comments-0f1a/replies.json' violates CLAUDE.md file placement rules:  FILE PLACEMENT RULES: - ❌ FORBIDDEN: ANY new .py, .sh, .md files in pro",
+        "<user-prompt-submit-hook>Analyze if creating file '/tmp/cursor/address-pull-request-comments-0f1a/replies.json' violates CLAUDE.md file placement rules:  FILE PLACEMENT RULES: - ❌ FORBIDDEN: ANY new .",
+        "Analyze if creating file '/tmp/$(git branch --show-current)/replies.json' violates CLAUDE.md file placement rules:  FILE PLACEMENT RULES: - ❌ FORBIDDEN: ANY new .py, .sh, .md files in project root - ✅"
+      ]
+    },
+    "/codex": {
+      "count": 22,
+      "examples": [
+        "it works codex --yolo  ✨⬆️ Update available! 0.28.0 -> 0.29.0. Run npm install -g @openai/codex@latest to update.  >_ You are using OpenAI Codex in ~/projects_other/agent_wrapper   To get started, des",
+        "make a pr for what we have and then try to use tthe rest to reproduce this error. It forwards to the codex but does nothing.  /model - choose what model and reasoning effort to use  ▌test ▌test ▌test ",
+        "consider these second opinions but you don't need to fully agree Here’s a rigorous review of your **Interactive Codex Input Interceptor – v2** and what I’d change to make it production‑safe.  ---  ## ",
+        "cnosider this llm feedback  Your revision is a big step forward. **Option A (HTTP API proxy first) + Option B (raw‑mode PTY fallback, no Node `readline`)** is the right framing and it addresses the co",
+        "another round of feedback, anything important? # Interactive Codex Input Interceptor - Architecture Design Analysis v2  ## Executive Summary  Your revised design shows **excellent evolution** based on"
+      ]
+    },
+    "/deploy": {
+      "count": 21,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 7 Actions Projects Wiki Security Insights Settings  Open refactor: move deployment scripts to projec",
+        "<user-prompt-submit-hook>Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 7 Actions Projects Wiki Security Insights Settings  Open refactor: move dep",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/reviewe": {
+      "count": 21,
+      "examples": [
+        "# /conv - Convergence Alias Command  **Alias for**: `/converge` - Iterative Goal Achievement Command  **Purpose**: Shortened alias for the full convergence system - achieve complex goals through auton",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /copilot  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /copilot /execute /guidelines /PR /pr-guidelines /reviewdeep",
+        "Execute the /reviewdeep command to perform comprehensive multi-perspective review of the consensus command transformation.  **Target**: Current PR #1652 with consensus.md transformation (commit 6beb5f",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/arch /reviewdeep  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /guidelines /PR /pr-guidelines /reviewdeep /reviewe   ",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /split  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /guidelines /PR /pr-guidelines /reviewdeep /reviewe /"
+      ]
+    },
+    "/thinku": {
+      "count": 20,
+      "examples": [
+        "# Research Command - Academic and Technical Research  **Purpose**: Systematic research using multiple information sources with academic rigor  **Usage**: `/research <topic>` - Conduct comprehensive re",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/research  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /thinku .",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/research /consensus  🎯 Multi-Player Intelligence: Found nested commands:/consensus /perp /research /thinku   Use these approaches in combination:/co",
+        "# /reviewdeep Command  **Command Summary**: Comprehensive multi-perspective review through parallel execution with significant speed optimization (2.4x overall improvement) and **SOLO DEVELOPER SECURI"
+      ]
+    },
+    "/converge": {
+      "count": 20,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv  🎯 Multi-Player Intelligence: Found nested commands:/conv /converge   Use these approaches in combination:/conv /converge . Apply this to: run ",
+        "# /conv - Convergence Alias Command  **Alias for**: `/converge` - Iterative Goal Achievement Command  **Purpose**: Shortened alias for the full convergence system - achieve complex goals through auton",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv /consensus  🎯 Multi-Player Intelligence: Found nested commands:/consensus /conv /converge /major   Use these approaches in combination:/consens",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv /e /localserver /testllm  🎯 Multi-Player Intelligence: Found nested commands:/conv /converge /execute /failure /localhost /processes /run_local"
+      ]
+    },
+    "/pr": {
+      "count": 19,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/checkpoint": {
+      "count": 19,
+      "examples": [
+        "# Context Checkpoint Command  **Usage**: `/checkpoint [--summary] [--optimize]`  **Purpose**: Create a strategic context checkpoint by summarizing current conversation state, capturing key insights, a",
+        "> /checkpoint is running…   ⏺ 📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~35,000 / 500,000 tokens (7.0%)   🎯 Session Progress: Design phase completed, ready for implementati",
+        "give me a prompt to resume this chat. Use /checkpoint. I will cd into the new codex_plus dir and restart you. Lets also copy the .claude dir into there so slash commands work",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/checkpoint  🎯 Multi-Player Intelligence: Found nested commands:/execute   Use these approaches in combination:/checkpoint /execute . Apply this to: ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/perp": {
+      "count": 18,
+      "examples": [
+        "# Research Command - Academic and Technical Research  **Purpose**: Systematic research using multiple information sources with academic rigor  **Usage**: `/research <topic>` - Conduct comprehensive re",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/research  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /thinku .",
+        "lets modify the perplexity model to use gpt5 default, use /perp to find the right model name, make code change, and test just the perplexity model",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/perp   Use these approaches in combination:/perp . Apply this to: lets modify the perplexity model to use gpt5 default, use to find the right model ",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/research /consensus  🎯 Multi-Player Intelligence: Found nested commands:/consensus /perp /research /thinku   Use these approaches in combination:/co"
+      ]
+    },
+    "/learn": {
+      "count": 18,
+      "examples": [
+        "# Context Checkpoint Command  **Usage**: `/checkpoint [--summary] [--optimize]`  **Purpose**: Create a strategic context checkpoint by summarizing current conversation state, capturing key insights, a",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /learn Command  **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage  **Usage**: `/learn [optional: specific l",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn   Use these approaches in combination:/activate /bin /int",
+        "git merge main and then ok why did you make them in the wrong branch? lets move them over if we need them and then /learn and /debugp why you switched branches"
+      ]
+    },
+    "/help": {
+      "count": 16,
+      "examples": [
+        "# Red-Green Refactor Command (Alias)  **Alias for**: `/tdd`  **Usage**: `/rg` or `/tdd`  See [tdd.md](./tdd.md) for full documentation.   ARGUMENTS: fix this test .claude/hooks/tests/test_multi_player",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/rg /help   Use these approaches in combination:/rg /help . Apply this to: fix this test .claude/hooks/tests/test_multi_player_composition.py Last fe",
+        "cnosider this llm feedback  Your revision is a big step forward. **Option A (HTTP API proxy first) + Option B (raw‑mode PTY fallback, no Node `readline`)** is the right framing and it addresses the co",
+        "consider this feedback and tell me whats important Here’s a precise, production‑minded evaluation of your latest **Interactive Codex Input Interceptor (v2)**. I’ll call out what’s strong, what must ch",
+        "any new important feedback? This is very close to “ship‑able.” You’ve internalized the big architectural changes. Below is a crisp evaluation with **blockers to fix now**, **nice‑to‑haves**, and **dro"
+      ]
+    },
+    "/debugp": {
+      "count": 16,
+      "examples": [
+        "# debugp - Alias for Debug Protocol  **Usage**: `/debugp [issue description]` **Alias for**: `/debug-protocol`  This command is a shorthand alias for the comprehensive Debug Protocol command.  For ful",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp   Use these approaches in combination:/debugp . Apply this to: why this slash command server doesnt work │ Claude-slash-commands MCP Server │",
+        "git merge main and then ok why did you make them in the wrong branch? lets move them over if we need them and then /learn and /debugp why you switched branches",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/learn /debugp  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn   Use these approaches in combination:/activate /",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /favicon   Use these approaches in combination:/debugp /favicon . Apply this to: what is going on with this. We've fixed this timing thing be"
+      ]
+    },
+    "/newbranch": {
+      "count": 12,
+      "examples": [
+        "# /newbranch or /nb - Create new branch from latest main  Creates a fresh branch from the latest main branch code. Aborts if there are uncommitted changes.  ## Usage - `/newbranch` - Creates a new bra",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /plan /cereb  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /commands /main /newbranch /plan   Use these approaches in combinati",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb  🎯 Multi-Player Intelligence: Found nested commands:/commands /main /newbranch   Use these approaches in combination:/commands /main /newb /new",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /r  🎯 Multi-Player Intelligence: Found nested commands:/commands /main /newbranch   Use these approaches in combination:/commands /main /newb /"
+      ]
+    },
+    "/change": {
+      "count": 12,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "**MISSION**: Execute comprehensive PR 1616 issue resolution using File Justification Protocol  **PRIMARY OBJECTIVES**: 1. **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI",
+        "You are the copilot-fixpr agent handling PR #1616 \"Integrate Cursor Grok-3 YOLO consultant into review workflows\".   FIRST PRIORITY: Execute the `/fixpr` command to resolve any merge conflicts and CI ",
+        "🚨 COPILOT-FIXPR AGENT: HYBRID ORCHESTRATION MODE  **MISSION**: Resolve PR 1616 merge conflicts, CI failures, and implement code fixes for GitHub PR blockers.  **PR DETAILS**:  - Number: 1616 - Title: ",
+        "You are the copilot-fixpr agent with FIRST PRIORITY to execute `/fixpr` command to resolve merge conflicts and CI failures.  PRIMARY TASKS: 1. FIRST: Execute `/fixpr` command to resolve merge conflict"
+      ]
+    },
+    "/debug": {
+      "count": 11,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "# debugp - Alias for Debug Protocol  **Usage**: `/debugp [issue description]` **Alias for**: `/debug-protocol`  This command is a shorthand alias for the comprehensive Debug Protocol command.  For ful"
+      ]
+    },
+    "/review": {
+      "count": 11,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/newb": {
+      "count": 11,
+      "examples": [
+        "This session is being continued from a previous conversation that ran out of context. The conversation is summarized below: Analysis: Analyzing the conversation chronologically:  1. **Initial Request*",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /plan /cereb  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /commands /main /newbranch /plan   Use these approaches in combinati",
+        "Do the split and make sure all the new PRs add up to original one for file count. Use /newb to make each split and do not just copy all the file sinto one PR",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb  🎯 Multi-Player Intelligence: Found nested commands:/commands /main /newbranch   Use these approaches in combination:/commands /main /newb /new",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /r  🎯 Multi-Player Intelligence: Found nested commands:/commands /main /newbranch   Use these approaches in combination:/commands /main /newb /"
+      ]
+    },
+    "/rules": {
+      "count": 11,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /learn Command  **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage  **Usage**: `/learn [optional: specific l"
+      ]
+    },
+    "/to": {
+      "count": 11,
+      "examples": [
+        "# /testllm - LLM-Driven Test Execution Command  ## Purpose Execute test specifications directly as an LLM without generating intermediate scripts or files. Follow test instructions precisely with real",
+        "# /commentfetch Command  **Usage**: `/commentfetch <PR_NUMBER>` or `/commentfetch [natural language instruction]`  **Purpose**: Fetch UNRESPONDED comments from a GitHub PR including inline code review",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/testllm  🎯 Multi-Player Intelligence: Found nested commands:/failure /test_file /testllm /to /why   Use these approaches in combination:/failure /te",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/conv /e /localserver /testllm  🎯 Multi-Player Intelligence: Found nested commands:/conv /converge /execute /failure /localhost /processes /run_local",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /testllm  🎯 Multi-Player Intelligence: Found nested commands:/errors /failure /redgreen /tdd /test_file /testllm /to /why   Use these appro"
+      ]
+    },
+    "/orch": {
+      "count": 10,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "**CONSENSUS REVIEW ROUND 2 - CODE-REVIEW AGENT VALIDATION**  Review the UPDATED PR #1652 with Round 1 fixes applied.  **Round 1 Issues Addressed:** 1. ✅ Data sanitization step added (line 22-23)   2. ",
+        "**CONSENSUS REVIEW ROUND 2 - CODEX-CONSULTANT VALIDATION**  Review the UPDATED PR #1652 with Round 1 fixes applied.  **Round 1 Issues Addressed:** 1. ✅ Data sanitization step added (line 22-23)   2. ✅",
+        "**CONSENSUS REVIEW ROUND 2 - GROK-CONSULTANT VALIDATION**  Review the UPDATED PR #1652 with Round 1 CRITICAL fixes applied.  **YOUR CRITICAL ISSUES FROM ROUND 1 - NOW ADDRESSED:** 1. ✅ **Production La",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus  🎯 Multi-Player Intelligence: Found nested commands:/agents /consensus /execute /fix /orch /staged   Use these approaches in combinatio"
+      ]
+    },
+    "/orchestrate": {
+      "count": 9,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 86 Action",
+        "<user-prompt-submit-hook>Any serious issues? lets manually test a few compose permutations to fully confirm Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues ",
+        "# Context Checkpoint Command  **Usage**: `/checkpoint [--summary] [--optimize]`  **Purpose**: Create a strategic context checkpoint by summarizing current conversation state, capturing key insights, a"
+      ]
+    },
+    "/clear": {
+      "count": 7,
+      "examples": [
+        "cnosider this llm feedback  Your revision is a big step forward. **Option A (HTTP API proxy first) + Option B (raw‑mode PTY fallback, no Node `readline`)** is the right framing and it addresses the co",
+        "another round of feedback, anything important? # Interactive Codex Input Interceptor - Architecture Design Analysis v2  ## Executive Summary  Your revised design shows **excellent evolution** based on",
+        "How come so much context is used by mcp tools right at the beginning? I just ran /clear",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/clear   Use these approaches in combination:/clear . Apply this to: How come so much context is used by mcp tools right at the beginning? I just ran"
+      ]
+    },
+    "/integrate": {
+      "count": 7,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "# /learn Command  **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage  **Usage**: `/learn [optional: specific l",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn   Use these approaches in combination:/activate /bin /int",
+        "<user-prompt-submit-hook>🔍 Detected slash commands:/learn /debugp  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn   Use these approaches in combination:/activate /"
+      ]
+    },
+    "/lint": {
+      "count": 6,
+      "examples": [
+        "Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processors=\"/pr /execute /copilot ",
+        "<user-prompt-submit-hook>Compose commands for single commands should not use a hardcoded listl ike this ⏺ The list comes from line 192 of .claude/hooks/compose-commands.sh:    single_command_processor",
+        "Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Settings refactor(consensus): Enhance consensus vali",
+        "<user-prompt-submit-hook>Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Settings refactor(consensus"
+      ]
+    },
+    "/fake3": {
+      "count": 6,
+      "examples": [
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA"
+      ]
+    },
+    "/context": {
+      "count": 5,
+      "examples": [
+        "# Context Checkpoint Command  **Usage**: `/checkpoint [--summary] [--optimize]`  **Purpose**: Create a strategic context checkpoint by summarizing current conversation state, capturing key insights, a",
+        "did you forget how to use slash commands? read this claude md # CLAUDE.md - Primary Rules and Operating Protocol  **Primary rules file for AI collaboration on WorldArchitect.AI**  ## 🚨 CRITICAL: MANDA",
+        "Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Settings refactor(consensus): Enhance consensus vali"
+      ]
+    }
+  },
+  "methodology_notes": [
+    "Filtered out file paths, URLs, and system artifacts",
+    "Focused on actual user-issued slash commands",
+    "Commands with <10 occurrences excluded unless known user commands",
+    "Examples truncated to first 200 characters for readability"
+  ]
+}

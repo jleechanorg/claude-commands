@@ -1,0 +1,1227 @@
+{
+  "batch_number": 32,
+  "processed_count": 640,
+  "total_target": 994,
+  "progress_percentage": 64.39,
+  "timestamp": "2025-09-22T04:23:23.981620",
+  "average_authenticity": 0.738,
+  "results": [
+    {
+      "prompt_id": 5591,
+      "timestamp": "2025-08-25T01:22:34.709Z",
+      "content_preview": "Execute /copilotc autonomous GitHub comment resolution protocol:\n\nGOAL: Resolve all serious GitHub c...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "15-30_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [
+            "optimization"
+          ],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification",
+            "progression_momentum"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.85
+        }
+      }
+    },
+    {
+      "prompt_id": 5600,
+      "timestamp": "2025-08-25T01:45:22.830Z",
+      "content_preview": "ok show me the latest file backed up",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5599,
+      "timestamp": "2025-08-25T01:43:07.184Z",
+      "content_preview": "<user-prompt-submit-hook>is the backup using rsync? I dont wanna replace files that didnt change</us...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.67
+        }
+      }
+    },
+    {
+      "prompt_id": 5594,
+      "timestamp": "2025-08-25T01:36:03.750Z",
+      "content_preview": "delete the google drive support then see if this comment still relevant\nhttps://github.com/jleechano...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.9,
+          "overall_score": 0.78
+        }
+      }
+    },
+    {
+      "prompt_id": 5596,
+      "timestamp": "2025-08-25T01:39:46.868Z",
+      "content_preview": "push to pr then run backup",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.695
+        }
+      }
+    },
+    {
+      "prompt_id": 5598,
+      "timestamp": "2025-08-25T01:43:06.974Z",
+      "content_preview": "is the backup using rsync? I dont wanna replace files that didnt change",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.67
+        }
+      }
+    },
+    {
+      "prompt_id": 5597,
+      "timestamp": "2025-08-25T01:39:47.021Z",
+      "content_preview": "<user-prompt-submit-hook>push to pr then run backup</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.695
+        }
+      }
+    },
+    {
+      "prompt_id": 5592,
+      "timestamp": "2025-08-25T01:30:30.080Z",
+      "content_preview": "run the backup",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "terse",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.66
+        }
+      }
+    },
+    {
+      "prompt_id": 5595,
+      "timestamp": "2025-08-25T01:36:03.938Z",
+      "content_preview": "<user-prompt-submit-hook>delete the google drive support then see if this comment still relevant\nhtt...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "repetitive_attempts"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.9,
+          "overall_score": 0.78
+        }
+      }
+    },
+    {
+      "prompt_id": 5593,
+      "timestamp": "2025-08-25T01:30:30.268Z",
+      "content_preview": "<user-prompt-submit-hook>run the backup</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5601,
+      "timestamp": "2025-08-25T01:45:23.044Z",
+      "content_preview": "<user-prompt-submit-hook>ok show me the latest file backed up</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5602,
+      "timestamp": "2025-08-25T01:48:04.008Z",
+      "content_preview": "ok now lets /redgreen test to make claude_mcp.sh check that this backup system is working. It should...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "sh"
+          ],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives",
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5603,
+      "timestamp": "2025-08-25T01:48:04.305Z",
+      "content_preview": "<user-prompt-submit-hook>ok now lets /redgreen test to make claude_mcp.sh check that this backup sys...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "sh"
+          ],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives",
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5604,
+      "timestamp": "2025-08-25T02:25:43.023Z",
+      "content_preview": "push to pr then /reviewdeep for correctness then /copilot",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "sequential_planning"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.7,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.695
+        }
+      }
+    },
+    {
+      "prompt_id": 5605,
+      "timestamp": "2025-08-25T02:26:11.653Z",
+      "content_preview": "Perform enhanced parallel multi-perspective review:\n\n1. /guidelines                    # Centralized...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing"
+          ],
+          "current_branch": "main",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "md",
+            "sh"
+          ],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "constructive",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [
+            "optimization",
+            "security"
+          ],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": [
+            "functional_success",
+            "performance"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.79
+        }
+      }
+    },
+    {
+      "prompt_id": 5606,
+      "timestamp": "2025-08-25T02:30:57.232Z",
+      "content_preview": "Execute the copilot workflow for backup verification system analysis and PR processing:\n\n**IMPLEMENT...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [
+            "optimization",
+            "security",
+            "monitoring"
+          ],
+          "task_complexity": "medium",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.87
+        }
+      }
+    },
+    {
+      "prompt_id": 5607,
+      "timestamp": "2025-08-25T05:05:48.717Z",
+      "content_preview": "https://github.com/jleechanorg/worldarchitect.ai/pull/1457#issuecomment-3218645168",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.75
+        }
+      }
+    },
+    {
+      "prompt_id": 5608,
+      "timestamp": "2025-08-25T05:05:48.892Z",
+      "content_preview": "<user-prompt-submit-hook>https://github.com/jleechanorg/worldarchitect.ai/pull/1457#issuecomment-321...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "api_testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.9,
+          "human_like_variance": 0.8,
+          "overall_score": 0.765
+        }
+      }
+    },
+    {
+      "prompt_id": 5609,
+      "timestamp": "2025-08-25T05:08:05.794Z",
+      "content_preview": "run the backup and show me the latest file",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    },
+    {
+      "prompt_id": 5610,
+      "timestamp": "2025-08-25T05:08:05.940Z",
+      "content_preview": "<user-prompt-submit-hook>run the backup and show me the latest file</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.72
+        }
+      }
+    }
+  ]
+}

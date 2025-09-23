@@ -1,0 +1,1290 @@
+{
+  "batch_number": 41,
+  "processed_count": 820,
+  "total_target": 994,
+  "progress_percentage": 82.49,
+  "timestamp": "2025-09-22T04:23:24.016133",
+  "average_authenticity": 0.738,
+  "results": [
+    {
+      "prompt_id": 5775,
+      "timestamp": "2025-09-12T00:52:01.112Z",
+      "content_preview": "is it just installing the deps? git pull origin main to get latest code",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "testing"
+          ],
+          "current_branch": "main",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command",
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.825
+        }
+      }
+    },
+    {
+      "prompt_id": 5777,
+      "timestamp": "2025-09-12T00:55:11.411Z",
+      "content_preview": "investigate this and try to repro locally \n  Most Likely Hang Location:\n  - pip install -r mvp_site/...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "timeout_error"
+          ],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "performance_issues"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.7,
+          "human_like_variance": 0.9,
+          "overall_score": 0.8
+        }
+      }
+    },
+    {
+      "prompt_id": 5772,
+      "timestamp": "2025-09-11T23:24:09.673Z",
+      "content_preview": "<user-prompt-submit-hook>make the workflow changes and push. you should have the proper GitHub token...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.75
+        }
+      }
+    },
+    {
+      "prompt_id": 5771,
+      "timestamp": "2025-09-11T23:24:09.496Z",
+      "content_preview": "make the workflow changes and push. you should have the proper GitHub token in ~/.token",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.75
+        }
+      }
+    },
+    {
+      "prompt_id": 5774,
+      "timestamp": "2025-09-12T00:50:29.234Z",
+      "content_preview": "<user-prompt-submit-hook>lets make it 15 min. and investigate if anything else needs to be timed out...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5779,
+      "timestamp": "2025-08-29T05:08:59.931Z",
+      "content_preview": "Execute the `/commentfetch` command for PR #1504 to retrieve all GitHub comments (inline, general, r...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "json"
+          ],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.85
+        }
+      }
+    },
+    {
+      "prompt_id": 5780,
+      "timestamp": "2025-08-29T05:12:10.094Z",
+      "content_preview": "Process all PR #1504 comments systematically and create threaded replies.\n\nWe have identified the fo...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.87
+        }
+      }
+    },
+    {
+      "prompt_id": 5776,
+      "timestamp": "2025-09-12T00:52:01.286Z",
+      "content_preview": "<user-prompt-submit-hook>is it just installing the deps? git pull origin main to get latest code</us...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "testing"
+          ],
+          "current_branch": "main",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command",
+            "test_command"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [
+            "questioning"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.7,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.8,
+          "human_like_variance": 0.8,
+          "overall_score": 0.825
+        }
+      }
+    },
+    {
+      "prompt_id": 5773,
+      "timestamp": "2025-09-12T00:50:28.886Z",
+      "content_preview": "lets make it 15 min. and investigate if anything else needs to be timed out. also lets invesgtigate ...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "understanding_oriented"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5778,
+      "timestamp": "2025-09-12T00:55:11.735Z",
+      "content_preview": "<user-prompt-submit-hook>investigate this and try to repro locally \n  Most Likely Hang Location:\n  -...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "testing",
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "timeout_error"
+          ],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "python"
+          ],
+          "command_history": [
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "performance_issues"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.7,
+          "human_like_variance": 0.9,
+          "overall_score": 0.8
+        }
+      }
+    },
+    {
+      "prompt_id": 5781,
+      "timestamp": "2025-08-29T10:12:31.075Z",
+      "content_preview": "Execute the /commentfetch command to collect all comments from PR #1504. This includes:\n1. Inline re...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "json"
+          ],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [
+            "security"
+          ],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.85
+        }
+      }
+    },
+    {
+      "prompt_id": 5782,
+      "timestamp": "2025-08-29T10:15:42.867Z",
+      "content_preview": "Process all 158 comments from PR #1504 systematically. The comments are already fetched in /tmp/back...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "file_editing"
+          ],
+          "current_branch": "main",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "json"
+          ],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.87
+        }
+      }
+    },
+    {
+      "prompt_id": 5783,
+      "timestamp": "2025-08-29T10:24:02.775Z",
+      "content_preview": "Process ALL 158 comments from PR #1504 that require responses. The comments are in /tmp/backup_fix12...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "execution_error"
+          ],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "json"
+          ],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure",
+            "error_resolution"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [
+            "security"
+          ],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "failure_experience"
+          ],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.9,
+          "overall_score": 0.865
+        }
+      }
+    },
+    {
+      "prompt_id": 5784,
+      "timestamp": "2025-08-25T09:41:23.756Z",
+      "content_preview": "Execute convergence system with autonomous GitHub comment resolution goal.\n\nGOAL: \"Resolve all serio...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "15-30_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "web",
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [
+            "seeking_guidance"
+          ],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [
+            "information_seeking",
+            "example_driven"
+          ],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success",
+            "performance"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification",
+            "progression_momentum"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.8,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.78
+        }
+      }
+    },
+    {
+      "prompt_id": 5785,
+      "timestamp": "2025-08-25T09:45:12.873Z",
+      "content_preview": "Analyze PR #1457 comments to identify serious unresolved issues requiring attention.\n\nFOCUS AREAS:\n-...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations",
+            "testing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "execution_error"
+          ],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command",
+            "test_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "error_resolution"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "testing",
+          "secondary_objectives": [
+            "security"
+          ],
+          "task_complexity": "high",
+          "domain_expertise": "version_control",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [
+            "failure_experience"
+          ],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.9,
+          "overall_score": 0.885
+        }
+      }
+    },
+    {
+      "prompt_id": 5786,
+      "timestamp": "2025-08-25T10:12:26.027Z",
+      "content_preview": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/orchc /copilot /commentcheck /commentreply \n\ud83c\udfaf Mu...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "file_editing"
+          ],
+          "current_branch": "unknown",
+          "session_duration": "15-30_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_request"
+          ],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [],
+          "task_complexity": "medium",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.9,
+          "behavioral_consistency": 0.9,
+          "technical_accuracy": 0.7,
+          "human_like_variance": 0.8,
+          "overall_score": 0.78
+        }
+      }
+    },
+    {
+      "prompt_id": 5787,
+      "timestamp": "2025-08-25T10:12:46.337Z",
+      "content_preview": "Setup tmux orchestration agent for continuous GitHub comment resolution workflow.\n\nAGENT MISSION: \"R...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [
+            "git_operations"
+          ],
+          "current_branch": "main",
+          "session_duration": "15-30_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git"
+          ],
+          "command_history": [
+            "git_command"
+          ],
+          "complexity_indicators": [
+            "long_request",
+            "multi_line"
+          ],
+          "urgency_signals": [
+            "time_pressure"
+          ]
+        },
+        "behavioral_patterns": {
+          "interaction_style": "detailed",
+          "communication_patterns": [],
+          "problem_solving_approach": "diagnostic",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "debugging",
+          "secondary_objectives": [
+            "monitoring"
+          ],
+          "task_complexity": "medium",
+          "domain_expertise": "version_control",
+          "success_criteria": [
+            "functional_success"
+          ]
+        },
+        "cognitive_state": {
+          "attention_level": "high",
+          "frustration_indicators": [],
+          "confidence_markers": [
+            "construction_confidence"
+          ],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": [
+            "detailed_specification"
+          ]
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 1.0,
+          "behavioral_consistency": 1.0,
+          "technical_accuracy": 1.0,
+          "human_like_variance": 0.8,
+          "overall_score": 0.87
+        }
+      }
+    },
+    {
+      "prompt_id": 5788,
+      "timestamp": "2025-08-25T10:20:19.376Z",
+      "content_preview": "tail it here",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "terse",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.9,
+          "overall_score": 0.66
+        }
+      }
+    },
+    {
+      "prompt_id": 5789,
+      "timestamp": "2025-08-25T10:20:19.544Z",
+      "content_preview": "<user-prompt-submit-hook>tail it here</user-prompt-submit-hook>",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "concise",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    },
+    {
+      "prompt_id": 5790,
+      "timestamp": "2025-08-25T15:24:57.353Z",
+      "content_preview": "<user-prompt-submit-hook>/commentfetch and check if any serious bugs remain</user-prompt-submit-hook...",
+      "analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "main",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "unknown"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "behavioral_patterns": {
+          "interaction_style": "standard",
+          "communication_patterns": [],
+          "problem_solving_approach": "unknown",
+          "learning_indicators": [],
+          "feedback_preferences": []
+        },
+        "intent_classification": {
+          "primary_goal": "unknown",
+          "secondary_objectives": [],
+          "task_complexity": "low",
+          "domain_expertise": "unknown",
+          "success_criteria": []
+        },
+        "cognitive_state": {
+          "attention_level": "normal",
+          "frustration_indicators": [],
+          "confidence_markers": [],
+          "multitasking_signs": [
+            "parallel_objectives"
+          ],
+          "flow_state_indicators": []
+        },
+        "authenticity_score": {
+          "natural_language_flow": 0.6,
+          "context_coherence": 0.5,
+          "behavioral_consistency": 0.8,
+          "technical_accuracy": 0.6,
+          "human_like_variance": 0.8,
+          "overall_score": 0.645
+        }
+      }
+    }
+  ]
+}

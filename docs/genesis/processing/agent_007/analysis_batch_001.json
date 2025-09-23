@@ -1,0 +1,157 @@
+{
+  "batch_info": {
+    "batch_number": 1,
+    "prompt_range": "5965-5984",
+    "prompts_analyzed": 20,
+    "timestamp": "2025-09-22T07:35:00Z"
+  },
+  "behavioral_analysis": {
+    "conversation_state": {
+      "previous_actions": [
+        "web_search_anthropic_params",
+        "file_placement_analysis",
+        "pr_processing_execution",
+        "urgent_bug_fixes",
+        "copilot_workflows"
+      ],
+      "current_branch": "various_automation_branches",
+      "session_duration": "extended_sessions",
+      "recent_errors": ["merge_conflicts", "ci_failures", "route_exposure_issues"],
+      "work_focus": "pr_automation_and_bug_fixes"
+    },
+    "technical_context": {
+      "file_references": [
+        "CLAUDE.md",
+        "responses.json",
+        "server.ts",
+        "pr-metadata.json",
+        "run_local_server.sh",
+        "RateLimitTool.ts"
+      ],
+      "technology_stack": [
+        "TypeScript",
+        "Express.js",
+        "FastMCP",
+        "Cloud_Run",
+        "Git",
+        "GitHub_CLI",
+        "Shell_Scripts"
+      ],
+      "command_history": [
+        "/fixpr",
+        "/copilot",
+        "/context --detailed",
+        "/context --optimize",
+        "web_search",
+        "file_analysis"
+      ],
+      "complexity_indicators": [
+        "multi_pr_coordination",
+        "p1_bug_fixes",
+        "ci_cd_integration",
+        "file_placement_protocols",
+        "merge_conflict_resolution"
+      ],
+      "urgency_signals": [
+        "URGENT:",
+        "CRITICAL:",
+        "P1 BUG:",
+        "FIRST PRIORITY:",
+        "PRIMARY MISSION:"
+      ]
+    },
+    "behavioral_patterns": {
+      "interaction_style": "systematic_protocol_driven",
+      "communication_patterns": [
+        "structured_requirements",
+        "priority_ordered_tasks",
+        "protocol_compliance_emphasis",
+        "boundary_definition",
+        "evidence_based_validation"
+      ],
+      "problem_solving_approach": "protocol_first_execution",
+      "learning_indicators": [
+        "template_reuse",
+        "iterative_improvement",
+        "error_pattern_recognition",
+        "automation_refinement"
+      ],
+      "feedback_preferences": [
+        "structured_status_updates",
+        "completion_evidence",
+        "protocol_adherence_confirmation",
+        "file_modification_proof"
+      ]
+    },
+    "intent_classification": {
+      "primary_goal": "automated_pr_processing_and_bug_resolution",
+      "secondary_objectives": [
+        "protocol_compliance_verification",
+        "file_placement_rule_enforcement",
+        "code_quality_improvement",
+        "ci_cd_stabilization"
+      ],
+      "task_complexity": "high",
+      "domain_expertise": "advanced_devops_and_automation",
+      "success_criteria": [
+        "pr_mergeability",
+        "ci_pass_rate",
+        "protocol_compliance",
+        "bug_resolution",
+        "automation_reliability"
+      ]
+    },
+    "cognitive_state": {
+      "attention_level": "high_focus",
+      "frustration_indicators": [
+        "repeated_fixpr_commands",
+        "urgency_escalation",
+        "protocol_violation_concerns"
+      ],
+      "confidence_markers": [
+        "specific_tool_selections",
+        "detailed_implementation_plans",
+        "clear_success_criteria",
+        "systematic_approach"
+      ],
+      "multitasking_signs": [
+        "multiple_pr_contexts",
+        "parallel_agent_coordination",
+        "cross_project_references"
+      ],
+      "flow_state_indicators": [
+        "consistent_protocol_application",
+        "automated_decision_making",
+        "efficient_tool_usage"
+      ]
+    },
+    "authenticity_score": {
+      "natural_language_flow": 0.82,
+      "context_coherence": 0.91,
+      "behavioral_consistency": 0.89,
+      "technical_accuracy": 0.94,
+      "human_like_variance": 0.78,
+      "overall_score": 0.87
+    }
+  },
+  "pattern_insights": {
+    "dominant_themes": [
+      "pr_automation_workflows",
+      "file_placement_protocol_enforcement",
+      "urgent_bug_resolution",
+      "ci_cd_reliability",
+      "systematic_quality_assurance"
+    ],
+    "communication_efficiency": "high_structured_directive",
+    "technical_sophistication": "advanced_automation_orchestration",
+    "collaboration_style": "protocol_driven_autonomous_execution",
+    "error_handling_approach": "systematic_prevention_and_correction"
+  },
+  "quality_metrics": {
+    "protocol_adherence": 0.93,
+    "technical_precision": 0.91,
+    "communication_clarity": 0.88,
+    "execution_efficiency": 0.86,
+    "innovation_factor": 0.84
+  }
+}

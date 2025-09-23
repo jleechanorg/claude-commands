@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 51,
+  "prompts_count": 5100,
+  "timestamp": "2025-09-22T03:49:11.295376",
+  "prompts": [
+    {
+      "content": "did you fix these tests? Skip to content\nNavigation Menu\njleechanorg\nai_universe_frontend\n\nType / to search\nCode\nIssues\nPull requests\n1\nActions\nProjects\nWiki\nSecurity\n2\nInsights\nSettings\nBack to pull request #12\nfeat: make backend URLs configurable via deploy script parameters #52\nJobs\nRun details\nAnnotations\n3 errors\ntest (20.x)\nfailed 19 minutes ago in 31s\nSearch logs\n1s\n2s\n5s\n12s\n5s\n2s\nRun npm run lint\n\n> ai-universe-frontend@1.0.0 lint\n> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0\n\n\n/home/runner/work/ai_universe_frontend/ai_universe_frontend/vite.config.ts\nError:   52:47  error  Use the rest parameters instead of 'arguments'  prefer-rest-params\nError:   66:45  error  Use the rest parameters instead of 'arguments'  prefer-rest-params\n\n\u2716 2 problems (2 errors, 0 warnings)\n\nError: Process completed with exit code 1.\n0s\n0s\n0s\n0s\n0s\n and lets push to pr",
+      "timestamp": "2025-09-21T01:49:27.052Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did you fix these tests? skip to content\nnavigation menu\njleechanorg\nai_universe_frontend\n\ntype / to",
+      "extraction_order": 5001
+    },
+    {
+      "content": "<user-prompt-submit-hook>did you fix these tests? Skip to content\nNavigation Menu\njleechanorg\nai_universe_frontend\n\nType / to search\nCode\nIssues\nPull requests\n1\nActions\nProjects\nWiki\nSecurity\n2\nInsights\nSettings\nBack to pull request #12\nfeat: make backend URLs configurable via deploy script parameters #52\nJobs\nRun details\nAnnotations\n3 errors\ntest (20.x)\nfailed 19 minutes ago in 31s\nSearch logs\n1s\n2s\n5s\n12s\n5s\n2s\nRun npm run lint\n\n> ai-universe-frontend@1.0.0 lint\n> eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0\n\n\n/home/runner/work/ai_universe_frontend/ai_universe_frontend/vite.config.ts\nError:   52:47  error  Use the rest parameters instead of 'arguments'  prefer-rest-params\nError:   66:45  error  Use the rest parameters instead of 'arguments'  prefer-rest-params\n\n\u2716 2 problems (2 errors, 0 warnings)\n\nError: Process completed with exit code 1.\n0s\n0s\n0s\n0s\n0s\n and lets push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T01:49:27.305Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did you fix these tests? skip to content\nnavigation menu\njleechanorg\nai_uni",
+      "extraction_order": 5002
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/deploy /conv \n\nUse these approaches in combination:/deploy /conv . Apply this to: dev and use browser mcp to test it again and make sure synthesis shows. if not use until you fix it or have high confidence it's backend issue\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/deploy /conv  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T05:09:43.010Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/deploy /conv \n\nuse these approaches in combinati",
+      "extraction_order": 5003
+    },
+    {
+      "content": "which backend url are you using for dev? test it directly",
+      "timestamp": "2025-09-21T05:12:55.531Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "which backend url are you using for dev? test it directly",
+      "extraction_order": 5004
+    },
+    {
+      "content": "<user-prompt-submit-hook>which backend url are you using for dev? test it directly</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T05:12:55.729Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>which backend url are you using for dev? test it directly</user-prompt-subm",
+      "extraction_order": 5005
+    },
+    {
+      "content": "confirm and fix it",
+      "timestamp": "2025-09-21T05:25:25.283Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "confirm and fix it",
+      "extraction_order": 5006
+    },
+    {
+      "content": "<user-prompt-submit-hook>confirm and fix it</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T05:25:25.471Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>confirm and fix it</user-prompt-submit-hook>",
+      "extraction_order": 5007
+    },
+    {
+      "content": "make an automated test and add logs to see exactly where the response could be modified or truncated. the test should run on pure js code without a running server. use /redgreen and first find the problem with the test",
+      "timestamp": "2025-09-21T05:37:04.887Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "make an automated test and add logs to see exactly where the response could be modified or truncated",
+      "extraction_order": 5008
+    },
+    {
+      "content": "your test needs to be end2end. get the real backend response and only mock the network. don't mock anything else. focus on finding the red scenario",
+      "timestamp": "2025-09-21T05:40:08.348Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "your test needs to be end2end. get the real backend response and only mock the network. don't mock a",
+      "extraction_order": 5009
+    },
+    {
+      "content": "<user-prompt-submit-hook>your test needs to be end2end. get the real backend response and only mock the network. don't mock anything else. focus on finding the red scenario</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T05:40:08.648Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>your test needs to be end2end. get the real backend response and only mock",
+      "extraction_order": 5010
+    },
+    {
+      "content": "wtf test it with a local server. stop giving up. for sure it's your problem. you directly tested the same backend which the local server uses and it worked. list out all the components involved in the request and use /e to do a strategy to isolate each one and see where the bug could be",
+      "timestamp": "2025-09-21T05:52:34.555Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wtf test it with a local server. stop giving up. for sure it's your problem. you directly tested the",
+      "extraction_order": 5011
+    },
+    {
+      "content": "use /testllm to run it locally again and if it works /deploy dev to gcp and use /testllm on it again",
+      "timestamp": "2025-09-21T05:59:50.081Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use /testllm to run it locally again and if it works /deploy dev to gcp and use /testllm on it again",
+      "extraction_order": 5012
+    },
+    {
+      "content": "where is the frontend devserer? see if it was really deployed",
+      "timestamp": "2025-09-21T06:21:20.921Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "where is the frontend devserer? see if it was really deployed",
+      "extraction_order": 5013
+    },
+    {
+      "content": "<user-prompt-submit-hook>where is the frontend devserer? see if it was really deployed</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:21:21.106Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>where is the frontend devserer? see if it was really deployed</user-prompt-",
+      "extraction_order": 5014
+    },
+    {
+      "content": "when was this last deployhed? https://ai-universe-frontend-dev-elhm2qjlta-uc.a.run.app",
+      "timestamp": "2025-09-21T06:28:52.039Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "when was this last deployhed? https://ai-universe-frontend-dev-elhm2qjlta-uc.a.run.app",
+      "extraction_order": 5015
+    },
+    {
+      "content": "<user-prompt-submit-hook>when was this last deployhed? https://ai-universe-frontend-dev-elhm2qjlta-uc.a.run.app</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:28:52.251Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>when was this last deployhed? https://ai-universe-frontend-dev-elhm2qjlta-u",
+      "extraction_order": 5016
+    },
+    {
+      "content": "why did you screw up the deployment? Does deploy.sh need improvements? does this script handle things better? #!/bin/bash\nset -e\n\n# --- Argument Parsing & Directory Logic ---\nTARGET_DIR=\"\"\nENVIRONMENT=\"dev\" # Default environment\n\n# --- THIS IS THE NEW CONTEXT-AWARE LOGIC ---\n# First, check if the CURRENT directory has a Dockerfile.\nif [ -f \"./Dockerfile\" ]; then\n    # If so, we've found our target.\n    TARGET_DIR=\".\"\n    # Check if an argument was provided, and if so, assume it's the environment.\n    if [[ \"$1\" == \"stable\" ]]; then\n        ENVIRONMENT=\"stable\"\n    fi\nelse\n    # The current directory is not a deployable app.\n    # Check if the first argument is a valid directory.\n    if [ -d \"$1\" ]; then\n        TARGET_DIR=\"$1\"\n        # Check if the second argument is the environment.\n        if [[ \"$2\" == \"stable\" ]]; then\n            ENVIRONMENT=\"stable\"\n        fi\n    fi\nfi\n\n# If TARGET_DIR is still empty after all checks, show the interactive menu.\nif [ -z \"$TARGET_DIR\" ]; then\n    echo \"No app auto-detected. Please choose an app to deploy:\"\n    apps=($(find . -maxdepth 2 -type f -name \"Dockerfile\" -printf \"%h\\n\" | sed 's|./||' | sort))\n    if [ ${#apps[@]} -eq 0 ]; then\n        echo \"No apps with a Dockerfile found.\"\n        exit 1\n    fi\n    select app in \"${apps[@]}\"; do\n        if [[ -n $app ]]; then\n            TARGET_DIR=$app\n            # After selection, check if an argument was passed for the environment\n            if [[ \"$1\" == \"stable\" ]]; then\n                ENVIRONMENT=\"stable\"\n            fi\n            break\n        else\n            echo \"Invalid selection. Please try again.\"\n        fi\n    done\nfi\n\n\n# --- Final Check & Configuration ---\necho \"--- Deployment Details ---\"\necho \"Target Directory: $TARGET_DIR\"\necho \"Environment:      $ENVIRONMENT\"\necho \"--------------------------\"\n\nif [ ! -f \"$TARGET_DIR/Dockerfile\" ]; then\n    echo \"Error: No Dockerfile found in '$TARGET_DIR'.\"\n    exit 1\nfi\n\nBASE_SERVICE_NAME=$(basename $(realpath \"$TARGET_DIR\") | tr '_' '-')-app\nSERVICE_NAME=\"$BASE_SERVICE_NAME-$ENVIRONMENT\"\nPROJECT_ID=$(gcloud config get-value project)\n\necho \"--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' ---\"\n\n# --- Build Step ---\nIMAGE_TAG=\"gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest\"\necho \"Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'...\"\n\n# Copy world directory into mvp_site for deployment\necho \"DEBUG: TARGET_DIR = '$TARGET_DIR'\"\necho \"DEBUG: Current directory = $(pwd)\"\n\n# Check for world directory in current dir or parent dir\nWORLD_DIR=\"\"\nif [ -d \"world\" ]; then\n    WORLD_DIR=\"world\"\n    echo \"DEBUG: Found world directory in current directory\"\nelif [ -d \"../world\" ]; then\n    WORLD_DIR=\"../world\"\n    echo \"DEBUG: Found world directory in parent directory\"\nelse\n    echo \"DEBUG: No world directory found\"\nfi\n\n# Handle different possible values of TARGET_DIR\nif [[ \"$TARGET_DIR\" == *\"mvp_site\"* ]] && [ -n \"$WORLD_DIR\" ]; then\n    echo \"Copying world directory into mvp_site...\"\n    cp -r \"$WORLD_DIR\" \"$TARGET_DIR/\"\n    echo \"DEBUG: World files copied from $WORLD_DIR to $TARGET_DIR/world\"\n    ls -la \"$TARGET_DIR/world/\" | head -5\nelif [[ \"$TARGET_DIR\" == *\"mvp_site\"* ]] && [ -z \"$WORLD_DIR\" ]; then\n    echo \"WARNING: No world directory found to copy!\"\n    echo \"Deployment may fail if world files are required.\"\nfi\n\n(cd \"$TARGET_DIR\" && gcloud builds submit . --tag \"$IMAGE_TAG\")\n\n# --- Deploy Step ---\necho \"Deploying to Cloud Run as service '$SERVICE_NAME'...\"\ngcloud run deploy \"$SERVICE_NAME\" \\\n    --image \"$IMAGE_TAG\" \\\n    --platform managed \\\n    --allow-unauthenticated \\\n    --set-secrets=\"GEMINI_API_KEY=gemini-api-key:latest\" \\\n    --memory=2Gi \\\n    --timeout=300 \\\n    --min-instances=1 \\\n    --max-instances=10 \\\n    --concurrency=10\n\necho \"--- Deployment of '$SERVICE_NAME' complete. ---\"\n\n# Configure load balancer timeout to match service timeout\necho \"Configuring load balancer timeout...\"\ngcloud run services update \"$SERVICE_NAME\" \\\n    --platform managed \\\n    --timeout=300\n\ngcloud run services describe \"$SERVICE_NAME\" --platform managed --format 'value(status.url)'",
+      "timestamp": "2025-09-21T06:32:40.896Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why did you screw up the deployment? does deploy.sh need improvements? does this script handle thing",
+      "extraction_order": 5017
+    },
+    {
+      "content": "<user-prompt-submit-hook>why did you screw up the deployment? Does deploy.sh need improvements? does this script handle things better? #!/bin/bash\nset -e\n\n# --- Argument Parsing & Directory Logic ---\nTARGET_DIR=\"\"\nENVIRONMENT=\"dev\" # Default environment\n\n# --- THIS IS THE NEW CONTEXT-AWARE LOGIC ---\n# First, check if the CURRENT directory has a Dockerfile.\nif [ -f \"./Dockerfile\" ]; then\n    # If so, we've found our target.\n    TARGET_DIR=\".\"\n    # Check if an argument was provided, and if so, assume it's the environment.\n    if [[ \"$1\" == \"stable\" ]]; then\n        ENVIRONMENT=\"stable\"\n    fi\nelse\n    # The current directory is not a deployable app.\n    # Check if the first argument is a valid directory.\n    if [ -d \"$1\" ]; then\n        TARGET_DIR=\"$1\"\n        # Check if the second argument is the environment.\n        if [[ \"$2\" == \"stable\" ]]; then\n            ENVIRONMENT=\"stable\"\n        fi\n    fi\nfi\n\n# If TARGET_DIR is still empty after all checks, show the interactive menu.\nif [ -z \"$TARGET_DIR\" ]; then\n    echo \"No app auto-detected. Please choose an app to deploy:\"\n    apps=($(find . -maxdepth 2 -type f -name \"Dockerfile\" -printf \"%h\\n\" | sed 's|./||' | sort))\n    if [ ${#apps[@]} -eq 0 ]; then\n        echo \"No apps with a Dockerfile found.\"\n        exit 1\n    fi\n    select app in \"${apps[@]}\"; do\n        if [[ -n $app ]]; then\n            TARGET_DIR=$app\n            # After selection, check if an argument was passed for the environment\n            if [[ \"$1\" == \"stable\" ]]; then\n                ENVIRONMENT=\"stable\"\n            fi\n            break\n        else\n            echo \"Invalid selection. Please try again.\"\n        fi\n    done\nfi\n\n\n# --- Final Check & Configuration ---\necho \"--- Deployment Details ---\"\necho \"Target Directory: $TARGET_DIR\"\necho \"Environment:      $ENVIRONMENT\"\necho \"--------------------------\"\n\nif [ ! -f \"$TARGET_DIR/Dockerfile\" ]; then\n    echo \"Error: No Dockerfile found in '$TARGET_DIR'.\"\n    exit 1\nfi\n\nBASE_SERVICE_NAME=$(basename $(realpath \"$TARGET_DIR\") | tr '_' '-')-app\nSERVICE_NAME=\"$BASE_SERVICE_NAME-$ENVIRONMENT\"\nPROJECT_ID=$(gcloud config get-value project)\n\necho \"--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' ---\"\n\n# --- Build Step ---\nIMAGE_TAG=\"gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest\"\necho \"Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'...\"\n\n# Copy world directory into mvp_site for deployment\necho \"DEBUG: TARGET_DIR = '$TARGET_DIR'\"\necho \"DEBUG: Current directory = $(pwd)\"\n\n# Check for world directory in current dir or parent dir\nWORLD_DIR=\"\"\nif [ -d \"world\" ]; then\n    WORLD_DIR=\"world\"\n    echo \"DEBUG: Found world directory in current directory\"\nelif [ -d \"../world\" ]; then\n    WORLD_DIR=\"../world\"\n    echo \"DEBUG: Found world directory in parent directory\"\nelse\n    echo \"DEBUG: No world directory found\"\nfi\n\n# Handle different possible values of TARGET_DIR\nif [[ \"$TARGET_DIR\" == *\"mvp_site\"* ]] && [ -n \"$WORLD_DIR\" ]; then\n    echo \"Copying world directory into mvp_site...\"\n    cp -r \"$WORLD_DIR\" \"$TARGET_DIR/\"\n    echo \"DEBUG: World files copied from $WORLD_DIR to $TARGET_DIR/world\"\n    ls -la \"$TARGET_DIR/world/\" | head -5\nelif [[ \"$TARGET_DIR\" == *\"mvp_site\"* ]] && [ -z \"$WORLD_DIR\" ]; then\n    echo \"WARNING: No world directory found to copy!\"\n    echo \"Deployment may fail if world files are required.\"\nfi\n\n(cd \"$TARGET_DIR\" && gcloud builds submit . --tag \"$IMAGE_TAG\")\n\n# --- Deploy Step ---\necho \"Deploying to Cloud Run as service '$SERVICE_NAME'...\"\ngcloud run deploy \"$SERVICE_NAME\" \\\n    --image \"$IMAGE_TAG\" \\\n    --platform managed \\\n    --allow-unauthenticated \\\n    --set-secrets=\"GEMINI_API_KEY=gemini-api-key:latest\" \\\n    --memory=2Gi \\\n    --timeout=300 \\\n    --min-instances=1 \\\n    --max-instances=10 \\\n    --concurrency=10\n\necho \"--- Deployment of '$SERVICE_NAME' complete. ---\"\n\n# Configure load balancer timeout to match service timeout\necho \"Configuring load balancer timeout...\"\ngcloud run services update \"$SERVICE_NAME\" \\\n    --platform managed \\\n    --timeout=300\n\ngcloud run services describe \"$SERVICE_NAME\" --platform managed --format 'value(status.url)'</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:32:41.201Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why did you screw up the deployment? does deploy.sh need improvements? does",
+      "extraction_order": 5018
+    },
+    {
+      "content": "WHy the hell did you add a notraffic flag? /learn",
+      "timestamp": "2025-09-21T06:33:38.262Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why the hell did you add a notraffic flag? /learn",
+      "extraction_order": 5019
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/learn \n\nUse these approaches in combination:/learn . Apply this to: WHy the hell did you add a notraffic flag?\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/learn  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:33:38.637Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/learn \n\nuse these approaches in combination:/lea",
+      "extraction_order": 5020
+    },
+    {
+      "content": "you wrote all the code in this repo. Find the git commit that added that",
+      "timestamp": "2025-09-21T06:34:05.570Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you wrote all the code in this repo. find the git commit that added that",
+      "extraction_order": 5021
+    },
+    {
+      "content": "<user-prompt-submit-hook>you wrote all the code in this repo. Find the git commit that added that</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:34:05.839Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you wrote all the code in this repo. find the git commit that added that</u",
+      "extraction_order": 5022
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/learn /think \n\nUse these approaches in combination:/learn /think . Apply this to: from that. That was stupid. Give me 5 whys on why you would do something so useless and about it\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/learn /think  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:37:09.780Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/learn /think \n\nuse these approaches in combinati",
+      "extraction_order": 5023
+    },
+    {
+      "content": "there is an existing Pr for this branch, run /header to find it",
+      "timestamp": "2025-09-21T06:39:55.153Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "there is an existing pr for this branch, run /header to find it",
+      "extraction_order": 5024
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/header \n\nUse these approaches in combination:/header . Apply this to: there is an existing Pr for this branch, run to find it\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/header  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:39:55.530Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/header \n\nuse these approaches in combination:/he",
+      "extraction_order": 5025
+    },
+    {
+      "content": "make a new PR in a new branch fresh from main and do not add tests to the project root     test_deployed_frontend.cjs\n    test_e2e_synthesis_red.cjs\n    test_green_synthesis.cjs\n    test_proxy_server.cjs\n    test_synthesis_parsing.js",
+      "timestamp": "2025-09-21T06:43:11.097Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "make a new pr in a new branch fresh from main and do not add tests to the project root     test_depl",
+      "extraction_order": 5026
+    },
+    {
+      "content": "<user-prompt-submit-hook>make a new PR in a new branch fresh from main and do not add tests to the project root     test_deployed_frontend.cjs\n    test_e2e_synthesis_red.cjs\n    test_green_synthesis.cjs\n    test_proxy_server.cjs\n    test_synthesis_parsing.js</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:43:11.306Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>make a new pr in a new branch fresh from main and do not add tests to the p",
+      "extraction_order": 5027
+    },
+    {
+      "content": "Execute the synthesis integration test to verify the synthesis field is working correctly in the deployed frontend.\n\nCRITICAL REQUIREMENTS:\n1. Test the deployed frontend: https://ai-universe-frontend-dev-elhm2qjlta-uc.a.run.app/\n2. Submit test query: \"compare gemini ai to chatgpt ai\" \n3. Capture browser console logs showing parsed response\n4. Verify synthesis field exists in response structure\n5. Take screenshots showing \"\ud83e\udde0 AI Synthesis\" header in UI\n6. Document if synthesis is working or missing\n\nVALIDATION CHECKLIST:\n- [ ] Frontend loads successfully\n- [ ] Query submits without errors  \n- [ ] Console shows parsed AI data structure\n- [ ] Response contains synthesis field: `synthesis: { model: \"claude-synthesis\", response: \"...\", tokens: number }`\n- [ ] UI displays synthesis content with proper header\n- [ ] Take evidence screenshots saved to docs/ directory\n\nEVIDENCE COLLECTION:\n- Save screenshots with descriptive filenames\n- Capture exact console log output\n- Document response structure keys\n- Note any errors or missing fields\n\nFollow the test specification in testing_llm/synthesis_integration_test.md but verify current status since synthesis was recently fixed.",
+      "timestamp": "2025-09-21T06:47:37.137Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the synthesis integration test to verify the synthesis field is working correctly in the dep",
+      "extraction_order": 5028
+    },
+    {
+      "content": "Test the local frontend at http://localhost:3001/ to reproduce the Accept header issue and verify if synthesis is working.\n\nOBJECTIVE: Reproduce the exact issue where frontend doesn't get synthesis responses.\n\nTEST STEPS:\n1. Navigate to http://localhost:3001/\n2. Submit test query: \"test local server synthesis\"\n3. Monitor browser console for response structure\n4. Check if synthesis field is present in response\n5. Capture evidence of the Accept header issue\n\nCRITICAL: Look for the specific error pattern:\n- Backend requires Accept: application/json, text/event-stream\n- Frontend MCP client may not be sending proper headers\n- Check actual network requests in browser dev tools\n\nEVIDENCE TO COLLECT:\n- Screenshot of frontend interface\n- Browser console output showing response structure\n- Network tab showing actual request headers\n- Document if synthesis field is present or missing\n\nThis will establish the RED phase baseline before fixing the issue.",
+      "timestamp": "2025-09-21T06:55:17.382Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test the local frontend at http://localhost:3001/ to reproduce the accept header issue and verify if",
+      "extraction_order": 5029
+    },
+    {
+      "content": "why are you using some random pport you should be doing /localserver",
+      "timestamp": "2025-09-21T07:10:36.565Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why are you using some random pport you should be doing /localserver",
+      "extraction_order": 5030
+    },
+    {
+      "content": "what was wrong?",
+      "timestamp": "2025-09-21T07:14:26.215Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what was wrong?",
+      "extraction_order": 5031
+    },
+    {
+      "content": "<user-prompt-submit-hook>what was wrong?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T07:14:26.396Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "b2bae44b-f781-4871-b291-7b00aa0e8bc6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what was wrong?</user-prompt-submit-hook>",
+      "extraction_order": 5032
+    },
+    {
+      "content": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test-browser-mcp.js' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test-browser-mcp.js' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-18T23:55:36.155Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "d4ad7dad-06fb-483e-95c7-5edb43b7e817.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/users/jleechan/project_ai_universe_frontend/ai_universe_frontend/test-bro",
+      "extraction_order": 5033
+    },
+    {
+      "content": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/docs/TESTING_REPORT.md' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/docs/TESTING_REPORT.md' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-20T20:49:50.933Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "1df8e436-a492-4e99-9510-85b0a6886370.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/users/jleechan/project_ai_universe_frontend/ai_universe_frontend/docs/tes",
+      "extraction_order": 5034
+    },
+    {
+      "content": "Analyze if creating file '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/Dockerfile' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/project_ai_universe_frontend/ai_universe_frontend/Dockerfile' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-22T10:47:21.733Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "6084ec3b-d7d4-4b6e-b138-55892c1c492a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/users/jleechan/project_ai_universe_frontend/ai_universe_frontend/dockerfi",
+      "extraction_order": 5035
+    },
+    {
+      "content": "make deploy.sh deploy to dev by default, then test it, then make a PR",
+      "timestamp": "2025-09-21T20:59:20.456Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "make deploy.sh deploy to dev by default, then test it, then make a pr",
+      "extraction_order": 5036
+    },
+    {
+      "content": "<user-prompt-submit-hook>make deploy.sh deploy to dev by default, then test it, then make a PR</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T20:59:20.637Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>make deploy.sh deploy to dev by default, then test it, then make a pr</user",
+      "extraction_order": 5037
+    },
+    {
+      "content": "lets do /localserver and /deploy and then run /testllm on both of them",
+      "timestamp": "2025-09-21T21:01:51.179Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets do /localserver and /deploy and then run /testllm on both of them",
+      "extraction_order": 5038
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/localserver /deploy /testllm \n\nUse these approaches in combination:/localserver /deploy /testllm . Apply this to: lets do and and then run on both of them\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/localserver /deploy /testllm  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:01:51.752Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/localserver /deploy /testllm \n\nuse these approac",
+      "extraction_order": 5039
+    },
+    {
+      "content": "Execute the complete testing_llm/ directory test suite against the local development server running at http://localhost:3000.\n\nCRITICAL REQUIREMENTS:\n1. Read ALL test files in testing_llm/ directory before any execution\n2. Create comprehensive TodoWrite checklist for ALL test cases across ALL files\n3. Test the local server at http://localhost:3000 (currently running via ./run_local_server.sh)\n4. Use real browser automation with Playwright MCP\n5. Collect evidence for every test case (screenshots, logs, console output)\n6. Follow the systematic validation protocol exactly as specified\n\nTEST ENVIRONMENT:\n- Local server: http://localhost:3000 (Vite dev server)\n- Backend proxy: /api/* -> https://ai-universe-backend-dev-114133832173.us-central1.run.app/*\n- Mode: Development environment testing\n\nEVIDENCE COLLECTION:\n- Save all screenshots to docs/ directory with descriptive filenames\n- Document console errors and network requests  \n- Reference all evidence files in the final report\n- Create evidence package for independent validation\n\nDIRECTORY TESTING PROTOCOL:\nExecute ALL test files in testing_llm/ directory:\n- large-query-test.md\n- medium-query-test.md  \n- small-query-test.md\n- synthesis_integration_test.md\n- test-setup.md (if contains test cases)\n\nReturn a structured evidence package with neutral documentation - NO success/failure judgments, only factual evidence collection.",
+      "timestamp": "2025-09-21T21:03:19.369Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the complete testing_llm/ directory test suite against the local development server running",
+      "extraction_order": 5040
+    },
+    {
+      "content": "perplexity failed lets see if its a frontend or backend issue Perplexity: Unable to contribute due to authentication issues",
+      "timestamp": "2025-09-21T21:15:16.356Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "perplexity failed lets see if its a frontend or backend issue perplexity: unable to contribute due t",
+      "extraction_order": 5041
+    },
+    {
+      "content": "<user-prompt-submit-hook>perplexity failed lets see if its a frontend or backend issue Perplexity: Unable to contribute due to authentication issues</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:15:16.585Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>perplexity failed lets see if its a frontend or backend issue perplexity: u",
+      "extraction_order": 5042
+    },
+    {
+      "content": "test it again for perplexity",
+      "timestamp": "2025-09-21T21:33:08.219Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test it again for perplexity",
+      "extraction_order": 5043
+    },
+    {
+      "content": "<user-prompt-submit-hook>test it again for perplexity</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:33:08.394Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test it again for perplexity</user-prompt-submit-hook>",
+      "extraction_order": 5044
+    },
+    {
+      "content": "is it done",
+      "timestamp": "2025-09-21T21:57:14.566Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is it done",
+      "extraction_order": 5045
+    },
+    {
+      "content": "<user-prompt-submit-hook>is it done</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:57:14.774Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is it done</user-prompt-submit-hook>",
+      "extraction_order": 5046
+    },
+    {
+      "content": "run the local server using /localserver too",
+      "timestamp": "2025-09-21T22:25:31.151Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run the local server using /localserver too",
+      "extraction_order": 5047
+    },
+    {
+      "content": "run /localserver and /deploy dev and then make a pr",
+      "timestamp": "2025-09-21T22:46:13.617Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run /localserver and /deploy dev and then make a pr",
+      "extraction_order": 5048
+    },
+    {
+      "content": "give the backend a prompt to investigate this \n  \ud83d\udd0d Backend Investigation:\n\n  - Grok missing because backend limits maxOpinions to 4\n  - Frontend ready for 5+ models when backend is updated\n  - All 4 current models working with new colors",
+      "timestamp": "2025-09-21T22:53:03.789Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "give the backend a prompt to investigate this \n  \ud83d\udd0d backend investigation:\n\n  - grok missing because",
+      "extraction_order": 5049
+    },
+    {
+      "content": "<user-prompt-submit-hook>give the backend a prompt to investigate this \n  \ud83d\udd0d Backend Investigation:\n\n  - Grok missing because backend limits maxOpinions to 4\n  - Frontend ready for 5+ models when backend is updated\n  - All 4 current models working with new colors</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T22:53:03.991Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>give the backend a prompt to investigate this \n  \ud83d\udd0d backend investigation:",
+      "extraction_order": 5050
+    },
+    {
+      "content": "I think the backend fixed it, test it again",
+      "timestamp": "2025-09-21T23:16:34.632Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i think the backend fixed it, test it again",
+      "extraction_order": 5051
+    },
+    {
+      "content": "<user-prompt-submit-hook>I think the backend fixed it, test it again</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:16:35.103Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i think the backend fixed it, test it again</user-prompt-submit-hook>",
+      "extraction_order": 5052
+    },
+    {
+      "content": "is max opinions a param you provide?",
+      "timestamp": "2025-09-21T23:23:47.784Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is max opinions a param you provide?",
+      "extraction_order": 5053
+    },
+    {
+      "content": "<user-prompt-submit-hook>is max opinions a param you provide?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:23:47.972Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is max opinions a param you provide?</user-prompt-submit-hook>",
+      "extraction_order": 5054
+    },
+    {
+      "content": "lets just remove the maxOpinions param and run /localserver and /deploy dev",
+      "timestamp": "2025-09-21T23:31:24.559Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets just remove the maxopinions param and run /localserver and /deploy dev",
+      "extraction_order": 5055
+    },
+    {
+      "content": "manually test localhost 2000 without max opinions",
+      "timestamp": "2025-09-21T23:42:53.364Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "manually test localhost 2000 without max opinions",
+      "extraction_order": 5056
+    },
+    {
+      "content": "<user-prompt-submit-hook>manually test localhost 2000 without max opinions</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:42:53.821Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>manually test localhost 2000 without max opinions</user-prompt-submit-hook>",
+      "extraction_order": 5057
+    },
+    {
+      "content": "show me your actual request you sent",
+      "timestamp": "2025-09-21T23:45:48.228Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "show me your actual request you sent",
+      "extraction_order": 5058
+    },
+    {
+      "content": "<user-prompt-submit-hook>show me your actual request you sent</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:45:48.429Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>show me your actual request you sent</user-prompt-submit-hook>",
+      "extraction_order": 5059
+    },
+    {
+      "content": "does this have a max models param? http://localhost:3000/ [Image #1]",
+      "timestamp": "2025-09-21T23:53:25.275Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "does this have a max models param? http://localhost:3000/ [image #1]",
+      "extraction_order": 5060
+    },
+    {
+      "content": "<user-prompt-submit-hook>does this have a max models param? http://localhost:3000/ [Image #1]</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:53:25.547Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>does this have a max models param? http://localhost:3000/ [image #1]</user-",
+      "extraction_order": 5061
+    },
+    {
+      "content": "double check the code",
+      "timestamp": "2025-09-21T23:53:48.062Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "double check the code",
+      "extraction_order": 5062
+    },
+    {
+      "content": "<user-prompt-submit-hook>double check the code</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T23:53:48.254Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>double check the code</user-prompt-submit-hook>",
+      "extraction_order": 5063
+    },
+    {
+      "content": "backend says this, test it agian \n\u23fa Bash(curl -X POST http://localhost:2000/mcp -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"agent.second_opin\u2026)\n  \u23bf \u00a0Error: % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                      Dload  Upload   Total   Spent    Left  Speed\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n     curl: (7) Failed to connect to localhost port 2000 after 0 ms: Couldn't connect to server\n\n\u23fa Let me use the Task tool to test this with the exact frontend request:\n\n\u23fa Task(Debug frontend Grok issue)\n  \u23bf \u00a0Done (18 tool uses \u00b7 54.3k tokens \u00b7 3m 59.9s)                                                                                                                                                   \n\n\u23fa Perfect! \u2705 The test confirms that the backend IS working correctly!\n\n  Key Findings from the Exact Frontend Request Test\n\n  \ud83c\udf89 BACKEND IS WORKING CORRECTLY - Grok is Present!\n\n  Test Results Summary\n\n  Using the exact frontend request:\n  {\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n      \"name\": \"agent.second_opinion\",\n      \"arguments\": {\n        \"question\": \"Test without maxOpinions\",\n        \"clientType\": \"web-browser\",\n        \"userId\": \"test-user-123\"\n      }\n    }\n  }\n\n  Backend Response Includes All 5 Models:\n  1. \u2705 Primary: cerebras-primary\n  2. \u2705 Secondary 1: gemini\n  3. \u2705 Secondary 2: grok \u2190 CONFIRMED PRESENT!\n  4. \u2705 Secondary 3: perplexity\n  5. \u2705 Secondary 4: anthropic-claude\n\n  Diagnosis: Frontend Issue, Not Backend\n\n  The backend is correctly:\n  - \u2705 Including Grok in secondary opinions\n  - \u2705 Using uncapped maxOpinions (all 4 secondary models returned)\n  - \u2705 Processing requests without errors\n  - \u2705 Returning proper model names including \"grok\"\n\n  Frontend Debugging Steps\n\n  Since the backend is working correctly, the issue is in the frontend. Here's what to check:\n\n  1. Frontend Model Recognition\n\n  Check if the frontend recognizes \"grok\" as a valid model name:\n  // Look for model mapping in frontend code\n  const modelMap = {\n    'cerebras-primary': 'Cerebras',\n    'gemini': 'Gemini',\n    'grok': 'Grok',  // \u2190 Make sure this exists\n    'perplexity': 'Perplexity',\n    'anthropic-claude': 'Claude'\n  };\n\n  2. Frontend Response Processing\n\n  Verify the frontend is parsing all secondary opinions:\n  // Check if frontend processes all items in secondaryOpinions array\n  response.secondaryOpinions.forEach(opinion => {\n    console.log('Model:', opinion.model); // Should log 'grok'\n  });\n\n  3. Frontend CSS/Styling\n\n  Ensure Grok has proper styling defined:\n  .model-grok {\n    background: linear-gradient(135deg, #00bcd4, #0097a7); /* Cyan-blue */\n  }\n\n  Conclusion\n\n  \u2705 Backend Fix Complete: The uncapped maxOpinions fix is working perfectly. Grok appears in every response from the backend.\n\n  \ud83d\udd0d Next Step: The frontend team needs to debug why their UI isn't displaying the Grok model that the backend is correctly providing. The issue is in frontend model rendering/recognition, not\n  backend functionality.",
+      "timestamp": "2025-09-22T00:02:44.245Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "backend says this, test it agian \n\u23fa bash(curl -x post http://localhost:2000/mcp -h \"content-type: ap",
+      "extraction_order": 5064
+    },
+    {
+      "content": "<user-prompt-submit-hook>backend says this, test it agian \n\u23fa Bash(curl -X POST http://localhost:2000/mcp -H \"Content-Type: application/json\" -d '{\"jsonrpc\":\"2.0\",\"id\":1,\"method\":\"tools/call\",\"params\":{\"name\":\"agent.second_opin\u2026)\n  \u23bf \u00a0Error: % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current\n                                      Dload  Upload   Total   Spent    Left  Speed\n  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0\n     curl: (7) Failed to connect to localhost port 2000 after 0 ms: Couldn't connect to server\n\n\u23fa Let me use the Task tool to test this with the exact frontend request:\n\n\u23fa Task(Debug frontend Grok issue)\n  \u23bf \u00a0Done (18 tool uses \u00b7 54.3k tokens \u00b7 3m 59.9s)                                                                                                                                                   \n\n\u23fa Perfect! \u2705 The test confirms that the backend IS working correctly!\n\n  Key Findings from the Exact Frontend Request Test\n\n  \ud83c\udf89 BACKEND IS WORKING CORRECTLY - Grok is Present!\n\n  Test Results Summary\n\n  Using the exact frontend request:\n  {\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n      \"name\": \"agent.second_opinion\",\n      \"arguments\": {\n        \"question\": \"Test without maxOpinions\",\n        \"clientType\": \"web-browser\",\n        \"userId\": \"test-user-123\"\n      }\n    }\n  }\n\n  Backend Response Includes All 5 Models:\n  1. \u2705 Primary: cerebras-primary\n  2. \u2705 Secondary 1: gemini\n  3. \u2705 Secondary 2: grok \u2190 CONFIRMED PRESENT!\n  4. \u2705 Secondary 3: perplexity\n  5. \u2705 Secondary 4: anthropic-claude\n\n  Diagnosis: Frontend Issue, Not Backend\n\n  The backend is correctly:\n  - \u2705 Including Grok in secondary opinions\n  - \u2705 Using uncapped maxOpinions (all 4 secondary models returned)\n  - \u2705 Processing requests without errors\n  - \u2705 Returning proper model names including \"grok\"\n\n  Frontend Debugging Steps\n\n  Since the backend is working correctly, the issue is in the frontend. Here's what to check:\n\n  1. Frontend Model Recognition\n\n  Check if the frontend recognizes \"grok\" as a valid model name:\n  // Look for model mapping in frontend code\n  const modelMap = {\n    'cerebras-primary': 'Cerebras',\n    'gemini': 'Gemini',\n    'grok': 'Grok',  // \u2190 Make sure this exists\n    'perplexity': 'Perplexity',\n    'anthropic-claude': 'Claude'\n  };\n\n  2. Frontend Response Processing\n\n  Verify the frontend is parsing all secondary opinions:\n  // Check if frontend processes all items in secondaryOpinions array\n  response.secondaryOpinions.forEach(opinion => {\n    console.log('Model:', opinion.model); // Should log 'grok'\n  });\n\n  3. Frontend CSS/Styling\n\n  Ensure Grok has proper styling defined:\n  .model-grok {\n    background: linear-gradient(135deg, #00bcd4, #0097a7); /* Cyan-blue */\n  }\n\n  Conclusion\n\n  \u2705 Backend Fix Complete: The uncapped maxOpinions fix is working perfectly. Grok appears in every response from the backend.\n\n  \ud83d\udd0d Next Step: The frontend team needs to debug why their UI isn't displaying the Grok model that the backend is correctly providing. The issue is in frontend model rendering/recognition, not\n  backend functionality.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:02:44.472Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>backend says this, test it agian \n\u23fa bash(curl -x post http://localhost:2000",
+      "extraction_order": 5065
+    },
+    {
+      "content": "backend says it got grok, test it again on your end direct to localhost 2000",
+      "timestamp": "2025-09-22T00:08:12.295Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "backend says it got grok, test it again on your end direct to localhost 2000",
+      "extraction_order": 5066
+    },
+    {
+      "content": "<user-prompt-submit-hook>backend says it got grok, test it again on your end direct to localhost 2000</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:08:12.463Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>backend says it got grok, test it again on your end direct to localhost 200",
+      "extraction_order": 5067
+    },
+    {
+      "content": "now test localhost:3000 and see why grok isnt showing",
+      "timestamp": "2025-09-22T00:10:28.877Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "now test localhost:3000 and see why grok isnt showing",
+      "extraction_order": 5068
+    },
+    {
+      "content": "<user-prompt-submit-hook>now test localhost:3000 and see why grok isnt showing</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:10:29.053Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>now test localhost:3000 and see why grok isnt showing</user-prompt-submit-h",
+      "extraction_order": 5069
+    },
+    {
+      "content": "we need different urls for local server, gcp dev, and gcp prod. Look at run_local_server.sh and deploy.sh to see how they work",
+      "timestamp": "2025-09-22T00:12:53.522Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "we need different urls for local server, gcp dev, and gcp prod. look at run_local_server.sh and depl",
+      "extraction_order": 5070
+    },
+    {
+      "content": "<user-prompt-submit-hook>we need different urls for local server, gcp dev, and gcp prod. Look at run_local_server.sh and deploy.sh to see how they work</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:12:53.702Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>we need different urls for local server, gcp dev, and gcp prod. look at run",
+      "extraction_order": 5071
+    },
+    {
+      "content": "does deploy.sh require docker locally?",
+      "timestamp": "2025-09-22T00:29:51.758Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "does deploy.sh require docker locally?",
+      "extraction_order": 5072
+    },
+    {
+      "content": "<user-prompt-submit-hook>does deploy.sh require docker locally?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:29:51.964Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>does deploy.sh require docker locally?</user-prompt-submit-hook>",
+      "extraction_order": 5073
+    },
+    {
+      "content": "ok update claude md and script documentation to explain that so you dont get confused in future and push to pr",
+      "timestamp": "2025-09-22T00:32:22.115Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok update claude md and script documentation to explain that so you dont get confused in future and",
+      "extraction_order": 5074
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok update claude md and script documentation to explain that so you dont get confused in future and push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:32:22.338Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok update claude md and script documentation to explain that so you dont ge",
+      "extraction_order": 5075
+    },
+    {
+      "content": "did we recently and successfully deploy to dev and prod gcp?",
+      "timestamp": "2025-09-22T00:38:37.661Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we recently and successfully deploy to dev and prod gcp?",
+      "extraction_order": 5076
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we recently and successfully deploy to dev and prod gcp?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:38:37.883Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we recently and successfully deploy to dev and prod gcp?</user-prompt-s",
+      "extraction_order": 5077
+    },
+    {
+      "content": "which gh token are you using the one in ~/.token should work",
+      "timestamp": "2025-09-22T00:46:57.107Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "which gh token are you using the one in ~/.token should work",
+      "extraction_order": 5078
+    },
+    {
+      "content": "<user-prompt-submit-hook>which gh token are you using the one in ~/.token should work</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:46:57.291Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>which gh token are you using the one in ~/.token should work</user-prompt-s",
+      "extraction_order": 5079
+    },
+    {
+      "content": "print the value of all three gh tokens here. they should use th sam token",
+      "timestamp": "2025-09-22T00:47:29.217Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "print the value of all three gh tokens here. they should use th sam token",
+      "extraction_order": 5080
+    },
+    {
+      "content": "<user-prompt-submit-hook>print the value of all three gh tokens here. they should use th sam token</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:47:29.408Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>print the value of all three gh tokens here. they should use th sam token</",
+      "extraction_order": 5081
+    },
+    {
+      "content": "whats the keyring token? Lets make sure its the same one too and if not delete all the keyring gh tokens and add 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",
+      "timestamp": "2025-09-22T00:48:16.733Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "whats the keyring token? lets make sure its the same one too and if not delete all the keyring gh to",
+      "extraction_order": 5082
+    },
+    {
+      "content": "<user-prompt-submit-hook>whats the keyring token? Lets make sure its the same one too and if not delete all the keyring gh tokens and add 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</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:48:16.930Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "a715c73a-7857-4984-b123-b2c4d45bf079.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>whats the keyring token? lets make sure its the same one too and if not del",
+      "extraction_order": 5083
+    },
+    {
+      "content": "link the local server",
+      "timestamp": "2025-09-19T00:08:32.681Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "link the local server",
+      "extraction_order": 5084
+    },
+    {
+      "content": "<user-prompt-submit-hook>link the local server</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:08:32.863Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>link the local server</user-prompt-submit-hook>",
+      "extraction_order": 5085
+    },
+    {
+      "content": "What should we do with these files? Should we make a new pr for them?   (use \"git restore --staged <file>...\" to unstage)\n    new file:   playwright-report/data/2111dfe78164b4e4ee80e7109c48b244de32e707.webm\n    new file:   playwright-report/data/3c59fcd05e4ba9a61dc568f86b7cea04ca638ca8.webm\n    new file:   playwright-report/data/4bd9e36dc1e21274559be40a9011d15fd3d88aaf.md\n    new file:   playwright-report/data/59c555e333be7e4c4ea55d49b0e53e2db1ac25dc.webm\n    new file:   playwright-report/data/86599add106a7c70d2561352c690aa57cc992e63.webm\n    new file:   playwright-report/data/c5e9ee966c2f3407a9c29e004b4a60a25b2c1f06.png\n    new file:   playwright-report/data/cf38dfc0c588ddc9217d7b2fa97345197a0dd98b.webm\n    new file:   playwright-report/data/e887dfe0eec09e901389fe32d2449ae0bc31d8e7.webm\n    new file:   playwright-report/data/fd61a99022b60f0f87d8c74c519b015d474b94fe.webm\n    new file:   playwright-report/data/fef373d4a93b4f3a8bd685624c2902766d817a65.webm\n    new file:   playwright-report/index.html\n    modified:   playwright.config.ts\n    new file:   test-browser-mcp.js\n    new file:   tests/manual-mcp-browser-test.mjs\n    new file:   tests/mcp-test-screenshot.png\n    new file:   tests/test-mcp-interaction.mjs\n    new file:   tests/tests/after-click-screenshot.png\n    new file:   tests/tests/before-click-screenshot.png",
+      "timestamp": "2025-09-19T00:11:52.967Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what should we do with these files? should we make a new pr for them?   (use \"git restore --staged <",
+      "extraction_order": 5086
+    },
+    {
+      "content": "<user-prompt-submit-hook>What should we do with these files? Should we make a new pr for them?   (use \"git restore --staged <file>...\" to unstage)\n    new file:   playwright-report/data/2111dfe78164b4e4ee80e7109c48b244de32e707.webm\n    new file:   playwright-report/data/3c59fcd05e4ba9a61dc568f86b7cea04ca638ca8.webm\n    new file:   playwright-report/data/4bd9e36dc1e21274559be40a9011d15fd3d88aaf.md\n    new file:   playwright-report/data/59c555e333be7e4c4ea55d49b0e53e2db1ac25dc.webm\n    new file:   playwright-report/data/86599add106a7c70d2561352c690aa57cc992e63.webm\n    new file:   playwright-report/data/c5e9ee966c2f3407a9c29e004b4a60a25b2c1f06.png\n    new file:   playwright-report/data/cf38dfc0c588ddc9217d7b2fa97345197a0dd98b.webm\n    new file:   playwright-report/data/e887dfe0eec09e901389fe32d2449ae0bc31d8e7.webm\n    new file:   playwright-report/data/fd61a99022b60f0f87d8c74c519b015d474b94fe.webm\n    new file:   playwright-report/data/fef373d4a93b4f3a8bd685624c2902766d817a65.webm\n    new file:   playwright-report/index.html\n    modified:   playwright.config.ts\n    new file:   test-browser-mcp.js\n    new file:   tests/manual-mcp-browser-test.mjs\n    new file:   tests/mcp-test-screenshot.png\n    new file:   tests/test-mcp-interaction.mjs\n    new file:   tests/tests/after-click-screenshot.png\n    new file:   tests/tests/before-click-screenshot.png</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:11:53.312Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what should we do with these files? should we make a new pr for them?   (us",
+      "extraction_order": 5087
+    },
+    {
+      "content": "lets move them out of project root and make a PR for any files that are useful in the futrue",
+      "timestamp": "2025-09-19T00:15:06.141Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets move them out of project root and make a pr for any files that are useful in the futrue",
+      "extraction_order": 5088
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets move them out of project root and make a PR for any files that are useful in the futrue</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:15:06.332Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets move them out of project root and make a pr for any files that are use",
+      "extraction_order": 5089
+    },
+    {
+      "content": "whats my local sertver por",
+      "timestamp": "2025-09-19T00:20:36.647Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "whats my local sertver por",
+      "extraction_order": 5090
+    },
+    {
+      "content": "<user-prompt-submit-hook>whats my local sertver por</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:20:36.826Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>whats my local sertver por</user-prompt-submit-hook>",
+      "extraction_order": 5091
+    },
+    {
+      "content": "deploy to gcp",
+      "timestamp": "2025-09-19T00:24:20.660Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "deploy to gcp",
+      "extraction_order": 5092
+    },
+    {
+      "content": "<user-prompt-submit-hook>deploy to gcp</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:24:20.838Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>deploy to gcp</user-prompt-submit-hook>",
+      "extraction_order": 5093
+    },
+    {
+      "content": "use the deploy.sh script to deploy to gcp and fix it if needed",
+      "timestamp": "2025-09-19T00:28:52.750Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use the deploy.sh script to deploy to gcp and fix it if needed",
+      "extraction_order": 5094
+    },
+    {
+      "content": "<user-prompt-submit-hook>use the deploy.sh script to deploy to gcp and fix it if needed</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:28:52.954Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use the deploy.sh script to deploy to gcp and fix it if needed</user-prompt",
+      "extraction_order": 5095
+    },
+    {
+      "content": "shouldnt there be a normal website? i dont want the static one",
+      "timestamp": "2025-09-19T00:36:21.013Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "shouldnt there be a normal website? i dont want the static one",
+      "extraction_order": 5096
+    },
+    {
+      "content": "<user-prompt-submit-hook>shouldnt there be a normal website? i dont want the static one</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:36:21.233Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>shouldnt there be a normal website? i dont want the static one</user-prompt",
+      "extraction_order": 5097
+    },
+    {
+      "content": "i dont want app engine. use deploy.sh and lets use google cloud run",
+      "timestamp": "2025-09-19T00:37:04.166Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i dont want app engine. use deploy.sh and lets use google cloud run",
+      "extraction_order": 5098
+    },
+    {
+      "content": "<user-prompt-submit-hook>i dont want app engine. use deploy.sh and lets use google cloud run</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T00:37:04.390Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i dont want app engine. use deploy.sh and lets use google cloud run</user-p",
+      "extraction_order": 5099
+    },
+    {
+      "content": "wait this used to work. look at the version of the code on origin/main and see what you messed up using /debugp",
+      "timestamp": "2025-09-19T00:55:28.848Z",
+      "project": "-Users-jleechan-project-ai-universe-frontend-ai-universe-frontend",
+      "file": "ac9212f1-c40d-45f7-9854-63bc62cdc703.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wait this used to work. look at the version of the code on origin/main and see what you messed up us",
+      "extraction_order": 5100
+    }
+  ],
+  "stats": {
+    "total_files_processed": 883,
+    "total_messages_processed": 331804,
+    "user_messages_found": 62263,
+    "filtered_out": 52992,
+    "duplicates_removed": 4171,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

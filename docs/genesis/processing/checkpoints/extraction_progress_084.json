@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 84,
+  "prompts_count": 8400,
+  "timestamp": "2025-09-22T03:49:13.902348",
+  "prompts": [
+    {
+      "content": "<user-prompt-submit-hook>note i don't wanna delete the tests jsut exclude from gh ci and run_tests.sh</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:40:22.886Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>note i don't wanna delete the tests jsut exclude from gh ci and run_tests.s",
+      "extraction_order": 8301
+    },
+    {
+      "content": "make fastci default and read claude md about cerebras usage and use /cereb",
+      "timestamp": "2025-08-26T06:43:14.367Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "make fastci default and read claude md about cerebras usage and use /cereb",
+      "extraction_order": 8302
+    },
+    {
+      "content": "<user-prompt-submit-hook>make fastci default and read claude md about cerebras usage and use /cereb</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:43:14.689Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>make fastci default and read claude md about cerebras usage and use /cereb<",
+      "extraction_order": 8303
+    },
+    {
+      "content": "thats gemini, use cerebras",
+      "timestamp": "2025-08-26T06:43:52.319Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "thats gemini, use cerebras",
+      "extraction_order": 8304
+    },
+    {
+      "content": "<user-prompt-submit-hook>thats gemini, use cerebras</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:43:52.474Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>thats gemini, use cerebras</user-prompt-submit-hook>",
+      "extraction_order": 8305
+    },
+    {
+      "content": "why are tests queued now? \npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (integration-slow) (pull_request)\nWorldArchitect Tests / test (integration-slow) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (unit-fast) (pull_request)\nWorldArchitect Tests / test (unit-fast) (pull_request)Queued \u2014 Waiting to run this check...\nskipped checks\nClaude PR Assistant / claude-code-action (pull_request_review)\nClaude PR Assistant / claude-code-action (pull_request_review)Skipped now\nsuccessful checks\nCursor Bugbot\nCursor BugbotSuccessful in 2m \u2014 Bugbot Review\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment\nComment\n \nAdd your comment here...\n \nRemember, contributions to this repository should follow our GitHub Community Guidelines.\n ProTip! Add .patch or .diff to the end of URLs for Git\u2019s plaintext views.\nReviewers\n@coderabbitai\ncoderabbitai[bot]\nCopilot code review\nCopilot\nStill in progress?\nAssignees\nNo one\u2014\nLabels\nNone yet\nProjects\nNone yet\nMilestone\nNo milestone\nDevelopment\nSuccessfully merging this pull request may close these issues.\n\nNone yet\n\n\nNotifications\nCustomize\nYou\u2019re receiving notifications because you authored the thread.\n1 participant\n@jleechan2015",
+      "timestamp": "2025-08-26T06:48:15.552Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why are tests queued now? \npending checks\nauto-resolve pr conflicts / auto-resolve-conflicts (pull_r",
+      "extraction_order": 8306
+    },
+    {
+      "content": "<user-prompt-submit-hook>why are tests queued now? \npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (integration-slow) (pull_request)\nWorldArchitect Tests / test (integration-slow) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (unit-fast) (pull_request)\nWorldArchitect Tests / test (unit-fast) (pull_request)Queued \u2014 Waiting to run this check...\nskipped checks\nClaude PR Assistant / claude-code-action (pull_request_review)\nClaude PR Assistant / claude-code-action (pull_request_review)Skipped now\nsuccessful checks\nCursor Bugbot\nCursor BugbotSuccessful in 2m \u2014 Bugbot Review\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment\nComment\n \nAdd your comment here...\n \nRemember, contributions to this repository should follow our GitHub Community Guidelines.\n ProTip! Add .patch or .diff to the end of URLs for Git\u2019s plaintext views.\nReviewers\n@coderabbitai\ncoderabbitai[bot]\nCopilot code review\nCopilot\nStill in progress?\nAssignees\nNo one\u2014\nLabels\nNone yet\nProjects\nNone yet\nMilestone\nNo milestone\nDevelopment\nSuccessfully merging this pull request may close these issues.\n\nNone yet\n\n\nNotifications\nCustomize\nYou\u2019re receiving notifications because you authored the thread.\n1 participant\n@jleechan2015</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:48:15.777Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why are tests queued now? \npending checks\nauto-resolve pr conflicts / auto-",
+      "extraction_order": 8307
+    },
+    {
+      "content": "can you do it for me with teh gh token you have?",
+      "timestamp": "2025-08-26T06:50:36.646Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "can you do it for me with teh gh token you have?",
+      "extraction_order": 8308
+    },
+    {
+      "content": "<user-prompt-submit-hook>can you do it for me with teh gh token you have?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:50:36.803Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>can you do it for me with teh gh token you have?</user-prompt-submit-hook>",
+      "extraction_order": 8309
+    },
+    {
+      "content": "still says pending pending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...\nskipped checks\nClaude PR Assistant / claude-code-action (pull_request_review)",
+      "timestamp": "2025-08-26T06:59:57.399Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "still says pending pending checks\nauto-resolve pr conflicts / auto-resolve-conflicts (pull_request)",
+      "extraction_order": 8310
+    },
+    {
+      "content": "<user-prompt-submit-hook>still says pending pending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...\nskipped checks\nClaude PR Assistant / claude-code-action (pull_request_review)</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T06:59:57.567Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>still says pending pending checks\nauto-resolve pr conflicts / auto-resolve-",
+      "extraction_order": 8311
+    },
+    {
+      "content": "all of my tests are queued i dont think they will run\n\npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...",
+      "timestamp": "2025-08-26T07:01:58.112Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "all of my tests are queued i dont think they will run\n\npending checks\nauto-resolve pr conflicts / au",
+      "extraction_order": 8312
+    },
+    {
+      "content": "<user-prompt-submit-hook>all of my tests are queued i dont think they will run\n\npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:01:58.271Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>all of my tests are queued i dont think they will run\n\npending checks\nauto-",
+      "extraction_order": 8313
+    },
+    {
+      "content": "push to pr and why does the pr have 2k delta lines?",
+      "timestamp": "2025-08-26T07:04:44.420Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and why does the pr have 2k delta lines?",
+      "extraction_order": 8314
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and why does the pr have 2k delta lines?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:04:44.569Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and why does the pr have 2k delta lines?</user-prompt-submit-hoo",
+      "extraction_order": 8315
+    },
+    {
+      "content": "mvp_site/conftest.py what does this do?",
+      "timestamp": "2025-08-26T07:08:45.632Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "mvp_site/conftest.py what does this do?",
+      "extraction_order": 8316
+    },
+    {
+      "content": "<user-prompt-submit-hook>mvp_site/conftest.py what does this do?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:08:45.797Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>mvp_site/conftest.py what does this do?</user-prompt-submit-hook>",
+      "extraction_order": 8317
+    },
+    {
+      "content": "the tests are still queued /debugp to resolve",
+      "timestamp": "2025-08-26T07:10:23.507Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the tests are still queued /debugp to resolve",
+      "extraction_order": 8318
+    },
+    {
+      "content": "<user-prompt-submit-hook>the tests are still queued /debugp to resolve</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:10:23.807Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the tests are still queued /debugp to resolve</user-prompt-submit-hook>",
+      "extraction_order": 8319
+    },
+    {
+      "content": "my actions budget seems ok Organization\njleechanorg\nProduct\nActions\nStop usage\nYes\n$102.64 spent\n$150.00 budget",
+      "timestamp": "2025-08-26T07:16:53.232Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "my actions budget seems ok organization\njleechanorg\nproduct\nactions\nstop usage\nyes\n$102.64 spent\n$15",
+      "extraction_order": 8320
+    },
+    {
+      "content": "<user-prompt-submit-hook>my actions budget seems ok Organization\njleechanorg\nProduct\nActions\nStop usage\nYes\n$102.64 spent\n$150.00 budget</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:16:53.390Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>my actions budget seems ok organization\njleechanorg\nproduct\nactions\nstop us",
+      "extraction_order": 8321
+    },
+    {
+      "content": "did we change the runner recently?",
+      "timestamp": "2025-08-26T07:19:48.846Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we change the runner recently?",
+      "extraction_order": 8322
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we change the runner recently?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:19:49.004Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we change the runner recently?</user-prompt-submit-hook>",
+      "extraction_order": 8323
+    },
+    {
+      "content": "no pretty sure its your fault /research this issue",
+      "timestamp": "2025-08-26T07:22:25.052Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "no pretty sure its your fault /research this issue",
+      "extraction_order": 8324
+    },
+    {
+      "content": "<user-prompt-submit-hook>no pretty sure its your fault /research this issue</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:22:25.356Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>no pretty sure its your fault /research this issue</user-prompt-submit-hook",
+      "extraction_order": 8325
+    },
+    {
+      "content": "oh fetch the ci status from this pr and print failing tests here. the test did run https://github.com/jleechanorg/worldarchitect.ai/pull/1471",
+      "timestamp": "2025-08-26T07:23:18.416Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "oh fetch the ci status from this pr and print failing tests here. the test did run https://github.co",
+      "extraction_order": 8326
+    },
+    {
+      "content": "<user-prompt-submit-hook>oh fetch the ci status from this pr and print failing tests here. the test did run https://github.com/jleechanorg/worldarchitect.ai/pull/1471</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:23:18.604Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "01c591ee-9703-4b1b-a139-af96c9110ada.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>oh fetch the ci status from this pr and print failing tests here. the test",
+      "extraction_order": 8327
+    },
+    {
+      "content": "wrong url https://github.com/jleechanorg/worldarchitect.ai/pull/1453",
+      "timestamp": "2025-08-24T22:12:09.908Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "f79936ce-3319-46fb-8562-650fe39316d5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wrong url https://github.com/jleechanorg/worldarchitect.ai/pull/1453",
+      "extraction_order": 8328
+    },
+    {
+      "content": "<user-prompt-submit-hook>wrong url https://github.com/jleechanorg/worldarchitect.ai/pull/1453</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:12:10.092Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "f79936ce-3319-46fb-8562-650fe39316d5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wrong url https://github.com/jleechanorg/worldarchitect.ai/pull/1453</user-",
+      "extraction_order": 8329
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/integrate /learn \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn \n\nUse these approaches in combination:/activate /bin /integrate /learn . Apply this to: then as this was a long pr and took to long to merge then\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/integrate /learn  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:13:49.474Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "f79936ce-3319-46fb-8562-650fe39316d5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/integrate /learn \n\ud83c\udfaf multi-player intelligence: f",
+      "extraction_order": 8330
+    },
+    {
+      "content": "<user-prompt-submit-hook>/reviewdeep make sure no more serious issues</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T08:50:32.222Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/reviewdeep make sure no more serious issues</user-prompt-submit-hook>",
+      "extraction_order": 8331
+    },
+    {
+      "content": "Define structured goal with success criteria for: \"Address all 10 unresponded PR comments in #1418 with appropriate technical responses and code fixes, achieve 100% comment coverage through continuous /commentcheck verification loops\"\n\nContext: PR #1418 has 10 recent unresponded comments (2025-08-24) including:\n- 5 CodeRabbit comments about refactor suggestions and potential issues\n- 4 cursor[bot] comments about async loop conflicts and bugs  \n- 1 jleechan2015 comment about async loop fix\n\nRequirements:\n1. Generate appropriate technical responses to each comment type\n2. Apply necessary code fixes based on feedback\n3. Use /commentcheck to verify coverage after each batch\n4. Continue until 100% coverage achieved\n5. Autonomous execution with minimal context consumption",
+      "timestamp": "2025-08-24T14:48:25.797Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "define structured goal with success criteria for: \"address all 10 unresponded pr comments in #1418 w",
+      "extraction_order": 8332
+    },
+    {
+      "content": "how many convergence loosp",
+      "timestamp": "2025-08-24T17:22:58.938Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how many convergence loosp",
+      "extraction_order": 8333
+    },
+    {
+      "content": "<user-prompt-submit-hook>how many convergence loosp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:22:59.095Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how many convergence loosp</user-prompt-submit-hook>",
+      "extraction_order": 8334
+    },
+    {
+      "content": "@jleechan2015\nAdd modified files\n45651ee\ncursor[bot]\ncursor bot reviewed 8 hours ago\nmvp_site/tests/test_infrastructure.py\n\n\nif __name__ == '__main__':\n    unittest.main()\n@cursor cursor bot 8 hours ago\nBug: Test Code Placement Causes Syntax Error\nThe new test code (lines 394-484) was accidentally appended after the existing if __name__ == \"__main__\": unittest.main() block. This includes a misplaced shebang line, which causes a SyntaxError, and makes the new TestEnvironmentDetection class and its tests unreachable.\n\nFix in Cursor Fix in Web\n\nAuthor\n@jleechan2015 jleechan2015 2 hours ago\nIMPLEMENTED \u2705 - Logging verbosity standardized with appropriate level classification. Debug statements removed from production paths and structured logging implemented for better observability.\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 1 minute ago\nCRITICAL_FIXES_SUMMARY.md\n@@ -0,0 +1,110 @@\n# Critical Bug Fixes for PR #1418\nAuthor\n@jleechan2015 jleechan2015 1 minute ago\nDont add files to project root\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\n.claude/commands/converge.md\n@@ -101,7 +101,7 @@ Until: Success criteria fully met\n\n#### Step 8: Enhanced Status Report Generation\n**Command**: `/status` - Generate comprehensive convergence status report with confidence data\n- **Report Location**: Save to `docs/pr-guidelines/{PR_NUMBER}/convergence-status-{timestamp}.md`\n- **Report Location**: Save to `docs/{branch_name}/convergence-status-{timestamp}.md` (same location as project guidelines)\nAuthor\n@jleechan2015 jleechan2015 now\nThis should be PR number by default but if no PR then branchname\n\n@jleechan2015    Reply...\n handle my recent comments then /commentreply also you replied to bugbot but sounds like you diddnt do what was asked",
+      "timestamp": "2025-08-24T17:27:45.894Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "@jleechan2015\nadd modified files\n45651ee\ncursor[bot]\ncursor bot reviewed 8 hours ago\nmvp_site/tests/",
+      "extraction_order": 8335
+    },
+    {
+      "content": "<user-prompt-submit-hook>@jleechan2015\nAdd modified files\n45651ee\ncursor[bot]\ncursor bot reviewed 8 hours ago\nmvp_site/tests/test_infrastructure.py\n\n\nif __name__ == '__main__':\n    unittest.main()\n@cursor cursor bot 8 hours ago\nBug: Test Code Placement Causes Syntax Error\nThe new test code (lines 394-484) was accidentally appended after the existing if __name__ == \"__main__\": unittest.main() block. This includes a misplaced shebang line, which causes a SyntaxError, and makes the new TestEnvironmentDetection class and its tests unreachable.\n\nFix in Cursor Fix in Web\n\nAuthor\n@jleechan2015 jleechan2015 2 hours ago\nIMPLEMENTED \u2705 - Logging verbosity standardized with appropriate level classification. Debug statements removed from production paths and structured logging implemented for better observability.\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 1 minute ago\nCRITICAL_FIXES_SUMMARY.md\n@@ -0,0 +1,110 @@\n# Critical Bug Fixes for PR #1418\nAuthor\n@jleechan2015 jleechan2015 1 minute ago\nDont add files to project root\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\n.claude/commands/converge.md\n@@ -101,7 +101,7 @@ Until: Success criteria fully met\n\n#### Step 8: Enhanced Status Report Generation\n**Command**: `/status` - Generate comprehensive convergence status report with confidence data\n- **Report Location**: Save to `docs/pr-guidelines/{PR_NUMBER}/convergence-status-{timestamp}.md`\n- **Report Location**: Save to `docs/{branch_name}/convergence-status-{timestamp}.md` (same location as project guidelines)\nAuthor\n@jleechan2015 jleechan2015 now\nThis should be PR number by default but if no PR then branchname\n\n@jleechan2015    Reply...\n handle my recent comments then /commentreply also you replied to bugbot but sounds like you diddnt do what was asked</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:27:46.270Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>@jleechan2015\nadd modified files\n45651ee\ncursor[bot]\ncursor bot reviewed 8",
+      "extraction_order": 8336
+    },
+    {
+      "content": "should we split up this pr?",
+      "timestamp": "2025-08-24T17:38:46.203Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "should we split up this pr?",
+      "extraction_order": 8337
+    },
+    {
+      "content": "<user-prompt-submit-hook>should we split up this pr?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:38:46.351Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>should we split up this pr?</user-prompt-submit-hook>",
+      "extraction_order": 8338
+    },
+    {
+      "content": "<user-prompt-submit-hook>/split and make sure the new PRs modified files add up exactly to the original. Make the new PRs</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:44:25.825Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/split and make sure the new prs modified files add up exactly to the origi",
+      "extraction_order": 8339
+    },
+    {
+      "content": "i want to split up the whole PR",
+      "timestamp": "2025-08-24T18:02:52.286Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i want to split up the whole pr",
+      "extraction_order": 8340
+    },
+    {
+      "content": "<user-prompt-submit-hook>i want to split up the whole PR</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:02:52.684Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i want to split up the whole pr</user-prompt-submit-hook>",
+      "extraction_order": 8341
+    },
+    {
+      "content": "i want to split up the whole PR lets use /split and do it properly",
+      "timestamp": "2025-08-24T18:03:11.443Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i want to split up the whole pr lets use /split and do it properly",
+      "extraction_order": 8342
+    },
+    {
+      "content": "<user-prompt-submit-hook>i want to split up the whole PR lets use /split and do it properly</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:03:11.722Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i want to split up the whole pr lets use /split and do it properly</user-pr",
+      "extraction_order": 8343
+    },
+    {
+      "content": "dont be sloppy list all 22 missing files here and explain why they can't be found on the original PR. we should have a record of them",
+      "timestamp": "2025-08-24T18:17:21.612Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "dont be sloppy list all 22 missing files here and explain why they can't be found on the original pr",
+      "extraction_order": 8344
+    },
+    {
+      "content": "<user-prompt-submit-hook>dont be sloppy list all 22 missing files here and explain why they can't be found on the original PR. we should have a record of them</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:17:21.762Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>dont be sloppy list all 22 missing files here and explain why they can't be",
+      "extraction_order": 8345
+    },
+    {
+      "content": "not good neough, where are the missing 2 files?",
+      "timestamp": "2025-08-24T18:22:28.839Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "not good neough, where are the missing 2 files?",
+      "extraction_order": 8346
+    },
+    {
+      "content": "<user-prompt-submit-hook>not good neough, where are the missing 2 files?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:22:29.001Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>not good neough, where are the missing 2 files?</user-prompt-submit-hook>",
+      "extraction_order": 8347
+    },
+    {
+      "content": "the source branch is from https://github.com/jleechanorg/worldarchitect.ai/pull/1418 or roadmap-update-1755831784",
+      "timestamp": "2025-08-24T18:23:24.352Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the source branch is from https://github.com/jleechanorg/worldarchitect.ai/pull/1418 or roadmap-upda",
+      "extraction_order": 8348
+    },
+    {
+      "content": "<user-prompt-submit-hook>the source branch is from https://github.com/jleechanorg/worldarchitect.ai/pull/1418 or roadmap-update-1755831784</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:23:24.562Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the source branch is from https://github.com/jleechanorg/worldarchitect.ai/",
+      "extraction_order": 8349
+    },
+    {
+      "content": "ok finish the proper split. Add the missing files to existing PRs or make new ones then follow /split protocol and ensure they all add up to original file",
+      "timestamp": "2025-08-24T18:29:15.888Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok finish the proper split. add the missing files to existing prs or make new ones then follow /spli",
+      "extraction_order": 8350
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok finish the proper split. Add the missing files to existing PRs or make new ones then follow /split protocol and ensure they all add up to original file</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:29:16.162Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok finish the proper split. add the missing files to existing prs or make n",
+      "extraction_order": 8351
+    },
+    {
+      "content": "link all the PRs and double check they add up to  the exact original files",
+      "timestamp": "2025-08-24T18:46:12.811Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "link all the prs and double check they add up to  the exact original files",
+      "extraction_order": 8352
+    },
+    {
+      "content": "<user-prompt-submit-hook>link all the PRs and double check they add up to  the exact original files</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T18:46:12.961Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>link all the prs and double check they add up to  the exact original files<",
+      "extraction_order": 8353
+    },
+    {
+      "content": "switch to this branch production-infrastructure-1418 then /copilot",
+      "timestamp": "2025-08-24T19:15:35.725Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "switch to this branch production-infrastructure-1418 then /copilot",
+      "extraction_order": 8354
+    },
+    {
+      "content": "ist his a real bug? Bug: Async Loop Conflict Causes Runtime Error\nThe call_tool_sync() and get_resource_sync() methods attempt to call run_until_complete() on the shared event loop. Since this loop is already running run_forever() in a background thread, this operation is invalid and raises a RuntimeError.",
+      "timestamp": "2025-08-24T19:49:52.235Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ist his a real bug? bug: async loop conflict causes runtime error\nthe call_tool_sync() and get_resou",
+      "extraction_order": 8355
+    },
+    {
+      "content": "<user-prompt-submit-hook>ist his a real bug? Bug: Async Loop Conflict Causes Runtime Error\nThe call_tool_sync() and get_resource_sync() methods attempt to call run_until_complete() on the shared event loop. Since this loop is already running run_forever() in a background thread, this operation is invalid and raises a RuntimeError.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T19:49:52.519Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ist his a real bug? bug: async loop conflict causes runtime error\nthe call_",
+      "extraction_order": 8356
+    },
+    {
+      "content": "cursor[bot]\ncursor bot reviewed 23 minutes ago\nmvp_site/mcp_client.py\n        except RuntimeError:\n            # No event loop running, use shared singleton loop for performance\n            shared_loop = self._get_shared_event_loop()\n            return shared_loop.run_until_complete(self.get_resource(uri))\n@cursor cursor bot 23 minutes ago\nBug: Async Loop Conflict Causes Runtime Error\nThe call_tool_sync() and get_resource_sync() methods attempt to call run_until_complete() on the shared event loop. Since this loop is already running run_forever() in a background thread, this operation is invalid and raises a RuntimeError.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 1 minute ago\nlogs/test_harness_20250629_202648.log\n@@ -0,0 +1,25 @@\n2025-06-29 20:26:48,798 - TestHarness - INFO - Running test: sariel_v2_001/multi_character/validation_only\nAuthor\n@jleechan2015 jleechan2015 1 minute ago\nWhy are we adding new files in logs? This should already be gitingored so untrack the whole folder\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\nmvp_site/mcp_client.py\n@@ -93,26 +102,36 @@ def __init__(\n            timeout: Request timeout in seconds (default 5 minutes)\n            skip_http: If True, skip HTTP and call world_logic.py directly\n        \"\"\"\n        # Input validation\nAuthor\n@jleechan2015 jleechan2015 now\nWhere are the associated tests for this file? Check the original PR\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\nrequirements/.current-requirement\nrequirements/2025-08-22-1904-test-file-justification\nAuthor\n@jleechan2015 jleechan2015 now\nWhat is this file for?\n\n@jleechan2015    Reply...\nMerge info\nSome checks haven't completed yet\n4 in progress, 1 skipped, 2 successful checks\n\n\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment\nComment\n \nAdd your comment here...\n \nRemember, contributions to this repository should follow our GitHub Community Guidelines.\n ProTip! Add comments to specific lines under Files changed.\nReviewers\n@coderabbitai\ncoderabbitai[bot]\nCopilot code review\nCopilot\n@cursor\ncursor[bot]\nStill in progress?\nAssignees\nNo one\u2014\nLabels\nbug\ncritical\ninfrastructure\nsecurity\nProjects\nNone yet\nMilestone\nNo milestone\nDevelopment\nSuccessfully merging this pull request may close these issues.\n\nNone yet\n\n\nNotifications\nCustomize\nYou\u2019re receiving notifications because you were mentioned.\n1 participant\n@jleechan2015\n handle my comments too then /commentreply then push to pr",
+      "timestamp": "2025-08-24T19:51:38.579Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "cursor[bot]\ncursor bot reviewed 23 minutes ago\nmvp_site/mcp_client.py\n        except runtimeerror:",
+      "extraction_order": 8357
+    },
+    {
+      "content": "<user-prompt-submit-hook>cursor[bot]\ncursor bot reviewed 23 minutes ago\nmvp_site/mcp_client.py\n        except RuntimeError:\n            # No event loop running, use shared singleton loop for performance\n            shared_loop = self._get_shared_event_loop()\n            return shared_loop.run_until_complete(self.get_resource(uri))\n@cursor cursor bot 23 minutes ago\nBug: Async Loop Conflict Causes Runtime Error\nThe call_tool_sync() and get_resource_sync() methods attempt to call run_until_complete() on the shared event loop. Since this loop is already running run_forever() in a background thread, this operation is invalid and raises a RuntimeError.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 1 minute ago\nlogs/test_harness_20250629_202648.log\n@@ -0,0 +1,25 @@\n2025-06-29 20:26:48,798 - TestHarness - INFO - Running test: sariel_v2_001/multi_character/validation_only\nAuthor\n@jleechan2015 jleechan2015 1 minute ago\nWhy are we adding new files in logs? This should already be gitingored so untrack the whole folder\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\nmvp_site/mcp_client.py\n@@ -93,26 +102,36 @@ def __init__(\n            timeout: Request timeout in seconds (default 5 minutes)\n            skip_http: If True, skip HTTP and call world_logic.py directly\n        \"\"\"\n        # Input validation\nAuthor\n@jleechan2015 jleechan2015 now\nWhere are the associated tests for this file? Check the original PR\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented now\nrequirements/.current-requirement\nrequirements/2025-08-22-1904-test-file-justification\nAuthor\n@jleechan2015 jleechan2015 now\nWhat is this file for?\n\n@jleechan2015    Reply...\nMerge info\nSome checks haven't completed yet\n4 in progress, 1 skipped, 2 successful checks\n\n\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment\nComment\n \nAdd your comment here...\n \nRemember, contributions to this repository should follow our GitHub Community Guidelines.\n ProTip! Add comments to specific lines under Files changed.\nReviewers\n@coderabbitai\ncoderabbitai[bot]\nCopilot code review\nCopilot\n@cursor\ncursor[bot]\nStill in progress?\nAssignees\nNo one\u2014\nLabels\nbug\ncritical\ninfrastructure\nsecurity\nProjects\nNone yet\nMilestone\nNo milestone\nDevelopment\nSuccessfully merging this pull request may close these issues.\n\nNone yet\n\n\nNotifications\nCustomize\nYou\u2019re receiving notifications because you were mentioned.\n1 participant\n@jleechan2015\n handle my comments too then /commentreply then push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T19:51:39.285Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>cursor[bot]\ncursor bot reviewed 23 minutes ago\nmvp_site/mcp_client.py",
+      "extraction_order": 8358
+    },
+    {
+      "content": "these are the tests? Why are they in prototype dir? mvp_site/prototype/run_full_integration_tests.py",
+      "timestamp": "2025-08-24T20:20:01.875Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "these are the tests? why are they in prototype dir? mvp_site/prototype/run_full_integration_tests.py",
+      "extraction_order": 8359
+    },
+    {
+      "content": "<user-prompt-submit-hook>these are the tests? Why are they in prototype dir? mvp_site/prototype/run_full_integration_tests.py</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T20:20:02.040Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>these are the tests? why are they in prototype dir? mvp_site/prototype/run_",
+      "extraction_order": 8360
+    },
+    {
+      "content": "we should have a test file called test_mcp_client.py in a tests/ subdir. make it there if not then ensure it covers fhe changes in the file and the new logic then /pushl",
+      "timestamp": "2025-08-24T20:20:34.781Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "we should have a test file called test_mcp_client.py in a tests/ subdir. make it there if not then e",
+      "extraction_order": 8361
+    },
+    {
+      "content": "<user-prompt-submit-hook>we should have a test file called test_mcp_client.py in a tests/ subdir. make it there if not then ensure it covers fhe changes in the file and the new logic then /pushl</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T20:20:35.068Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>we should have a test file called test_mcp_client.py in a tests/ subdir. ma",
+      "extraction_order": 8362
+    },
+    {
+      "content": "why do we even have this file? requirements/.current-requirement",
+      "timestamp": "2025-08-24T20:31:52.680Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why do we even have this file? requirements/.current-requirement",
+      "extraction_order": 8363
+    },
+    {
+      "content": "<user-prompt-submit-hook>why do we even have this file? requirements/.current-requirement</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T20:31:52.878Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why do we even have this file? requirements/.current-requirement</user-prom",
+      "extraction_order": 8364
+    },
+    {
+      "content": "did you actually make the right fixes? also why do we even have this dir? mvp_site/prototype/run_full_integration_tests.py",
+      "timestamp": "2025-08-24T20:51:17.451Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did you actually make the right fixes? also why do we even have this dir? mvp_site/prototype/run_ful",
+      "extraction_order": 8365
+    },
+    {
+      "content": "<user-prompt-submit-hook>did you actually make the right fixes? also why do we even have this dir? mvp_site/prototype/run_full_integration_tests.py</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T20:51:17.651Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did you actually make the right fixes? also why do we even have this dir? m",
+      "extraction_order": 8366
+    },
+    {
+      "content": "just delete mvp_site/prototype this dir, make the actual fixes, push to pr, then /commentreply",
+      "timestamp": "2025-08-24T20:53:26.584Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "just delete mvp_site/prototype this dir, make the actual fixes, push to pr, then /commentreply",
+      "extraction_order": 8367
+    },
+    {
+      "content": "<user-prompt-submit-hook>just delete mvp_site/prototype this dir, make the actual fixes, push to pr, then /commentreply</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T20:53:26.878Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>just delete mvp_site/prototype this dir, make the actual fixes, push to pr,",
+      "extraction_order": 8368
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/conv /copilot /commentcheck \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /comments /conv /converge /execute /fixpr /guidelines /poor /pulls /pushl /repos \n\nUse these approaches in combination:/commentcheck /commentfetch /commentreply /comments /conv /converge /copilot /execute /fixpr /guidelines /poor /pulls /pushl /repos . Apply this to: run and manually run and keep going until all srious gh comments addressed and coded\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/conv /copilot /commentcheck  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T21:05:49.166Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/conv /copilot /commentcheck \n\ud83c\udfaf multi-player inte",
+      "extraction_order": 8369
+    },
+    {
+      "content": "seems like you are introducing more bugs? /think how can we stop this?\n\ncursor bot reviewed 1 minute ago\nmvp_site/mcp_client.py\n            future = asyncio.run_coroutine_threadsafe(\n                self.get_resource(uri), shared_loop\n            )\n            return future.result()\n@cursor cursor bot 1 minute ago\nBug: Sync Methods Block Indefinitely Without Timeout\nThe call_tool_sync and get_resource_sync methods call future.result() without a timeout parameter. This can cause indefinite blocking if the underlying async operations hang, despite the client having a configured timeout.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\nmvp_site/mcp_client.py\n    if flask_request.is_json:\n        body = flask_request.get_json(silent=True)\n        if body:\n            arguments.update(body)\n@cursor cursor bot 1 minute ago\nBug: JSON Parsing Filters Out Valid Structures\nThe http_to_mcp_request function's JSON body handling uses if body: after parsing, which incorrectly filters out valid JSON structures like empty objects {}, empty arrays [], 0, and False. This prevents legitimate API requests with these values from being processed.",
+      "timestamp": "2025-08-24T21:15:04.476Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "seems like you are introducing more bugs? /think how can we stop this?\n\ncursor bot reviewed 1 minute",
+      "extraction_order": 8370
+    },
+    {
+      "content": "<user-prompt-submit-hook>seems like you are introducing more bugs? /think how can we stop this?\n\ncursor bot reviewed 1 minute ago\nmvp_site/mcp_client.py\n            future = asyncio.run_coroutine_threadsafe(\n                self.get_resource(uri), shared_loop\n            )\n            return future.result()\n@cursor cursor bot 1 minute ago\nBug: Sync Methods Block Indefinitely Without Timeout\nThe call_tool_sync and get_resource_sync methods call future.result() without a timeout parameter. This can cause indefinite blocking if the underlying async operations hang, despite the client having a configured timeout.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\nmvp_site/mcp_client.py\n    if flask_request.is_json:\n        body = flask_request.get_json(silent=True)\n        if body:\n            arguments.update(body)\n@cursor cursor bot 1 minute ago\nBug: JSON Parsing Filters Out Valid Structures\nThe http_to_mcp_request function's JSON body handling uses if body: after parsing, which incorrectly filters out valid JSON structures like empty objects {}, empty arrays [], 0, and False. This prevents legitimate API requests with these values from being processed.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T21:15:04.858Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>seems like you are introducing more bugs? /think how can we stop this?\n\ncur",
+      "extraction_order": 8371
+    },
+    {
+      "content": "real bug?             return future.result(timeout=self.timeout)\n@cursor cursor bot 11 minutes ago\nBug: Inconsistent Event Loop Handling in Sync Methods\nThe call_tool_sync and get_resource_sync methods handle existing event loops inconsistently. call_tool_sync uses run_coroutine_threadsafe unless the current loop is the shared loop, while get_resource_sync always creates a new event loop in a thread pool when any loop is active. This difference may cause varying performance and unexpected behavior.",
+      "timestamp": "2025-08-24T21:38:57.642Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "real bug?             return future.result(timeout=self.timeout)\n@cursor cursor bot 11 minutes ago\nb",
+      "extraction_order": 8372
+    },
+    {
+      "content": "<user-prompt-submit-hook>real bug?             return future.result(timeout=self.timeout)\n@cursor cursor bot 11 minutes ago\nBug: Inconsistent Event Loop Handling in Sync Methods\nThe call_tool_sync and get_resource_sync methods handle existing event loops inconsistently. call_tool_sync uses run_coroutine_threadsafe unless the current loop is the shared loop, while get_resource_sync always creates a new event loop in a thread pool when any loop is active. This difference may cause varying performance and unexpected behavior.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T21:38:57.797Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>real bug?             return future.result(timeout=self.timeout)\n@cursor cu",
+      "extraction_order": 8373
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/guidelines /conv /copilot \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/branch-guidelines /commentcheck /commentfetch /commentreply /conv /converge /execute /fixpr /guidelines /plan /pushl /review-enhanced /reviewdeep \n\nUse these approaches in combination:/branch-guidelines /commentcheck /commentfetch /commentreply /conv /converge /copilot /execute /fixpr /guidelines /plan /pushl /review-enhanced /reviewdeep . Apply this to: to stop introducing bugs then and do until all gh comments resolved\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/guidelines /conv /copilot  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T21:57:21.114Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/guidelines /conv /copilot \n\ud83c\udfaf multi-player intell",
+      "extraction_order": 8374
+    },
+    {
+      "content": "Define the goal structure for autonomous convergence: \"Run /copilot until all serious GitHub comments addressed and coded with implementation-first protocol\"\n\nGoal Components Needed:\n1. Success Criteria: What constitutes \"all serious GitHub comments addressed\"?\n2. Implementation Standards: How to apply implementation-first protocol?\n3. Validation Method: How to verify comments are properly resolved?\n4. Iteration Boundaries: When to continue vs stop convergence?\n\nContext: PR #1453 Production Infrastructure Modernization - User wants autonomous resolution of all GitHub review comments using the implementation-first protocol (fix implementation bugs before test cosmetics). Previous pattern showed fixing test quality while leaving cursor bot implementation issues unaddressed.\n\nOutput the structured goal definition for the convergence system.",
+      "timestamp": "2025-08-24T21:59:05.078Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "06560ba0-b3da-4175-a600-c1bab898e455.jsonl",
+      "conversation_id": null,
+      "dedup_key": "define the goal structure for autonomous convergence: \"run /copilot until all serious github comment",
+      "extraction_order": 8375
+    },
+    {
+      "content": "run_tests.sh",
+      "timestamp": "2025-08-26T07:25:33.330Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run_tests.sh",
+      "extraction_order": 8376
+    },
+    {
+      "content": "<user-prompt-submit-hook>run_tests.sh</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:25:33.502Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run_tests.sh</user-prompt-submit-hook>",
+      "extraction_order": 8377
+    },
+    {
+      "content": "add the plan first to roadmap/ then start",
+      "timestamp": "2025-08-26T07:35:38.627Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "add the plan first to roadmap/ then start",
+      "extraction_order": 8378
+    },
+    {
+      "content": "<user-prompt-submit-hook>add the plan first to roadmap/ then start</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:35:38.781Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>add the plan first to roadmap/ then start</user-prompt-submit-hook>",
+      "extraction_order": 8379
+    },
+    {
+      "content": "Create detailed specifications for /cerebras to generate Flask test infrastructure fixes. The task exceeds 10 delta lines so must use Cerebras API per CLAUDE.md protocol.\n\nPROBLEM ANALYSIS:\n- conftest.py has over-aggressive Flask mocking (lines 198-204) \n- Flask test clients return MagicMock objects instead of real HTTP responses\n- 268 test failures due to assertions like `assert response.status_code == 200` failing because status_code is a MagicMock\n- Need selective mocking: mock external services (Firebase, Gemini) but preserve Flask test infrastructure\n\nSPECIFICATIONS NEEDED:\n\n1. **FLASK TEST CLIENT FIX (conftest.py modification)**\n   - Remove lines 198-204 that over-mock Flask\n   - Keep external service mocking (Firebase, Gemini, requests) \n   - Preserve real Flask.test_client() functionality\n   - Add selective import path mocking that doesn't break Flask testing\n\n2. **TEST FIXTURES HELPER (test_fixtures.py)**\n   - Create reusable Flask app fixture with proper configuration\n   - Authentication bypass fixtures for test headers\n   - Database state management fixtures\n   - Error handling fixtures for consistent test behavior\n\n3. **MOCK HELPERS UTILITY (mock_helpers.py)**\n   - Selective mocking functions that preserve Flask infrastructure\n   - External service mock generators (Firebase responses, Gemini responses)\n   - Helper functions to mock only what's needed without breaking Flask test clients\n   - Mock validation functions to ensure mocks don't interfere with Flask testing\n\n4. **CLIENT FACTORY (client_factory.py)** \n   - Factory pattern for creating configured Flask test clients\n   - Different client configurations for different test scenarios\n   - Authentication state management for test clients\n   - Request/response logging for debugging test issues\n\n5. **TEST DATA GENERATORS (test_data_generators.py)**\n   - Generate realistic campaign data for API tests\n   - Generate user profile data with proper authentication headers\n   - Generate settings data that matches expected API responses\n   - Generate error response data that matches Flask error format\n\n6. **MOCK RESPONSES UTILITY (mock_responses.py)**\n   - Create realistic HTTP response objects that match Flask patterns\n   - Response builders for different HTTP status codes\n   - JSON response formatters that match API specifications\n   - Error response formatters for consistent error handling tests\n\n7. **TEST UTILITIES (test_utilities.py)**\n   - Assert functions for common HTTP response validation\n   - Status code validation helpers\n   - JSON response parsing and validation\n   - Test cleanup utilities\n\nTECHNICAL REQUIREMENTS:\n- All files must maintain existing passing tests (824 tests)\n- Must follow Flask testing best practices\n- Must use proper pytest fixture patterns\n- Must maintain backwards compatibility with existing test files\n- Must not break external service mocking (Firebase, Gemini still need to be mocked)\n\nOUTPUT FORMAT: Generate detailed /cerebras prompt specifications for each of the 7 components above, with exact file paths, import statements, function signatures, and implementation requirements.",
+      "timestamp": "2025-08-26T07:37:20.447Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "create detailed specifications for /cerebras to generate flask test infrastructure fixes. the task e",
+      "extraction_order": 8380
+    },
+    {
+      "content": "use cerebras not gemini",
+      "timestamp": "2025-08-26T07:39:46.477Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use cerebras not gemini",
+      "extraction_order": 8381
+    },
+    {
+      "content": "<user-prompt-submit-hook>use cerebras not gemini</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:39:46.630Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use cerebras not gemini</user-prompt-submit-hook>",
+      "extraction_order": 8382
+    },
+    {
+      "content": "still using gemini use cerebras direct",
+      "timestamp": "2025-08-26T07:42:03.288Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "still using gemini use cerebras direct",
+      "extraction_order": 8383
+    },
+    {
+      "content": "<user-prompt-submit-hook>still using gemini use cerebras direct</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T07:42:03.446Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>still using gemini use cerebras direct</user-prompt-submit-hook>",
+      "extraction_order": 8384
+    },
+    {
+      "content": "Execute the task: fix all tests with /cereb\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-26T07:56:08.002Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix all tests with /cereb\n\nfollow the complete /execute workflow:\n\n1. **phase 1 -",
+      "extraction_order": 8385
+    },
+    {
+      "content": "isnt there already a pr? use that one",
+      "timestamp": "2025-08-26T08:08:01.436Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "isnt there already a pr? use that one",
+      "extraction_order": 8386
+    },
+    {
+      "content": "<user-prompt-submit-hook>isnt there already a pr? use that one</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:08:01.738Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>isnt there already a pr? use that one</user-prompt-submit-hook>",
+      "extraction_order": 8387
+    },
+    {
+      "content": "Some checks haven't completed yet\n4 queued, 2 successful checks\n\n\npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...\n why are tehse all waiting agian? /research",
+      "timestamp": "2025-08-26T08:14:59.987Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "some checks haven't completed yet\n4 queued, 2 successful checks\n\n\npending checks\nauto-resolve pr con",
+      "extraction_order": 8388
+    },
+    {
+      "content": "<user-prompt-submit-hook>Some checks haven't completed yet\n4 queued, 2 successful checks\n\n\npending checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Queued \u2014 Waiting to run this check...\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Queued \u2014 Waiting to run this check...\nWorldArchitect Tests / test (fast-ci) (pull_request)\nWorldArchitect Tests / test (fast-ci) (pull_request)Queued \u2014 Waiting to run this check...\n why are tehse all waiting agian? /research</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:15:00.263Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>some checks haven't completed yet\n4 queued, 2 successful checks\n\n\npending c",
+      "extraction_order": 8389
+    },
+    {
+      "content": "Research why GitHub Actions checks are stuck in \"Queued\" status for PR #1471. The checks that are queued are:\n\n1. Auto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request) \n2. Test Deployment Build / test-deployment-build (pull_request)\n3. WorldArchitect Tests / test (commands) (pull_request)\n4. WorldArchitect Tests / test (fast-ci) (pull_request)\n\nThis is a recurring issue - these same checks were stuck before. I need to understand:\n\n1. Are there GitHub Actions runner capacity issues?\n2. Are there workflow configuration issues causing the queue?\n3. Are there billing/quota limits affecting the repository?\n4. Are workflows conflicting with each other?\n5. Is there a way to check GitHub Actions queue status and runner availability?\n\nPlease research GitHub's current status, common causes of queued actions, and provide specific steps to diagnose and resolve this issue for the jleechanorg/worldarchitect.ai repository.",
+      "timestamp": "2025-08-26T08:15:10.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "research why github actions checks are stuck in \"queued\" status for pr #1471. the checks that are qu",
+      "extraction_order": 8390
+    },
+    {
+      "content": "no this is not a capacity issue, /research it. pretty sure its our config",
+      "timestamp": "2025-08-26T08:47:08.145Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "no this is not a capacity issue, /research it. pretty sure its our config",
+      "extraction_order": 8391
+    },
+    {
+      "content": "<user-prompt-submit-hook>no this is not a capacity issue, /research it. pretty sure its our config</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:47:08.432Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>no this is not a capacity issue, /research it. pretty sure its our config</",
+      "extraction_order": 8392
+    },
+    {
+      "content": "Research the GitHub Actions workflow configuration in jleechanorg/worldarchitect.ai that's causing ALL workflows to be stuck in \"Queued\" status. This is NOT a capacity issue - it's a configuration problem.\n\nKey observations:\n1. ALL workflows are queued: WorldArchitect Tests, Test Deployment Build, Auto-Resolve PR Conflicts\n2. Multiple PRs affected (tests_continued, backup_fix1231, main branch)\n3. This is a recurring pattern - happened before\n\nI need you to:\n1. Examine the workflow YAML files in .github/workflows/\n2. Look for configuration issues like:\n   - Incorrect runs-on specifications\n   - Missing or invalid runner labels\n   - Dependency conflicts between workflows\n   - Concurrency group conflicts\n   - Required status checks blocking each other\n   - Self-hosted runner references that don't exist\n3. Check if workflows are waiting for each other in circular dependencies\n4. Look for any recent changes to workflow files that could cause this\n5. Examine branch protection rules that might be causing workflow blocks\n\nFocus on CONFIGURATION issues, not capacity. This is clearly a config problem affecting the entire repository.",
+      "timestamp": "2025-08-26T08:47:24.285Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "research the github actions workflow configuration in jleechanorg/worldarchitect.ai that's causing a",
+      "extraction_order": 8393
+    },
+    {
+      "content": "whats the claude bot?",
+      "timestamp": "2025-08-26T08:59:27.710Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "whats the claude bot?",
+      "extraction_order": 8394
+    },
+    {
+      "content": "<user-prompt-submit-hook>whats the claude bot?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:59:27.866Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>whats the claude bot?</user-prompt-submit-hook>",
+      "extraction_order": 8395
+    },
+    {
+      "content": "<user-prompt-submit-hook>/r delete the claude bot</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:01:21.830Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "97e4e1f8-4dde-43c6-bf77-0b60156f9966.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/r delete the claude bot</user-prompt-submit-hook>",
+      "extraction_order": 8396
+    },
+    {
+      "content": "checkout local branch for this PR and pull from remote https://github.com/jleechanorg/worldarchitect.ai/pull/1418",
+      "timestamp": "2025-08-24T08:05:20.650Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "24158a59-b728-44dc-87ba-e45f149cbdba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "checkout local branch for this pr and pull from remote https://github.com/jleechanorg/worldarchitect",
+      "extraction_order": 8397
+    },
+    {
+      "content": "<user-prompt-submit-hook>checkout local branch for this PR and pull from remote https://github.com/jleechanorg/worldarchitect.ai/pull/1418</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T08:05:21.196Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "24158a59-b728-44dc-87ba-e45f149cbdba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>checkout local branch for this pr and pull from remote https://github.com/j",
+      "extraction_order": 8398
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/conv /reviewdeep \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/arch /cerebras /commands /conv /converge /execute /guidelines /pr /PR /pr-guidelines /reviewdeep /reviewe \n\nUse these approaches in combination:/arch /cerebras /commands /conv /converge /execute /guidelines /pr /PR /pr-guidelines /reviewdeep /reviewe . Apply this to: get this PR safe to merge and keep doing and fixing issues until its ready MERGE STATUS: REQUEST CHANGES \ud83d\udd34\n\nJustification: The infrastructure modernization provides substantial value, but the event loop performance bug alone could cause catastrophic production issues under normal load. The HTTP status code logic creates systematic reliability problems that undermine testing confidence.\n\nTimeline: With focused effort, both critical issues can be resolved within 1-2 days, making this PR ready for production deployment.\n\nRisk Assessment: LOW RISK after fixes are applied - the architectural improvements significantly enhance system reliability.\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/conv /reviewdeep  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T08:06:16.441Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "24158a59-b728-44dc-87ba-e45f149cbdba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/conv /reviewdeep \n\ud83c\udfaf multi-player intelligence: f",
+      "extraction_order": 8399
+    },
+    {
+      "content": "Conduct a comprehensive deep review of PR #1418 (roadmap-update-1755831784 branch) with focus on:\n\n1. **Critical Issues Identified**: Event loop performance bug and HTTP status code logic problems\n2. **Infrastructure Modernization**: Assess the changes for production readiness\n3. **Security Analysis**: Check for vulnerabilities in the updated code\n4. **Performance Impact**: Analyze potential performance implications\n5. **Testing Coverage**: Evaluate test completeness and reliability\n\nProvide specific technical details about:\n- Exact location and nature of the event loop performance bug\n- Details of HTTP status code logic issues\n- Recommended fixes with code examples\n- Risk assessment for each identified issue\n- Priority ranking for fixes\n\nThis review should be thorough enough to create an actionable plan for getting this PR merge-ready.",
+      "timestamp": "2025-08-24T08:06:59.735Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests",
+      "file": "24158a59-b728-44dc-87ba-e45f149cbdba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "conduct a comprehensive deep review of pr #1418 (roadmap-update-1755831784 branch) with focus on:\n\n1",
+      "extraction_order": 8400
+    }
+  ],
+  "stats": {
+    "total_files_processed": 3535,
+    "total_messages_processed": 703816,
+    "user_messages_found": 155119,
+    "filtered_out": 135079,
+    "duplicates_removed": 11640,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

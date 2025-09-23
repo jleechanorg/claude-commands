@@ -1,0 +1,512 @@
+[
+  {
+    "prompt_id": "chunk_005_prompt_006",
+    "raw_prompt": "<user-prompt-submit-hook>look at the last 50 commits in the pr. This used to work. You probably followed a code reviewer suggestion and broke it\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:11:11.208Z",
+    "extraction_order": 3982,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["diagnosing_issue", "hook_processing"],
+        "current_branch": "feature_branch",
+        "session_duration": "5_minutes",
+        "recent_errors": ["functionality_regression"],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "git", "pull_request"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_007",
+    "raw_prompt": "`do you need to restart server?",
+    "timestamp": "2025-08-26T09:14:44.354Z",
+    "extraction_order": 3983,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["troubleshooting", "waiting"],
+        "current_branch": "unknown",
+        "session_duration": "8_minutes",
+        "recent_errors": ["server_issues"],
+        "work_focus": "server_troubleshooting"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": ["server"],
+        "command_history": [],
+        "complexity_indicators": ["server_management"],
+        "urgency_signals": ["server_restart_consideration"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "troubleshooting_query",
+        "communication_patterns": ["backtick_prefix", "direct_question"],
+        "problem_solving_approach": "systematic_diagnostics",
+        "learning_indicators": [],
+        "feedback_preferences": ["yes_no_answer"]
+      },
+      "intent_classification": {
+        "primary_goal": "diagnose_server_state",
+        "secondary_objectives": ["get_restart_recommendation"],
+        "task_complexity": "medium",
+        "domain_expertise": "system_administration",
+        "success_criteria": ["clear_server_action"]
+      },
+      "cognitive_state": {
+        "attention_level": "problem_solving",
+        "frustration_indicators": ["persistent_issues"],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.80,
+        "context_coherence": 0.88,
+        "behavioral_consistency": 0.85,
+        "technical_accuracy": 0.90,
+        "human_like_variance": 0.82,
+        "overall_score": 0.85
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_008",
+    "raw_prompt": "<user-prompt-submit-hook>`do you need to restart server?\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:14:44.521Z",
+    "extraction_order": 3984,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["troubleshooting_query", "hook_processing"],
+        "current_branch": "unknown",
+        "session_duration": "8_minutes",
+        "recent_errors": ["server_issues"],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "server"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_009",
+    "raw_prompt": "reconnected",
+    "timestamp": "2025-08-26T09:16:10.672Z",
+    "extraction_order": 3985,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["server_restart", "reconnection"],
+        "current_branch": "unknown",
+        "session_duration": "reset",
+        "recent_errors": [],
+        "work_focus": "connection_restoration"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": ["network"],
+        "command_history": [],
+        "complexity_indicators": [],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "status_update",
+        "communication_patterns": ["single_word", "confirmation"],
+        "problem_solving_approach": "problem_resolution",
+        "learning_indicators": [],
+        "feedback_preferences": ["acknowledgment"]
+      },
+      "intent_classification": {
+        "primary_goal": "confirm_connection_restored",
+        "secondary_objectives": ["resume_work"],
+        "task_complexity": "low",
+        "domain_expertise": "basic",
+        "success_criteria": ["connection_confirmed"]
+      },
+      "cognitive_state": {
+        "attention_level": "relieved",
+        "frustration_indicators": [],
+        "confidence_markers": ["successful_reconnection"],
+        "multitasking_signs": [],
+        "flow_state_indicators": ["ready_to_continue"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.95,
+        "context_coherence": 0.92,
+        "behavioral_consistency": 0.88,
+        "technical_accuracy": 0.90,
+        "human_like_variance": 0.85,
+        "overall_score": 0.90
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_010",
+    "raw_prompt": "<user-prompt-submit-hook>reconnected\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:16:10.872Z",
+    "extraction_order": 3986,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["reconnection_confirmed", "hook_processing"],
+        "current_branch": "unknown",
+        "session_duration": "reset",
+        "recent_errors": [],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_011",
+    "raw_prompt": "push to pr and generate some test code to prove it worked. also check the tools and ensure only cerebras is exposed for now",
+    "timestamp": "2025-08-26T09:17:46.882Z",
+    "extraction_order": 3987,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["reconnected", "ready_to_work"],
+        "current_branch": "feature_branch",
+        "session_duration": "reset",
+        "recent_errors": [],
+        "work_focus": "testing_and_deployment"
+      },
+      "technical_context": {
+        "file_references": ["pr"],
+        "technology_stack": ["git", "cerebras", "testing"],
+        "command_history": ["push", "test_generation"],
+        "complexity_indicators": ["integration_testing", "tool_exposure_control"],
+        "urgency_signals": ["deployment_ready"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "directive_comprehensive",
+        "communication_patterns": ["multi_task_instruction", "security_conscious"],
+        "problem_solving_approach": "test_driven_deployment",
+        "learning_indicators": [],
+        "feedback_preferences": ["comprehensive_validation"]
+      },
+      "intent_classification": {
+        "primary_goal": "deploy_and_validate_changes",
+        "secondary_objectives": ["generate_test_code", "control_tool_exposure"],
+        "task_complexity": "high",
+        "domain_expertise": "experienced_developer",
+        "success_criteria": ["pr_pushed", "tests_generated", "only_cerebras_exposed"]
+      },
+      "cognitive_state": {
+        "attention_level": "highly_focused",
+        "frustration_indicators": [],
+        "confidence_markers": ["ready_for_deployment"],
+        "multitasking_signs": ["multiple_objectives"],
+        "flow_state_indicators": ["productive_momentum"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.90,
+        "context_coherence": 0.94,
+        "behavioral_consistency": 0.92,
+        "technical_accuracy": 0.96,
+        "human_like_variance": 0.88,
+        "overall_score": 0.92
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_012",
+    "raw_prompt": "<user-prompt-submit-hook>push to pr and generate some test code to prove it worked. also check the tools and ensure only cerebras is exposed for now\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:17:47.039Z",
+    "extraction_order": 3988,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["deployment_instruction", "hook_processing"],
+        "current_branch": "feature_branch",
+        "session_duration": "reset",
+        "recent_errors": [],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "git", "cerebras", "testing"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_013",
+    "raw_prompt": "<user-prompt-submit-hook>/learn huge mistake. The hwole point is cerebras creted it\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:20:44.612Z",
+    "extraction_order": 3989,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["realization", "learning_moment"],
+        "current_branch": "unknown",
+        "session_duration": "active",
+        "recent_errors": ["conceptual_mistake"],
+        "work_focus": "learning_correction"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "cerebras", "learning_system"],
+        "command_history": ["/learn"],
+        "complexity_indicators": ["conceptual_understanding"],
+        "urgency_signals": ["mistake_recognition"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "emotional_realization",
+        "communication_patterns": ["typos", "emotional_intensity", "slash_command"],
+        "problem_solving_approach": "self_correction",
+        "learning_indicators": ["mistake_acknowledgment", "conceptual_clarity"],
+        "feedback_preferences": ["learning_reinforcement"]
+      },
+      "intent_classification": {
+        "primary_goal": "correct_understanding",
+        "secondary_objectives": ["acknowledge_mistake", "clarify_cerebras_role"],
+        "task_complexity": "medium",
+        "domain_expertise": "learning_developer",
+        "success_criteria": ["corrected_understanding"]
+      },
+      "cognitive_state": {
+        "attention_level": "high_emotional_intensity",
+        "frustration_indicators": ["self_frustration"],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": ["learning_breakthrough"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.75,
+        "context_coherence": 0.85,
+        "behavioral_consistency": 0.88,
+        "technical_accuracy": 0.80,
+        "human_like_variance": 0.92,
+        "overall_score": 0.84
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_014",
+    "raw_prompt": "Use the cerebras_generate tool to write just the words 'Hello World'",
+    "timestamp": "2025-08-22T16:08:11.728Z",
+    "extraction_order": 3990,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["tool_testing"],
+        "current_branch": "unknown",
+        "session_duration": "new_session",
+        "recent_errors": [],
+        "work_focus": "tool_validation"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": ["cerebras_generate", "tools"],
+        "command_history": [],
+        "complexity_indicators": ["tool_testing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "precise_instructional",
+        "communication_patterns": ["explicit_tool_naming", "simple_task"],
+        "problem_solving_approach": "minimal_viable_test",
+        "learning_indicators": ["tool_exploration"],
+        "feedback_preferences": ["simple_validation"]
+      },
+      "intent_classification": {
+        "primary_goal": "test_cerebras_tool",
+        "secondary_objectives": ["validate_tool_functionality"],
+        "task_complexity": "low",
+        "domain_expertise": "tool_user",
+        "success_criteria": ["hello_world_generated"]
+      },
+      "cognitive_state": {
+        "attention_level": "focused_testing",
+        "frustration_indicators": [],
+        "confidence_markers": ["clear_instruction"],
+        "multitasking_signs": [],
+        "flow_state_indicators": ["testing_mode"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.88,
+        "context_coherence": 0.90,
+        "behavioral_consistency": 0.92,
+        "technical_accuracy": 0.95,
+        "human_like_variance": 0.85,
+        "overall_score": 0.90
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_015",
+    "raw_prompt": "<user-prompt-submit-hook>Use the cerebras_generate tool to write just the words 'Hello World'</user-prompt-submit-hook>",
+    "timestamp": "2025-08-22T16:08:11.787Z",
+    "extraction_order": 3991,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["tool_testing_instruction", "hook_processing"],
+        "current_branch": "unknown",
+        "session_duration": "new_session",
+        "recent_errors": [],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "cerebras_generate"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  }
+]

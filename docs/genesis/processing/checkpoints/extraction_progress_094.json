@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 94,
+  "prompts_count": 9400,
+  "timestamp": "2025-09-22T03:49:14.459670",
+  "prompts": [
+    {
+      "content": "<user-prompt-submit-hook>make sure wall the tests pass, did any fail?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T06:26:36.125Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>make sure wall the tests pass, did any fail?</user-prompt-submit-hook>",
+      "extraction_order": 9301
+    },
+    {
+      "content": "push to pr and tell me what the failures are",
+      "timestamp": "2025-08-28T06:43:59.561Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and tell me what the failures are",
+      "extraction_order": 9302
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and tell me what the failures are</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T06:43:59.707Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and tell me what the failures are</user-prompt-submit-hook>",
+      "extraction_order": 9303
+    },
+    {
+      "content": "are the test failures in a file?",
+      "timestamp": "2025-08-28T06:52:24.195Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "are the test failures in a file?",
+      "extraction_order": 9304
+    },
+    {
+      "content": "<user-prompt-submit-hook>are the test failures in a file?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T06:52:24.350Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>are the test failures in a file?</user-prompt-submit-hook>",
+      "extraction_order": 9305
+    },
+    {
+      "content": "i will clear the context. give me a prompt to send back to you that references an exact file with the detailed test failures and debug instructions",
+      "timestamp": "2025-08-28T06:53:22.248Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i will clear the context. give me a prompt to send back to you that references an exact file with th",
+      "extraction_order": 9306
+    },
+    {
+      "content": "<user-prompt-submit-hook>i will clear the context. give me a prompt to send back to you that references an exact file with the detailed test failures and debug instructions</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T06:53:22.398Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "775c24d8-718e-48c8-a469-62161ced8490.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i will clear the context. give me a prompt to send back to you that referen",
+      "extraction_order": 9307
+    },
+    {
+      "content": "lets change the bashrc tree alias to look for create_worktree script in current dir or scripts/",
+      "timestamp": "2025-09-21T21:21:50.418Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "0cd004ce-e397-4578-9b0e-46c3e60982b7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets change the bashrc tree alias to look for create_worktree script in current dir or scripts/",
+      "extraction_order": 9308
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets change the bashrc tree alias to look for create_worktree script in current dir or scripts/</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:21:50.595Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "0cd004ce-e397-4578-9b0e-46c3e60982b7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets change the bashrc tree alias to look for create_worktree script in cur",
+      "extraction_order": 9309
+    },
+    {
+      "content": "actualyl lets just use this alias tree='if [ -f ./create_worktree.sh ]; then source ./create_worktree.sh; elif [ -f ./scripts/create_worktree.sh ]; then source ./scripts/create_worktree.sh; else echo \"create_worktree.sh not found in current directory or scripts/\"; fi'",
+      "timestamp": "2025-09-21T21:23:29.085Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "0cd004ce-e397-4578-9b0e-46c3e60982b7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "actualyl lets just use this alias tree='if [ -f ./create_worktree.sh ]; then source ./create_worktre",
+      "extraction_order": 9310
+    },
+    {
+      "content": "<user-prompt-submit-hook>actualyl lets just use this alias tree='if [ -f ./create_worktree.sh ]; then source ./create_worktree.sh; elif [ -f ./scripts/create_worktree.sh ]; then source ./scripts/create_worktree.sh; else echo \"create_worktree.sh not found in current directory or scripts/\"; fi'</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:23:29.448Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "0cd004ce-e397-4578-9b0e-46c3e60982b7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>actualyl lets just use this alias tree='if [ -f ./create_worktree.sh ]; the",
+      "extraction_order": 9311
+    },
+    {
+      "content": "Analyze if creating file '/Users/jleechan/projects/worldarchitect.ai/.env' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/projects/worldarchitect.ai/.env' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-22T09:18:19.378Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "9b330fd9-7861-4a98-b753-277d020b6f7c.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/users/jleechan/projects/worldarchitect.ai/.env' violates claude.md file p",
+      "extraction_order": 9312
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/Users/jleechan/projects/worldarchitect.ai/.env' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/projects/worldarchitect.ai/.env' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T09:18:19.632Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "9b330fd9-7861-4a98-b753-277d020b6f7c.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/users/jleechan/projects/worldarchitect.ai/.env'",
+      "extraction_order": 9313
+    },
+    {
+      "content": "look at these local changes, where did they come from",
+      "timestamp": "2025-09-08T00:11:05.905Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at these local changes, where did they come from",
+      "extraction_order": 9314
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at these local changes, where did they come from</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T00:11:06.090Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at these local changes, where did they come from</user-prompt-submit-h",
+      "extraction_order": 9315
+    },
+    {
+      "content": "what are these changes? are they associated with any open PRs? no one was supposed to be working in this dir. Lok at the commit messages",
+      "timestamp": "2025-09-08T00:13:43.646Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what are these changes? are they associated with any open prs? no one was supposed to be working in",
+      "extraction_order": 9316
+    },
+    {
+      "content": "<user-prompt-submit-hook>what are these changes? are they associated with any open PRs? no one was supposed to be working in this dir. Lok at the commit messages</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T00:13:43.818Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what are these changes? are they associated with any open prs? no one was s",
+      "extraction_order": 9317
+    },
+    {
+      "content": "review the files",
+      "timestamp": "2025-09-08T00:15:07.857Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "review the files",
+      "extraction_order": 9318
+    },
+    {
+      "content": "<user-prompt-submit-hook>review the files</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T00:15:08.395Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>review the files</user-prompt-submit-hook>",
+      "extraction_order": 9319
+    },
+    {
+      "content": "ok make a new PR for them",
+      "timestamp": "2025-09-08T00:18:54.032Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok make a new pr for them",
+      "extraction_order": 9320
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok make a new PR for them</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T00:18:54.918Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "6f47a0ea-169a-4aea-81d6-1f14a8c715ad.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok make a new pr for them</user-prompt-submit-hook>",
+      "extraction_order": 9321
+    },
+    {
+      "content": "push local changes to pr",
+      "timestamp": "2025-09-08T00:35:40.477Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "9289167b-cc5b-4ba8-98be-6ef40c868e82.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push local changes to pr",
+      "extraction_order": 9322
+    },
+    {
+      "content": "<user-prompt-submit-hook>push local changes to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T00:35:41.011Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "9289167b-cc5b-4ba8-98be-6ef40c868e82.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push local changes to pr</user-prompt-submit-hook>",
+      "extraction_order": 9323
+    },
+    {
+      "content": "fix this in the bashrc \ntree worker2\nbash: syntax error near unexpected token `worker2'",
+      "timestamp": "2025-09-22T00:59:53.320Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix this in the bashrc \ntree worker2\nbash: syntax error near unexpected token `worker2'",
+      "extraction_order": 9324
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix this in the bashrc \ntree worker2\nbash: syntax error near unexpected token `worker2'</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T00:59:53.501Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix this in the bashrc \ntree worker2\nbash: syntax error near unexpected tok",
+      "extraction_order": 9325
+    },
+    {
+      "content": "still not working /redgreen fix htis source ~/.bashrc\nYou have new mail in /var/mail/jleechan\ntree worker2\nbash: syntax error near unexpected token `worker2'",
+      "timestamp": "2025-09-22T01:01:10.075Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "still not working /redgreen fix htis source ~/.bashrc\nyou have new mail in /var/mail/jleechan\ntree w",
+      "extraction_order": 9326
+    },
+    {
+      "content": "still not working, can you test it. /redgreen fix it wtree worker2\nCreating git worktree: worktree_worker2\nfatal: invalid reference: worker2",
+      "timestamp": "2025-09-22T01:26:06.564Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "still not working, can you test it. /redgreen fix it wtree worker2\ncreating git worktree: worktree_w",
+      "extraction_order": 9327
+    },
+    {
+      "content": "i ran this but how come it iddnt navigate to the dir? wtree worker6\nCreating git worktree: worktree_worker6\nPreparing worktree (new branch 'worker6')\nHEAD is now at acf27a7 \ud83d\udd27 Add missing GROK_API_KEY to CI environment\npwd\n/Users/jleechan/project_ai_universe/worktree_worker4",
+      "timestamp": "2025-09-22T01:38:28.800Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i ran this but how come it iddnt navigate to the dir? wtree worker6\ncreating git worktree: worktree_",
+      "extraction_order": 9328
+    },
+    {
+      "content": "<user-prompt-submit-hook>i ran this but how come it iddnt navigate to the dir? wtree worker6\nCreating git worktree: worktree_worker6\nPreparing worktree (new branch 'worker6')\nHEAD is now at acf27a7 \ud83d\udd27 Add missing GROK_API_KEY to CI environment\npwd\n/Users/jleechan/project_ai_universe/worktree_worker4</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T01:38:29.240Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i ran this but how come it iddnt navigate to the dir? wtree worker6\ncreatin",
+      "extraction_order": 9329
+    },
+    {
+      "content": "is it looking for the create_worktree.sh script?",
+      "timestamp": "2025-09-22T01:38:46.120Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is it looking for the create_worktree.sh script?",
+      "extraction_order": 9330
+    },
+    {
+      "content": "<user-prompt-submit-hook>is it looking for the create_worktree.sh script?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T01:38:46.383Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is it looking for the create_worktree.sh script?</user-prompt-submit-hook>",
+      "extraction_order": 9331
+    },
+    {
+      "content": "its supposed to call create_worktree.sh from project root or look in scripts/ and try that asa fallback. Lets give it back the \"tree alias\" and make sure args are passed and edit hte bashrc for this",
+      "timestamp": "2025-09-22T01:39:43.073Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "its supposed to call create_worktree.sh from project root or look in scripts/ and try that asa fallb",
+      "extraction_order": 9332
+    },
+    {
+      "content": "<user-prompt-submit-hook>its supposed to call create_worktree.sh from project root or look in scripts/ and try that asa fallback. Lets give it back the \"tree alias\" and make sure args are passed and edit hte bashrc for this</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T01:39:43.255Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f87cef6d-a643-43ee-8c22-016aa363b3e8.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>its supposed to call create_worktree.sh from project root or look in script",
+      "extraction_order": 9333
+    },
+    {
+      "content": "help me set my ghostty theme to theme = dark:andromeda,light:catppuccin-latte and /perp to see how to do it if needed and look for ghostty official docs",
+      "timestamp": "2025-09-07T23:22:45.633Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "222f5414-6c79-485e-b24e-6869c314ed4e.jsonl",
+      "conversation_id": null,
+      "dedup_key": "help me set my ghostty theme to theme = dark:andromeda,light:catppuccin-latte and /perp to see how t",
+      "extraction_order": 9334
+    },
+    {
+      "content": "you do it for me",
+      "timestamp": "2025-09-07T23:29:52.120Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "222f5414-6c79-485e-b24e-6869c314ed4e.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you do it for me",
+      "extraction_order": 9335
+    },
+    {
+      "content": "<user-prompt-submit-hook>you do it for me</user-prompt-submit-hook>",
+      "timestamp": "2025-09-07T23:29:52.647Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "222f5414-6c79-485e-b24e-6869c314ed4e.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you do it for me</user-prompt-submit-hook>",
+      "extraction_order": 9336
+    },
+    {
+      "content": "which directory and worktree has this pr? https://github.com/jleechanorg/worldarchitect.ai/pull/1658/files#diff-823d820dcf657597b41ce9fd987316577a0d814a9296a256cfb6b86ca94a9acf",
+      "timestamp": "2025-09-21T21:36:53.675Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "ac8fc360-93fd-4849-91c0-856aaed5cfb6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "which directory and worktree has this pr? https://github.com/jleechanorg/worldarchitect.ai/pull/1658",
+      "extraction_order": 9337
+    },
+    {
+      "content": "<user-prompt-submit-hook>which directory and worktree has this pr? https://github.com/jleechanorg/worldarchitect.ai/pull/1658/files#diff-823d820dcf657597b41ce9fd987316577a0d814a9296a256cfb6b86ca94a9acf</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T21:36:53.932Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "ac8fc360-93fd-4849-91c0-856aaed5cfb6.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>which directory and worktree has this pr? https://github.com/jleechanorg/wo",
+      "extraction_order": 9338
+    },
+    {
+      "content": "Analyze if creating file '/tmp/test_wtree.sh' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/test_wtree.sh' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-22T01:03:56.096Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "eb3d4c62-0de0-4569-bd51-f31acf969a60.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/test_wtree.sh' violates claude.md file placement rules:\n\nfile placeme",
+      "extraction_order": 9339
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/test_wtree.sh' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/test_wtree.sh' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T01:03:56.345Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "eb3d4c62-0de0-4569-bd51-f31acf969a60.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/test_wtree.sh' violates claude.md file place",
+      "extraction_order": 9340
+    },
+    {
+      "content": "un track the logs dir and remove from git",
+      "timestamp": "2025-08-24T17:42:46.293Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "un track the logs dir and remove from git",
+      "extraction_order": 9341
+    },
+    {
+      "content": "<user-prompt-submit-hook>un track the logs dir and remove from git</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:42:46.459Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>un track the logs dir and remove from git</user-prompt-submit-hook>",
+      "extraction_order": 9342
+    },
+    {
+      "content": "do we need a PR for it?",
+      "timestamp": "2025-08-24T17:44:36.156Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do we need a pr for it?",
+      "extraction_order": 9343
+    },
+    {
+      "content": "<user-prompt-submit-hook>do we need a PR for it?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:44:36.309Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do we need a pr for it?</user-prompt-submit-hook>",
+      "extraction_order": 9344
+    },
+    {
+      "content": "we have main branch protection so maybe we need a pr?",
+      "timestamp": "2025-08-24T17:49:53.216Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "we have main branch protection so maybe we need a pr?",
+      "extraction_order": 9345
+    },
+    {
+      "content": "<user-prompt-submit-hook>we have main branch protection so maybe we need a pr?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T17:49:53.367Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "1af6f13e-9ef8-4409-a0a1-664ddc4f1ead.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>we have main branch protection so maybe we need a pr?</user-prompt-submit-h",
+      "extraction_order": 9346
+    },
+    {
+      "content": "looka at the current branch and local changes. are they needed?",
+      "timestamp": "2025-08-25T16:30:42.469Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f8a4e610-0f70-460f-9ab5-c59d5c562045.jsonl",
+      "conversation_id": null,
+      "dedup_key": "looka at the current branch and local changes. are they needed?",
+      "extraction_order": 9347
+    },
+    {
+      "content": "<user-prompt-submit-hook>looka at the current branch and local changes. are they needed?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T16:30:42.640Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f8a4e610-0f70-460f-9ab5-c59d5c562045.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>looka at the current branch and local changes. are they needed?</user-promp",
+      "extraction_order": 9348
+    },
+    {
+      "content": "<user-prompt-submit-hook>/newb misc_fixes and make a PR for what we should keep and delete the rest</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T16:36:03.680Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "f8a4e610-0f70-460f-9ab5-c59d5c562045.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/newb misc_fixes and make a pr for what we should keep and delete the rest<",
+      "extraction_order": 9349
+    },
+    {
+      "content": "what is this local branch about. there are a lot of files that seem unrelated to cerebras context contam",
+      "timestamp": "2025-09-08T15:31:21.722Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what is this local branch about. there are a lot of files that seem unrelated to cerebras context co",
+      "extraction_order": 9350
+    },
+    {
+      "content": "<user-prompt-submit-hook>what is this local branch about. there are a lot of files that seem unrelated to cerebras context contam</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T15:31:21.972Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what is this local branch about. there are a lot of files that seem unrelat",
+      "extraction_order": 9351
+    },
+    {
+      "content": "look at the commits to see what they are for",
+      "timestamp": "2025-09-08T15:34:33.393Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at the commits to see what they are for",
+      "extraction_order": 9352
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at the commits to see what they are for</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T15:34:34.478Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at the commits to see what they are for</user-prompt-submit-hook>",
+      "extraction_order": 9353
+    },
+    {
+      "content": "what are these commits beyond cerebras? try to figure it out",
+      "timestamp": "2025-09-08T15:51:34.163Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what are these commits beyond cerebras? try to figure it out",
+      "extraction_order": 9354
+    },
+    {
+      "content": "<user-prompt-submit-hook>what are these commits beyond cerebras? try to figure it out</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T15:51:34.383Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what are these commits beyond cerebras? try to figure it out</user-prompt-s",
+      "extraction_order": 9355
+    },
+    {
+      "content": "git pull origin main and make sure these arent already in main",
+      "timestamp": "2025-09-08T16:01:34.169Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main and make sure these arent already in main",
+      "extraction_order": 9356
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main and make sure these arent already in main</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T16:01:34.502Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main and make sure these arent already in main</user-prompt",
+      "extraction_order": 9357
+    },
+    {
+      "content": "just delete the original branch",
+      "timestamp": "2025-09-08T16:45:20.879Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "just delete the original branch",
+      "extraction_order": 9358
+    },
+    {
+      "content": "<user-prompt-submit-hook>just delete the original branch</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T16:45:21.058Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>just delete the original branch</user-prompt-submit-hook>",
+      "extraction_order": 9359
+    },
+    {
+      "content": "how about claude code cli handle it?",
+      "timestamp": "2025-09-08T17:52:14.262Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how about claude code cli handle it?",
+      "extraction_order": 9360
+    },
+    {
+      "content": "<user-prompt-submit-hook>how about claude code cli handle it?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T17:52:14.594Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how about claude code cli handle it?</user-prompt-submit-hook>",
+      "extraction_order": 9361
+    },
+    {
+      "content": "ok how can we replicate that?",
+      "timestamp": "2025-09-08T17:54:03.806Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok how can we replicate that?",
+      "extraction_order": 9362
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok how can we replicate that?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T17:54:04.086Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok how can we replicate that?</user-prompt-submit-hook>",
+      "extraction_order": 9363
+    },
+    {
+      "content": "Lets use real python and not python in string. There already is a context extractor class. Build the new stuff using /tdd",
+      "timestamp": "2025-09-08T17:55:52.610Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets use real python and not python in string. there already is a context extractor class. build the",
+      "extraction_order": 9364
+    },
+    {
+      "content": "ok does it try to parse the convo and extract the useful s tuff? i dont want just a black and white thing",
+      "timestamp": "2025-09-08T18:17:21.200Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok does it try to parse the convo and extract the useful s tuff? i dont want just a black and white",
+      "extraction_order": 9365
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok does it try to parse the convo and extract the useful s tuff? i dont want just a black and white thing</user-prompt-submit-hook>",
+      "timestamp": "2025-09-08T18:17:21.523Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok does it try to parse the convo and extract the useful s tuff? i dont wan",
+      "extraction_order": 9366
+    },
+    {
+      "content": "push to pr, run local tests to make sure they pass, then /reviewdeep focus on bugs and correctness, then /copilot",
+      "timestamp": "2025-09-08T18:23:33.339Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr, run local tests to make sure they pass, then /reviewdeep focus on bugs and correctness,",
+      "extraction_order": 9367
+    },
+    {
+      "content": "Perform comprehensive technical analysis of PR #1571 focusing on bugs and correctness with solo developer security focus. Analyze the Cerebras context contamination filtering implementation for:\n\n1. **Solo Developer Security Analysis**: \n   - Focus on REAL vulnerabilities: command injection, credential exposure, path traversal, input validation\n   - Filter out enterprise paranoia - this is trusted code for filtering protocols\n   - Check for actual exploitable vulnerabilities vs theoretical concerns\n\n2. **Architecture Pattern Analysis**:\n   - Evaluate ClaudeCodeContextFilter and ContextQualityScorer design patterns\n   - Check SOLID principles adherence and code organization\n   - Assess the filtering logic and pattern matching approach\n\n3. **Performance & Correctness**:\n   - Analyze regex patterns for efficiency and correctness\n   - Check quality scoring algorithm logic (0.0-1.0 scale)\n   - Validate message parsing and role inference accuracy\n   - Review integration with existing extract_conversation_context.py\n\n4. **Bug Detection Focus**:\n   - Logic errors in conversation parsing\n   - Edge cases in filtering patterns\n   - Memory leaks or resource issues\n   - Error handling completeness\n\nReview these key files in the PR:\n- .claude/commands/cerebras/claude_code_context_filter.py (core implementation)\n- .claude/commands/cerebras/test_claude_context_tdd.py (test coverage)\n- .claude/commands/cerebras/apply_claude_code_context.py (integration)\n- .claude/commands/cerebras/demo_*.py (examples)\n- docs/cerebras-context-contamination-issue.md (documentation)\n\nProvide specific findings with line references and actionable recommendations. Focus on functional bugs, security issues, and correctness problems that could affect production usage.",
+      "timestamp": "2025-09-08T18:28:10.736Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "perform comprehensive technical analysis of pr #1571 focusing on bugs and correctness with solo deve",
+      "extraction_order": 9368
+    },
+    {
+      "content": "Perform comprehensive architectural analysis of PR #1571's Cerebras context contamination solution focusing on:\n\n1. **System Design Assessment**:\n   - Evaluate the overall architecture of the context filtering system\n   - Analyze integration points with existing cerebras_direct.sh and conversation extraction\n   - Review the Command-line interface design in apply_claude_code_context.py\n   - Assess scalability and maintainability of the filtering approach\n\n2. **Code Quality & Maintainability**:\n   - Review class design patterns and separation of concerns\n   - Evaluate the test-driven development implementation quality\n   - Analyze code complexity and readability\n   - Check for proper documentation and examples\n\n3. **Technical Integration Analysis**:\n   - How well does this integrate with existing MCP workflows?\n   - Compatibility with existing context extraction systems\n   - Future extensibility for other AI services beyond Cerebras\n   - Configuration and mode flexibility (none/smart/full modes)\n\n4. **Long-term Technical Vision**:\n   - Does this solution properly address the root cause of context contamination?\n   - Can this approach scale to other similar problems?\n   - Technical debt implications and maintenance burden\n   - Alignment with project's AI-assisted development goals\n\nFocus on structural soundness, design quality, and architectural fitness for the WorldArchitect.AI project. Provide specific recommendations for improvement and flag any architectural concerns that could impact long-term maintainability or performance.",
+      "timestamp": "2025-09-08T18:28:10.819Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "perform comprehensive architectural analysis of pr #1571's cerebras context contamination solution f",
+      "extraction_order": 9369
+    },
+    {
+      "content": "**GOAL**: Resolve all serious GitHub comments on PR #1571 and make PR mergeable\n\n**CONTEXT**: PR #1571 contains comprehensive Cerebras context contamination technical documentation. The parallel review analysis found this is an excellent implementation (92/100 quality score) with only minor documentation improvements needed.\n\n**CURRENT STATUS**: \n- Technical analysis: EXCELLENT - No critical security or bug issues\n- Architectural analysis: 95/100 - Outstanding implementation  \n- Enhanced review: Only 4 nitpick-level comments from AI reviewers\n- Test status: All 9 TDD tests passing\n\n**REVIEW COMMENTS TO RESOLVE**:\n\n1. **CodeRabbit Comments** (4 nitpicks on docs/cerebras-context-contamination-issue.md):\n   - Lines 22-33: Add redaction note for sanitized request/response payloads\n   - Lines 119-126: Consider making `--no-auto-context` the default\n   - Lines 151-155: Document debug flag consistently  \n   - Lines 139-156: Add cross-references to related docs and usage examples\n\n2. **GitHub Copilot Comment** (1 minor):\n   - Missing backticks around file extensions for consistency (lines 67-70)\n\n**IMPLEMENTATION APPROACH**:\n1. **FILE JUSTIFICATION PROTOCOL**: Each change must be documented as Enhancement (improving documentation clarity)\n2. **INTEGRATION PROOF**: These are documentation improvements to existing technical documentation file\n3. **MODIFICATION APPROACH**: Use Edit tool to enhance existing documentation with requested improvements\n4. **QUALITY FOCUS**: Maintain the excellent technical documentation while addressing reviewer feedback\n\n**EXPECTED OUTCOME**: All review comments resolved with enhanced documentation clarity, making PR ready for merge.\n\n**FILE OPERATIONS REQUIRED**: \n- Edit docs/cerebras-context-contamination-issue.md to address the 5 documentation improvement suggestions\n- Follow FILE JUSTIFICATION PROTOCOL for each change\n- Verify improvements enhance rather than detract from the comprehensive technical analysis\n\nPlease implement these documentation improvements and provide file justification for each change.",
+      "timestamp": "2025-09-08T20:13:46.777Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "**goal**: resolve all serious github comments on pr #1571 and make pr mergeable\n\n**context**: pr #15",
+      "extraction_order": 9370
+    },
+    {
+      "content": "push to pr then /commentfetch anything serious",
+      "timestamp": "2025-09-09T02:04:12.933Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr then /commentfetch anything serious",
+      "extraction_order": 9371
+    },
+    {
+      "content": "Execute the task: follow file justification protocol and consider merging new files into existing test files. And fix the truncation\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-09T02:58:48.957Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: follow file justification protocol and consider merging new files into existing te",
+      "extraction_order": 9372
+    },
+    {
+      "content": "update pr desc and then see if any serious comments Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n93\nActions\nProjects\nSecurity\nInsights\nSettings\n Open\ndocs: Add comprehensive Cerebras context contamination technical documentation\n#1571\njleechan2015 wants to merge 5 commits into main from docs/cerebras-context-contamination \n+1,294 \u22120 \n Conversation 19\n Commits 5\n Checks 6\n Files changed 8\nConversation\njleechan2015\njleechan2015 commented 11 hours ago \u2022 \nSummary\nThis PR adds the missing technical documentation for the Cerebras context contamination issue that was resolved in commit . While the functional fix was implemented and merged, the detailed technical analysis was never added to the main branch.\n\nWhat This Adds\n\ud83d\udccb Complete Technical Documentation\nRoot Cause Analysis: MCP tool references in conversation context being learned by Cerebras\nEvidence Package: Raw API requests/responses showing contamination patterns\nFailing Prompt Example: Exact reproduction case that demonstrates the issue\nSolution Implementation: flag usage and context filtering strategies\n\ud83d\udd0d Key Technical Insights\nFeedback Loop Problem: The debugging process itself contaminated the system being debugged\nIntermittent Behavior Explained: Context extraction ON = contaminated responses, OFF = clean generation\nPerformance Impact: Clean generation (341ms) vs contaminated context (13,949+ tokens)\nWhy This Matters\nHistorical Record: Documents a critical debugging process for future reference\nKnowledge Sharing: Helps other developers recognize similar contamination patterns\nProcess Improvement: Highlights the importance of isolating debugging environments\nSolution Reference: Provides clear guidance on using flag\nFiles Added\nComplete technical documentation (176 lines)\nRelationship to Previous Work\nOriginal Fix: - Implemented the functional solution\nMissing Documentation: This PR fills the gap by adding the comprehensive technical analysis\nNo Code Changes: Pure documentation addition, no risk to existing functionality\nVerification\nDocumentation includes exact failing prompt for reproduction\nAPI evidence package validates the root cause analysis\nSolution verification shows clean vs contaminated generation comparison\n\ud83e\udd16 Generated with Claude Code\n\nCo-Authored-By: Claude noreply@anthropic.com\n\nSummary by CodeRabbit\nNew Features\n\nAdded a CLI to clean and score conversation context with selectable modes (none/smart/semantic/full), quality threshold fallback, optional analysis output, and JSON or text formatting.\nDocumentation\n\nAdded a guide on Cerebras context contamination, immediate workaround, and recommendations.\nAdded PR-specific implementation guidelines for robust context filtering.\nIncluded runnable demos showcasing nuanced filtering and parsing.\nTests\n\nAdded comprehensive tests covering cleaning, metadata extraction, quality scoring, role handling, mode behavior, and edge cases.\n@jleechan2015\n@claude\ndocs: Add comprehensive Cerebras context contamination technical docu\u2026 \n1503e14\n@Copilot Copilot AI review requested due to automatic review settings 11 hours ago\n@coderabbitaicoderabbitai\ncoderabbitai bot commented 11 hours ago \u2022 \nNote\n\nOther AI code review bot(s) detected\nCodeRabbit has detected other AI code review bot(s) in this pull request and will avoid duplicating their findings in the review comments. This may lead to a less comprehensive review.\n\nWalkthrough\nAdds a context-filtering library, a CLI for applying it, demo scripts, a comprehensive TDD-style test suite, and documentation. The library extracts clean messages, reconstructs context by mode (none/smart/semantic/full), and scores content quality. The CLI exposes modes, thresholds, and output formats. Docs describe the contamination issue and PR guidelines.\n\nChanges\nCohort / File(s)    Summary of Changes\nCore filtering & scoring\n .claude/commands/cerebras/claude_code_context_filter.py    New module implementing ClaudeCodeContextFilter, CleanMessage, and ContextQualityScorer; provides message extraction, context reconstruction by mode, contamination filtering, metadata extraction, and heuristic quality scoring.\nCLI integration\n.claude/commands/cerebras/apply_claude_code_context.py    New CLI to process raw context via filter/scorer; supports modes (none, smart, semantic, full), quality thresholding, optional analysis to stderr, and text/JSON output.\nDemonstrations\n.claude/commands/cerebras/demo_nuanced.py, .claude/commands/cerebras/demo_nuanced_filtering.py, .claude/commands/cerebras/demo_parsing.py    New demo scripts showcasing nuanced filtering, parsing, reconstruction, and scoring across varied content types with printed metrics and previews.\nTests (TDD suite)\n.claude/commands/cerebras/test_claude_context_tdd.py    New unittest suite validating cleaning, metadata extraction, role inference, scoring comparisons, mode handling, threshold fallback, and integration behavior.\nDocumentation\ndocs/cerebras-context-contamination-issue.md, docs/pr-guidelines/1571/guidelines.md    New docs detailing the contamination issue, immediate mitigation, workflow, evidence, and PR-specific implementation/testing guidelines and patterns.\nSequence Diagram(s)\n\nEstimated code review effort\n\ud83c\udfaf 4 (Complex) | \u23f1\ufe0f ~60 minutes\n\nPoem\nI sift through chatter with whiskered care,\nNibbling noise, leaving signal bare.\nHop-hop, the modes align in queue\u2014\nSmart or full, I know what to do.\nThresholds set, I guard the flow,\nClean context blooms\u2014now watch it grow.\n\ud83e\udd55\u2728\n\nComment @coderabbitai help to get the list of available commands and usage tips.\n\nCopilot\nCopilot AI reviewed 11 hours ago\nCopilot AI left a comment\nPull Request Overview\nAdds comprehensive technical documentation for a resolved Cerebras context contamination issue. This documentation fills a gap by providing detailed root cause analysis, evidence, and solutions for a previously fixed bug.\n\nComplete technical analysis of context contamination affecting Cerebras code generation\nEvidence package with API requests/responses demonstrating the contamination patterns\nDocumentation of the --no-auto-context flag solution and recommended improvements\nComments suppressed due to low confidence (1)\nTip: Customize your code reviews with copilot-instructions.md. Create the file or learn how to get started.\n\ndocs/cerebras-context-contamination-issue.md\nComment on lines +147 to +148\n# Filter out MCP tool references from context\ncontext=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\nCopilot AI\n11 hours ago\nThe proposed context filtering logic uses basic grep patterns that may be fragile. Consider using more robust filtering or structured parsing to avoid false positives when legitimate content contains these patterns.\n\nSuggested change\n# Filter out MCP tool references from context\ncontext=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\n# Filter out only lines that are actual MCP tool contamination\ncontext=$(extract_context | awk '!(/^\\[Used mcp__.* tool\\]$/)')\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\ncoderabbitai[bot]\ncoderabbitai bot reviewed 11 hours ago\ncoderabbitai bot left a comment\nActionable comments posted: 4\n\n\ud83e\uddf9 Nitpick comments (4)\n\ud83d\udcdc Review details\ndocs/cerebras-context-contamination-issue.md\nComment on lines +1 to +2\n# Cerebras Context Contamination Issue\n\n@coderabbitai coderabbitai bot 11 hours ago\n\ud83d\udca1 Verification agent\n\n\ud83e\udde9 Analysis chain\nAdd \u201cLast updated\u201d and changelog metadata at the top\n\n # Cerebras Context Contamination Issue\n+\n+> Last updated: 2025-09-08  \n+> Related fix: https://github.com/jleechanorg/worldarchitect.ai/commit/1503e14\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ndocs/cerebras-context-contamination-issue.md\nComment on lines +50 to +112\n```bash\n.claude/commands/cerebras/cerebras_direct.sh \"I need you to update a design document for a Python proxy that adds slash commands to Codex CLI. The current design has critical compatibility issues with Claude Code CLI specification that must be fixed.\n## CONTEXT: Current Design Problems\nThe architecture review found 7 critical issues:\n1. \u274c Command discovery only checks .claude/ (missing ~/.claude/)\n2. \u274c No precedence rules (project should override personal)\n3. \u274c Missing frontmatter parsing (YAML with allowed-tools, description, etc.)\n4. \u274c No argument substitution (\\$ARGUMENTS, \\$1, \\$2, etc.)\n5. \u274c Missing bash execution (! prefix)\n6. \u274c Missing file references (@ prefix)\n7. \u274c No namespacing support (subdirectories)\n## CLAUDE CODE CLI SPECIFICATION (MUST FOLLOW EXACTLY):\n### Command Discovery:\n- Commands from \\`.claude/commands/\\` AND \\`~/.claude/commands/\\`\n- Project-level overrides personal-level\n- Supports subdirectories for namespacing\n- Command name derived from filename without .md\n### Markdown File Structure:\n\\`\\`\\`markdown\n---\nallowed-tools: Bash(git:*)\nargument-hint: \\\"file or directory\\\"\ndescription: \\\"Command description\\\"\nmodel: \\\"claude-3-sonnet\\\"\n---\nCommand instructions here with \\$ARGUMENTS and \\$1, \\$2 substitution.\n\\`\\`\\`\n### Argument Handling:\n- \\$ARGUMENTS = entire argument string\n- \\$1, \\$2, \\$3 = positional arguments\n- Substituted in markdown content before execution\n### Execution Model:\n- ! prefix = bash command execution\n- @ prefix = file references\n- Tool permissions from frontmatter\n- Default = send enhanced prompt to AI\n## TASK: UPDATE DESIGN.MD\nPlease rewrite the \\\"Phase 2: Slash Commands - Module Architecture\\\" section with:\n1. **Correct Command Discovery**: Both .claude/ and ~/.claude/ with proper precedence\n2. **Proper Markdown Parsing**: Frontmatter + argument substitution\n3. **Complete Execution Model**: Bash (!), file refs (@), tool permissions\n4. **Maintain Module System**: Keep as enhancement layer over Claude Code CLI compatibility\n5. **Practical Implementation**: Code that actually works with real Claude Code CLI commands\nFocus on correctness and exact compatibility. Show the corrected code with proper:\n- \\`discover_claude_commands()\\` function for dual-directory discovery\n- \\`parse_command_file()\\` with YAML frontmatter and \\$ARGUMENTS substitution\n- \\`handle_slash_command()\\` with complete execution logic\n- Integration with the existing module system\nMake it comprehensive enough to implement correctly in 1-2 iterations.\"\n```\n@coderabbitai coderabbitai bot 11 hours ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nAvoid duplicating CLI specification text; link to canonical spec instead\n\nGuideline: NEVER duplicate systematic protocols from other .md files. Replace the inlined \u201cCLAUDE CODE CLI SPECIFICATION\u201d with a reference to the canonical spec to prevent drift.\n\n-## CLAUDE CODE CLI SPECIFICATION (MUST FOLLOW EXACTLY):\n-...\n-### Command Discovery:\n-...\n-### Markdown File Structure:\n-...\n-### Argument Handling:\n-...\n-### Execution Model:\n-...\n+## Reference: Claude Code CLI specification\n+See: [Claude Code CLI Spec](../<path-to-canonical-spec>.md#cli-spec)\n+Use that spec verbatim for reproduction; do not rely on this document as a source of truth.\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ndocs/cerebras-context-contamination-issue.md\nComment on lines +146 to +149\n```bash\n# Filter out MCP tool references from context\ncontext=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\n```\n@coderabbitai coderabbitai bot 11 hours ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nReplace brittle grep-based filtering with structured filtering in the extractor\n\nString greps risk false positives/negatives and will break on format changes. Move filtering into extract_conversation_context.py with explicit rules (e.g., drop assistant tool-usage system markers; allowlist user/assistant natural language only). Update the doc to recommend the extractor flag, not shell grep.\n\n-# Filter out MCP tool references from context\n-context=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\n+# Prefer extractor-level filtering (example flag)\n+context=$(extract_conversation_context.py --exclude-tool-markers --role user,assistant --drop-mcp-markers)\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ndocs/cerebras-context-contamination-issue.md\nComment on lines +159 to +161\n- **Script**: `.claude/commands/cerebras/cerebras_direct.sh` (lines 133-174, context extraction)\n- **Context Extractor**: `extract_conversation_context.py` (may need MCP filtering)\n\n@coderabbitai coderabbitai bot 11 hours ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nAvoid line-number references; use anchors/functions to prevent doc rot\n\nLine numbers in scripts change frequently. Reference functions/flags or anchors instead, and (optionally) permalink to a commit.\n\n-- **Script**: `.claude/commands/cerebras/cerebras_direct.sh` (lines 133-174, context extraction)\n+- **Script**: `.claude/commands/cerebras/cerebras_direct.sh` (context extraction section; function handling `--auto-context`)\n+- Permalink: <commit URL>/`.claude/commands/cerebras/cerebras_direct.sh`\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n@jleechan2015\n@claude\nfeat: Implement Claude Code CLI context management system using TDD \n8e74e94\ncursor[bot]\nThis comment was marked as outdated.\nShow comment\n@jleechan2015\n@claude\ndocs: Address all reviewer feedback on Cerebras context contamination\u2026 \nb527d4d\ncursor[bot]\nThis comment was marked as outdated.\nShow comment\ncoderabbitai[bot]\ncoderabbitai bot reviewed 2 hours ago\ncoderabbitai bot left a comment\nActionable comments posted: 3\n\nCaution\n\nSome comments are outside the diff and can\u2019t be posted inline due to platform limitations.\n\n\u26a0\ufe0f Outside diff range comments (3)\n.claude/commands/cerebras/apply_claude_code_context.py\nComment on lines +76 to +81\n        if quality_score < args.quality_threshold:\n            if args.show_analysis:\n                print(f\"\u26a0\ufe0f Context quality ({quality_score:.2f}) below threshold ({args.quality_threshold}), falling back to no-context mode\", file=sys.stderr)\n            clean_context = \"\"\n            quality_score = 0.0\n\n@coderabbitai coderabbitai bot 2 hours ago\n\u26a0\ufe0f Potential issue\n\nThreshold fallback leaves a stale message_count. Reset it to 0.\n\nCurrently message_count can remain >0 when falling back to no-context.\n\n         if quality_score < args.quality_threshold:\n             if args.show_analysis:\n                 print(f\"\u26a0\ufe0f Context quality ({quality_score:.2f}) below threshold ({args.quality_threshold}), falling back to no-context mode\", file=sys.stderr)\n             clean_context = \"\"\n             quality_score = 0.0\n+            message_count = 0\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n.claude/commands/cerebras/test_claude_context_tdd.py\nOutdated\nComment on lines 189 to 205\n    def test_integration_with_existing_context_extractor(self):\n        \"\"\"\ud83d\udd34 FAIL: Should integrate with existing extract_conversation_context.py\"\"\"\n        from claude_code_context_filter import ClaudeCodeContextFilter\n        from extract_conversation_context import extract_conversation_context\n\n        # Mock a conversation file\n        filter = ClaudeCodeContextFilter()\n\n        # Should be able to process output from existing extractor\n        try:\n            # This should work with the existing system\n            raw_context = \"Mock conversation from existing extractor\"\n            clean_messages = filter.extract_clean_messages(raw_context)\n            self.assertIsInstance(clean_messages, list)\n        except ImportError:\n            self.fail(\"Should integrate with existing context extractor\")\n\n@coderabbitai coderabbitai bot 2 hours ago\n\u26a0\ufe0f Potential issue\n\nImport error isn\u2019t caught; test will error before try/except.\n\nMove the import inside the try and skip if extractor isn\u2019t available.\n\n-        from claude_code_context_filter import ClaudeCodeContextFilter\n-        from extract_conversation_context import extract_conversation_context\n-\n-        # Mock a conversation file\n-        filter = ClaudeCodeContextFilter()\n-\n-        # Should be able to process output from existing extractor\n-        try:\n-            # This should work with the existing system\n-            raw_context = \"Mock conversation from existing extractor\"\n-            clean_messages = filter.extract_clean_messages(raw_context)\n-            self.assertIsInstance(clean_messages, list)\n-        except ImportError:\n-            self.fail(\"Should integrate with existing context extractor\")\n+        from claude_code_context_filter import ClaudeCodeContextFilter\n+        try:\n+            from extract_conversation_context import extract_conversation_context\n+        except ImportError:\n+            self.skipTest(\"extract_conversation_context not available\")\n+        # Mock a conversation file and ensure filter runs\n+        ctx_filter = ClaudeCodeContextFilter()\n+        raw_context = \"Mock conversation from existing extractor\"\n+        clean_messages = ctx_filter.extract_clean_messages(raw_context)\n+        self.assertIsInstance(clean_messages, list)\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ndocs/pr-guidelines/1571/guidelines.md\nComment on lines +60 to +73\n### \u2705 **Empirically Validated Quality Scoring**\n```python\n# CORRECT - Evidence-based threshold with scoring rationale\nclass ContextQualityScorer:\n    def score_content_quality(self, content: str) -> float:\n        # Weighted scoring based on value indicators\n        score = 0.5  # Base neutral score\n        score += 0.4 if '```' in content else 0  # Code blocks high value\n        score += 0.3 if any(term in content.lower() for term in TECHNICAL_TERMS) else 0\n        score -= 0.5 if self._count_protocol_refs(content) > 2 else 0\n        return max(0.0, min(1.0, score))  # Bounded 0.0-1.0\n```\n**Solution**: Multi-dimensional quality assessment with clear scoring rationale and empirical validation (0.3 threshold).\n\n@coderabbitai coderabbitai bot 2 hours ago\n\ud83d\udca1 Verification agent\n\n\ud83e\udde9 Analysis chain\nClarify quality threshold configurability\nThe guidelines currently state a fixed 0.3 threshold for content scoring, but the implementation exposes this via the --quality-threshold CLI flag (default 0.3 in apply_claude_code_context.py). Update docs/pr-guidelines/1571/guidelines.md to note that 0.3 is the default and that users can override it with --quality-threshold.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\njleechan2015 and others added 2 commits 1 hour ago\n@jleechan2015\n@claude\nfix: Remove broken duplicate test files with syntax errors \n6596efd\n@jleechan2015\n@claude\nfix: resolve import validation and syntax errors in Cerebras context \u2026 \n69c212f\ncoderabbitai[bot]\ncoderabbitai bot reviewed 10 minutes ago\ncoderabbitai bot left a comment\nActionable comments posted: 2\n\n\u267b\ufe0f Duplicate comments (1)\n\ud83e\uddf9 Nitpick comments (3)\n\ud83d\udcdc Review details\n.claude/commands/cerebras/test_claude_context_tdd.py\nComment on lines +9 to +16\nimport unittest\nimport sys\nimport os\nfrom dataclasses import dataclass\nfrom typing import List, Dict, Any, Optional\nfrom datetime import datetime\nfrom claude_code_context_filter import ClaudeCodeContextFilter, ContextQualityScorer\n\n@coderabbitai coderabbitai bot 10 minutes ago\n\u26a0\ufe0f Potential issue\n\nFix import path to avoid ModuleNotFoundError under unittest discovery\n\nWhen running from repo root, claude_code_context_filter (a sibling in this directory) won\u2019t be on sys.path. Add a path tweak before the import (and drop now-unused imports below once you remove the local dataclass).\n\n import unittest\n import sys\n import os\n-from dataclasses import dataclass\n-from typing import List, Dict, Any, Optional\n-from datetime import datetime\n-from claude_code_context_filter import ClaudeCodeContextFilter, ContextQualityScorer\n+# Ensure sibling module imports resolve when executing tests from repo root\n+sys.path.append(os.path.dirname(__file__))\n+from claude_code_context_filter import ClaudeCodeContextFilter, ContextQualityScorer\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n.claude/commands/cerebras/test_claude_context_tdd.py\nComment on lines +18 to +26\n@dataclass\nclass CleanMessage:\n    \"\"\"Claude Code CLI style message structure\"\"\"\n    role: str  # \"user\" | \"assistant\" | \"system\"\n    content: str  # Semantic content only, no protocol references\n    metadata: Dict[str, Any]  # Tool results abstracted as metadata\n    timestamp: str\n    quality_score: float = 0.0\n\n@coderabbitai coderabbitai bot 10 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nRemove test-local CleanMessage dataclass (shadows production type, risks drift)\n\nThis duplicate type can mask interface changes in production. Import the production type if you need it, or avoid hard dependency by asserting on fields. Since you don\u2019t use it, just delete it.\n\n-@dataclass\n-class CleanMessage:\n-    \"\"\"Claude Code CLI style message structure\"\"\"\n-    role: str  # \"user\" | \"assistant\" | \"system\"\n-    content: str  # Semantic content only, no protocol references\n-    metadata: Dict[str, Any]  # Tool results abstracted as metadata\n-    timestamp: str\n-    quality_score: float = 0.0\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\nMerge info\nAll checks have passed\n1 skipped, 6 successful checks\n\n\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment\nComment\n \nAdd your comment here...\n \nRemember, contributions to this repository should follow our GitHub Community Guidelines.\n ProTip! Add comments to specific lines under Files changed.\nReviewers\n@coderabbitai\ncoderabbitai[bot]\nCopilot code review\nCopilot\n@cursor\ncursor[bot]\nStill in progress?\nAssignees\nNo one\u2014\nLabels\nNone yet\nProjects\nNone yet\nMilestone\nNo milestone\nDevelopment\nSuccessfully merging this pull request may close these issues.\n\nNone yet\n\n\nNotifications\nCustomize\nYou\u2019re receiving notifications because you authored the thread.\n1 participant\n@jleechan2015\nFooter\n\u00a9 2025 GitHub, Inc.\nFooter navigation\nTerms\nPrivacy\nSecurity\nStatus\nGitHub Community\nDocs\nContact\nManage cookies\nDo not share my personal information",
+      "timestamp": "2025-09-09T04:23:28.677Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "update pr desc and then see if any serious comments skip to content\nnavigation menu\njleechanorg\nworl",
+      "extraction_order": 9373
+    },
+    {
+      "content": "<user-prompt-submit-hook>update pr desc and then see if any serious comments Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n93\nActions\nProjects\nSecurity\nInsights\nSettings\n Open\ndocs: Add comprehensive Cerebras context contamination technical documentation\n#1571\njleechan2015 wants to merge 5 commits into main from docs/cerebras-context-contamination \n+1,294 \u22120 \n Conversation 19\n Commits 5\n Checks 6\n Files changed 8\nConversation\njleechan2015\njleechan2015 commented 11 hours ago \u2022 \nSummary\nThis PR adds the missing technical documentation for the Cerebras context contamination issue that was resolved in commit . While the functional fix was implemented and merged, the detailed technical analysis was never added to the main branch.\n\nWhat This Adds\n\ud83d\udccb Complete Technical Documentation\nRoot Cause Analysis: MCP tool references in conversation context being learned by Cerebras\nEvidence Package: Raw API requests/responses showing contamination patterns\nFailing Prompt Example: Exact reproduction case that demonstrates the issue\nSolution Implementation: flag usage and context filtering strategies\n\ud83d\udd0d Key Technical Insights\nFeedback Loop Problem: The debugging process itself contaminated the system being debugged\nIntermittent Behavior Explained: Context extraction ON = contaminated responses, OFF = clean generation\nPerformance Impact: Clean generation (341ms) vs contaminated context (13,949+ tokens)\nWhy This Matters\nHistorical Record: Documents a critical debugging process for future reference\nKnowledge Sharing: Helps other developers recognize similar contamination patterns\nProcess Improvement: Highlights the importance of isolating debugging environments\nSolution Reference: Provides clear guidance on using flag\nFiles Added\nComplete technical documentation (176 lines)\nRelationship to Previous Work\nOriginal Fix: - Implemented the functional solution\nMissing Documentation: This PR fills the gap by adding the comprehensive technical analysis\nNo Code Changes: Pure documentation addition, no risk to existing functionality\nVerification\nDocumentation includes exact failing prompt for reproduction\nAPI evidence package validates the root cause analysis\nSolution verification shows clean vs contaminated generation comparison\n\ud83e\udd16 Generated with Claude Code\n\nCo-Authored-By: Claude noreply@anthropic.com\n\nSummary by CodeRabbit\nNew Features\n\nAdded a CLI to clean and score conversation context with selectable modes (none/smart/semantic/full), quality threshold fallback, optional analysis output, and JSON or text formatting.\nDocumentation\n\nAdded a guide on Cerebras context contamination, immediate workaround, and recommendations.\nAdded PR-specific implementation guidelines for robust context filtering.\nIncluded runnable demos showcasing nuanced filtering and parsing.\nTests\n\nAdded comprehensive tests covering cleaning, metadata extraction, quality scoring, role handling, mode behavior, and edge cases.\n@jleechan2015\n@claude\ndocs: Add comprehensive Cerebras context contamination technical docu\u2026 \n1503e14\n@Copilot Copilot AI review requested due to automatic review settings 11 hours ago\n@coderabbitaicoderabbitai\ncoderabbitai bot commented 11 hours ago \u2022 \nNote\n\nOther AI code review bot(s) detected\nCodeRabbit has detected other AI code review bot(s) in this pull request and will avoid duplicating their findings in the review comments. This may lead to a less comprehensive review.\n\nWalkthrough\nAdds a context-filtering library, a CLI for applying it, demo scripts, a comprehensive TDD-style test suite, and documentation. The library extracts clean messages, reconstructs context by mode (none/smart/semantic/full), and scores content quality. The CLI exposes modes, thresholds, and output formats. Docs describe the contamination issue and PR guidelines.\n\nChanges\nCohort / File(s)    Summary of Changes\nCore filtering & scoring\n .claude/commands/cerebras/claude_code_context_filter.py    New module implementing ClaudeCodeContextFilter, CleanMessage, and ContextQualityScorer; provides message extraction, context reconstruction by mode, contamination filtering, metadata extraction, and heuristic quality scoring.\nCLI integration\n.claude/commands/cerebras/apply_claude_code_context.py    New CLI to process raw context via filter/scorer; supports modes (none, smart, semantic, full), quality thresholding, optional analysis to stderr, and text/JSON output.\nDemonstrations\n.claude/commands/cerebras/demo_nuanced.py, .claude/commands/cerebras/demo_nuanced_filtering.py, .claude/commands/cerebras/demo_parsing.py    New demo scripts showcasing nuanced filtering, parsing, reconstruction, and scoring across varied content types with printed metrics and previews.\nTests (TDD suite)\n.claude/commands/cerebras/test_claude_context_tdd.py    New unittest suite validating cleaning, metadata extraction, role inference, scoring comparisons, mode handling, threshold fallback, and integration behavior.\nDocumentation\ndocs/cerebras-context-contamination-issue.md, docs/pr-guidelines/1571/guidelines.md    New docs detailing the contamination issue, immediate mitigation, workflow, evidence, and PR-specific implementation/testing guidelines and patterns.\nSequence Diagram(s)\n\nEstimated code review effort\n\ud83c\udfaf 4 (Complex) | \u23f1\ufe0f ~60 minutes\n\nPoem\nI sift through chatter with whiskered care,\nNibbling noise, leaving signal bare.\nHop-hop, the modes align in queue\u2014\nSmart or full, I know what to do.\nThresholds set, I guard the flow,\nClean context blooms\u2014now watch it grow.\n\ud83e\udd55\u2728\n\nComment @coderabbitai help to get the list of available commands and usage tips.\n\nCopilot\nCopilot AI reviewed 11 hours ago\nCopilot AI left a comment\nPull Request Overview\nAdds comprehensive technical documentation for a resolved Cerebras context contamination issue. This documentation fills a gap by providing detailed root cause analysis, evidence, and solutions for a previously fixed bug.\n\nComplete technical analysis of context contamination affecting Cerebras code generation\nEvidence package with API requests/responses demonstrating the contamination patterns\nDocumentation of the --no-auto-context flag solution and recommended improvements\nComments suppressed due to low confidence (1)\nTip: Customize your code reviews with copilot-instructions.md. Create the file or learn how to get started.\n\ndocs/cerebras-context-contamination-issue.md\nComment on lines +147 to +148\n# Filter out MCP tool references from context\ncontext=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\nCopilot AI\n11 hours ago\nThe proposed context filtering logic uses basic grep patterns that may be fragile. Consider using more robust filtering or structured parsing to avoid false positives when legitimate content contains these patterns.\n\nSuggested change\n# Filter out MCP tool references from context\ncontext=$(extract_context | grep -v \"Used.*tool\" | grep -v \"mcp__\")\n# Filter out only lines that are actual MCP tool contamination\ncontext=$(extract_context | awk '!(/^\\[Used mcp__.* tool\\]$/)')\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\ncoderabbitai[bot]\ncoderabbitai bot reviewed 11 hours ago\ncoderabbitai bot left a comment\nActionable comments posted: 4\n\n\ud83e\uddf9 Nitpick comments (4)\n\ud83d\udcdc Review details\ndocs/cerebras-context-contamination-issue.md\nComment on lines +1 to +2\n# Cerebras Context Contamination Issue\n\n@coderabbitai coderabbitai bot 11 hours ago\n\ud83d\udca1 Verification agent\n\n\ud83e\udde9 Analysis chain\nAdd \u201cLast updated\u201d and changelog metadata at the top\n\n # Cerebras Context Contamination Issue\n+\n+> Last updated: 2025-09-08  \n+> Related fix: https://github.com/jleechanorg/worldarchitect.ai/commit/1503e14\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ndocs/cerebras-context-contamination-issue.md\nComment on lines +50 to +112\n```bash\n.claude/commands/cerebras/cerebras_direct.sh \"I need you to update a design document for a Python proxy that adds slash commands to Codex CLI. The current design has critical compatibility issues with Claude Code CLI specification that must be fixed.\n## CONTEXT: Current Design Problems\nThe architecture review found 7 critical issues:\n1. \u274c Command discovery only checks .claude/ (missing ~/.claude/)\n2. \u274c No precedence rules (project should override personal)\n3. \u274c Missing frontmatter parsing (YAML with allowed-tools, description, etc.)\n4. \u274c No argument substitution (\\$ARGUMENTS, \\$1, \\$2, etc.)\n5. \u274c Missing bash execution (! prefix)\n6. \u274c Missing file references (@ prefix)\n7. \u274c No namespacing support (subdirectories)\n## CLAUDE CODE CLI SPECIFICATION (MUST FOLLOW EXACTLY):\n### Command Discovery:\n- Commands from \\`.claude/commands/\\` AND \\`~/.claude/commands/\\`\n- Project-level overrides personal-level\n- Supports subdirectories for namespacing\n- Command name derived from filename without .md\n### Markdown File Structure:\n\\`\\`\\`markdown\n---\nallowed-tools: Bash(git:*)\nargument-hint: \\\"file or directory\\\"\ndescription: \\\"Command description\\\"\nmodel: \\\"claude-3-sonnet\\\"\n---\nCommand instructions here with \\$ARGUMENTS and \\$1, \\$2 substitution.\n\\`\\`\\`\n### Argument Handling:\n- \\$ARGUMENTS = entire argument string\n- \\$1, \\$2, \\$3 = positional arguments\n- Substituted in markdown content before execution\n### Execution Model:\n- ! prefix = bash command execution\n- @ prefix = file references\n- Tool permissions from frontmatter\n- Default = send enhanced prompt to AI\n## TASK: UPDATE DESIGN.MD\nPlease rewrite the \\\"Phase 2: Slash Commands - Module Architecture\\\" section with:\n1. **Correct Command Discovery**: Both .claude/ and ~/.claude/ with proper precedence\n2. **Proper Markdown Parsing**: Frontmatter + argument substitution\n3. **Complete Execution Model**: Bash (!), file refs (@), tool permissions\n4. **Maintain Module System**: Keep as enhancement layer over Claude Code CLI compatibility\n5. **Practical Implementation**: Code that actually works with real Claude Code CLI commands\nFocus on correctness and exact compatibility. Show the corrected code with proper:\n- \\`discover_claude_comma\n\n[output truncated - exceeded 10000 characters]</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T04:23:31.328Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>update pr desc and then see if any serious comments skip to content\nnavigat",
+      "extraction_order": 9374
+    },
+    {
+      "content": "this whole PR doesnt make sense, there's nowhwere that cerebras_direct.sh calls into it? Also dont add all these new files",
+      "timestamp": "2025-09-09T04:24:42.645Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "this whole pr doesnt make sense, there's nowhwere that cerebras_direct.sh calls into it? also dont a",
+      "extraction_order": 9375
+    },
+    {
+      "content": "<user-prompt-submit-hook>this whole PR doesnt make sense, there's nowhwere that cerebras_direct.sh calls into it? Also dont add all these new files</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T04:24:43.055Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>this whole pr doesnt make sense, there's nowhwere that cerebras_direct.sh c",
+      "extraction_order": 9376
+    },
+    {
+      "content": "Lets do 1) but cant we use this code?",
+      "timestamp": "2025-09-09T04:28:02.493Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets do 1) but cant we use this code?",
+      "extraction_order": 9377
+    },
+    {
+      "content": "<user-prompt-submit-hook>Lets do 1) but cant we use this code?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T04:28:02.993Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets do 1) but cant we use this code?</user-prompt-submit-hook>",
+      "extraction_order": 9378
+    },
+    {
+      "content": "Execute the task: option 1\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-09T04:33:10.054Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: option 1\n\nfollow the complete /execute workflow:\n\n1. **phase 1 - planning**: show",
+      "extraction_order": 9379
+    },
+    {
+      "content": "lets use /tdd to design some tests for the new logic then push to pr. Add to existing test files dont make new files",
+      "timestamp": "2025-09-09T05:02:28.295Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets use /tdd to design some tests for the new logic then push to pr. add to existing test files don",
+      "extraction_order": 9380
+    },
+    {
+      "content": "--filter-mcp delete this flag. i awlays wanrt to filter",
+      "timestamp": "2025-09-09T05:43:59.673Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "--filter-mcp delete this flag. i awlays wanrt to filter",
+      "extraction_order": 9381
+    },
+    {
+      "content": "<user-prompt-submit-hook>--filter-mcp delete this flag. i awlays wanrt to filter</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T05:43:59.857Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>--filter-mcp delete this flag. i awlays wanrt to filter</user-prompt-submit",
+      "extraction_order": 9382
+    },
+    {
+      "content": "push to pr and then test the filterig manually",
+      "timestamp": "2025-09-09T05:56:47.043Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and then test the filterig manually",
+      "extraction_order": 9383
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and then test the filterig manually</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T05:56:47.318Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and then test the filterig manually</user-prompt-submit-hook>",
+      "extraction_order": 9384
+    },
+    {
+      "content": "fix this locally Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n96\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1571\ndocs: Add comprehensive Cerebras context contamination technical documentation #6433\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (import-validation-delta)\nfailed 12 minutes ago in 57s\nSearch logs\n2s\n2s\n0s\n5s\n41s\n5s\nCurrent Python: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/bin/python3\nVirtual env: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv\n\u2705 Pydantic 2.11.7 available\n\ud83d\udd0d Running DELTA IMPORT validation checks...\nChecking only files changed in this PR for inline imports and try/except patterns...\nCurrent branch: \nCurrent commit: 2af1843a461bdab98fefd4ec7756b486d73bc0c1\nAvailable refs:   remotes/origin/main\nUsing merge-base diff spec: origin/main...HEAD\n\ud83d\udd0d Validating imports in changed files: origin/main...HEAD\n==================================================\n\u26a0\ufe0f git diff strategy 'origin/main...HEAD' failed: fatal: origin/main...HEAD: no merge base\n\ud83d\udccb Using diff strategy: git diff --name-only origin/main..HEAD\n\ud83d\udcdd Found 2 changed Python files:\n  - .claude/commands/cerebras/extract_conversation_context.py\n  - mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n\n\u274c Found 6 import violations:\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:63\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:65\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:63\n    IMP002: Import statement not at top of file (inline import)\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:65\n    IMP002: Import statement not at top of file (inline import)\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:300\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:300\n    IMP002: Import statement not at top of file (inline import)\n\nImport Validation Rules:\n  IMP001: No try/except around imports\n  IMP002: No inline imports (imports must be at top)\n  SYN001: Syntax error\n  ERR001: Validation error\nError: Process completed with exit code 1.\n0s\n0s\n0s\n0s\n0s\n then push to pr",
+      "timestamp": "2025-09-09T06:09:12.519Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix this locally skip to content\nnavigation menu\njleechanorg\nworldarchitect.ai\n\ntype / to search\ncod",
+      "extraction_order": 9385
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix this locally Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n96\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1571\ndocs: Add comprehensive Cerebras context contamination technical documentation #6433\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (import-validation-delta)\nfailed 12 minutes ago in 57s\nSearch logs\n2s\n2s\n0s\n5s\n41s\n5s\nCurrent Python: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/bin/python3\nVirtual env: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv\n\u2705 Pydantic 2.11.7 available\n\ud83d\udd0d Running DELTA IMPORT validation checks...\nChecking only files changed in this PR for inline imports and try/except patterns...\nCurrent branch: \nCurrent commit: 2af1843a461bdab98fefd4ec7756b486d73bc0c1\nAvailable refs:   remotes/origin/main\nUsing merge-base diff spec: origin/main...HEAD\n\ud83d\udd0d Validating imports in changed files: origin/main...HEAD\n==================================================\n\u26a0\ufe0f git diff strategy 'origin/main...HEAD' failed: fatal: origin/main...HEAD: no merge base\n\ud83d\udccb Using diff strategy: git diff --name-only origin/main..HEAD\n\ud83d\udcdd Found 2 changed Python files:\n  - .claude/commands/cerebras/extract_conversation_context.py\n  - mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n\n\u274c Found 6 import violations:\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:63\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:65\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:63\n    IMP002: Import statement not at top of file (inline import)\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:65\n    IMP002: Import statement not at top of file (inline import)\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:300\n    IMP001: Import statement inside try/except block\n\n  mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py:300\n    IMP002: Import statement not at top of file (inline import)\n\nImport Validation Rules:\n  IMP001: No try/except around imports\n  IMP002: No inline imports (imports must be at top)\n  SYN001: Syntax error\n  ERR001: Validation error\nError: Process completed with exit code 1.\n0s\n0s\n0s\n0s\n0s\n then push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T06:09:13.953Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix this locally skip to content\nnavigation menu\njleechanorg\nworldarchitect",
+      "extraction_order": 9386
+    },
+    {
+      "content": "<user-prompt-submit-hook>contiue</user-prompt-submit-hook>",
+      "timestamp": "2025-09-09T06:43:40.527Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "5c4a30d8-2bd3-46a8-842a-29de6cbd17f7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>contiue</user-prompt-submit-hook>",
+      "extraction_order": 9387
+    },
+    {
+      "content": "Does localexportcommands update ~/.claude/settings.json",
+      "timestamp": "2025-09-20T23:34:12.536Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "32dbbf85-b9b0-427e-97d9-7398c88cb7c4.jsonl",
+      "conversation_id": null,
+      "dedup_key": "does localexportcommands update ~/.claude/settings.json",
+      "extraction_order": 9388
+    },
+    {
+      "content": "<user-prompt-submit-hook>Does localexportcommands update ~/.claude/settings.json</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T23:34:12.732Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "32dbbf85-b9b0-427e-97d9-7398c88cb7c4.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>does localexportcommands update ~/.claude/settings.json</user-prompt-submit",
+      "extraction_order": 9389
+    },
+    {
+      "content": "look at ~/.claude/settings.json and make sure it was updated and print hte statusline config",
+      "timestamp": "2025-09-20T23:39:54.238Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "32dbbf85-b9b0-427e-97d9-7398c88cb7c4.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at ~/.claude/settings.json and make sure it was updated and print hte statusline config",
+      "extraction_order": 9390
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at ~/.claude/settings.json and make sure it was updated and print hte statusline config</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T23:39:54.429Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "32dbbf85-b9b0-427e-97d9-7398c88cb7c4.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at ~/.claude/settings.json and make sure it was updated and print hte",
+      "extraction_order": 9391
+    },
+    {
+      "content": "I wanna change the create_worktree.sh script to make sibling worktrees vs child directories",
+      "timestamp": "2025-08-28T07:30:33.951Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i wanna change the create_worktree.sh script to make sibling worktrees vs child directories",
+      "extraction_order": 9392
+    },
+    {
+      "content": "<user-prompt-submit-hook>I wanna change the create_worktree.sh script to make sibling worktrees vs child directories</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T07:30:34.120Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i wanna change the create_worktree.sh script to make sibling worktrees vs c",
+      "extraction_order": 9393
+    },
+    {
+      "content": "i want the script to cd into the new dir",
+      "timestamp": "2025-08-28T07:32:42.489Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i want the script to cd into the new dir",
+      "extraction_order": 9394
+    },
+    {
+      "content": "<user-prompt-submit-hook>i want the script to cd into the new dir</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T07:32:42.665Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i want the script to cd into the new dir</user-prompt-submit-hook>",
+      "extraction_order": 9395
+    },
+    {
+      "content": "test it yourself then push to pr",
+      "timestamp": "2025-08-28T07:33:23.373Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test it yourself then push to pr",
+      "extraction_order": 9396
+    },
+    {
+      "content": "<user-prompt-submit-hook>test it yourself then push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T07:33:23.527Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "170b6af2-6e31-49ee-804c-19ba8a491d20.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test it yourself then push to pr</user-prompt-submit-hook>",
+      "extraction_order": 9397
+    },
+    {
+      "content": "<user-prompt-submit-hook>ccusage blocks</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T03:18:16.703Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "561984c4-7adf-4aa4-bd11-15d66e48d00b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ccusage blocks</user-prompt-submit-hook>",
+      "extraction_order": 9398
+    },
+    {
+      "content": "where is the gemini api key? lets add it to bashrc",
+      "timestamp": "2025-09-21T22:20:09.182Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "e9e4142c-4d43-4ff0-b204-8cec4d080b0f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "where is the gemini api key? lets add it to bashrc",
+      "extraction_order": 9399
+    },
+    {
+      "content": "<user-prompt-submit-hook>where is the gemini api key? lets add it to bashrc</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T22:20:09.358Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai",
+      "file": "e9e4142c-4d43-4ff0-b204-8cec4d080b0f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>where is the gemini api key? lets add it to bashrc</user-prompt-submit-hook",
+      "extraction_order": 9400
+    }
+  ],
+  "stats": {
+    "total_files_processed": 3722,
+    "total_messages_processed": 787937,
+    "user_messages_found": 170855,
+    "filtered_out": 148757,
+    "duplicates_removed": 12698,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

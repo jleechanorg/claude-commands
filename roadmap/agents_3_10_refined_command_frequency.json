@@ -1,0 +1,464 @@
+{
+  "analysis_timestamp": "2025-09-22T13:25:39.564238",
+  "analysis_type": "refined_filtering",
+  "agents_processed": [
+    "agent_003",
+    "agent_004",
+    "agent_005",
+    "agent_006",
+    "agent_007",
+    "agent_008",
+    "agent_009",
+    "agent_010"
+  ],
+  "original_summary": {
+    "total_prompts_analyzed": 2981,
+    "unique_commands_found": 154,
+    "total_command_occurrences": 2707
+  },
+  "filtering_results": {
+    "original_unique_commands": 154,
+    "refined_unique_commands": 139,
+    "commands_filtered_out": 15,
+    "filtering_efficiency": "9.7%"
+  },
+  "refined_command_frequencies": {
+    "/arch": 31,
+    "/reviewdeep": 43,
+    "/fixpr": 107,
+    "/commentfetch": 35,
+    "/commentreply": 104,
+    "/pushl": 25,
+    "/guidelines": 46,
+    "/copilot": 131,
+    "/backend": 2,
+    "/testllm": 66,
+    "/localserver": 5,
+    "/deploy": 6,
+    "/synthesis": 2,
+    "/TESTLLM": 1,
+    "/docs": 1,
+    "/redgreen": 52,
+    "/scripts": 6,
+    "/think": 42,
+    "/tdd": 63,
+    "/cereb": 51,
+    "/execute": 132,
+    "/cerebras": 24,
+    "/consensus": 4,
+    "/fixprc": 17,
+    "/investigate": 9,
+    "/gst": 12,
+    "/cons": 15,
+    "/research": 82,
+    "/commentr": 1,
+    "/commentcheck": 28,
+    "/reviewe": 24,
+    "/checkpoint": 3,
+    "/newb": 12,
+    "/mcp": 29,
+    "/agents": 1,
+    "/memory": 3,
+    "/repos": 2,
+    "/design": 29,
+    "/push": 18,
+    "/hour": 16,
+    "/principalengineer": 16,
+    "/requirements-start": 18,
+    "/thinku": 33,
+    "/issues": 1,
+    "/rg": 9,
+    "/perp": 33,
+    "/pr": 20,
+    "/main": 10,
+    "/newbranch": 8,
+    "/review": 22,
+    "/pr-": 2,
+    "/context": 25,
+    "/mcp-json": 16,
+    "/copilot-codex": 8,
+    "/plan": 30,
+    "/codex_tmp": 2,
+    "/replicate": 6,
+    "/learn": 24,
+    "/integrate": 7,
+    "/status": 20,
+    "/approvals": 21,
+    "/model": 26,
+    "/debugp": 39,
+    "/token": 2,
+    "/chat": 2,
+    "/embeddings": 1,
+    "/responses": 57,
+    "/gstatus": 3,
+    "/init": 14,
+    "/errors": 3,
+    "/conv": 16,
+    "/header": 8,
+    "/pull": 2,
+    "/repo": 8,
+    "/user": 2,
+    "/github": 5,
+    "/fake3": 36,
+    "/scratchpad_fake3_": 4,
+    "/tests": 4,
+    "/commands": 10,
+    "/failure": 6,
+    "/PR": 12,
+    "/pr-guidelines": 10,
+    "/test_file": 6,
+    "/to": 6,
+    "/why": 6,
+    "/paranoid": 6,
+    "/command": 1,
+    "/requirements-status": 1,
+    "/echo": 2,
+    "/shout": 2,
+    "/converge": 14,
+    "/help": 12,
+    "/copilotc": 9,
+    "/cmd2": 1,
+    "/copilotl": 5,
+    "/fake": 16,
+    "/areas": 2,
+    "/diligent": 3,
+    "/fakel": 2,
+    "/hooks": 2,
+    "/jleechan": 2,
+    "/projects": 6,
+    "/worldarchitect": 2,
+    "/clear": 3,
+    "/commit": 3,
+    "/slash": 5,
+    "/ask": 5,
+    "/codex": 1,
+    "/fail": 6,
+    "/fix": 6,
+    "/if": 6,
+    "/commenftfetch": 2,
+    "/history": 15,
+    "/comments": 6,
+    "/line": 2,
+    "/MultiEdit": 2,
+    "/owner": 6,
+    "/pulls": 2,
+    "/snippet": 2,
+    "/review-enhanced": 3,
+    "/orchc": 3,
+    "/exportcommands": 6,
+    "/null": 4,
+    "/orch": 4,
+    "/test": 4,
+    "/contexte": 12,
+    "/con": 1,
+    "/uuid": 4,
+    "/login": 4,
+    "/copilot-expanded": 1,
+    "/copilot-lite": 2,
+    "/analyze": 1,
+    "/health": 2,
+    "/debug": 1,
+    "/handoff": 1,
+    "/orchestrate": 1,
+    "/app": 6,
+    "/src": 3
+  },
+  "top_commands_refined": [
+    [
+      "/execute",
+      132
+    ],
+    [
+      "/copilot",
+      131
+    ],
+    [
+      "/fixpr",
+      107
+    ],
+    [
+      "/commentreply",
+      104
+    ],
+    [
+      "/research",
+      82
+    ],
+    [
+      "/testllm",
+      66
+    ],
+    [
+      "/tdd",
+      63
+    ],
+    [
+      "/responses",
+      57
+    ],
+    [
+      "/redgreen",
+      52
+    ],
+    [
+      "/cereb",
+      51
+    ],
+    [
+      "/guidelines",
+      46
+    ],
+    [
+      "/reviewdeep",
+      43
+    ],
+    [
+      "/think",
+      42
+    ],
+    [
+      "/debugp",
+      39
+    ],
+    [
+      "/fake3",
+      36
+    ],
+    [
+      "/commentfetch",
+      35
+    ],
+    [
+      "/thinku",
+      33
+    ],
+    [
+      "/perp",
+      33
+    ],
+    [
+      "/arch",
+      31
+    ],
+    [
+      "/plan",
+      30
+    ],
+    [
+      "/mcp",
+      29
+    ],
+    [
+      "/design",
+      29
+    ],
+    [
+      "/commentcheck",
+      28
+    ],
+    [
+      "/model",
+      26
+    ],
+    [
+      "/pushl",
+      25
+    ],
+    [
+      "/context",
+      25
+    ],
+    [
+      "/cerebras",
+      24
+    ],
+    [
+      "/reviewe",
+      24
+    ],
+    [
+      "/learn",
+      24
+    ],
+    [
+      "/review",
+      22
+    ]
+  ],
+  "filtered_out_commands": {
+    "/dev": 294,
+    "/Users": 104,
+    "/tmp": 102,
+    "/e": 34,
+    "/bin": 11,
+    "/run_tests": 10,
+    "/path": 7,
+    "/run_ci_replica": 6,
+    "/devilsadvocate": 5,
+    "/runs": 4,
+    "/etc": 2,
+    "/var": 2,
+    "/home": 2,
+    "/r": 1,
+    "/usr": 1
+  },
+  "command_categories": {
+    "execution": {
+      "/execute": 132
+    },
+    "collaboration": {
+      "/copilot": 131,
+      "/commentreply": 104,
+      "/commentfetch": 35,
+      "/commentcheck": 28,
+      "/copilotc": 9,
+      "/copilot-codex": 8,
+      "/comments": 6,
+      "/copilotl": 5,
+      "/consensus": 4,
+      "/copilot-lite": 2,
+      "/copilot-expanded": 1
+    },
+    "development": {
+      "/testllm": 66,
+      "/tdd": 63,
+      "/redgreen": 52,
+      "/debugp": 39,
+      "/test_file": 6,
+      "/tests": 4,
+      "/test": 4,
+      "/TESTLLM": 1,
+      "/analyze": 1,
+      "/debug": 1
+    },
+    "git_workflow": {
+      "/fixpr": 107,
+      "/pushl": 25,
+      "/push": 18,
+      "/fixprc": 17,
+      "/newbranch": 8,
+      "/commit": 3,
+      "/pull": 2,
+      "/pulls": 2
+    },
+    "architecture": {
+      "/research": 82,
+      "/reviewdeep": 43,
+      "/arch": 31,
+      "/plan": 30,
+      "/design": 29,
+      "/reviewe": 24,
+      "/review": 22,
+      "/review-enhanced": 3,
+      "/worldarchitect": 2
+    },
+    "research": {
+      "/cereb": 51,
+      "/cerebras": 24
+    },
+    "project_management": {
+      "/guidelines": 46,
+      "/think": 42,
+      "/thinku": 33,
+      "/status": 20,
+      "/pr-guidelines": 10,
+      "/checkpoint": 3,
+      "/gstatus": 3,
+      "/hooks": 2,
+      "/requirements-status": 1
+    },
+    "system": {
+      "/context": 25,
+      "/contexte": 12,
+      "/memory": 3
+    },
+    "uncategorized": {
+      "/responses": 57,
+      "/fake3": 36,
+      "/perp": 33,
+      "/mcp": 29,
+      "/model": 26,
+      "/learn": 24,
+      "/approvals": 21,
+      "/pr": 20,
+      "/requirements-start": 18,
+      "/hour": 16,
+      "/principalengineer": 16,
+      "/mcp-json": 16,
+      "/conv": 16,
+      "/fake": 16,
+      "/cons": 15,
+      "/history": 15,
+      "/init": 14,
+      "/converge": 14,
+      "/gst": 12,
+      "/newb": 12,
+      "/PR": 12,
+      "/help": 12,
+      "/main": 10,
+      "/commands": 10,
+      "/investigate": 9,
+      "/rg": 9,
+      "/header": 8,
+      "/repo": 8,
+      "/integrate": 7,
+      "/deploy": 6,
+      "/scripts": 6,
+      "/replicate": 6,
+      "/failure": 6,
+      "/to": 6,
+      "/why": 6,
+      "/paranoid": 6,
+      "/projects": 6,
+      "/fail": 6,
+      "/fix": 6,
+      "/if": 6,
+      "/owner": 6,
+      "/exportcommands": 6,
+      "/app": 6,
+      "/localserver": 5,
+      "/github": 5,
+      "/slash": 5,
+      "/ask": 5,
+      "/scratchpad_fake3_": 4,
+      "/null": 4,
+      "/orch": 4,
+      "/uuid": 4,
+      "/login": 4,
+      "/errors": 3,
+      "/diligent": 3,
+      "/clear": 3,
+      "/orchc": 3,
+      "/src": 3,
+      "/backend": 2,
+      "/synthesis": 2,
+      "/repos": 2,
+      "/pr-": 2,
+      "/codex_tmp": 2,
+      "/token": 2,
+      "/chat": 2,
+      "/user": 2,
+      "/echo": 2,
+      "/shout": 2,
+      "/areas": 2,
+      "/fakel": 2,
+      "/jleechan": 2,
+      "/commenftfetch": 2,
+      "/line": 2,
+      "/MultiEdit": 2,
+      "/snippet": 2,
+      "/health": 2,
+      "/docs": 1,
+      "/commentr": 1,
+      "/agents": 1,
+      "/issues": 1,
+      "/embeddings": 1,
+      "/command": 1,
+      "/cmd2": 1,
+      "/codex": 1,
+      "/con": 1,
+      "/handoff": 1,
+      "/orchestrate": 1
+    }
+  }
+}

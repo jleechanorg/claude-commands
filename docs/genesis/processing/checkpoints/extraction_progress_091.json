@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 91,
+  "prompts_count": 9100,
+  "timestamp": "2025-09-22T03:49:14.299343",
+  "prompts": [
+    {
+      "content": "lets also add test for claude_mcp for the new logic into existing  test file then continue and use /cereb to do it",
+      "timestamp": "2025-09-05T22:44:38.605Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "482b94bb-59b6-4aa6-ac44-94876b22a351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets also add test for claude_mcp for the new logic into existing  test file then continue and use /",
+      "extraction_order": 9001
+    },
+    {
+      "content": "test a generation to /tmp again",
+      "timestamp": "2025-09-06T00:58:15.247Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "482b94bb-59b6-4aa6-ac44-94876b22a351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test a generation to /tmp again",
+      "extraction_order": 9002
+    },
+    {
+      "content": "<user-prompt-submit-hook>test a generation to /tmp again</user-prompt-submit-hook>",
+      "timestamp": "2025-09-06T00:58:15.618Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "482b94bb-59b6-4aa6-ac44-94876b22a351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test a generation to /tmp again</user-prompt-submit-hook>",
+      "extraction_order": 9003
+    },
+    {
+      "content": "ist his real  cursor bot now\nBug: Undefined $PROJECT_ROOT Breaks Virtual Env Path Check\nThe script uses $PROJECT_ROOT in the Python interpreter detection logic, but this variable is undefined in the shell context. This causes the path check for the project's virtual environment to fail, as $PROJECT_ROOT expands to an empty string.\n\nFix in Cursor Fix in Web",
+      "timestamp": "2025-09-06T01:35:21.357Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "482b94bb-59b6-4aa6-ac44-94876b22a351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ist his real  cursor bot now\nbug: undefined $project_root breaks virtual env path check\nthe script u",
+      "extraction_order": 9004
+    },
+    {
+      "content": "<user-prompt-submit-hook>ist his real  cursor bot now\nBug: Undefined $PROJECT_ROOT Breaks Virtual Env Path Check\nThe script uses $PROJECT_ROOT in the Python interpreter detection logic, but this variable is undefined in the shell context. This causes the path check for the project's virtual environment to fail, as $PROJECT_ROOT expands to an empty string.\n\nFix in Cursor Fix in Web</user-prompt-submit-hook>",
+      "timestamp": "2025-09-06T01:35:22.097Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "482b94bb-59b6-4aa6-ac44-94876b22a351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ist his real  cursor bot now\nbug: undefined $project_root breaks virtual en",
+      "extraction_order": 9005
+    },
+    {
+      "content": "Analyze if creating file '/Users/jleechan/projects/worktree_worker/tmp/copilot-benchmark-design/replies.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/projects/worktree_worker/tmp/copilot-benchmark-design/replies.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-21T01:24:42.967Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "98a29374-e959-40af-a131-27a23955882d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/users/jleechan/projects/worktree_worker/tmp/copilot-benchmark-design/repl",
+      "extraction_order": 9006
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/Users/jleechan/projects/worktree_worker/tmp/copilot-benchmark-design/replies.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/Users/jleechan/projects/worktree_worker/tmp/copilot-benchmark-design/replies.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T01:24:43.154Z",
+      "project": "-Users-jleechan-projects-worktree-worker",
+      "file": "98a29374-e959-40af-a131-27a23955882d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/users/jleechan/projects/worktree_worker/tmp/copi",
+      "extraction_order": 9007
+    },
+    {
+      "content": "Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      ModuleNotFoundError: No module named 'fastmcp'\n      \n      During handling of the above exception, another exception occurred:\n      \n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 31, in <module>\n          pytest.skip(f\"MCP dependencies not available: {e}\", allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'\n[FAIL] 1 test(s) failed\n\nSUMMARY: 180 passed, 1 failed\nFAILED TESTS:\n./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py",
+      "timestamp": "2025-08-29T02:21:07.206Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    last few li",
+      "extraction_order": 9008
+    },
+    {
+      "content": "<user-prompt-submit-hook>Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      ModuleNotFoundError: No module named 'fastmcp'\n      \n      During handling of the above exception, another exception occurred:\n      \n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 31, in <module>\n          pytest.skip(f\"MCP dependencies not available: {e}\", allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'\n[FAIL] 1 test(s) failed\n\nSUMMARY: 180 passed, 1 failed\nFAILED TESTS:\n./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T02:21:07.584Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integ",
+      "extraction_order": 9009
+    },
+    {
+      "content": "also did we accidentally edit the test in the wrong dir? \nstatus\nOn branch dev1756431358\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n    modified:   mvp_site/tests/test_qwen_matrix.py",
+      "timestamp": "2025-08-29T02:22:11.051Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "also did we accidentally edit the test in the wrong dir? \nstatus\non branch dev1756431358\nchanges not",
+      "extraction_order": 9010
+    },
+    {
+      "content": "<user-prompt-submit-hook>also did we accidentally edit the test in the wrong dir? \nstatus\nOn branch dev1756431358\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n    modified:   mvp_site/tests/test_qwen_matrix.py</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T02:22:11.227Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>also did we accidentally edit the test in the wrong dir? \nstatus\non branch",
+      "extraction_order": 9011
+    },
+    {
+      "content": "push to pr then /debugp fix the 2 remaining tests",
+      "timestamp": "2025-08-29T02:27:39.250Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr then /debugp fix the 2 remaining tests",
+      "extraction_order": 9012
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr then /debugp fix the 2 remaining tests</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T02:27:39.598Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr then /debugp fix the 2 remaining tests</user-prompt-submit-hook>",
+      "extraction_order": 9013
+    },
+    {
+      "content": "just delete these tests  - claude_command_scripts/commands/test_fake_code_patterns.py\n    - claude-bot-commands/tests/test_claude_bot_server.py then push to pr",
+      "timestamp": "2025-08-29T02:29:10.103Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "just delete these tests  - claude_command_scripts/commands/test_fake_code_patterns.py\n    - claude-b",
+      "extraction_order": 9014
+    },
+    {
+      "content": "<user-prompt-submit-hook>just delete these tests  - claude_command_scripts/commands/test_fake_code_patterns.py\n    - claude-bot-commands/tests/test_claude_bot_server.py then push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T02:29:10.361Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>just delete these tests  - claude_command_scripts/commands/test_fake_code_p",
+      "extraction_order": 9015
+    },
+    {
+      "content": "did we fix this? ARN] Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 37, in <module>\n          pytest.skip(pytest_skip_reason, allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'",
+      "timestamp": "2025-08-29T03:23:49.261Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we fix this? arn] failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integrat",
+      "extraction_order": 9016
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we fix this? ARN] Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 37, in <module>\n          pytest.skip(pytest_skip_reason, allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:23:49.590Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we fix this? arn] failed test details:\n  - ./mvp_site/tests/mcp_tests/t",
+      "extraction_order": 9017
+    },
+    {
+      "content": "if we fixed it then why is gh failing",
+      "timestamp": "2025-08-29T03:24:41.114Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "if we fixed it then why is gh failing",
+      "extraction_order": 9018
+    },
+    {
+      "content": "<user-prompt-submit-hook>if we fixed it then why is gh failing</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:24:41.267Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>if we fixed it then why is gh failing</user-prompt-submit-hook>",
+      "extraction_order": 9019
+    },
+    {
+      "content": "if you pushed to pr then why wouldnt it trigger a new one?",
+      "timestamp": "2025-08-29T03:26:15.727Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "if you pushed to pr then why wouldnt it trigger a new one?",
+      "extraction_order": 9020
+    },
+    {
+      "content": "<user-prompt-submit-hook>if you pushed to pr then why wouldnt it trigger a new one?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:26:15.958Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>if you pushed to pr then why wouldnt it trigger a new one?</user-prompt-sub",
+      "extraction_order": 9021
+    },
+    {
+      "content": "no, nothing was running until your empty commit",
+      "timestamp": "2025-08-29T03:27:02.510Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "no, nothing was running until your empty commit",
+      "extraction_order": 9022
+    },
+    {
+      "content": "<user-prompt-submit-hook>no, nothing was running until your empty commit</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:27:02.692Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>no, nothing was running until your empty commit</user-prompt-submit-hook>",
+      "extraction_order": 9023
+    },
+    {
+      "content": "whats the root cause",
+      "timestamp": "2025-08-29T03:28:26.588Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "whats the root cause",
+      "extraction_order": 9024
+    },
+    {
+      "content": "<user-prompt-submit-hook>whats the root cause</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:28:26.739Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>whats the root cause</user-prompt-submit-hook>",
+      "extraction_order": 9025
+    },
+    {
+      "content": "look the test is jsut failing in gh are you sure its passing locally? [WARN] Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 37, in <module>\n          pytest.skip(pytest_skip_reason, allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'\n[FAIL] 1 test(s) failed",
+      "timestamp": "2025-08-29T03:28:45.905Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look the test is jsut failing in gh are you sure its passing locally? [warn] failed test details:",
+      "extraction_order": 9026
+    },
+    {
+      "content": "<user-prompt-submit-hook>look the test is jsut failing in gh are you sure its passing locally? [WARN] Failed test details:\n  - ./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\n    Last few lines of output:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/./mvp_site/tests/mcp_tests/test_mcp_cerebras_integration.py\", line 37, in <module>\n          pytest.skip(pytest_skip_reason, allow_module_level=True)\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/lib/python3.11/site-packages/_pytest/outcomes.py\", line 159, in skip\n          raise Skipped(msg=reason, allow_module_level=allow_module_level)\n      Skipped: MCP dependencies not available: No module named 'fastmcp'\n[FAIL] 1 test(s) failed</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:28:46.217Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look the test is jsut failing in gh are you sure its passing locally? [warn",
+      "extraction_order": 9027
+    },
+    {
+      "content": "push to pr and why isn't fastmcp available on gh?",
+      "timestamp": "2025-08-29T03:31:47.702Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and why isn't fastmcp available on gh?",
+      "extraction_order": 9028
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and why isn't fastmcp available on gh?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:31:47.869Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and why isn't fastmcp available on gh?</user-prompt-submit-hook>",
+      "extraction_order": 9029
+    },
+    {
+      "content": "github actions should install all the requirements.txt files in the project. we are running tests besides just mvp_site",
+      "timestamp": "2025-08-29T03:36:35.279Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "github actions should install all the requirements.txt files in the project. we are running tests be",
+      "extraction_order": 9030
+    },
+    {
+      "content": "<user-prompt-submit-hook>github actions should install all the requirements.txt files in the project. we are running tests besides just mvp_site</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:36:35.442Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>github actions should install all the requirements.txt files in the project",
+      "extraction_order": 9031
+    },
+    {
+      "content": "why do you need additional permissions?",
+      "timestamp": "2025-08-29T03:39:15.034Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why do you need additional permissions?",
+      "extraction_order": 9032
+    },
+    {
+      "content": "<user-prompt-submit-hook>why do you need additional permissions?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:39:15.196Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why do you need additional permissions?</user-prompt-submit-hook>",
+      "extraction_order": 9033
+    },
+    {
+      "content": "your token should have the scope",
+      "timestamp": "2025-08-29T03:41:37.100Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "your token should have the scope",
+      "extraction_order": 9034
+    },
+    {
+      "content": "<user-prompt-submit-hook>your token should have the scope</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:41:37.261Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>your token should have the scope</user-prompt-submit-hook>",
+      "extraction_order": 9035
+    },
+    {
+      "content": "write the proper file to ~/Downloads/ and then I will do it",
+      "timestamp": "2025-08-29T03:42:32.235Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "write the proper file to ~/downloads/ and then i will do it",
+      "extraction_order": 9036
+    },
+    {
+      "content": "<user-prompt-submit-hook>write the proper file to ~/Downloads/ and then I will do it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:42:32.402Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>write the proper file to ~/downloads/ and then i will do it</user-prompt-su",
+      "extraction_order": 9037
+    },
+    {
+      "content": "<user-prompt-submit-hook>go ahead</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:43:30.696Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>go ahead</user-prompt-submit-hook>",
+      "extraction_order": 9038
+    },
+    {
+      "content": "<user-prompt-submit-hook>merged it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:47:39.149Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>merged it</user-prompt-submit-hook>",
+      "extraction_order": 9039
+    },
+    {
+      "content": "git pull origin main then push",
+      "timestamp": "2025-08-29T03:48:47.091Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main then push",
+      "extraction_order": 9040
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main then push</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:48:47.251Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main then push</user-prompt-submit-hook>",
+      "extraction_order": 9041
+    },
+    {
+      "content": "push empty commit",
+      "timestamp": "2025-08-29T03:49:26.314Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push empty commit",
+      "extraction_order": 9042
+    },
+    {
+      "content": "<user-prompt-submit-hook>push empty commit</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T03:49:26.476Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "725cb415-545b-4360-8c74-c72ccca3cf7a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push empty commit</user-prompt-submit-hook>",
+      "extraction_order": 9043
+    },
+    {
+      "content": "<user-prompt-submit-hook>/reviewdeep focus on correctness. Any changes to non test files that look like serious bbugs or problems?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:08:23.049Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/reviewdeep focus on correctness. any changes to non test files that look l",
+      "extraction_order": 9044
+    },
+    {
+      "content": "add a doc to roadmap/ about these findings and update pr desc",
+      "timestamp": "2025-08-29T01:08:23.049Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "add a doc to roadmap/ about these findings and update pr desc",
+      "extraction_order": 9045
+    },
+    {
+      "content": "<user-prompt-submit-hook>add a doc to roadmap/ about these findings and update pr desc</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:08:23.049Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>add a doc to roadmap/ about these findings and update pr desc</user-prompt-",
+      "extraction_order": 9046
+    },
+    {
+      "content": "git pull origin main and resolve merge conflicts",
+      "timestamp": "2025-08-29T01:08:33.951Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main and resolve merge conflicts",
+      "extraction_order": 9047
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main and resolve merge conflicts</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:08:34.147Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main and resolve merge conflicts</user-prompt-submit-hook>",
+      "extraction_order": 9048
+    },
+    {
+      "content": "# Statusline Command - Universal Composition with Header\n\n**Purpose**: Display branch and PR status information using universal composition\n\n**Usage**: `/statusline` - Shows current branch, remote, and PR information\n\n## \ud83d\udea8 UNIVERSAL COMPOSITION PROTOCOL\n\n### Command Flow\n\n**The `/statusline` command uses universal composition**:\n1. **`/header`** - Executes the header command to get branch and PR information\n2. **Display** - Presents the status line information in a clean format\n\n### Implementation\n\nThis command delegates to `/header` using Claude's natural workflow orchestration:\n- Calls `/header` command directly\n- Uses the same branch and PR detection logic\n- Provides status line style output\n\n### Example Output\n\n```\n[Local: feature-branch | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]\n```\n\n## Command Execution\n\nExecute `/header` command and format output as status line information.",
+      "timestamp": "2025-08-29T01:19:31.844Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "# statusline command - universal composition with header\n\n**purpose**: display branch and pr status",
+      "extraction_order": 9049
+    },
+    {
+      "content": "<user-prompt-submit-hook>/statusline</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:19:32.227Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/statusline</user-prompt-submit-hook>",
+      "extraction_order": 9050
+    },
+    {
+      "content": "resolve this merge conflict \nDocumentation Size Check / check-doc-sizes (pull_request)\nDocumentation Size Check / check-doc-sizes (pull_request)Successful in 7s\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Successful in 35s\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Successful in 46s\nThis branch has conflicts that must be resolved\nUse the web editor or the command line to resolve conflicts before continuing.\n\n.claude/commands/cerebras/cerebras_direct.sh",
+      "timestamp": "2025-08-29T01:30:19.272Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resolve this merge conflict \ndocumentation size check / check-doc-sizes (pull_request)\ndocumentation",
+      "extraction_order": 9051
+    },
+    {
+      "content": "<user-prompt-submit-hook>resolve this merge conflict \nDocumentation Size Check / check-doc-sizes (pull_request)\nDocumentation Size Check / check-doc-sizes (pull_request)Successful in 7s\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Successful in 35s\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Successful in 46s\nThis branch has conflicts that must be resolved\nUse the web editor or the command line to resolve conflicts before continuing.\n\n.claude/commands/cerebras/cerebras_direct.sh</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:30:19.458Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>resolve this merge conflict \ndocumentation size check / check-doc-sizes (pu",
+      "extraction_order": 9052
+    },
+    {
+      "content": "see if these broken tests indicate real issues \ud83c\udf89 All Integration Tests Completed Successfully!\n==============================================\nThe Command Output Trimmer Hook is ready for deployment.\n\nNext Steps:\n1. Add hook configuration to .claude/settings.json\n2. Test with real slash commands\n3. Monitor compression statistics in logs\n\u2713 test_trimmer_integration passed\n\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551              Test Summary                 \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nTotal test files run: 7\nPassed: 5\nFailed: 2\n\nFailed tests:\n  \u2022 test_github_pr_full\n  \u2022 test_pr_text",
+      "timestamp": "2025-08-29T01:33:54.246Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "see if these broken tests indicate real issues \ud83c\udf89 all integration tests completed successfully!\n=====",
+      "extraction_order": 9053
+    },
+    {
+      "content": "<user-prompt-submit-hook>see if these broken tests indicate real issues \ud83c\udf89 All Integration Tests Completed Successfully!\n==============================================\nThe Command Output Trimmer Hook is ready for deployment.\n\nNext Steps:\n1. Add hook configuration to .claude/settings.json\n2. Test with real slash commands\n3. Monitor compression statistics in logs\n\u2713 test_trimmer_integration passed\n\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551              Test Summary                 \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nTotal test files run: 7\nPassed: 5\nFailed: 2\n\nFailed tests:\n  \u2022 test_github_pr_full\n  \u2022 test_pr_text</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:33:54.415Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>see if these broken tests indicate real issues \ud83c\udf89 all integration tests comp",
+      "extraction_order": 9054
+    },
+    {
+      "content": "what dir are we in",
+      "timestamp": "2025-08-29T01:38:14.050Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what dir are we in",
+      "extraction_order": 9055
+    },
+    {
+      "content": "<user-prompt-submit-hook>what dir are we in</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:38:14.209Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what dir are we in</user-prompt-submit-hook>",
+      "extraction_order": 9056
+    },
+    {
+      "content": "Issue 1) and 2) are fine, adjust the test. look at this PR its intended https://github.com/jleechanorg/worldarchitect.ai/pull/1490",
+      "timestamp": "2025-08-29T01:39:17.523Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "issue 1) and 2) are fine, adjust the test. look at this pr its intended https://github.com/jleechano",
+      "extraction_order": 9057
+    },
+    {
+      "content": "<user-prompt-submit-hook>Issue 1) and 2) are fine, adjust the test. look at this PR its intended https://github.com/jleechanorg/worldarchitect.ai/pull/1490</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:39:17.702Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>issue 1) and 2) are fine, adjust the test. look at this pr its intended htt",
+      "extraction_order": 9058
+    },
+    {
+      "content": "where ist his list from? i wanna make sure other commands can be composed - List of composition commands: /pr /execute /copilot /orchestrate /research /think /debug /plan /arch /review",
+      "timestamp": "2025-08-29T01:43:02.166Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "where ist his list from? i wanna make sure other commands can be composed - list of composition comm",
+      "extraction_order": 9059
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/pr /execute /copilot /orchestrate /research /think /debug /plan /arch /review \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/autoapprove /cerebras /claude_start /commentcheck /commentfetch /commentreply /copilot /debug /e /execute /fixpr /guidelines /learn /orch /orchestrate /perp /plan /pr /push /pushl /research /review /think /thinku \n\nUse these approaches in combination:/arch /autoapprove /cerebras /claude_start /commentcheck /commentfetch /commentreply /copilot /debug /e /execute /fixpr /guidelines /learn /orch /orchestrate /perp /plan /pr /push /pushl /research /review /think /thinku . Apply this to: where ist his list from? i wanna make sure other commands can be composed - List of composition commands:\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/pr /execute /copilot /orchestrate /research /think /debug /plan /arch /review  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:43:03.601Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/pr /execute /copilot /orchestrate /research /thi",
+      "extraction_order": 9060
+    },
+    {
+      "content": "fetch gh status from here to see which tests still broken \nWorldArchitect Tests / test (integration-slow) (pull_request)\nWorldArchitect Tests / test (integration-slow) (pull_request)Failing after 1m\nWorldArchitect Tests / test (unit-fast) (pull_request)\nWorldArchitect Tests / test (unit-fast) (pull_request)Failing after 1m",
+      "timestamp": "2025-08-29T01:49:23.274Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fetch gh status from here to see which tests still broken \nworldarchitect tests / test (integration-",
+      "extraction_order": 9061
+    },
+    {
+      "content": "<user-prompt-submit-hook>fetch gh status from here to see which tests still broken \nWorldArchitect Tests / test (integration-slow) (pull_request)\nWorldArchitect Tests / test (integration-slow) (pull_request)Failing after 1m\nWorldArchitect Tests / test (unit-fast) (pull_request)\nWorldArchitect Tests / test (unit-fast) (pull_request)Failing after 1m</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:49:23.434Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fetch gh status from here to see which tests still broken \nworldarchitect t",
+      "extraction_order": 9062
+    },
+    {
+      "content": "Both unit-fast and integration-slow have the same 3 failing tests: why do both suites have overlap?",
+      "timestamp": "2025-08-29T01:51:08.034Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "both unit-fast and integration-slow have the same 3 failing tests: why do both suites have overlap?",
+      "extraction_order": 9063
+    },
+    {
+      "content": "<user-prompt-submit-hook>Both unit-fast and integration-slow have the same 3 failing tests: why do both suites have overlap?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:51:08.181Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>both unit-fast and integration-slow have the same 3 failing tests: why do b",
+      "extraction_order": 9064
+    },
+    {
+      "content": "arent we the ones adding the category?",
+      "timestamp": "2025-08-29T01:54:32.549Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "arent we the ones adding the category?",
+      "extraction_order": 9065
+    },
+    {
+      "content": "<user-prompt-submit-hook>arent we the ones adding the category?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:54:32.710Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>arent we the ones adding the category?</user-prompt-submit-hook>",
+      "extraction_order": 9066
+    },
+    {
+      "content": "<user-prompt-submit-hook>/checkpoint and explain next steps on categorization</user-prompt-submit-hook>",
+      "timestamp": "2025-08-29T01:55:14.793Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "592d1a76-c40e-47ad-a6be-c62d88a009b1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/checkpoint and explain next steps on categorization</user-prompt-submit-ho",
+      "extraction_order": 9067
+    },
+    {
+      "content": "besides editing claude md with that advice any settings we can change or anything else?",
+      "timestamp": "2025-08-27T15:50:41.548Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "besides editing claude md with that advice any settings we can change or anything else?",
+      "extraction_order": 9068
+    },
+    {
+      "content": "<user-prompt-submit-hook>besides editing claude md with that advice any settings we can change or anything else?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T15:50:41.722Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>besides editing claude md with that advice any settings we can change or an",
+      "extraction_order": 9069
+    },
+    {
+      "content": "are those all real settings? I wanna leave tehse alone     \"BASH_MAX_OUTPUT_LENGTH\": \"2000\",\n       254 +      \"BASH_DEFAULT_TIMEOUT_MS\": \"30000\",",
+      "timestamp": "2025-08-27T15:52:13.382Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "are those all real settings? i wanna leave tehse alone     \"bash_max_output_length\": \"2000\",",
+      "extraction_order": 9070
+    },
+    {
+      "content": "<user-prompt-submit-hook>are those all real settings? I wanna leave tehse alone     \"BASH_MAX_OUTPUT_LENGTH\": \"2000\",\n       254 +      \"BASH_DEFAULT_TIMEOUT_MS\": \"30000\",</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T15:52:13.548Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>are those all real settings? i wanna leave tehse alone     \"bash_max_output",
+      "extraction_order": 9071
+    },
+    {
+      "content": "ok for behavior changes modify claude md an then lets run_tests.sh but make sure to redirect output. Also explain the categories and why we have 300 tests",
+      "timestamp": "2025-08-27T15:53:00.579Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok for behavior changes modify claude md an then lets run_tests.sh but make sure to redirect output.",
+      "extraction_order": 9072
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok for behavior changes modify claude md an then lets run_tests.sh but make sure to redirect output. Also explain the categories and why we have 300 tests</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T15:53:00.744Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok for behavior changes modify claude md an then lets run_tests.sh but make",
+      "extraction_order": 9073
+    },
+    {
+      "content": "look at the output file and tell me which tests failed",
+      "timestamp": "2025-08-27T15:57:43.370Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at the output file and tell me which tests failed",
+      "extraction_order": 9074
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at the output file and tell me which tests failed</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T15:57:43.531Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at the output file and tell me which tests failed</user-prompt-submit-",
+      "extraction_order": 9075
+    },
+    {
+      "content": "git merge main then /plan on how to fix",
+      "timestamp": "2025-08-27T15:59:21.266Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git merge main then /plan on how to fix",
+      "extraction_order": 9076
+    },
+    {
+      "content": "<user-prompt-submit-hook>git merge main then /plan on how to fix</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T15:59:21.654Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git merge main then /plan on how to fix</user-prompt-submit-hook>",
+      "extraction_order": 9077
+    },
+    {
+      "content": "read the test failures wiwhout fetching/reading whole file in this convo",
+      "timestamp": "2025-08-27T16:41:51.725Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "read the test failures wiwhout fetching/reading whole file in this convo",
+      "extraction_order": 9078
+    },
+    {
+      "content": "<user-prompt-submit-hook>read the test failures wiwhout fetching/reading whole file in this convo</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T16:41:51.899Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>read the test failures wiwhout fetching/reading whole file in this convo</u",
+      "extraction_order": 9079
+    },
+    {
+      "content": "add this plan to roadmap/ dir then push to pr and then do /roadmap for the context optimizations you described and then switch back to this branch and fix the tests",
+      "timestamp": "2025-08-27T16:43:23.142Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "add this plan to roadmap/ dir then push to pr and then do /roadmap for the context optimizations you",
+      "extraction_order": 9080
+    },
+    {
+      "content": "<user-prompt-submit-hook>add this plan to roadmap/ dir then push to pr and then do /roadmap for the context optimizations you described and then switch back to this branch and fix the tests</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T16:43:23.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "0bce6f19-47db-4f4f-bd4b-60ef38bb2117.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>add this plan to roadmap/ dir then push to pr and then do /roadmap for the",
+      "extraction_order": 9081
+    },
+    {
+      "content": "did you accidentally put some test fixes in the wrong branch? status\nOn branch dev1756331357\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n    modified:   mvp_site/main.py\n    modified:   mvp_site/testing_framework/mock_provider.py\n    modified:   mvp_site/testing_framework/tests/test_mock_provider.py\n    modified:   mvp_site/tests/test_end2end/test_debug_mode_end2end.py\n\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n    .claude/hooks/tests/test_single_slash_command_parsing.py\n    docs/contexte-universal-composition-fix.md\n\ni saw this here no changes added to commit (use \"git add\" and/or \"git commit -a\")\npwd\n/Users/jleechan/projects/worldarchitect.ai",
+      "timestamp": "2025-08-28T11:23:56.792Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did you accidentally put some test fixes in the wrong branch? status\non branch dev1756331357\nchanges",
+      "extraction_order": 9082
+    },
+    {
+      "content": "<user-prompt-submit-hook>did you accidentally put some test fixes in the wrong branch? status\nOn branch dev1756331357\nChanges not staged for commit:\n  (use \"git add <file>...\" to update what will be committed)\n  (use \"git restore <file>...\" to discard changes in working directory)\n    modified:   mvp_site/main.py\n    modified:   mvp_site/testing_framework/mock_provider.py\n    modified:   mvp_site/testing_framework/tests/test_mock_provider.py\n    modified:   mvp_site/tests/test_end2end/test_debug_mode_end2end.py\n\nUntracked files:\n  (use \"git add <file>...\" to include in what will be committed)\n    .claude/hooks/tests/test_single_slash_command_parsing.py\n    docs/contexte-universal-composition-fix.md\n\ni saw this here no changes added to commit (use \"git add\" and/or \"git commit -a\")\npwd\n/Users/jleechan/projects/worldarchitect.ai</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:23:57.080Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did you accidentally put some test fixes in the wrong branch? status\non bra",
+      "extraction_order": 9083
+    },
+    {
+      "content": "examine the changes and see if you should pull them in",
+      "timestamp": "2025-08-28T11:24:38.816Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "examine the changes and see if you should pull them in",
+      "extraction_order": 9084
+    },
+    {
+      "content": "<user-prompt-submit-hook>examine the changes and see if you should pull them in</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:24:38.968Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>examine the changes and see if you should pull them in</user-prompt-submit-",
+      "extraction_order": 9085
+    },
+    {
+      "content": "just copy the files over and then run the relevant tests, dont redo edits",
+      "timestamp": "2025-08-28T11:27:34.460Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "just copy the files over and then run the relevant tests, dont redo edits",
+      "extraction_order": 9086
+    },
+    {
+      "content": "<user-prompt-submit-hook>just copy the files over and then run the relevant tests, dont redo edits</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:27:34.608Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>just copy the files over and then run the relevant tests, dont redo edits</",
+      "extraction_order": 9087
+    },
+    {
+      "content": "<user-prompt-submit-hook>/debugp why did those changes end up on teh wrong branch?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:29:05.520Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/debugp why did those changes end up on teh wrong branch?</user-prompt-subm",
+      "extraction_order": 9088
+    },
+    {
+      "content": "ok lets debug the tests",
+      "timestamp": "2025-08-28T11:32:02.392Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok lets debug the tests",
+      "extraction_order": 9089
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok lets debug the tests</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:32:02.537Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok lets debug the tests</user-prompt-submit-hook>",
+      "extraction_order": 9090
+    },
+    {
+      "content": "push to pr and /e lets debug the rest",
+      "timestamp": "2025-08-28T11:36:46.461Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and /e lets debug the rest",
+      "extraction_order": 9091
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and /e lets debug the rest</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T11:36:46.737Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and /e lets debug the rest</user-prompt-submit-hook>",
+      "extraction_order": 9092
+    },
+    {
+      "content": "push to pr and this is not acceptable. All tests must pass. /e and /debugp to finish it",
+      "timestamp": "2025-08-28T20:00:45.037Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and this is not acceptable. all tests must pass. /e and /debugp to finish it",
+      "extraction_order": 9093
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/e /debugp \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/execute \n\nUse these approaches in combination:/debugp /e /execute . Apply this to: push to pr and this is not acceptable. All tests must pass. and to finish it\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/e /debugp  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:00:45.456Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/e /debugp \n\ud83c\udfaf multi-player intelligence: found ne",
+      "extraction_order": 9094
+    },
+    {
+      "content": "lets make a plan to fix tests and batch them into different commmits. only fix related tests in each commit. after you fix a test you must rerun all the other tests to ensure yiu didnt cause a new regression",
+      "timestamp": "2025-08-28T20:03:03.889Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets make a plan to fix tests and batch them into different commmits. only fix related tests in each",
+      "extraction_order": 9095
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets make a plan to fix tests and batch them into different commmits. only fix related tests in each commit. after you fix a test you must rerun all the other tests to ensure yiu didnt cause a new regression</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:03:04.049Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "1d274dcb-0381-40db-822d-3d376267a919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets make a plan to fix tests and batch them into different commmits. only",
+      "extraction_order": 9096
+    },
+    {
+      "content": "lets follow this, first tell me which MCP servers we can disable in claude_mcp roadmap/context_optimization_mcp_cleanup_plan.md",
+      "timestamp": "2025-08-27T17:10:06.702Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "523209d6-7651-4d9d-906f-891297c235af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets follow this, first tell me which mcp servers we can disable in claude_mcp roadmap/context_optim",
+      "extraction_order": 9097
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets follow this, first tell me which MCP servers we can disable in claude_mcp roadmap/context_optimization_mcp_cleanup_plan.md</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T17:10:06.881Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "523209d6-7651-4d9d-906f-891297c235af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets follow this, first tell me which mcp servers we can disable in claude_",
+      "extraction_order": 9098
+    },
+    {
+      "content": "we use playwright but lets disable it by default. continue and then use claude mcp to remove them",
+      "timestamp": "2025-08-27T17:11:27.371Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "523209d6-7651-4d9d-906f-891297c235af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "we use playwright but lets disable it by default. continue and then use claude mcp to remove them",
+      "extraction_order": 9099
+    },
+    {
+      "content": "<user-prompt-submit-hook>we use playwright but lets disable it by default. continue and then use claude mcp to remove them</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T17:11:27.525Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-tests2",
+      "file": "523209d6-7651-4d9d-906f-891297c235af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>we use playwright but lets disable it by default. continue and then use cla",
+      "extraction_order": 9100
+    }
+  ],
+  "stats": {
+    "total_files_processed": 3673,
+    "total_messages_processed": 761383,
+    "user_messages_found": 166152,
+    "filtered_out": 144722,
+    "duplicates_removed": 12330,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

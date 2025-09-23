@@ -1,0 +1,1465 @@
+{
+  "batch_info": {
+    "start_index": 100,
+    "end_index": 120,
+    "processed_count": 20,
+    "batch_authenticity_average": 0.8736831443952677
+  },
+  "results": [
+    {
+      "prompt_index": 100,
+      "extraction_order": 8051,
+      "timestamp": "2025-09-18T20:15:20.196Z",
+      "content_preview": "run local tests, make sure they pass, push to pr.",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "push"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "medium",
+        "technical_depth": "intermediate",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8692938277859119,
+        "context_coherence": 0.8548138611523627,
+        "behavioral_consistency": 0.9274886894278754,
+        "technical_accuracy": 0.893108232055579,
+        "human_like_variance": 0.8052399658297658,
+        "overall_score": 0.8699889152502991
+      },
+      "meta_indicators": {
+        "processing_time": 1.0252027745803225,
+        "confidence_level": 0.9587264455481697,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 101,
+      "extraction_order": 8052,
+      "timestamp": "2025-09-18T20:18:51.696Z",
+      "content_preview": "Execute the task: fix these tests, our local environment needs to better match the CI one. Lets /red...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [
+            "jestjs.io",
+            "integration.test"
+          ],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management",
+            "security",
+            "typescript"
+          ],
+          "command_history": [
+            "pull"
+          ],
+          "complexity_indicators": [
+            "long_content",
+            "high_complexity"
+          ],
+          "urgency_signals": [
+            "fix",
+            "security"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "quality_assurance",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected",
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.9999999999999999,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "security_first",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "expert",
+        "collaboration_style": "security_focused"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8647807747031682,
+        "context_coherence": 0.9454722136998707,
+        "behavioral_consistency": 0.9207710126124213,
+        "technical_accuracy": 0.9202876787331686,
+        "human_like_variance": 0.9429507212478438,
+        "overall_score": 0.9188524801992944
+      },
+      "meta_indicators": {
+        "processing_time": 1.534244726800499,
+        "confidence_level": 0.9006530048070501,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 102,
+      "extraction_order": 8053,
+      "timestamp": "2025-09-18T20:29:01.481Z",
+      "content_preview": "the gcp s ercret manager should be available, we've been using it this whole time",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "development_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8664443423766431,
+        "context_coherence": 0.9081439291508275,
+        "behavioral_consistency": 0.8368015614369911,
+        "technical_accuracy": 0.923610122714614,
+        "human_like_variance": 0.8575107837263878,
+        "overall_score": 0.8785021478810927
+      },
+      "meta_indicators": {
+        "processing_time": 1.6722612429598858,
+        "confidence_level": 0.8384810697597713,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 103,
+      "extraction_order": 8054,
+      "timestamp": "2025-09-18T20:30:03.060Z",
+      "content_preview": "its fine if the tests dont use the secret manager but i dont wanna come to some incorrect conclusion",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8029309756338918,
+        "context_coherence": 0.8628135260304395,
+        "behavioral_consistency": 0.8775730327121585,
+        "technical_accuracy": 0.9279859176991615,
+        "human_like_variance": 0.8151816514332784,
+        "overall_score": 0.857297020701786
+      },
+      "meta_indicators": {
+        "processing_time": 2.0300881717304096,
+        "confidence_level": 0.9338886441710704,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 104,
+      "extraction_order": 8055,
+      "timestamp": "2025-09-18T20:31:02.035Z",
+      "content_preview": "ok push to pr and make sure the tests work locally and we simulated the red scenario locally",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "push"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "medium",
+        "technical_depth": "intermediate",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8412305319090916,
+        "context_coherence": 0.881655194321811,
+        "behavioral_consistency": 0.9319431672291152,
+        "technical_accuracy": 0.9285265693553161,
+        "human_like_variance": 0.8441947943519867,
+        "overall_score": 0.8855100514334641
+      },
+      "meta_indicators": {
+        "processing_time": 0.9932392959825145,
+        "confidence_level": 0.8518918938752152,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 105,
+      "extraction_order": 8056,
+      "timestamp": "2025-09-14T05:42:03.172Z",
+      "content_preview": "delete anything in testing_llm/ that is not a .md file. The tests hsould be pure LLM tests driven by...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8799911886671318,
+        "context_coherence": 0.8904422706977805,
+        "behavioral_consistency": 0.8430214461614931,
+        "technical_accuracy": 0.8998849842323778,
+        "human_like_variance": 0.8780141878523108,
+        "overall_score": 0.8782708155222189
+      },
+      "meta_indicators": {
+        "processing_time": 0.9523018820762692,
+        "confidence_level": 0.8211162758958622,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 106,
+      "extraction_order": 8057,
+      "timestamp": "2025-09-14T05:48:32.185Z",
+      "content_preview": "we should have a file for the test cases. I want to test the list tools and second opinions from loc...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "compliance_expected",
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8169102768313197,
+        "context_coherence": 0.8850588985096662,
+        "behavioral_consistency": 0.8604013675095566,
+        "technical_accuracy": 0.928913872253064,
+        "human_like_variance": 0.8105136686927098,
+        "overall_score": 0.8603596167592633
+      },
+      "meta_indicators": {
+        "processing_time": 1.2991255733151579,
+        "confidence_level": 0.9523356601257607,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 107,
+      "extraction_order": 8058,
+      "timestamp": "2025-09-14T05:50:11.055Z",
+      "content_preview": "make the file clear that the LLM is supposed to read the file and execute the test cases. Like a cla...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance",
+            "documentation"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8764485950261497,
+        "context_coherence": 0.8623401591575672,
+        "behavioral_consistency": 0.8356010756074731,
+        "technical_accuracy": 0.8956651625630538,
+        "human_like_variance": 0.906742809779759,
+        "overall_score": 0.8753595604268005
+      },
+      "meta_indicators": {
+        "processing_time": 1.7810096033604261,
+        "confidence_level": 0.9290491076117066,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 108,
+      "extraction_order": 8059,
+      "timestamp": "2025-09-14T07:11:02.484Z",
+      "content_preview": "is there a way to stop the remote server url from changing?",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "morning",
+          "project_phase": "development_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8119884947331368,
+        "context_coherence": 0.8642132475089295,
+        "behavioral_consistency": 0.82804326116747,
+        "technical_accuracy": 0.8937093810193678,
+        "human_like_variance": 0.8784643675125055,
+        "overall_score": 0.855283750388282
+      },
+      "meta_indicators": {
+        "processing_time": 1.7899881056431322,
+        "confidence_level": 0.7795625295195416,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 109,
+      "extraction_order": 8060,
+      "timestamp": "2025-09-14T18:02:36.353Z",
+      "content_preview": "Is there a script called deploy.sh ? It should always use the custom domain or same deomain",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [
+            "deploy.sh"
+          ],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "development_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "deployment_focused"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "delivery_focused",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8036949967942959,
+        "context_coherence": 0.8656942025675312,
+        "behavioral_consistency": 0.8234190988544372,
+        "technical_accuracy": 0.9241277907677979,
+        "human_like_variance": 0.8466254814789536,
+        "overall_score": 0.8527123140926032
+      },
+      "meta_indicators": {
+        "processing_time": 2.0027912075837313,
+        "confidence_level": 0.8771011840870813,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 110,
+      "extraction_order": 8061,
+      "timestamp": "2025-09-14T18:13:34.392Z",
+      "content_preview": "i want to just always use the same domain by default for stable and dev. change this if not and then...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8705627973209635,
+        "context_coherence": 0.8698701778701784,
+        "behavioral_consistency": 0.8311816793606902,
+        "technical_accuracy": 0.8956303906468549,
+        "human_like_variance": 0.7861665990779798,
+        "overall_score": 0.8506823288553335
+      },
+      "meta_indicators": {
+        "processing_time": 1.2052390604419936,
+        "confidence_level": 0.78908056225372,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 111,
+      "extraction_order": 8062,
+      "timestamp": "2025-09-14T18:29:00.998Z",
+      "content_preview": "ok delpoy stable and dev and run the tests using /testllm on testing_llm/ folder",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8289406353601058,
+        "context_coherence": 0.8678171396347294,
+        "behavioral_consistency": 0.8271936108790339,
+        "technical_accuracy": 0.9253375535033297,
+        "human_like_variance": 0.7874520388789712,
+        "overall_score": 0.8473481956512341
+      },
+      "meta_indicators": {
+        "processing_time": 1.126237649227111,
+        "confidence_level": 0.7675217956634842,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 112,
+      "extraction_order": 8063,
+      "timestamp": "2025-09-14T18:30:30.444Z",
+      "content_preview": "You are an LLM tester and must execute the test cases in testing_llm/TEST_CASES.md. Read the file an...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present"
+          ],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [
+            "TEST_CASES.md",
+            "ai-universe-api.com"
+          ],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_content"
+          ],
+          "urgency_signals": [
+            "critical"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7999999999999999,
+          "complexity_level": "medium",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "security_first",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "security_focused"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8287226821401946,
+        "context_coherence": 0.8916192879167442,
+        "behavioral_consistency": 0.8923416300561169,
+        "technical_accuracy": 0.9067686726423538,
+        "human_like_variance": 0.9589229912337249,
+        "overall_score": 0.8956750527978269
+      },
+      "meta_indicators": {
+        "processing_time": 1.4532181607120025,
+        "confidence_level": 0.9768209165825593,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 113,
+      "extraction_order": 8064,
+      "timestamp": "2025-09-14T18:32:11.156Z",
+      "content_preview": "I am acting as an LLM tester and must execute the test cases in testing_llm/TEST_CASES.md following ...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present"
+          ],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [
+            "TEST_CASES.md",
+            "ai-universe-api.com"
+          ],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_content"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "compliance_expected",
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.8999999999999999,
+          "complexity_level": "high",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "security_first",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "security_focused"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8839798726063552,
+        "context_coherence": 0.889378605371008,
+        "behavioral_consistency": 0.936346255429974,
+        "technical_accuracy": 0.9219056654251492,
+        "human_like_variance": 0.8995163262879734,
+        "overall_score": 0.906225345024092
+      },
+      "meta_indicators": {
+        "processing_time": 1.414571054142943,
+        "confidence_level": 0.9465636119041405,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 114,
+      "extraction_order": 8065,
+      "timestamp": "2025-09-14T18:44:11.089Z",
+      "content_preview": "Execute the task: fix the dev delpoyment and re-test and increase timeout\n\nFollow the complete /exec...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "fixing_attempt"
+          ],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "collaborative_review",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7999999999999999,
+          "complexity_level": "medium",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8984461396878983,
+        "context_coherence": 0.876681333224524,
+        "behavioral_consistency": 0.9252450109893602,
+        "technical_accuracy": 0.8994962048768231,
+        "human_like_variance": 0.7618984915745173,
+        "overall_score": 0.8723534360706247
+      },
+      "meta_indicators": {
+        "processing_time": 1.274859964070324,
+        "confidence_level": 0.8363511409657451,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 115,
+      "extraction_order": 8066,
+      "timestamp": "2025-09-14T18:46:54.233Z",
+      "content_preview": "You need to execute comprehensive LLM tests following the TEST_CASES.md file in the testing_llm/ dir...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [
+            "ai-universe-api.com",
+            "EXECUTION_SUMMARY.md",
+            "ai-universe-dev-114133832173.us",
+            "TEST_CASES.md",
+            "-central1.run"
+          ],
+          "technology_stack": [
+            "testing",
+            "pr_management",
+            "security"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_content"
+          ],
+          "urgency_signals": [
+            "fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "deployment_focused"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "problem_solving",
+          "secondary_intents": [
+            "quality_assurance",
+            "performance_optimization",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7999999999999999,
+          "complexity_level": "medium",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "solution_focused",
+        "complexity": "medium",
+        "technical_depth": "intermediate",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8452168766910412,
+        "context_coherence": 0.8954087589230518,
+        "behavioral_consistency": 0.867144359829224,
+        "technical_accuracy": 0.9151112049674597,
+        "human_like_variance": 0.8142053454137039,
+        "overall_score": 0.8674173091648962
+      },
+      "meta_indicators": {
+        "processing_time": 0.853667662316745,
+        "confidence_level": 0.94906901381273,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 116,
+      "extraction_order": 8067,
+      "timestamp": "2025-09-14T20:32:29.980Z",
+      "content_preview": "run /testllm on the test cases for testing_llm/ directory",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8731455939268875,
+        "context_coherence": 0.8813711453650762,
+        "behavioral_consistency": 0.8372610743549845,
+        "technical_accuracy": 0.8945267451932084,
+        "human_like_variance": 0.8716726358540201,
+        "overall_score": 0.8715954389388354
+      },
+      "meta_indicators": {
+        "processing_time": 1.6022917622264736,
+        "confidence_level": 0.9349602306906454,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 117,
+      "extraction_order": 8068,
+      "timestamp": "2025-09-14T20:32:45.385Z",
+      "content_preview": "Execute comprehensive LLM testing following the test cases defined in the testing_llm/ directory. \n\n...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [
+            "TEST_CASES.md",
+            "-central1.run",
+            "ai-universe-dev-114133832173.us",
+            "ai-universe-stable-114133832173.us"
+          ],
+          "technology_stack": [
+            "testing",
+            "pr_management",
+            "security"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_content"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "quality_assurance",
+            "performance_optimization"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.8999999999999999,
+          "complexity_level": "medium",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "medium",
+        "technical_depth": "intermediate",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8861124830160721,
+        "context_coherence": 0.8804085888180585,
+        "behavioral_consistency": 0.9120330915207072,
+        "technical_accuracy": 0.8973930275864597,
+        "human_like_variance": 0.8814882553229634,
+        "overall_score": 0.8914870892528522
+      },
+      "meta_indicators": {
+        "processing_time": 1.8751074247783301,
+        "confidence_level": 0.9554135098658552,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 118,
+      "extraction_order": 8069,
+      "timestamp": "2025-09-15T01:12:41.824Z",
+      "content_preview": "run the server locally and ask it for the secondary opiions and primary and print them all here with...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8571137976461385,
+        "context_coherence": 0.8847454521090743,
+        "behavioral_consistency": 0.8725265562205149,
+        "technical_accuracy": 0.8921687644349746,
+        "human_like_variance": 0.8433075925030302,
+        "overall_score": 0.8699724325827465
+      },
+      "meta_indicators": {
+        "processing_time": 1.0483620558728828,
+        "confidence_level": 0.8258268173765488,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 119,
+      "extraction_order": 8070,
+      "timestamp": "2025-09-15T01:14:29.529Z",
+      "content_preview": "i dont wanna test this way, we shouldn't need any code changes. We should be able to add the mcp ser...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8410549610719745,
+        "context_coherence": 0.8747990295295899,
+        "behavioral_consistency": 0.8339523695212222,
+        "technical_accuracy": 0.9227259723692365,
+        "human_like_variance": 0.8713156020670197,
+        "overall_score": 0.8687695869118086
+      },
+      "meta_indicators": {
+        "processing_time": 1.377919569610557,
+        "confidence_level": 0.8906395974422436,
+        "engagement_level": 0.8
+      }
+    }
+  ],
+  "summary": {
+    "total_processed": 120,
+    "overall_average_authenticity": 0.8789741667578429,
+    "target_compliance": 0.6416666666666667
+  }
+}

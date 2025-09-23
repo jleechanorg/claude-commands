@@ -1,0 +1,29 @@
+{
+  "extraction_metadata": {
+    "total_prompts_extracted": 9936,
+    "target_prompts": 6208,
+    "achievement_rate": 160.0515463917526,
+    "chunks_created": 10,
+    "average_chunk_size": 993
+  },
+  "processing_statistics": {
+    "total_files_processed": 3872,
+    "total_messages_processed": 831161,
+    "user_messages_found": 179569,
+    "filtered_out": 156296,
+    "duplicates_removed": 13337,
+    "final_unique_prompts": 9936,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": "2025-09-22T03:49:14.761317"
+  },
+  "quality_metrics": {
+    "deduplication_rate": 7.4272285305370085,
+    "filter_rate": 87.03952241199761,
+    "extraction_efficiency": 1.1954362632510427
+  },
+  "file_structure": {
+    "checkpoints_created": 100,
+    "chunks_created": 10,
+    "base_directory": "/Users/jleechan/projects/worktree_genesis/docs/genesis/processing"
+  }
+}

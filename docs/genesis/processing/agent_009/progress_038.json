@@ -1,0 +1,1627 @@
+{
+  "batch_info": {
+    "start_index": 740,
+    "end_index": 760,
+    "processed_count": 20,
+    "batch_authenticity_average": 0.8829894307261981
+  },
+  "results": [
+    {
+      "prompt_index": 740,
+      "extraction_order": 8691,
+      "timestamp": "2025-09-20T21:30:44.266Z",
+      "content_preview": "<user-prompt-submit-hook>run relevant local tests</user-prompt-submit-hook>",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8063405359563404,
+        "context_coherence": 0.8882320179707809,
+        "behavioral_consistency": 0.9056979573100845,
+        "technical_accuracy": 0.9043816274095858,
+        "human_like_variance": 0.8268121476551928,
+        "overall_score": 0.8662928572603968
+      },
+      "meta_indicators": {
+        "processing_time": 1.1655510174174988,
+        "confidence_level": 0.782971848682853,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 741,
+      "extraction_order": 8692,
+      "timestamp": "2025-09-20T21:31:18.571Z",
+      "content_preview": "Execute the task: fix these tests then push to pr Skip to content\nNavigation Menu\njleechanorg\nworlda...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [
+            "test_api_service_enhancements.py",
+            "test_authenticated_comprehensive.py",
+            "test_hook_patterns.py",
+            "test_exportcommands.py",
+            "test_mcp_cerebras_integration.py",
+            "test_framework_validation.py",
+            "test_age_field_validation.py",
+            "test_capture.py",
+            "settings.json",
+            "test_decorators.py",
+            "test_mock_provider.py",
+            "test_banned_names_visibility_v2.py",
+            "test_ai_content_simple.py",
+            "test_data_integrity.py",
+            "test_campaign_creation_v2_memory_leaks.py",
+            "test_orchestrate.py",
+            "test_constants.py",
+            "test_documentation_performance.py",
+            "test_api_response_format_consistency.py",
+            "test_orchestrate_integration.py",
+            "worldarchitect.ai",
+            "test_auth_resilience.py",
+            "test_factory.py",
+            "TestClaudeSettingsValidation.test",
+            "test_real_browser_settings_game_integration.py",
+            "test_common.py",
+            "test_auth_mock_separation_redgreen.py",
+            "test_character_extraction_regex_bug.py",
+            "test_complete_combined_approach.py",
+            "test_basic_validation.py",
+            "test_animation_system.py",
+            "test_banned_names_loading.py",
+            "test_timeout.py",
+            "test_combat_cleanup_comprehensive.py",
+            "test_command_output_trimmer.py",
+            "test_multi_player_composition.py",
+            "test_architectural_boundary_validation.py",
+            "test_mcp_comprehensive.py",
+            "test_api_routes.py",
+            "test_claude_settings_validation.py",
+            "test_subprocess_utils.py",
+            "test_real_provider.py",
+            "test_always_json_mode.py",
+            "test_campaign_clicks.py",
+            "test_architectural_decisions.py",
+            "test_combat_bug_green.py",
+            "test_context_truncation.py",
+            "test_cerebras_comprehensive.py",
+            "test_banned_name_prevention_v2.py",
+            "test_ci_firebase_init_redgreen.py",
+            "test_pr_utils.py",
+            "test_api_backward_compatibility.py",
+            "test_pr_comment_formatter.py"
+          ],
+          "technology_stack": [
+            "python",
+            "git",
+            "testing",
+            "pr_management",
+            "security"
+          ],
+          "command_history": [
+            "pull",
+            "push"
+          ],
+          "complexity_indicators": [
+            "long_content",
+            "high_complexity"
+          ],
+          "urgency_signals": [
+            "fix",
+            "security"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "pre_deployment"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "quality_assurance",
+            "performance_optimization",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.9999999999999999,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "security_first",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "expert",
+        "collaboration_style": "security_focused"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8487711200119251,
+        "context_coherence": 0.9319076957959895,
+        "behavioral_consistency": 0.8801722604040105,
+        "technical_accuracy": 0.9441034149590536,
+        "human_like_variance": 0.8285262837776262,
+        "overall_score": 0.8866961549897209
+      },
+      "meta_indicators": {
+        "processing_time": 1.436264606374381,
+        "confidence_level": 0.8544147525905396,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 742,
+      "extraction_order": 8693,
+      "timestamp": "2025-09-20T21:34:47.227Z",
+      "content_preview": "any seirous issues in the comments? Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nT...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "git_operations",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [
+            "yaml.safe",
+            "github.com",
+            "test.yml",
+            "copilot-fixpr.md",
+            "gserviceaccount.com",
+            "self.conf",
+            "json.load",
+            "os.path",
+            "grafana.com",
+            "settings.json",
+            "copilot.md",
+            "run_tests.sh",
+            "l.acti",
+            "ic.type",
+            "p.wait",
+            "self.proj",
+            "metric.labe",
+            "assistant_message_validator.sh",
+            "replies.json",
+            "tmux_cleanup_wrapper.sh",
+            "base-guidelines.md",
+            "GRAFANA_SETUP_COMPLETE.md",
+            "commentreply.py",
+            "os.envi",
+            "signal.sign",
+            "dashboards.yaml",
+            "p.term",
+            "gcp_config.get",
+            "docker-compose.yml",
+            "responses.json",
+            "de.back",
+            "sys.exit",
+            "guidelines.md",
+            "worldarchitect.ai",
+            "chan.clau",
+            "ig.get",
+            "claude_start.sh",
+            "claude_functions.sh",
+            "custom-metrics-20250918002102.iam",
+            "test_basic_validation.py",
+            "copilot-instructions.md",
+            "custom-metrics-service-account.json",
+            "custom.goog",
+            "custom_metrics_hook.py",
+            "constants.py",
+            "-sys.path",
+            "l.auto",
+            "claude_backup_with_sync.sh",
+            "jsonData.defa",
+            "sys.argv",
+            "scratchpad_modular_copilot_architecture.md",
+            "leapis.com",
+            "ron.get",
+            "com.jlee",
+            "commentreply.md",
+            "gcp-cloud-monitoring.yaml",
+            "mistake-detection-service-account.json",
+            "series.metr",
+            "scratchpad_modular-copilot-architecture.md",
+            "ic.labe",
+            "tmux_cleanup.log",
+            "signal.alar",
+            "cleanup_completed_agents.py",
+            "sys.modu",
+            "validate_imports.py",
+            "testing_framework.inte",
+            "claude_backup_cron.sh",
+            "gcp.proj",
+            "admin_password.txt",
+            "claude-mistake-detection.json",
+            "sync_backup_to_dropbox.sh",
+            "custom_metrics_config.yaml",
+            "commentfetch.py",
+            "sys.path"
+          ],
+          "technology_stack": [
+            "react",
+            "python",
+            "git",
+            "testing",
+            "pr_management",
+            "security"
+          ],
+          "command_history": [
+            "copilot",
+            "pull",
+            "git",
+            "push"
+          ],
+          "complexity_indicators": [
+            "long_content",
+            "high_complexity",
+            "collaborative_complexity"
+          ],
+          "urgency_signals": [
+            "critical",
+            "fix",
+            "merge",
+            "security",
+            "vulnerability"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "deployment_focused"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "quality_assurance",
+            "performance_optimization",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected",
+            "automation_preferred",
+            "speed_valued"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 1.0,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "polite",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "expert",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8589340071978391,
+        "context_coherence": 0.9480463703729214,
+        "behavioral_consistency": 0.9068123295381115,
+        "technical_accuracy": 0.9275595579204585,
+        "human_like_variance": 0.9397605763876834,
+        "overall_score": 0.9162225682834026
+      },
+      "meta_indicators": {
+        "processing_time": 1.256962104796765,
+        "confidence_level": 0.8998336870309696,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 743,
+      "extraction_order": 8694,
+      "timestamp": "2025-09-20T21:34:54.166Z",
+      "content_preview": "<user-prompt-submit-hook>any seirous issues in the comments? Skip to content\nNavigation Menu\njleecha...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "git_operations",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [
+            "test.yml",
+            "copilot-fixpr.md",
+            "copilot.md",
+            "run_tests.sh",
+            "replies.json",
+            "responses.json",
+            "de.back",
+            "guidelines.md",
+            "worldarchitect.ai",
+            "chan.clau",
+            "claude_start.sh",
+            "claude_functions.sh",
+            "test_basic_validation.py",
+            "copilot-instructions.md",
+            "claude_backup_with_sync.sh",
+            "com.jlee",
+            "cleanup_completed_agents.py",
+            "validate_imports.py",
+            "testing_framework.inte",
+            "claude_backup_cron.sh",
+            "sync_backup_to_dropbox.sh"
+          ],
+          "technology_stack": [
+            "python",
+            "git",
+            "testing",
+            "pr_management",
+            "security"
+          ],
+          "command_history": [
+            "copilot",
+            "pull",
+            "git"
+          ],
+          "complexity_indicators": [
+            "long_content",
+            "high_complexity",
+            "collaborative_complexity"
+          ],
+          "urgency_signals": [
+            "critical",
+            "fix",
+            "merge",
+            "security"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "pre_deployment"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "quality_assurance",
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 1.0,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "expert",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8163049555406872,
+        "context_coherence": 0.9411517922742323,
+        "behavioral_consistency": 0.9349995534000508,
+        "technical_accuracy": 0.9509686440910958,
+        "human_like_variance": 0.8636808850096565,
+        "overall_score": 0.9014211660631444
+      },
+      "meta_indicators": {
+        "processing_time": 1.5791329675440156,
+        "confidence_level": 0.8762331181258104,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 744,
+      "extraction_order": 8695,
+      "timestamp": "2025-09-20T21:47:04.345Z",
+      "content_preview": "i agree with 1) but for security issues which are relevant for solo unlaunched mvp project? 1. Hardc...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management",
+            "security"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "high_complexity",
+            "collaborative_complexity"
+          ],
+          "urgency_signals": [
+            "fix",
+            "security"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "pre_deployment"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.95,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "basic",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8003153876778897,
+        "context_coherence": 0.8696693775226512,
+        "behavioral_consistency": 0.9183276933351517,
+        "technical_accuracy": 0.9414371792929991,
+        "human_like_variance": 0.9429604158032596,
+        "overall_score": 0.8945420107263903
+      },
+      "meta_indicators": {
+        "processing_time": 0.9145749585013082,
+        "confidence_level": 0.953498351384272,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 745,
+      "extraction_order": 8696,
+      "timestamp": "2025-09-20T21:47:04.770Z",
+      "content_preview": "<user-prompt-submit-hook>i agree with 1) but for security issues which are relevant for solo unlaunc...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "error_present",
+            "fixing_attempt"
+          ],
+          "work_focus": "security_review"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management",
+            "security"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "high_complexity",
+            "collaborative_complexity"
+          ],
+          "urgency_signals": [
+            "fix",
+            "security"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "pre_deployment"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "security_analysis",
+          "secondary_intents": [
+            "documentation"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.95,
+          "complexity_level": "high",
+          "mental_state": "alert"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "professional_cautious",
+        "complexity": "high",
+        "technical_depth": "basic",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8878543666282486,
+        "context_coherence": 0.8904814882413269,
+        "behavioral_consistency": 0.8940926564574073,
+        "technical_accuracy": 0.9383458423690654,
+        "human_like_variance": 0.8231263702847842,
+        "overall_score": 0.8867801447961664
+      },
+      "meta_indicators": {
+        "processing_time": 1.2555111942989816,
+        "confidence_level": 0.8223046480712762,
+        "engagement_level": 0.9500000000000001
+      }
+    },
+    {
+      "prompt_index": 746,
+      "extraction_order": 8697,
+      "timestamp": "2025-09-20T21:49:48.336Z",
+      "content_preview": "Execute the task: do that\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show e...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "collaborative_review",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "automation_preferred"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7999999999999999,
+          "complexity_level": "medium",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "direct",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8918145550734481,
+        "context_coherence": 0.8926726842320168,
+        "behavioral_consistency": 0.9328445012049078,
+        "technical_accuracy": 0.8917020163508341,
+        "human_like_variance": 0.8864274177119082,
+        "overall_score": 0.899092234914623
+      },
+      "meta_indicators": {
+        "processing_time": 1.0825968449436485,
+        "confidence_level": 0.988448577692737,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 747,
+      "extraction_order": 8698,
+      "timestamp": "2025-09-20T21:53:11.602Z",
+      "content_preview": "git pull origin main then push to pr",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "pr_management"
+          ],
+          "command_history": [
+            "pull",
+            "git",
+            "push"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8789175417947233,
+        "context_coherence": 0.9036300500135773,
+        "behavioral_consistency": 0.9193454480664879,
+        "technical_accuracy": 0.9195204655871901,
+        "human_like_variance": 0.9108572698324127,
+        "overall_score": 0.9064541550588782
+      },
+      "meta_indicators": {
+        "processing_time": 0.8320641467877082,
+        "confidence_level": 0.8474579587008038,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 748,
+      "extraction_order": 8699,
+      "timestamp": "2025-09-20T21:53:11.902Z",
+      "content_preview": "<user-prompt-submit-hook>git pull origin main then push to pr</user-prompt-submit-hook>",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "pr_management"
+          ],
+          "command_history": [
+            "pull",
+            "git",
+            "push"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "evening",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8825429281183493,
+        "context_coherence": 0.8622973650982511,
+        "behavioral_consistency": 0.8950771220846312,
+        "technical_accuracy": 0.915163386150725,
+        "human_like_variance": 0.8707512572865818,
+        "overall_score": 0.8851664117477076
+      },
+      "meta_indicators": {
+        "processing_time": 1.4093519599754818,
+        "confidence_level": 0.9435549564982022,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 749,
+      "extraction_order": 8700,
+      "timestamp": "2025-09-20T22:00:45.780Z",
+      "content_preview": "review this whole PR and update PR desc to explain what it does in delta. Look at the actual deltas ...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "collaborative_complexity"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "collaborative_review",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.75,
+          "complexity_level": "low",
+          "mental_state": "engaged"
+        },
+        "behavioral_indicators": {
+          "communication_style": "collaborative",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "collaborative"
+        }
+      },
+      "response_characteristics": {
+        "tone": "collaborative_supportive",
+        "complexity": "medium",
+        "technical_depth": "basic",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8550196116428561,
+        "context_coherence": 0.8842550544789618,
+        "behavioral_consistency": 0.9141658613583218,
+        "technical_accuracy": 0.9226529608778233,
+        "human_like_variance": 0.837078343774271,
+        "overall_score": 0.8826343664264469
+      },
+      "meta_indicators": {
+        "processing_time": 1.6706980206526205,
+        "confidence_level": 0.948911551250504,
+        "engagement_level": 0.9
+      }
+    },
+    {
+      "prompt_index": 750,
+      "extraction_order": 8701,
+      "timestamp": "2025-09-20T22:00:45.981Z",
+      "content_preview": "<user-prompt-submit-hook>review this whole PR and update PR desc to explain what it does in delta. L...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "collaborative_complexity"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "collaborative_review",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.75,
+          "complexity_level": "low",
+          "mental_state": "engaged"
+        },
+        "behavioral_indicators": {
+          "communication_style": "collaborative",
+          "decision_making_pattern": "consensus_seeking",
+          "problem_solving_approach": "collaborative"
+        }
+      },
+      "response_characteristics": {
+        "tone": "collaborative_supportive",
+        "complexity": "medium",
+        "technical_depth": "basic",
+        "collaboration_style": "consensus_building"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8860628986997765,
+        "context_coherence": 0.8618880751983609,
+        "behavioral_consistency": 0.9139703548894855,
+        "technical_accuracy": 0.8906205432291394,
+        "human_like_variance": 0.8951392392509968,
+        "overall_score": 0.8895362222535519
+      },
+      "meta_indicators": {
+        "processing_time": 1.134298994713635,
+        "confidence_level": 0.9002939507104631,
+        "engagement_level": 0.9
+      }
+    },
+    {
+      "prompt_index": 751,
+      "extraction_order": 8702,
+      "timestamp": "2025-09-20T22:03:09.396Z",
+      "content_preview": "use the token from ~/.token it should have the right scope and update the pr desc",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8082663113917763,
+        "context_coherence": 0.8832402930721553,
+        "behavioral_consistency": 0.8623156914231499,
+        "technical_accuracy": 0.9229896798252921,
+        "human_like_variance": 0.8302526582641826,
+        "overall_score": 0.8614129267953112
+      },
+      "meta_indicators": {
+        "processing_time": 0.831602013274572,
+        "confidence_level": 0.8693634613607135,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 752,
+      "extraction_order": 8703,
+      "timestamp": "2025-09-20T22:03:09.576Z",
+      "content_preview": "<user-prompt-submit-hook>use the token from ~/.token it should have the right scope and update the p...",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8728420466460702,
+        "context_coherence": 0.8899960754577644,
+        "behavioral_consistency": 0.9311996208728083,
+        "technical_accuracy": 0.9124488706104348,
+        "human_like_variance": 0.8423836452167343,
+        "overall_score": 0.8897740517607623
+      },
+      "meta_indicators": {
+        "processing_time": 1.1448130494586974,
+        "confidence_level": 0.9859721260455845,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 753,
+      "extraction_order": 8704,
+      "timestamp": "2025-09-20T22:08:51.135Z",
+      "content_preview": "yes it should, please just do it",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "development_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "polite",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8542407697084259,
+        "context_coherence": 0.862225885381457,
+        "behavioral_consistency": 0.8462222701782366,
+        "technical_accuracy": 0.9072463954127488,
+        "human_like_variance": 0.9152188509484532,
+        "overall_score": 0.8770308343258643
+      },
+      "meta_indicators": {
+        "processing_time": 1.4907732662703175,
+        "confidence_level": 0.888461560396409,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 754,
+      "extraction_order": 8705,
+      "timestamp": "2025-09-20T22:08:51.330Z",
+      "content_preview": "<user-prompt-submit-hook>yes it should, please just do it</user-prompt-submit-hook>",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "polite",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8484376349213509,
+        "context_coherence": 0.8720123749411256,
+        "behavioral_consistency": 0.9261250030567191,
+        "technical_accuracy": 0.9205094892589711,
+        "human_like_variance": 0.7723817899565314,
+        "overall_score": 0.8678932584269397
+      },
+      "meta_indicators": {
+        "processing_time": 1.2872338173776303,
+        "confidence_level": 0.8791507348060391,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 755,
+      "extraction_order": 8706,
+      "timestamp": "2025-09-20T22:09:29.325Z",
+      "content_preview": "why did you htink it woouldnt work?",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "development_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8153296991093456,
+        "context_coherence": 0.8812437932976392,
+        "behavioral_consistency": 0.8728756391755377,
+        "technical_accuracy": 0.8906307280287349,
+        "human_like_variance": 0.863018472615594,
+        "overall_score": 0.8646196664453702
+      },
+      "meta_indicators": {
+        "processing_time": 0.8968178744502271,
+        "confidence_level": 0.8904750942732194,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 756,
+      "extraction_order": 8707,
+      "timestamp": "2025-09-20T22:09:29.521Z",
+      "content_preview": "<user-prompt-submit-hook>why did you htink it woouldnt work?</user-prompt-submit-hook>",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "direct"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8815838298218363,
+        "context_coherence": 0.8780115211869436,
+        "behavioral_consistency": 0.8987414987883237,
+        "technical_accuracy": 0.9198186290120804,
+        "human_like_variance": 0.7862329823801257,
+        "overall_score": 0.8728776922378619
+      },
+      "meta_indicators": {
+        "processing_time": 1.012065415334106,
+        "confidence_level": 0.8179382009710884,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 757,
+      "extraction_order": 8708,
+      "timestamp": "2025-09-20T22:16:52.497Z",
+      "content_preview": "How should we manually test this pr?",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8139151958218781,
+        "context_coherence": 0.8659776076474464,
+        "behavioral_consistency": 0.9282954413182621,
+        "technical_accuracy": 0.9112787490630474,
+        "human_like_variance": 0.8932451258537248,
+        "overall_score": 0.8825424239408719
+      },
+      "meta_indicators": {
+        "processing_time": 1.5523423231791318,
+        "confidence_level": 0.8479794319164625,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 758,
+      "extraction_order": 8709,
+      "timestamp": "2025-09-20T22:16:52.725Z",
+      "content_preview": "<user-prompt-submit-hook>How should we manually test this pr?</user-prompt-submit-hook>",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "pr_workflow",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "review_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": [
+            "compliance_expected"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "experimental"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8239800098553942,
+        "context_coherence": 0.8522344630576897,
+        "behavioral_consistency": 0.9371110499032607,
+        "technical_accuracy": 0.9061698459978419,
+        "human_like_variance": 0.7634752549802175,
+        "overall_score": 0.8565941247588806
+      },
+      "meta_indicators": {
+        "processing_time": 1.581216218678672,
+        "confidence_level": 0.7927720550848175,
+        "engagement_level": 0.8
+      }
+    },
+    {
+      "prompt_index": 759,
+      "extraction_order": 8710,
+      "timestamp": "2025-09-20T22:20:35.603Z",
+      "content_preview": "execut all of them yourseld but save the test cases in roadmap/ first as an md file",
+      "context_features": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "development",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "night",
+          "project_phase": "testing_phase",
+          "team_context": "collaborative_review",
+          "deployment_state": "development"
+        }
+      },
+      "cognitive_patterns": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [
+            "quality_assurance"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 0.7,
+          "complexity_level": "low",
+          "mental_state": "normal"
+        },
+        "behavioral_indicators": {
+          "communication_style": "neutral",
+          "decision_making_pattern": "analytical",
+          "problem_solving_approach": "systematic"
+        }
+      },
+      "response_characteristics": {
+        "tone": "informative",
+        "complexity": "low",
+        "technical_depth": "basic",
+        "collaboration_style": "balanced"
+      },
+      "authenticity_metrics": {
+        "natural_language_flow": 0.8029376393203056,
+        "context_coherence": 0.8661421217133165,
+        "behavioral_consistency": 0.8747221273000763,
+        "technical_accuracy": 0.9242416870229765,
+        "human_like_variance": 0.8929831412016664,
+        "overall_score": 0.8722053433116683
+      },
+      "meta_indicators": {
+        "processing_time": 1.5192193056222338,
+        "confidence_level": 0.8338875568182853,
+        "engagement_level": 0.8
+      }
+    }
+  ],
+  "summary": {
+    "total_processed": 760,
+    "overall_average_authenticity": 0.8795025195503194,
+    "target_compliance": 0.6881578947368421
+  }
+}

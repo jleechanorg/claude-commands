@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 69,
+  "prompts_count": 6900,
+  "timestamp": "2025-09-22T03:49:13.103407",
+  "prompts": [
+    {
+      "content": "approve and make sure you switch branches and dont mix up the changes",
+      "timestamp": "2025-09-07T19:14:59.790Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8a34a44a-a222-4d54-8be0-a746a8cfa0f3.jsonl",
+      "conversation_id": null,
+      "dedup_key": "approve and make sure you switch branches and dont mix up the changes",
+      "extraction_order": 6801
+    },
+    {
+      "content": "<user-prompt-submit-hook>approve and make sure you switch branches and dont mix up the changes</user-prompt-submit-hook>",
+      "timestamp": "2025-09-07T19:15:00.155Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8a34a44a-a222-4d54-8be0-a746a8cfa0f3.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>approve and make sure you switch branches and dont mix up the changes</user",
+      "extraction_order": 6802
+    },
+    {
+      "content": "run /gst on all PRs and see if test are passing. tell me explicitly for each one",
+      "timestamp": "2025-09-07T20:52:30.949Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8a34a44a-a222-4d54-8be0-a746a8cfa0f3.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run /gst on all prs and see if test are passing. tell me explicitly for each one",
+      "extraction_order": 6803
+    },
+    {
+      "content": "Execute multi-stage deep code analysis for current branch/PR using BugBot/DeepCode methodologies:\n\nANALYSIS STAGES:\n- Multi-Stage Bug Detection: Logic errors, race conditions, memory leaks, boundary issues\n- Security Vulnerability Analysis: OWASP Top 10 patterns, input validation gaps, injection vectors  \n- Performance Issues: Algorithmic complexity problems, resource cleanup, scalability concerns\n- Architectural Quality: Design pattern implementation, SOLID violations, coupling issues\n- Production-Critical Findings: Issues that could impact system stability\n\nTARGET: Current branch/PR context - analyze recent changes from main branch\n\nDEEP ANALYSIS METHODOLOGY:\n1. Static code analysis for common bug patterns\n2. Security vulnerability scanning with OWASP focus\n3. Performance profiling and optimization opportunities\n4. Architectural quality assessment  \n5. Integration and compatibility validation\n\nProvide comprehensive bug detection and vulnerability analysis with specific remediation suggestions.",
+      "timestamp": "2025-09-12T19:49:57.293Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "a898f2e7-57e4-4627-8a82-2f83df871969.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute multi-stage deep code analysis for current branch/pr using bugbot/deepcode methodologies:\n\na",
+      "extraction_order": 6804
+    },
+    {
+      "content": "Execute /arch comprehensive architectural assessment for current branch/PR:\n\nANALYSIS DIMENSIONS:\n- System design patterns and scalability considerations\n- Integration points and long-term maintainability\n- Structural soundness and design quality evaluation\n- Cross-system dependencies and technical compatibility\n- Code quality assessment: technical debt, maintainability, refactoring opportunities\n\nTARGET: Current branch/PR context - analyze recent changes from main branch\n\nMETHODOLOGY:\n1. Use Serena MCP for semantic code analysis first\n2. Examine recent commits and changed files\n3. Assess architectural implications of changes\n4. Review integration patterns and dependencies\n5. Evaluate maintainability and scalability impact\n\nProvide detailed architectural findings with specific recommendations and file references.",
+      "timestamp": "2025-09-12T19:49:57.281Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "a898f2e7-57e4-4627-8a82-2f83df871969.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute /arch comprehensive architectural assessment for current branch/pr:\n\nanalysis dimensions:\n-",
+      "extraction_order": 6805
+    },
+    {
+      "content": "Execute /cerebras comprehensive technical analysis for comprehensive review of current branch/PR:\n\nFOCUS AREAS:\n- Security vulnerability scanning (solo developer focus - real vulnerabilities only)\n- Trusted source detection (GitHub API, package managers)\n- Functional bugs and performance issues\n- Architecture pattern analysis\n- Performance bottleneck identification\n- Filter out enterprise paranoia (JSON schema validation for trusted APIs)\n\nTARGET: Current branch/PR context - analyze recent changes from main branch\n\nSOLO DEVELOPER SECURITY PRIORITY:\n1. Command Injection - Unsanitized user input in system commands, shell=True risks\n2. Credential Exposure - Hardcoded secrets, API keys in code, .env file issues  \n3. Path Traversal - User-controlled file paths, directory traversal vulnerabilities\n4. SQL Injection - Dynamic queries without parameterization\n5. XSS Vulnerabilities - Unsanitized output in web applications\n6. Authentication Flaws - Session handling, password storage issues\n\nSKIP enterprise paranoia for trusted sources like GitHub API responses, npm registry, verified CDNs.\n\nProvide specific technical findings with file references and line numbers.",
+      "timestamp": "2025-09-12T19:49:57.312Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "a898f2e7-57e4-4627-8a82-2f83df871969.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute /cerebras comprehensive technical analysis for comprehensive review of current branch/pr:\n\nf",
+      "extraction_order": 6806
+    },
+    {
+      "content": "Execute comprehensive multi-dimensional analysis for current branch/PR using Gemini capabilities:\n\nANALYSIS PERSPECTIVES:\n- CodeRabbit/GitHub Copilot-style review covering correctness, architecture, security, performance\n- PR goal alignment and business value assessment\n- Multi-role analysis: Developer, Architect, Business Analyst perspectives\n- Framework expertise and language-specific patterns\n- Up-to-date best practices and industry standards\n\nTARGET: Current branch/PR context - analyze recent changes from main branch\n\nFOCUS AREAS:\n1. Architecture Findings: SOLID principles adherence, design pattern usage, scalability issues\n2. Security Assessment: OWASP compliance, vulnerability detection, authentication analysis  \n3. Performance Evaluation: Bottleneck identification, algorithmic efficiency, resource usage\n4. Correctness Validation: Logic accuracy, edge case handling, PR goal fulfillment\n5. Code Quality: Maintainability, complexity metrics, technical debt assessment\n\nProvide detailed multi-dimensional analysis with prioritized recommendations.",
+      "timestamp": "2025-09-12T19:49:57.327Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "a898f2e7-57e4-4627-8a82-2f83df871969.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute comprehensive multi-dimensional analysis for current branch/pr using gemini capabilities:\n\na",
+      "extraction_order": 6807
+    },
+    {
+      "content": "Execute comprehensive copilot-fixpr analysis for PR #1599: \"Fix CI test hangs: Add 45-minute memory monitor timeout\"\n\n**FIRST PRIORITY**: Execute /fixpr command to resolve any merge conflicts and CI failures\n\n**PRIMARY FOCUS AREAS**:\n1. **Merge Conflicts**: Check for and resolve any merge conflicts with main branch\n2. **CI Failures**: Analyze and fix any failing CI checks or tests\n3. **Security Vulnerabilities**: Review code changes for security issues (command injection, subprocess security, timeout handling)\n4. **Code Quality Issues**: Performance optimization, runtime errors, maintainability improvements\n5. **Technical Accuracy**: Ensure implementations follow project patterns and best practices\n\n**CURRENT CONTEXT**: PR involves major cleanup of memory backup scripts (49% code reduction), CI timeout improvements, and infrastructure hardening.\n\n**KEY FILES TO ANALYZE**:\n- `.github/workflows/test.yml` (CI timeout configurations)\n- `scripts/ci_integration_optimizer.py` (CI optimization logic)  \n- `orchestration/test_a2a_*.py` (A2A integration tests)\n- `scripts/memory_sync/` (memory synchronization components)\n- Memory backup script consolidation (11 files removed)\n\n**IMPLEMENTATION REQUIREMENTS**:\n- Use Edit/MultiEdit tools for actual file modifications\n- Follow File Justification Protocol for all changes\n- Apply subprocess security patterns (`shell=False, timeout=30`)\n- Implement proper async context management\n- Ensure CI timeout hierarchy (job > step timeouts)\n\n**SUCCESS CRITERIA**:\n1. All merge conflicts resolved\n2. All CI checks passing\n3. Security vulnerabilities addressed with actual code fixes\n4. Performance improvements implemented\n5. File changes documented with proper justification\n\nProvide specific file modifications with line-by-line changes and complete justification for each modification.",
+      "timestamp": "2025-09-14T05:51:52.873Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "a898f2e7-57e4-4627-8a82-2f83df871969.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute comprehensive copilot-fixpr analysis for pr #1599: \"fix ci test hangs: add 45-minute memory",
+      "extraction_order": 6808
+    },
+    {
+      "content": "Look at all the sh scripts in the project root. Which ones are particular to worldAI vs useful in general? For the generally useful ones lets allowlist for the exportcommands slash command",
+      "timestamp": "2025-09-11T05:48:38.068Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8604f554-a361-48dc-8332-a2a7acb35aa1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at all the sh scripts in the project root. which ones are particular to worldai vs useful in ge",
+      "extraction_order": 6809
+    },
+    {
+      "content": "<user-prompt-submit-hook>Look at all the sh scripts in the project root. Which ones are particular to worldAI vs useful in general? For the generally useful ones lets allowlist for the exportcommands slash command</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T05:48:38.131Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8604f554-a361-48dc-8332-a2a7acb35aa1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at all the sh scripts in the project root. which ones are particular t",
+      "extraction_order": 6810
+    },
+    {
+      "content": "ok lets allowlist the the generally useful scripts. Do /newb and make a pr",
+      "timestamp": "2025-09-11T05:52:08.158Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8604f554-a361-48dc-8332-a2a7acb35aa1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok lets allowlist the the generally useful scripts. do /newb and make a pr",
+      "extraction_order": 6811
+    },
+    {
+      "content": "pr url doesnt work https://github.com/jleechanorg/claude-commands/issues/34",
+      "timestamp": "2025-09-11T06:12:50.604Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8604f554-a361-48dc-8332-a2a7acb35aa1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "pr url doesnt work https://github.com/jleechanorg/claude-commands/issues/34",
+      "extraction_order": 6812
+    },
+    {
+      "content": "<user-prompt-submit-hook>pr url doesnt work https://github.com/jleechanorg/claude-commands/issues/34</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T06:12:50.845Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "8604f554-a361-48dc-8332-a2a7acb35aa1.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>pr url doesnt work https://github.com/jleechanorg/claude-commands/issues/34",
+      "extraction_order": 6813
+    },
+    {
+      "content": "look at this current pr and see how we can manually test it",
+      "timestamp": "2025-09-11T07:32:05.077Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at this current pr and see how we can manually test it",
+      "extraction_order": 6814
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at this current pr and see how we can manually test it</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:32:05.149Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at this current pr and see how we can manually test it</user-prompt-su",
+      "extraction_order": 6815
+    },
+    {
+      "content": "cancel the automated test run for this PR. something is wrong. they are running for liek 40 min https://github.com/jleechanorg/worldarchitect.ai/pull/1514",
+      "timestamp": "2025-09-11T07:33:15.383Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "cancel the automated test run for this pr. something is wrong. they are running for liek 40 min http",
+      "extraction_order": 6816
+    },
+    {
+      "content": "<user-prompt-submit-hook>cancel the automated test run for this PR. something is wrong. they are running for liek 40 min https://github.com/jleechanorg/worldarchitect.ai/pull/1514</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:33:15.539Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>cancel the automated test run for this pr. something is wrong. they are run",
+      "extraction_order": 6817
+    },
+    {
+      "content": "git pull origin main then /debugp investigate the tests dont dismiss it. find the root cause. These tests are supposed to timoeut",
+      "timestamp": "2025-09-11T07:38:07.457Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main then /debugp investigate the tests dont dismiss it. find the root cause. these",
+      "extraction_order": 6818
+    },
+    {
+      "content": "ok make those fixes and which deps are we adding? why do we needt o add more deps?",
+      "timestamp": "2025-09-11T07:43:52.212Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok make those fixes and which deps are we adding? why do we needt o add more deps?",
+      "extraction_order": 6819
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok make those fixes and which deps are we adding? why do we needt o add more deps?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:43:52.271Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok make those fixes and which deps are we adding? why do we needt o add mor",
+      "extraction_order": 6820
+    },
+    {
+      "content": "lets just delete the archive folder",
+      "timestamp": "2025-09-11T07:45:58.659Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets just delete the archive folder",
+      "extraction_order": 6821
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets just delete the archive folder</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:45:58.718Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets just delete the archive folder</user-prompt-submit-hook>",
+      "extraction_order": 6822
+    },
+    {
+      "content": "push to pr. you have workdflow perms. reread the ~/.token and try pushing. if not just manually use this token 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",
+      "timestamp": "2025-09-11T07:49:37.491Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr. you have workdflow perms. reread the ~/.token and try pushing. if not just manually use",
+      "extraction_order": 6823
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr. you have workdflow perms. reread the ~/.token and try pushing. if not just manually use this token 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</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:49:37.740Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr. you have workdflow perms. reread the ~/.token and try pushing.",
+      "extraction_order": 6824
+    },
+    {
+      "content": "is the ~/.token file matching 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",
+      "timestamp": "2025-09-11T07:51:39.183Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is the ~/.token file matching ghp_rrt6ezvmb1h66uyzyxe9f2bsar3hkj4kx5iy",
+      "extraction_order": 6825
+    },
+    {
+      "content": "<user-prompt-submit-hook>is the ~/.token file matching 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</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T07:51:39.460Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is the ~/.token file matching ghp_rrt6ezvmb1h66uyzyxe9f2bsar3hkj4kx5iy</use",
+      "extraction_order": 6826
+    },
+    {
+      "content": "# /copilot - Fast PR Processing\n\n## \ud83c\udfaf Purpose\nUltra-fast PR processing using hybrid orchestration: direct comment handling + copilot-fixpr agent for file operations.\n\n## \u26a1 Core Workflow\n\n### Initial Setup\n```bash\n# Get comprehensive PR status and initialize timing\n/gstatus\nCOPILOT_START_TIME=$(date +%s)\n```\n\n### Phase 1: Analysis & Agent Launch\n\n**Direct Comment Processing:**\n```bash\n# Fetch and analyze PR comments\n/commentfetch\n\n# Analyze actionable issues by priority:\n# 1. Security vulnerabilities\n# 2. Runtime errors\n# 3. Test failures\n# 4. Style/quality issues\n```\n\n**Parallel copilot-fixpr Agent:**\n- Launch agent for file modifications with File Justification Protocol\n- Agent analyzes security vulnerabilities and implements fixes\n- Agent uses Edit/MultiEdit tools for actual code changes\n- Agent must verify target files exist before modifications\n\n**\ud83d\udea8 PHASE 1 VERIFICATION (MANDATORY):**\n```bash\n# Hard stop: Verify agent made actual changes\nCHANGES=$(git diff --name-only | wc -l)\n[ \"$CHANGES\" -eq 0 ] && echo \"\ud83d\udea8 AGENT FAILURE: No files modified\" && exit 1\necho \"\u2705 Verified: $CHANGES files modified\"\ngit diff --stat\n```\n\n### Phase 2: Response Generation\n\n**Integration & Communication:**\n- Collect agent results: technical analysis, file fixes, security implementations\n- Generate responses based on actual implemented changes\n- Execute /commentreply with implementation details for guaranteed GitHub posting\n\n**\ud83d\udea8 PHASE 2 VERIFICATION (MANDATORY):**\n```bash\n# Verify both changes and comment processing completed\n[ -z \"$(git diff --name-only)\" ] && echo \"\ud83d\udea8 NO MODIFICATIONS\" && exit 1\n[ ! -f \"/tmp/copilot_comments_fetched\" ] && /commentfetch && touch /tmp/copilot_comments_fetched\n```\n\n### Phase 3: Verification & Push\n\n**\ud83d\udea8 MANDATORY VERIFICATION PROTOCOL:**\n```bash\n# Show evidence of changes\necho \"\ud83d\udcca COPILOT EXECUTION EVIDENCE:\"\necho \"\ud83d\udd27 FILES MODIFIED:\"\ngit diff --name-only | sed 's/^/  - /'\necho \"\ud83d\udcc8 CHANGE SUMMARY:\"\ngit diff --stat\n\n# Push changes to PR\n/pushl || { echo \"\ud83d\udea8 PUSH FAILED: PR not updated\"; exit 1; }\n```\n\n**Coverage Tracking:**\n```bash\n# Coverage verification (silent unless incomplete)\nREPO=\"$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)\"\nPR_NUMBER=\"$(gh pr view --json number -q .number 2>/dev/null)\"\n\n# Input validation\n[[ ! \"$REPO\" =~ ^[a-zA-Z0-9._/-]+$ ]] || [[ ! \"$PR_NUMBER\" =~ ^[0-9]+$ ]] && echo \"\ud83d\udea8 INVALID REPO/PR\" && exit 1\n\n# Calculate coverage\nREV_JSON=\"$(gh api \"repos/$REPO/pulls/$PR_NUMBER/comments\" --paginate 2>/dev/null | jq -s 'add // []' 2>/dev/null)\"\nREV_ORIGINAL=\"$(jq -r '[.[] | select(.in_reply_to_id == null)] | length' <<<\"$REV_JSON\")\"\nUNIQUE_REPLIED_ORIGINALS=\"$(jq -r '[.[] | select(.in_reply_to_id != null) | .in_reply_to_id] | unique | length' <<<\"$REV_JSON\")\"\n\nORIGINAL_COMMENTS=\"${REV_ORIGINAL:-0}\"\nREPLIED_ORIGINALS=\"${UNIQUE_REPLIED_ORIGINALS:-0}\"\n\n[[ ! \"$ORIGINAL_COMMENTS\" =~ ^[0-9]+$ ]] && ORIGINAL_COMMENTS=0\n[[ ! \"$REPLIED_ORIGINALS\" =~ ^[0-9]+$ ]] && REPLIED_ORIGINALS=0\n\nif [ \"${ORIGINAL_COMMENTS:-0}\" -gt 0 ]; then\n  COVERAGE_PERCENT=$(( REPLIED_ORIGINALS * 100 / ORIGINAL_COMMENTS ))\n  if [ \"$COVERAGE_PERCENT\" -lt 100 ]; then\n    missing=$(( ORIGINAL_COMMENTS - REPLIED_ORIGINALS ))\n    [ \"$missing\" -lt 0 ] && missing=0\n    echo \"\ud83d\udea8 WARNING: INCOMPLETE COVERAGE: ${COVERAGE_PERCENT}% (missing: ${missing})\"\n  fi\nfi\n```\n\n**Final Timing:**\n```bash\nCOPILOT_END_TIME=$(date +%s)\nCOPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))\n[ \"${COPILOT_DURATION:-0}\" -gt 180 ] && echo \"\u26a0\ufe0f PERFORMANCE: ${COPILOT_DURATION}s exceeded 3m target\"\n\n/guidelines\n```\n\n## \ud83d\udea8 Agent Boundaries\n\n**copilot-fixpr Agent:**\n- File operations only (Edit/MultiEdit, security fixes)\n- Must verify file existence before modifications\n- Must run `git diff --stat` before reporting success\n\n**Direct Orchestrator:**\n- Comment processing (/commentfetch, /commentreply)\n- GitHub operations and workflow coordination\n- Verification checkpoints and evidence collection\n\n## \ud83c\udfaf Success Criteria\n\n**BOTH REQUIRED:**\n1. **Implementation**: All actionable issues have actual file changes\n2. **Communication**: 100% comment response rate\n\n**FAILURE CONDITIONS:**\n- No file changes after agent execution\n- Missing comment responses\n- Push failures\n- Skipped verification checkpoints\n\n## \ud83d\udea8 Critical Anti-Patterns\n- \u274c Agent reports success but `git diff` shows no changes\n- \u274c Agent targets non-existent files (app.py vs main.py)\n- \u274c Skipping /commentfetch or /commentreply workflows\n- \u274c Declaring completion without /pushl execution\n- \u274c Accepting \"implemented\" without git evidence",
+      "timestamp": "2025-09-11T17:38:07.327Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "# /copilot - fast pr processing\n\n## \ud83c\udfaf purpose\nultra-fast pr processing using hybrid orchestration: d",
+      "extraction_order": 6827
+    },
+    {
+      "content": "let's fix the issues. we should have a default backup url and not rely on the environment variable",
+      "timestamp": "2025-09-11T17:41:33.186Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "let's fix the issues. we should have a default backup url and not rely on the environment variable",
+      "extraction_order": 6828
+    },
+    {
+      "content": "<user-prompt-submit-hook>let's fix the issues. we should have a default backup url and not rely on the environment variable</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T17:41:33.250Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>let's fix the issues. we should have a default backup url and not rely on t",
+      "extraction_order": 6829
+    },
+    {
+      "content": "make the pr and then ok run the backup andm ake sure it work",
+      "timestamp": "2025-09-11T17:56:30.195Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "make the pr and then ok run the backup andm ake sure it work",
+      "extraction_order": 6830
+    },
+    {
+      "content": "<user-prompt-submit-hook>make the pr and then ok run the backup andm ake sure it work</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T17:56:30.253Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>make the pr and then ok run the backup andm ake sure it work</user-prompt-s",
+      "extraction_order": 6831
+    },
+    {
+      "content": "i want to run the real memory backup and show me the commit urls of memories backed up",
+      "timestamp": "2025-09-11T17:59:18.748Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i want to run the real memory backup and show me the commit urls of memories backed up",
+      "extraction_order": 6832
+    },
+    {
+      "content": "<user-prompt-submit-hook>i want to run the real memory backup and show me the commit urls of memories backed up</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T17:59:18.810Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i want to run the real memory backup and show me the commit urls of memorie",
+      "extraction_order": 6833
+    },
+    {
+      "content": "**HYBRID COPILOT TASK**: Fix PR #1597 \"fix: Add default backup URL to memory sync scripts\" with comprehensive file operations.\n\n**PRIORITY EXECUTION SEQUENCE**:\n1. **FIRST**: Execute `/fixpr` command to resolve merge conflicts and CI failures\n2. **THEN**: Address PR review comments with file modifications\n\n**PR CONTEXT**:\n- Branch: memb_test \n- PR: https://github.com/jleechanorg/worldarchitect.ai/pull/1597\n- Changes: Memory sync scripts now use default URLs instead of requiring environment variables\n\n**RECENT COMMENT TO ADDRESS**:\n```\nComment ID: 2341935225\nIssue: \"This validation check is now unreachable since repo_url will always have a value\"\n```\n\n**REQUIRED ACTIONS**:\n1. **Execute `/fixpr`** - Resolve any merge conflicts or CI failures first\n2. **Address Unreachable Code**: Fix validation logic that's now unreachable due to default URL changes\n3. **Security Review**: Ensure default URL doesn't introduce security issues\n4. **Code Quality**: Remove dead code, improve validation logic\n5. **File Justification**: Document necessity of all file changes per protocol\n\n**TOOLS TO USE**:\n- `/fixpr` command (HIGHEST PRIORITY)\n- Edit/MultiEdit for file modifications\n- Serena MCP for semantic code analysis\n- Must follow File Justification Protocol\n\n**SUCCESS CRITERIA**:\n- All merge conflicts resolved\n- Unreachable validation code fixed  \n- Files modified with proper justification\n- PR becomes mergeable with clean CI\n\nExecute immediately with comprehensive file operations.",
+      "timestamp": "2025-09-11T18:06:46.525Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "**hybrid copilot task**: fix pr #1597 \"fix: add default backup url to memory sync scripts\" with comp",
+      "extraction_order": 6834
+    },
+    {
+      "content": "lets scan this codebase for similar memory backup scripts and see which one the crontab uses. I'm concerned this is a parallel system and there's duplicate logic",
+      "timestamp": "2025-09-11T18:11:48.783Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets scan this codebase for similar memory backup scripts and see which one the crontab uses. i'm co",
+      "extraction_order": 6835
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets scan this codebase for similar memory backup scripts and see which one the crontab uses. I'm concerned this is a parallel system and there's duplicate logic</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T18:11:48.995Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets scan this codebase for similar memory backup scripts and see which one",
+      "extraction_order": 6836
+    },
+    {
+      "content": "whats the difference between primary and secondary?",
+      "timestamp": "2025-09-11T18:16:41.196Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "whats the difference between primary and secondary?",
+      "extraction_order": 6837
+    },
+    {
+      "content": "<user-prompt-submit-hook>whats the difference between primary and secondary?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T18:16:41.254Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>whats the difference between primary and secondary?</user-prompt-submit-hoo",
+      "extraction_order": 6838
+    },
+    {
+      "content": "i think we should just have one script?",
+      "timestamp": "2025-09-11T18:22:16.227Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i think we should just have one script?",
+      "extraction_order": 6839
+    },
+    {
+      "content": "<user-prompt-submit-hook>i think we should just have one script?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T18:22:16.288Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i think we should just have one script?</user-prompt-submit-hook>",
+      "extraction_order": 6840
+    },
+    {
+      "content": "Execute the task: lets do it and then test it\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-11T18:25:46.898Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: lets do it and then test it\n\nfollow the complete /execute workflow:\n\n1. **phase 1",
+      "extraction_order": 6841
+    },
+    {
+      "content": "why do we need to backup so many memories? didnt we jsut do a bulk backup? double check if they are duplicates",
+      "timestamp": "2025-09-11T18:35:42.268Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why do we need to backup so many memories? didnt we jsut do a bulk backup? double check if they are",
+      "extraction_order": 6842
+    },
+    {
+      "content": "<user-prompt-submit-hook>why do we need to backup so many memories? didnt we jsut do a bulk backup? double check if they are duplicates</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T18:35:42.330Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why do we need to backup so many memories? didnt we jsut do a bulk backup?",
+      "extraction_order": 6843
+    },
+    {
+      "content": "what are these relationship entities for?",
+      "timestamp": "2025-09-11T18:45:49.054Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what are these relationship entities for?",
+      "extraction_order": 6844
+    },
+    {
+      "content": "<user-prompt-submit-hook>what are these relationship entities for?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T18:45:49.192Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what are these relationship entities for?</user-prompt-submit-hook>",
+      "extraction_order": 6845
+    },
+    {
+      "content": "why do we have relationships? when did we add them?",
+      "timestamp": "2025-09-11T23:01:06.899Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why do we have relationships? when did we add them?",
+      "extraction_order": 6846
+    },
+    {
+      "content": "<user-prompt-submit-hook>why do we have relationships? when did we add them?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-11T23:01:06.965Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why do we have relationships? when did we add them?</user-prompt-submit-hoo",
+      "extraction_order": 6847
+    },
+    {
+      "content": "cancel the CI run taking too long for tests and then /debugp for why takes so long",
+      "timestamp": "2025-09-11T23:04:07.157Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "cancel the ci run taking too long for tests and then /debugp for why takes so long",
+      "extraction_order": 6848
+    },
+    {
+      "content": "You are specialized in PR issue resolution with focus on code fixes. Current context:\n\n**PR #1599 STATUS:**\n- 4 failing CI checks: auto-resolve-conflicts, test (all-tests), test (commands), test (import-validation-delta)\n- 1 Copilot review comment about extracting magic number 2700 to configuration variable\n\n**PRIORITY TASKS:**\n1. FIRST: Execute `/fixpr` command to resolve merge conflicts and CI failures\n2. Address the Copilot comment: Extract `max_monitor_time=2700` to configuration section at top of run_tests.sh\n3. Ensure PR is mergeable after fixes\n4. Follow File Justification Protocol for all changes\n\n**FILE TO MODIFY:** \n- `run_tests.sh` - Add MONITOR_TIMEOUT_SECONDS=2700 to config section and reference it in memory_monitor function\n\n**SUCCESS CRITERIA:**\n- CI tests pass or are mergeable\n- Magic number extracted to configuration variable \n- File changes follow justification protocol\n\nExecute these fixes systematically and provide evidence of actual code changes made.",
+      "timestamp": "2025-09-11T23:26:29.809Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you are specialized in pr issue resolution with focus on code fixes. current context:\n\n**pr #1599 st",
+      "extraction_order": 6849
+    },
+    {
+      "content": "git pull origin main and thten lets investigate why it takes so long to run tests",
+      "timestamp": "2025-09-12T00:52:10.564Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main and thten lets investigate why it takes so long to run tests",
+      "extraction_order": 6850
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main and thten lets investigate why it takes so long to run tests</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T00:52:10.625Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main and thten lets investigate why it takes so long to run",
+      "extraction_order": 6851
+    },
+    {
+      "content": "ok push to pr and make sure everythign has a timeot",
+      "timestamp": "2025-09-12T01:05:06.013Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok push to pr and make sure everythign has a timeot",
+      "extraction_order": 6852
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok push to pr and make sure everythign has a timeot</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T01:05:06.260Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok push to pr and make sure everythign has a timeot</user-prompt-submit-hoo",
+      "extraction_order": 6853
+    },
+    {
+      "content": "lets make these timeouts 15 min 1. \u2705 GitHub Actions Job Level: 60 minutes (prevents workflow hangs)\n  2. \u2705 GitHub Actions Step Level: 45 minutes (prevents test step hangs)",
+      "timestamp": "2025-09-12T01:07:34.832Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets make these timeouts 15 min 1. \u2705 github actions job level: 60 minutes (prevents workflow hangs)",
+      "extraction_order": 6854
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets make these timeouts 15 min 1. \u2705 GitHub Actions Job Level: 60 minutes (prevents workflow hangs)\n  2. \u2705 GitHub Actions Step Level: 45 minutes (prevents test step hangs)</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T01:07:35.041Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets make these timeouts 15 min 1. \u2705 github actions job level: 60 minutes (",
+      "extraction_order": 6855
+    },
+    {
+      "content": "scripts/memory_sync/unified_memory_backup.py do we have test coverage for this new file? Maybe rather than\n   delete tests we merge them into test_unified_memory_backup.py \n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500",
+      "timestamp": "2025-09-12T01:11:42.561Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "scripts/memory_sync/unified_memory_backup.py do we have test coverage for this new file? maybe rathe",
+      "extraction_order": 6856
+    },
+    {
+      "content": "<user-prompt-submit-hook>scripts/memory_sync/unified_memory_backup.py do we have test coverage for this new file? Maybe rather than\n   delete tests we merge them into test_unified_memory_backup.py \n\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T01:11:42.688Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>scripts/memory_sync/unified_memory_backup.py do we have test coverage for t",
+      "extraction_order": 6857
+    },
+    {
+      "content": "Execute the task: fix the otehr two tests\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-12T01:16:39.865Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix the otehr two tests\n\nfollow the complete /execute workflow:\n\n1. **phase 1 - pl",
+      "extraction_order": 6858
+    },
+    {
+      "content": "Execute the task: fix the tests Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n94\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1599\nFix CI test hangs: Add 45-minute memory monitor timeout #6569\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 11 minutes ago in 10m 50s\nSearch logs\n2s\n3s\n0s\n5s\n33s\n10m 3s\n        setup_file_logging()\n      ResourceWarning: Enable tracemalloc to get the object allocation traceback\n      E2025-09-12 01:21:03,807 - root - INFO - File logging configured: /tmp/worldarchitect.ai/flask-server.log\n      /home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/main.py:200: ResourceWarning: unclosed file <_io.TextIOWrapper name='/tmp/worldarchitect.ai/flask-server.log' mode='a' encoding='UTF-8'>\n        setup_file_logging()\n      ResourceWarning: Enable tracemalloc to get the object allocation traceback\n  \u2713 test_squash_merge_detection.py (0s)\n  \u2713 test_state_update_integration.py (0s)\n  \u2713 test_state_updates_json_parsing.py (1s)\n  \u2713 test_structured_fields_storage.py (0s)\n  \u2713 test_structured_fields_utils.py (0s)\n  \u2713 test_structured_generation.py (0s)\n  \u2713 test_structured_response_extraction.py (0s)\n  \u2713 test_subprocess_security.py (0s)\n  \u2713 test_syntax.py (0s)\n  \u2713 test_syntax_comprehensive.py (3s)\n  \u2713 test_think_block_protocol.py (2s)\n  \u2713 test_time_consolidation.py (0s)\n  \u2713 test_time_pressure.py (0s)\n  \u2713 test_token_utils.py (1s)\n  \u2713 test_type_safety_foundation.py (0s)\n  \u2713 test_unknown_entity_filtering.py (0s)\n  \u2713 test_unknown_entity_fix_summary.py (0s)\n  \u2713 test_user_scenario_fix_validation.py (0s)\n  \u2713 test_v1_vs_v2_campaign_comparison.py (0s)\n  \u2713 test_v2_dashboard_authenticated_user.py (0s)\n  \u2713 test_v2_frontend_red_green.py (0s)\n  \u2713 test_v2_frontend_verification.py (1s)\n  \u2713 test_validation_comparison.py (0s)\n  \u2713 test_world_loader.py (1s)\n  \u2713 test_world_loader_e2e.py (0s)\n  \u2717 test_world_logic.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/mvp_site/tests/test_world_logic.py\", line 86, in <module>\n          from mvp_site.debug_hybrid_system import convert_json_escape_sequences\n      ModuleNotFoundError: No module named 'mvp_site'\n  \u2713 test_campaign_wizard_reset_reproduction.py (0s)\n  \u2717 test_a2a_integration.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_a2a_integration.py\", line 15, in <module>\n          from a2a.client.client import A2AClient\n      ModuleNotFoundError: No module named 'a2a'\n  \u2717 test_a2a_system.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_a2a_system.py\", line 13, in <module>\n          from .a2a_agent_wrapper import create_a2a_wrapper\n      ImportError: attempted relative import with no known parent package\n  \u2717 test_agent_worker.py (300s)\n    Error details:\n  \u2717 test_cleanup_completed_agents.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/tests/test_cleanup_completed_agents.py\", line 16, in <module>\n          from orchestration.cleanup_completed_agents import (\n      ModuleNotFoundError: No module named 'orchestration'\n  \u2717 test_collision_bug_fix.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_collision_bug_fix.py\", line 13, in <module>\n          from .task_dispatcher import TaskDispatcher\n      ImportError: attempted relative import with no known parent package\n  \u2717 test_simple_task.py (0s)\n    Error details:\n      \ud83d\udcc1 File-based MessageBroker initialized (Redis functionality removed)\n      === Simple Task Flow Test ===\n      \n      1. Sending task to test-worker-1...\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_simple_task.py\", line 74, in <module>\n          success = test_simple_flow()\n                    ^^^^^^^^^^^^^^^^^^\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_simple_task.py\", line 36, in test_simple_flow\n          broker.redis_client.lpush(\"queue:test-worker-1\", json.dumps(task_dict))\n  \u2717 test_unified_naming.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/test_unified_naming.py\", line 14, in <module>\n          from .orchestrate_unified import UnifiedOrchestration\n      ImportError: attempted relative import with no known parent package\n  \u2713 test_agent_monitor_restart.py (0s)\n  \u2717 test_cleanup_completed_agents.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/orchestration/tests/test_cleanup_completed_agents.py\", line 16, in <module>\n          from orchestration.cleanup_completed_agents import (\n      ModuleNotFoundError: No module named 'orchestration'\n  \u2713 test_security_validation.py (0s)\n  \u2713 test_task_dispatcher_fix.py (0s)\n  \u2717 test_crdt_integration.py (0s)\n    Error details:\n      Traceback (most recent call last):\n        File \"/home/runner/work/worldarchitect.ai/worldarchitect.ai/scripts/tests/test_crdt_integration.py\", line 15, in <module>\n          from memory_backup_crdt import MemoryBackupCRDT, crdt_merge\n      ModuleNotFoundError: No module named 'memory_backup_crdt'\n  \u2713 test_memory_mcp.py (0s)\n  \u2717 test_unified_memory_backup.py (0s)\n    Error details:\n0s\n0s\n0s\n1s\n0s\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-12T01:42:08.984Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix the tests skip to content\nnavigation menu\njleechanorg\nworldarchitect.ai\n\ntype",
+      "extraction_order": 6859
+    },
+    {
+      "content": "did you merge with main?",
+      "timestamp": "2025-09-12T02:08:11.894Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did you merge with main?",
+      "extraction_order": 6860
+    },
+    {
+      "content": "<user-prompt-submit-hook>did you merge with main?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T02:08:11.954Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did you merge with main?</user-prompt-submit-hook>",
+      "extraction_order": 6861
+    },
+    {
+      "content": "resolve merge conflicts in run-tests.sh and push to pr",
+      "timestamp": "2025-09-12T02:09:14.995Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resolve merge conflicts in run-tests.sh and push to pr",
+      "extraction_order": 6862
+    },
+    {
+      "content": "<user-prompt-submit-hook>resolve merge conflicts in run-tests.sh and push to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T02:09:15.055Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>resolve merge conflicts in run-tests.sh and push to pr</user-prompt-submit-",
+      "extraction_order": 6863
+    },
+    {
+      "content": "update pr desc, whats the goal of this pr",
+      "timestamp": "2025-09-12T02:12:40.541Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "update pr desc, whats the goal of this pr",
+      "extraction_order": 6864
+    },
+    {
+      "content": "<user-prompt-submit-hook>update pr desc, whats the goal of this pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T02:12:40.631Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>update pr desc, whats the goal of this pr</user-prompt-submit-hook>",
+      "extraction_order": 6865
+    },
+    {
+      "content": "read ~/.token it should work then continue",
+      "timestamp": "2025-09-12T02:13:40.322Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "read ~/.token it should work then continue",
+      "extraction_order": 6866
+    },
+    {
+      "content": "<user-prompt-submit-hook>read ~/.token it should work then continue</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T02:13:40.387Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>read ~/.token it should work then continue</user-prompt-submit-hook>",
+      "extraction_order": 6867
+    },
+    {
+      "content": "Execute the task: fix these Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n93\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1599\nFix CI test hangs: Add 45-minute memory monitor timeout #6572\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (import-validation-delta)\nfailed 16 minutes ago in 56s\nSearch logs\n1s\n4s\n0s\n7s\n33s\n6s\n\n  orchestration/test_a2a_integration.py:16\n    IMP001: Import statement inside try/except block\n\n  orchestration/test_a2a_integration.py:17\n    IMP001: Import statement inside try/except block\n\n  orchestration/test_a2a_integration.py:18\n    IMP001: Import statement inside try/except block\n\n  scripts/tests/test_crdt_integration.py:19\n    IMP001: Import statement inside try/except block\n\n  scripts/tests/test_crdt_integration.py:19\n    IMP002: Import statement not at top of file (inline import)\n\n  scripts/tests/test_unified_memory_backup.py:23\n    IMP002: Import statement not at top of file (inline import)\n\n  scripts/tests/test_unified_memory_backup.py:390\n    IMP001: Import statement inside try/except block\n\n  scripts/tests/test_unified_memory_backup.py:390\n    IMP002: Import statement not at top of file (inline import)\n\nImport Validation Rules:\n  IMP001: No try/except around imports\n  IMP002: No inline imports (imports must be at top)\n  SYN001: Syntax error\n  ERR001: Validation error\nError: Process completed with exit code 1.\n0s\n0s\n0s\n0s\n0s\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-12T02:15:37.176Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix these skip to content\nnavigation menu\njleechanorg\nworldarchitect.ai\n\ntype / to",
+      "extraction_order": 6868
+    },
+    {
+      "content": "Execute the task: fix the serious sisues\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-12T02:23:51.465Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix the serious sisues\n\nfollow the complete /execute workflow:\n\n1. **phase 1 - pla",
+      "extraction_order": 6869
+    },
+    {
+      "content": "did we fail the commentreply?",
+      "timestamp": "2025-09-12T02:46:01.894Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we fail the commentreply?",
+      "extraction_order": 6870
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we fail the commentreply?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T02:46:01.967Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we fail the commentreply?</user-prompt-submit-hook>",
+      "extraction_order": 6871
+    },
+    {
+      "content": "i dont see your comment response",
+      "timestamp": "2025-09-12T03:18:15.792Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i dont see your comment response",
+      "extraction_order": 6872
+    },
+    {
+      "content": "<user-prompt-submit-hook>i dont see your comment response</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:18:15.853Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i dont see your comment response</user-prompt-submit-hook>",
+      "extraction_order": 6873
+    },
+    {
+      "content": "where is the crontab pointing for memory backup?",
+      "timestamp": "2025-09-12T03:25:32.085Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "where is the crontab pointing for memory backup?",
+      "extraction_order": 6874
+    },
+    {
+      "content": "<user-prompt-submit-hook>where is the crontab pointing for memory backup?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:25:32.145Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>where is the crontab pointing for memory backup?</user-prompt-submit-hook>",
+      "extraction_order": 6875
+    },
+    {
+      "content": "Bug: Import Timing Breaks Mocking and CI\nThe imports for world_logic, debug_hybrid_system, and prompt_utils now occur before the test environment setup and critical mocking, like firebase_admin. This defeats the mock's purpose of preventing google.auth conflicts and contradicts the explicit setup order. Additionally, changing these to unqualified imports may cause ImportError outside CI environments. is this real?",
+      "timestamp": "2025-09-12T03:26:25.460Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "bug: import timing breaks mocking and ci\nthe imports for world_logic, debug_hybrid_system, and promp",
+      "extraction_order": 6876
+    },
+    {
+      "content": "<user-prompt-submit-hook>Bug: Import Timing Breaks Mocking and CI\nThe imports for world_logic, debug_hybrid_system, and prompt_utils now occur before the test environment setup and critical mocking, like firebase_admin. This defeats the mock's purpose of preventing google.auth conflicts and contradicts the explicit setup order. Additionally, changing these to unqualified imports may cause ImportError outside CI environments. is this real?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:26:25.521Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>bug: import timing breaks mocking and ci\nthe imports for world_logic, debug",
+      "extraction_order": 6877
+    },
+    {
+      "content": "run the memory backup using crontab command",
+      "timestamp": "2025-09-12T03:27:55.392Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run the memory backup using crontab command",
+      "extraction_order": 6878
+    },
+    {
+      "content": "<user-prompt-submit-hook>run the memory backup using crontab command</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:27:55.506Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run the memory backup using crontab command</user-prompt-submit-hook>",
+      "extraction_order": 6879
+    },
+    {
+      "content": "run gh auth status it should be working",
+      "timestamp": "2025-09-12T03:31:33.483Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run gh auth status it should be working",
+      "extraction_order": 6880
+    },
+    {
+      "content": "<user-prompt-submit-hook>run gh auth status it should be working</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:31:33.547Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run gh auth status it should be working</user-prompt-submit-hook>",
+      "extraction_order": 6881
+    },
+    {
+      "content": "how many entries in this memory file?",
+      "timestamp": "2025-09-12T03:35:27.551Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how many entries in this memory file?",
+      "extraction_order": 6882
+    },
+    {
+      "content": "<user-prompt-submit-hook>how many entries in this memory file?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:35:27.615Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how many entries in this memory file?</user-prompt-submit-hook>",
+      "extraction_order": 6883
+    },
+    {
+      "content": "look at this, it should be 2MB. Something went wrong. https://github.com/jleechanorg/worldarchitect-memory-backups/blob/main/memory.json",
+      "timestamp": "2025-09-12T03:38:52.960Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at this, it should be 2mb. something went wrong. https://github.com/jleechanorg/worldarchitect-",
+      "extraction_order": 6884
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at this, it should be 2MB. Something went wrong. https://github.com/jleechanorg/worldarchitect-memory-backups/blob/main/memory.json</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:38:53.329Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at this, it should be 2mb. something went wrong. https://github.com/jl",
+      "extraction_order": 6885
+    },
+    {
+      "content": "you should be able to rad tthat repo using gh cli, get it working first",
+      "timestamp": "2025-09-12T03:39:20.680Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you should be able to rad tthat repo using gh cli, get it working first",
+      "extraction_order": 6886
+    },
+    {
+      "content": "<user-prompt-submit-hook>you should be able to rad tthat repo using gh cli, get it working first</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:39:20.747Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you should be able to rad tthat repo using gh cli, get it working first</us",
+      "extraction_order": 6887
+    },
+    {
+      "content": "did we go into the wrong branch? where should we push the fix?",
+      "timestamp": "2025-09-12T03:44:55.805Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we go into the wrong branch? where should we push the fix?",
+      "extraction_order": 6888
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we go into the wrong branch? where should we push the fix?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T03:44:55.868Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we go into the wrong branch? where should we push the fix?</user-prompt",
+      "extraction_order": 6889
+    },
+    {
+      "content": "are we still on the wrong branch? why are me on dev1757612264 locally",
+      "timestamp": "2025-09-12T04:01:27.571Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "are we still on the wrong branch? why are me on dev1757612264 locally",
+      "extraction_order": 6890
+    },
+    {
+      "content": "<user-prompt-submit-hook>are we still on the wrong branch? why are me on dev1757612264 locally</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T04:01:27.634Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>are we still on the wrong branch? why are me on dev1757612264 locally</user",
+      "extraction_order": 6891
+    },
+    {
+      "content": "ok make the pr",
+      "timestamp": "2025-09-12T04:13:44.786Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok make the pr",
+      "extraction_order": 6892
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok make the pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T04:13:44.846Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok make the pr</user-prompt-submit-hook>",
+      "extraction_order": 6893
+    },
+    {
+      "content": "git pull origin main and then make the pr",
+      "timestamp": "2025-09-12T04:13:54.560Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git pull origin main and then make the pr",
+      "extraction_order": 6894
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main and then make the pr</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T04:13:54.621Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main and then make the pr</user-prompt-submit-hook>",
+      "extraction_order": 6895
+    },
+    {
+      "content": "lets run the memory backup from the crontab entry. It should just append files right?",
+      "timestamp": "2025-09-12T04:26:03.785Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets run the memory backup from the crontab entry. it should just append files right?",
+      "extraction_order": 6896
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets run the memory backup from the crontab entry. It should just append files right?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T04:26:03.844Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets run the memory backup from the crontab entry. it should just append fi",
+      "extraction_order": 6897
+    },
+    {
+      "content": "should we just start a new PR? whats the goal of this pr anyway?",
+      "timestamp": "2025-09-12T04:28:11.347Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "should we just start a new pr? whats the goal of this pr anyway?",
+      "extraction_order": 6898
+    },
+    {
+      "content": "<user-prompt-submit-hook>should we just start a new PR? whats the goal of this pr anyway?</user-prompt-submit-hook>",
+      "timestamp": "2025-09-12T04:28:11.414Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>should we just start a new pr? whats the goal of this pr anyway?</user-prom",
+      "extraction_order": 6899
+    },
+    {
+      "content": "what about this pr? we originally were working on it https://github.com/jleechanorg/worldarchitect.ai/pull/1599",
+      "timestamp": "2025-09-12T04:28:51.034Z",
+      "project": "-Users-jleechan-projects-worktree-worker3",
+      "file": "9779eb0c-efc9-4120-a1ef-8a093be986eb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what about this pr? we originally were working on it https://github.com/jleechanorg/worldarchitect.a",
+      "extraction_order": 6900
+    }
+  ],
+  "stats": {
+    "total_files_processed": 3279,
+    "total_messages_processed": 570008,
+    "user_messages_found": 132096,
+    "filtered_out": 115601,
+    "duplicates_removed": 9595,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

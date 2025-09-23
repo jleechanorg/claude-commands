@@ -1,0 +1,63 @@
+{
+  "agent_id": "006",
+  "chunk_info": {
+    "chunk_number": 6,
+    "prompts_count": 994,
+    "start_index": 4970,
+    "end_index": 5963,
+    "target_authenticity": 0.87
+  },
+  "analysis_framework": {
+    "dimensions": {
+      "conversation_state": {
+        "previous_actions": [],
+        "current_branch": "unknown",
+        "session_duration": "0_minutes",
+        "recent_errors": [],
+        "work_focus": "unknown"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": [],
+        "command_history": [],
+        "complexity_indicators": [],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "unknown",
+        "communication_patterns": [],
+        "problem_solving_approach": "unknown",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "unknown",
+        "secondary_objectives": [],
+        "task_complexity": "low",
+        "domain_expertise": "unknown",
+        "success_criteria": []
+      },
+      "cognitive_state": {
+        "attention_level": "normal",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.0,
+        "context_coherence": 0.0,
+        "behavioral_consistency": 0.0,
+        "technical_accuracy": 0.0,
+        "human_like_variance": 0.0,
+        "overall_score": 0.0
+      }
+    }
+  },
+  "processing_metadata": {
+    "checkpoint_frequency": 20,
+    "save_location": "docs/genesis/processing/agent_006/",
+    "progress_tracking": true,
+    "parallel_processing": true
+  }
+}

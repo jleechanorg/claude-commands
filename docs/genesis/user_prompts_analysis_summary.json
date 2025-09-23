@@ -1,0 +1,23 @@
+{
+  "total_prompts_analyzed": 20,
+  "analysis_date": "2025-09-22T03:10:53.085983",
+  "intent_distribution": {
+    "general": 3,
+    "feature_request": 11,
+    "bug_fix": 1,
+    "analysis_request": 5
+  },
+  "communication_style_distribution": {
+    "declarative": 3,
+    "questioning": 17
+  },
+  "user_pattern_distribution": {
+    "explorer": 3,
+    "investigator": 17
+  },
+  "complexity_stats": {
+    "mean": 0.47000000000000003,
+    "max": 0.8,
+    "min": 0.0
+  }
+}

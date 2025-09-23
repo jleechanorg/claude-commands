@@ -1,0 +1,2809 @@
+{
+  "agent_id": "agent_003",
+  "total_prompts": 994,
+  "processed_files": 10,
+  "command_frequencies": {
+    "/arch": 12,
+    "/reviewdeep": 24,
+    "/fixpr": 35,
+    "/commentfetch": 9,
+    "/commentreply": 50,
+    "/pushl": 11,
+    "/guidelines": 13,
+    "/tmp": 34,
+    "/copilot": 42,
+    "/backend": 1,
+    "/testllm": 49,
+    "/localserver": 5,
+    "/deploy": 6,
+    "/dev": 170,
+    "/synthesis": 2,
+    "/TESTLLM": 1,
+    "/docs": 1,
+    "/redgreen": 21,
+    "/scripts": 1,
+    "/think": 7,
+    "/Users": 62,
+    "/tdd": 33,
+    "/cereb": 16,
+    "/execute": 38,
+    "/cerebras": 9,
+    "/consensus": 4,
+    "/fixprc": 7,
+    "/investigate": 1,
+    "/gst": 2,
+    "/cons": 3,
+    "/research": 33,
+    "/commentr": 1,
+    "/e": 8,
+    "/commentcheck": 10,
+    "/reviewe": 9,
+    "/checkpoint": 1,
+    "/bin": 4,
+    "/newb": 2,
+    "/mcp": 2,
+    "/agents": 1,
+    "/memory": 1,
+    "/repos": 2,
+    "/design": 13,
+    "/push": 7,
+    "/hour": 8,
+    "/principalengineer": 8,
+    "/requirements-start": 10,
+    "/thinku": 12,
+    "/issues": 1,
+    "/rg": 4,
+    "/perp": 15,
+    "/pr": 4,
+    "/main": 4,
+    "/newbranch": 2,
+    "/review": 2,
+    "/pr-": 2,
+    "/context": 2,
+    "/mcp-json": 3,
+    "/copilot-codex": 5,
+    "/plan": 11,
+    "/codex_tmp": 2,
+    "/replicate": 6,
+    "/learn": 6,
+    "/integrate": 2,
+    "/status": 6,
+    "/approvals": 7,
+    "/model": 10,
+    "/debugp": 8,
+    "/token": 2,
+    "/chat": 2,
+    "/embeddings": 1,
+    "/path": 2,
+    "/responses": 32,
+    "/gstatus": 2,
+    "/init": 3,
+    "/errors": 1,
+    "/conv": 1,
+    "/header": 6,
+    "/pull": 2,
+    "/repo": 2,
+    "/user": 2,
+    "/github": 1,
+    "/fake3": 2,
+    "/scratchpad_fake3_": 2,
+    "/tests": 4,
+    "/commands": 2,
+    "/failure": 4,
+    "/PR": 4,
+    "/pr-guidelines": 4,
+    "/test_file": 4,
+    "/to": 4,
+    "/why": 4,
+    "/paranoid": 2,
+    "/etc": 2,
+    "/command": 1,
+    "/requirements-status": 1
+  },
+  "command_examples": {
+    "/arch": [
+      {
+        "prompt_id": "chunk_003_prompt_009",
+        "raw_prompt": "Analyze the architectural approach of adding a grok-consultant agent alongside gemini-consultant and codex-consultant for /arch and /reviewdeep commands. Focus on: 1) Integration pattern consistency, ...",
+        "timestamp": "2025-09-20T22:18:24.483Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_011",
+        "raw_prompt": "You are testing Track B parallel execution alongside gemini-consultant. Provide Grok's unconventional take on adding yet another AI consultant to the review process. Focus on practical reality vs theo...",
+        "timestamp": "2025-09-20T22:21:00.476Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_266",
+        "raw_prompt": "Execute the complete /reviewdeep workflow with focus on correctness as specified in the command documentation. This is a comprehensive multi-perspective review that includes:  1. Execute /guidelines f...",
+        "timestamp": "2025-08-30T05:15:27.352Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_822",
+        "raw_prompt": "Execute comprehensive parallel multi-perspective review with focus on correctness:  **PRIORITY: CORRECTNESS FOCUS** - Logic accuracy and algorithmic correctness - Edge case handling and boundary condi...",
+        "timestamp": "2025-09-12T04:52:29.669Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_896",
+        "raw_prompt": "# /arch Command (Alias)  **Alias for**: `/archreview`  **Purpose**: MVP-focused architecture review for solo developers - prioritizes shipping speed over perfection.  ## Solo MVP Context  **Target**: ...",
+        "timestamp": "2025-09-08T06:28:50.984Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_896",
+        "raw_prompt": "# /arch Command (Alias)  **Alias for**: `/archreview`  **Purpose**: MVP-focused architecture review for solo developers - prioritizes shipping speed over perfection.  ## Solo MVP Context  **Target**: ...",
+        "timestamp": "2025-09-08T06:28:50.984Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_896",
+        "raw_prompt": "# /arch Command (Alias)  **Alias for**: `/archreview`  **Purpose**: MVP-focused architecture review for solo developers - prioritizes shipping speed over perfection.  ## Solo MVP Context  **Target**: ...",
+        "timestamp": "2025-09-08T06:28:50.984Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_896",
+        "raw_prompt": "# /arch Command (Alias)  **Alias for**: `/archreview`  **Purpose**: MVP-focused architecture review for solo developers - prioritizes shipping speed over perfection.  ## Solo MVP Context  **Target**: ...",
+        "timestamp": "2025-09-08T06:28:50.984Z"
+      }
+    ],
+    "/reviewdeep": [
+      {
+        "prompt_id": "chunk_003_prompt_009",
+        "raw_prompt": "Analyze the architectural approach of adding a grok-consultant agent alongside gemini-consultant and codex-consultant for /arch and /reviewdeep commands. Focus on: 1) Integration pattern consistency, ...",
+        "timestamp": "2025-09-20T22:18:24.483Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_010",
+        "raw_prompt": "You are testing Track B parallel execution from /reviewdeep. Provide brief analysis of the grok-consultant integration architecture focusing on code quality and maintainability. This should run alongs...",
+        "timestamp": "2025-09-20T22:19:50.077Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_011",
+        "raw_prompt": "You are testing Track B parallel execution alongside gemini-consultant. Provide Grok's unconventional take on adding yet another AI consultant to the review process. Focus on practical reality vs theo...",
+        "timestamp": "2025-09-20T22:21:00.476Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_058",
+        "raw_prompt": "Execute comprehensive /reviewdeep analysis of the multi-model opinion synthesis implementation.  **CRITICAL CONTEXT FROM TESTING:** Our comprehensive /testllm execution revealed a critical gap: The mu...",
+        "timestamp": "2025-09-21T03:17:41.710Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_059",
+        "raw_prompt": "Apply /copilot approach to immediately fix the MCP registration gap and validate the multi-model opinion synthesis functionality.  **CRITICAL FINDING FROM /reviewdeep:** 🔴 **Root Cause Identified**: T...",
+        "timestamp": "2025-09-21T03:20:13.851Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_172",
+        "raw_prompt": "Execute the task: do recommendations then run tests locally then push to pr then /consensus then /reviewdeep focus correctness and hten /copilot  Follow the complete /execute workflow:  1. **Phase 1 -...",
+        "timestamp": "2025-09-21T21:00:12.363Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_185",
+        "raw_prompt": "git pull origin main, resolve conflicts, then run /cons and push to pr and run /reviewdeep and /copilot",
+        "timestamp": "2025-09-22T00:58:23.980Z"
+      }
+    ],
+    "/fixpr": [
+      {
+        "prompt_id": "chunk_003_prompt_015",
+        "raw_prompt": "Execute `/fixpr` command first to resolve merge conflicts and CI failures for PR #1621. Then analyze PR comments and implement file fixes following CLAUDE.md File Justification Protocol.   PR Details:...",
+        "timestamp": "2025-09-20T06:50:00.359Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_016",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then implement file fixes following File Justification Protocol.  CRITICAL REQUIREMENTS: 1. FIRST PRIORITY: Execute ...",
+        "timestamp": "2025-09-20T10:34:53.351Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_016",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then implement file fixes following File Justification Protocol.  CRITICAL REQUIREMENTS: 1. FIRST PRIORITY: Execute ...",
+        "timestamp": "2025-09-20T10:34:53.351Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_016",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then implement file fixes following File Justification Protocol.  CRITICAL REQUIREMENTS: 1. FIRST PRIORITY: Execute ...",
+        "timestamp": "2025-09-20T10:34:53.351Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_021",
+        "raw_prompt": "Execute /fixpr command first to resolve merge conflicts and CI failures for PR #1621. Then analyze the PR for security vulnerabilities, runtime errors, test failures, and code quality issues. Implemen...",
+        "timestamp": "2025-09-20T07:50:17.947Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_021",
+        "raw_prompt": "Execute /fixpr command first to resolve merge conflicts and CI failures for PR #1621. Then analyze the PR for security vulnerabilities, runtime errors, test failures, and code quality issues. Implemen...",
+        "timestamp": "2025-09-20T07:50:17.947Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_024",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then analyze and implement code fixes following File Justification Protocol.  FIRST PRIORITY: Execute /fixpr command...",
+        "timestamp": "2025-09-20T08:36:03.469Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_024",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then analyze and implement code fixes following File Justification Protocol.  FIRST PRIORITY: Execute /fixpr command...",
+        "timestamp": "2025-09-20T08:36:03.469Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_024",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then analyze and implement code fixes following File Justification Protocol.  FIRST PRIORITY: Execute /fixpr command...",
+        "timestamp": "2025-09-20T08:36:03.469Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_024",
+        "raw_prompt": "Execute the /fixpr command to resolve merge conflicts and CI failures for PR #1621, then analyze and implement code fixes following File Justification Protocol.  FIRST PRIORITY: Execute /fixpr command...",
+        "timestamp": "2025-09-20T08:36:03.469Z"
+      }
+    ],
+    "/commentfetch": [
+      {
+        "prompt_id": "chunk_003_prompt_017",
+        "raw_prompt": "Execute the /commentfetch command workflow for PR #1621. This involves:  1. Gather all PR comments and issues from GitHub 2. Analyze actionable issues and categorize by type (security, runtime, tests,...",
+        "timestamp": "2025-09-20T10:34:53.337Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_026",
+        "raw_prompt": "🚨 COPILOT-FIXPR AGENT MISSION: Comprehensive PR Mergeability and Code Quality Resolution  ## 🎯 PRIORITY 1: EXECUTE /fixpr COMMAND FIRST **MANDATORY FIRST ACTION**: Execute the `/fixpr` command to reso...",
+        "timestamp": "2025-09-20T10:03:00.342Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_306",
+        "raw_prompt": "Create a brief technical specification for the modernized /commentreply workflow that has been implemented. Focus on:  1. **Modern 3-Step Workflow**:    - Step 1: /commentfetch loads JSON    - Step 2:...",
+        "timestamp": "2025-08-29T18:25:03.990Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_862",
+        "raw_prompt": "Execute /commentfetch to gather all PR comments and issues for PR #3 on the hooks-restore branch. Focus on the most recent 30 comments and categorize them by actionable issues (security, runtime, test...",
+        "timestamp": "2025-09-18T07:21:36.807Z"
+      }
+    ],
+    "/commentreply": [
+      {
+        "prompt_id": "chunk_003_prompt_018",
+        "raw_prompt": "Execute the /commentreply command workflow to respond to all unresponded comments in PR #1621.  Based on the comment analysis that found: - Total comments: 65 - Actionable issues: 42 unresponded comme...",
+        "timestamp": "2025-09-20T10:40:26.261Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_120",
+        "raw_prompt": "see if anyh serious issues Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings  Open Implement multi-...",
+        "timestamp": "2025-09-21T09:56:12.267Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_120",
+        "raw_prompt": "see if anyh serious issues Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings  Open Implement multi-...",
+        "timestamp": "2025-09-21T09:56:12.267Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_288",
+        "raw_prompt": "fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session Progress: Copilot executi...",
+        "timestamp": "2025-08-29T17:43:15.073Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_288",
+        "raw_prompt": "fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session Progress: Copilot executi...",
+        "timestamp": "2025-08-29T17:43:15.073Z"
+      }
+    ],
+    "/pushl": [
+      {
+        "prompt_id": "chunk_003_prompt_019",
+        "raw_prompt": "Execute the /pushl command to push changes to the PR branch.  Changes to push include: - Import fixes in .claude/commands/_copilot_modules/commentfetch.py - Updated .pr-metadata.json - Security fixes ...",
+        "timestamp": "2025-09-20T10:47:20.540Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_585",
+        "raw_prompt": "look at all the gh comments and see if any serious ones not resolved Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 1 Actions Projects Security Ins...",
+        "timestamp": "2025-09-20T23:53:35.452Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      }
+    ],
+    "/guidelines": [
+      {
+        "prompt_id": "chunk_003_prompt_020",
+        "raw_prompt": "Execute the /guidelines command to complete the copilot workflow and provide final summary.",
+        "timestamp": "2025-09-20T10:48:30.254Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_266",
+        "raw_prompt": "Execute the complete /reviewdeep workflow with focus on correctness as specified in the command documentation. This is a comprehensive multi-perspective review that includes:  1. Execute /guidelines f...",
+        "timestamp": "2025-08-30T05:15:27.352Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/tmp": [
+      {
+        "prompt_id": "chunk_003_prompt_022",
+        "raw_prompt": "**TASK**: Fix all actionable issues in PR 1621 based on the comprehensive comment analysis  **PR CONTEXT**:  - PR 1621: \"feat: File Placement Enforcement System - Dual-Layer Hook Implementation\" - URL...",
+        "timestamp": "2025-09-20T05:19:14.885Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      }
+    ],
+    "/copilot": [
+      {
+        "prompt_id": "chunk_003_prompt_030",
+        "raw_prompt": "Execute comprehensive PR #1621 issue resolution using copilot-fixpr specialized protocol:  **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures, making PR mergeable ...",
+        "timestamp": "2025-09-20T09:24:03.020Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_051",
+        "raw_prompt": "checkout this branch locally codex/implement-multi-model-opinion-synthesis then /copilot",
+        "timestamp": "2025-09-21T02:48:07.799Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_059",
+        "raw_prompt": "Apply /copilot approach to immediately fix the MCP registration gap and validate the multi-model opinion synthesis functionality.  **CRITICAL FINDING FROM /reviewdeep:** 🔴 **Root Cause Identified**: T...",
+        "timestamp": "2025-09-21T03:20:13.851Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_067",
+        "raw_prompt": "Execute comprehensive /copilot analysis of the current pull request for multi-model opinion synthesis implementation. You need to:  1. **Analyze the current PR state** in the `codex/implement-multi-mo...",
+        "timestamp": "2025-09-21T03:58:07.640Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_172",
+        "raw_prompt": "Execute the task: do recommendations then run tests locally then push to pr then /consensus then /reviewdeep focus correctness and hten /copilot  Follow the complete /execute workflow:  1. **Phase 1 -...",
+        "timestamp": "2025-09-21T21:00:12.363Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      }
+    ],
+    "/backend": [
+      {
+        "prompt_id": "chunk_003_prompt_053",
+        "raw_prompt": "I'm on the branch 'codex/implement-multi-model-opinion-synthesis' and need to understand what needs to be implemented for multi-model opinion synthesis in this AI Universe codebase.  Please analyze th...",
+        "timestamp": "2025-09-21T02:48:20.896Z"
+      }
+    ],
+    "/testllm": [
+      {
+        "prompt_id": "chunk_003_prompt_054",
+        "raw_prompt": "push to pr /testllm",
+        "timestamp": "2025-09-21T03:03:56.586Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_056",
+        "raw_prompt": "resolve merge conflicts then /testllm",
+        "timestamp": "2025-09-21T03:11:15.286Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_057",
+        "raw_prompt": "You are the TestExecutor agent tasked with executing comprehensive LLM testing for the AI Universe multi-model opinion synthesis system.  **CRITICAL MISSION:** Execute comprehensive /testllm protocol ...",
+        "timestamp": "2025-09-21T03:14:49.331Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_057",
+        "raw_prompt": "You are the TestExecutor agent tasked with executing comprehensive LLM testing for the AI Universe multi-model opinion synthesis system.  **CRITICAL MISSION:** Execute comprehensive /testllm protocol ...",
+        "timestamp": "2025-09-21T03:14:49.331Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_058",
+        "raw_prompt": "Execute comprehensive /reviewdeep analysis of the multi-model opinion synthesis implementation.  **CRITICAL CONTEXT FROM TESTING:** Our comprehensive /testllm execution revealed a critical gap: The mu...",
+        "timestamp": "2025-09-21T03:17:41.710Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_060",
+        "raw_prompt": "push to pr then /testllm. Also we should have all the API keys so every model should be working",
+        "timestamp": "2025-09-21T03:30:48.372Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_061",
+        "raw_prompt": "Execute comprehensive /testllm protocol with ALL API keys available for complete multi-model opinion synthesis validation.  **CRITICAL CONTEXT UPDATE:** ✅ **Tool Name Correction Applied**: Using `\"age...",
+        "timestamp": "2025-09-21T03:31:29.217Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      }
+    ],
+    "/localserver": [
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      }
+    ],
+    "/deploy": [
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_075",
+        "raw_prompt": "do we need to /deploy dev again or no code changes?",
+        "timestamp": "2025-09-21T05:08:08.273Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_082",
+        "raw_prompt": "# /deploy  Automates project deployments using the standard `deploy.sh` workflow with safety checks.  ## Usage ``` /deploy [target] ```  Examples: - `/deploy` – run default deployment - `/deploy stagi...",
+        "timestamp": "2025-09-21T05:41:55.407Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_082",
+        "raw_prompt": "# /deploy  Automates project deployments using the standard `deploy.sh` workflow with safety checks.  ## Usage ``` /deploy [target] ```  Examples: - `/deploy` – run default deployment - `/deploy stagi...",
+        "timestamp": "2025-09-21T05:41:55.407Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_082",
+        "raw_prompt": "# /deploy  Automates project deployments using the standard `deploy.sh` workflow with safety checks.  ## Usage ``` /deploy [target] ```  Examples: - `/deploy` – run default deployment - `/deploy stagi...",
+        "timestamp": "2025-09-21T05:41:55.407Z"
+      }
+    ],
+    "/dev": [
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      }
+    ],
+    "/synthesis": [
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      }
+    ],
+    "/TESTLLM": [
+      {
+        "prompt_id": "chunk_003_prompt_064",
+        "raw_prompt": "fix tests Skip to content Navigation Menu jleechanorg ai_universe  Type / to search Code Issues Pull requests 3 Actions Projects Wiki Security Insights Settings Back to pull request #9 Implement multi...",
+        "timestamp": "2025-09-21T03:48:43.473Z"
+      }
+    ],
+    "/docs": [
+      {
+        "prompt_id": "chunk_003_prompt_073",
+        "raw_prompt": "Execute comprehensive /testllm validation on the deployed AI Universe backend service. You need to:  1. **Target the deployed backend service**: https://ai-universe-backend-dev-114133832173.us-central...",
+        "timestamp": "2025-09-21T04:42:16.166Z"
+      }
+    ],
+    "/redgreen": [
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_081",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /redgreen /localserver   Use these approaches in combination:/debugp /redgreen /localserver . Apply this to: all the models need to be used. ...",
+        "timestamp": "2025-09-21T05:26:44.001Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_165",
+        "raw_prompt": "Do we have some script like run_tests.sh that runs the CI locally? I want the Ci workflow to just call this script to centralize the logic. Then I wanna repro the actual test failure locally first bef...",
+        "timestamp": "2025-09-21T19:56:15.581Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_177",
+        "raw_prompt": "use /redgreen to repro failure locally and fix for the CI tests and then /fixprc",
+        "timestamp": "2025-09-21T21:50:22.508Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_288",
+        "raw_prompt": "fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session Progress: Copilot executi...",
+        "timestamp": "2025-08-29T17:43:15.073Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_289",
+        "raw_prompt": "<user-prompt-submit-hook>fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session ...",
+        "timestamp": "2025-08-29T17:43:15.628Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_316",
+        "raw_prompt": "find me this PR  Update /fixpr command documentation Sep 20 · jleechanorg/worldarchitect.ai · main  Archive  Share  3 I saw the /fixpr slash command just randomly stop. I think we should keep to more ...",
+        "timestamp": "2025-09-20T21:55:33.506Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_316",
+        "raw_prompt": "find me this PR  Update /fixpr command documentation Sep 20 · jleechanorg/worldarchitect.ai · main  Archive  Share  3 I saw the /fixpr slash command just randomly stop. I think we should keep to more ...",
+        "timestamp": "2025-09-20T21:55:33.506Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_316",
+        "raw_prompt": "find me this PR  Update /fixpr command documentation Sep 20 · jleechanorg/worldarchitect.ai · main  Archive  Share  3 I saw the /fixpr slash command just randomly stop. I think we should keep to more ...",
+        "timestamp": "2025-09-20T21:55:33.506Z"
+      }
+    ],
+    "/scripts": [
+      {
+        "prompt_id": "chunk_003_prompt_082",
+        "raw_prompt": "# /deploy  Automates project deployments using the standard `deploy.sh` workflow with safety checks.  ## Usage ``` /deploy [target] ```  Examples: - `/deploy` – run default deployment - `/deploy stagi...",
+        "timestamp": "2025-09-21T05:41:55.407Z"
+      }
+    ],
+    "/think": [
+      {
+        "prompt_id": "chunk_003_prompt_091",
+        "raw_prompt": "the pr already exists /think why are you getting this wrong?",
+        "timestamp": "2025-09-21T06:31:20.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_180",
+        "raw_prompt": "the tests are still failing in github. Why are you unbale to see it? /investigate and /think",
+        "timestamp": "2025-09-21T22:30:41.741Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_181",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/investigate /think   Use these approaches in combination:/investigate /think . Apply this to: the tests are still failing in github. Why are you unb...",
+        "timestamp": "2025-09-21T22:30:42.221Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_181",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/investigate /think   Use these approaches in combination:/investigate /think . Apply this to: the tests are still failing in github. Why are you unb...",
+        "timestamp": "2025-09-21T22:30:42.221Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_181",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/investigate /think   Use these approaches in combination:/investigate /think . Apply this to: the tests are still failing in github. Why are you unb...",
+        "timestamp": "2025-09-21T22:30:42.221Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/Users": [
+      {
+        "prompt_id": "chunk_003_prompt_098",
+        "raw_prompt": "Perform independent validation of the test execution results against the original test specification. You are receiving ONLY the evidence package and original requirements - you have no context about ...",
+        "timestamp": "2025-09-21T06:46:24.591Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_103",
+        "raw_prompt": "use python to edit files outside the repo if needed. Make the changes here and make a new PR /Users/jleechan/projects/worktree_hooks",
+        "timestamp": "2025-09-21T06:56:51.500Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_104",
+        "raw_prompt": "<user-prompt-submit-hook>use python to edit files outside the repo if needed. Make the changes here and make a new PR /Users/jleechan/projects/worktree_hooks</user-prompt-submit-hook>",
+        "timestamp": "2025-09-21T06:56:51.766Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_117",
+        "raw_prompt": "<local-command-stderr>Error: Bash command failed for pattern \"!`python3 .claude/commands/gstatus.py \"$ARGUMENTS\"`\": [stderr] /Users/jleechan/.pyenv/versions/3.11.10/bin/python3: can't open file '/User...",
+        "timestamp": "2025-09-21T07:47:00.974Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_184",
+        "raw_prompt": "this should be looking in ~/.claude/  > /gst and make sure   ⎿  Error: Bash command failed for pattern \"!`python3 .claude/commands/gstatus.py \"and make sure\"`\": [stderr]      /Users/jleechan/.pyenv/ve...",
+        "timestamp": "2025-09-22T00:37:56.083Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_192",
+        "raw_prompt": "when do do run_tests.sh can we clear the api keys or use some fresh bash context? We need to replicate the ci environment. Look at run_tests.sh here to see if theres any useful prior art ls run_tests....",
+        "timestamp": "2025-09-22T01:43:23.454Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_193",
+        "raw_prompt": "<user-prompt-submit-hook>when do do run_tests.sh can we clear the api keys or use some fresh bash context? We need to replicate the ci environment. Look at run_tests.sh here to see if theres any usefu...",
+        "timestamp": "2025-09-22T01:43:23.804Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_324",
+        "raw_prompt": "is this true?    File details:   - Path: /Users/jleechan/.claude/hooks/git-header.sh   - Permissions: -rwxr-xr-x (executable)   - Size: 13,902 bytes   - Last modified: Sep 20 14:33    This is the file...",
+        "timestamp": "2025-09-21T20:06:55.569Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_325",
+        "raw_prompt": "<user-prompt-submit-hook>is this true?    File details:   - Path: /Users/jleechan/.claude/hooks/git-header.sh   - Permissions: -rwxr-xr-x (executable)   - Size: 13,902 bytes   - Last modified: Sep 20 ...",
+        "timestamp": "2025-09-21T20:06:55.799Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_360",
+        "raw_prompt": "checkout this branch and remove anyone else using it /Users/jleechan/tmp/pr-automation-workspaces/ai_universe-pr-14",
+        "timestamp": "2025-09-21T02:12:43.866Z"
+      }
+    ],
+    "/tdd": [
+      {
+        "prompt_id": "chunk_003_prompt_128",
+        "raw_prompt": "Execute the task: push to pr and then use /tdd to add additional automated test coverage. Using the regular conventions for typescript or javascript lets make some end2end tests in a folder somewhere ...",
+        "timestamp": "2025-09-21T11:23:32.463Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_340",
+        "raw_prompt": "I always want it to say (synced) or (synced uncommitted) etc. I never want the () missing. Chaange this if needed and use /tdd to make some tests for statusline in an appropriate subdir (not project r...",
+        "timestamp": "2025-09-21T20:22:29.372Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_567",
+        "raw_prompt": "fix the bugs but run local automated tests after to make sure nothing broke. Use /tdd to add coverage if needed",
+        "timestamp": "2025-09-19T00:38:49.954Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_568",
+        "raw_prompt": "<user-prompt-submit-hook>fix the bugs but run local automated tests after to make sure nothing broke. Use /tdd to add coverage if needed  fix the bugs but run local automated tests after to make sure ...",
+        "timestamp": "2025-09-19T00:38:50.363Z"
+      }
+    ],
+    "/cereb": [
+      {
+        "prompt_id": "chunk_003_prompt_128",
+        "raw_prompt": "Execute the task: push to pr and then use /tdd to add additional automated test coverage. Using the regular conventions for typescript or javascript lets make some end2end tests in a folder somewhere ...",
+        "timestamp": "2025-09-21T11:23:32.463Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_304",
+        "raw_prompt": "git merge main then /cereb to run /design to make a brief spec for this. Then /e to actually follow and implement it, then /push",
+        "timestamp": "2025-08-29T18:24:30.183Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_845",
+        "raw_prompt": "Execute the task: use /cereb and do  /tdd to add tests for new logic and lets make sure that when codex cli uses statusline it still looks at the .claude/settings.json or ~/.claude/settings.json file....",
+        "timestamp": "2025-09-22T00:41:21.084Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_846",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/execute   Use these approaches in combination:/cereb /e /execute /tdd . Apply thi...",
+        "timestamp": "2025-09-22T00:41:21.657Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_846",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/execute   Use these approaches in combination:/cereb /e /execute /tdd . Apply thi...",
+        "timestamp": "2025-09-22T00:41:21.657Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_897",
+        "raw_prompt": "Lets use /cereb to update the design doc. Try to do it in one or two generations and /plan it. Give it as much contex as needed",
+        "timestamp": "2025-09-08T06:34:11.519Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_899",
+        "raw_prompt": "no i want you to use /cereb",
+        "timestamp": "2025-09-08T06:36:49.309Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_920",
+        "raw_prompt": "ok now lets /plan to build the hooks with /cereb. Lets do one generation for /tdd tests for hooks and then one geneation for all the hooks and then have main antrhopic model review it",
+        "timestamp": "2025-09-08T07:32:36.551Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_921",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/plan /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan /t...",
+        "timestamp": "2025-09-08T07:32:37.222Z"
+      }
+    ],
+    "/execute": [
+      {
+        "prompt_id": "chunk_003_prompt_128",
+        "raw_prompt": "Execute the task: push to pr and then use /tdd to add additional automated test coverage. Using the regular conventions for typescript or javascript lets make some end2end tests in a folder somewhere ...",
+        "timestamp": "2025-09-21T11:23:32.463Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_172",
+        "raw_prompt": "Execute the task: do recommendations then run tests locally then push to pr then /consensus then /reviewdeep focus correctness and hten /copilot  Follow the complete /execute workflow:  1. **Phase 1 -...",
+        "timestamp": "2025-09-21T21:00:12.363Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_212",
+        "raw_prompt": "Execute the task: fix all the test and consider skipping failing integration tests from ci  Follow the complete /execute workflow:  1. **Phase 1 - Planning**: Show execution plan with complexity asses...",
+        "timestamp": "2025-09-22T03:33:47.458Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_215",
+        "raw_prompt": "Execute the task: i want end2end tests to still use mocks by default. We should design some fakes that capture real responses and return that data. We should have a capture mode for the end2end tests ...",
+        "timestamp": "2025-09-22T03:35:31.994Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_354",
+        "raw_prompt": "Execute the task: fix the critical comments and then psuh to pr  Follow the complete /execute workflow:  1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method dec...",
+        "timestamp": "2025-09-21T20:57:46.433Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_355",
+        "raw_prompt": "Execute the task: fix the critical comments and then psuh to pr and also we need to make sure it wil lwork from ~/.claude/  Follow the complete /execute workflow:  1. **Phase 1 - Planning**: Show exec...",
+        "timestamp": "2025-09-21T20:58:02.110Z"
+      }
+    ],
+    "/cerebras": [
+      {
+        "prompt_id": "chunk_003_prompt_135",
+        "raw_prompt": "look for the /cerebras slash command",
+        "timestamp": "2025-09-21T11:26:55.008Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_266",
+        "raw_prompt": "Execute the complete /reviewdeep workflow with focus on correctness as specified in the command documentation. This is a comprehensive multi-perspective review that includes:  1. Execute /guidelines f...",
+        "timestamp": "2025-08-30T05:15:27.352Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_822",
+        "raw_prompt": "Execute comprehensive parallel multi-perspective review with focus on correctness:  **PRIORITY: CORRECTNESS FOCUS** - Logic accuracy and algorithmic correctness - Edge case handling and boundary condi...",
+        "timestamp": "2025-09-12T04:52:29.669Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_898",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /plan  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan . Apply...",
+        "timestamp": "2025-09-08T06:34:12.825Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_921",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/plan /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan /t...",
+        "timestamp": "2025-09-08T07:32:37.222Z"
+      }
+    ],
+    "/consensus": [
+      {
+        "prompt_id": "chunk_003_prompt_172",
+        "raw_prompt": "Execute the task: do recommendations then run tests locally then push to pr then /consensus then /reviewdeep focus correctness and hten /copilot  Follow the complete /execute workflow:  1. **Phase 1 -...",
+        "timestamp": "2025-09-21T21:00:12.363Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_173",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /consensus /reviewdeep /copilot   Use these approaches in combination:/e /consensus /reviewdeep /copilot . Apply this to: do recommendations then ...",
+        "timestamp": "2025-09-21T21:00:13.319Z"
+      }
+    ],
+    "/fixprc": [
+      {
+        "prompt_id": "chunk_003_prompt_177",
+        "raw_prompt": "use /redgreen to repro failure locally and fix for the CI tests and then /fixprc",
+        "timestamp": "2025-09-21T21:50:22.508Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_178",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /fixprc   Use these approaches in combination:/redgreen /fixprc . Apply this to: use to repro failure locally and fix for the CI tests and ...",
+        "timestamp": "2025-09-21T21:50:23.082Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_178",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /fixprc   Use these approaches in combination:/redgreen /fixprc . Apply this to: use to repro failure locally and fix for the CI tests and ...",
+        "timestamp": "2025-09-21T21:50:23.082Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_178",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /fixprc   Use these approaches in combination:/redgreen /fixprc . Apply this to: use to repro failure locally and fix for the CI tests and ...",
+        "timestamp": "2025-09-21T21:50:23.082Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_198",
+        "raw_prompt": "push to pr and then /fixprc",
+        "timestamp": "2025-09-22T02:11:43.594Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_884",
+        "raw_prompt": "Analyze current PR comment status and create comprehensive processing plan for /fixprc.  Execute PR-focused autonomous comment resolution:  1. **PR Comment Discovery & Analysis**    - Identify all PR ...",
+        "timestamp": "2025-09-18T19:05:43.182Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_885",
+        "raw_prompt": "Execute autonomous PR comment resolution using /fixprc approach.  Based on the analysis, implement comprehensive PR comment fixing:  ## AUTONOMOUS PR PROCESSING  1. **Immediate PR Context Discovery** ...",
+        "timestamp": "2025-09-18T19:06:58.066Z"
+      }
+    ],
+    "/investigate": [
+      {
+        "prompt_id": "chunk_003_prompt_180",
+        "raw_prompt": "the tests are still failing in github. Why are you unbale to see it? /investigate and /think",
+        "timestamp": "2025-09-21T22:30:41.741Z"
+      }
+    ],
+    "/gst": [
+      {
+        "prompt_id": "chunk_003_prompt_184",
+        "raw_prompt": "this should be looking in ~/.claude/  > /gst and make sure   ⎿  Error: Bash command failed for pattern \"!`python3 .claude/commands/gstatus.py \"and make sure\"`\": [stderr]      /Users/jleechan/.pyenv/ve...",
+        "timestamp": "2025-09-22T00:37:56.083Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_703",
+        "raw_prompt": "push to PR then /gst",
+        "timestamp": "2025-09-15T03:47:51.301Z"
+      }
+    ],
+    "/cons": [
+      {
+        "prompt_id": "chunk_003_prompt_185",
+        "raw_prompt": "git pull origin main, resolve conflicts, then run /cons and push to pr and run /reviewdeep and /copilot",
+        "timestamp": "2025-09-22T00:58:23.980Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_204",
+        "raw_prompt": "run local tests and run /cons then push to pr and /copilot",
+        "timestamp": "2025-09-22T02:38:08.436Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_218",
+        "raw_prompt": "run local tests to make sure they pass and simulate CI. then /cons and then psuh to pr",
+        "timestamp": "2025-09-22T03:52:08.594Z"
+      }
+    ],
+    "/research": [
+      {
+        "prompt_id": "chunk_003_prompt_251",
+        "raw_prompt": "still not working. /research the right api. it needs to look like my test3 comment https://github.com/jleechanorg/worldarchitect.ai/pull/1510#discussion_r2311453347",
+        "timestamp": "2025-08-29T22:23:54.588Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_258",
+        "raw_prompt": "threaded reply still not working /research the right API with GitHub cli and post one to prove to me you got it",
+        "timestamp": "2025-08-29T22:25:52.677Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_290",
+        "raw_prompt": "what do we actually need to fix? i want it to actually reply to gh comments /research the right api",
+        "timestamp": "2025-08-29T17:51:13.245Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_314",
+        "raw_prompt": "threaded comments not working properly so /research the api and /rg fix https://github.com/jleechanorg/worldarchitect.ai/pull/1510#issuecomment-3238309021",
+        "timestamp": "2025-08-29T21:41:42.592Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      }
+    ],
+    "/commentr": [
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      }
+    ],
+    "/e": [
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_304",
+        "raw_prompt": "git merge main then /cereb to run /design to make a brief spec for this. Then /e to actually follow and implement it, then /push",
+        "timestamp": "2025-08-29T18:24:30.183Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_846",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/execute   Use these approaches in combination:/cereb /e /execute /tdd . Apply thi...",
+        "timestamp": "2025-09-22T00:41:21.657Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_922",
+        "raw_prompt": "Execute the task: run the tests, make a statusline hook and test it manually, then push to pr. Then build slash commands the same way we build hooks using /tdd /cereb and /e  Follow the complete /exec...",
+        "timestamp": "2025-09-08T07:38:22.979Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_923",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /tdd /cereb  🎯 Multi-Player Intelligence: Found nested commands:/execute   Use these approaches in combination:/cereb /e /execute /tdd . Apply thi...",
+        "timestamp": "2025-09-08T07:38:23.643Z"
+      }
+    ],
+    "/commentcheck": [
+      {
+        "prompt_id": "chunk_003_prompt_265",
+        "raw_prompt": "# /commentreply Command  🔒 **Security**: Functions use explicit parameter passing to prevent variable scoping issues and safe jq --arg parameter passing to prevent command injection vulnerabilities.  ...",
+        "timestamp": "2025-08-30T02:04:09.943Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_288",
+        "raw_prompt": "fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session Progress: Copilot executi...",
+        "timestamp": "2025-08-29T17:43:15.073Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_289",
+        "raw_prompt": "<user-prompt-submit-hook>fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session ...",
+        "timestamp": "2025-08-29T17:43:15.628Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_865",
+        "raw_prompt": "Execute /commentcheck to verify 100% comment coverage and ensure all comments have been responded to. This is a mandatory gate before completion.",
+        "timestamp": "2025-09-18T07:30:01.639Z"
+      }
+    ],
+    "/reviewe": [
+      {
+        "prompt_id": "chunk_003_prompt_266",
+        "raw_prompt": "Execute the complete /reviewdeep workflow with focus on correctness as specified in the command documentation. This is a comprehensive multi-perspective review that includes:  1. Execute /guidelines f...",
+        "timestamp": "2025-08-30T05:15:27.352Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_379",
+        "raw_prompt": "find this PR  Set timeout to 10 minutes for LLMs Sep 20 · jleechanorg/ai_universe · main +59 -25  Archive  Share  Update branch   Make the timeout 10 minutes for the primary llm, secondary llms Copy S...",
+        "timestamp": "2025-09-20T22:51:11.461Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_380",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/testllm /reviewe   Use these approaches in combination:/testllm /reviewe . Apply this to: find this PR Set timeout to 10 minutes for LLMs Sep 20 · j...",
+        "timestamp": "2025-09-20T22:51:13.941Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_380",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/testllm /reviewe   Use these approaches in combination:/testllm /reviewe . Apply this to: find this PR Set timeout to 10 minutes for LLMs Sep 20 · j...",
+        "timestamp": "2025-09-20T22:51:13.941Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_822",
+        "raw_prompt": "Execute comprehensive parallel multi-perspective review with focus on correctness:  **PRIORITY: CORRECTNESS FOCUS** - Logic accuracy and algorithmic correctness - Edge case handling and boundary condi...",
+        "timestamp": "2025-09-12T04:52:29.669Z"
+      }
+    ],
+    "/checkpoint": [
+      {
+        "prompt_id": "chunk_003_prompt_278",
+        "raw_prompt": "<user-prompt-submit-hook>/checkpoint and focus on commentreply bug. https://github.com/jleechanorg/worldarchitect.ai/pull/1509#discussion_r2310743147 look at this comment. It is not an issue comment a...",
+        "timestamp": "2025-08-29T17:41:11.651Z"
+      }
+    ],
+    "/bin": [
+      {
+        "prompt_id": "chunk_003_prompt_288",
+        "raw_prompt": "fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session Progress: Copilot executi...",
+        "timestamp": "2025-08-29T17:43:15.073Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_289",
+        "raw_prompt": "<user-prompt-submit-hook>fix this bug with /redgreen  ⏺ Genesis Coder, Prime Mover,    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~80,000 / 500,000 tokens (16%)   🎯 Session ...",
+        "timestamp": "2025-08-29T17:43:15.628Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      }
+    ],
+    "/newb": [
+      {
+        "prompt_id": "chunk_003_prompt_291",
+        "raw_prompt": "<user-prompt-submit-hook>/newb lets make this fix in a new branch fresh from main</user-prompt-submit-hook>",
+        "timestamp": "2025-08-29T17:53:00.066Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/mcp": [
+      {
+        "prompt_id": "chunk_003_prompt_292",
+        "raw_prompt": "<local-command-stdout> \u001b[38;2;136;136;136m⛁ \u001b[38;2;153;153;153m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[38;2;8;145;178m⛁ ⛁ ⛁ \u001b[39m  \u001b[1mContext Usage\u001b[22m \u001b[38;2;8;145;178m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[39m  \u001b[2mclaude-sonnet-4-20250514...",
+        "timestamp": "2025-08-29T17:57:11.175Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_379",
+        "raw_prompt": "find this PR  Set timeout to 10 minutes for LLMs Sep 20 · jleechanorg/ai_universe · main +59 -25  Archive  Share  Update branch   Make the timeout 10 minutes for the primary llm, secondary llms Copy S...",
+        "timestamp": "2025-09-20T22:51:11.461Z"
+      }
+    ],
+    "/agents": [
+      {
+        "prompt_id": "chunk_003_prompt_292",
+        "raw_prompt": "<local-command-stdout> \u001b[38;2;136;136;136m⛁ \u001b[38;2;153;153;153m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[38;2;8;145;178m⛁ ⛁ ⛁ \u001b[39m  \u001b[1mContext Usage\u001b[22m \u001b[38;2;8;145;178m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[39m  \u001b[2mclaude-sonnet-4-20250514...",
+        "timestamp": "2025-08-29T17:57:11.175Z"
+      }
+    ],
+    "/memory": [
+      {
+        "prompt_id": "chunk_003_prompt_292",
+        "raw_prompt": "<local-command-stdout> \u001b[38;2;136;136;136m⛁ \u001b[38;2;153;153;153m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[38;2;8;145;178m⛁ ⛁ ⛁ \u001b[39m  \u001b[1mContext Usage\u001b[22m \u001b[38;2;8;145;178m⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ ⛁ \u001b[39m  \u001b[2mclaude-sonnet-4-20250514...",
+        "timestamp": "2025-08-29T17:57:11.175Z"
+      }
+    ],
+    "/repos": [
+      {
+        "prompt_id": "chunk_003_prompt_293",
+        "raw_prompt": "leets run /commentreply and see if it works. here's the last chekcpoint    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~153,000 / 200,000 tokens (76%)   🎯 Session Progress: C...",
+        "timestamp": "2025-08-29T18:03:29.624Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_294",
+        "raw_prompt": "<user-prompt-submit-hook>leets run /commentreply and see if it works. here's the last chekcpoint    📍 CONTEXT CHECKPOINT   ━━━━━━━━━━━━━━━━━━━━━━━━━    📊 Context Status: ~153,000 / 200,000 tokens (76%...",
+        "timestamp": "2025-08-29T18:03:30.181Z"
+      }
+    ],
+    "/design": [
+      {
+        "prompt_id": "chunk_003_prompt_304",
+        "raw_prompt": "git merge main then /cereb to run /design to make a brief spec for this. Then /e to actually follow and implement it, then /push",
+        "timestamp": "2025-08-29T18:24:30.183Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_527",
+        "raw_prompt": "run /design and look at design.md to see what we wanna do with hooks and slash commands. then make an actual suggestion",
+        "timestamp": "2025-09-08T05:06:53.458Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_892",
+        "raw_prompt": "lets look at design.md and /research to double check how exactly claude code cli slash commands work and then run /design to see if we should update design.md for how to  integrat them. I want to defi...",
+        "timestamp": "2025-09-08T06:17:17.326Z"
+      }
+    ],
+    "/push": [
+      {
+        "prompt_id": "chunk_003_prompt_304",
+        "raw_prompt": "git merge main then /cereb to run /design to make a brief spec for this. Then /e to actually follow and implement it, then /push",
+        "timestamp": "2025-08-29T18:24:30.183Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/hour": [
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      }
+    ],
+    "/principalengineer": [
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      }
+    ],
+    "/requirements-start": [
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_893",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /require...",
+        "timestamp": "2025-09-08T06:17:17.807Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_982",
+        "raw_prompt": "<user-prompt-submit-hook>/requirements-start lets look at the existing code and see if we can refactor the curl cffi and proxy stuff into a library. That way our code can import the library and call i...",
+        "timestamp": "2025-09-19T07:00:03.985Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_982",
+        "raw_prompt": "<user-prompt-submit-hook>/requirements-start lets look at the existing code and see if we can refactor the curl cffi and proxy stuff into a library. That way our code can import the library and call i...",
+        "timestamp": "2025-09-19T07:00:03.985Z"
+      }
+    ],
+    "/thinku": [
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_305",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /design /e /push  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /push /r...",
+        "timestamp": "2025-08-29T18:24:30.846Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_474",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /research  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/debugp /perp /re...",
+        "timestamp": "2025-09-07T23:39:18.759Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_474",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /research  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/debugp /perp /re...",
+        "timestamp": "2025-09-07T23:39:18.759Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_528",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/design  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /principalengineer /principalproductmanager /requirements-start /res...",
+        "timestamp": "2025-09-08T05:06:54.145Z"
+      }
+    ],
+    "/issues": [
+      {
+        "prompt_id": "chunk_003_prompt_310",
+        "raw_prompt": "anything serious? coderabbitai bot reviewed 2 hours ago coderabbitai bot left a comment Actionable comments posted: 8  Caution  Some comments are outside the diff and can’t be posted inline due to pla...",
+        "timestamp": "2025-08-29T20:54:12.004Z"
+      }
+    ],
+    "/rg": [
+      {
+        "prompt_id": "chunk_003_prompt_314",
+        "raw_prompt": "threaded comments not working properly so /research the api and /rg fix https://github.com/jleechanorg/worldarchitect.ai/pull/1510#issuecomment-3238309021",
+        "timestamp": "2025-08-29T21:41:42.592Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_315",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /rg  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/perp /research /rg /...",
+        "timestamp": "2025-08-29T21:41:43.348Z"
+      }
+    ],
+    "/perp": [
+      {
+        "prompt_id": "chunk_003_prompt_330",
+        "raw_prompt": "Use /perp the statusline is an anthropic special thing not the normal branch header",
+        "timestamp": "2025-09-21T20:10:19.106Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_409",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/research /design /arch  🎯 Multi-Player Intelligence: Found nested commands:/arch /execute /hour /perp /principalengineer /principalproductmanager /r...",
+        "timestamp": "2025-09-10T23:23:20.835Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_474",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /research  🎯 Multi-Player Intelligence: Found nested commands:/perp /research /thinku   Use these approaches in combination:/debugp /perp /re...",
+        "timestamp": "2025-09-07T23:39:18.759Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_549",
+        "raw_prompt": "Also first lets make sure statusline works the same way as claude code cli. It should be something specified in .claude/settings.json or ~/.claude/settings.json or .codexplus/settings.json. Final one ...",
+        "timestamp": "2025-09-21T01:40:39.747Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_614",
+        "raw_prompt": "should we just use litellm? /perp to find the opens ource library and i believe the project i already have /Users/jleechan/projects_other/claude_llm_proxy already uses litellm?",
+        "timestamp": "2025-09-07T21:31:34.295Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_625",
+        "raw_prompt": "just look at /Users/jleechan/projects_other/claude_llm_proxy  for the requirements and see whats needed by litellm and look online using /perp to find the requirements in the open soruce project and i...",
+        "timestamp": "2025-09-07T22:19:36.294Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_708",
+        "raw_prompt": "Execute the task: go through all the test files and move them from project root or from beside source files. /perp for the standard test file format. I believe they should be under /tests/ maybe same ...",
+        "timestamp": "2025-09-15T07:17:32.891Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_709",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /perp  🎯 Multi-Player Intelligence: Found nested commands:/execute /perp /research   Use these approaches in combination:/e /execute /perp /resear...",
+        "timestamp": "2025-09-15T05:32:20.246Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_709",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /perp  🎯 Multi-Player Intelligence: Found nested commands:/execute /perp /research   Use these approaches in combination:/e /execute /perp /resear...",
+        "timestamp": "2025-09-15T05:32:20.246Z"
+      }
+    ],
+    "/pr": [
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/main": [
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      }
+    ],
+    "/newbranch": [
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/review": [
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_337",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/newb /pr  🎯 Multi-Player Intelligence: Found nested commands:/commands /copilot /execute /main /newbranch /pr /push /review /think   Use these appro...",
+        "timestamp": "2025-09-21T20:16:56.757Z"
+      }
+    ],
+    "/pr-": [
+      {
+        "prompt_id": "chunk_003_prompt_352",
+        "raw_prompt": "make sure to do my comment about moving test file Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Se...",
+        "timestamp": "2025-09-21T20:55:28.793Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_353",
+        "raw_prompt": "<user-prompt-submit-hook>make sure to do my comment about moving test file Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projec...",
+        "timestamp": "2025-09-21T20:55:30.211Z"
+      }
+    ],
+    "/context": [
+      {
+        "prompt_id": "chunk_003_prompt_352",
+        "raw_prompt": "make sure to do my comment about moving test file Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Se...",
+        "timestamp": "2025-09-21T20:55:28.793Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_352",
+        "raw_prompt": "make sure to do my comment about moving test file Skip to content Navigation Menu jleechanorg worldarchitect.ai  Type / to search Code Issues 7 Pull requests 60 Actions Projects Security 7 Insights Se...",
+        "timestamp": "2025-09-21T20:55:28.793Z"
+      }
+    ],
+    "/mcp-json": [
+      {
+        "prompt_id": "chunk_003_prompt_379",
+        "raw_prompt": "find this PR  Set timeout to 10 minutes for LLMs Sep 20 · jleechanorg/ai_universe · main +59 -25  Archive  Share  Update branch   Make the timeout 10 minutes for the primary llm, secondary llms Copy S...",
+        "timestamp": "2025-09-20T22:51:11.461Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_379",
+        "raw_prompt": "find this PR  Set timeout to 10 minutes for LLMs Sep 20 · jleechanorg/ai_universe · main +59 -25  Archive  Share  Update branch   Make the timeout 10 minutes for the primary llm, secondary llms Copy S...",
+        "timestamp": "2025-09-20T22:51:11.461Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_379",
+        "raw_prompt": "find this PR  Set timeout to 10 minutes for LLMs Sep 20 · jleechanorg/ai_universe · main +59 -25  Archive  Share  Update branch   Make the timeout 10 minutes for the primary llm, secondary llms Copy S...",
+        "timestamp": "2025-09-20T22:51:11.461Z"
+      }
+    ],
+    "/copilot-codex": [
+      {
+        "prompt_id": "chunk_003_prompt_416",
+        "raw_prompt": "ok lets test it using /copilot-codex but first read copilot.md and make sure you adapted everything you can do copilot-codex.md",
+        "timestamp": "2025-09-11T04:36:27.876Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      }
+    ],
+    "/plan": [
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_897",
+        "raw_prompt": "Lets use /cereb to update the design doc. Try to do it in one or two generations and /plan it. Give it as much contex as needed",
+        "timestamp": "2025-09-08T06:34:11.519Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_898",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /plan  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan . Apply...",
+        "timestamp": "2025-09-08T06:34:12.825Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_898",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /plan  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan . Apply...",
+        "timestamp": "2025-09-08T06:34:12.825Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_898",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /plan  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan . Apply...",
+        "timestamp": "2025-09-08T06:34:12.825Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_898",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/cereb /plan  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan . Apply...",
+        "timestamp": "2025-09-08T06:34:12.825Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_920",
+        "raw_prompt": "ok now lets /plan to build the hooks with /cereb. Lets do one generation for /tdd tests for hooks and then one geneation for all the hooks and then have main antrhopic model review it",
+        "timestamp": "2025-09-08T07:32:36.551Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_921",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/plan /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan /t...",
+        "timestamp": "2025-09-08T07:32:37.222Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_921",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/plan /cereb /tdd  🎯 Multi-Player Intelligence: Found nested commands:/cerebras /plan   Use these approaches in combination:/cereb /cerebras /plan /t...",
+        "timestamp": "2025-09-08T07:32:37.222Z"
+      }
+    ],
+    "/codex_tmp": [
+      {
+        "prompt_id": "chunk_003_prompt_436",
+        "raw_prompt": "how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the feedback!\\n🤖 *Automated resp...",
+        "timestamp": "2025-09-11T06:07:16.679Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_437",
+        "raw_prompt": "<user-prompt-submit-hook>how come codex cant push to pr the workflow thing but you can? \"id\": 2338630368,         \"type\": \"inline\",         \"body\": \"✅ Acknowledged and addressed. Thank you for the fee...",
+        "timestamp": "2025-09-11T06:07:19.047Z"
+      }
+    ],
+    "/replicate": [
+      {
+        "prompt_id": "chunk_003_prompt_450",
+        "raw_prompt": "i switched to the main branch lets run /replicate and see what changes/fixes we sohuld make in a new PR fresh from main. I wanna bring in things unrelated to hooks. The key mistake we need to /learn f...",
+        "timestamp": "2025-09-18T20:12:56.589Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_566",
+        "raw_prompt": "any serious bugs in these comments? Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 2 Actions Projects Security Insights Settings  Open feat: add in...",
+        "timestamp": "2025-09-19T00:37:35.367Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_888",
+        "raw_prompt": "Use /replicate to see if anything else should be taken from PR 3 thats unrelated to hooks",
+        "timestamp": "2025-09-18T20:51:00.081Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_889",
+        "raw_prompt": "i merged the PR. now make a new branch and use /replicate to see if anything else should be taken from PR 3 thats unrelated to hooks",
+        "timestamp": "2025-09-18T20:51:39.337Z"
+      }
+    ],
+    "/learn": [
+      {
+        "prompt_id": "chunk_003_prompt_450",
+        "raw_prompt": "i switched to the main branch lets run /replicate and see what changes/fixes we sohuld make in a new PR fresh from main. I wanna bring in things unrelated to hooks. The key mistake we need to /learn f...",
+        "timestamp": "2025-09-18T20:12:56.589Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_470",
+        "raw_prompt": "stop you wee about to do fake code /learn from this and do not do that. /debugp and lets fix the actual issue",
+        "timestamp": "2025-09-07T23:11:38.871Z"
+      }
+    ],
+    "/integrate": [
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_451",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/replicate /learn  🎯 Multi-Player Intelligence: Found nested commands:/activate /bin /integrate /learn /replicate   Use these approaches in combinati...",
+        "timestamp": "2025-09-18T20:12:57.102Z"
+      }
+    ],
+    "/status": [
+      {
+        "prompt_id": "chunk_003_prompt_468",
+        "raw_prompt": "pretty sure it didnt work, i get this  codex --yolo  >_ You are using OpenAI Codex in ~/projects_other/codex_plus   To get started, describe a task or try one of these commands:   /status - show curre...",
+        "timestamp": "2025-09-07T23:06:24.426Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_635",
+        "raw_prompt": "codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest to update.  ╭─────────────...",
+        "timestamp": "2025-09-21T02:32:31.756Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_636",
+        "raw_prompt": "<user-prompt-submit-hook>codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest t...",
+        "timestamp": "2025-09-21T02:32:32.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      }
+    ],
+    "/approvals": [
+      {
+        "prompt_id": "chunk_003_prompt_468",
+        "raw_prompt": "pretty sure it didnt work, i get this  codex --yolo  >_ You are using OpenAI Codex in ~/projects_other/codex_plus   To get started, describe a task or try one of these commands:   /status - show curre...",
+        "timestamp": "2025-09-07T23:06:24.426Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_635",
+        "raw_prompt": "codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest to update.  ╭─────────────...",
+        "timestamp": "2025-09-21T02:32:31.756Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_636",
+        "raw_prompt": "<user-prompt-submit-hook>codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest t...",
+        "timestamp": "2025-09-21T02:32:32.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      }
+    ],
+    "/model": [
+      {
+        "prompt_id": "chunk_003_prompt_468",
+        "raw_prompt": "pretty sure it didnt work, i get this  codex --yolo  >_ You are using OpenAI Codex in ~/projects_other/codex_plus   To get started, describe a task or try one of these commands:   /status - show curre...",
+        "timestamp": "2025-09-07T23:06:24.426Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_469",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/status /approvals /model   Use these approaches in combination:/status /approvals /model . Apply this to: pretty sure it didnt work, i get this code...",
+        "timestamp": "2025-09-07T23:06:48.218Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_635",
+        "raw_prompt": "codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest to update.  ╭─────────────...",
+        "timestamp": "2025-09-21T02:32:31.756Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_635",
+        "raw_prompt": "codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest to update.  ╭─────────────...",
+        "timestamp": "2025-09-21T02:32:31.756Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_636",
+        "raw_prompt": "<user-prompt-submit-hook>codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest t...",
+        "timestamp": "2025-09-21T02:32:32.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_636",
+        "raw_prompt": "<user-prompt-submit-hook>codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest t...",
+        "timestamp": "2025-09-21T02:32:32.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      }
+    ],
+    "/debugp": [
+      {
+        "prompt_id": "chunk_003_prompt_470",
+        "raw_prompt": "stop you wee about to do fake code /learn from this and do not do that. /debugp and lets fix the actual issue",
+        "timestamp": "2025-09-07T23:11:38.871Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_473",
+        "raw_prompt": "stop celebrating, its not working. Remember to follow the /debugp protocol. /research codex exec, it should work so likely this is your fault",
+        "timestamp": "2025-09-07T23:38:52.004Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_550",
+        "raw_prompt": "inspect the code and see how it should work. Use /debugp to figure it out. It has worked before",
+        "timestamp": "2025-09-21T01:47:46.554Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_645",
+        "raw_prompt": "Fix  this using the /redgreen philosophy. I want the statusline to appear in the chat. /debugp to get it working",
+        "timestamp": "2025-09-21T02:59:48.005Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_646",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /debugp  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/debugp /errors /r...",
+        "timestamp": "2025-09-21T02:59:49.355Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_646",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /debugp  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/debugp /errors /r...",
+        "timestamp": "2025-09-21T02:59:49.355Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_772",
+        "raw_prompt": "stop the exuses this is totally your fault. /debugp it ▌ what day today  • Ran date  ⚠️ stream error: error sending request for url (http://localhost:10000/responses); retrying 1/5 in 187ms…  ⚠️ strea...",
+        "timestamp": "2025-09-18T05:25:49.231Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_773",
+        "raw_prompt": "<user-prompt-submit-hook>stop the exuses this is totally your fault. /debugp it ▌ what day today  • Ran date  ⚠️ stream error: error sending request for url (http://localhost:10000/responses); retryin...",
+        "timestamp": "2025-09-18T05:25:49.867Z"
+      }
+    ],
+    "/token": [
+      {
+        "prompt_id": "chunk_003_prompt_481",
+        "raw_prompt": "what about this article  Search Write Sign up  Sign in     Writing is for everyone.Register for Medium Day   Press enter or click to view image in full size  Securing LiteLLM’s MCP Integration: Write ...",
+        "timestamp": "2025-09-08T02:22:13.872Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_482",
+        "raw_prompt": "<user-prompt-submit-hook>what about this article  Search Write Sign up  Sign in     Writing is for everyone.Register for Medium Day   Press enter or click to view image in full size  Securing LiteLLM’...",
+        "timestamp": "2025-09-08T02:22:14.294Z"
+      }
+    ],
+    "/chat": [
+      {
+        "prompt_id": "chunk_003_prompt_483",
+        "raw_prompt": "Skip to main content 🚅 LiteLLM Docs Integrations Enterprise Release Notes 💸 LLM Model Cost Map GitHub Slack/Discord   Search for anything... K Oauth 2.0 Authentication Use this if you want to use an O...",
+        "timestamp": "2025-09-08T02:23:00.606Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_484",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/embeddings   Use these approaches in combination:/embeddings . Apply this to: Skip to main content 🚅 LiteLLM Docs Integrations Enterprise Release No...",
+        "timestamp": "2025-09-08T02:23:01.104Z"
+      }
+    ],
+    "/embeddings": [
+      {
+        "prompt_id": "chunk_003_prompt_483",
+        "raw_prompt": "Skip to main content 🚅 LiteLLM Docs Integrations Enterprise Release Notes 💸 LLM Model Cost Map GitHub Slack/Discord   Search for anything... K Oauth 2.0 Authentication Use this if you want to use an O...",
+        "timestamp": "2025-09-08T02:23:00.606Z"
+      }
+    ],
+    "/path": [
+      {
+        "prompt_id": "chunk_003_prompt_545",
+        "raw_prompt": "handle my comments and cnsider coderabbit ones @jleechan2015 docs: add Codex system instructions and analysis report  efcad08 coderabbitai[bot] coderabbitai bot reviewed 6 minutes ago coderabbitai bot...",
+        "timestamp": "2025-09-08T06:00:14.512Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_546",
+        "raw_prompt": "<user-prompt-submit-hook>handle my comments and cnsider coderabbit ones @jleechan2015 docs: add Codex system instructions and analysis report  efcad08 coderabbitai[bot] coderabbitai bot reviewed 6 min...",
+        "timestamp": "2025-09-08T06:00:14.949Z"
+      }
+    ],
+    "/responses": [
+      {
+        "prompt_id": "chunk_003_prompt_572",
+        "raw_prompt": "any of these bugbot comments real bugs? Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 2 Actions Projects Security Insights Settings feat: add infr...",
+        "timestamp": "2025-09-19T01:12:10.327Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_572",
+        "raw_prompt": "any of these bugbot comments real bugs? Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 2 Actions Projects Security Insights Settings feat: add infr...",
+        "timestamp": "2025-09-19T01:12:10.327Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_585",
+        "raw_prompt": "look at all the gh comments and see if any serious ones not resolved Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 1 Actions Projects Security Ins...",
+        "timestamp": "2025-09-20T23:53:35.452Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_789",
+        "raw_prompt": "Help me debug this in the current dir What I did    - Created two sample hooks in .codexplus/hooks:       - pre_inject_marker.py (pre-input): adds fields hooked=true and hook_note=pre-input-injected t...",
+        "timestamp": "2025-09-11T16:56:14.951Z"
+      }
+    ],
+    "/gstatus": [
+      {
+        "prompt_id": "chunk_003_prompt_585",
+        "raw_prompt": "look at all the gh comments and see if any serious ones not resolved Skip to content Navigation Menu jleechan2015 codex_plus  Type / to search Code Issues Pull requests 1 Actions Projects Security Ins...",
+        "timestamp": "2025-09-20T23:53:35.452Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_860",
+        "raw_prompt": "Execute /gstatus to get comprehensive PR status for the current branch hooks-restore. Focus on getting GitHub PR status, recent commits, and overall PR health check.",
+        "timestamp": "2025-09-18T07:17:51.823Z"
+      }
+    ],
+    "/init": [
+      {
+        "prompt_id": "chunk_003_prompt_635",
+        "raw_prompt": "codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest to update.  ╭─────────────...",
+        "timestamp": "2025-09-21T02:32:31.756Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_636",
+        "raw_prompt": "<user-prompt-submit-hook>codex interactie doesnt seem to work, where did you see the statusline working? codex --yolo  ✨⬆️ Update available! 0.36.0 -> 0.39.0. Run npm install -g @openai/codex@latest t...",
+        "timestamp": "2025-09-21T02:32:32.102Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_834",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /status  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/errors /redgreen ...",
+        "timestamp": "2025-09-21T23:45:34.703Z"
+      }
+    ],
+    "/errors": [
+      {
+        "prompt_id": "chunk_003_prompt_646",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/redgreen /debugp  🎯 Multi-Player Intelligence: Found nested commands:/errors /redgreen /tdd   Use these approaches in combination:/debugp /errors /r...",
+        "timestamp": "2025-09-21T02:59:49.355Z"
+      }
+    ],
+    "/conv": [
+      {
+        "prompt_id": "chunk_003_prompt_647",
+        "raw_prompt": "wtf is this potential fix? actually keep going and use /conv until you auctually see it int he convo output",
+        "timestamp": "2025-09-21T03:12:13.526Z"
+      }
+    ],
+    "/header": [
+      {
+        "prompt_id": "chunk_003_prompt_660",
+        "raw_prompt": "did we miss this slash command for header?  ■ Conversation interrupted - tell the model what to do differently  ▌ /header  • Ran git show origin/main:CLAUDE.md | head  • Ran git diff origin/main..HEAD...",
+        "timestamp": "2025-09-21T06:24:15.064Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_678",
+        "raw_prompt": "isnt there a param for /header? Also the existing statusline from ~/.claude/settings.json does not produce thatl ong output?",
+        "timestamp": "2025-09-21T07:27:10.632Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_937",
+        "raw_prompt": "ok show me the hook and slash command working. Lets have it do \"/perp what day is it today and then /header\"",
+        "timestamp": "2025-09-08T16:46:21.985Z"
+      }
+    ],
+    "/pull": [
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      }
+    ],
+    "/repo": [
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      }
+    ],
+    "/user": [
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      }
+    ],
+    "/github": [
+      {
+        "prompt_id": "chunk_003_prompt_673",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/debugp /header  🎯 Multi-Player Intelligence: Found nested commands:/github /main /pull /repo /user   Use these approaches in combination:/debugp /gi...",
+        "timestamp": "2025-09-21T06:52:41.901Z"
+      }
+    ],
+    "/fake3": [
+      {
+        "prompt_id": "chunk_003_prompt_698",
+        "raw_prompt": "push to pr then /fake3 to make sure the test results are real then /copilot",
+        "timestamp": "2025-09-15T02:15:34.611Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      }
+    ],
+    "/scratchpad_fake3_": [
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_699",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/fake3 /copilot  🎯 Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /pushl /scr...",
+        "timestamp": "2025-09-15T02:15:35.094Z"
+      }
+    ],
+    "/tests": [
+      {
+        "prompt_id": "chunk_003_prompt_708",
+        "raw_prompt": "Execute the task: go through all the test files and move them from project root or from beside source files. /perp for the standard test file format. I believe they should be under /tests/ maybe same ...",
+        "timestamp": "2025-09-15T07:17:32.891Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_708",
+        "raw_prompt": "Execute the task: go through all the test files and move them from project root or from beside source files. /perp for the standard test file format. I believe they should be under /tests/ maybe same ...",
+        "timestamp": "2025-09-15T07:17:32.891Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_709",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /perp  🎯 Multi-Player Intelligence: Found nested commands:/execute /perp /research   Use these approaches in combination:/e /execute /perp /resear...",
+        "timestamp": "2025-09-15T05:32:20.246Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_709",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/e /perp  🎯 Multi-Player Intelligence: Found nested commands:/execute /perp /research   Use these approaches in combination:/e /execute /perp /resear...",
+        "timestamp": "2025-09-15T05:32:20.246Z"
+      }
+    ],
+    "/commands": [
+      {
+        "prompt_id": "chunk_003_prompt_726",
+        "raw_prompt": "ramp up on this The push is taking a while due to the large .claude directory. Here's your checkpoint prompt for resuming:    ---   CHECKPOINT RESUME PROMPT:    Continue developing Codex-Plus M1 imple...",
+        "timestamp": "2025-09-07T19:24:57.230Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_727",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/commands   Use these approaches in combination:/commands . Apply this to: ramp up on this The push is taking a while due to the large .claude direct...",
+        "timestamp": "2025-09-07T19:24:58.622Z"
+      }
+    ],
+    "/failure": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/PR": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/pr-guidelines": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/test_file": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/to": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/why": [
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_751",
+        "raw_prompt": "<user-prompt-submit-hook>🔍 Detected slash commands:/reviewdeep /testllm  🎯 Multi-Player Intelligence: Found nested commands:/arch /cerebras /execute /failure /guidelines /PR /pr-guidelines /reviewdeep...",
+        "timestamp": "2025-09-20T22:34:31.630Z"
+      }
+    ],
+    "/paranoid": [
+      {
+        "prompt_id": "chunk_003_prompt_787",
+        "raw_prompt": "be /paranoid and look for any more blocking calls that should be async",
+        "timestamp": "2025-09-18T05:50:30.803Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_788",
+        "raw_prompt": "<user-prompt-submit-hook>be /paranoid and look for any more blocking calls that should be async</user-prompt-submit-hook>",
+        "timestamp": "2025-09-18T05:50:31.191Z"
+      }
+    ],
+    "/etc": [
+      {
+        "prompt_id": "chunk_003_prompt_825",
+        "raw_prompt": "codex cli seems to be having trouble with gh cli. Could that be due to our proxy or indep?  ▌ test gh auth status and see if it works for you  • Ran gh auth status   └ You are not logged into any GitH...",
+        "timestamp": "2025-09-21T23:09:27.866Z"
+      },
+      {
+        "prompt_id": "chunk_003_prompt_826",
+        "raw_prompt": "<user-prompt-submit-hook>codex cli seems to be having trouble with gh cli. Could that be due to our proxy or indep?  ▌ test gh auth status and see if it works for you  • Ran gh auth status   └ You are...",
+        "timestamp": "2025-09-21T23:09:28.821Z"
+      }
+    ],
+    "/command": [
+      {
+        "prompt_id": "chunk_003_prompt_928",
+        "raw_prompt": "Execute the /tdd command to generate comprehensive TDD tests for Claude Code CLI slash command system.  Generate comprehensive TDD tests for Claude Code CLI slash command system based on design.md req...",
+        "timestamp": "2025-09-08T07:59:15.972Z"
+      }
+    ],
+    "/requirements-status": [
+      {
+        "prompt_id": "chunk_003_prompt_981",
+        "raw_prompt": "# Start Requirements Gathering  *Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this th...",
+        "timestamp": "2025-09-19T07:00:03.548Z"
+      }
+    ]
+  },
+  "top_commands": [
+    [
+      "/dev",
+      170
+    ],
+    [
+      "/Users",
+      62
+    ],
+    [
+      "/commentreply",
+      50
+    ],
+    [
+      "/testllm",
+      49
+    ],
+    [
+      "/copilot",
+      42
+    ],
+    [
+      "/execute",
+      38
+    ],
+    [
+      "/fixpr",
+      35
+    ],
+    [
+      "/tmp",
+      34
+    ],
+    [
+      "/tdd",
+      33
+    ],
+    [
+      "/research",
+      33
+    ],
+    [
+      "/responses",
+      32
+    ],
+    [
+      "/reviewdeep",
+      24
+    ],
+    [
+      "/redgreen",
+      21
+    ],
+    [
+      "/cereb",
+      16
+    ],
+    [
+      "/perp",
+      15
+    ],
+    [
+      "/guidelines",
+      13
+    ],
+    [
+      "/design",
+      13
+    ],
+    [
+      "/arch",
+      12
+    ],
+    [
+      "/thinku",
+      12
+    ],
+    [
+      "/pushl",
+      11
+    ]
+  ]
+}

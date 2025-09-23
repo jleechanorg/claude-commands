@@ -1,0 +1,163 @@
+{
+  "total_prompts_analyzed": 994,
+  "processing_files": 50,
+  "file_breakdown": {
+    "progress_001.json": 20,
+    "progress_002.json": 20,
+    "progress_003.json": 20,
+    "progress_004.json": 20,
+    "progress_005.json": 20,
+    "progress_006.json": 20,
+    "progress_007.json": 20,
+    "progress_008.json": 20,
+    "progress_009.json": 20,
+    "progress_010.json": 20,
+    "progress_011.json": 20,
+    "progress_012.json": 20,
+    "progress_013.json": 20,
+    "progress_014.json": 20,
+    "progress_015.json": 20,
+    "progress_016.json": 20,
+    "progress_017.json": 20,
+    "progress_018.json": 20,
+    "progress_019.json": 20,
+    "progress_020.json": 20,
+    "progress_021.json": 20,
+    "progress_022.json": 20,
+    "progress_023.json": 20,
+    "progress_024.json": 20,
+    "progress_025.json": 20,
+    "progress_026.json": 20,
+    "progress_027.json": 20,
+    "progress_028.json": 20,
+    "progress_029.json": 20,
+    "progress_030.json": 20,
+    "progress_031.json": 20,
+    "progress_032.json": 20,
+    "progress_033.json": 20,
+    "progress_034.json": 20,
+    "progress_035.json": 20,
+    "progress_036.json": 20,
+    "progress_037.json": 20,
+    "progress_038.json": 20,
+    "progress_039.json": 20,
+    "progress_040.json": 20,
+    "progress_041.json": 20,
+    "progress_042.json": 20,
+    "progress_043.json": 20,
+    "progress_044.json": 20,
+    "progress_045.json": 20,
+    "progress_046.json": 20,
+    "progress_047.json": 20,
+    "progress_048.json": 20,
+    "progress_049.json": 20,
+    "progress_050.json": 14
+  },
+  "quality_metrics": {
+    "avg_authenticity_score": 0.705,
+    "avg_information_density": 0.964,
+    "avg_technical_specificity": 0.007,
+    "avg_action_orientation": 0.626,
+    "authenticity_distribution": {
+      "high": 523,
+      "medium": 471,
+      "low": 0
+    }
+  },
+  "cognitive_analysis": {
+    "hp_score_distribution": {
+      "3": 47,
+      "5": 90,
+      "2": 121,
+      "1": 597,
+      "4": 139
+    },
+    "avg_cognitive_load": 2.0,
+    "intent_classification": {
+      "workflow_continuation": 233,
+      "system_modification": 53,
+      "problem_resolution": 301,
+      "information_seeking": 197,
+      "directive": 191,
+      "automation_trigger": 19
+    },
+    "complexity_distribution": {
+      "moderate": 47,
+      "complex": 229,
+      "simple": 718
+    }
+  },
+  "behavioral_patterns": {
+    "communication_styles": {
+      "ultra_direct": 994
+    },
+    "core_tenets": {
+      "Technical-Precision": 994
+    },
+    "themes": {
+      "Development_Automation": 994
+    },
+    "expertise_levels": {
+      "expert": 994
+    }
+  },
+  "predictive_patterns": {
+    "command_probabilities": {
+      "/execute": {
+        "avg_probability": 0.4,
+        "max_probability": 0.4,
+        "min_probability": 0.4,
+        "occurrences": 994
+      },
+      "/tdd": {
+        "avg_probability": 0.25,
+        "max_probability": 0.25,
+        "min_probability": 0.25,
+        "occurrences": 994
+      },
+      "/redgreen": {
+        "avg_probability": 0.2,
+        "max_probability": 0.2,
+        "min_probability": 0.2,
+        "occurrences": 994
+      },
+      "/orch": {
+        "avg_probability": 0.15,
+        "max_probability": 0.15,
+        "min_probability": 0.15,
+        "occurrences": 994
+      }
+    },
+    "workflow_trajectories": {
+      "execution -> validation -> completion": 994
+    },
+    "common_next_actions": {
+      "execute": 994,
+      "validate": 994,
+      "test": 994
+    }
+  },
+  "technical_context": {
+    "file_types_mentioned": {
+      "py:": 262,
+      "sh:": 143,
+      "md:": 281,
+      "txt:": 22,
+      "json:": 93,
+      "yml:": 1
+    },
+    "technology_stacks": {
+      "git": 824,
+      "hooks": 516,
+      "python": 187,
+      "bash": 221,
+      "general": 130
+    },
+    "complexity_indicators": {
+      "has_hook": 491,
+      "is_error": 803,
+      "has_path": 503,
+      "is_directive": 191
+    }
+  }
+}

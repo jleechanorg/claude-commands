@@ -1,0 +1,2214 @@
+{
+  "batch_number": 37,
+  "total_batches": 50,
+  "agent_id": "agent_008",
+  "processing_timestamp": "2025-09-22T04:36:04.838544Z",
+  "prompts_in_batch": 20,
+  "authenticity_target": 0.87,
+  "prompts": [
+    {
+      "prompt_id": "chunk_008_prompt_721",
+      "raw_prompt": "<user-prompt-submit-hook>any serious bugs? Skip to content\nNavigation Menu\njleechanorg\nai_universe\n\nType / to search\nCode\nIssues\nPull requests\n5\nActions\nProjects\nWiki\nSecurity\nInsights\nSettings\n Open\nAdd comprehensive infrastructure automation scripts\n#7\njleechan2015 wants to merge 1 commit into main from commands \n+6,057 \u22120 \n Conversation 13\n Commits 1\n Checks 5\n Files changed 17\nConversation\njleechan2015\njleechan2015 commented 1 hour ago\nSummary\nAdd 17 development and CI/CD automation scripts from claude-commands repository\nInclude MCP server management, code analysis, Git workflow automation, and CI/CD tools\nEnhance development workflow with automated testing, deployment, and project management\nScripts Added\nMCP Server Management\nclaude_mcp.sh - MCP server installation and configuration (72KB)\nclaude_start.sh - Claude startup automation (77KB)\nCode Analysis Tools\ncoverage.sh - Test coverage analysis (8.6KB)\nloc.sh & loc_simple.sh - Line of code counting utilities\ncodebase_loc.sh - Codebase line counting\nGit Workflow Automation\nintegrate.sh - Branch integration automation (29KB)\npush.sh - Git push automation\nsync_branch.sh - Branch synchronization\nresolve_conflicts.sh - Merge conflict resolution\nDevelopment Utilities\ncreate_snapshot.sh - Create project snapshots\ncreate_worktree.sh - Git worktree management\nschedule_branch_work.sh - Branch work scheduling\nCI/CD Tools\nrun_lint.sh - Linting automation\nrun_tests_with_coverage.sh - Test execution with coverage\nsetup-github-runner.sh - GitHub Actions runner setup\nSetup Scripts\nsetup_email.sh - Git email configuration\nTest plan\n Scripts downloaded and placed in /scripts/ directory\n All scripts are executable (chmod +x)\n No conflicts with existing scripts\n Manual testing of key scripts (integrate.sh, coverage.sh, run_tests_with_coverage.sh)\n\ud83e\udd16 Generated with Claude Code\n\n@Copilot Copilot AI review requested due to automatic review settings 1 hour ago\n@coderabbitaicoderabbitai\ncoderabbitai bot commented 1 hour ago\nWarning\n\nRate limit exceeded\n@jleechan2015 has exceeded the limit for the number of commits or files that can be reviewed per hour. Please wait 4 minutes and 0 seconds before requesting another review.\n\n\u231b How to resolve this issue?\n\ud83d\udea6 How do rate limits work?\n\ud83d\udce5 Commits\n\ud83d\udcd2 Files selected for processing (17)\nComment @coderabbitai help to get the list of available commands and usage tips.\n\nCopilot\nCopilot AI reviewed 1 hour ago\nCopilot AI left a comment\nPull Request Overview\nThis PR adds 17 development and CI/CD automation scripts from the claude-commands repository to enhance the development workflow with automated testing, deployment, and project management capabilities.\n\nKey changes:\n\nAdds MCP server management scripts (claude_mcp.sh, claude_start.sh)\nIncludes code analysis and testing tools (coverage.sh, run_tests_with_coverage.sh, run_lint.sh)\nProvides Git workflow automation (integrate.sh, push.sh, sync_branch.sh)\nReviewed Changes\nCopilot reviewed 17 out of 17 changed files in this pull request and generated 9 comments.\n\nShow a summary per file\nComments suppressed due to low confidence (1)\nTip: Customize your code reviews with copilot-instructions.md. Create the file or learn how to get started.\n\nscripts/setup-github-runner.sh\n\n# If still not set, print error and exit\nif [[ -z \"$REPO_URL\" ]]; then\n    echo -e \"${RED}\u274c Repository URL not specified.${NC}\"\nCopilot AI\n1 hour ago\nThe variable NC is used before it's defined. The Colors section is defined after this error condition, so NC will be empty when this error is printed.\n\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/schedule_branch_work.sh\nfi\n\nSCHEDULE_TIME=\"$1\"\nUSE_CONTINUE=true\nCopilot AI\n1 hour ago\nThe variable USE_CONTINUE is initialized to true but the logic suggests it should be false by default. The --continue flag should enable continue mode, not be the default.\n\nSuggested change\nUSE_CONTINUE=true\nUSE_CONTINUE=false\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/coverage.sh\nComment on lines +15 to +21\nPROJECT_ROOT=\"$PWD\"\n\n# Coverage output directory\nCOVERAGE_DIR=\"/tmp/$PROJECT_NAME/coverage\"\n\n# Check if virtual environment exists\nif [ ! -d \"$PROJECT_ROOT/venv\" ]; then\nCopilot AI\n1 hour ago\nThe variable PROJECT_NAME is used on line 18 but is not defined until line 91. This will result in an incorrect coverage directory path.\n\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_start.sh\nComment on lines +639 to +640\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\nCopilot AI\n1 hour ago\nThese echo statements are missing closing quotes, which will cause syntax errors.\n\nSuggested change\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)${NC}\"\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)${NC}\"\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_start.sh\n            API_PROXY_PATH=\"$HOME/projects/claude_llm_proxy/api_proxy.py\"\n            if [ ! -f \"$API_PROXY_PATH\" ]; then\n                echo -e \"${RED}\u274c LLM self-hosting repository not found${NC}\"\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\nCopilot AI\n1 hour ago\nMultiple echo statements throughout the file are missing closing quotes, which will cause syntax errors.\n\nSuggested change\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)${NC}\"\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_start.sh\nComment on lines +1046 to +1047\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\nCopilot AI\n1 hour ago\nMultiple echo statements throughout the file are missing closing quotes, which will cause syntax errors.\n\nSuggested change\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\n                echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\"\n                echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\"\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_start.sh\n            echo -e \"${RED}\u274c LLM self-hosting repository not found${NC}\"\n            echo -e \"${BLUE}\ud83d\udca1 LLM proxy (for Qwen and Cerebras modes) is maintained in the separate claude_llm_proxy repository${NC}\"\n            echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\nCopilot AI\n1 hour ago\nMultiple echo statements throughout the file are missing closing quotes, which will cause syntax errors.\n\nSuggested change\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)${NC}\"\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_start.sh\nComment on lines +1599 to +1600\n            echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\nCopilot AI\n1 hour ago\nMultiple echo statements throughout the file are missing closing quotes, which will cause syntax errors.\n\nSuggested change\n            echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\n            echo -e \"${BLUE}\ud83d\udca1 Clone it with: cd ~/projects && git clone $(git config --get remote.origin.url)\"\n            echo -e \"${BLUE}\ud83d\udca1 Repository: $(git config --get remote.origin.url)\"\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\nscripts/claude_mcp.sh\ndisplay_step \"Setting up WorldArchitect MCP Server...\"\nTOTAL_SERVERS=$((TOTAL_SERVERS + 1))\necho -e \"${BLUE}  \ud83c\udfae Configuring project MCP server for application mechanics...${NC}\"\nlog_with_timestamp \"Setting up MCP server: worldarchitect (local: $PROJECT_ROOT/mcp_api.py)\"\nCopilot AI\n1 hour ago\nThe variable PROJECT_ROOT is used but not defined in this script. This will result in an incorrect log message and potentially wrong file path.\n\nCopilot uses AI. Check for mistakes.\n\n@jleechan2015    Reply...\ncursor[bot]\ncursor bot reviewed 1 hour ago\nscripts/coverage.sh\nPROJECT_ROOT=\"$PWD\"\n\n# Coverage output directory\nCOVERAGE_DIR=\"/tmp/$PROJECT_NAME/coverage\"\n@cursor cursor bot 1 hour ago\nBug: Undefined Variable Causes Malformed Path\nThe PROJECT_NAME variable is used in the COVERAGE_DIR path but isn't defined in the script. This causes the coverage output directory to resolve to /tmp//coverage, which is a malformed path and may result in reports being saved to an unexpected location.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\nscripts/coverage.sh\nif [ ! -d \"$SOURCE_DIR\" ]; then\n    print_error \"mvp_site directory not found. Please run this script from the project root.\"\n    exit 1\nfi\n@cursor cursor bot 1 hour ago\nBug: Undefined SOURCE_DIR Causes Script Navigation Failure\nThe SOURCE_DIR variable is used for directory existence checks and navigation but is never assigned a value. This prevents the s\n\n[output truncated - exceeded 10000 characters]</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T02:52:38.666Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7678,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "integration",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "and exit",
+            "condition, so NC will be empty when this error is printed"
+          ],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "scripts/claude_mcp.sh",
+            "scripts/coverage",
+            "setup_email.sh",
+            "integrate.sh",
+            "scripts/schedule_branch_work.sh"
+          ],
+          "technology_stack": [
+            "python",
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "clone",
+            "config",
+            "config",
+            "CD",
+            "CD"
+          ],
+          "complexity_indicators": [
+            "long_prompt",
+            "code_heavy",
+            "multiple_questions",
+            "system_generated"
+          ],
+          "urgency_signals": [
+            "contains_fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation",
+            "polite_assistance",
+            "system_processing"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "advanced"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "explicit_reasoning_provided",
+          "trigger_event": "error_encountered",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_start"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "moderate",
+          "technical_precision": "high",
+          "emotional_tone": "negative",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "beginner",
+          "workflow_preference": "automated",
+          "quality_standards": "high",
+          "risk_tolerance": "high"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_code_elements",
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [
+            "version_control",
+            "automation"
+          ],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "problem_resolution",
+          "session_goal": "deployment_readiness",
+          "project_goal": "quality_assurance",
+          "meta_goal": "knowledge_acquisition"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "debug_issue",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "git": 0.8,
+          "test": 0.7,
+          "copilot": 0.8
+        },
+        "workflow_trajectory": "initiation_phase",
+        "completion_indicators": [
+          "ready_to_commit",
+          "ready_to_merge"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.913,
+        "information_density": 0.33,
+        "technical_specificity": 0.29,
+        "action_orientation": 0.05
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_722",
+      "raw_prompt": "is this what we deploy to for prod? https://ai-universe-backend-114133832173.us-central1.run.app",
+      "timestamp": "2025-09-19T03:04:02.082Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7679,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "deployment"
+        },
+        "technical_context": {
+          "file_references": [
+            "central1.run.app",
+            "//ai",
+            "114133832173.us"
+          ],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [
+            "ai"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "pr_workflow",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Integration-Focused",
+          "description": "Request for PR management or merge operations",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "deployment",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "integration",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.919,
+        "information_density": 1.0,
+        "technical_specificity": 0.33,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_723",
+      "raw_prompt": "<user-prompt-submit-hook>is this what we deploy to for prod? https://ai-universe-backend-114133832173.us-central1.run.app</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T03:04:02.336Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7680,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "deployment"
+        },
+        "technical_context": {
+          "file_references": [
+            "central1.run.app",
+            "//ai",
+            "114133832173.us"
+          ],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [
+            "ai",
+            "user"
+          ],
+          "complexity_indicators": [
+            "system_generated"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation",
+            "system_processing"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "system_triggered",
+          "trigger_event": "pr_workflow",
+          "expected_outcome": "information_response",
+          "workflow_position": "system_checkpoint"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Integration-Focused",
+          "description": "Request for PR management or merge operations",
+          "evidence": [
+            "contains_questions",
+            "system_generated_prompt"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "deployment",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "integration",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.948,
+        "information_density": 1.0,
+        "technical_specificity": 0.33,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_724",
+      "raw_prompt": "Execute comprehensive PR issue resolution for ai_universe PR #7. You are the copilot-fixpr agent responsible for:\n\n**FIRST PRIORITY**: Execute `/fixpr` command to resolve any merge conflicts and CI failures\n\n**PRIMARY RESPONSIBILITIES**:\n- Analyze current GitHub PR status and identify potential improvements\n- Review code changes for security vulnerabilities and quality issues  \n- Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol\n- Focus on code quality, performance optimization, and technical accuracy\n\n**CURRENT PR STATUS**:\n- **PR #7**: \"Add comprehensive infrastructure automation scripts\"\n- **State**: MERGEABLE, 5 passing checks, 0 review decisions\n- **Files**: 17 infrastructure scripts added to /scripts/ directory\n- **Previous Issues**: 9 critical bugs already fixed in commit ae91410\n\n**ANALYSIS CONTEXT**:\n- CodeRabbit hit rate limits (no actionable feedback)\n- GitHub Copilot identified minor issues already resolved\n- All CI checks passing, PR is technically ready to merge\n\n**FILE JUSTIFICATION PROTOCOL REQUIREMENTS**:\n- Document Goal, Modification, Necessity, Integration Proof for each change\n- Classify changes as Essential, Enhancement, or Unnecessary\n- Prove integration attempts were made before new file creation\n- Priority: Security \u2192 Runtime Errors \u2192 Test Failures \u2192 Style\n\n**EXECUTION REQUIREMENTS**:\n1. First execute `/fixpr` command for merge conflicts/CI issues\n2. Use Edit/MultiEdit for any code modifications needed\n3. Provide justification documentation for all file changes\n4. Focus on making PR mergeable and addressing any remaining quality issues\n5. Use git diff to verify changes made\n\n**BOUNDARY**: Focus on file operations and code quality - do NOT handle GitHub comment responses",
+      "timestamp": "2025-09-19T06:03:16.654Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7681,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "/scripts/",
+            "Edit/MultiEdit",
+            "conflicts/CI"
+          ],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "diff",
+            "fixpr",
+            "MultiEdit",
+            "scripts",
+            "fixpr"
+          ],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": [
+            "contains_critical",
+            "contains_fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [
+            "verification",
+            "documentation"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "expressing_need",
+          "trigger_event": "error_encountered",
+          "expected_outcome": "problem_resolution",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "negative",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "advanced",
+          "workflow_preference": "automated",
+          "quality_standards": "high",
+          "risk_tolerance": "low"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [
+            "version_control",
+            "database",
+            "automation"
+          ],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "problem_resolution",
+          "session_goal": "feature_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "efficiency_improvement"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis",
+          "write_code",
+          "run_tests"
+        ],
+        "command_probability": {
+          "git": 0.8,
+          "test": 0.7,
+          "fixpr": 0.9,
+          "copilot": 0.8
+        },
+        "workflow_trajectory": "development_phase",
+        "completion_indicators": [
+          "ready_to_commit",
+          "ready_to_merge"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.936,
+        "information_density": 0.68,
+        "technical_specificity": 0.12,
+        "action_orientation": 0.32
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_725",
+      "raw_prompt": "<local-command-stdout>Failed to reconnect to aiuniverse-stdio.</local-command-stdout>",
+      "timestamp": "2025-09-15T07:22:26.783Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7682,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "to reconnect to aiuniverse-stdio"
+          ],
+          "work_focus": "general"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "local"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "general_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "system_failure",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "negative",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "general",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.895,
+        "information_density": 0.8,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_726",
+      "raw_prompt": "this is not expected wff are you talking about. /learn because it is supposed to work  I can see the aiuniverse-stdio server was added but failed to connect. This makes sense because the STDIO server script expects to run\n  interactively while we have it running in the background through the dual-transport script. Let me update my todos and complete our\n  verification:",
+      "timestamp": "2025-09-15T07:22:57.922Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7683,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "to connect"
+          ],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [
+            "learn"
+          ],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "maintenance",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "development_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "explicit_reasoning_provided",
+          "trigger_event": "system_failure",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_end"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "negative",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "general_progress",
+          "project_goal": "product_development",
+          "meta_goal": "knowledge_acquisition"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "maintenance_phase",
+        "completion_indicators": [
+          "explicit_completion"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.913,
+        "information_density": 0.84,
+        "technical_specificity": 0.02,
+        "action_orientation": 0.33
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_727",
+      "raw_prompt": "why did you make a wrapper? stop making so many new files. cant you integrate it into the exisgting script? Fix it and actually test it and run the second opinions",
+      "timestamp": "2025-09-15T07:27:09.824Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7684,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "problem_solving",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "moderate",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Problem-Solving",
+          "description": "Request for debugging or issue resolution",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "debugging",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "problem_resolution",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "debug_issue"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.867,
+        "information_density": 0.84,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.97
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_728",
+      "raw_prompt": "i restarted now test the second opionions and print them here. If you cannot or do not print it is a TOTAL FAILURE",
+      "timestamp": "2025-09-15T07:30:09.518Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7685,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "system_failure",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_start"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "pr_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "initiation_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.906,
+        "information_density": 0.96,
+        "technical_specificity": 0.09,
+        "action_orientation": 0.87
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_729",
+      "raw_prompt": "ok push to pr and in the commit message make sure it contains \"local server WORKING\"",
+      "timestamp": "2025-09-15T07:34:44.778Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7686,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "integration",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "deployment_action",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "pr_workflow",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Integration-Focused",
+          "description": "Request for PR management or merge operations",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "pr_management",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "integration",
+          "session_goal": "pr_completion",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "integration_phase",
+        "completion_indicators": [
+          "success_signal",
+          "ready_to_commit"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.903,
+        "information_density": 1.0,
+        "technical_specificity": 0.06,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_730",
+      "raw_prompt": "Execute the task: now lets get the http server started, added (claude mcp add), tested, and working.\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-09-15T08:26:38.787Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7687,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "development"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "execute"
+          ],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": [
+            "contains_now"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "development_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 8,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "expressing_need",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_start"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Implementation-Focused",
+          "description": "Request for feature development or creation",
+          "evidence": [
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "feature_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "write_code",
+          "run_tests",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "initiation_phase",
+        "completion_indicators": [
+          "explicit_completion",
+          "success_signal"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.95,
+        "information_density": 0.82,
+        "technical_specificity": 0.06,
+        "action_orientation": 0.56
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_731",
+      "raw_prompt": "test the /mcp endpoint too",
+      "timestamp": "2025-09-15T08:33:19.525Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7688,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [
+            "mcp"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.909,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_732",
+      "raw_prompt": "push to pr and include \"WORKING http\" in the commit msg",
+      "timestamp": "2025-09-15T08:35:03.635Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7689,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "git",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "integration",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "deployment_action",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "pr_workflow",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "moderate",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Integration-Focused",
+          "description": "Request for PR management or merge operations",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "pr_management",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "integration",
+          "session_goal": "pr_completion",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "integration_phase",
+        "completion_indicators": [
+          "success_signal",
+          "ready_to_commit"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.895,
+        "information_density": 1.0,
+        "technical_specificity": 0.09,
+        "action_orientation": 0.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_733",
+      "raw_prompt": "update the tests in testing_llm/ to account for the testing we just did and run the tests using /testllm. Delete the old test results in docs/ and push to pr. Then /reviewdeep /fake3 /copilot",
+      "timestamp": "2025-09-15T08:41:20.677Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7690,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [
+            "docs/",
+            "testing_llm/"
+          ],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "testllm",
+            "reviewdeep",
+            "fake3",
+            "copilot"
+          ],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 6,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_middle"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "high",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [
+            "automation"
+          ],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "pr_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "test": 0.7,
+          "copilot": 0.8
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.939,
+        "information_density": 0.79,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_734",
+      "raw_prompt": "Perform a comprehensive deep code review of the AI Universe dual-transport MCP server architecture that was just implemented. \n\nFocus on:\n1. **Code Quality**: Review the scripts/aiuniverse-stdio.sh, scripts/aiuniverse-http.sh, and run_local_server.sh files\n2. **Architecture Design**: Evaluate the dual-transport approach (STDIO + HTTP)\n3. **Security**: Check for potential vulnerabilities, especially in process management and API key handling\n4. **Performance**: Assess the efficiency of the server startup and management processes\n5. **Maintainability**: Review code organization and documentation quality\n6. **Error Handling**: Evaluate robustness of error handling and cleanup procedures\n\nProvide specific recommendations for improvements and identify any potential issues or best practices that should be followed.",
+      "timestamp": "2025-09-15T08:45:44.665Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7691,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [
+            "Handling**: Evaluate robustness of error handling and cleanup procedures"
+          ],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "http.sh",
+            "run_local_server.sh",
+            "stdio.sh",
+            "scripts/aiuniverse"
+          ],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "aiuniverse",
+            "aiuniverse"
+          ],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [
+            "documentation"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "error_encountered",
+          "expected_outcome": "feature_implementation",
+          "workflow_position": "workflow_start"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "negative",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "advanced",
+          "workflow_preference": "automated",
+          "quality_standards": "high",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "feature_development",
+          "session_goal": "feature_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "efficiency_improvement"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "write_code",
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "initiation_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.95,
+        "information_density": 0.78,
+        "technical_specificity": 0.1,
+        "action_orientation": 0.29
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_735",
+      "raw_prompt": "Generate 3 realistic test cases for the AI Universe second opinion tool that would be suitable for automated testing. Each test case should include:\n\n1. A test question that would generate meaningful responses from all 5 AI models\n2. Expected response characteristics (length, topic coverage, etc.)\n3. Success criteria for validation\n\nFocus on questions that would:\n- Test different types of reasoning (technical, creative, analytical)\n- Generate responses of varying lengths from different models\n- Allow for validation of the \"second opinion\" concept\n\nFormat the output as JSON that could be used in the testing framework.",
+      "timestamp": "2025-09-15T08:49:03.327Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7692,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing"
+          ],
+          "command_history": [],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "task_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "positive",
+          "command_preference": "automated"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "automated",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": [
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "general_progress",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": [
+          "success_signal"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.927,
+        "information_density": 0.73,
+        "technical_specificity": 0.07,
+        "action_orientation": 0.1
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_736",
+      "raw_prompt": "Analyze the current AI Universe dual-transport MCP server implementation for potential PR blockers and provide specific code implementation fixes. Focus on:\n\n1. **Security Issues**: Review the recent security fix and identify any remaining vulnerabilities\n2. **Code Quality**: Identify potential issues that could block PR approval\n3. **Architecture Concerns**: Evaluate the dual-transport design for potential problems\n4. **Testing Coverage**: Assess what additional testing might be needed\n5. **Documentation**: Review if documentation is adequate for PR approval\n\nFor any issues identified, provide specific code implementations to fix them, not just descriptions. The goal is to ensure this PR can be merged without blockers.\n\nContext: This PR implements a dual-transport MCP server architecture with:\n- STDIO server (port 2000) for Claude CLI integration\n- HTTP server (port 3000) for web/API integration  \n- Process management improvements\n- Environment variable handling\n- Comprehensive testing documentation\n\nRecent changes include removing a hardcoded API key security vulnerability.",
+      "timestamp": "2025-09-15T08:50:33.685Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7693,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "debugging"
+        },
+        "technical_context": {
+          "file_references": [
+            "web/API"
+          ],
+          "technology_stack": [
+            "git",
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "API"
+          ],
+          "complexity_indicators": [
+            "long_prompt"
+          ],
+          "urgency_signals": [
+            "contains_fix"
+          ]
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "analysis_request",
+          "secondary_intents": [
+            "documentation"
+          ],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 7,
+          "complexity_factors": {
+            "information_density": "high",
+            "decision_complexity": "high",
+            "technical_depth": "intermediate"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "expressing_need",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "problem_resolution",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "high",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "advanced",
+          "workflow_preference": "automated",
+          "quality_standards": "high",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Analysis-Focused",
+          "description": "Request for analytical evaluation or review",
+          "evidence": [
+            "contains_analysis_keywords",
+            "contains_code_elements"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "development",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "problem_resolution",
+          "session_goal": "feature_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "efficiency_improvement"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "provide_analysis",
+          "write_code",
+          "run_tests"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "development_phase",
+        "completion_indicators": [
+          "ready_to_merge"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.95,
+        "information_density": 0.69,
+        "technical_specificity": 0.11,
+        "action_orientation": 0.33
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_737",
+      "raw_prompt": "whats the url for google cloud? lets deploy dev",
+      "timestamp": "2025-09-15T09:06:37.095Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7694,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "deployment"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "development_hours",
+          "project_phase": "deployment",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "information_seeking",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "expects_explanation"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "low",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "seeking_information",
+          "trigger_event": "planned_development",
+          "expected_outcome": "information_response",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "General-Purpose",
+          "description": "General development or operational request",
+          "evidence": [
+            "contains_questions"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "deployment",
+          "sub_themes": [],
+          "pattern_family": "inquiry_pattern"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "task_completion",
+          "session_goal": "deployment_readiness",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "clarify_requirements"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "deployment_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.872,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_738",
+      "raw_prompt": "run local server and test second opinions and print htem here",
+      "timestamp": "2025-09-18T23:25:00.750Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7695,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "high",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "pr_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.939,
+        "information_density": 0.91,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_739",
+      "raw_prompt": "<user-prompt-submit-hook>run local server and test second opinions and print htem here</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T23:25:00.943Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7696,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "testing"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "testing",
+            "pr_management"
+          ],
+          "command_history": [
+            "user"
+          ],
+          "complexity_indicators": [
+            "system_generated"
+          ],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "testing",
+          "team_context": "solo",
+          "deployment_state": "testing"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "testing_request",
+          "secondary_intents": [],
+          "implicit_expectations": [
+            "system_processing"
+          ]
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "low",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "system_triggered",
+          "trigger_event": "testing_phase",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "system_checkpoint"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "moderate",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Quality-Assurance",
+          "description": "Request for testing or validation",
+          "evidence": [
+            "system_generated_prompt"
+          ]
+        },
+        "theme_classification": {
+          "primary_theme": "testing",
+          "sub_themes": [],
+          "pattern_family": "system_generated"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "validation",
+          "session_goal": "pr_completion",
+          "project_goal": "quality_assurance",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "run_tests",
+          "resolve_pr"
+        ],
+        "command_probability": {
+          "test": 0.7
+        },
+        "workflow_trajectory": "testing_phase",
+        "completion_indicators": []
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.898,
+        "information_density": 0.91,
+        "technical_specificity": 0.0,
+        "action_orientation": 1.0
+      }
+    },
+    {
+      "prompt_id": "chunk_008_prompt_740",
+      "raw_prompt": "print the actual responses here, i dont believe you that its working. Try 2+2 first",
+      "timestamp": "2025-09-18T23:57:23.583Z",
+      "project_context": "-Users-jleechan-project-ai-universe-ai-universe",
+      "extraction_order": 7697,
+      "context_analysis": {
+        "conversation_state": {
+          "previous_actions": [],
+          "current_branch": "unknown",
+          "session_duration": "0_minutes",
+          "recent_errors": [],
+          "work_focus": "pr_management"
+        },
+        "technical_context": {
+          "file_references": [],
+          "technology_stack": [
+            "pr_management"
+          ],
+          "command_history": [],
+          "complexity_indicators": [],
+          "urgency_signals": []
+        },
+        "environmental_context": {
+          "time_of_day": "off_hours",
+          "project_phase": "integration",
+          "team_context": "solo",
+          "deployment_state": "dev"
+        }
+      },
+      "cognitive_analysis": {
+        "intent_classification": {
+          "primary_intent": "pr_management",
+          "secondary_intents": [],
+          "implicit_expectations": []
+        },
+        "cognitive_load": {
+          "hp_score": 5,
+          "complexity_factors": {
+            "information_density": "moderate",
+            "decision_complexity": "high",
+            "technical_depth": "basic"
+          }
+        },
+        "reasoning_analysis": {
+          "why_said": "context_dependent",
+          "trigger_event": "pr_workflow",
+          "expected_outcome": "pr_completion",
+          "workflow_position": "workflow_unknown"
+        }
+      },
+      "behavioral_classification": {
+        "communication_style": {
+          "directness_level": "low",
+          "technical_precision": "low",
+          "emotional_tone": "neutral",
+          "command_preference": "mixed"
+        },
+        "user_persona_indicators": {
+          "expertise_level": "intermediate",
+          "workflow_preference": "mixed",
+          "quality_standards": "basic",
+          "risk_tolerance": "moderate"
+        }
+      },
+      "taxonomic_classification": {
+        "core_tenet": {
+          "category": "Integration-Focused",
+          "description": "Request for PR management or merge operations",
+          "evidence": []
+        },
+        "theme_classification": {
+          "primary_theme": "pr_management",
+          "sub_themes": [],
+          "pattern_family": "direct_command"
+        },
+        "goal_hierarchy": {
+          "immediate_goal": "integration",
+          "session_goal": "pr_completion",
+          "project_goal": "product_development",
+          "meta_goal": "value_delivery"
+        }
+      },
+      "predictive_modeling": {
+        "next_likely_actions": [
+          "resolve_pr"
+        ],
+        "command_probability": {},
+        "workflow_trajectory": "integration_phase",
+        "completion_indicators": [
+          "success_signal"
+        ]
+      },
+      "quality_metrics": {
+        "authenticity_score": 0.91,
+        "information_density": 1.0,
+        "technical_specificity": 0.0,
+        "action_orientation": 0.67
+      }
+    }
+  ]
+}

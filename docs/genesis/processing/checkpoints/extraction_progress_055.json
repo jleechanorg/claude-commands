@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 55,
+  "prompts_count": 5500,
+  "timestamp": "2025-09-22T03:49:11.458308",
+  "prompts": [
+    {
+      "content": "fix the load token script then continue",
+      "timestamp": "2025-08-24T21:52:48.601Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "6dab8820-1b6a-4f4a-b136-dd3eaac3ecfb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix the load token script then continue",
+      "extraction_order": 5401
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix the load token script then continue</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T21:52:48.753Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "6dab8820-1b6a-4f4a-b136-dd3eaac3ecfb.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix the load token script then continue</user-prompt-submit-hook>",
+      "extraction_order": 5402
+    },
+    {
+      "content": "is this duplicated if its in claude_start.sh now? scripts/start_mcp_server.sh Why not just have claude_start.sh call this script? scripts/start_mcp_server.sh",
+      "timestamp": "2025-08-26T08:16:28.008Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ad6623ad-9ebf-4662-a8ac-391ae4e223a7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is this duplicated if its in claude_start.sh now? scripts/start_mcp_server.sh why not just have clau",
+      "extraction_order": 5403
+    },
+    {
+      "content": "<user-prompt-submit-hook>is this duplicated if its in claude_start.sh now? scripts/start_mcp_server.sh Why not just have claude_start.sh call this script? scripts/start_mcp_server.sh</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:16:28.177Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ad6623ad-9ebf-4662-a8ac-391ae4e223a7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is this duplicated if its in claude_start.sh now? scripts/start_mcp_server.",
+      "extraction_order": 5404
+    },
+    {
+      "content": "does claude start call the other script?",
+      "timestamp": "2025-08-26T08:18:07.061Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ad6623ad-9ebf-4662-a8ac-391ae4e223a7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "does claude start call the other script?",
+      "extraction_order": 5405
+    },
+    {
+      "content": "<user-prompt-submit-hook>does claude start call the other script?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:18:07.218Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ad6623ad-9ebf-4662-a8ac-391ae4e223a7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>does claude start call the other script?</user-prompt-submit-hook>",
+      "extraction_order": 5406
+    },
+    {
+      "content": "list the tools for the worldai mcp server",
+      "timestamp": "2025-08-24T22:23:11.526Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "list the tools for the worldai mcp server",
+      "extraction_order": 5407
+    },
+    {
+      "content": "<user-prompt-submit-hook>list the tools for the worldai mcp server</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:23:11.684Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>list the tools for the worldai mcp server</user-prompt-submit-hook>",
+      "extraction_order": 5408
+    },
+    {
+      "content": "i dont even see the worldai mcp server. run claude_mcp.sh",
+      "timestamp": "2025-08-24T22:24:46.269Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i dont even see the worldai mcp server. run claude_mcp.sh",
+      "extraction_order": 5409
+    },
+    {
+      "content": "<user-prompt-submit-hook>i dont even see the worldai mcp server. run claude_mcp.sh</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:24:46.440Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i dont even see the worldai mcp server. run claude_mcp.sh</user-prompt-subm",
+      "extraction_order": 5410
+    },
+    {
+      "content": "why am i not seeing it in /mcp",
+      "timestamp": "2025-08-24T22:27:46.882Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why am i not seeing it in /mcp",
+      "extraction_order": 5411
+    },
+    {
+      "content": "<user-prompt-submit-hook>why am i not seeing it in /mcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:27:47.168Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why am i not seeing it in /mcp</user-prompt-submit-hook>",
+      "extraction_order": 5412
+    },
+    {
+      "content": "<user-prompt-submit-hook>/research should claude_mcp.sh also edit the settings.json to configure the mcp servers? how does it work for claude code li</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:28:54.624Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/research should claude_mcp.sh also edit the settings.json to configure the",
+      "extraction_order": 5413
+    },
+    {
+      "content": "does claude_mcp.sh actually run claude mcp add?",
+      "timestamp": "2025-08-24T22:34:14.408Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "does claude_mcp.sh actually run claude mcp add?",
+      "extraction_order": 5414
+    },
+    {
+      "content": "<user-prompt-submit-hook>does claude_mcp.sh actually run claude mcp add?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:34:14.566Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>does claude_mcp.sh actually run claude mcp add?</user-prompt-submit-hook>",
+      "extraction_order": 5415
+    },
+    {
+      "content": "handle comments  \n37233e5\ncursor[bot]\ncursor bot reviewed 11 minutes ago\nmvp_site/mcp_client.py\n\n            with concurrent.futures.ThreadPoolExecutor() as executor:\n                future = executor.submit(sync_wrapper)\n                return future.result()\n@cursor cursor bot 11 minutes ago\nBug: Sync Methods Lack Timeout, Risk Hanging\nThe call_tool_sync and get_resource_sync methods now call future.result() without a timeout parameter when using the ThreadPoolExecutor. This removes the existing timeout protection, which could cause these synchronous calls to hang indefinitely if the underlying async operation doesn't complete.\n\nAdditional Locations (1)\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 11 minutes ago\nscripts/load_tokens.sh\n            echo -e \"${YELLOW}      export GITHUB_TOKEN=\\\"ghp_your_github_token_here\\\"${NC}\"\n            echo -e \"${YELLOW}      export PERPLEXITY_API_KEY=\\\"pplx_your_perplexity_token_here\\\"${NC}\"\n            echo -e \"${YELLOW}   4. chmod 600 ~/.token${NC}\"\n            echo -e \"${YELLOW}      export GEMINI_API_KEY=\\\"AI_your_gemini_api_key_here\\\"${NC}\"\nAuthor\n@jleechan2015 jleechan2015 11 minutes ago\ndo not do this. Fetch the token from the appropriate place\n\n@jleechan2015    Reply...\nMerge info\n then continue and lets first find the root cause",
+      "timestamp": "2025-08-24T22:35:26.317Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "handle comments  \n37233e5\ncursor[bot]\ncursor bot reviewed 11 minutes ago\nmvp_site/mcp_client.py",
+      "extraction_order": 5416
+    },
+    {
+      "content": "<user-prompt-submit-hook>handle comments  \n37233e5\ncursor[bot]\ncursor bot reviewed 11 minutes ago\nmvp_site/mcp_client.py\n\n            with concurrent.futures.ThreadPoolExecutor() as executor:\n                future = executor.submit(sync_wrapper)\n                return future.result()\n@cursor cursor bot 11 minutes ago\nBug: Sync Methods Lack Timeout, Risk Hanging\nThe call_tool_sync and get_resource_sync methods now call future.result() without a timeout parameter when using the ThreadPoolExecutor. This removes the existing timeout protection, which could cause these synchronous calls to hang indefinitely if the underlying async operation doesn't complete.\n\nAdditional Locations (1)\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\njleechan2015\njleechan2015 commented 11 minutes ago\nscripts/load_tokens.sh\n            echo -e \"${YELLOW}      export GITHUB_TOKEN=\\\"ghp_your_github_token_here\\\"${NC}\"\n            echo -e \"${YELLOW}      export PERPLEXITY_API_KEY=\\\"pplx_your_perplexity_token_here\\\"${NC}\"\n            echo -e \"${YELLOW}   4. chmod 600 ~/.token${NC}\"\n            echo -e \"${YELLOW}      export GEMINI_API_KEY=\\\"AI_your_gemini_api_key_here\\\"${NC}\"\nAuthor\n@jleechan2015 jleechan2015 11 minutes ago\ndo not do this. Fetch the token from the appropriate place\n\n@jleechan2015    Reply...\nMerge info\n then continue and lets first find the root cause</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T22:35:26.487Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>handle comments  \n37233e5\ncursor[bot]\ncursor bot reviewed 11 minutes ago\nmv",
+      "extraction_order": 5417
+    },
+    {
+      "content": "<local-command-stderr>Error: Error during compaction: Error: Failed to generate conversation summary - response did not contain valid text content</local-command-stderr>",
+      "timestamp": "2025-08-24T23:10:47.703Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "0221c68a-50fc-4e40-8061-f10034b534d0.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<local-command-stderr>error: error during compaction: error: failed to generate conversation summary",
+      "extraction_order": 5418
+    },
+    {
+      "content": "do list tools for worldarchitect mcp server",
+      "timestamp": "2025-08-24T23:16:31.371Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do list tools for worldarchitect mcp server",
+      "extraction_order": 5419
+    },
+    {
+      "content": "<user-prompt-submit-hook>do list tools for worldarchitect mcp server</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T23:16:31.527Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do list tools for worldarchitect mcp server</user-prompt-submit-hook>",
+      "extraction_order": 5420
+    },
+    {
+      "content": "will the /testmcp command use those tools?",
+      "timestamp": "2025-08-24T23:17:04.625Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "will the /testmcp command use those tools?",
+      "extraction_order": 5421
+    },
+    {
+      "content": "<user-prompt-submit-hook>will the /testmcp command use those tools?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T23:17:04.926Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>will the /testmcp command use those tools?</user-prompt-submit-hook>",
+      "extraction_order": 5422
+    },
+    {
+      "content": "update the /testmcp command. Make it ignore python tests and mock mode and only run the real MCP server tools. If the MCP server is not available fail fast with obvious warning to the user. And then run it",
+      "timestamp": "2025-08-24T23:18:05.432Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "update the /testmcp command. make it ignore python tests and mock mode and only run the real mcp ser",
+      "extraction_order": 5423
+    },
+    {
+      "content": "<user-prompt-submit-hook>update the /testmcp command. Make it ignore python tests and mock mode and only run the real MCP server tools. If the MCP server is not available fail fast with obvious warning to the user. And then run it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T23:18:05.717Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>update the /testmcp command. make it ignore python tests and mock mode and",
+      "extraction_order": 5424
+    },
+    {
+      "content": "i thought we fixed all the API key issues?",
+      "timestamp": "2025-08-24T23:22:53.837Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i thought we fixed all the api key issues?",
+      "extraction_order": 5425
+    },
+    {
+      "content": "<user-prompt-submit-hook>i thought we fixed all the API key issues?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T23:22:54.000Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i thought we fixed all the api key issues?</user-prompt-submit-hook>",
+      "extraction_order": 5426
+    },
+    {
+      "content": "use a real user and not a test user. the creds are jleechantest@gmail.com in the bashrc",
+      "timestamp": "2025-08-24T23:23:20.510Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use a real user and not a test user. the creds are jleechantest@gmail.com in the bashrc",
+      "extraction_order": 5427
+    },
+    {
+      "content": "<user-prompt-submit-hook>use a real user and not a test user. the creds are jleechantest@gmail.com in the bashrc</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T23:23:20.779Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "d182b1b1-f142-4041-bf7f-c3662e2fe26a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use a real user and not a test user. the creds are jleechantest@gmail.com i",
+      "extraction_order": 5428
+    },
+    {
+      "content": "<user-prompt-submit-hook>/commentfetch</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T15:30:53.431Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "f15a99e7-1f93-4def-9798-b0e297d7bd8a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/commentfetch</user-prompt-submit-hook>",
+      "extraction_order": 5429
+    },
+    {
+      "content": "<user-prompt-submit-hook>/commentfetch and see if any serious comments not handled</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T18:14:33.188Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "f15a99e7-1f93-4def-9798-b0e297d7bd8a.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/commentfetch and see if any serious comments not handled</user-prompt-subm",
+      "extraction_order": 5430
+    },
+    {
+      "content": "List available tools. Show me exactly what MCP servers are available and specifically check if mcp__worldarchitect__ tools exist.",
+      "timestamp": "2025-08-25T02:56:55.547Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "80d38af9-7f03-423d-85f2-0d2c47a1eaaf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "list available tools. show me exactly what mcp servers are available and specifically check if mcp__",
+      "extraction_order": 5431
+    },
+    {
+      "content": "<user-prompt-submit-hook>List available tools. Show me exactly what MCP servers are available and specifically check if mcp__worldarchitect__ tools exist.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:56:55.725Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "80d38af9-7f03-423d-85f2-0d2c47a1eaaf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>list available tools. show me exactly what mcp servers are available and sp",
+      "extraction_order": 5432
+    },
+    {
+      "content": "any serious issues",
+      "timestamp": "2025-08-27T06:07:35.779Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "any serious issues",
+      "extraction_order": 5433
+    },
+    {
+      "content": "<user-prompt-submit-hook>any serious issues</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:07:35.934Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>any serious issues</user-prompt-submit-hook>",
+      "extraction_order": 5434
+    },
+    {
+      "content": "any seirous issues? jleechan2015 commented 43 minutes ago\nstart_mcp_server.sh\nOutdated\n@@ -0,0 +1 @@\nscripts/start_mcp_server.sh\nAuthor\n@jleechan2015 jleechan2015 43 minutes ago\nBlank script? Delete\n\n@jleechan2015    Reply...\n@jleechan2015\n@claude\nFix File Justification Protocol violations - move files from project \u2026 \n17d91cc\ncoderabbitai[bot]\ncoderabbitai bot reviewed 38 minutes ago\ncoderabbitai bot left a comment\nActionable comments posted: 6\n\nCaution\n\nSome comments are outside the diff and can\u2019t be posted inline due to platform limitations.\n\n\u26a0\ufe0f Outside diff range comments (3)\n\u267b\ufe0f Duplicate comments (4)\n\ud83e\uddf9 Nitpick comments (9)\n\ud83d\udcdc Review details\nclaude_start.sh\nComment on lines +236 to +297\n# WorldArchitect MCP server auto-start\necho -e \"${BLUE}\ud83c\udff0 Checking WorldArchitect MCP server status...${NC}\"\n\n# Function to check if WorldArchitect MCP server is running\nis_worldarchitect_mcp_running() {\n    if curl -s --connect-timeout 3 http://localhost:8081/health &> /dev/null; then\n        return 0\n    else\n        return 1\n    fi\n}\n\n# Function to start WorldArchitect MCP server in background\nstart_worldarchitect_mcp_background() {\n    local SCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n\n    # Check if start script exists\n    if [ -f \"$SCRIPT_DIR/scripts/start_mcp_server.sh\" ]; then\n        echo -e \"${BLUE}\ud83d\ude80 Starting WorldArchitect MCP server in background...${NC}\"\n\n        # Start the server in background, redirecting output to log file\n        nohup \"$SCRIPT_DIR/scripts/start_mcp_server.sh\" --port 8081 --http-only > \"$HOME/.worldarchitect-mcp-server.log\" 2>&1 &\n\n        # Store the PID\n        echo $! > \"$HOME/.worldarchitect-mcp-server.pid\"\n\n        # Wait a moment for startup\n        sleep 5\n\n        return 0\n    else\n        echo -e \"${YELLOW}\u26a0\ufe0f  scripts/start_mcp_server.sh not found${NC}\"\n        return 1\n    fi\n}\n\n# Check and start WorldArchitect MCP server\nif is_worldarchitect_mcp_running; then\n    echo -e \"${GREEN}\u2705 WorldArchitect MCP server already running on port 8081${NC}\"\nelse\n    echo -e \"${YELLOW}\u26a0\ufe0f  WorldArchitect MCP server not running${NC}\"\n\n    if start_worldarchitect_mcp_background; then\n        # Give it a moment to start up\n        sleep 3\n\n        if is_worldarchitect_mcp_running; then\n            echo -e \"${GREEN}\u2705 WorldArchitect MCP server started successfully${NC}\"\n            echo -e \"${BLUE}\ud83d\udccb Server info:${NC}\"\n            echo -e \"   \u2022 Health check: http://localhost:8081/health\"\n            echo -e \"   \u2022 MCP endpoint: http://localhost:8081/rpc\"\n            echo -e \"   \u2022 Log file: $HOME/.worldarchitect-mcp-server.log\"\n            echo -e \"   \u2022 PID file: $HOME/.worldarchitect-mcp-server.pid\"\n        else\n            echo -e \"${RED}\u274c Failed to start WorldArchitect MCP server${NC}\"\n            echo -e \"${BLUE}\ud83d\udca1 Check log: tail -f $HOME/.worldarchitect-mcp-server.log${NC}\"\n        fi\n    else\n        echo -e \"${YELLOW}\u26a0\ufe0f  Could not start WorldArchitect MCP server automatically${NC}\"\n        echo -e \"${BLUE}\ud83d\udca1 To start manually: ./scripts/start_mcp_server.sh${NC}\"\n    fi\nfi\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nScript must live under scripts/, not project root.\nMove claude_start.sh to scripts/ per repo policy and update references.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\nmcp_stdio_wrapper.py\nOutdated\nComment on lines 1 to 18\n#!/usr/bin/env python3\n\"\"\"\nWrapper script to run WorldArchitect MCP server in dual mode (stdio + HTTP) for Claude Code.\nUses port 8002 for HTTP to avoid conflicts with main app on 8000/8081.\n\"\"\"\nimport subprocess\nimport sys\nimport os\n\n# Get the directory of this script\nscript_dir = os.path.dirname(os.path.abspath(__file__))\n\n# Path to the actual MCP server\nmcp_server_path = os.path.join(script_dir, \"mvp_site\", \"mcp_api.py\")\n\n# Run the MCP server in stdio-only mode for Claude Code\ncmd = [sys.executable, mcp_server_path, \"--stdio\"]\nos.execv(sys.executable, cmd)\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nFile placement violates root directory policy\n\nCreating new Python files in the project root violates the established coding guidelines. According to the project rules, Python files should be placed in appropriate module directories, not in the root.\n\nMove this file to mvp_site/ or scripts/ directory:\n\n-# File location: mcp_stdio_wrapper.py (root)\n+# File location: mvp_site/mcp_stdio_wrapper.py\nAlso, the docstring mentions \"dual mode (stdio + HTTP)\" and \"port 8002\" but the actual implementation only runs stdio mode. Either update the docstring to reflect the actual behavior or implement the dual-mode functionality as described.\n\nCommittable suggestion skipped: line range outside the PR's diff.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\nmvp_site/tests/test_mcp_client.py\nComment on lines +327 to +476\n            return {\"result\": \"cleanup_test\"}\n        mock_call_tool.return_value = mock_async_call()\n\n        async def run_in_event_loop():\n            client = MCPClient(self.base_url, timeout=30)\n\n            created_loops = []\n\n            # Mock asyncio.new_event_loop to track created loops\n            original_new_event_loop = asyncio.new_event_loop\n            def track_new_loop():\n                loop = original_new_event_loop()\n                created_loops.append(loop)\n                return loop\n\n            with patch('asyncio.new_event_loop', side_effect=track_new_loop):\n                with patch('asyncio.set_event_loop') as mock_set_loop:\n                    result = client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n                    # Verify new loop was created and set\n                    self.assertEqual(len(created_loops), 1)\n                    mock_set_loop.assert_called_once_with(created_loops[0])\n\n                    # Verify loop was closed (should be closed by finally block)\n                    self.assertTrue(created_loops[0].is_closed())\n                    self.assertEqual(result, {\"result\": \"cleanup_test\"})\n\n        asyncio.run(run_in_event_loop())\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_concurrent_execution_safety(self, mock_call_tool):\n        \"\"\"Test concurrent execution safety with ThreadPoolExecutor.\"\"\"\n        call_count = 0\n\n        async def mock_async_call(*args, **kwargs):\n            nonlocal call_count\n            call_count += 1\n            # Simulate some async work\n            await asyncio.sleep(0.01)\n            return {\"result\": f\"concurrent_{call_count}\"}\n\n        mock_call_tool.side_effect = mock_async_call\n\n        async def run_concurrent_test():\n            client = MCPClient(self.base_url, timeout=30)\n\n            # Run multiple concurrent sync calls\n            tasks = []\n            for i in range(5):\n                task = asyncio.create_task(\n                    asyncio.to_thread(client.call_tool_sync, f\"tool_{i}\", {\"arg\": f\"value_{i}\"})\n                )\n                tasks.append(task)\n\n            results = await asyncio.gather(*tasks)\n\n            # Verify all calls completed successfully\n            self.assertEqual(len(results), 5)\n            for result in results:\n                self.assertIn(\"result\", result)\n                self.assertIn(\"concurrent_\", result[\"result\"])\n\n            # Verify all calls were made\n            self.assertEqual(call_count, 5)\n\n        asyncio.run(run_concurrent_test())\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_error_handling_no_loop(self, mock_call_tool):\n        \"\"\"Test error handling in call_tool_sync when no event loop exists.\"\"\"\n        mock_call_tool.side_effect = MCPClientError(\"Test error\", -32603)\n\n        client = MCPClient(self.base_url, timeout=30)\n\n        # Ensure no event loop is running\n        with patch('asyncio.get_running_loop', side_effect=RuntimeError(\"no running event loop\")):\n            with patch('asyncio.run', side_effect=MCPClientError(\"Test error\", -32603)):\n                with self.assertRaises(MCPClientError) as context:\n                    client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n                self.assertEqual(str(context.exception), \"Test error\")\n                self.assertEqual(context.exception.error_code, -32603)\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_error_handling_threadpool(self, mock_call_tool):\n        \"\"\"Test error handling in ThreadPoolExecutor path.\"\"\"\n        async def mock_async_error():\n            raise MCPClientError(\"ThreadPool error\", -32602)\n        mock_call_tool.return_value = mock_async_error()\n\n        async def run_error_test():\n            client = MCPClient(self.base_url, timeout=30)\n\n            with self.assertRaises(MCPClientError) as context:\n                client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n            self.assertEqual(str(context.exception), \"ThreadPool error\")\n            self.assertEqual(context.exception.error_code, -32602)\n\n        asyncio.run(run_error_test())\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nDuplicate test block detected\n\nLines 327-476 appear to be an exact duplicate of tests that likely already exist elsewhere in the file. This violates DRY principles and makes the test suite harder to maintain.\n\nRemove the duplicate test block. These six tests (lines 327-476) should only appear once in the file:\n\ntest_call_tool_sync_no_event_loop_path\ntest_call_tool_sync_threadpool_executor_path\ntest_call_tool_sync_event_loop_cleanup\ntest_call_tool_sync_concurrent_execution_safety\ntest_call_tool_sync_error_handling_no_loop\ntest_call_tool_sync_error_handling_threadpool\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntest_mcp_integration.py\nOutdated\nComment on lines 1 to 6\n#!/usr/bin/env python3\n\"\"\"\nComprehensive MCP Integration Test Suite\nTesting WorldArchitect MCP server dual transport functionality\n\"\"\"\n\n@coderabbitai coderabbitai bot 38 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\n\u26a0\ufe0f Potential issue\n\nTest placement violates repo rules; move or convert.\nNever add prototype tests in project root; add to existing suites under mvp_site/tests/ or convert this into a scripts/ utility.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntest_mcp_integration.py\nOutdated\nComment on lines 7 to 14\nimport asyncio\nimport json\nimport subprocess\nimport sys\nimport time\nimport requests\nfrom typing import Dict, Any\n\n@coderabbitai coderabbitai bot 38 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nGuard external dependency on \u201cclaude\u201d CLI.\nSkip or downgrade to WARN when claude is unavailable to keep tests deterministic.\n\nApply this diff:\n\n+import shutil\n@@\n-            result = subprocess.run(\n-                [\"claude\", \"mcp\", \"get\", \"worldarchitect\"],\n+            if shutil.which(\"claude\") is None:\n+                self.log_test(\"Claude MCP Connection\", \"WARN\", \"claude CLI not installed\")\n+                return False\n+            result = subprocess.run(\n+                [\"claude\", \"mcp\", \"get\", \"worldarchitect\"],\nAlso applies to: 124-131\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntest_mcp_integration.py\nOutdated\nComment on lines 19 to 21\n        self.mcp_server_path = \"/Users/jleechan/projects/worldarchitect.ai/worktree_browser/mvp_site/mcp_api.py\"\n        self.python_path = \"/Users/jleechan/.pyenv/versions/3.11.10/bin/python3.11\"\n\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nRemove hardcoded absolute paths; use module invocation and sys.executable.\nCurrent values break CI and other machines. Use -m to run server module.\n\nApply this diff:\n\n-        self.mcp_server_path = \"/Users/jleechan/projects/worldarchitect.ai/worktree_browser/mvp_site/mcp_api.py\"\n-        self.python_path = \"/Users/jleechan/.pyenv/versions/3.11.10/bin/python3.11\"\n+        self.mcp_module = \"mvp_site.mcp_api\"\nAnd update the stdio spawn:\n\n-            process = subprocess.Popen(\n-                [self.python_path, self.mcp_server_path, \"--stdio\"],\n+            process = subprocess.Popen(\n+                [sys.executable, \"-m\", self.mcp_module, \"--stdio\"],\nCommittable suggestion skipped: line range outside the PR's diff.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ncoderabbitai[bot]\ncoderabbitai bot reviewed 28 minutes ago\ncoderabbitai bot left a comment\nActionable comments posted: 5\n\n\ud83e\uddf9 Nitpick comments (4)\n\ud83d\udcdc Review details\nscripts/mcp_stdio_wrapper.py\nOutdated\nscripts/mcp_stdio_wrapper.py\nComment on lines +10 to +18\n# Get the directory of this script\nscript_dir = os.path.dirname(os.path.abspath(__file__))\n\n# Path to the actual MCP server (go up one level from scripts directory)\nmcp_server_path = os.path.join(os.path.dirname(script_dir), \"mvp_site\", \"mcp_api.py\")\n\n# Run the MCP server in stdio-only mode for Claude Code\ncmd = [sys.executable, mcp_server_path, \"--stdio\"]\nos.execv(sys.executable, cmd)\n@coderabbitai coderabbitai bot 28 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nAdd error handling for missing MCP server file\n\nThe script assumes the MCP server file exists at the computed path but doesn't verify this before attempting to execute it. This could lead to cryptic errors if the file structure changes.\n\n # Path to the actual MCP server (go up one level from scripts directory)\n mcp_server_path = os.path.join(os.path.dirname(script_dir), \"mvp_site\", \"mcp_api.py\")\n \n+# Verify the MCP server exists\n+if not os.path.exists(mcp_server_path):\n+    print(f\"Error: MCP server not found at {mcp_server_path}\", file=sys.stderr)\n+    sys.exit(1)\n+\n # Run the MCP server in stdio-only mode for Claude Code\n cmd = [sys.executable, mcp_server_path, \"--stdio\"]\n os.execv(sys.executable, cmd)\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/test_mcp_integration.py\n        # Get project root and construct path to MCP server\n        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))\n        self.mcp_server_path = os.path.join(project_root, \"mvp_site\", \"mcp_api.py\")\n        self.python_path = \"/Users/jleechan/.pyenv/versions/3.11.10/bin/python3.11\"\n@coderabbitai coderabbitai bot 28 minutes ago\n\u26a0\ufe0f Potential issue\n\nHardcoded Python path should be configurable\n\nThe Python interpreter path is hardcoded to a user-specific pyenv location, which will break on other systems.\n\n-        self.python_path = \"/Users/jleechan/.pyenv/versions/3.11.10/bin/python3.11\"\n+        self.python_path = sys.executable  # Use current Python interpreter\nOr make it configurable via environment variable:\n\n-        self.python_path = \"/Users/jleechan/.pyenv/versions/3.11.10/bin/python3.11\"\n+        self.python_path = os.environ.get(\"PYTHON_PATH\", sys.executable)\nCommittable suggestion skipped: line range outside the PR's diff.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/test_mcp_integration.py\nComment on lines +59 to +61\n        except Exception as e:\n            self.log_test(\"HTTP Transport Health\", \"FAIL\", f\"Exception: {e}\")\n            return False\n@coderabbitai coderabbitai bot 28 minutes ago\n\u26a0\ufe0f Potential issue\n\nUse specific exception types instead of broad Exception\n\nAccording to coding guidelines, specific exception types should be used instead of catching broad Exception.\n\n-        except Exception as e:\n+        except (requests.RequestException, requests.Timeout, ValueError) as e:\n             self.log_test(\"HTTP Transport Health\", \"FAIL\", f\"Exception: {e}\")\n             return False\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/test_mcp_integration.py\nComment on lines +120 to +122\n        except Exception as e:\n            self.log_test(\"Stdio Transport Protocol\", \"FAIL\", f\"Exception: {e}\")\n            return False\n@coderabbitai coderabbitai bot 28 minutes ago\n\u26a0\ufe0f Potential issue\n\nInconsistent exception handling patterns\n\nThe code uses broad Exception catches in multiple places, violating the coding guidelines that require specific exception types.\n\nFor line 120-122:\n\n-        except Exception as e:\n+        except (OSError, ValueError, json.JSONDecodeError) as e:\n             self.log_test(\"Stdio Transport Protocol\", \"FAIL\", f\"Exception: {e}\")\n             return False\nFor line 147-149:\n\n-        except Exception as e:\n+        except (subprocess.SubprocessError, OSError, FileNotFoundError) as e:\n             self.log_test(\"Claude MCP Connection\", \"FAIL\", f\"Exception: {e}\")\n             return False\nFor line 172-176:\n\n-        except Exception as e:\n+        except (requests.RequestException, requests.Timeout, ValueError) as e:\n             self.log_test(\"MCP Tools HTTP Access\", \"WARN\",\n                         f\"HTTP tools access not available: {e}\")\nAlso applies to: 147-149, 172-176\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n@jleechan2015\n@claude\nAdd comprehensive MCP campaign creation test suite \n338c5dc\ncoderabbitai[bot]\ncoderabbitai bot reviewed 13 minutes ago\ncoderabbitai bot left a comment\nActionable comments posted: 6\n\n\ud83e\uddf9 Nitpick comments (6)\n\ud83d\udcdc Review details\ntesting_mcp/create_campaign_direct.py\nComment on lines +84 to +86\n                        if 'result' in response and 'content' in response['result']:\n                            content = response['result']['content'][0]['text']\n                            campaign_result = json.loads(content)\n@coderabbitai coderabbitai bot 13 minutes ago\n\u26a0\ufe0f Potential issue\n\nPotential KeyError when accessing nested dict\n\nThe code assumes the response structure without checking if keys exist.\n\n                     if message['method'] == 'tools/call':\n                         # Parse campaign creation response\n-                        if 'result' in response and 'content' in response['result']:\n-                            content = response['result']['content'][0]['text']\n+                        if ('result' in response and \n+                            'content' in response.get('result', {}) and\n+                            response['result']['content'] and\n+                            'text' in response['result']['content'][0]):\n+                            content = response['result']['content'][0]['text']\n                             campaign_result = json.loads(content)\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/create_campaign_direct.py\nComment on lines +131 to +133\n    except Exception as e:\n        print(f\"\u274c Exception: {e}\")\n        return {'success': False, 'error': str(e)}\n@coderabbitai coderabbitai bot 13 minutes ago\n\u26a0\ufe0f Potential issue\n\nUse specific exception types\n\nSimilar to the previous file, avoid catching all exceptions.\n\n-    except Exception as e:\n+    except (subprocess.TimeoutExpired, OSError, IOError) as e:\n         print(f\"\u274c Exception: {e}\")\n         return {'success': False, 'error': str(e)}\nCommittable suggestion skipped: line range outside the PR's diff.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/quick_campaign_test.py\nComment on lines +64 to +66\n                if 'result' in response and 'content' in response['result']:\n                    content = response['result']['content'][0]['text']\n                    campaign_result = json.loads(content)\n@coderabbitai coderabbitai bot 13 minutes ago\n\u26a0\ufe0f Potential issue\n\nAdd safety checks for nested dict access\n\nSimilar to the previous file, add checks before accessing nested dictionary values.\n\n-                if 'result' in response and 'content' in response['result']:\n-                    content = response['result']['content'][0]['text']\n+                if ('result' in response and \n+                    'content' in response.get('result', {}) and\n+                    response['result']['content'] and\n+                    'text' in response['result']['content'][0]):\n+                    content = response['result']['content'][0]['text']\n                     campaign_result = json.loads(content)\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/quick_campaign_test.py\nComment on lines +79 to +80\n    except Exception as e:\n        return {'success': False, 'error': str(e)}\n@coderabbitai coderabbitai bot 13 minutes ago\n\u26a0\ufe0f Potential issue\n\nUse specific exception types\n\nConsistent with other files, avoid catching all exceptions.\n\n-    except Exception as e:\n+    except (subprocess.TimeoutExpired, OSError, IOError, json.JSONDecodeError) as e:\n         return {'success': False, 'error': str(e)}\n\ud83d\udcdd Committable suggestion\n@jleechan2015    Reply...\ntesting_mcp/test_campaign_creation.py\nComment on lines +207 to +208\n                    except:\n                        pass\n@coderabbitai coderabbitai bot 13 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\nInconsistent exception handling in parsing blocks\n\nMultiple bare except clauses suppress all exceptions. Consider catching specific exceptions for better error handling.\n\n-                    except:\n-                        pass\n+                    except (json.JSONDecodeError, KeyError, TypeError) as e:\n+                        print(f\"   \u26a0\ufe0f Failed to parse campaign result: {e}\")\nApply the same change to lines 222-223:\n\n-                except:\n-                    pass\n+                except (json.JSONDecodeError, KeyError, TypeError) as e:\n+                    print(f\"   \u26a0\ufe0f Failed to parse TextContent format: {e}\")\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntesting_mcp/test_campaign_creation.py\nComment on lines +228 to +230\n    except Exception as e:\n        print(f\"\u274c Test failed with exception: {e}\")\n        return False\n@coderabbitai coderabbitai bot 13 minutes ago\n\u26a0\ufe0f Potential issue\n\nCatch specific exception types\n\nUsing a bare Exception catch is too broad and might hide unexpected errors.\n\n-    except Exception as e:\n+    except (subprocess.TimeoutExpired, OSError, IOError) as e:\n         print(f\"\u274c Test failed with exception: {e}\")\n         return False\n\ud83d\udcdd Committable suggestion\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n@jleechan2015\n@claude\nFix critical MCP integration issues \ndab8c83\nMerge info\nSome checks haven't completed yet\n1 pending, 2 in progress, 5 successful checks\n\n\npending checks\nCodeRabbit\nCodeRabbitWaiting for status to be reported \u2014 Review in progress\nin progress checks\nLoading\nWorldArchitect Tests / test (integration-slow) (pull_request)\nWorldArchitect Tests / test (integration-slow) (pull_request)Started 3 minutes ago \u2014 This check has started...\nLoading\nWorldArchitect Tests / test (unit-fast) (pull_request)\nWorldArchitect Tests / test (unit-fast) (pull_request)Started 3 minutes ago \u2014 This check has started...\nsuccessful checks\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)\nAuto-Resolve PR Conflicts / auto-resolve-conflicts (pull_request)Successful in 31s\nCursor Bugbot\nCursor BugbotSuccessful in 3m \u2014 Bugbot Review\nDocumentation Size Check / check-doc-sizes (pull_request)\nDocumentation Size Check / check-doc-sizes (pull_request)Successful in 7s\nTest Deployment Build / test-deployment-build (pull_request)\nTest Deployment Build / test-deployment-build (pull_request)Successful in 33s\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Successful in 45s\nNo conflicts with base branch\nMerging can be performed automatically.\n\nYou can also merge this with the command line. \n@jleechan2015\n\n\nAdd a comment",
+      "timestamp": "2025-08-27T06:12:35.747Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "any seirous issues? jleechan2015 commented 43 minutes ago\nstart_mcp_server.sh\noutdated\n@@ -0,0 +1 @@",
+      "extraction_order": 5435
+    },
+    {
+      "content": "<user-prompt-submit-hook>any seirous issues? jleechan2015 commented 43 minutes ago\nstart_mcp_server.sh\nOutdated\n@@ -0,0 +1 @@\nscripts/start_mcp_server.sh\nAuthor\n@jleechan2015 jleechan2015 43 minutes ago\nBlank script? Delete\n\n@jleechan2015    Reply...\n@jleechan2015\n@claude\nFix File Justification Protocol violations - move files from project \u2026 \n17d91cc\ncoderabbitai[bot]\ncoderabbitai bot reviewed 38 minutes ago\ncoderabbitai bot left a comment\nActionable comments posted: 6\n\nCaution\n\nSome comments are outside the diff and can\u2019t be posted inline due to platform limitations.\n\n\u26a0\ufe0f Outside diff range comments (3)\n\u267b\ufe0f Duplicate comments (4)\n\ud83e\uddf9 Nitpick comments (9)\n\ud83d\udcdc Review details\nclaude_start.sh\nComment on lines +236 to +297\n# WorldArchitect MCP server auto-start\necho -e \"${BLUE}\ud83c\udff0 Checking WorldArchitect MCP server status...${NC}\"\n\n# Function to check if WorldArchitect MCP server is running\nis_worldarchitect_mcp_running() {\n    if curl -s --connect-timeout 3 http://localhost:8081/health &> /dev/null; then\n        return 0\n    else\n        return 1\n    fi\n}\n\n# Function to start WorldArchitect MCP server in background\nstart_worldarchitect_mcp_background() {\n    local SCRIPT_DIR=\"$(cd \"$(dirname \"${BASH_SOURCE[0]}\")\" && pwd)\"\n\n    # Check if start script exists\n    if [ -f \"$SCRIPT_DIR/scripts/start_mcp_server.sh\" ]; then\n        echo -e \"${BLUE}\ud83d\ude80 Starting WorldArchitect MCP server in background...${NC}\"\n\n        # Start the server in background, redirecting output to log file\n        nohup \"$SCRIPT_DIR/scripts/start_mcp_server.sh\" --port 8081 --http-only > \"$HOME/.worldarchitect-mcp-server.log\" 2>&1 &\n\n        # Store the PID\n        echo $! > \"$HOME/.worldarchitect-mcp-server.pid\"\n\n        # Wait a moment for startup\n        sleep 5\n\n        return 0\n    else\n        echo -e \"${YELLOW}\u26a0\ufe0f  scripts/start_mcp_server.sh not found${NC}\"\n        return 1\n    fi\n}\n\n# Check and start WorldArchitect MCP server\nif is_worldarchitect_mcp_running; then\n    echo -e \"${GREEN}\u2705 WorldArchitect MCP server already running on port 8081${NC}\"\nelse\n    echo -e \"${YELLOW}\u26a0\ufe0f  WorldArchitect MCP server not running${NC}\"\n\n    if start_worldarchitect_mcp_background; then\n        # Give it a moment to start up\n        sleep 3\n\n        if is_worldarchitect_mcp_running; then\n            echo -e \"${GREEN}\u2705 WorldArchitect MCP server started successfully${NC}\"\n            echo -e \"${BLUE}\ud83d\udccb Server info:${NC}\"\n            echo -e \"   \u2022 Health check: http://localhost:8081/health\"\n            echo -e \"   \u2022 MCP endpoint: http://localhost:8081/rpc\"\n            echo -e \"   \u2022 Log file: $HOME/.worldarchitect-mcp-server.log\"\n            echo -e \"   \u2022 PID file: $HOME/.worldarchitect-mcp-server.pid\"\n        else\n            echo -e \"${RED}\u274c Failed to start WorldArchitect MCP server${NC}\"\n            echo -e \"${BLUE}\ud83d\udca1 Check log: tail -f $HOME/.worldarchitect-mcp-server.log${NC}\"\n        fi\n    else\n        echo -e \"${YELLOW}\u26a0\ufe0f  Could not start WorldArchitect MCP server automatically${NC}\"\n        echo -e \"${BLUE}\ud83d\udca1 To start manually: ./scripts/start_mcp_server.sh${NC}\"\n    fi\nfi\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nScript must live under scripts/, not project root.\nMove claude_start.sh to scripts/ per repo policy and update references.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\nmcp_stdio_wrapper.py\nOutdated\nComment on lines 1 to 18\n#!/usr/bin/env python3\n\"\"\"\nWrapper script to run WorldArchitect MCP server in dual mode (stdio + HTTP) for Claude Code.\nUses port 8002 for HTTP to avoid conflicts with main app on 8000/8081.\n\"\"\"\nimport subprocess\nimport sys\nimport os\n\n# Get the directory of this script\nscript_dir = os.path.dirname(os.path.abspath(__file__))\n\n# Path to the actual MCP server\nmcp_server_path = os.path.join(script_dir, \"mvp_site\", \"mcp_api.py\")\n\n# Run the MCP server in stdio-only mode for Claude Code\ncmd = [sys.executable, mcp_server_path, \"--stdio\"]\nos.execv(sys.executable, cmd)\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nFile placement violates root directory policy\n\nCreating new Python files in the project root violates the established coding guidelines. According to the project rules, Python files should be placed in appropriate module directories, not in the root.\n\nMove this file to mvp_site/ or scripts/ directory:\n\n-# File location: mcp_stdio_wrapper.py (root)\n+# File location: mvp_site/mcp_stdio_wrapper.py\nAlso, the docstring mentions \"dual mode (stdio + HTTP)\" and \"port 8002\" but the actual implementation only runs stdio mode. Either update the docstring to reflect the actual behavior or implement the dual-mode functionality as described.\n\nCommittable suggestion skipped: line range outside the PR's diff.\n\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\nmvp_site/tests/test_mcp_client.py\nComment on lines +327 to +476\n            return {\"result\": \"cleanup_test\"}\n        mock_call_tool.return_value = mock_async_call()\n\n        async def run_in_event_loop():\n            client = MCPClient(self.base_url, timeout=30)\n\n            created_loops = []\n\n            # Mock asyncio.new_event_loop to track created loops\n            original_new_event_loop = asyncio.new_event_loop\n            def track_new_loop():\n                loop = original_new_event_loop()\n                created_loops.append(loop)\n                return loop\n\n            with patch('asyncio.new_event_loop', side_effect=track_new_loop):\n                with patch('asyncio.set_event_loop') as mock_set_loop:\n                    result = client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n                    # Verify new loop was created and set\n                    self.assertEqual(len(created_loops), 1)\n                    mock_set_loop.assert_called_once_with(created_loops[0])\n\n                    # Verify loop was closed (should be closed by finally block)\n                    self.assertTrue(created_loops[0].is_closed())\n                    self.assertEqual(result, {\"result\": \"cleanup_test\"})\n\n        asyncio.run(run_in_event_loop())\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_concurrent_execution_safety(self, mock_call_tool):\n        \"\"\"Test concurrent execution safety with ThreadPoolExecutor.\"\"\"\n        call_count = 0\n\n        async def mock_async_call(*args, **kwargs):\n            nonlocal call_count\n            call_count += 1\n            # Simulate some async work\n            await asyncio.sleep(0.01)\n            return {\"result\": f\"concurrent_{call_count}\"}\n\n        mock_call_tool.side_effect = mock_async_call\n\n        async def run_concurrent_test():\n            client = MCPClient(self.base_url, timeout=30)\n\n            # Run multiple concurrent sync calls\n            tasks = []\n            for i in range(5):\n                task = asyncio.create_task(\n                    asyncio.to_thread(client.call_tool_sync, f\"tool_{i}\", {\"arg\": f\"value_{i}\"})\n                )\n                tasks.append(task)\n\n            results = await asyncio.gather(*tasks)\n\n            # Verify all calls completed successfully\n            self.assertEqual(len(results), 5)\n            for result in results:\n                self.assertIn(\"result\", result)\n                self.assertIn(\"concurrent_\", result[\"result\"])\n\n            # Verify all calls were made\n            self.assertEqual(call_count, 5)\n\n        asyncio.run(run_concurrent_test())\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_error_handling_no_loop(self, mock_call_tool):\n        \"\"\"Test error handling in call_tool_sync when no event loop exists.\"\"\"\n        mock_call_tool.side_effect = MCPClientError(\"Test error\", -32603)\n\n        client = MCPClient(self.base_url, timeout=30)\n\n        # Ensure no event loop is running\n        with patch('asyncio.get_running_loop', side_effect=RuntimeError(\"no running event loop\")):\n            with patch('asyncio.run', side_effect=MCPClientError(\"Test error\", -32603)):\n                with self.assertRaises(MCPClientError) as context:\n                    client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n                self.assertEqual(str(context.exception), \"Test error\")\n                self.assertEqual(context.exception.error_code, -32603)\n\n    @patch('mvp_site.mcp_client.MCPClient.call_tool')\n    def test_call_tool_sync_error_handling_threadpool(self, mock_call_tool):\n        \"\"\"Test error handling in ThreadPoolExecutor path.\"\"\"\n        async def mock_async_error():\n            raise MCPClientError(\"ThreadPool error\", -32602)\n        mock_call_tool.return_value = mock_async_error()\n\n        async def run_error_test():\n            client = MCPClient(self.base_url, timeout=30)\n\n            with self.assertRaises(MCPClientError) as context:\n                client.call_tool_sync(\"test_tool\", {\"arg\": \"value\"})\n\n            self.assertEqual(str(context.exception), \"ThreadPool error\")\n            self.assertEqual(context.exception.error_code, -32602)\n\n        asyncio.run(run_error_test())\n@coderabbitai coderabbitai bot 38 minutes ago\n\u26a0\ufe0f Potential issue\n\nDuplicate test block detected\n\nLines 327-476 appear to be an exact duplicate of tests that likely already exist elsewhere in the file. This violates DRY principles and makes the test suite harder to maintain.\n\nRemove the duplicate test block. These six tests (lines 327-476) should only appear once in the file:\n\ntest_call_tool_sync_no_event_loop_path\ntest_call_tool_sync_threadpool_executor_path\ntest_call_tool_sync_event_loop_cleanup\ntest_call_tool_sync_concurrent_execution_safety\ntest_call_tool_sync_error_handling_no_loop\ntest_call_tool_sync_error_handling_threadpool\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\ntest_mcp_integration.py\nOutdated\nComment on lines 1 to 6\n#!/usr/bin/env python3\n\"\"\"\nComprehensive MCP Integration Test Suite\nTesting WorldArchitect MCP server dual transport functionality\n\"\"\"\n\n@coderabbitai coderabbitai bot 38 minutes ago\n\ud83d\udee0\ufe0f Refactor suggestion\n\n\u26a0\ufe0f Potential issue\n\nTest placement violates repo rules; move or convert.\nN\n\n[output truncated - exceeded 10000 characters]</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:12:36.736Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>any seirous issues? jleechan2015 commented 43 minutes ago\nstart_mcp_server.",
+      "extraction_order": 5436
+    },
+    {
+      "content": "fix w/ /cerebras direct",
+      "timestamp": "2025-08-27T06:17:26.819Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix w/ /cerebras direct",
+      "extraction_order": 5437
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix w/ /cerebras direct</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:17:27.100Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix w/ /cerebras direct</user-prompt-submit-hook>",
+      "extraction_order": 5438
+    },
+    {
+      "content": "lets use run_tests.sh to run local tests relevant to our PR. redirect output to a file in /tmp",
+      "timestamp": "2025-08-27T06:40:57.830Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets use run_tests.sh to run local tests relevant to our pr. redirect output to a file in /tmp",
+      "extraction_order": 5439
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets use run_tests.sh to run local tests relevant to our PR. redirect output to a file in /tmp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:40:58.107Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "40680796-21f1-4bf5-9fbc-81b7ac294239.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets use run_tests.sh to run local tests relevant to our pr. redirect outpu",
+      "extraction_order": 5440
+    },
+    {
+      "content": "List all available MCP tools and show me specifically any tools that start with mcp__worldarchitect__. If available, test mcp__worldarchitect__get_user_settings with user_id \"test-user-123\".",
+      "timestamp": "2025-08-25T02:51:20.418Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "98239db3-5ca7-456a-82b7-54172d2a7b6f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "list all available mcp tools and show me specifically any tools that start with mcp__worldarchitect_",
+      "extraction_order": 5441
+    },
+    {
+      "content": "<user-prompt-submit-hook>List all available MCP tools and show me specifically any tools that start with mcp__worldarchitect__. If available, test mcp__worldarchitect__get_user_settings with user_id \"test-user-123\".</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:51:20.594Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "98239db3-5ca7-456a-82b7-54172d2a7b6f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>list all available mcp tools and show me specifically any tools that start",
+      "extraction_order": 5442
+    },
+    {
+      "content": "i restarted claude try again",
+      "timestamp": "2025-08-25T01:21:07.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i restarted claude try again",
+      "extraction_order": 5443
+    },
+    {
+      "content": "<user-prompt-submit-hook>i restarted claude try again</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:21:07.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i restarted claude try again</user-prompt-submit-hook>",
+      "extraction_order": 5444
+    },
+    {
+      "content": "run claude_mcp.sh and then confirm if the keys are loaded",
+      "timestamp": "2025-08-25T01:21:07.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run claude_mcp.sh and then confirm if the keys are loaded",
+      "extraction_order": 5445
+    },
+    {
+      "content": "<user-prompt-submit-hook>run claude_mcp.sh and then confirm if the keys are loaded</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:21:07.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run claude_mcp.sh and then confirm if the keys are loaded</user-prompt-subm",
+      "extraction_order": 5446
+    },
+    {
+      "content": "Resume work on branch: mcp-async-fixes. Active PR #1434: Fix MCP async event loop errors. Recent commits:$'\\n'  37233e5d Resolve merge conflicts preserving async safety fixes\n  7e6bb77f Merge branch 'main' of https://github.com/jleechanorg/worldarchitect.ai into mcp-async-fixes\n  ac563039 Fix async handling bugs and endpoint conflicts$'\\n\\n'Please review conversation history and any existing context to continue the work appropriately.",
+      "timestamp": "2025-08-25T01:21:07.619Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resume work on branch: mcp-async-fixes. active pr #1434: fix mcp async event loop errors. recent com",
+      "extraction_order": 5447
+    },
+    {
+      "content": "run claude_mcp.sh or something and restart it. Get this mcp server working",
+      "timestamp": "2025-08-25T01:21:07.620Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run claude_mcp.sh or something and restart it. get this mcp server working",
+      "extraction_order": 5448
+    },
+    {
+      "content": "<user-prompt-submit-hook>run claude_mcp.sh or something and restart it. Get this mcp server working</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:21:07.620Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run claude_mcp.sh or something and restart it. get this mcp server working<",
+      "extraction_order": 5449
+    },
+    {
+      "content": "i restarted test again",
+      "timestamp": "2025-08-25T00:23:57.748Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i restarted test again",
+      "extraction_order": 5450
+    },
+    {
+      "content": "<user-prompt-submit-hook>i restarted test again</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T00:23:57.905Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i restarted test again</user-prompt-submit-hook>",
+      "extraction_order": 5451
+    },
+    {
+      "content": "i restarted try /testmcp",
+      "timestamp": "2025-08-25T01:21:12.603Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i restarted try /testmcp",
+      "extraction_order": 5452
+    },
+    {
+      "content": "<user-prompt-submit-hook>i restarted try /testmcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:21:12.943Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i restarted try /testmcp</user-prompt-submit-hook>",
+      "extraction_order": 5453
+    },
+    {
+      "content": "the worldarchitectai mcp server looks good when i run /mcp",
+      "timestamp": "2025-08-25T01:23:13.288Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the worldarchitectai mcp server looks good when i run /mcp",
+      "extraction_order": 5454
+    },
+    {
+      "content": "<user-prompt-submit-hook>the worldarchitectai mcp server looks good when i run /mcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:23:13.591Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the worldarchitectai mcp server looks good when i run /mcp</user-prompt-sub",
+      "extraction_order": 5455
+    },
+    {
+      "content": "why is the gemini keuy still not working? Lets run claude_mcp.sh and set up the server again. use /history to also look at our convo history. I t was working before so whats different now",
+      "timestamp": "2025-08-25T01:26:59.206Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why is the gemini keuy still not working? lets run claude_mcp.sh and set up the server again. use /h",
+      "extraction_order": 5456
+    },
+    {
+      "content": "<user-prompt-submit-hook>why is the gemini keuy still not working? Lets run claude_mcp.sh and set up the server again. use /history to also look at our convo history. I t was working before so whats different now</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:26:59.503Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "8c991a32-0054-4bd1-8252-efb068c229c5.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why is the gemini keuy still not working? lets run claude_mcp.sh and set up",
+      "extraction_order": 5457
+    },
+    {
+      "content": "List available MCP tools and specifically check if mcp__worldarchitect__ tools are available. Show me all available MCP tools that start with mcp__worldarchitect__.",
+      "timestamp": "2025-08-25T02:41:01.205Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "7feb739e-72c1-4f6d-9610-3f11fd53b90d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "list available mcp tools and specifically check if mcp__worldarchitect__ tools are available. show m",
+      "extraction_order": 5458
+    },
+    {
+      "content": "<user-prompt-submit-hook>List available MCP tools and specifically check if mcp__worldarchitect__ tools are available. Show me all available MCP tools that start with mcp__worldarchitect__.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:41:01.542Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "7feb739e-72c1-4f6d-9610-3f11fd53b90d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>list available mcp tools and specifically check if mcp__worldarchitect__ to",
+      "extraction_order": 5459
+    },
+    {
+      "content": "which port is the mcp server supposed to use? could it be colliding with another local serveR? /thinku why is htis thing so hard to test?",
+      "timestamp": "2025-08-25T01:37:24.734Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "which port is the mcp server supposed to use? could it be colliding with another local server? /thin",
+      "extraction_order": 5460
+    },
+    {
+      "content": "<user-prompt-submit-hook>which port is the mcp server supposed to use? could it be colliding with another local serveR? /thinku why is htis thing so hard to test?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:37:25.071Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>which port is the mcp server supposed to use? could it be colliding with an",
+      "extraction_order": 5461
+    },
+    {
+      "content": "what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-perm",
+      "timestamp": "2025-08-25T01:40:35.193Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-perm",
+      "extraction_order": 5462
+    },
+    {
+      "content": "<user-prompt-submit-hook>what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-perm</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:40:35.349Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what ifwe use claude headless to test ie. claude -p --dnageroulsly-skip-per",
+      "extraction_order": 5463
+    },
+    {
+      "content": "isnt the mcp server process running?",
+      "timestamp": "2025-08-25T01:48:26.712Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "isnt the mcp server process running?",
+      "extraction_order": 5464
+    },
+    {
+      "content": "<user-prompt-submit-hook>isnt the mcp server process running?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:48:26.883Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>isnt the mcp server process running?</user-prompt-submit-hook>",
+      "extraction_order": 5465
+    },
+    {
+      "content": "<user-prompt-submit-hook>/research how s hould the mcp server be setup? When should a server be stdio vs http? Can it just support both? Or do we need two servers</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:49:46.950Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/research how s hould the mcp server be setup? when should a server be stdi",
+      "extraction_order": 5466
+    },
+    {
+      "content": "Execute the task: ok improve the mcp server and do it properly\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-25T01:55:38.971Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: ok improve the mcp server and do it properly\n\nfollow the complete /execute workflo",
+      "extraction_order": 5467
+    },
+    {
+      "content": "<user-prompt-submit-hook>/e ok improve the mcp server and do it properly</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:55:39.348Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/e ok improve the mcp server and do it properly</user-prompt-submit-hook>",
+      "extraction_order": 5468
+    },
+    {
+      "content": "Execute the task: ok improve the mcp server and do it properly. do nott make a new one, use the existing code in mcp_api.py or whereever. do not make new files. Impelment it with /tdd\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-25T01:56:00.515Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: ok improve the mcp server and do it properly. do nott make a new one, use the exis",
+      "extraction_order": 5469
+    },
+    {
+      "content": "push to pr then test it",
+      "timestamp": "2025-08-25T02:16:50.335Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr then test it",
+      "extraction_order": 5470
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr then test it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:16:50.641Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr then test it</user-prompt-submit-hook>",
+      "extraction_order": 5471
+    },
+    {
+      "content": "<user-prompt-submit-hook>/testmcp and focus only on LLM tests</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:31:59.927Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/testmcp and focus only on llm tests</user-prompt-submit-hook>",
+      "extraction_order": 5472
+    },
+    {
+      "content": "wrong. we are supposed to test the mcp server through the worldarchitect.ai mcp in this convo",
+      "timestamp": "2025-08-25T02:37:50.660Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wrong. we are supposed to test the mcp server through the worldarchitect.ai mcp in this convo",
+      "extraction_order": 5473
+    },
+    {
+      "content": "<user-prompt-submit-hook>wrong. we are supposed to test the mcp server through the worldarchitect.ai mcp in this convo</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:37:50.839Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wrong. we are supposed to test the mcp server through the worldarchitect.ai",
+      "extraction_order": 5474
+    },
+    {
+      "content": "modify /testmcp to explicitly say use mcp__worldarchitect__ so its more clear which MCP it should be using. then run it again",
+      "timestamp": "2025-08-25T02:39:31.820Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "modify /testmcp to explicitly say use mcp__worldarchitect__ so its more clear which mcp it should be",
+      "extraction_order": 5475
+    },
+    {
+      "content": "<user-prompt-submit-hook>modify /testmcp to explicitly say use mcp__worldarchitect__ so its more clear which MCP it should be using. then run it again</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:39:32.160Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>modify /testmcp to explicitly say use mcp__worldarchitect__ so its more cle",
+      "extraction_order": 5476
+    },
+    {
+      "content": "<user-prompt-submit-hook>/conv get the worldai server working and use claude -p --dangerous-skip as needed to test it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:47:24.147Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/conv get the worldai server working and use claude -p --dangerous-skip as",
+      "extraction_order": 5477
+    },
+    {
+      "content": "<user-prompt-submit-hook>/conv keep going, fix the isue and test it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:55:56.387Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "89bbdd69-ab0f-4149-b335-33053410e642.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/conv keep going, fix the isue and test it</user-prompt-submit-hook>",
+      "extraction_order": 5478
+    },
+    {
+      "content": "follow file justification protocol dont add files to project root",
+      "timestamp": "2025-08-27T05:27:09.901Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "follow file justification protocol dont add files to project root",
+      "extraction_order": 5479
+    },
+    {
+      "content": "<user-prompt-submit-hook>follow file justification protocol dont add files to project root</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:27:10.067Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>follow file justification protocol dont add files to project root</user-pro",
+      "extraction_order": 5480
+    },
+    {
+      "content": "test a campaign creation with worldai mcp server",
+      "timestamp": "2025-08-27T05:30:55.692Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test a campaign creation with worldai mcp server",
+      "extraction_order": 5481
+    },
+    {
+      "content": "<user-prompt-submit-hook>test a campaign creation with worldai mcp server</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:30:55.851Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test a campaign creation with worldai mcp server</user-prompt-submit-hook>",
+      "extraction_order": 5482
+    },
+    {
+      "content": "use stdio mcp",
+      "timestamp": "2025-08-27T05:32:04.007Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use stdio mcp",
+      "extraction_order": 5483
+    },
+    {
+      "content": "<user-prompt-submit-hook>use stdio mcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:32:04.162Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use stdio mcp</user-prompt-submit-hook>",
+      "extraction_order": 5484
+    },
+    {
+      "content": "> /mcp \n  \u23bf \u00a0Failed to reconnect to worldarchitect. /debugp this",
+      "timestamp": "2025-08-27T05:33:06.446Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "> /mcp \n  \u23bf \u00a0failed to reconnect to worldarchitect. /debugp this",
+      "extraction_order": 5485
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/mcp /debugp \n\nUse these approaches in combination:/mcp /debugp . Apply this to: >\n\u23bf Failed to reconnect to worldarchitect. this\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/mcp /debugp  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:33:06.841Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/mcp /debugp \n\nuse these approaches in combinatio",
+      "extraction_order": 5486
+    },
+    {
+      "content": "test making a campaign with the mcp",
+      "timestamp": "2025-08-27T05:40:53.669Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test making a campaign with the mcp",
+      "extraction_order": 5487
+    },
+    {
+      "content": "<user-prompt-submit-hook>test making a campaign with the mcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:40:53.820Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test making a campaign with the mcp</user-prompt-submit-hook>",
+      "extraction_order": 5488
+    },
+    {
+      "content": "no test with the worldarchitectai mcp",
+      "timestamp": "2025-08-27T05:44:12.547Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "no test with the worldarchitectai mcp",
+      "extraction_order": 5489
+    },
+    {
+      "content": "<user-prompt-submit-hook>no test with the worldarchitectai mcp</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:44:12.706Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>no test with the worldarchitectai mcp</user-prompt-submit-hook>",
+      "extraction_order": 5490
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/reviewdeep /commentfetch \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/actions /arch /cerebras /commands /commentfetch /commentreply /comments /copilot /execute /fixpr /github /guidelines /owner /pr /PR /pr-guidelines /repo /reviewdeep /reviewe /runs /tmp \n\nUse these approaches in combination:/actions /arch /cerebras /commands /commentfetch /commentreply /comments /copilot /execute /fixpr /github /guidelines /owner /pr /PR /pr-guidelines /repo /reviewdeep /reviewe /runs /tmp . Apply this to: focus on correctness and serious issues then same focus\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/reviewdeep /commentfetch  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T05:48:45.918Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/reviewdeep /commentfetch \n\ud83c\udfaf multi-player intelli",
+      "extraction_order": 5491
+    },
+    {
+      "content": "Conduct comprehensive independent code review analysis of PR #1474 \"feat: Core MCP async fixes - Clean extraction from PR #1434\" with PRIORITY FOCUS on correctness and serious issues.\n\n**CRITICAL FOCUS AREAS:**\n1. **Security Vulnerabilities**: Subprocess security, shell injection risks, privilege escalation, insecure port binding\n2. **Async/Concurrency Correctness**: Race conditions, deadlocks, resource leaks, improper async patterns\n3. **Protocol Compliance**: MCP protocol violations, JSON-RPC correctness, transport layer integrity\n4. **Error Handling**: Unhandled exceptions, silent failures, improper cleanup, resource leakage\n5. **Integration Stability**: Claude Code compatibility, background process reliability, dual transport coordination\n\n**KEY FILES TO ANALYZE:**\n- scripts/mcp_stdio_wrapper.py (NEW: dual transport wrapper script)\n- mvp_site/mcp_api.py (MODIFIED: async fixes and dual transport logic)\n- testing_mcp/ directory (NEW: test suite and validation)\n- Any MCP configuration changes\n\n**SEVERITY CLASSIFICATION:**\n- **CRITICAL**: Security vulnerabilities, data corruption, system crashes\n- **HIGH**: Protocol violations, integration failures, resource leaks\n- **MEDIUM**: Code quality issues, performance concerns, maintainability\n\n**ANALYSIS REQUIREMENTS:**\n1. Line-by-line security analysis of subprocess calls and file operations\n2. Async pattern validation for race conditions and proper resource cleanup\n3. Protocol compliance verification against MCP 2024-11-05 specification\n4. Integration testing validation for Claude Code compatibility\n5. Background process lifecycle management review\n\n**OUTPUT FORMAT:**\n```\n## Security Analysis\n[Critical security findings with line references]\n\n## Async/Concurrency Review  \n[Race conditions, resource management, async pattern issues]\n\n## Protocol Compliance\n[MCP protocol violations and transport layer issues]\n\n## Integration Stability\n[Claude Code compatibility and dual transport coordination]\n\n## Summary Recommendations\n[Priority fixes ranked by severity]\n```\n\nFocus on SERIOUS ISSUES that could cause production problems, security breaches, or integration failures. Provide specific line references and actionable recommendations.",
+      "timestamp": "2025-08-27T05:51:56.405Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "conduct comprehensive independent code review analysis of pr #1474 \"feat: core mcp async fixes - cle",
+      "extraction_order": 5492
+    },
+    {
+      "content": "any serious comments?",
+      "timestamp": "2025-08-27T06:00:10.763Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "any serious comments?",
+      "extraction_order": 5493
+    },
+    {
+      "content": "<user-prompt-submit-hook>any serious comments?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:00:10.915Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>any serious comments?</user-prompt-submit-hook>",
+      "extraction_order": 5494
+    },
+    {
+      "content": "use /cereb to fix the serious issues",
+      "timestamp": "2025-08-27T06:01:12.908Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use /cereb to fix the serious issues",
+      "extraction_order": 5495
+    },
+    {
+      "content": "<user-prompt-submit-hook>use /cereb to fix the serious issues</user-prompt-submit-hook>",
+      "timestamp": "2025-08-27T06:01:13.198Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "00b98e16-7350-48c7-901a-3745d77aa078.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use /cereb to fix the serious issues</user-prompt-submit-hook>",
+      "extraction_order": 5496
+    },
+    {
+      "content": "List available MCP tools and test one simple tool like mcp__memory-server__search_nodes with query 'test' to verify MCP connectivity works",
+      "timestamp": "2025-08-25T01:45:27.867Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ae9ceb10-b627-4d67-9986-29937221a959.jsonl",
+      "conversation_id": null,
+      "dedup_key": "list available mcp tools and test one simple tool like mcp__memory-server__search_nodes with query '",
+      "extraction_order": 5497
+    },
+    {
+      "content": "<user-prompt-submit-hook>List available MCP tools and test one simple tool like mcp__memory-server__search_nodes with query 'test' to verify MCP connectivity works</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:45:28.024Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "ae9ceb10-b627-4d67-9986-29937221a959.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>list available mcp tools and test one simple tool like mcp__memory-server__",
+      "extraction_order": 5498
+    },
+    {
+      "content": "Test MCP connection by calling mcp__worldarchitect__get_user_settings with user_id jleechantest@gmail.com and return the result",
+      "timestamp": "2025-08-25T01:40:56.591Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "43825db9-da4b-4795-8a50-471cbfa28c87.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test mcp connection by calling mcp__worldarchitect__get_user_settings with user_id jleechantest@gmai",
+      "extraction_order": 5499
+    },
+    {
+      "content": "<user-prompt-submit-hook>/debugp this server isnt working. the whole point of the pr is to get it working.   \u23bf \u00a0(no content)\n\u256d\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256e\n\u2502 Worldarchitect MCP Server                                                                                                                \u2502\n\u2502                                                                                                                                          \u2502\n\u2502 Status: \u2718 failed                                                                                                                         \u2502\n\u2502 Command: ./start_mcp_server.sh                                                                                                           \u2502\n\u2502 Config location: /Users/jleechan/.claude.json                                                                                            \u2502\n\u2502                                                                                                                                          \u2502\n\u2502 \u276f 1. Reconnect                                                                                                                           \u2502\n\u2570\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u256f\n   Esc to go back</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T08:20:52.274Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-browser",
+      "file": "712c57bf-bcd9-4dbc-837c-6407ed14c7fa.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/debugp this server isnt working. the whole point of the pr is to get it wo",
+      "extraction_order": 5500
+    }
+  ],
+  "stats": {
+    "total_files_processed": 1028,
+    "total_messages_processed": 356107,
+    "user_messages_found": 66928,
+    "filtered_out": 56867,
+    "duplicates_removed": 4561,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

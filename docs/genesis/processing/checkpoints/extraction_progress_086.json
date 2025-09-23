@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 86,
+  "prompts_count": 8600,
+  "timestamp": "2025-09-22T03:49:13.996121",
+  "prompts": [
+    {
+      "content": "delete the test results from docs/ then run /testllm and save new results ther. Make sure synthesis works and is different than the claude primary and secondary response",
+      "timestamp": "2025-09-20T21:38:14.227Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "delete the test results from docs/ then run /testllm and save new results ther. make sure synthesis",
+      "extraction_order": 8501
+    },
+    {
+      "content": "push to pr and then deploy gcp dev",
+      "timestamp": "2025-09-20T21:51:01.038Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and then deploy gcp dev",
+      "extraction_order": 8502
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and then deploy gcp dev</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T21:51:01.367Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and then deploy gcp dev</user-prompt-submit-hook>",
+      "extraction_order": 8503
+    },
+    {
+      "content": "frontend coding agent thinks you have a bug. is this true?  Backend Issue: Missing Synthesis Generation\n\n  The AI Universe backend is not generating synthesis responses properly. The frontend expects a synthesis field in the response but is receiving null or no synthesis at all.\n\n  Expected API Response Structure\n\n  The backend should return this exact structure for the agent.second_opinion tool:\n\n  interface SecondOpinionResponse {\n    primary: {\n      model: \"claude-primary\";\n      response: string;\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    };\n    secondaryOpinions: Array<{\n      model: \"gemini\" | \"cerebras\" | \"perplexity\" | \"claude-secondary\";\n      response: string;\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    }>;\n    synthesis: {  // \u2190 THIS IS MISSING/NULL\n      model: \"claude-synthesis\";\n      response: string;  // \u2190 Combined analysis of all responses\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    } | null;\n    summary: {\n      totalModels: number;\n      totalTokens: number;\n      totalCost: number;\n      successfulResponses: number;\n    };\n    metadata: {\n      userId: string;\n      sessionId: string;\n      timestamp: string;\n      processingTime: number;\n    };\n  }\n\n  Current Problem\n\n  - \u2705 primary response working (Claude response)\n  - \u2705 secondaryOpinions working (Gemini, Cerebras, Perplexity responses)\n  - \u274c synthesis is null or missing (should contain synthesized opinion)\n\n  Required Fix\n\n  The backend should:\n\n  1. Collect all successful responses from primary + secondary opinions\n  2. Generate synthesis prompt like:\n  Analyze and synthesize the following AI responses to the question: \"{original_question}\"\n\n  Response 1 (Claude): {claude_response}\n  Response 2 (Gemini): {gemini_response}  \n  Response 3 (Cerebras): {cerebras_response}\n  Response 4 (Perplexity): {perplexity_response}\n\n  Provide a synthesized analysis that:\n  - Highlights areas of agreement and disagreement\n  - Identifies the most accurate and comprehensive points\n  - Provides additional insights from combining perspectives\n  - Presents a balanced, well-reasoned conclusion\n  3. Call Claude synthesis API with the combined prompt\n  4. Return synthesis object with the response, tokens, and cost\n\n  Backend Endpoint\n\n  - URL: https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp\n  - Method: POST\n  - JSON-RPC Format:\n  {\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n      \"name\": \"agent.second_opinion\",\n      \"arguments\": {\n        \"question\": \"compare gemini ai to chatgpt ai\",\n        \"maxOpinions\": 5\n      }\n    }\n  }\n\n  Test Case\n\n  When user asks: \"compare gemini ai to chatgpt ai\"\n\n  Expected: Frontend shows \"\ud83e\udde0 AI Synthesis\" with a combined analysis\n  Current: Frontend shows \"Synthesized Opinion (Unavailable)\" with just Claude response\n\n  Implementation Notes\n\n  - Synthesis should only be generated if at least 2 responses are successful\n  - If synthesis generation fails, set synthesis.error = true\n  - Include synthesis tokens/cost in the totals\n  - Synthesis should be substantively different from individual responses\n\n  The frontend is already configured to display synthesis properly - it just needs the backend to generate and return it correctly.",
+      "timestamp": "2025-09-20T22:14:08.775Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "frontend coding agent thinks you have a bug. is this true?  backend issue: missing synthesis generat",
+      "extraction_order": 8504
+    },
+    {
+      "content": "<user-prompt-submit-hook>frontend coding agent thinks you have a bug. is this true?  Backend Issue: Missing Synthesis Generation\n\n  The AI Universe backend is not generating synthesis responses properly. The frontend expects a synthesis field in the response but is receiving null or no synthesis at all.\n\n  Expected API Response Structure\n\n  The backend should return this exact structure for the agent.second_opinion tool:\n\n  interface SecondOpinionResponse {\n    primary: {\n      model: \"claude-primary\";\n      response: string;\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    };\n    secondaryOpinions: Array<{\n      model: \"gemini\" | \"cerebras\" | \"perplexity\" | \"claude-secondary\";\n      response: string;\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    }>;\n    synthesis: {  // \u2190 THIS IS MISSING/NULL\n      model: \"claude-synthesis\";\n      response: string;  // \u2190 Combined analysis of all responses\n      tokens: number;\n      cost: number;\n      error?: boolean;\n    } | null;\n    summary: {\n      totalModels: number;\n      totalTokens: number;\n      totalCost: number;\n      successfulResponses: number;\n    };\n    metadata: {\n      userId: string;\n      sessionId: string;\n      timestamp: string;\n      processingTime: number;\n    };\n  }\n\n  Current Problem\n\n  - \u2705 primary response working (Claude response)\n  - \u2705 secondaryOpinions working (Gemini, Cerebras, Perplexity responses)\n  - \u274c synthesis is null or missing (should contain synthesized opinion)\n\n  Required Fix\n\n  The backend should:\n\n  1. Collect all successful responses from primary + secondary opinions\n  2. Generate synthesis prompt like:\n  Analyze and synthesize the following AI responses to the question: \"{original_question}\"\n\n  Response 1 (Claude): {claude_response}\n  Response 2 (Gemini): {gemini_response}  \n  Response 3 (Cerebras): {cerebras_response}\n  Response 4 (Perplexity): {perplexity_response}\n\n  Provide a synthesized analysis that:\n  - Highlights areas of agreement and disagreement\n  - Identifies the most accurate and comprehensive points\n  - Provides additional insights from combining perspectives\n  - Presents a balanced, well-reasoned conclusion\n  3. Call Claude synthesis API with the combined prompt\n  4. Return synthesis object with the response, tokens, and cost\n\n  Backend Endpoint\n\n  - URL: https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp\n  - Method: POST\n  - JSON-RPC Format:\n  {\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n      \"name\": \"agent.second_opinion\",\n      \"arguments\": {\n        \"question\": \"compare gemini ai to chatgpt ai\",\n        \"maxOpinions\": 5\n      }\n    }\n  }\n\n  Test Case\n\n  When user asks: \"compare gemini ai to chatgpt ai\"\n\n  Expected: Frontend shows \"\ud83e\udde0 AI Synthesis\" with a combined analysis\n  Current: Frontend shows \"Synthesized Opinion (Unavailable)\" with just Claude response\n\n  Implementation Notes\n\n  - Synthesis should only be generated if at least 2 responses are successful\n  - If synthesis generation fails, set synthesis.error = true\n  - Include synthesis tokens/cost in the totals\n  - Synthesis should be substantively different from individual responses\n\n  The frontend is already configured to display synthesis properly - it just needs the backend to generate and return it correctly.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T22:14:09.086Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>frontend coding agent thinks you have a bug. is this true?  backend issue:",
+      "extraction_order": 8505
+    },
+    {
+      "content": "frontend thinks you're missing a field why did it work when you tested it?      \u2026 +83 lines (ctrl+o to expand)\n\n\u23fa Excellent! I found the root cause! The debugging logs clearly show:\n\n  \ud83d\udc1b SYNTHESIS DEBUG: Raw text content length: 16012\n  \ud83d\udc1b SYNTHESIS DEBUG: Text contains \"synthesis\": false\n  \ud83d\udc1b SYNTHESIS DEBUG: Text contains \"claude-synthesis\": false\n  \ud83d\udc1b SYNTHESIS DEBUG: Available fields after parse: [primary, secondaryOpinions, summary, metadata]\n  \ud83d\udc1b SYNTHESIS DEBUG: Has synthesis field: false\n  \ud83d\udc1b SYNTHESIS DEBUG: \u274c SYNTHESIS MISSING from parsed data!\n\n  The synthesis field is never present in the raw response text from the backend, even though the backend logs show it's generating synthesis. This means the issue is in the backend - it's not\n  including the synthesis field in the actual response sent to the frontend.\n\n  Let me update the todo list and move to implementing a fix:\n\n\u23fa \ud83d\udd0d ROOT CAUSE IDENTIFIED\n\n  The debugging logs definitively show that the backend is NOT including the synthesis field in the response sent to the frontend, despite generating it.\n\n  Evidence:\n  - Raw response text length: 16,012 characters\n  - Text contains \"synthesis\": false\n  - Text contains \"claude-synthesis\": false\n  - Available fields: [primary, secondaryOpinions, summary, metadata]\n  - synthesis field completely missing\n\n  Conclusion:\n  This is a backend issue, not a frontend parsing issue. The backend generates synthesis (as shown in backend logs) but fails to include it in the JSON response sent to the frontend.\n\n  Next Steps:\n  The backend team needs to fix their response formatting to include the synthesis field alongside primary, secondaryOpinions, summary, and metadata.\n\n  Since this is a backend issue and you mentioned there's a backend agent, this needs to be escalated to the backend team with this evidence.\n\n> Why did you think earlier the field was there?\n\n\u273b Thinking\u2026\n\n  This is a great question from the user. Let me think back through the conversation to understand why I thought the synthesis field was there earlier.\n\n  Looking back at the evidence:\n\n  1. Backend logs showed synthesis generation: The backend logs clearly showed \"Starting synthesis generation\" and \"Anthropic completion: 2153 tokens (1441 input + 712 output), ~$0.015003\" which \n  suggested synthesis was being generated.\n  2. Direct backend test script results: The test script in testing_llm/run_synthesis_test.cjs was supposed to test direct backend API calls, and from the test documentation in \n  testing_llm/synthesis_integration_test.md, it showed:\n\n  ### Direct Backend Test (2025-09-20 15:39)\n  **Result**: \u2705 WORKING\n  **Evidence**: Direct backend call shows synthesis field exists:\n  ```json\n  \"synthesis\": {\n    \"model\": \"claude-synthesis\",\n    \"response\": \"# Comprehensive Comparison: Gemini AI vs ChatGPT...\",\n    \"tokens\": 2153,\n    \"cost\": 0.015003\n  }\n\n  But wait - I need to check if this direct backend test was actually run and if those results were real, or if that was just documentation of what we EXPECTED to see.\n\n  Looking back at the conversation, the user said:\n  - Backend agent claims synthesis is working perfectly \n  - Backend logs show synthesis generation\n  - There was evidence from direct API calls showing synthesis exists\n\n  However, now that I've done the actual debugging with enhanced logging, I can see that the raw response from the backend does NOT contain the synthesis field.\n\n  So the question is: why did I think it was there?\n\n  The most likely explanations:\n  1. I relied on backend logs showing synthesis generation - but generation doesn't mean it was included in the response\n  2. I relied on the test documentation - but that documentation might have been aspirational or from a different test\n  3. Backend agent feedback - the backend agent claimed it was working, but that might have been based on logs, not actual response inspection\n\n  4. I didn't actually verify the direct API test results myself - I assumed the test script results were accurate\n\n  I mistakenly conflated synthesis generation with response inclusion. The backend logs and test documentation created a false impression of successful implementation, when in reality, a critical gap \n  exists between generation and actual response delivery.\n\n\u23fa You're absolutely right to question this! Looking back, I made several assumptions that led me astray:\n\n  Why I Initially Thought Synthesis Was There\n\n  1. Backend logs showed synthesis generation: The logs clearly showed \"Starting synthesis generation\" and \"Anthropic completion: 2153 tokens, $0.015003\" - but generation \u2260 inclusion in response\n  2. Backend agent claimed it was working: The backend agent said synthesis was working perfectly, but they were likely looking at generation logs, not the actual response structure sent to frontend\n  3. Test documentation suggested it existed: The synthesis_integration_test.md showed:\n  \"synthesis\": {\n    \"model\": \"claude-synthesis\",\n    \"response\": \"# Comprehensive Comparison...\",\n    \"tokens\": 2153,\n    \"cost\": 0.015003\n  }\n  3. But this was expected behavior documentation, not actual test results\n  4. I didn't verify the direct API test results myself: I assumed the test script results were accurate without running it myself\n\n  The Key Mistake\n\n  I confused synthesis generation (happening in backend) with synthesis inclusion (missing from response). The backend successfully generates synthesis but has a bug where it doesn't include the\n  synthesis field in the final JSON response sent to frontend.\n\n  What the Enhanced Logging Actually Proved\n\n  - Backend generates synthesis: \u2705 (from logs)\n  - Backend includes synthesis in response: \u274c (from debugging)\n  - Raw response contains \"synthesis\": false\n  - Available fields: [primary, secondaryOpinions, summary, metadata]\n\n  The debugging logs definitively show this is a backend response formatting bug, not a frontend parsing issu",
+      "timestamp": "2025-09-20T23:57:45.714Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "frontend thinks you're missing a field why did it work when you tested it?      \u2026 +83 lines (ctrl+o",
+      "extraction_order": 8506
+    },
+    {
+      "content": "<user-prompt-submit-hook>frontend thinks you're missing a field why did it work when you tested it?      \u2026 +83 lines (ctrl+o to expand)\n\n\u23fa Excellent! I found the root cause! The debugging logs clearly show:\n\n  \ud83d\udc1b SYNTHESIS DEBUG: Raw text content length: 16012\n  \ud83d\udc1b SYNTHESIS DEBUG: Text contains \"synthesis\": false\n  \ud83d\udc1b SYNTHESIS DEBUG: Text contains \"claude-synthesis\": false\n  \ud83d\udc1b SYNTHESIS DEBUG: Available fields after parse: [primary, secondaryOpinions, summary, metadata]\n  \ud83d\udc1b SYNTHESIS DEBUG: Has synthesis field: false\n  \ud83d\udc1b SYNTHESIS DEBUG: \u274c SYNTHESIS MISSING from parsed data!\n\n  The synthesis field is never present in the raw response text from the backend, even though the backend logs show it's generating synthesis. This means the issue is in the backend - it's not\n  including the synthesis field in the actual response sent to the frontend.\n\n  Let me update the todo list and move to implementing a fix:\n\n\u23fa \ud83d\udd0d ROOT CAUSE IDENTIFIED\n\n  The debugging logs definitively show that the backend is NOT including the synthesis field in the response sent to the frontend, despite generating it.\n\n  Evidence:\n  - Raw response text length: 16,012 characters\n  - Text contains \"synthesis\": false\n  - Text contains \"claude-synthesis\": false\n  - Available fields: [primary, secondaryOpinions, summary, metadata]\n  - synthesis field completely missing\n\n  Conclusion:\n  This is a backend issue, not a frontend parsing issue. The backend generates synthesis (as shown in backend logs) but fails to include it in the JSON response sent to the frontend.\n\n  Next Steps:\n  The backend team needs to fix their response formatting to include the synthesis field alongside primary, secondaryOpinions, summary, and metadata.\n\n  Since this is a backend issue and you mentioned there's a backend agent, this needs to be escalated to the backend team with this evidence.\n\n> Why did you think earlier the field was there?\n\n\u273b Thinking\u2026\n\n  This is a great question from the user. Let me think back through the conversation to understand why I thought the synthesis field was there earlier.\n\n  Looking back at the evidence:\n\n  1. Backend logs showed synthesis generation: The backend logs clearly showed \"Starting synthesis generation\" and \"Anthropic completion: 2153 tokens (1441 input + 712 output), ~$0.015003\" which \n  suggested synthesis was being generated.\n  2. Direct backend test script results: The test script in testing_llm/run_synthesis_test.cjs was supposed to test direct backend API calls, and from the test documentation in \n  testing_llm/synthesis_integration_test.md, it showed:\n\n  ### Direct Backend Test (2025-09-20 15:39)\n  **Result**: \u2705 WORKING\n  **Evidence**: Direct backend call shows synthesis field exists:\n  ```json\n  \"synthesis\": {\n    \"model\": \"claude-synthesis\",\n    \"response\": \"# Comprehensive Comparison: Gemini AI vs ChatGPT...\",\n    \"tokens\": 2153,\n    \"cost\": 0.015003\n  }\n\n  But wait - I need to check if this direct backend test was actually run and if those results were real, or if that was just documentation of what we EXPECTED to see.\n\n  Looking back at the conversation, the user said:\n  - Backend agent claims synthesis is working perfectly \n  - Backend logs show synthesis generation\n  - There was evidence from direct API calls showing synthesis exists\n\n  However, now that I've done the actual debugging with enhanced logging, I can see that the raw response from the backend does NOT contain the synthesis field.\n\n  So the question is: why did I think it was there?\n\n  The most likely explanations:\n  1. I relied on backend logs showing synthesis generation - but generation doesn't mean it was included in the response\n  2. I relied on the test documentation - but that documentation might have been aspirational or from a different test\n  3. Backend agent feedback - the backend agent claimed it was working, but that might have been based on logs, not actual response inspection\n\n  4. I didn't actually verify the direct API test results myself - I assumed the test script results were accurate\n\n  I mistakenly conflated synthesis generation with response inclusion. The backend logs and test documentation created a false impression of successful implementation, when in reality, a critical gap \n  exists between generation and actual response delivery.\n\n\u23fa You're absolutely right to question this! Looking back, I made several assumptions that led me astray:\n\n  Why I Initially Thought Synthesis Was There\n\n  1. Backend logs showed synthesis generation: The logs clearly showed \"Starting synthesis generation\" and \"Anthropic completion: 2153 tokens, $0.015003\" - but generation \u2260 inclusion in response\n  2. Backend agent claimed it was working: The backend agent said synthesis was working perfectly, but they were likely looking at generation logs, not the actual response structure sent to frontend\n  3. Test documentation suggested it existed: The synthesis_integration_test.md showed:\n  \"synthesis\": {\n    \"model\": \"claude-synthesis\",\n    \"response\": \"# Comprehensive Comparison...\",\n    \"tokens\": 2153,\n    \"cost\": 0.015003\n  }\n  3. But this was expected behavior documentation, not actual test results\n  4. I didn't verify the direct API test results myself: I assumed the test script results were accurate without running it myself\n\n  The Key Mistake\n\n  I confused synthesis generation (happening in backend) with synthesis inclusion (missing from response). The backend successfully generates synthesis but has a bug where it doesn't include the\n  synthesis field in the final JSON response sent to frontend.\n\n  What the Enhanced Logging Actually Proved\n\n  - Backend generates synthesis: \u2705 (from logs)\n  - Backend includes synthesis in response: \u274c (from debugging)\n  - Raw response contains \"synthesis\": false\n  - Available fields: [primary, secondaryOpinions, summary, metadata]\n\n  The debugging logs definitively show this is a backend response formatting bug, not a frontend parsing issu</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T23:57:46.187Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>frontend thinks you're missing a field why did it work when you tested it?",
+      "extraction_order": 8507
+    },
+    {
+      "content": "lets /redgreen fix this. Add or modify existing test case in testing_llm/ dir to first repro the issue. then fix",
+      "timestamp": "2025-09-21T00:02:07.427Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets /redgreen fix this. add or modify existing test case in testing_llm/ dir to first repro the iss",
+      "extraction_order": 8508
+    },
+    {
+      "content": "its taking too long. why",
+      "timestamp": "2025-09-21T00:14:28.608Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "its taking too long. why",
+      "extraction_order": 8509
+    },
+    {
+      "content": "<user-prompt-submit-hook>its taking too long. why</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:14:28.839Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>its taking too long. why</user-prompt-submit-hook>",
+      "extraction_order": 8510
+    },
+    {
+      "content": "this should not be a model. Print the actual request you expect\n\n\"model\": \"claude-synthesis\",",
+      "timestamp": "2025-09-21T00:27:19.896Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "this should not be a model. print the actual request you expect\n\n\"model\": \"claude-synthesis\",",
+      "extraction_order": 8511
+    },
+    {
+      "content": "<user-prompt-submit-hook>this should not be a model. Print the actual request you expect\n\n\"model\": \"claude-synthesis\",</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:27:20.256Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>this should not be a model. print the actual request you expect\n\n\"model\": \"",
+      "extraction_order": 8512
+    },
+    {
+      "content": "Run /localserver and get this working with latest code from this branch \n> /mcp \n  \u23bf \u00a0Failed to reconnect to aiuniverse-stdio. \n\nthen print the synthesis answer in this chat",
+      "timestamp": "2025-09-21T00:28:26.515Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run /localserver and get this working with latest code from this branch \n> /mcp \n  \u23bf \u00a0failed to reco",
+      "extraction_order": 8513
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/localserver /mcp \n\nUse these approaches in combination:/localserver /mcp . Apply this to: Run and get this working with latest code from this branch\n>\n\u23bf Failed to reconnect to aiuniverse-stdio.\n\nthen print the synthesis answer in this chat\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/localserver /mcp  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:28:27.139Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/localserver /mcp \n\nuse these approaches in combi",
+      "extraction_order": 8514
+    },
+    {
+      "content": "print the response for synthesis and add to docs in docs/",
+      "timestamp": "2025-09-21T00:31:47.951Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "print the response for synthesis and add to docs in docs/",
+      "extraction_order": 8515
+    },
+    {
+      "content": "<user-prompt-submit-hook>print the response for synthesis and add to docs in docs/</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:31:48.177Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>print the response for synthesis and add to docs in docs/</user-prompt-subm",
+      "extraction_order": 8516
+    },
+    {
+      "content": "where is the local server",
+      "timestamp": "2025-09-21T00:36:09.827Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "where is the local server",
+      "extraction_order": 8517
+    },
+    {
+      "content": "<user-prompt-submit-hook>where is the local server</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:36:10.021Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>where is the local server</user-prompt-submit-hook>",
+      "extraction_order": 8518
+    },
+    {
+      "content": "what response should we use to test second opinion synthesis against the localhost 2000",
+      "timestamp": "2025-09-21T00:46:49.401Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what response should we use to test second opinion synthesis against the localhost 2000",
+      "extraction_order": 8519
+    },
+    {
+      "content": "<user-prompt-submit-hook>what response should we use to test second opinion synthesis against the localhost 2000</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:46:49.561Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what response should we use to test second opinion synthesis against the lo",
+      "extraction_order": 8520
+    },
+    {
+      "content": "what request should we use to test second opinion synthesis against the localhost 2000",
+      "timestamp": "2025-09-21T00:46:56.216Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what request should we use to test second opinion synthesis against the localhost 2000",
+      "extraction_order": 8521
+    },
+    {
+      "content": "<user-prompt-submit-hook>what request should we use to test second opinion synthesis against the localhost 2000</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:46:56.394Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what request should we use to test second opinion synthesis against the loc",
+      "extraction_order": 8522
+    },
+    {
+      "content": "ok test it and see if synethesis shows",
+      "timestamp": "2025-09-21T00:48:13.878Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok test it and see if synethesis shows",
+      "extraction_order": 8523
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok test it and see if synethesis shows</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:48:14.071Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok test it and see if synethesis shows</user-prompt-submit-hook>",
+      "extraction_order": 8524
+    },
+    {
+      "content": "print the synthesis",
+      "timestamp": "2025-09-21T00:50:09.903Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "print the synthesis",
+      "extraction_order": 8525
+    },
+    {
+      "content": "<user-prompt-submit-hook>print the synthesis</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:50:10.288Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>print the synthesis</user-prompt-submit-hook>",
+      "extraction_order": 8526
+    },
+    {
+      "content": "ok save the full results on this test to docs/ and include the exact request/response and link me the file",
+      "timestamp": "2025-09-21T00:52:55.723Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok save the full results on this test to docs/ and include the exact request/response and link me th",
+      "extraction_order": 8527
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok save the full results on this test to docs/ and include the exact request/response and link me the file</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:52:55.921Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok save the full results on this test to docs/ and include the exact reques",
+      "extraction_order": 8528
+    },
+    {
+      "content": "how is docker not installed? it should be. we already used it before",
+      "timestamp": "2025-09-21T00:57:51.503Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how is docker not installed? it should be. we already used it before",
+      "extraction_order": 8529
+    },
+    {
+      "content": "<user-prompt-submit-hook>how is docker not installed? it should be. we already used it before</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:57:51.752Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how is docker not installed? it should be. we already used it before</user-",
+      "extraction_order": 8530
+    },
+    {
+      "content": "docker should be installed on this macbook",
+      "timestamp": "2025-09-21T00:59:56.086Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "docker should be installed on this macbook",
+      "extraction_order": 8531
+    },
+    {
+      "content": "<user-prompt-submit-hook>docker should be installed on this macbook</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T00:59:56.304Z",
+      "project": "-Users-jleechan-project-ai-universe-ai-universe-scripts",
+      "file": "287ab893-0cb5-4e61-b945-f917910fe68b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>docker should be installed on this macbook</user-prompt-submit-hook>",
+      "extraction_order": 8532
+    },
+    {
+      "content": "look at the local changes are they already merged to origin main?",
+      "timestamp": "2025-09-18T03:41:43.170Z",
+      "project": "-Users-jleechan-projects-worldarchitect-memory-backups",
+      "file": "6c9221f8-c3b1-4038-b941-fb588722ad7d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at the local changes are they already merged to origin main?",
+      "extraction_order": 8533
+    },
+    {
+      "content": "ok just abort",
+      "timestamp": "2025-09-18T03:43:00.138Z",
+      "project": "-Users-jleechan-projects-worldarchitect-memory-backups",
+      "file": "6c9221f8-c3b1-4038-b941-fb588722ad7d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok just abort",
+      "extraction_order": 8534
+    },
+    {
+      "content": "Execute the copilot-fixpr agent workflow for PR #1702. Your responsibilities:\n\n1. **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures\n2. **PRIMARY TASKS**: \n   - Analyze current GitHub PR status and identify potential improvements\n   - Review code changes for security vulnerabilities and quality issues  \n   - Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol compliance\n   - Focus on code quality, performance optimization, and technical accuracy\n\n3. **FILE JUSTIFICATION PROTOCOL COMPLIANCE**: \n   - Every file modification must follow FILE JUSTIFICATION PROTOCOL before implementation\n   - Required documentation: Goal, Modification, Necessity, Integration Proof for each change\n   - Integration verification: Proof that adding to existing files was attempted first\n   - Protocol adherence: All changes must follow NEW FILE CREATION PROTOCOL hierarchy\n\n4. **PRIORITY ORDER**: Security \u2192 Runtime Errors \u2192 Test Failures \u2192 Style\n\n5. **TOOLS TO USE**: Edit/MultiEdit for code changes, Serena MCP for semantic analysis, `/fixpr` command\n\n6. **CRITICAL BOUNDARY**: You handle file operations and PR mergeability - NEVER attempt to:\n   - Generate responses.json entries\n   - Handle comment response generation\n   - Execute /commentreply\n   - Manage GitHub comment posting\n   - Handle comment coverage verification\n\n7. **OUTPUT REQUIREMENT**: Write completion status to structured result file at `/tmp/orchestration-install-script/agent_status.json` with format:\n```json\n{\n  \"status\": \"completed\",\n  \"files_modified\": [\"file1.py\", \"file2.js\"],\n  \"fixes_applied\": [\"Security fix in auth.py:45\", \"Performance optimization in utils.py:123\"],\n  \"commit_hash\": \"abc123def\",\n  \"execution_time\": 180\n}\n```\n\n**SUCCESS CRITERIA**: Make PR mergeable first, then implement actual code changes with proper justification documentation.",
+      "timestamp": "2025-09-22T08:14:57.246Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "7fc95c22-f8cd-4822-9a4e-81f333c3b914.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the copilot-fixpr agent workflow for pr #1702. your responsibilities:\n\n1. **first priority**",
+      "extraction_order": 8535
+    },
+    {
+      "content": "You are the copilot-fixpr agent. Your mission is to resolve PR #1702 issues and make it mergeable.\n\nCRITICAL TASKS:\n1. FIRST PRIORITY: Execute /fixpr command to resolve merge conflicts and CI failures\n2. Analyze current GitHub PR status and identify potential improvements  \n3. Review code changes for security vulnerabilities and quality issues\n4. Implement actual file fixes using Edit/MultiEdit tools with File Justification Protocol\n5. Focus on code quality, performance optimization, and technical accuracy\n\nMANDATORY FILE JUSTIFICATION PROTOCOL:\n- Every file modification must follow FILE JUSTIFICATION PROTOCOL before implementation\n- Required documentation: Goal, Modification, Necessity, Integration Proof for each change\n- Integration verification: Proof that adding to existing files was attempted first\n- Protocol adherence: All changes must follow NEW FILE CREATION PROTOCOL hierarchy\n\nSECURITY PRIORITIES:\n- Security vulnerabilities (CRITICAL)\n- Runtime errors (HIGH) \n- Test failures (MEDIUM)\n- Style issues (LOW)\n\nTOOLS AVAILABLE:\n- Edit/MultiEdit for file modifications\n- Serena MCP for semantic analysis\n- /fixpr command for merge conflicts\n- All standard file analysis tools\n\nAGENT BOUNDARIES:\n- NEVER generate responses.json entries\n- NEVER handle GitHub comment responses\n- NEVER execute /commentreply\n- FOCUS ONLY on file operations and PR mergeability\n\nOUTPUT REQUIREMENT:\nWrite completion status to /tmp/orchestration-install-script/agent_status.json with this format:\n{\n  \"status\": \"completed\",\n  \"files_modified\": [\"file1.py\", \"file2.js\"],\n  \"fixes_applied\": [\"Fixed security issue in auth\", \"Resolved merge conflict\"],\n  \"commit_hash\": \"abc123\",\n  \"execution_time\": 120\n}\n\nExecute with maximum efficiency and technical precision.",
+      "timestamp": "2025-09-22T04:12:28.182Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "df4f59aa-506d-4be7-ba20-bba280affe21.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you are the copilot-fixpr agent. your mission is to resolve pr #1702 issues and make it mergeable.",
+      "extraction_order": 8536
+    },
+    {
+      "content": "Analyze if creating file '/tmp/orchestration-install-script/responses.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/orchestration-install-script/responses.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-22T10:18:15.768Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "3c93a85b-ab5e-4ad5-8bab-abd11aafd69b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/orchestration-install-script/responses.json' violates claude.md file",
+      "extraction_order": 8537
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/orchestration-install-script/responses.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/orchestration-install-script/responses.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T10:18:16.256Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "3c93a85b-ab5e-4ad5-8bab-abd11aafd69b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/orchestration-install-script/responses.json'",
+      "extraction_order": 8538
+    },
+    {
+      "content": "You are the copilot-fixpr agent for PR #1702. Execute the /fixpr command to resolve merge conflicts and CI failures FIRST, then handle all PR issues with actual file modifications.\n\nAGENT RESPONSIBILITIES:\n- FIRST PRIORITY: Execute `/fixpr` command to resolve merge conflicts and CI failures  \n- Security vulnerability detection and implementation\n- Use Edit/MultiEdit for file modifications with File Justification Protocol compliance\n- Make PR mergeable first, then implement actual code changes\n- Write completion status to /tmp/orchestration-install-script/agent_status.json\n\nSTRUCTURED OUTPUT REQUIREMENT:\nWhen complete, write a JSON status file with this exact format:\n```json\n{\n  \"status\": \"completed\",\n  \"files_modified\": [\"file1.py\", \"file2.sh\"],\n  \"fixes_applied\": [\"security fix\", \"performance improvement\"],\n  \"commit_hash\": \"abc123...\",\n  \"execution_time\": 120\n}\n```\n\nCRITICAL BOUNDARIES:\n- NEVER handle GitHub comment responses\n- NEVER generate responses.json entries  \n- NEVER execute /commentreply\n- Focus only on file operations and PR mergeability\n\nExecute now with File Justification Protocol compliance.",
+      "timestamp": "2025-09-22T10:14:45.912Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "ccc61828-86c5-4843-82bd-4589d7672c24.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you are the copilot-fixpr agent for pr #1702. execute the /fixpr command to resolve merge conflicts",
+      "extraction_order": 8539
+    },
+    {
+      "content": "Analyze if creating file '/tmp/orchestration-install-script/comments.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/orchestration-install-script/comments.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-22T04:14:43.023Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "85e6e020-705e-4e6a-b5ea-eb3e72e11727.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/orchestration-install-script/comments.json' violates claude.md file p",
+      "extraction_order": 8540
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/orchestration-install-script/comments.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/orchestration-install-script/comments.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-22T04:14:43.468Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "85e6e020-705e-4e6a-b5ea-eb3e72e11727.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/orchestration-install-script/comments.json'",
+      "extraction_order": 8541
+    },
+    {
+      "content": "Execute copilot-fixpr agent workflow for PR 1702:\n\n**FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures for PR 1702\n\n**PRIMARY OBJECTIVES**:\n1. **MERGE CONFLICTS**: Resolve any merge conflicts preventing PR merge\n2. **CI FAILURES**: Fix any failing tests or CI issues\n3. **SECURITY VULNERABILITIES**: Address security issues with priority\n4. **CODE QUALITY**: Implement improvements from PR comments\n5. **FILE JUSTIFICATION**: Follow FILE JUSTIFICATION PROTOCOL for all changes\n\n**CRITICAL BOUNDARIES**:\n- **FOCUS**: File modifications, security fixes, technical implementations\n- **TOOLS**: Edit/MultiEdit for file changes, Serena MCP for analysis, `/fixpr` command\n- **NEVER**: Handle GitHub comment responses, generate responses.json, execute /commentreply\n- **OUTPUT**: Write completion status to /tmp/orchestration-install-script/agent_status.json\n\n**CONTEXT**:\n- PR #1702: orchestration install script for system dependencies\n- Branch: orchestration-install-script  \n- Status: UNSTABLE (needs resolution before merge)\n- CI Status: Some checks passing, but merge unstable\n- Complex PR: 22 files changed\n\n**WORKFLOW**:\n1. Execute `/fixpr` command first for merge conflicts and CI issues\n2. Analyze PR comments and implement actionable technical changes\n3. Apply File Justification Protocol for all modifications\n4. Write structured results to agent_status.json\n\n**AGENT STATUS FILE FORMAT**:\n```json\n{\n  \"status\": \"completed\",\n  \"files_modified\": [\"file1.py\", \"file2.sh\"],\n  \"fixes_applied\": [\"Resolved merge conflict in X\", \"Fixed CI test Y\"],\n  \"commit_hash\": \"abc123\",\n  \"execution_time\": 180\n}\n```\n\nExecute the workflow autonomously and write completion status for orchestrator coordination.",
+      "timestamp": "2025-09-22T05:08:35.341Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1702",
+      "file": "26c7552e-2509-4870-b794-1f6fee2f5a81.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute copilot-fixpr agent workflow for pr 1702:\n\n**first priority**: execute `/fixpr` command to r",
+      "extraction_order": 8542
+    },
+    {
+      "content": "delete this repo https://github.com/jleechan2015/larry_clone",
+      "timestamp": "2025-08-24T19:02:38.413Z",
+      "project": "-Users-jleechan-projects",
+      "file": "98b9021a-b8f8-4fd5-b620-e4441d496170.jsonl",
+      "conversation_id": null,
+      "dedup_key": "delete this repo https://github.com/jleechan2015/larry_clone",
+      "extraction_order": 8543
+    },
+    {
+      "content": "You are the copilot-fixpr agent handling PR #8 \"feat: add hybrid client metadata rate limiting\" in the ai_universe repository.\n\n**MANDATORY FIRST ACTION**: Execute the `/fixpr` command to resolve any merge conflicts and CI failures.\n\n**Current PR Status**:\n- PR #8: feat: add hybrid client metadata rate limiting\n- State: OPEN, mergeable\n- All CI checks: PASSING (test, security, docker-build)\n- No merge conflicts detected\n- Only 1 comment from CodeRabbit (rate limit warning - not actionable)\n\n**Your Responsibilities**:\n1. **FIRST PRIORITY**: Execute `/fixpr` command to ensure PR is fully mergeable\n2. **PRIMARY**: Security vulnerability detection and code implementation  \n3. **FILE OPERATIONS**: Use Edit/MultiEdit for actual file modifications\n4. **PROTOCOL COMPLIANCE**: Follow File Justification Protocol for all changes\n5. **BOUNDARIES**: Handle file operations only - never GitHub comment responses\n\n**Context**: This PR adds hybrid client metadata rate limiting with Redis-based per-user limits. The PR appears to be in good shape with passing CI, but needs verification for:\n- Rate limiting implementation correctness\n- Security best practices\n- Code quality improvements\n- Performance optimizations\n\n**Expected Output**: Report on `/fixpr` execution results, any file modifications made, and ensure the PR is in optimal state for merging.",
+      "timestamp": "2025-09-20T21:14:44.694Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-8",
+      "file": "4ae90e0d-816c-4d9b-8b1e-eb78a01da698.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you are the copilot-fixpr agent handling pr #8 \"feat: add hybrid client metadata rate limiting\" in t",
+      "extraction_order": 8544
+    },
+    {
+      "content": "You are the copilot-fixpr agent for PR #13. Your primary responsibilities:\n\n1. **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures\n2. **PRIMARY FOCUS**: Security vulnerability detection and code implementation  \n3. **FILE OPERATIONS**: Use Edit/MultiEdit for file modifications with File Justification Protocol compliance\n4. **MAKE PR MERGEABLE**: Focus on resolving blockers that prevent PR from being merged\n\n**CURRENT PR STATUS**:\n- PR #13: \"Set timeout to 10 minutes for LLMs\"\n- Modified file: .pr-metadata.json\n- Author: jleechan2015\n- Has one CodeRabbit comment with rate limit notice\n\n**KEY INSTRUCTIONS**:\n- Start by executing `/fixpr` command to identify and resolve any merge conflicts or CI failures\n- Focus on making the PR mergeable first, then address any code quality issues\n- Use Edit/MultiEdit tools for actual file changes\n- Follow File Justification Protocol for all modifications\n- Provide technical analysis and security review\n- DO NOT handle GitHub comment responses - that's handled by the orchestrator\n\n**EXPECTED DELIVERABLES**:\n- Execute `/fixpr` to resolve blockers\n- Analysis of current PR state and any issues\n- Actual file fixes if needed using Edit/MultiEdit\n- Security vulnerability assessment\n- Technical recommendations for code quality\n\nBegin by executing `/fixpr` to assess and resolve any merge conflicts or CI failures.",
+      "timestamp": "2025-09-21T00:41:37.430Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "1bfeec6d-1b5c-4f36-8777-2cb2c7c9c636.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you are the copilot-fixpr agent for pr #13. your primary responsibilities:\n\n1. **first priority**: e",
+      "extraction_order": 8545
+    },
+    {
+      "content": "Analyze if creating file '/tmp/reply_content.txt' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/reply_content.txt' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-20T21:03:23.677Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "55533a2a-6162-4c24-b2e4-abc95705d848.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/reply_content.txt' violates claude.md file placement rules:\n\nfile pla",
+      "extraction_order": 8546
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/reply_content.txt' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/reply_content.txt' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-20T21:03:24.113Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "55533a2a-6162-4c24-b2e4-abc95705d848.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/reply_content.txt' violates claude.md file p",
+      "extraction_order": 8547
+    },
+    {
+      "content": "Analyze if creating file '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt1uv/replies.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt1uv/replies.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-21T01:50:29.900Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "129a6680-1024-47d2-825f-0c907cec1648.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt1uv/replies.json' violate",
+      "extraction_order": 8548
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt1uv/replies.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt1uv/replies.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T01:50:30.283Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "129a6680-1024-47d2-825f-0c907cec1648.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/codex-set-timeout-to-10-minutes-for-llms-rbt",
+      "extraction_order": 8549
+    },
+    {
+      "content": "Execute /fixpr command to resolve merge conflicts and CI failures for PR #13. Then analyze and implement fixes for any remaining issues.\n\nPR CONTEXT:\n- PR #13: \"Centralize LLM timeout defaults\" \n- Branch: codex/set-timeout-to-10-minutes-for-llms-rbt1uv\n- Status: OPEN, MERGEABLE\n- Comments: 4 total (all from coderabbitai bot - comprehensive review)\n\nKEY REQUIREMENTS:\n1. FIRST PRIORITY: Execute `/fixpr` command to ensure PR is mergeable\n2. Analyze the CodeRabbit review for any actionable technical issues\n3. Implement actual file fixes using Edit/MultiEdit tools\n4. Follow File Justification Protocol for all changes\n5. Focus on security, runtime errors, test failures, then style issues\n6. Make actual code changes - do not just post GitHub responses\n\nThe CodeRabbit review shows this is a timeout centralization PR with config changes. Focus on:\n- Ensuring the timeout defaults are properly implemented\n- Verifying the config centralization is complete\n- Checking for any security or runtime issues in the timeout handling\n- Validating the integration test updates\n\nReturn a summary of:\n1. /fixpr execution results\n2. Issues found and fixed\n3. File changes made with justification\n4. Any remaining concerns",
+      "timestamp": "2025-09-20T23:23:21.269Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "913dbc75-ec6a-4b82-88f1-2ec7e06d2dc4.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute /fixpr command to resolve merge conflicts and ci failures for pr #13. then analyze and imple",
+      "extraction_order": 8550
+    },
+    {
+      "content": "Execute comprehensive PR fix workflow for PR #13 \"Centralize LLM timeout defaults\":\n\nFIRST PRIORITY: Execute `/fixpr` command to resolve any merge conflicts and CI failures\n\nCURRENT PR STATUS:\n- Title: \"Centralize LLM timeout defaults\"\n- State: OPEN\n- Mergeable: UNKNOWN\n- Status checks: SUCCESS (CodeRabbit, Cursor Bugbot)\n- 6 comments total from coderabbitai\n\nTASKS REQUIRED:\n1. FIRST: Execute `/fixpr` command to ensure PR is mergeable and resolve any conflicts\n2. Analyze all PR comments and identify actionable technical issues\n3. Review the codebase changes related to LLM timeout centralization\n4. Implement any necessary security fixes, runtime error corrections, or test improvements\n5. Follow File Justification Protocol for all code changes\n6. Focus on code quality and performance optimization\n\nTECHNICAL CONTEXT:\n- This PR centralizes LLM timeout defaults into ConfigManager.ts\n- Changes affect SecondOpinionAgent.ts, RuntimeConfigService.ts, and test files\n- Default timeout changed to 10 minutes (600000ms)\n- Integration tests and documentation updated\n\nIMPLEMENTATION REQUIREMENTS:\n- Use Edit/MultiEdit tools for actual file modifications\n- Provide justification for each file change following the protocol\n- Prioritize: Security \u2192 Runtime Errors \u2192 Test Failures \u2192 Style\n- Ensure all changes integrate properly with existing codebase\n- Verify changes don't break existing functionality\n\nReturn detailed analysis of:\n1. Current PR mergeability status after `/fixpr` execution\n2. Any code issues identified and fixed\n3. File modifications made with justifications\n4. Security improvements implemented\n5. Test coverage and validation status",
+      "timestamp": "2025-09-21T01:46:58.957Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "a2cfda58-b7ee-4b80-809d-bb4586ad6a6e.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute comprehensive pr fix workflow for pr #13 \"centralize llm timeout defaults\":\n\nfirst priority:",
+      "extraction_order": 8551
+    },
+    {
+      "content": "Execute comprehensive analysis and optimization for PR #13 \"Set timeout to 10 minutes for LLMs\".\n\nCURRENT STATUS:\n- PR is MERGEABLE with all CI checks passing\n- No merge conflicts or failures to resolve\n- Single CodeRabbit comment providing walkthrough summary\n- Changes involve centralizing LLM timeout configuration to 10 minutes\n\nTASK SCOPE:\n1. FIRST PRIORITY: Execute /fixpr command to ensure PR mergeability (even though currently mergeable)\n2. COMPREHENSIVE CODE REVIEW: Analyze the timeout configuration changes for:\n   - Security implications of 10-minute timeouts\n   - Performance impact and optimization opportunities\n   - Code quality and maintainability improvements\n   - Consistency with existing timeout patterns\n3. IMPLEMENTATION IMPROVEMENTS: Apply File Justification Protocol for any optimizations:\n   - Validate timeout defaults implementation\n   - Check for edge cases in SecondOpinionAgent timeout handling\n   - Verify integration test migration to ESM is complete\n   - Review documentation accuracy\n\nFILES TO ANALYZE:\n- backend/src/config/llmTimeoutDefaults.ts (new centralized config)\n- backend/src/agents/SecondOpinionAgent.ts (timeout resolution updates)\n- backend/src/services/RuntimeConfigService.ts (defaults integration)\n- backend/src/test/integration/test-all-5-models-REQUIRED.js (ESM migration)\n- docs/endpoint-documentation.md (timeout documentation)\n\nEXPECTED DELIVERABLES:\n- Technical analysis of timeout configuration architecture\n- Security assessment of extended timeout values\n- Any code improvements following File Justification Protocol\n- Verification that centralized configuration is properly implemented\n- Assessment of test coverage for new timeout logic\n\nFocus on code quality, performance optimization, and ensuring the 10-minute timeout implementation is robust and secure.",
+      "timestamp": "2025-09-20T21:00:40.587Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-ai-universe-pr-13",
+      "file": "75eedfb1-5bca-4636-86bb-99ae39ca30d7.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute comprehensive analysis and optimization for pr #13 \"set timeout to 10 minutes for llms\".\n\ncu",
+      "extraction_order": 8552
+    },
+    {
+      "content": "Analyze if creating file '/tmp/codex-add-subagentstop-hook-to-summarize-work-n38ras/responses.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/codex-add-subagentstop-hook-to-summarize-work-n38ras/responses.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.",
+      "timestamp": "2025-09-21T06:18:55.352Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1653--claude-commands",
+      "file": "465c7fc8-24b8-4e85-b526-c57c8c183780.jsonl",
+      "conversation_id": null,
+      "dedup_key": "analyze if creating file '/tmp/codex-add-subagentstop-hook-to-summarize-work-n38ras/responses.json'",
+      "extraction_order": 8553
+    },
+    {
+      "content": "<user-prompt-submit-hook>Analyze if creating file '/tmp/codex-add-subagentstop-hook-to-summarize-work-n38ras/responses.json' violates CLAUDE.md file placement rules:\n\nFILE PLACEMENT RULES:\n- \u274c FORBIDDEN: ANY new .py, .sh, .md files in project root\n- \u2705 REQUIRED: Python files \u2192 mvp_site/ or module directories\n- \u2705 REQUIRED: Shell scripts \u2192 scripts/ directory\n- \u2705 REQUIRED: Test files \u2192 mvp_site/tests/ directory\n\nANTI-CREATION BIAS:\n- Prefer integration into existing files over creating new ones\n- New test files especially discouraged - integrate into existing test files\n\nANALYSIS REQUIRED:\n1. Does '/tmp/codex-add-subagentstop-hook-to-summarize-work-n38ras/responses.json' violate file placement rules?\n2. Could this functionality be integrated into existing files instead?\n3. If violation detected, suggest 2-3 existing files for integration\n\nRESPOND WITH:\nVIOLATION: [YES/NO]\nREASON: [Brief explanation if violation]\nINTEGRATION_TARGETS: [List 2-3 existing files that could handle this, or NONE]\n\nBe concise and direct.</user-prompt-submit-hook>",
+      "timestamp": "2025-09-21T06:18:55.623Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1653--claude-commands",
+      "file": "465c7fc8-24b8-4e85-b526-c57c8c183780.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>analyze if creating file '/tmp/codex-add-subagentstop-hook-to-summarize-wor",
+      "extraction_order": 8554
+    },
+    {
+      "content": "COPILOT-FIXPR AGENT: Execute file operations for PR 1711\n\n\ud83d\udea8 **MISSION**: Implement technical fixes based on comment analysis\n\n## ACTIONABLE TECHNICAL ISSUES:\n1. **Documentation Consistency** (2 inline comments): Update documentation to reflect correct Cerebras usage\n   - docs/user_mimicry_system_prompt.md:47 - Fix `/cerebras` command documentation \n   - docs/user_mimicry_system_prompt.md:158 - Update code generation reference\n\n## COMMENTS REQUIRING FILE CHANGES:\n```json\n[\n  {\n    \"id\": 2367287658,\n    \"type\": \"inline\", \n    \"file\": \"docs/user_mimicry_system_prompt.md\",\n    \"line\": 47,\n    \"issue\": \"Fix `/cerebras` command documentation to specify direct Cerebras API script usage\"\n  },\n  {\n    \"id\": 2367287696,\n    \"type\": \"inline\",\n    \"file\": \"docs/user_mimicry_system_prompt.md\", \n    \"line\": 158,\n    \"issue\": \"Update code generation reference to match converge.md clarification\"\n  }\n]\n```\n\n## REQUIRED AGENT ACTIONS:\n1. **IMMEDIATE**: Read the target file to understand current content\n2. **ANALYZE**: Review .claude/commands/converge.md to understand correct Cerebras usage\n3. **IMPLEMENT**: Use Edit tool to fix both documentation inconsistencies \n4. **EVIDENCE**: Document specific changes made with file:line references\n5. **STATUS**: Write completion status to structured result file\n\n## SUCCESS CRITERIA:\n- Both inline comment issues resolved with actual file edits\n- Documentation consistency achieved with converge.md\n- Proper File Justification Protocol compliance\n- Structured agent completion status provided\n\n## OUTPUT FORMAT:\nWrite completion status to: /tmp/feature-user-mimicry-system-prompt-automation-1711/agent_status.json\n\n```json\n{\n  \"status\": \"completed\",\n  \"files_modified\": [\"docs/user_mimicry_system_prompt.md\"],\n  \"fixes_applied\": [\"Fixed /cerebras documentation consistency\", \"Updated code generation reference\"],\n  \"commit_hash\": \"[git commit hash if committed]\",\n  \"execution_time\": \"[seconds]\"\n}\n```\n\n**AGENT FOCUS**: File modifications with integration-first approach, NOT comment responses.",
+      "timestamp": "2025-09-22T09:52:13.590Z",
+      "project": "-Users-jleechan-tmp-pr-automation-workspaces-worldarchitect-ai-pr-1711",
+      "file": "72703471-b5d3-482a-804b-654f3da073cd.jsonl",
+      "conversation_id": null,
+      "dedup_key": "copilot-fixpr agent: execute file operations for pr 1711\n\n\ud83d\udea8 **mission**: implement technical fixes b",
+      "extraction_order": 8555
+    },
+    {
+      "content": "@/tmp/agent_prompt_task-agent-test-worksp-locati.txt",
+      "timestamp": "2025-09-07T19:03:28.320Z",
+      "project": "-Users-jleechan-projects-orch-worldarchitect-ai-task-agent-test-worksp-locati",
+      "file": "100eee80-3763-4929-95a7-66e824a5935b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "@/tmp/agent_prompt_task-agent-test-worksp-locati.txt",
+      "extraction_order": 8556
+    },
+    {
+      "content": "<user-prompt-submit-hook>@/tmp/agent_prompt_task-agent-test-worksp-locati.txt</user-prompt-submit-hook>",
+      "timestamp": "2025-09-07T19:03:28.694Z",
+      "project": "-Users-jleechan-projects-orch-worldarchitect-ai-task-agent-test-worksp-locati",
+      "file": "100eee80-3763-4929-95a7-66e824a5935b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>@/tmp/agent_prompt_task-agent-test-worksp-locati.txt</user-prompt-submit-ho",
+      "extraction_order": 8557
+    },
+    {
+      "content": "i think this failed, what happened? \u26a0\ufe0f Installing missing memory backup cron job...\nbash: local: can only be used in a function\ncrontab: tmp/tmp.87985: Operation not permitted\n\u2705 Installed unified memory backup cron job (daily at 2 AM)\nbash: local: can only be used in a function\n\u2705 Memory backup system is properly configured with dedicated repository",
+      "timestamp": "2025-09-18T03:46:41.793Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i think this failed, what happened? \u26a0\ufe0f installing missing memory backup cron job...\nbash: local: can",
+      "extraction_order": 8558
+    },
+    {
+      "content": "<user-prompt-submit-hook>i think this failed, what happened? \u26a0\ufe0f Installing missing memory backup cron job...\nbash: local: can only be used in a function\ncrontab: tmp/tmp.87985: Operation not permitted\n\u2705 Installed unified memory backup cron job (daily at 2 AM)\nbash: local: can only be used in a function\n\u2705 Memory backup system is properly configured with dedicated repository</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T03:46:42.003Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i think this failed, what happened? \u26a0\ufe0f installing missing memory backup cro",
+      "extraction_order": 8559
+    },
+    {
+      "content": "ok make a PR and then debug why the ~/.claude/ backu cron wasn't working. I had to manually run it code /Users/jleechan/.local/bin/claude_backup_cron.sh\n/Users/jleechan/.local/bin/claude_backup_cron.sh\n[2025-09-17 20:47:25] Starting Claude backup at Wed Sep 17 20:47:25 PDT 2025\n[2025-09-17 20:47:25] === Checking Prerequisites ===\n[2025-09-17 20:47:25] SUCCESS: Source Check - Claude directory found at /Users/jleechan/.claude\n[2025-09-17 20:47:25] SUCCESS: Prerequisites - rsync command available\n[2025-09-17 20:47:25] SUCCESS: Destination Path - Parent directory accessible at /Users/jleechan/Library/CloudStorage/Dropbox\n[2025-09-17 20:47:25] === Backing up to Backup ===\n[2025-09-17 20:47:33] rsync completed successfully for .claude directory\n[2025-09-17 20:47:33] rsync completed successfully for .claude.json files\n[2025-09-17 20:47:33] SUCCESS: Backup Backup - Synced to /Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_jeffreys-macbook-pro (    3716 files)\n[2025-09-17 20:47:33] Claude backup completed with status: SUCCESS",
+      "timestamp": "2025-09-18T03:48:24.630Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok make a pr and then debug why the ~/.claude/ backu cron wasn't working. i had to manually run it c",
+      "extraction_order": 8560
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok make a PR and then debug why the ~/.claude/ backu cron wasn't working. I had to manually run it code /Users/jleechan/.local/bin/claude_backup_cron.sh\n/Users/jleechan/.local/bin/claude_backup_cron.sh\n[2025-09-17 20:47:25] Starting Claude backup at Wed Sep 17 20:47:25 PDT 2025\n[2025-09-17 20:47:25] === Checking Prerequisites ===\n[2025-09-17 20:47:25] SUCCESS: Source Check - Claude directory found at /Users/jleechan/.claude\n[2025-09-17 20:47:25] SUCCESS: Prerequisites - rsync command available\n[2025-09-17 20:47:25] SUCCESS: Destination Path - Parent directory accessible at /Users/jleechan/Library/CloudStorage/Dropbox\n[2025-09-17 20:47:25] === Backing up to Backup ===\n[2025-09-17 20:47:33] rsync completed successfully for .claude directory\n[2025-09-17 20:47:33] rsync completed successfully for .claude.json files\n[2025-09-17 20:47:33] SUCCESS: Backup Backup - Synced to /Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_jeffreys-macbook-pro (    3716 files)\n[2025-09-17 20:47:33] Claude backup completed with status: SUCCESS</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T03:48:24.904Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok make a pr and then debug why the ~/.claude/ backu cron wasn't working. i",
+      "extraction_order": 8561
+    },
+    {
+      "content": "nothing is here /Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_mac.home",
+      "timestamp": "2025-09-18T03:51:12.354Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "nothing is here /users/jleechan/library/cloudstorage/dropbox/claude_backup_mac.home",
+      "extraction_order": 8562
+    },
+    {
+      "content": "<user-prompt-submit-hook>nothing is here /Users/jleechan/Library/CloudStorage/Dropbox/claude_backup_mac.home</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T03:51:12.605Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>nothing is here /users/jleechan/library/cloudstorage/dropbox/claude_backup_",
+      "extraction_order": 8563
+    },
+    {
+      "content": "are you deaf? that backup i ran manually. There were no backusp that ran before",
+      "timestamp": "2025-09-18T03:54:02.266Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "are you deaf? that backup i ran manually. there were no backusp that ran before",
+      "extraction_order": 8564
+    },
+    {
+      "content": "<user-prompt-submit-hook>are you deaf? that backup i ran manually. There were no backusp that ran before</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T03:54:02.348Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>are you deaf? that backup i ran manually. there were no backusp that ran be",
+      "extraction_order": 8565
+    },
+    {
+      "content": "ok i added it now letes test it",
+      "timestamp": "2025-09-18T03:59:41.013Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok i added it now letes test it",
+      "extraction_order": 8566
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok i added it now letes test it</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T03:59:41.091Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok i added it now letes test it</user-prompt-submit-hook>",
+      "extraction_order": 8567
+    },
+    {
+      "content": "do option 2 and make it execute 1 minute from now",
+      "timestamp": "2025-09-18T04:02:22.620Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do option 2 and make it execute 1 minute from now",
+      "extraction_order": 8568
+    },
+    {
+      "content": "<user-prompt-submit-hook>do option 2 and make it execute 1 minute from now</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:02:22.698Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do option 2 and make it execute 1 minute from now</user-prompt-submit-hook>",
+      "extraction_order": 8569
+    },
+    {
+      "content": "ok i added it for terminal, test it",
+      "timestamp": "2025-09-18T04:10:06.489Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok i added it for terminal, test it",
+      "extraction_order": 8570
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok i added it for terminal, test it</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:10:06.595Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok i added it for terminal, test it</user-prompt-submit-hook>",
+      "extraction_order": 8571
+    },
+    {
+      "content": "temrinal isnt running",
+      "timestamp": "2025-09-18T04:12:24.936Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "temrinal isnt running",
+      "extraction_order": 8572
+    },
+    {
+      "content": "<user-prompt-submit-hook>temrinal isnt running</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:12:25.026Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>temrinal isnt running</user-prompt-submit-hook>",
+      "extraction_order": 8573
+    },
+    {
+      "content": "temrinal isnt running in my UI. restart it yourself",
+      "timestamp": "2025-09-18T04:12:32.691Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "temrinal isnt running in my ui. restart it yourself",
+      "extraction_order": 8574
+    },
+    {
+      "content": "<user-prompt-submit-hook>temrinal isnt running in my UI. restart it yourself</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:12:32.817Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>temrinal isnt running in my ui. restart it yourself</user-prompt-submit-hoo",
+      "extraction_order": 8575
+    },
+    {
+      "content": "this is using warp terminal",
+      "timestamp": "2025-09-18T04:20:53.385Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "this is using warp terminal",
+      "extraction_order": 8576
+    },
+    {
+      "content": "<user-prompt-submit-hook>this is using warp terminal</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:20:53.484Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>this is using warp terminal</user-prompt-submit-hook>",
+      "extraction_order": 8577
+    },
+    {
+      "content": "ok for now lets avoid editing the crontab, but i wanna see why the backup job is not running. can you debug that",
+      "timestamp": "2025-09-18T04:21:51.171Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok for now lets avoid editing the crontab, but i wanna see why the backup job is not running. can yo",
+      "extraction_order": 8578
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok for now lets avoid editing the crontab, but i wanna see why the backup job is not running. can you debug that</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:21:51.256Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok for now lets avoid editing the crontab, but i wanna see why the backup j",
+      "extraction_order": 8579
+    },
+    {
+      "content": "ok letes try launchd",
+      "timestamp": "2025-09-18T04:29:34.753Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok letes try launchd",
+      "extraction_order": 8580
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok letes try launchd</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:29:34.848Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok letes try launchd</user-prompt-submit-hook>",
+      "extraction_order": 8581
+    },
+    {
+      "content": "run it in one minute to test it",
+      "timestamp": "2025-09-18T04:33:05.574Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run it in one minute to test it",
+      "extraction_order": 8582
+    },
+    {
+      "content": "<user-prompt-submit-hook>run it in one minute to test it</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:33:05.730Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run it in one minute to test it</user-prompt-submit-hook>",
+      "extraction_order": 8583
+    },
+    {
+      "content": "wait i want it to automatically sync to dropbox",
+      "timestamp": "2025-09-18T04:33:32.606Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wait i want it to automatically sync to dropbox",
+      "extraction_order": 8584
+    },
+    {
+      "content": "<user-prompt-submit-hook>wait i want it to automatically sync to dropbox</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:33:32.784Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wait i want it to automatically sync to dropbox</user-prompt-submit-hook>",
+      "extraction_order": 8585
+    },
+    {
+      "content": "test it now",
+      "timestamp": "2025-09-18T04:36:03.606Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test it now",
+      "extraction_order": 8586
+    },
+    {
+      "content": "<user-prompt-submit-hook>test it now</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:36:03.723Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test it now</user-prompt-submit-hook>",
+      "extraction_order": 8587
+    },
+    {
+      "content": "ok lets have claude_start.sh actually check the launchagent setup and install it if needed when using macbook",
+      "timestamp": "2025-09-18T04:42:00.905Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok lets have claude_start.sh actually check the launchagent setup and install it if needed when usin",
+      "extraction_order": 8588
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok lets have claude_start.sh actually check the launchagent setup and install it if needed when using macbook</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:42:01.023Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok lets have claude_start.sh actually check the launchagent setup and insta",
+      "extraction_order": 8589
+    },
+    {
+      "content": "git merge main then /copilotl",
+      "timestamp": "2025-09-18T04:47:22.948Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git merge main then /copilotl",
+      "extraction_order": 8590
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/copilotl \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/commentcheck /commentfetch /commentreply /copilot-lite /copilotl /execute /fixpr /guidelines /pushl \n\nUse these approaches in combination:/commentcheck /commentfetch /commentreply /copilot-lite /copilotl /execute /fixpr /guidelines /pushl . Apply this to: git merge main then\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/copilotl  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-09-18T04:47:23.144Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "b51a2e6b-2a3c-46fb-9d49-85a334172774.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/copilotl \n\ud83c\udfaf multi-player intelligence: found nes",
+      "extraction_order": 8591
+    },
+    {
+      "content": "fix thse tests Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n53\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1624\nfeat: Worktree backup system with automatic Claude data protection #6750\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 51 minutes ago in 10m 50s\nSearch logs\n2s\n3s\n0s\n5s\n35s\n10m 2s\n  \u2022 test_red_green_json_fix.py\n  \u2022 test_robust_json_parser.py\n  \u2022 test_scene_numbering.py\n  \u2022 test_settings_api.py\n  \u2022 test_squash_merge_detection.py\n  \u2022 test_state_update_integration.py\n  \u2022 test_state_updates_json_parsing.py\n  \u2022 test_structured_fields_storage.py\n  \u2022 test_structured_fields_utils.py\n  \u2022 test_structured_generation.py\n  \u2022 test_structured_response_extraction.py\n  \u2022 test_subprocess_security.py\n  \u2022 test_syntax.py\n  \u2022 test_syntax_comprehensive.py\n  \u2022 test_think_block_protocol.py\n  \u2022 test_time_consolidation.py\n  \u2022 test_time_pressure.py\n  \u2022 test_token_utils.py\n  \u2022 test_type_safety_foundation.py\n  \u2022 test_unknown_entity_filtering.py\n  \u2022 test_unknown_entity_fix_summary.py\n  \u2022 test_user_scenario_fix_validation.py\n  \u2022 test_v1_vs_v2_campaign_comparison.py\n  \u2022 test_v2_dashboard_authenticated_user.py\n  \u2022 test_v2_frontend_red_green.py\n  \u2022 test_v2_frontend_verification.py\n  \u2022 test_validation_comparison.py\n  \u2022 test_world_loader.py\n  \u2022 test_world_loader_e2e.py\n  \u2022 test_world_logic.py\n  \u2022 test_campaign_wizard_reset_reproduction.py\n  \u2022 test_crdt_integration.py\n  \u2022 test_crdt_validation.py\n\nSuccess rate: 0.0%\n\n[ERROR] \u274c 177 test(s) failed\nError: Process completed with exit code 1.\n1s\n0s\n0s\n0s\n0s",
+      "timestamp": "2025-09-19T07:59:50.573Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix thse tests skip to content\nnavigation menu\njleechanorg\nworldarchitect.ai\n\ntype / to search\ncode",
+      "extraction_order": 8592
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix thse tests Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n53\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1624\nfeat: Worktree backup system with automatic Claude data protection #6750\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 51 minutes ago in 10m 50s\nSearch logs\n2s\n3s\n0s\n5s\n35s\n10m 2s\n  \u2022 test_red_green_json_fix.py\n  \u2022 test_robust_json_parser.py\n  \u2022 test_scene_numbering.py\n  \u2022 test_settings_api.py\n  \u2022 test_squash_merge_detection.py\n  \u2022 test_state_update_integration.py\n  \u2022 test_state_updates_json_parsing.py\n  \u2022 test_structured_fields_storage.py\n  \u2022 test_structured_fields_utils.py\n  \u2022 test_structured_generation.py\n  \u2022 test_structured_response_extraction.py\n  \u2022 test_subprocess_security.py\n  \u2022 test_syntax.py\n  \u2022 test_syntax_comprehensive.py\n  \u2022 test_think_block_protocol.py\n  \u2022 test_time_consolidation.py\n  \u2022 test_time_pressure.py\n  \u2022 test_token_utils.py\n  \u2022 test_type_safety_foundation.py\n  \u2022 test_unknown_entity_filtering.py\n  \u2022 test_unknown_entity_fix_summary.py\n  \u2022 test_user_scenario_fix_validation.py\n  \u2022 test_v1_vs_v2_campaign_comparison.py\n  \u2022 test_v2_dashboard_authenticated_user.py\n  \u2022 test_v2_frontend_red_green.py\n  \u2022 test_v2_frontend_verification.py\n  \u2022 test_validation_comparison.py\n  \u2022 test_world_loader.py\n  \u2022 test_world_loader_e2e.py\n  \u2022 test_world_logic.py\n  \u2022 test_campaign_wizard_reset_reproduction.py\n  \u2022 test_crdt_integration.py\n  \u2022 test_crdt_validation.py\n\nSuccess rate: 0.0%\n\n[ERROR] \u274c 177 test(s) failed\nError: Process completed with exit code 1.\n1s\n0s\n0s\n0s\n0s</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T07:59:50.830Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix thse tests skip to content\nnavigation menu\njleechanorg\nworldarchitect.a",
+      "extraction_order": 8593
+    },
+    {
+      "content": "is this skipping the integration tests? how come all the tests are timing out",
+      "timestamp": "2025-09-19T08:30:10.360Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is this skipping the integration tests? how come all the tests are timing out",
+      "extraction_order": 8594
+    },
+    {
+      "content": "<user-prompt-submit-hook>is this skipping the integration tests? how come all the tests are timing out</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T08:30:10.998Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is this skipping the integration tests? how come all the tests are timing o",
+      "extraction_order": 8595
+    },
+    {
+      "content": "Extended CI Timeouts: 15min \u2192 30min job, 15min \u2192 25min step lets keep this at 20 min",
+      "timestamp": "2025-09-19T08:36:02.633Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "extended ci timeouts: 15min \u2192 30min job, 15min \u2192 25min step lets keep this at 20 min",
+      "extraction_order": 8596
+    },
+    {
+      "content": "<user-prompt-submit-hook>Extended CI Timeouts: 15min \u2192 30min job, 15min \u2192 25min step lets keep this at 20 min</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T08:36:02.852Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>extended ci timeouts: 15min \u2192 30min job, 15min \u2192 25min step lets keep this",
+      "extraction_order": 8597
+    },
+    {
+      "content": "why did all the tests time out? Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n51\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1624\nfeat: Worktree backup system with automatic Claude data protection #6763\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 20 minutes ago in 10m 52s\nSearch logs\n1s\n3s\n0s\n7s\n34s\n10m 3s\n  \u2717 test_numeric_field_converter.py (timeout)\n  \u2717 test_performance_config.py (timeout)\n  \u2717 test_planning_block_analysis.py (timeout)\n  \u2717 test_planning_block_robustness.py (timeout)\n  \u2717 test_planning_block_validation_integration.py (timeout)\n  \u2717 test_planning_blocks_ui.py (timeout)\n  \u2717 test_pr_changes_runner.py (timeout)\n  \u2717 test_production_parity.py (timeout)\n  \u2717 test_prompts.py (timeout)\n  \u2717 test_qwen_matrix.py (timeout)\n  \u2717 test_react_v2_tdd_critical_issues.py (timeout)\n  \u2717 test_real_json_bug_reproduction.py (timeout)\n  \u2717 test_red_green_json_fix.py (timeout)\n  \u2717 test_robust_json_parser.py (timeout)\n  \u2717 test_scene_numbering.py (timeout)\n  \u2717 test_settings_api.py (timeout)\n  \u2717 test_squash_merge_detection.py (timeout)\n  \u2717 test_state_update_integration.py (timeout)\n  \u2717 test_state_updates_json_parsing.py (timeout)\n  \u2717 test_structured_fields_storage.py (timeout)\n  \u2717 test_structured_fields_utils.py (timeout)\n  \u2717 test_structured_generation.py (timeout)\n  \u2717 test_structured_response_extraction.py (timeout)\n  \u2717 test_subprocess_security.py (timeout)\n  \u2717 test_syntax.py (timeout)\n  \u2717 test_syntax_comprehensive.py (timeout)\n  \u2717 test_think_block_protocol.py (timeout)\n  \u2717 test_time_consolidation.py (timeout)\n  \u2717 test_time_pressure.py (timeout)\n  \u2717 test_token_utils.py (timeout)\n  \u2717 test_type_safety_foundation.py (timeout)\n  \u2717 test_unknown_entity_filtering.py (timeout)\n  \u2717 test_unknown_entity_fix_summary.py (timeout)\n  \u2717 test_user_scenario_fix_validation.py (timeout)\n  \u2717 test_v1_vs_v2_campaign_comparison.py (timeout)\n  \u2717 test_v2_dashboard_authenticated_user.py (timeout)\n  \u2717 test_v2_frontend_red_green.py (timeout)\n  \u2717 test_v2_frontend_verification.py (timeout)\n  \u2717 test_validation_comparison.py (timeout)\n  \u2717 test_world_loader.py (timeout)\n  \u2717 test_world_loader_e2e.py (timeout)\n  \u2717 test_world_logic.py (timeout)\n  \u2717 test_campaign_wizard_reset_reproduction.py (timeout)\n  \u2717 test_crdt_integration.py (timeout)\n  \u2717 test_crdt_validation.py (timeout)\nAll tests marked as failed due to suite timeout\n\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551              Test Summary                 \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nTotal tests run: 177\nPassed: 0\nFailed: 177\n\nFailed tests:\n  \u2022 test_cerebras_comprehensive.py\n  \u2022 test_orchestrate_integration.py\n  \u2022 test_pr_utils.py\n  \u2022 test_exportcommands.py\n  \u2022 test_orchestrate.py\n  \u2022 test_pr_comment_formatter.py\n  \u2022 test_subprocess_utils.py\n  \u2022 test_timeout.py\n  \u2022 test_command_output_trimmer.py\n  \u2022 test_hook_patterns.py\n  \u2022 test_multi_player_composition.py\n  \u2022 test_documentation_performance.py\n  \u2022 test_basic_validation.py\n  \u2022 test_framework_validation.py\n  \u2022 test_capture.py\n  \u2022 test_factory.py\n  \u2022 test_mock_provider.py\n  \u2022 test_real_provider.py\n  \u2022 test_auth_resilience.py\n  \u2022 test_campaign_creation_v2_memory_leaks.py\n  \u2022 test_real_browser_settings_game_integration.py\n  \u2022 test_mcp_cerebras_integration.py\n  \u2022 test_mcp_comprehensive.py\n  \u2022 test_age_field_validation.py\n  \u2022 test_ai_content_simple.py\n  \u2022 test_always_json_mode.py\n  \u2022 test_animation_system.py\n  \u2022 test_api_backward_compatibility.py\n  \u2022 test_api_response_format_consistency.py\n  \u2022 test_api_routes.py\n  \u2022 test_api_service_enhancements.py\n  \u2022 test_architectural_boundary_validation.py\n  \u2022 test_architectural_decisions.py\n  \u2022 test_auth_mock_separation_redgreen.py\n  \u2022 test_authenticated_comprehensive.py\n  \u2022 test_banned_name_prevention_v2.py\n  \u2022 test_banned_names_loading.py\n  \u2022 test_banned_names_visibility_v2.py\n  \u2022 test_campaign_clicks.py\n  \u2022 test_character_extraction_regex_bug.py\n  \u2022 test_ci_firebase_init_redgreen.py\n  \u2022 test_claude_settings_validation.py\n  \u2022 test_combat_bug_green.py\n  \u2022 test_combat_cleanup_comprehensive.py\n0s\n0s\n0s\n0s\n0s",
+      "timestamp": "2025-09-19T08:58:43.591Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why did all the tests time out? skip to content\nnavigation menu\njleechanorg\nworldarchitect.ai\n\ntype",
+      "extraction_order": 8598
+    },
+    {
+      "content": "<user-prompt-submit-hook>why did all the tests time out? Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n51\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1624\nfeat: Worktree backup system with automatic Claude data protection #6763\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 20 minutes ago in 10m 52s\nSearch logs\n1s\n3s\n0s\n7s\n34s\n10m 3s\n  \u2717 test_numeric_field_converter.py (timeout)\n  \u2717 test_performance_config.py (timeout)\n  \u2717 test_planning_block_analysis.py (timeout)\n  \u2717 test_planning_block_robustness.py (timeout)\n  \u2717 test_planning_block_validation_integration.py (timeout)\n  \u2717 test_planning_blocks_ui.py (timeout)\n  \u2717 test_pr_changes_runner.py (timeout)\n  \u2717 test_production_parity.py (timeout)\n  \u2717 test_prompts.py (timeout)\n  \u2717 test_qwen_matrix.py (timeout)\n  \u2717 test_react_v2_tdd_critical_issues.py (timeout)\n  \u2717 test_real_json_bug_reproduction.py (timeout)\n  \u2717 test_red_green_json_fix.py (timeout)\n  \u2717 test_robust_json_parser.py (timeout)\n  \u2717 test_scene_numbering.py (timeout)\n  \u2717 test_settings_api.py (timeout)\n  \u2717 test_squash_merge_detection.py (timeout)\n  \u2717 test_state_update_integration.py (timeout)\n  \u2717 test_state_updates_json_parsing.py (timeout)\n  \u2717 test_structured_fields_storage.py (timeout)\n  \u2717 test_structured_fields_utils.py (timeout)\n  \u2717 test_structured_generation.py (timeout)\n  \u2717 test_structured_response_extraction.py (timeout)\n  \u2717 test_subprocess_security.py (timeout)\n  \u2717 test_syntax.py (timeout)\n  \u2717 test_syntax_comprehensive.py (timeout)\n  \u2717 test_think_block_protocol.py (timeout)\n  \u2717 test_time_consolidation.py (timeout)\n  \u2717 test_time_pressure.py (timeout)\n  \u2717 test_token_utils.py (timeout)\n  \u2717 test_type_safety_foundation.py (timeout)\n  \u2717 test_unknown_entity_filtering.py (timeout)\n  \u2717 test_unknown_entity_fix_summary.py (timeout)\n  \u2717 test_user_scenario_fix_validation.py (timeout)\n  \u2717 test_v1_vs_v2_campaign_comparison.py (timeout)\n  \u2717 test_v2_dashboard_authenticated_user.py (timeout)\n  \u2717 test_v2_frontend_red_green.py (timeout)\n  \u2717 test_v2_frontend_verification.py (timeout)\n  \u2717 test_validation_comparison.py (timeout)\n  \u2717 test_world_loader.py (timeout)\n  \u2717 test_world_loader_e2e.py (timeout)\n  \u2717 test_world_logic.py (timeout)\n  \u2717 test_campaign_wizard_reset_reproduction.py (timeout)\n  \u2717 test_crdt_integration.py (timeout)\n  \u2717 test_crdt_validation.py (timeout)\nAll tests marked as failed due to suite timeout\n\n\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557\n\u2551              Test Summary                 \u2551\n\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d\n\nTotal tests run: 177\nPassed: 0\nFailed: 177\n\nFailed tests:\n  \u2022 test_cerebras_comprehensive.py\n  \u2022 test_orchestrate_integration.py\n  \u2022 test_pr_utils.py\n  \u2022 test_exportcommands.py\n  \u2022 test_orchestrate.py\n  \u2022 test_pr_comment_formatter.py\n  \u2022 test_subprocess_utils.py\n  \u2022 test_timeout.py\n  \u2022 test_command_output_trimmer.py\n  \u2022 test_hook_patterns.py\n  \u2022 test_multi_player_composition.py\n  \u2022 test_documentation_performance.py\n  \u2022 test_basic_validation.py\n  \u2022 test_framework_validation.py\n  \u2022 test_capture.py\n  \u2022 test_factory.py\n  \u2022 test_mock_provider.py\n  \u2022 test_real_provider.py\n  \u2022 test_auth_resilience.py\n  \u2022 test_campaign_creation_v2_memory_leaks.py\n  \u2022 test_real_browser_settings_game_integration.py\n  \u2022 test_mcp_cerebras_integration.py\n  \u2022 test_mcp_comprehensive.py\n  \u2022 test_age_field_validation.py\n  \u2022 test_ai_content_simple.py\n  \u2022 test_always_json_mode.py\n  \u2022 test_animation_system.py\n  \u2022 test_api_backward_compatibility.py\n  \u2022 test_api_response_format_consistency.py\n  \u2022 test_api_routes.py\n  \u2022 test_api_service_enhancements.py\n  \u2022 test_architectural_boundary_validation.py\n  \u2022 test_architectural_decisions.py\n  \u2022 test_auth_mock_separation_redgreen.py\n  \u2022 test_authenticated_comprehensive.py\n  \u2022 test_banned_name_prevention_v2.py\n  \u2022 test_banned_names_loading.py\n  \u2022 test_banned_names_visibility_v2.py\n  \u2022 test_campaign_clicks.py\n  \u2022 test_character_extraction_regex_bug.py\n  \u2022 test_ci_firebase_init_redgreen.py\n  \u2022 test_claude_settings_validation.py\n  \u2022 test_combat_bug_green.py\n  \u2022 test_combat_cleanup_comprehensive.py\n0s\n0s\n0s\n0s\n0s</user-prompt-submit-hook>",
+      "timestamp": "2025-09-19T08:58:44.073Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why did all the tests time out? skip to content\nnavigation menu\njleechanorg",
+      "extraction_order": 8599
+    },
+    {
+      "content": "all tehse tests are still timing out. try to runn tthem locally and see whats going on Skip to content\nNavigation Menu\njleechanorg\nworldarchitect.ai\n\nType / to search\nCode\nIssues\n7\nPull requests\n50\nActions\nProjects\nSecurity\nInsights\nSettings\nBack to pull request #1624\nfeat: Worktree backup system with automatic Claude data protection #6769\nJobs\nRun details\nAnnotations\n1 error and 1 warning\ntest (all-tests)\nfailed 8 hours ago in 10m 52s\nSearch logs\n2s\n3s\n0s\n8s\n32s\n10m 2s\nCurrent Python: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv/bin/python3\nVirtual env: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv\n\u2705 Pydantic 2.11.9 available\n\ud83d\udd17 Running CRITICAL tests (fast CI execution with test limit)...\n[SUCCESS] Virtual environment is already active: /home/runner/work/worldarchitect.ai/worldarchitect.ai/venv\n[INFO] \ud83e\udde0 Intelligent Test Selection Mode (use --full for complete suite)\n[INFO] Skipping integration tests (include_integration=false, use --integration to include them)\n[INFO] \ud83d\udd12 Running critical Claude settings validation...\n\u2705 Claude settings.json validation passed\n[INFO] Running tests from project root for complete discovery...\n[INFO] TEST_MODE=mock (Real-Mode Testing Framework)\n[SUCCESS] \u2705 CI simulation environment configured (matches GitHub Actions)\n[INFO] \ud83d\udd0d Analyzing git changes for intelligent test selection...\n[WARN] origin/main not found, falling back to full test suite\n[INFO] Running tests in parallel mode (use --coverage for coverage analysis)\n[INFO] \ud83d\udd0d Discovering all test files (traditional mode)\n[INFO] Including .claude/commands tests...\n[INFO] Skipping orchestration tests (require --integration flag)\n[INFO] Including .claude/hooks tests...\n[INFO] Including .claude/commands direct test files...\n[INFO] Including scripts/tests...\n[INFO] \ud83d\ude80 Discovering cerebras command tests...\n  - Found: .claude/commands/cerebras/tests/test_cerebras_comprehensive.py\n[INFO] \ud83d\udcca Found 177 test files to execute\n[WARN] \u26a0\ufe0f  Applying CI_TEST_LIMIT: 177 \u2192 50 tests (for CI timeout prevention)\n[INFO] \ud83d\udcca Limited to 50 test files for CI execution\n[INFO] \ud83d\udccb Test files preview (first 10):\n  .claude/commands/cerebras/tests/test_cerebras_comprehensive.py\n  .claude/commands/test_orchestrate_integration.py\n  .claude/commands/test_pr_utils.py\n  .claude/commands/tests/test_exportcommands.py\n  .claude/commands/tests/test_orchestrate.py\n  .claude/commands/tests/test_pr_comment_formatter.py\n  .claude/commands/tests/test_subprocess_utils.py\n  .claude/commands/tests/test_timeout.py\n  .claude/hooks/tests/test_command_output_trimmer.py\n  .claude/hooks/tests/test_hook_patterns.py\n  ... and 40 more files\n[INFO] \ud83e\ude9d Running Claude Code hooks tests...\n[INFO] Hook test script not found or not executable, skipping...\n[INFO] \ud83d\udcbe Running backup script tests...\n[INFO] Backup test script not found or not executable at scripts/tests/test_claude_backup.sh, skipping...\n[INFO] Running tests in parallel (GitHub Actions: 2 workers - matching runner cores)...\n[INFO] \ud83d\ude80 Starting test execution: 50 files, 2 workers\n[INFO] \ud83d\udcca Memory monitoring active: 30GB total limit, 10GB per process\n[INFO] \u23f1\ufe0f  Test suite timeout: 600 seconds (10 minutes)\nbash: line 1: run_tests_with_timeout: command not found\n\u274c ERROR: Test suite exceeded timeout of 600 seconds (10 minutes)\nThis indicates tests are hanging or taking excessively long. Check for:\n  - Infinite loops in test code\n  - Network timeouts or external service dependencies\n  - Memory leaks causing system slowdown\n  - Tests waiting for user input or external events\n[INFO] \u23f1\ufe0f  Memory Monitor [0s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [6s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [12s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [18s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [24s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [31s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [37s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [43s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [49s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [55s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [61s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [67s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [73s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [79s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [86s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [92s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [98s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [104s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [110s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [116s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [122s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [128s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [134s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [141s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [147s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [153s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [159s]: Total=0.00GB (limit: 30GB)\n[INFO] \u23f1\ufe0f  Memory Monitor [165s]: Total=0.00GB (limit: 30GB)\n0s\n0s\n0s\n0s\n0s",
+      "timestamp": "2025-09-19T17:54:35.268Z",
+      "project": "-Users-jleechan-projects-worktree-backup",
+      "file": "20c35483-a377-4965-a4ee-7a6e38e654b2.jsonl",
+      "conversation_id": null,
+      "dedup_key": "all tehse tests are still timing out. try to runn tthem locally and see whats going on skip to conte",
+      "extraction_order": 8600
+    }
+  ],
+  "stats": {
+    "total_files_processed": 3588,
+    "total_messages_processed": 718472,
+    "user_messages_found": 158038,
+    "filtered_out": 137614,
+    "duplicates_removed": 11824,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

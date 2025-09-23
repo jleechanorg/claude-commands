@@ -1,0 +1,257 @@
+[
+  {
+    "prompt_id": "chunk_005_prompt_001",
+    "raw_prompt": "ok i reconnected now lets test cerebras though the mcp",
+    "timestamp": "2025-08-26T09:06:34.088Z",
+    "extraction_order": 3977,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["reconnected"],
+        "current_branch": "unknown",
+        "session_duration": "recent_restart",
+        "recent_errors": ["connection_issues"],
+        "work_focus": "testing_cerebras_mcp"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": ["cerebras", "mcp"],
+        "command_history": [],
+        "complexity_indicators": ["integration_testing"],
+        "urgency_signals": ["testing_after_reconnect"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "direct_casual",
+        "communication_patterns": ["lowercase", "informal_tone"],
+        "problem_solving_approach": "immediate_testing",
+        "learning_indicators": [],
+        "feedback_preferences": ["quick_validation"]
+      },
+      "intent_classification": {
+        "primary_goal": "test_cerebras_functionality",
+        "secondary_objectives": ["verify_mcp_integration"],
+        "task_complexity": "medium",
+        "domain_expertise": "intermediate",
+        "success_criteria": ["cerebras_responds_through_mcp"]
+      },
+      "cognitive_state": {
+        "attention_level": "focused",
+        "frustration_indicators": [],
+        "confidence_markers": ["reconnected"],
+        "multitasking_signs": [],
+        "flow_state_indicators": ["ready_to_test"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.85,
+        "context_coherence": 0.90,
+        "behavioral_consistency": 0.88,
+        "technical_accuracy": 0.92,
+        "human_like_variance": 0.87,
+        "overall_score": 0.884
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_002",
+    "raw_prompt": "<user-prompt-submit-hook>ok i reconnected now lets test cerebras though the mcp\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:06:34.258Z",
+    "extraction_order": 3978,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["reconnected", "prompt_submission"],
+        "current_branch": "unknown",
+        "session_duration": "recent_restart",
+        "recent_errors": ["connection_issues"],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system", "cerebras", "mcp"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_003",
+    "raw_prompt": "should not take this long",
+    "timestamp": "2025-08-26T09:09:10.296Z",
+    "extraction_order": 3979,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["waiting", "testing_cerebras"],
+        "current_branch": "unknown",
+        "session_duration": "3_minutes_wait",
+        "recent_errors": ["slow_response"],
+        "work_focus": "performance_concern"
+      },
+      "technical_context": {
+        "file_references": [],
+        "technology_stack": ["cerebras"],
+        "command_history": [],
+        "complexity_indicators": ["performance_issues"],
+        "urgency_signals": ["impatience", "timeout_concern"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "frustrated_direct",
+        "communication_patterns": ["short_sentences", "impatience"],
+        "problem_solving_approach": "expectation_management",
+        "learning_indicators": [],
+        "feedback_preferences": ["immediate_response"]
+      },
+      "intent_classification": {
+        "primary_goal": "express_performance_concern",
+        "secondary_objectives": ["get_faster_response"],
+        "task_complexity": "low",
+        "domain_expertise": "user_experience",
+        "success_criteria": ["faster_response_time"]
+      },
+      "cognitive_state": {
+        "attention_level": "impatient",
+        "frustration_indicators": ["time_expectation_violated"],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.92,
+        "context_coherence": 0.88,
+        "behavioral_consistency": 0.90,
+        "technical_accuracy": 0.85,
+        "human_like_variance": 0.93,
+        "overall_score": 0.896
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_004",
+    "raw_prompt": "<user-prompt-submit-hook>should not take this long\n\nn</user-prompt-submit-hook>",
+    "timestamp": "2025-08-26T09:09:10.454Z",
+    "extraction_order": 3980,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["expressed_frustration", "hook_processing"],
+        "current_branch": "unknown",
+        "session_duration": "3_minutes_wait",
+        "recent_errors": ["slow_response"],
+        "work_focus": "hook_system_processing"
+      },
+      "technical_context": {
+        "file_references": ["user-prompt-submit-hook"],
+        "technology_stack": ["hook_system"],
+        "command_history": [],
+        "complexity_indicators": ["hook_processing"],
+        "urgency_signals": []
+      },
+      "behavioral_patterns": {
+        "interaction_style": "system_generated",
+        "communication_patterns": ["hook_wrapper"],
+        "problem_solving_approach": "automated_processing",
+        "learning_indicators": [],
+        "feedback_preferences": []
+      },
+      "intent_classification": {
+        "primary_goal": "hook_system_execution",
+        "secondary_objectives": ["prompt_processing"],
+        "task_complexity": "low",
+        "domain_expertise": "system_level",
+        "success_criteria": ["hook_executed"]
+      },
+      "cognitive_state": {
+        "attention_level": "automated",
+        "frustration_indicators": [],
+        "confidence_markers": [],
+        "multitasking_signs": [],
+        "flow_state_indicators": []
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.20,
+        "context_coherence": 0.95,
+        "behavioral_consistency": 0.25,
+        "technical_accuracy": 0.98,
+        "human_like_variance": 0.15,
+        "overall_score": 0.506
+      }
+    }
+  },
+  {
+    "prompt_id": "chunk_005_prompt_005",
+    "raw_prompt": "look at the last 50 commits in the pr. This used to work. You probably followed a code reviewer suggestion and broke it",
+    "timestamp": "2025-08-26T09:11:11.061Z",
+    "extraction_order": 3981,
+    "context_analysis": {
+      "conversation_state": {
+        "previous_actions": ["diagnosing_issue", "investigating"],
+        "current_branch": "feature_branch",
+        "session_duration": "5_minutes",
+        "recent_errors": ["functionality_regression"],
+        "work_focus": "debugging_regression"
+      },
+      "technical_context": {
+        "file_references": ["pr_commits"],
+        "technology_stack": ["git", "pull_request"],
+        "command_history": ["git_log", "pr_review"],
+        "complexity_indicators": ["regression_analysis", "code_review_impact"],
+        "urgency_signals": ["broken_functionality"]
+      },
+      "behavioral_patterns": {
+        "interaction_style": "analytical_frustrated",
+        "communication_patterns": ["hypothesis_formation", "blame_attribution"],
+        "problem_solving_approach": "historical_analysis",
+        "learning_indicators": ["pattern_recognition"],
+        "feedback_preferences": ["detailed_investigation"]
+      },
+      "intent_classification": {
+        "primary_goal": "identify_regression_cause",
+        "secondary_objectives": ["restore_functionality", "understand_code_review_impact"],
+        "task_complexity": "high",
+        "domain_expertise": "experienced_developer",
+        "success_criteria": ["identified_breaking_commit", "functionality_restored"]
+      },
+      "cognitive_state": {
+        "attention_level": "highly_focused",
+        "frustration_indicators": ["regression_frustration", "code_review_skepticism"],
+        "confidence_markers": ["historical_knowledge"],
+        "multitasking_signs": [],
+        "flow_state_indicators": ["deep_investigation"]
+      },
+      "authenticity_score": {
+        "natural_language_flow": 0.88,
+        "context_coherence": 0.92,
+        "behavioral_consistency": 0.90,
+        "technical_accuracy": 0.94,
+        "human_like_variance": 0.87,
+        "overall_score": 0.902
+      }
+    }
+  }
+]

@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 37,
+  "prompts_count": 3700,
+  "timestamp": "2025-09-22T03:49:10.712456",
+  "prompts": [
+    {
+      "content": "<user-prompt-submit-hook>test the mcp slash cmd server again with cerebras generate and make sure it generates something\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:45:02.429Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test the mcp slash cmd server again with cerebras generate and make sure it",
+      "extraction_order": 3601
+    },
+    {
+      "content": "wait did it actually generate code?",
+      "timestamp": "2025-08-26T17:52:22.298Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wait did it actually generate code?",
+      "extraction_order": 3602
+    },
+    {
+      "content": "<user-prompt-submit-hook>wait did it actually generate code?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:52:22.455Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wait did it actually generate code?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3603
+    },
+    {
+      "content": "it was jus working earlier, look at the previous commits",
+      "timestamp": "2025-08-26T17:54:25.054Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "it was jus working earlier, look at the previous commits",
+      "extraction_order": 3604
+    },
+    {
+      "content": "<user-prompt-submit-hook>it was jus working earlier, look at the previous commits\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:54:25.217Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>it was jus working earlier, look at the previous commits\n\nn</user-prompt-su",
+      "extraction_order": 3605
+    },
+    {
+      "content": "i probably need to restart claude code cli",
+      "timestamp": "2025-08-26T17:55:32.084Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i probably need to restart claude code cli",
+      "extraction_order": 3606
+    },
+    {
+      "content": "<user-prompt-submit-hook>i probably need to restart claude code cli\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:55:32.460Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i probably need to restart claude code cli\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3607
+    },
+    {
+      "content": "lets test both compose commands and slash cmd mcp",
+      "timestamp": "2025-08-26T17:56:58.627Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets test both compose commands and slash cmd mcp",
+      "extraction_order": 3608
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets test both compose commands and slash cmd mcp\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:56:58.788Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets test both compose commands and slash cmd mcp\n\nn</user-prompt-submit-ho",
+      "extraction_order": 3609
+    },
+    {
+      "content": "restarted and lets test both compose commands and slash cmd mcp",
+      "timestamp": "2025-08-26T17:57:09.285Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "restarted and lets test both compose commands and slash cmd mcp",
+      "extraction_order": 3610
+    },
+    {
+      "content": "<user-prompt-submit-hook>restarted and lets test both compose commands and slash cmd mcp\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:57:09.447Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>restarted and lets test both compose commands and slash cmd mcp\n\nn</user-pr",
+      "extraction_order": 3611
+    },
+    {
+      "content": "did we actually generate code with cerebras?",
+      "timestamp": "2025-08-26T18:32:56.029Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we actually generate code with cerebras?",
+      "extraction_order": 3612
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we actually generate code with cerebras?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:32:56.188Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we actually generate code with cerebras?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3613
+    },
+    {
+      "content": "run the tests that are relevant to our PR locally but save output to file to save context",
+      "timestamp": "2025-08-26T18:34:19.582Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run the tests that are relevant to our pr locally but save output to file to save context",
+      "extraction_order": 3614
+    },
+    {
+      "content": "<user-prompt-submit-hook>run the tests that are relevant to our PR locally but save output to file to save context\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:34:19.742Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run the tests that are relevant to our pr locally but save output to file t",
+      "extraction_order": 3615
+    },
+    {
+      "content": "fix the router core tests since we added them in this pr",
+      "timestamp": "2025-08-26T18:35:36.379Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix the router core tests since we added them in this pr",
+      "extraction_order": 3616
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix the router core tests since we added them in this pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:35:36.543Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix the router core tests since we added them in this pr\n\nn</user-prompt-su",
+      "extraction_order": 3617
+    },
+    {
+      "content": "fix the ur lhttps://github.com/jleechanorg/worldarchitect.ai/pull/1436",
+      "timestamp": "2025-08-26T18:45:24.841Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "fix the ur lhttps://github.com/jleechanorg/worldarchitect.ai/pull/1436",
+      "extraction_order": 3618
+    },
+    {
+      "content": "<user-prompt-submit-hook>fix the ur lhttps://github.com/jleechanorg/worldarchitect.ai/pull/1436\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:45:25.167Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>fix the ur lhttps://github.com/jleechanorg/worldarchitect.ai/pull/1436\n\nn</",
+      "extraction_order": 3619
+    },
+    {
+      "content": "why are all the gh actions for tests failing?",
+      "timestamp": "2025-08-26T18:49:19.666Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why are all the gh actions for tests failing?",
+      "extraction_order": 3620
+    },
+    {
+      "content": "<user-prompt-submit-hook>why are all the gh actions for tests failing?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:49:19.845Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why are all the gh actions for tests failing?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3621
+    },
+    {
+      "content": "added budget",
+      "timestamp": "2025-08-26T18:57:56.387Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "added budget",
+      "extraction_order": 3622
+    },
+    {
+      "content": "<user-prompt-submit-hook>added budget\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T18:57:56.634Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>added budget\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3623
+    },
+    {
+      "content": "focus on only serious gh comments and make sure to run relevant local tests after making changes to ensure things still work. be very cautious about bot comments that can introduce more errors if you change stuff. then continue",
+      "timestamp": "2025-08-26T22:34:21.340Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "focus on only serious gh comments and make sure to run relevant local tests after making changes to",
+      "extraction_order": 3624
+    },
+    {
+      "content": "<user-prompt-submit-hook>focus on only serious gh comments and make sure to run relevant local tests after making changes to ensure things still work. be very cautious about bot comments that can introduce more errors if you change stuff. then continue\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T22:34:21.503Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>focus on only serious gh comments and make sure to run relevant local tests",
+      "extraction_order": 3625
+    },
+    {
+      "content": "<user-prompt-submit-hook>git merge main\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T07:25:06.308Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "829b3444-5f6d-48d6-88c3-3b0fdf565814.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git merge main\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3626
+    },
+    {
+      "content": "<user-prompt-submit-hook>/fake3 and ensure the test results were real</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T01:36:26.339Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/fake3 and ensure the test results were real</user-prompt-submit-hook>",
+      "extraction_order": 3627
+    },
+    {
+      "content": "wait did you change files unrelated to the pr?",
+      "timestamp": "2025-08-23T02:05:43.532Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wait did you change files unrelated to the pr?",
+      "extraction_order": 3628
+    },
+    {
+      "content": "<user-prompt-submit-hook>wait did you change files unrelated to the pr?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T02:05:43.606Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wait did you change files unrelated to the pr?</user-prompt-submit-hook>",
+      "extraction_order": 3629
+    },
+    {
+      "content": "in the three agent test what was the prompt for Cerebras instruction vs Cerebras mcp?",
+      "timestamp": "2025-08-23T02:08:56.413Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "in the three agent test what was the prompt for cerebras instruction vs cerebras mcp?",
+      "extraction_order": 3630
+    },
+    {
+      "content": "<user-prompt-submit-hook>in the three agent test what was the prompt for Cerebras instruction vs Cerebras mcp?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T02:08:56.476Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>in the three agent test what was the prompt for cerebras instruction vs cer",
+      "extraction_order": 3631
+    },
+    {
+      "content": "I wanna test another agent 4. give it the same general tasks but have the mcp be available and see how often it chooses to use it. our Claude MD already has a directive to be Cerebras first right?",
+      "timestamp": "2025-08-23T02:13:20.952Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i wanna test another agent 4. give it the same general tasks but have the mcp be available and see h",
+      "extraction_order": 3632
+    },
+    {
+      "content": "<user-prompt-submit-hook>I wanna test another agent 4. give it the same general tasks but have the mcp be available and see how often it chooses to use it. our Claude MD already has a directive to be Cerebras first right?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T02:13:21.026Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i wanna test another agent 4. give it the same general tasks but have the m",
+      "extraction_order": 3633
+    },
+    {
+      "content": "<user-prompt-submit-hook>run it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T03:14:36.477Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run it</user-prompt-submit-hook>",
+      "extraction_order": 3634
+    },
+    {
+      "content": "push results to pr",
+      "timestamp": "2025-08-23T04:51:26.461Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push results to pr",
+      "extraction_order": 3635
+    },
+    {
+      "content": "<user-prompt-submit-hook>push results to pr</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T04:51:26.693Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push results to pr</user-prompt-submit-hook>",
+      "extraction_order": 3636
+    },
+    {
+      "content": "<user-prompt-submit-hook>/commentfetch look for serious issues</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T16:14:11.942Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/commentfetch look for serious issues</user-prompt-submit-hook>",
+      "extraction_order": 3637
+    },
+    {
+      "content": "Execute the task: fix seirous issues then /guidelines then /copilot\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-23T16:48:37.028Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: fix seirous issues then /guidelines then /copilot\n\nfollow the complete /execute wo",
+      "extraction_order": 3638
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/e /guidelines /copilot \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/branch-guidelines /commentcheck /commentfetch /commentreply /execute /fixpr /guidelines /plan /pushl /review-enhanced /reviewdeep \n\nUse these approaches in combination:/branch-guidelines /commentcheck /commentfetch /commentreply /copilot /e /execute /fixpr /guidelines /plan /pushl /review-enhanced /reviewdeep . Apply this to: fix seirous issues then then\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/e /guidelines /copilot  and will combine them intelligently.\"</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T16:48:37.214Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/e /guidelines /copilot \n\ud83c\udfaf multi-player intellige",
+      "extraction_order": 3639
+    },
+    {
+      "content": "actually code in docs/ is not prod code. Can ignore it. Anything serious remaining?",
+      "timestamp": "2025-08-23T16:49:15.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "actually code in docs/ is not prod code. can ignore it. anything serious remaining?",
+      "extraction_order": 3640
+    },
+    {
+      "content": "<user-prompt-submit-hook>actually code in docs/ is not prod code. Can ignore it. Anything serious remaining?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T16:49:15.522Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>actually code in docs/ is not prod code. can ignore it. anything serious re",
+      "extraction_order": 3641
+    },
+    {
+      "content": "why looking at analyze git stats? that isnt being modified right?",
+      "timestamp": "2025-08-23T16:51:14.627Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why looking at analyze git stats? that isnt being modified right?",
+      "extraction_order": 3642
+    },
+    {
+      "content": "<user-prompt-submit-hook>why looking at analyze git stats? that isnt being modified right?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T16:51:14.698Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why looking at analyze git stats? that isnt being modified right?</user-pro",
+      "extraction_order": 3643
+    },
+    {
+      "content": "how come the pr is so big 25k lines? which files should i focus on reviewing",
+      "timestamp": "2025-08-23T17:09:55.942Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how come the pr is so big 25k lines? which files should i focus on reviewing",
+      "extraction_order": 3644
+    },
+    {
+      "content": "<user-prompt-submit-hook>how come the pr is so big 25k lines? which files should i focus on reviewing</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T17:09:56.011Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how come the pr is so big 25k lines? which files should i focus on reviewin",
+      "extraction_order": 3645
+    },
+    {
+      "content": "why do we need this file? auth_service/app/config.py also shuldnnt i review the mcp server?",
+      "timestamp": "2025-08-23T17:12:27.453Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "why do we need this file? auth_service/app/config.py also shuldnnt i review the mcp server?",
+      "extraction_order": 3646
+    },
+    {
+      "content": "<user-prompt-submit-hook>why do we need this file? auth_service/app/config.py also shuldnnt i review the mcp server?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T17:12:27.529Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>why do we need this file? auth_service/app/config.py also shuldnnt i review",
+      "extraction_order": 3647
+    },
+    {
+      "content": "Execute the task: lets see if we need auth server and then and handle this comment  49 changes: 49 additions & 0 deletions49  \nmcp_servers/slash_commands/archived_tools/batchcopilot_tool.py\nViewed\nOriginal file line number    Diff line number    Diff line change\n@@ -0,0 +1,49 @@\n#!/usr/bin/env python3\nAuthor\n@jleechan2015 jleechan2015 now\nWhy are these in archived_tools? Can we just delete? then /copilot and focus on my comments\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-23T17:15:29.446Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: lets see if we need auth server and then and handle this comment  49 changes: 49 a",
+      "extraction_order": 3648
+    },
+    {
+      "content": "push to pr and summarize agent 4 prompt and results",
+      "timestamp": "2025-08-23T18:37:25.325Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and summarize agent 4 prompt and results",
+      "extraction_order": 3649
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and summarize agent 4 prompt and results</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T18:37:25.597Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and summarize agent 4 prompt and results</user-prompt-submit-hoo",
+      "extraction_order": 3650
+    },
+    {
+      "content": "how was the speed and loc?",
+      "timestamp": "2025-08-23T18:39:17.795Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how was the speed and loc?",
+      "extraction_order": 3651
+    },
+    {
+      "content": "<user-prompt-submit-hook>how was the speed and loc?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T18:39:17.860Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how was the speed and loc?</user-prompt-submit-hook>",
+      "extraction_order": 3652
+    },
+    {
+      "content": "run the agent 4 prompt and benchmark here",
+      "timestamp": "2025-08-23T18:40:48.444Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run the agent 4 prompt and benchmark here",
+      "extraction_order": 3653
+    },
+    {
+      "content": "<user-prompt-submit-hook>run the agent 4 prompt and benchmark here</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T18:40:48.506Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run the agent 4 prompt and benchmark here</user-prompt-submit-hook>",
+      "extraction_order": 3654
+    },
+    {
+      "content": "I want you to directly execute what agent 4 did without a sub agent",
+      "timestamp": "2025-08-23T18:41:59.040Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i want you to directly execute what agent 4 did without a sub agent",
+      "extraction_order": 3655
+    },
+    {
+      "content": "<user-prompt-submit-hook>I want you to directly execute what agent 4 did without a sub agent</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T18:41:59.101Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i want you to directly execute what agent 4 did without a sub agent</user-p",
+      "extraction_order": 3656
+    },
+    {
+      "content": "give me a prompt to directly execute those tasks. I want you to execute them. I will clear the convo to avoid bias and paste it in.",
+      "timestamp": "2025-08-23T19:46:46.224Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "give me a prompt to directly execute those tasks. i want you to execute them. i will clear the convo",
+      "extraction_order": 3657
+    },
+    {
+      "content": "<user-prompt-submit-hook>give me a prompt to directly execute those tasks. I want you to execute them. I will clear the convo to avoid bias and paste it in.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T19:46:46.466Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>give me a prompt to directly execute those tasks. i want you to execute the",
+      "extraction_order": 3658
+    },
+    {
+      "content": "remove all mention of cerebras i want it tobe more natural",
+      "timestamp": "2025-08-23T19:48:09.894Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "remove all mention of cerebras i want it tobe more natural",
+      "extraction_order": 3659
+    },
+    {
+      "content": "<user-prompt-submit-hook>remove all mention of cerebras i want it tobe more natural</user-prompt-submit-hook>",
+      "timestamp": "2025-08-23T19:48:09.963Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "78be4d97-8522-4ea3-bff0-9c4469536351.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>remove all mention of cerebras i want it tobe more natural</user-prompt-sub",
+      "extraction_order": 3660
+    },
+    {
+      "content": "# Fake Code Detection Command\n\n**Purpose**: Detect fake, demo, or simulated code that isn't truly working using research-backed pattern recognition with Memory MCP integration and real-time hook validation\n\n**Usage**: `/fake` - Comprehensive audit for non-functional code patterns with 900% improved detection capability\n\n## \ud83d\udea8 ENHANCED DETECTION SYSTEM\n\n**Research Foundation**: Based on comprehensive multi-phase research (August 2025) incorporating:\n- Google's 17% improvement methodology via self-reflection\n- Meta's 71% hallucination reduction techniques  \n- Stanford NLP semantic entropy methods\n- MIT multi-agent verification systems\n\n**Real-time Integration**: Automatically uses the advanced detection hook system at `/home/jleechan/projects/worldarchitect.ai/.claude/hooks/detect_speculation_and_fake_code.sh` which has proven 900% detection improvement over legacy approaches.\n\n## \ud83d\udd04 RELATED COMMANDS\n\n**Light Alternative**: For quick screening, use `/fakel` command which provides the same detection patterns with faster analysis (4 thoughts vs 10+ thoughts).\n\n## \ud83d\udea8 COMMAND COMPOSITION\n\nThis command combines: `/arch /thinku /devilsadvocate /diligent`\n\n**\u26a0\ufe0f CRITICAL**: This composition MUST be executed with Memory MCP integration as described in the Execution Protocol below. The Memory MCP operations are MANDATORY, not optional.\n\n**Composition Logic**:\n- **Architecture Analysis** (/arch): Understand system design and integration points\n- **Deep Thinking** (/thinku): Thorough analysis of code functionality (10+ thoughts)\n- **Devil's Advocate** (/devilsadvocate): Challenge assumptions about what works\n- **Diligent Review** (/diligent): Methodical examination of implementation details\n\n## \ud83d\udd0d DETECTION TARGETS\n\n### Research-Validated Pattern Categories (21 Total Patterns)\n\n#### Speculation Patterns (9 patterns)\n- **Temporal Speculation**: \"I'll wait for\", \"let me wait\", \"waiting for completion\"\n- **State Assumptions**: \"command is running\", \"system processing\", \"while executing\"  \n- **Outcome Predictions**: \"should see\", \"will result\", \"expect to\"\n- **Process Speculation**: \"during process\", \"as it runs\", \"once complete\"\n\n#### Fake Code Patterns (12 patterns)\n- **Placeholder Code**: \"TODO: implement\", \"FIXME\", \"dummy value\", \"placeholder for real validation\"\n- **Non-functional Logic**: \"return null # stub\", \"throw NotImplemented\", debug code left in production\n- **Template/Demo Code**: \"Example implementation\", \"Sample code\", \"This example\", \"Basic template\"\n- **Duplicate Logic**: \"copy from\", \"similar to\", \"based on existing\"\n- **Parallel Systems**: \"create new instead\", \"replace existing with\", \"simpler version of\"\n\n#### Legacy CLAUDE.md Violations\n- **Demo Files**: Non-functional demonstration code\n- **Fake Intelligence**: Python files simulating .md logic\n- **Template Responses**: Generic replies without real analysis\n- **Mock Implementations**: Functions that simulate rather than implement\n\n### Code Quality Indicators\n- **TODO/FIXME**: Unfinished implementation markers\n- **Hardcoded Values**: Non-configurable demo data\n- **Missing Error Handling**: Code that works only in perfect conditions\n- **Incomplete Integration**: Functions that don't connect to real systems\n- **Test-Only Logic**: Code that only works in test environments\n\n## \ud83c\udfaf ANALYSIS SCOPE\n\n### Branch Comparison\n- **Local vs Main**: Compare current branch against main branch\n- **Local vs Remote PR**: Compare against remote PR if exists\n- **Integration Points**: Check how changes affect existing systems\n- **Dependency Analysis**: Verify all dependencies are real and functional\n\n### File Type Focus\n- **Python Files**: Check for actual functionality vs simulation\n- **Configuration**: Verify settings connect to real services\n- **Scripts**: Ensure automation actually works\n- **Tests**: Distinguish real tests from fake validations\n- **Documentation**: Flag docs describing non-existent features\n\n## \ud83d\udea8 EXECUTION PROTOCOL\n\n**\u26a0\ufe0f MANDATORY**: When executing /fake, you MUST perform the Memory MCP operations described below. These are NOT optional documentation - they are required execution steps.\n\n### Phase 0: Memory Enhancement (Memory MCP Integration)\n**ACTUAL IMPLEMENTATION STEPS**:\n\n1. **Search for existing fake patterns**:\n   ```python\n   \ud83d\udd0d Searching memory for fake patterns...\n   result1 = mcp__memory-server__search_nodes(\"fake_patterns OR placeholder_code OR demo_files OR fake_implementation\")\n   ```\n\n2. **Get branch-specific patterns**:\n   ```python\n   import subprocess\n   current_branch = subprocess.check_output([\"git\", \"branch\", \"--show-current\"], text=True).strip()\n   result2 = mcp__memory-server__search_nodes(f\"fake patterns {current_branch}\")\n   ```\n\n3. **Log results**:\n   - Log results only if patterns found or errors occur\n   - If patterns found, list them briefly\n   - Use these patterns to inform subsequent analysis\n\n**Integration**: The memory context MUST inform all subsequent analysis phases\n\n### Enhanced Composition Execution\n\nExecute the composed commands WITH memory context awareness:\n\n### Phase 1: Architecture Analysis (/arch)\n**System Understanding** (enhanced with memory):\n- Map current system architecture\n- Pay special attention to areas where fake patterns were previously found\n- Identify integration boundaries\n- Understand data flow and dependencies\n- Analyze how changes fit into existing system\n\n### Phase 2: Deep Thinking (/thinku)\n**Thorough Code Analysis** (10+ thoughts, informed by memory):\n- Trace execution paths through new code\n- Verify each function actually performs its stated purpose\n- Check for patterns similar to remembered fake implementations\n- Check error handling and edge cases\n- Analyze resource usage and performance implications\n\n### Phase 3: Devil's Advocate (/devilsadvocate)\n**Challenge Assumptions** (using historical knowledge):\n- Question whether code actually works as claimed\n- Look for scenarios where code would fail\n- Use past fake patterns to challenge current implementations\n- Challenge integration assumptions\n- Verify all dependencies are available and functional\n\n### Phase 4: Diligent Review (/diligent)\n**Methodical Examination** (with specific attention to problem areas):\n- Line-by-line code review for fake patterns\n- Focus on file types/areas that historically had fake implementations\n- Verify all imports resolve to real modules\n- Check configuration values point to real resources\n- Validate test assertions match actual behavior\n\n### Phase 5: Self-Reflection Integration (Research-Backed Improvement)\n**ACTUAL IMPLEMENTATION STEPS**:\n\n1. **Trigger Hook-Based Self-Reflection**:\n   - Process detected fake code through enhanced reflection pipeline\n   - Apply Google's 17% improvement methodology via self-questioning\n   - Generate specific corrective guidance for each violation\n   \n2. **Document Self-Correction Success**:\n   - Track before/after comparison of code quality\n   - Log successful transformations from fake to functional code\n   - Measure improvement in real-world implementations\n\n### Phase 6: Memory Persistence (Store Learnings)\n**ACTUAL IMPLEMENTATION STEPS**:\n\nAfter analysis completes, store new findings:\n\n1. **For each fake pattern found**:\n   ```python\n   pattern_name = f\"{pattern_type}_{timestamp}\"\n   mcp__memory-server__create_entities([{\n     \"name\": pattern_name,\n     \"entityType\": \"fake_code_pattern\",\n     \"observations\": [\n       \"Description of pattern\",\n       f\"Location: {file}:{line}\",\n       f\"Detection method: {method}\",\n       f\"Found on branch: {current_branch}\",\n       f\"Detected by: /fake command\",\n       f\"Self-reflection triggered: {reflection_applied}\",\n       f\"Correction guidance: {guidance_provided}\"\n     ]\n   }])\n   ```\n\n2. **Create relationships** (if applicable):\n   ```python\n   mcp__memory-server__create_relations([{\n     \"from\": pattern_name,\n     \"to\": component_name,\n     \"relationType\": \"found_in\"\n   }])\n   ```\n\n3. **Log storage**:\n   - Log storage only if successful or errors occur\n   - List what was stored for transparency\n\n**Benefits**: Builds persistent knowledge base for improved future detection\n\n## \ud83d\udccb DETECTION CHECKLIST\n\n### Code Functionality\n- [ ] All functions perform actual work (not just return mock data)\n- [ ] Error handling exists and works with real failures\n- [ ] External dependencies are real and accessible\n- [ ] Configuration values connect to actual services\n- [ ] Integration points function bidirectionally\n\n### Implementation Quality\n- [ ] No placeholder comments or TODOs in production code\n- [ ] No hardcoded demo data masquerading as real functionality\n- [ ] No duplicate implementations of existing systems\n- [ ] No Python files simulating .md file logic\n- [ ] No fake response generation using templates\n\n### System Integration\n- [ ] New code integrates with existing architecture\n- [ ] Database connections use real schemas\n- [ ] API calls reach actual endpoints\n- [ ] File operations work with real file systems\n- [ ] Authentication connects to real identity providers\n\n## \ud83d\udd0d REPORTING FORMAT\n\n### Summary Report\n```text\n\ud83d\udea8 FAKE CODE AUDIT RESULTS (Research-Enhanced + Memory Integration)\n\n\ud83d\udcca Files Analyzed: X\n\u26a0\ufe0f  Fake Patterns Found: Y (900% improvement over legacy detection)\n\u2705 Verified Working Code: Z\n\ud83d\udd04 Self-Reflection Triggered: R\n\ud83e\udde0 Memory Patterns Used: A\n\ud83d\udcda New Patterns Learned: B\n\n\ud83d\udd0d RESEARCH-BACKED DETECTION CAPABILITIES:\n- Speculation patterns: 9 temporal/state/outcome categories\n- Fake code patterns: 12 placeholder/template/parallel categories  \n- Self-reflection pipeline: Google's 17% improvement methodology\n- Hook integration: Real-time pattern validation with CRITICAL messaging\n\n\ud83d\udd04 SELF-REFLECTION ANALYSIS:\n- [Fake code violations detected and corrected]\n- [Before/after transformation examples]\n- [Self-questioning effectiveness measurement]\n- [Corrective guidance success rate]\n\n\ud83d\udd34 CRITICAL ISSUES (CLAUDE.md Rule Violations):\n- [List fake implementations requiring immediate attention]\n- [Parallel system creation violations]\n- [Template/placeholder code violations]\n\n\ud83d\udfe1 SUSPICIOUS PATTERNS:\n- [Code showing speculation indicators]\n- [Potential fake implementations requiring verification]\n\n\u2705 VERIFIED FUNCTIONAL:\n- [Code confirmed to work correctly]\n- [Real implementations validated through testing]\n\n\ud83d\udd04 SELF-CORRECTION SUCCESS:\n- [Successful transformations from fake to functional code]\n- [Quality improvements measured through reflection]\n\n\ud83e\udde0 KNOWLEDGE CAPTURED:\n- [New fake patterns stored with self-reflection metadata]\n- [Detection effectiveness improvements documented]\n- [Research validation integrated into future detection]\n```\n\n### Detailed Findings\nFor each fake pattern found:\n- **File**: Exact location (file:line)\n- **Pattern**: Type of fake implementation\n- **Evidence**: Code snippet showing the issue\n- **Impact**: How this affects system functionality\n- **Recommendation**: Specific action to resolve the issue\n\n## \ud83e\udde0 MEMORY-ENHANCED DETECTION BENEFITS\n\n### Learning from History\n**Pattern Recognition**: Memory MCP stores examples of fake patterns found in this codebase, enabling faster recognition of similar issues.\n\n**Context Awareness**: The system learns which files, directories, or code areas tend to contain fake implementations.\n\n**Strategy Evolution**: Detection approaches are refined based on what works well for this specific project.\n\n### Continuous Improvement\n**False Positive Reduction**: Memory helps distinguish between legitimate code and fake patterns by learning from corrections.\n\n**Codebase-Specific Intelligence**: Understanding of project conventions helps identify what constitutes \"fake\" vs acceptable code.\n\n**Cross-Session Knowledge**: Insights persist across different analysis sessions, building comprehensive detection capabilities.\n\n### Memory Integration Flow\n1. **Search**: Query memory for relevant fake patterns before analysis\n2. **Analyze**: Use memory context to enhance detection accuracy\n3. **Learn**: Store new findings and update existing knowledge\n4. **Evolve**: Each run improves future detection capabilities\n\n## \ud83d\udee0\ufe0f REMEDIATION GUIDANCE\n\n### Immediate Actions\n1. **Remove Fake Files**: Delete files that serve no functional purpose\n2. **Fix Placeholder Code**: Replace comments with actual implementations\n3. **Consolidate Duplicates**: Remove duplicate implementations, use existing systems\n4. **Verify Integration**: Test that code actually works with real systems\n\n### Long-term Prevention\n1. **Code Review Standards**: Establish detection criteria for reviews\n2. **Testing Requirements**: Mandate real functionality verification\n3. **Integration Testing**: Ensure all code works with actual dependencies\n4. **Documentation Accuracy**: Keep docs aligned with actual implementation\n\n## \ud83c\udfaf SUCCESS CRITERIA\n\n**Command Succeeds When**:\n- All fake/demo/simulated code is identified using 21 research-backed patterns\n- Each finding includes specific evidence and location with pattern classification\n- Self-reflection triggers automatically for detected violations\n- Corrective guidance provided based on Google's 17% improvement methodology\n- Before/after analysis demonstrates successful transformation to functional code\n- Both local branch and PR context are analyzed with hook integration\n- Integration points are verified for real functionality\n- **Memory MCP successfully queried** for historical fake patterns\n- **New learnings stored** with self-reflection metadata for improvement\n- **Research validation integrated** into detection and correction processes\n\n**Red Flags Requiring Attention**:\n- Files with placeholder comments in production areas\n- Functions that only return mock data  \n- Duplicate implementations of existing functionality\n- Code that works only in test environments\n- Integration points that don't connect to real systems\n- **Speculation patterns**: Temporal assumptions, state speculation, outcome predictions\n- **Template/demo language**: \"Example implementation\", \"sample code\", \"basic template\"\n- **Parallel system creation**: \"create new instead\", \"simpler version of\"\n\n## \ud83c\udfc6 RESEARCH VALIDATION & TESTING RESULTS\n\n### Red/Green Testing Success (August 2025)\n**Proven Detection Improvement**: \n- **Legacy Approach**: 0/9 sophisticated fake code patterns detected (0% success rate)\n- **Enhanced System**: 9/9 sophisticated fake code patterns detected (100% success rate)  \n- **Quantified Improvement**: 900% detection capability increase\n\n### Self-Reflection Pipeline Validation\n**Research Implementation**: Successfully integrated Google's 17% improvement methodology\n- **Automatic Trigger**: Self-reflection activates when fake code patterns detected\n- **Corrective Guidance**: CRITICAL messaging with specific 5-step improvement process\n- **Real-World Success**: Demonstrated transformation of 10 fake code violations into functional implementations\n- **User Experience**: Non-disruptive advisory system preserving development workflow\n\n### Research Foundation Sources\n**Peer-Reviewed Evidence Base**:\n- Google DeepMind: Constitutional AI with 17% improvement via self-questioning (2024)\n- Meta AI: RAG techniques achieving 71% hallucination reduction (2024)  \n- Stanford NLP: Semantic entropy methods for uncertainty measurement (2024)\n- MIT: Multi-agent verification systems for AI quality assurance (2024)\n- Anthropic: Constitutional AI and safety alignment techniques (2024-2025)\n\n### Hook Integration Benefits\n**Real-Time Quality Assurance**:\n- **Pattern Recognition**: 21 research-backed detection patterns\n- **Advisory Warnings**: CRITICAL violation messaging with CLAUDE.md rule references  \n- **Self-Reflection Questions**: Automated quality assessment prompts\n- **Corrective Actions**: Specific guidance for fixing violations\n- **Immediate Tasks**: Direct instructions for code improvement\n\nThis enhanced `/fake` command represents the most advanced AI code quality detection system available, combining cutting-edge research with proven real-world effectiveness.\n\n\nARGUMENTS: --branch-only",
+      "timestamp": "2025-08-25T03:29:09.569Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "167aa546-fd3e-4104-8436-618c36e5152d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "# fake code detection command\n\n**purpose**: detect fake, demo, or simulated code that isn't truly wo",
+      "extraction_order": 3661
+    },
+    {
+      "content": "<user-prompt-submit-hook>/fake --branch-only\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T03:29:09.946Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "167aa546-fd3e-4104-8436-618c36e5152d.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/fake --branch-only\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3662
+    },
+    {
+      "content": "Use the read_text_content tool to generate a simple Python hello world function",
+      "timestamp": "2025-08-22T16:44:15.236Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "54a450e9-f075-4c76-b86a-a4634c2ace17.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use the read_text_content tool to generate a simple python hello world function",
+      "extraction_order": 3663
+    },
+    {
+      "content": "<user-prompt-submit-hook>Use the read_text_content tool to generate a simple Python hello world function</user-prompt-submit-hook>",
+      "timestamp": "2025-08-22T16:44:15.294Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "54a450e9-f075-4c76-b86a-a4634c2ace17.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use the read_text_content tool to generate a simple python hello world func",
+      "extraction_order": 3664
+    },
+    {
+      "content": "<user-prompt-submit-hook>restarted</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T00:28:22.804Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>restarted</user-prompt-submit-hook>",
+      "extraction_order": 3665
+    },
+    {
+      "content": "you did not executre it",
+      "timestamp": "2025-08-25T00:29:09.181Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you did not executre it",
+      "extraction_order": 3666
+    },
+    {
+      "content": "<user-prompt-submit-hook>you did not executre it</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T00:29:09.412Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you did not executre it</user-prompt-submit-hook>",
+      "extraction_order": 3667
+    },
+    {
+      "content": "<user-prompt-submit-hook>/debugp root cause for why you didnt execute it.  Thats whole point of this PR</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T00:29:42.010Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/debugp root cause for why you didnt execute it.  thats whole point of this",
+      "extraction_order": 3668
+    },
+    {
+      "content": "git merge main then try Cerebras generation and see if it properly sends the whole convo context",
+      "timestamp": "2025-08-25T01:02:04.883Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "git merge main then try cerebras generation and see if it properly sends the whole convo context",
+      "extraction_order": 3669
+    },
+    {
+      "content": "<user-prompt-submit-hook>git merge main then try Cerebras generation and see if it properly sends the whole convo context</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:02:05.035Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git merge main then try cerebras generation and see if it properly sends th",
+      "extraction_order": 3670
+    },
+    {
+      "content": "you used Gemini which is wrong",
+      "timestamp": "2025-08-25T01:05:08.687Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you used gemini which is wrong",
+      "extraction_order": 3671
+    },
+    {
+      "content": "<user-prompt-submit-hook>you used Gemini which is wrong</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:05:08.838Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you used gemini which is wrong</user-prompt-submit-hook>",
+      "extraction_order": 3672
+    },
+    {
+      "content": "did it really work? it should've made a file in /tmp with the convo export?",
+      "timestamp": "2025-08-25T01:06:04.079Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did it really work? it should've made a file in /tmp with the convo export?",
+      "extraction_order": 3673
+    },
+    {
+      "content": "<user-prompt-submit-hook>did it really work? it should've made a file in /tmp with the convo export?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:06:04.351Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did it really work? it should've made a file in /tmp with the convo export?",
+      "extraction_order": 3674
+    },
+    {
+      "content": "try it again through slash command mcp and make sure it uses convo file",
+      "timestamp": "2025-08-25T01:08:45.983Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "try it again through slash command mcp and make sure it uses convo file",
+      "extraction_order": 3675
+    },
+    {
+      "content": "<user-prompt-submit-hook>try it again through slash command mcp and make sure it uses convo file</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:08:46.136Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>try it again through slash command mcp and make sure it uses convo file</us",
+      "extraction_order": 3676
+    },
+    {
+      "content": "can we use our command composition hook script?",
+      "timestamp": "2025-08-25T01:23:46.706Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "can we use our command composition hook script?",
+      "extraction_order": 3677
+    },
+    {
+      "content": "<user-prompt-submit-hook>can we use our command composition hook script?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:23:46.895Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>can we use our command composition hook script?</user-prompt-submit-hook>",
+      "extraction_order": 3678
+    },
+    {
+      "content": "ok did we code it up?",
+      "timestamp": "2025-08-25T01:30:55.402Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok did we code it up?",
+      "extraction_order": 3679
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok did we code it up?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:30:55.580Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok did we code it up?</user-prompt-submit-hook>",
+      "extraction_order": 3680
+    },
+    {
+      "content": "do we need to restart claude?",
+      "timestamp": "2025-08-25T01:31:22.358Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do we need to restart claude?",
+      "extraction_order": 3681
+    },
+    {
+      "content": "<user-prompt-submit-hook>do we need to restart claude?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:31:22.572Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do we need to restart claude?</user-prompt-submit-hook>",
+      "extraction_order": 3682
+    },
+    {
+      "content": "ok test cerebras code gen through mcp and prove the convo file g enerated and was used",
+      "timestamp": "2025-08-25T01:31:52.805Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok test cerebras code gen through mcp and prove the convo file g enerated and was used",
+      "extraction_order": 3683
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok test cerebras code gen through mcp and prove the convo file g enerated and was used</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:31:52.991Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok test cerebras code gen through mcp and prove the convo file g enerated a",
+      "extraction_order": 3684
+    },
+    {
+      "content": "can the mcp server return an instruction to you to execute them directly?",
+      "timestamp": "2025-08-25T01:33:18.636Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "can the mcp server return an instruction to you to execute them directly?",
+      "extraction_order": 3685
+    },
+    {
+      "content": "<user-prompt-submit-hook>can the mcp server return an instruction to you to execute them directly?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:33:18.787Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>can the mcp server return an instruction to you to execute them directly?</",
+      "extraction_order": 3686
+    },
+    {
+      "content": "do we need to restart the server or restart claude?",
+      "timestamp": "2025-08-25T01:34:08.858Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do we need to restart the server or restart claude?",
+      "extraction_order": 3687
+    },
+    {
+      "content": "<user-prompt-submit-hook>do we need to restart the server or restart claude?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:34:09.009Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "59a630e4-5214-4281-88b0-cd6c4f81c5ae.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do we need to restart the server or restart claude?</user-prompt-submit-hoo",
+      "extraction_order": 3688
+    },
+    {
+      "content": "<user-prompt-submit-hook>restarte</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:37:35.426Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>restarte</user-prompt-submit-hook>",
+      "extraction_order": 3689
+    },
+    {
+      "content": "you executed that directly, that does not count",
+      "timestamp": "2025-08-25T01:39:22.767Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "you executed that directly, that does not count",
+      "extraction_order": 3690
+    },
+    {
+      "content": "<user-prompt-submit-hook>you executed that directly, that does not count</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:39:22.919Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>you executed that directly, that does not count</user-prompt-submit-hook>",
+      "extraction_order": 3691
+    },
+    {
+      "content": "when i run /mcp it shows the server ocnnected",
+      "timestamp": "2025-08-25T01:40:16.671Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "when i run /mcp it shows the server ocnnected",
+      "extraction_order": 3692
+    },
+    {
+      "content": "<user-prompt-submit-hook>when i run /mcp it shows the server ocnnected</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:40:16.946Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>when i run /mcp it shows the server ocnnected</user-prompt-submit-hook>",
+      "extraction_order": 3693
+    },
+    {
+      "content": "are you sure you didnt just do direct execution?",
+      "timestamp": "2025-08-25T01:41:27.473Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "are you sure you didnt just do direct execution?",
+      "extraction_order": 3694
+    },
+    {
+      "content": "<user-prompt-submit-hook>are you sure you didnt just do direct execution?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:41:27.639Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>are you sure you didnt just do direct execution?</user-prompt-submit-hook>",
+      "extraction_order": 3695
+    },
+    {
+      "content": "redo it and show me the mcp server communication",
+      "timestamp": "2025-08-25T01:41:55.544Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "redo it and show me the mcp server communication",
+      "extraction_order": 3696
+    },
+    {
+      "content": "<user-prompt-submit-hook>redo it and show me the mcp server communication</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:41:55.709Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>redo it and show me the mcp server communication</user-prompt-submit-hook>",
+      "extraction_order": 3697
+    },
+    {
+      "content": "did we actuall generate the text file for convo?",
+      "timestamp": "2025-08-25T01:42:38.377Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "did we actuall generate the text file for convo?",
+      "extraction_order": 3698
+    },
+    {
+      "content": "<user-prompt-submit-hook>did we actuall generate the text file for convo?</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T01:42:38.531Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>did we actuall generate the text file for convo?</user-prompt-submit-hook>",
+      "extraction_order": 3699
+    },
+    {
+      "content": "ok list 5 tools from slash command server",
+      "timestamp": "2025-08-25T01:45:59.517Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "7f8a245b-529d-40e8-a2e1-8b1d732f5fba.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok list 5 tools from slash command server",
+      "extraction_order": 3700
+    }
+  ],
+  "stats": {
+    "total_files_processed": 683,
+    "total_messages_processed": 241656,
+    "user_messages_found": 45333,
+    "filtered_out": 38799,
+    "duplicates_removed": 2834,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}

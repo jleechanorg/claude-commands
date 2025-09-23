@@ -1,0 +1,1342 @@
+{
+  "analysis_timestamp": "2025-09-22T13:26:59.024611",
+  "analysis_scope": "all_agents_1_to_10",
+  "dataset_info": {
+    "total_prompts_analyzed": 4969,
+    "expected_total_prompts": 9936,
+    "coverage_percentage": "50.0%",
+    "agents_processed": [
+      "agent_001",
+      "agent_002",
+      "agents_3_10"
+    ]
+  },
+  "agent_summaries": {
+    "agent_001": {
+      "prompts": 994,
+      "unique_commands": 50,
+      "total_command_occurrences": 1761
+    },
+    "agent_002": {
+      "prompts": 994,
+      "unique_commands": 52,
+      "total_command_occurrences": 742
+    },
+    "agents_3_10": {
+      "prompts": 2981,
+      "unique_commands": 139,
+      "total_command_occurrences": 2122
+    }
+  },
+  "consolidated_command_frequencies": {
+    "/fixpr": 401,
+    "/consensus": 102,
+    "/reviewdeep": 161,
+    "/commentreply": 214,
+    "/copilot": 258,
+    "/execute": 262,
+    "/guidelines": 135,
+    "/testllm": 135,
+    "/comments": 61,
+    "/arch": 119,
+    "/commentfetch": 113,
+    "/cons": 65,
+    "/tdd": 115,
+    "/plan": 90,
+    "/commentcheck": 97,
+    "/redgreen": 99,
+    "/test": 59,
+    "/think": 105,
+    "/cerebras": 76,
+    "/cereb": 82,
+    "/conv": 47,
+    "/research": 123,
+    "/pushl": 61,
+    "/localserver": 30,
+    "/replies": 23,
+    "/codex": 23,
+    "/deploy": 31,
+    "/reviewe": 58,
+    "/thinku": 53,
+    "/converge": 34,
+    "/pr": 52,
+    "/checkpoint": 24,
+    "/perp": 51,
+    "/learn": 42,
+    "/help": 28,
+    "/debugp": 55,
+    "/newbranch": 20,
+    "/change": 12,
+    "/debug": 13,
+    "/review": 44,
+    "/newb": 23,
+    "/rules": 11,
+    "/to": 17,
+    "/orch": 20,
+    "/orchestrate": 10,
+    "/clear": 10,
+    "/integrate": 14,
+    "/lint": 6,
+    "/fake3": 48,
+    "/context": 31,
+    "/pull": 61,
+    "/hooks": 51,
+    "/push": 33,
+    "/settings": 14,
+    "/git-header": 14,
+    "/auto_fix_placement": 11,
+    "/PR": 22,
+    "/pre_creation_blocker": 8,
+    "/compose-commands": 7,
+    "/testmcp": 4,
+    "/CLEAN": 4,
+    "/run_mcp_tests": 3,
+    "/branch": 3,
+    "/pushlite": 2,
+    "/validate": 2,
+    "/manual_fix_placement": 2,
+    "/init": 16,
+    "/Delete": 2,
+    "/update": 1,
+    "/config": 1,
+    "/modify": 1,
+    "/logging": 1,
+    "/remote": 1,
+    "/backend": 2,
+    "/synthesis": 2,
+    "/TESTLLM": 1,
+    "/docs": 1,
+    "/scripts": 6,
+    "/fixprc": 17,
+    "/investigate": 9,
+    "/gst": 12,
+    "/commentr": 1,
+    "/mcp": 29,
+    "/agents": 1,
+    "/memory": 3,
+    "/repos": 2,
+    "/design": 29,
+    "/hour": 16,
+    "/principalengineer": 16,
+    "/requirements-start": 18,
+    "/issues": 1,
+    "/rg": 9,
+    "/main": 10,
+    "/pr-": 2,
+    "/mcp-json": 16,
+    "/copilot-codex": 8,
+    "/codex_tmp": 2,
+    "/replicate": 6,
+    "/status": 20,
+    "/approvals": 21,
+    "/model": 26,
+    "/token": 2,
+    "/chat": 2,
+    "/embeddings": 1,
+    "/responses": 57,
+    "/gstatus": 3,
+    "/errors": 3,
+    "/header": 8,
+    "/repo": 8,
+    "/user": 2,
+    "/github": 5,
+    "/scratchpad_fake3_": 4,
+    "/tests": 4,
+    "/commands": 10,
+    "/failure": 6,
+    "/pr-guidelines": 10,
+    "/test_file": 6,
+    "/why": 6,
+    "/paranoid": 6,
+    "/command": 1,
+    "/requirements-status": 1,
+    "/echo": 2,
+    "/shout": 2,
+    "/copilotc": 9,
+    "/cmd2": 1,
+    "/copilotl": 5,
+    "/fake": 16,
+    "/areas": 2,
+    "/diligent": 3,
+    "/fakel": 2,
+    "/jleechan": 2,
+    "/projects": 6,
+    "/worldarchitect": 2,
+    "/commit": 3,
+    "/slash": 5,
+    "/ask": 5,
+    "/fail": 6,
+    "/fix": 6,
+    "/if": 6,
+    "/commenftfetch": 2,
+    "/history": 15,
+    "/line": 2,
+    "/MultiEdit": 2,
+    "/owner": 6,
+    "/pulls": 2,
+    "/snippet": 2,
+    "/review-enhanced": 3,
+    "/orchc": 3,
+    "/exportcommands": 6,
+    "/null": 4,
+    "/contexte": 12,
+    "/con": 1,
+    "/uuid": 4,
+    "/login": 4,
+    "/copilot-expanded": 1,
+    "/copilot-lite": 2,
+    "/analyze": 1,
+    "/health": 2,
+    "/handoff": 1,
+    "/app": 6,
+    "/src": 3
+  },
+  "top_commands_overall": [
+    [
+      "/fixpr",
+      401
+    ],
+    [
+      "/execute",
+      262
+    ],
+    [
+      "/copilot",
+      258
+    ],
+    [
+      "/commentreply",
+      214
+    ],
+    [
+      "/reviewdeep",
+      161
+    ],
+    [
+      "/guidelines",
+      135
+    ],
+    [
+      "/testllm",
+      135
+    ],
+    [
+      "/research",
+      123
+    ],
+    [
+      "/arch",
+      119
+    ],
+    [
+      "/tdd",
+      115
+    ],
+    [
+      "/commentfetch",
+      113
+    ],
+    [
+      "/think",
+      105
+    ],
+    [
+      "/consensus",
+      102
+    ],
+    [
+      "/redgreen",
+      99
+    ],
+    [
+      "/commentcheck",
+      97
+    ],
+    [
+      "/plan",
+      90
+    ],
+    [
+      "/cereb",
+      82
+    ],
+    [
+      "/cerebras",
+      76
+    ],
+    [
+      "/cons",
+      65
+    ],
+    [
+      "/comments",
+      61
+    ],
+    [
+      "/pushl",
+      61
+    ],
+    [
+      "/pull",
+      61
+    ],
+    [
+      "/test",
+      59
+    ],
+    [
+      "/reviewe",
+      58
+    ],
+    [
+      "/responses",
+      57
+    ],
+    [
+      "/debugp",
+      55
+    ],
+    [
+      "/thinku",
+      53
+    ],
+    [
+      "/pr",
+      52
+    ],
+    [
+      "/perp",
+      51
+    ],
+    [
+      "/hooks",
+      51
+    ],
+    [
+      "/fake3",
+      48
+    ],
+    [
+      "/conv",
+      47
+    ],
+    [
+      "/review",
+      44
+    ],
+    [
+      "/learn",
+      42
+    ],
+    [
+      "/converge",
+      34
+    ],
+    [
+      "/push",
+      33
+    ],
+    [
+      "/deploy",
+      31
+    ],
+    [
+      "/context",
+      31
+    ],
+    [
+      "/localserver",
+      30
+    ],
+    [
+      "/mcp",
+      29
+    ],
+    [
+      "/design",
+      29
+    ],
+    [
+      "/help",
+      28
+    ],
+    [
+      "/model",
+      26
+    ],
+    [
+      "/checkpoint",
+      24
+    ],
+    [
+      "/replies",
+      23
+    ],
+    [
+      "/codex",
+      23
+    ],
+    [
+      "/newb",
+      23
+    ],
+    [
+      "/PR",
+      22
+    ],
+    [
+      "/approvals",
+      21
+    ],
+    [
+      "/newbranch",
+      20
+    ]
+  ],
+  "summary_statistics": {
+    "unique_commands_total": 161,
+    "total_command_occurrences": 4625,
+    "average_commands_per_prompt": "0.93",
+    "command_usage_percentage": "93.1%"
+  },
+  "command_tier_analysis": {
+    "tier_1_heavy_use": [
+      [
+        "/fixpr",
+        401,
+        "8.7%"
+      ],
+      [
+        "/execute",
+        262,
+        "5.7%"
+      ],
+      [
+        "/copilot",
+        258,
+        "5.6%"
+      ],
+      [
+        "/commentreply",
+        214,
+        "4.6%"
+      ],
+      [
+        "/reviewdeep",
+        161,
+        "3.5%"
+      ],
+      [
+        "/guidelines",
+        135,
+        "2.9%"
+      ],
+      [
+        "/testllm",
+        135,
+        "2.9%"
+      ],
+      [
+        "/research",
+        123,
+        "2.7%"
+      ],
+      [
+        "/arch",
+        119,
+        "2.6%"
+      ],
+      [
+        "/tdd",
+        115,
+        "2.5%"
+      ],
+      [
+        "/commentfetch",
+        113,
+        "2.4%"
+      ],
+      [
+        "/think",
+        105,
+        "2.3%"
+      ],
+      [
+        "/consensus",
+        102,
+        "2.2%"
+      ]
+    ],
+    "tier_2_frequent_use": [
+      [
+        "/redgreen",
+        99,
+        "2.1%"
+      ],
+      [
+        "/commentcheck",
+        97,
+        "2.1%"
+      ],
+      [
+        "/plan",
+        90,
+        "1.9%"
+      ],
+      [
+        "/cereb",
+        82,
+        "1.8%"
+      ],
+      [
+        "/cerebras",
+        76,
+        "1.6%"
+      ],
+      [
+        "/cons",
+        65,
+        "1.4%"
+      ],
+      [
+        "/comments",
+        61,
+        "1.3%"
+      ],
+      [
+        "/pushl",
+        61,
+        "1.3%"
+      ],
+      [
+        "/pull",
+        61,
+        "1.3%"
+      ],
+      [
+        "/test",
+        59,
+        "1.3%"
+      ],
+      [
+        "/reviewe",
+        58,
+        "1.3%"
+      ],
+      [
+        "/responses",
+        57,
+        "1.2%"
+      ],
+      [
+        "/debugp",
+        55,
+        "1.2%"
+      ],
+      [
+        "/thinku",
+        53,
+        "1.1%"
+      ],
+      [
+        "/pr",
+        52,
+        "1.1%"
+      ],
+      [
+        "/perp",
+        51,
+        "1.1%"
+      ],
+      [
+        "/hooks",
+        51,
+        "1.1%"
+      ]
+    ],
+    "tier_3_moderate_use": [
+      [
+        "/fake3",
+        48,
+        "1.0%"
+      ],
+      [
+        "/conv",
+        47,
+        "1.0%"
+      ],
+      [
+        "/review",
+        44,
+        "1.0%"
+      ],
+      [
+        "/learn",
+        42,
+        "0.9%"
+      ],
+      [
+        "/converge",
+        34,
+        "0.7%"
+      ],
+      [
+        "/push",
+        33,
+        "0.7%"
+      ],
+      [
+        "/deploy",
+        31,
+        "0.7%"
+      ],
+      [
+        "/context",
+        31,
+        "0.7%"
+      ],
+      [
+        "/localserver",
+        30,
+        "0.6%"
+      ],
+      [
+        "/mcp",
+        29,
+        "0.6%"
+      ],
+      [
+        "/design",
+        29,
+        "0.6%"
+      ],
+      [
+        "/help",
+        28,
+        "0.6%"
+      ],
+      [
+        "/model",
+        26,
+        "0.6%"
+      ],
+      [
+        "/checkpoint",
+        24,
+        "0.5%"
+      ],
+      [
+        "/replies",
+        23,
+        "0.5%"
+      ],
+      [
+        "/codex",
+        23,
+        "0.5%"
+      ],
+      [
+        "/newb",
+        23,
+        "0.5%"
+      ],
+      [
+        "/PR",
+        22,
+        "0.5%"
+      ],
+      [
+        "/approvals",
+        21,
+        "0.5%"
+      ],
+      [
+        "/newbranch",
+        20,
+        "0.4%"
+      ],
+      [
+        "/orch",
+        20,
+        "0.4%"
+      ],
+      [
+        "/status",
+        20,
+        "0.4%"
+      ]
+    ],
+    "tier_4_light_use": [
+      [
+        "/requirements-start",
+        18,
+        "0.4%"
+      ],
+      [
+        "/to",
+        17,
+        "0.4%"
+      ],
+      [
+        "/fixprc",
+        17,
+        "0.4%"
+      ],
+      [
+        "/init",
+        16,
+        "0.3%"
+      ],
+      [
+        "/hour",
+        16,
+        "0.3%"
+      ],
+      [
+        "/principalengineer",
+        16,
+        "0.3%"
+      ],
+      [
+        "/mcp-json",
+        16,
+        "0.3%"
+      ],
+      [
+        "/fake",
+        16,
+        "0.3%"
+      ],
+      [
+        "/history",
+        15,
+        "0.3%"
+      ],
+      [
+        "/integrate",
+        14,
+        "0.3%"
+      ],
+      [
+        "/settings",
+        14,
+        "0.3%"
+      ],
+      [
+        "/git-header",
+        14,
+        "0.3%"
+      ],
+      [
+        "/debug",
+        13,
+        "0.3%"
+      ],
+      [
+        "/change",
+        12,
+        "0.3%"
+      ],
+      [
+        "/gst",
+        12,
+        "0.3%"
+      ],
+      [
+        "/contexte",
+        12,
+        "0.3%"
+      ],
+      [
+        "/rules",
+        11,
+        "0.2%"
+      ],
+      [
+        "/auto_fix_placement",
+        11,
+        "0.2%"
+      ],
+      [
+        "/orchestrate",
+        10,
+        "0.2%"
+      ],
+      [
+        "/clear",
+        10,
+        "0.2%"
+      ],
+      [
+        "/main",
+        10,
+        "0.2%"
+      ],
+      [
+        "/commands",
+        10,
+        "0.2%"
+      ],
+      [
+        "/pr-guidelines",
+        10,
+        "0.2%"
+      ],
+      [
+        "/investigate",
+        9,
+        "0.2%"
+      ],
+      [
+        "/rg",
+        9,
+        "0.2%"
+      ],
+      [
+        "/copilotc",
+        9,
+        "0.2%"
+      ],
+      [
+        "/pre_creation_blocker",
+        8,
+        "0.2%"
+      ],
+      [
+        "/copilot-codex",
+        8,
+        "0.2%"
+      ],
+      [
+        "/header",
+        8,
+        "0.2%"
+      ],
+      [
+        "/repo",
+        8,
+        "0.2%"
+      ],
+      [
+        "/compose-commands",
+        7,
+        "0.2%"
+      ],
+      [
+        "/lint",
+        6,
+        "0.1%"
+      ],
+      [
+        "/scripts",
+        6,
+        "0.1%"
+      ],
+      [
+        "/replicate",
+        6,
+        "0.1%"
+      ],
+      [
+        "/failure",
+        6,
+        "0.1%"
+      ],
+      [
+        "/test_file",
+        6,
+        "0.1%"
+      ],
+      [
+        "/why",
+        6,
+        "0.1%"
+      ],
+      [
+        "/paranoid",
+        6,
+        "0.1%"
+      ],
+      [
+        "/projects",
+        6,
+        "0.1%"
+      ],
+      [
+        "/fail",
+        6,
+        "0.1%"
+      ],
+      [
+        "/fix",
+        6,
+        "0.1%"
+      ],
+      [
+        "/if",
+        6,
+        "0.1%"
+      ],
+      [
+        "/owner",
+        6,
+        "0.1%"
+      ],
+      [
+        "/exportcommands",
+        6,
+        "0.1%"
+      ],
+      [
+        "/app",
+        6,
+        "0.1%"
+      ],
+      [
+        "/github",
+        5,
+        "0.1%"
+      ],
+      [
+        "/copilotl",
+        5,
+        "0.1%"
+      ],
+      [
+        "/slash",
+        5,
+        "0.1%"
+      ],
+      [
+        "/ask",
+        5,
+        "0.1%"
+      ]
+    ],
+    "tier_5_rare_use": [
+      [
+        "/testmcp",
+        4,
+        "0.1%"
+      ],
+      [
+        "/CLEAN",
+        4,
+        "0.1%"
+      ],
+      [
+        "/scratchpad_fake3_",
+        4,
+        "0.1%"
+      ],
+      [
+        "/tests",
+        4,
+        "0.1%"
+      ],
+      [
+        "/null",
+        4,
+        "0.1%"
+      ],
+      [
+        "/uuid",
+        4,
+        "0.1%"
+      ],
+      [
+        "/login",
+        4,
+        "0.1%"
+      ],
+      [
+        "/run_mcp_tests",
+        3,
+        "0.1%"
+      ],
+      [
+        "/branch",
+        3,
+        "0.1%"
+      ],
+      [
+        "/memory",
+        3,
+        "0.1%"
+      ],
+      [
+        "/gstatus",
+        3,
+        "0.1%"
+      ],
+      [
+        "/errors",
+        3,
+        "0.1%"
+      ],
+      [
+        "/diligent",
+        3,
+        "0.1%"
+      ],
+      [
+        "/commit",
+        3,
+        "0.1%"
+      ],
+      [
+        "/review-enhanced",
+        3,
+        "0.1%"
+      ],
+      [
+        "/orchc",
+        3,
+        "0.1%"
+      ],
+      [
+        "/src",
+        3,
+        "0.1%"
+      ],
+      [
+        "/pushlite",
+        2,
+        "0.0%"
+      ],
+      [
+        "/validate",
+        2,
+        "0.0%"
+      ],
+      [
+        "/manual_fix_placement",
+        2,
+        "0.0%"
+      ],
+      [
+        "/Delete",
+        2,
+        "0.0%"
+      ],
+      [
+        "/backend",
+        2,
+        "0.0%"
+      ],
+      [
+        "/synthesis",
+        2,
+        "0.0%"
+      ],
+      [
+        "/repos",
+        2,
+        "0.0%"
+      ],
+      [
+        "/pr-",
+        2,
+        "0.0%"
+      ],
+      [
+        "/codex_tmp",
+        2,
+        "0.0%"
+      ],
+      [
+        "/token",
+        2,
+        "0.0%"
+      ],
+      [
+        "/chat",
+        2,
+        "0.0%"
+      ],
+      [
+        "/user",
+        2,
+        "0.0%"
+      ],
+      [
+        "/echo",
+        2,
+        "0.0%"
+      ],
+      [
+        "/shout",
+        2,
+        "0.0%"
+      ],
+      [
+        "/areas",
+        2,
+        "0.0%"
+      ],
+      [
+        "/fakel",
+        2,
+        "0.0%"
+      ],
+      [
+        "/jleechan",
+        2,
+        "0.0%"
+      ],
+      [
+        "/worldarchitect",
+        2,
+        "0.0%"
+      ],
+      [
+        "/commenftfetch",
+        2,
+        "0.0%"
+      ],
+      [
+        "/line",
+        2,
+        "0.0%"
+      ],
+      [
+        "/MultiEdit",
+        2,
+        "0.0%"
+      ],
+      [
+        "/pulls",
+        2,
+        "0.0%"
+      ],
+      [
+        "/snippet",
+        2,
+        "0.0%"
+      ],
+      [
+        "/copilot-lite",
+        2,
+        "0.0%"
+      ],
+      [
+        "/health",
+        2,
+        "0.0%"
+      ],
+      [
+        "/update",
+        1,
+        "0.0%"
+      ],
+      [
+        "/config",
+        1,
+        "0.0%"
+      ],
+      [
+        "/modify",
+        1,
+        "0.0%"
+      ],
+      [
+        "/logging",
+        1,
+        "0.0%"
+      ],
+      [
+        "/remote",
+        1,
+        "0.0%"
+      ],
+      [
+        "/TESTLLM",
+        1,
+        "0.0%"
+      ],
+      [
+        "/docs",
+        1,
+        "0.0%"
+      ],
+      [
+        "/commentr",
+        1,
+        "0.0%"
+      ],
+      [
+        "/agents",
+        1,
+        "0.0%"
+      ],
+      [
+        "/issues",
+        1,
+        "0.0%"
+      ],
+      [
+        "/embeddings",
+        1,
+        "0.0%"
+      ],
+      [
+        "/command",
+        1,
+        "0.0%"
+      ],
+      [
+        "/requirements-status",
+        1,
+        "0.0%"
+      ],
+      [
+        "/cmd2",
+        1,
+        "0.0%"
+      ],
+      [
+        "/con",
+        1,
+        "0.0%"
+      ],
+      [
+        "/copilot-expanded",
+        1,
+        "0.0%"
+      ],
+      [
+        "/analyze",
+        1,
+        "0.0%"
+      ],
+      [
+        "/handoff",
+        1,
+        "0.0%"
+      ]
+    ]
+  },
+  "comparison_with_priorities": {
+    "priority_commands_analyzed": [
+      "/execute",
+      "/copilot",
+      "/reviewdeep",
+      "/fixpr",
+      "/consensus",
+      "/commentreply",
+      "/arch",
+      "/guidelines",
+      "/testllm",
+      "/comments",
+      "/commentfetch",
+      "/cons",
+      "/tdd",
+      "/plan",
+      "/commentcheck",
+      "/pull",
+      "/hooks",
+      "/think",
+      "/redgreen"
+    ],
+    "found_in_dataset": {
+      "/execute": 262,
+      "/copilot": 258,
+      "/reviewdeep": 161,
+      "/fixpr": 401,
+      "/consensus": 102,
+      "/commentreply": 214,
+      "/arch": 119,
+      "/guidelines": 135,
+      "/testllm": 135,
+      "/comments": 61,
+      "/commentfetch": 113,
+      "/cons": 65,
+      "/tdd": 115,
+      "/plan": 90,
+      "/commentcheck": 97,
+      "/pull": 61,
+      "/hooks": 51,
+      "/think": 105,
+      "/redgreen": 99
+    },
+    "missing_from_dataset": [],
+    "priority_command_rankings": [
+      [
+        "/execute",
+        262
+      ],
+      [
+        "/copilot",
+        258
+      ],
+      [
+        "/reviewdeep",
+        161
+      ],
+      [
+        "/fixpr",
+        401
+      ],
+      [
+        "/consensus",
+        102
+      ],
+      [
+        "/commentreply",
+        214
+      ],
+      [
+        "/arch",
+        119
+      ],
+      [
+        "/guidelines",
+        135
+      ],
+      [
+        "/testllm",
+        135
+      ],
+      [
+        "/comments",
+        61
+      ],
+      [
+        "/commentfetch",
+        113
+      ],
+      [
+        "/cons",
+        65
+      ],
+      [
+        "/tdd",
+        115
+      ],
+      [
+        "/plan",
+        90
+      ],
+      [
+        "/commentcheck",
+        97
+      ],
+      [
+        "/pull",
+        61
+      ],
+      [
+        "/hooks",
+        51
+      ],
+      [
+        "/think",
+        105
+      ],
+      [
+        "/redgreen",
+        99
+      ]
+    ]
+  }
+}

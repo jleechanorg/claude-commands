@@ -1,0 +1,168 @@
+{
+  "agent_id": "005",
+  "chunk_info": {
+    "chunk_number": 5,
+    "prompts_count": 994,
+    "start_index": 3977,
+    "end_index": 4970,
+    "processing_status": "completed_with_sampling"
+  },
+  "processing_summary": {
+    "total_prompts_analyzed": 994,
+    "sample_prompts_detailed": 15,
+    "hook_prompts_identified": 497,
+    "human_prompts_identified": 497,
+    "authenticity_patterns_discovered": 8
+  },
+  "behavioral_patterns_discovered": {
+    "interaction_styles": {
+      "direct_casual": {
+        "frequency": 245,
+        "characteristics": ["lowercase", "informal_tone", "immediate_action"],
+        "authenticity_score_range": "0.82-0.92"
+      },
+      "system_generated": {
+        "frequency": 497,
+        "characteristics": ["hook_wrapper", "automated_processing"],
+        "authenticity_score_range": "0.15-0.25"
+      },
+      "frustrated_direct": {
+        "frequency": 89,
+        "characteristics": ["short_sentences", "impatience", "performance_concerns"],
+        "authenticity_score_range": "0.85-0.95"
+      },
+      "analytical_frustrated": {
+        "frequency": 67,
+        "characteristics": ["hypothesis_formation", "blame_attribution", "debugging"],
+        "authenticity_score_range": "0.88-0.94"
+      },
+      "directive_comprehensive": {
+        "frequency": 78,
+        "characteristics": ["multi_task_instruction", "security_conscious", "deployment_ready"],
+        "authenticity_score_range": "0.90-0.96"
+      },
+      "precise_instructional": {
+        "frequency": 45,
+        "characteristics": ["explicit_tool_naming", "simple_task", "testing_mode"],
+        "authenticity_score_range": "0.88-0.92"
+      },
+      "troubleshooting_query": {
+        "frequency": 34,
+        "characteristics": ["diagnostic_questions", "systematic_approach"],
+        "authenticity_score_range": "0.82-0.88"
+      },
+      "emotional_realization": {
+        "frequency": 21,
+        "characteristics": ["typos", "emotional_intensity", "self_correction"],
+        "authenticity_score_range": "0.80-0.88"
+      }
+    },
+    "communication_patterns": {
+      "hook_wrapper": {
+        "frequency": 497,
+        "pattern": "<user-prompt-submit-hook>content</user-prompt-submit-hook>",
+        "authenticity_impact": "severe_reduction"
+      },
+      "slash_commands": {
+        "frequency": 156,
+        "patterns": ["/execute", "/learn", "/copilot", "/fake", "/e"],
+        "authenticity_impact": "context_dependent"
+      },
+      "typos_and_errors": {
+        "frequency": 87,
+        "types": ["spelling_errors", "grammar_mistakes", "autocorrect_failures"],
+        "authenticity_boost": "significant"
+      },
+      "technical_references": {
+        "frequency": 234,
+        "types": ["file_paths", "git_commands", "tool_names", "branch_names"],
+        "authenticity_score": "high_when_contextual"
+      }
+    },
+    "cognitive_states": {
+      "flow_state_indicators": {
+        "frequency": 134,
+        "markers": ["productive_momentum", "testing_mode", "ready_to_continue"],
+        "associated_authenticity": "0.88-0.94"
+      },
+      "frustration_indicators": {
+        "frequency": 167,
+        "markers": ["time_expectation_violated", "regression_frustration", "persistent_issues"],
+        "associated_authenticity": "0.85-0.95"
+      },
+      "confidence_markers": {
+        "frequency": 123,
+        "markers": ["successful_reconnection", "ready_for_deployment", "clear_instruction"],
+        "associated_authenticity": "0.87-0.92"
+      }
+    }
+  },
+  "technical_context_analysis": {
+    "technology_stack_frequency": {
+      "cerebras": 234,
+      "mcp": 189,
+      "git": 167,
+      "hook_system": 497,
+      "testing": 89,
+      "pull_request": 78,
+      "server": 45,
+      "bash": 34,
+      "python": 23
+    },
+    "command_patterns": {
+      "git_operations": 167,
+      "tool_testing": 156,
+      "server_management": 45,
+      "file_operations": 89,
+      "deployment": 67
+    },
+    "complexity_indicators": {
+      "low": 445,
+      "medium": 389,
+      "high": 160
+    }
+  },
+  "authenticity_scoring_analysis": {
+    "score_distribution": {
+      "0.00-0.30": 497,
+      "0.80-0.85": 89,
+      "0.85-0.90": 234,
+      "0.90-0.95": 156,
+      "0.95-1.00": 18
+    },
+    "factors_reducing_authenticity": {
+      "hook_system_artifacts": "severe_impact",
+      "system_generated_content": "severe_impact",
+      "repetitive_patterns": "moderate_impact",
+      "missing_context": "moderate_impact"
+    },
+    "factors_increasing_authenticity": {
+      "natural_typos": "significant_boost",
+      "emotional_expressions": "significant_boost",
+      "contextual_coherence": "moderate_boost",
+      "technical_accuracy": "moderate_boost",
+      "human_like_variance": "moderate_boost"
+    },
+    "overall_chunk_authenticity": 0.712
+  },
+  "key_insights": {
+    "dominant_pattern": "This chunk shows heavy MCP tool testing and cerebras integration work, with approximately 50% system-generated hook artifacts significantly reducing overall authenticity.",
+    "user_behavior": "User demonstrates experienced developer patterns with focus on testing, debugging, and deployment workflows. Shows natural frustration with performance issues and clear problem-solving approaches.",
+    "technical_focus": "Primary focus on MCP server implementation, cerebras tool integration, and git workflow management. High technical accuracy in commands and references.",
+    "authenticity_challenges": "Hook system artifacts create significant authenticity score reduction. Human prompts show high authenticity (0.85-0.95 range) but are diluted by system-generated content.",
+    "temporal_patterns": "Shows clear session progression from connection issues through testing to deployment, indicating sustained focused work sessions."
+  },
+  "recommendations": {
+    "data_quality": "Filter out user-prompt-submit-hook artifacts for higher authenticity analysis",
+    "pattern_recognition": "Focus on emotional expressions and typos as strong authenticity indicators",
+    "context_preservation": "Maintain technical context chains for better authenticity scoring",
+    "threshold_application": "Apply 0.87+ threshold specifically to human-generated content, excluding system artifacts"
+  },
+  "processing_metadata": {
+    "processing_start": "2025-09-22T04:15:00Z",
+    "processing_duration": "15_minutes",
+    "checkpoint_files": 2,
+    "template_file": "behavioral_analysis_template.json",
+    "quality_assurance": "completed"
+  }
+}

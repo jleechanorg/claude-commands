@@ -1,0 +1,917 @@
+{
+  "checkpoint_number": 40,
+  "prompts_count": 4000,
+  "timestamp": "2025-09-22T03:49:10.810540",
+  "prompts": [
+    {
+      "content": "the mcp server will cause us to execute a hook and execute the slash command itself. is the hook working?",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the mcp server will cause us to execute a hook and execute the slash command itself. is the hook wor",
+      "extraction_order": 3901
+    },
+    {
+      "content": "<user-prompt-submit-hook>the mcp server will cause us to execute a hook and execute the slash command itself. is the hook working?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the mcp server will cause us to execute a hook and execute the slash comman",
+      "extraction_order": 3902
+    },
+    {
+      "content": "the hook used to work look at the last 100 commits",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the hook used to work look at the last 100 commits",
+      "extraction_order": 3903
+    },
+    {
+      "content": "<user-prompt-submit-hook>the hook used to work look at the last 100 commits\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the hook used to work look at the last 100 commits\n\nn</user-prompt-submit-h",
+      "extraction_order": 3904
+    },
+    {
+      "content": "i restarted claude, its unliekly all hooks are broken unless the settings.json is truly messed up",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "i restarted claude, its unliekly all hooks are broken unless the settings.json is truly messed up",
+      "extraction_order": 3905
+    },
+    {
+      "content": "<user-prompt-submit-hook>i restarted claude, its unliekly all hooks are broken unless the settings.json is truly messed up\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>i restarted claude, its unliekly all hooks are broken unless the settings.j",
+      "extraction_order": 3906
+    },
+    {
+      "content": "<user-prompt-submit-hook>/debugp its not working at all. commit what we have and then go and restore the relevant code from a working commit from yesterday.\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/debugp its not working at all. commit what we have and then go and restore",
+      "extraction_order": 3907
+    },
+    {
+      "content": "test it again",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test it again",
+      "extraction_order": 3908
+    },
+    {
+      "content": "<user-prompt-submit-hook>test it again\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:01:36.609Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test it again\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3909
+    },
+    {
+      "content": "is verbose mode on",
+      "timestamp": "2025-08-26T16:05:27.330Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "is verbose mode on",
+      "extraction_order": 3910
+    },
+    {
+      "content": "<user-prompt-submit-hook>is verbose mode on\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:05:27.483Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>is verbose mode on\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3911
+    },
+    {
+      "content": "this used to work, test it again",
+      "timestamp": "2025-08-26T16:10:10.307Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "this used to work, test it again",
+      "extraction_order": 3912
+    },
+    {
+      "content": "<user-prompt-submit-hook>this used to work, test it again\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:10:10.585Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>this used to work, test it again\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3913
+    },
+    {
+      "content": "look at the last 100 commits and restore to a ponit where the hook was probably working. note that i need to restart claude ever time you change the hooks",
+      "timestamp": "2025-08-26T16:11:17.378Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at the last 100 commits and restore to a ponit where the hook was probably working. note that i",
+      "extraction_order": 3914
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at the last 100 commits and restore to a ponit where the hook was probably working. note that i need to restart claude ever time you change the hooks\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:11:17.672Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "ec2c0814-722a-4ae8-8bdf-1df35792a37f.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at the last 100 commits and restore to a ponit where the hook was prob",
+      "extraction_order": 3915
+    },
+    {
+      "content": "cleanup files being added to project root. either move or delete then run file justification protocol. maybe some of these files being aded we dont need and remove these submodules test-agent-control test-agent-enhanced",
+      "timestamp": "2025-08-24T05:18:53.321Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "cleanup files being added to project root. either move or delete then run file justification protoco",
+      "extraction_order": 3916
+    },
+    {
+      "content": "<user-prompt-submit-hook>cleanup files being added to project root. either move or delete then run file justification protocol. maybe some of these files being aded we dont need and remove these submodules test-agent-control test-agent-enhanced</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T05:18:53.478Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>cleanup files being added to project root. either move or delete then run f",
+      "extraction_order": 3917
+    },
+    {
+      "content": "wait, leave files alone that are unrelated to this PR",
+      "timestamp": "2025-08-24T05:20:07.478Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "wait, leave files alone that are unrelated to this pr",
+      "extraction_order": 3918
+    },
+    {
+      "content": "<user-prompt-submit-hook>wait, leave files alone that are unrelated to this PR</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T05:20:07.630Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>wait, leave files alone that are unrelated to this pr</user-prompt-submit-h",
+      "extraction_order": 3919
+    },
+    {
+      "content": "cursor was doing work and made some progress. evaluate the changes and see how to proceed. dont do aything yet, tell me what you'll do next. Also i want the slash command server in unified_router to use a bash subprocess ls command to find and register all the tools for the slash commands vs hardcoding them",
+      "timestamp": "2025-08-24T06:57:32.554Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "cursor was doing work and made some progress. evaluate the changes and see how to proceed. dont do a",
+      "extraction_order": 3920
+    },
+    {
+      "content": "<user-prompt-submit-hook>cursor was doing work and made some progress. evaluate the changes and see how to proceed. dont do aything yet, tell me what you'll do next. Also i want the slash command server in unified_router to use a bash subprocess ls command to find and register all the tools for the slash commands vs hardcoding them</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T06:57:32.875Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "96509372-b347-41dd-ac8b-4d83022f70b9.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>cursor was doing work and made some progress. evaluate the changes and see",
+      "extraction_order": 3921
+    },
+    {
+      "content": "what as wrong?",
+      "timestamp": "2025-08-26T16:18:07.201Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "what as wrong?",
+      "extraction_order": 3922
+    },
+    {
+      "content": "<user-prompt-submit-hook>what as wrong?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:18:07.351Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>what as wrong?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3923
+    },
+    {
+      "content": "<user-prompt-submit-hook>/research i dont believe that, the description should not do anything\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:19:45.617Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/research i dont believe that, the description should not do anything\n\nn</u",
+      "extraction_order": 3924
+    },
+    {
+      "content": "test it one more time",
+      "timestamp": "2025-08-26T16:22:21.792Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test it one more time",
+      "extraction_order": 3925
+    },
+    {
+      "content": "<user-prompt-submit-hook>test it one more time\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:22:21.947Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test it one more time\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3926
+    },
+    {
+      "content": "can we run an automated test or make a new test to /redgreen secure this fix? dont make a new test file",
+      "timestamp": "2025-08-26T16:23:57.854Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "can we run an automated test or make a new test to /redgreen secure this fix? dont make a new test f",
+      "extraction_order": 3927
+    },
+    {
+      "content": "<user-prompt-submit-hook>can we run an automated test or make a new test to /redgreen secure this fix? dont make a new test file\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:23:58.132Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>can we run an automated test or make a new test to /redgreen secure this fi",
+      "extraction_order": 3928
+    },
+    {
+      "content": "Do run_tests.sh but redirect output to a file and then grep for the failures so you don't see the whole output and pollute this convo",
+      "timestamp": "2025-08-26T16:28:45.326Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do run_tests.sh but redirect output to a file and then grep for the failures so you don't see the wh",
+      "extraction_order": 3929
+    },
+    {
+      "content": "<user-prompt-submit-hook>Do run_tests.sh but redirect output to a file and then grep for the failures so you don't see the whole output and pollute this convo\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:28:45.489Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do run_tests.sh but redirect output to a file and then grep for the failure",
+      "extraction_order": 3930
+    },
+    {
+      "content": "lets switch to main and run tests in the same way and compare to see if the failures related to our PR or not then switch back to this branch",
+      "timestamp": "2025-08-26T16:32:04.729Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets switch to main and run tests in the same way and compare to see if the failures related to our",
+      "extraction_order": 3931
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets switch to main and run tests in the same way and compare to see if the failures related to our PR or not then switch back to this branch\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:32:04.881Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets switch to main and run tests in the same way and compare to see if the",
+      "extraction_order": 3932
+    },
+    {
+      "content": "ok make sure we're back on the right branch and run file justification protocol one more time but only for new files added in the pr",
+      "timestamp": "2025-08-26T16:39:10.973Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok make sure we're back on the right branch and run file justification protocol one more time but on",
+      "extraction_order": 3933
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok make sure we're back on the right branch and run file justification protocol one more time but only for new files added in the pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:39:11.119Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok make sure we're back on the right branch and run file justification prot",
+      "extraction_order": 3934
+    },
+    {
+      "content": "how come our tests pass and the main branch doesnt? What are the changes to run_tests.sh",
+      "timestamp": "2025-08-26T16:44:35.046Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "how come our tests pass and the main branch doesnt? what are the changes to run_tests.sh",
+      "extraction_order": 3935
+    },
+    {
+      "content": "<user-prompt-submit-hook>how come our tests pass and the main branch doesnt? What are the changes to run_tests.sh\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:44:35.199Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>how come our tests pass and the main branch doesnt? what are the changes to",
+      "extraction_order": 3936
+    },
+    {
+      "content": "lets make a new pr fresh from main just for our run_tests.sh fixes then back to this branch",
+      "timestamp": "2025-08-26T16:45:43.475Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "lets make a new pr fresh from main just for our run_tests.sh fixes then back to this branch",
+      "extraction_order": 3937
+    },
+    {
+      "content": "<user-prompt-submit-hook>lets make a new pr fresh from main just for our run_tests.sh fixes then back to this branch\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:45:43.617Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>lets make a new pr fresh from main just for our run_tests.sh fixes then bac",
+      "extraction_order": 3938
+    },
+    {
+      "content": "run these tests locally \nHook Tests / test-hooks (pull_request)\nHook Tests / test-hooks (pull_request)Failing after 100m\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Failing after 100m but redirect output to a file and dont read the whole thing",
+      "timestamp": "2025-08-26T16:53:10.509Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "run these tests locally \nhook tests / test-hooks (pull_request)\nhook tests / test-hooks (pull_reques",
+      "extraction_order": 3939
+    },
+    {
+      "content": "<user-prompt-submit-hook>run these tests locally \nHook Tests / test-hooks (pull_request)\nHook Tests / test-hooks (pull_request)Failing after 100m\nWorldArchitect Tests / test (commands) (pull_request)\nWorldArchitect Tests / test (commands) (pull_request)Failing after 100m but redirect output to a file and dont read the whole thing\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:53:10.733Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>run these tests locally \nhook tests / test-hooks (pull_request)\nhook tests",
+      "extraction_order": 3940
+    },
+    {
+      "content": "try to grep the output file just for failures and fix these tests if related to the pr",
+      "timestamp": "2025-08-26T16:58:27.464Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "try to grep the output file just for failures and fix these tests if related to the pr",
+      "extraction_order": 3941
+    },
+    {
+      "content": "<user-prompt-submit-hook>try to grep the output file just for failures and fix these tests if related to the pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T16:58:27.615Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>try to grep the output file just for failures and fix these tests if relate",
+      "extraction_order": 3942
+    },
+    {
+      "content": "rerun just the failed t ests but redirect outpout to a file",
+      "timestamp": "2025-08-26T17:34:20.043Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "rerun just the failed t ests but redirect outpout to a file",
+      "extraction_order": 3943
+    },
+    {
+      "content": "<user-prompt-submit-hook>rerun just the failed t ests but redirect outpout to a file\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T17:34:20.192Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8291552c-0916-4921-ae05-6081f6f2b919.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>rerun just the failed t ests but redirect outpout to a file\n\nn</user-prompt",
+      "extraction_order": 3944
+    },
+    {
+      "content": "<user-prompt-submit-hook>/fake --silent\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T03:32:19.922Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "b800430b-d891-4e37-abf3-33f659efc266.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/fake --silent\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3945
+    },
+    {
+      "content": "Use cerebras_generate tool to create: Create a function called add_two that takes parameters a and b and returns their sum",
+      "timestamp": "2025-08-22T12:09:14.848Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "417cc1ff-9111-4a35-95c1-17af6072aa36.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use cerebras_generate tool to create: create a function called add_two that takes parameters a and b",
+      "extraction_order": 3946
+    },
+    {
+      "content": "<user-prompt-submit-hook>Use cerebras_generate tool to create: Create a function called add_two that takes parameters a and b and returns their sum</user-prompt-submit-hook>",
+      "timestamp": "2025-08-22T12:09:14.904Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "417cc1ff-9111-4a35-95c1-17af6072aa36.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use cerebras_generate tool to create: create a function called add_two that",
+      "extraction_order": 3947
+    },
+    {
+      "content": "resolve merge conflicts then push to pr",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resolve merge conflicts then push to pr",
+      "extraction_order": 3948
+    },
+    {
+      "content": "<user-prompt-submit-hook>resolve merge conflicts then push to pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>resolve merge conflicts then push to pr\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3949
+    },
+    {
+      "content": "see if this is real Fix PR number parsing to only match explicit PR patterns\n\nThe current logic in .claude/commands/commentfetch.md (lines 136\u2013147) uses grep -o '[0-9]\\+', which captures any standalone number in the command arguments (e.g. \u201clast 30\u201d). As demonstrated, \u201cprint last 30 unresponded here\u201d yields PR=30, leading to wrong PR lookups and broken workflows.\n\n\u2013 File .claude/commands/commentfetch.md, lines 136\u2013147: tighten the regex so it only extracts numbers when preceded by \u201cPR\u201d, \u201cpr\u201d, or \u201c#\u201d, for example:\n\n else\n     # Extract PR number from arguments\n-    PR_NUMBER=$(echo \"$ARGS\" | grep -o '[0-9]\\+' | head -1)\n+    PR_NUMBER=$(\n+      echo \"$ARGS\" \\\n+      | grep -oE '([Pp][Rr][#[:space:]]*|#)[0-9]+' \\\n+      | grep -oE '[0-9]+' \\\n+      | head -1\n+    )\n fi\nThis ensures only patterns like \u201cPR 1234\u201d, \u201cpr#1234\u201d, or \u201c#1234\u201d are picked up, falling back to branch\u2010based auto-detect otherwise. and this Fix broken code fencing and harden the shell snippet (won\u2019t render/execute as intended).\n\nThe \u201cIntelligent Argument Processing\u201d block starts with a stray ! + backtick and ends with a lone backtick. This breaks Markdown rendering and any tooling that extracts/executes this block. Also add strict mode and prereq checks.\n\nApply this diff to properly fence and harden the block: and this Tighten SLASH_COMMAND_EXECUTE pass-through to avoid unintended bypasses\n\nCurrent check matches anywhere in the payload and uses regex mode. This can unexpectedly short\u2011circuit normal processing if user text merely contains that substring. Prefer a fixed-string, start-of-input match. Also guard against leading whitespace. and these           # Single command that's not a composition command - strip command and return text\n            output=\"$text\"\n@cursor cursor bot 2 days ago\nBug: Command Update Breaks Existing Workflows\nThe update for single commands now strips the command name, returning only the text. This breaks backward compatibility and existing workflows expecting the full command string to be preserved.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\n@cursor cursor bot 2 days ago\nBug: Command Prefix Removal Breaks Passthrough\nThe update for single, non-composition commands now strips the slash command prefix by setting output=\"$text\". This breaks the previous passthrough behavior, impacting backward compatibility and preventing downstream systems from recognizing commands.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\n        fi\n    else @cursor cursor bot 3 days ago\nBug: Undefined Variables in Python Script\nThe embedded Python script's exception handler attempts to print the shell variable raw_input, which is undefined in its scope, leading to a NameError. Additionally, log_file and timestamp are conditionally defined in the initial debug block but used in subsequent blocks without being re-declared, creating fragile variable scope. cursor bot 2 days ago\nBug: Unquoted Shell Variable Causes Argument Parsing Issues\nThe printf command uses an unquoted $cmd_args variable, leading to shell word splitting. This incorrectly parses arguments with spaces or special characters, creating a potential for argument injection or unexpected command execution.         echo \"\"\n\n        # For /fake3 specifically, execute the workflow directly\n        if [[ \"$cmd_name\" == \"fake3\" ]]; then\nAuthor\n@jleechan2015 jleechan2015 now\nNo remove this. We should never hardcode any commands here\n\n@jleechan2015    Reply...\n            echo \"\ud83d\ude80 Starting /fake3 - Automated Fake Code Detection and Fixing\"\n            echo \"\ud83d\udccd Branch: $(git branch --show-current)\"\n            ech  o \" Also just analyze thse comments and run tests and see if you think the bugs are real. Do not try to fix them yet.",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "see if this is real fix pr number parsing to only match explicit pr patterns\n\nthe current logic in .",
+      "extraction_order": 3950
+    },
+    {
+      "content": "<user-prompt-submit-hook>see if this is real Fix PR number parsing to only match explicit PR patterns\n\nThe current logic in .claude/commands/commentfetch.md (lines 136\u2013147) uses grep -o '[0-9]\\+', which captures any standalone number in the command arguments (e.g. \u201clast 30\u201d). As demonstrated, \u201cprint last 30 unresponded here\u201d yields PR=30, leading to wrong PR lookups and broken workflows.\n\n\u2013 File .claude/commands/commentfetch.md, lines 136\u2013147: tighten the regex so it only extracts numbers when preceded by \u201cPR\u201d, \u201cpr\u201d, or \u201c#\u201d, for example:\n\nelse\n# Extract PR number from arguments\n- PR_NUMBER=$(echo \"$ARGS\" | grep -o '[0-9]\\+' | head -1)\n+ PR_NUMBER=$(\n+ echo \"$ARGS\" \\\n+ | grep -oE '([Pp][Rr][#[:space:]]*|#)[0-9]+' \\\n+ | grep -oE '[0-9]+' \\\n+ | head -1\n+ )\nfi\nThis ensures only patterns like \u201cPR 1234\u201d, \u201cpr#1234\u201d, or \u201c#1234\u201d are picked up, falling back to branch\u2010based auto-detect otherwise. and this Fix broken code fencing and harden the shell snippet (won\u2019t render/execute as intended).\n\nThe \u201cIntelligent Argument Processing\u201d block starts with a stray ! + backtick and ends with a lone backtick. This breaks Markdown rendering and any tooling that extracts/executes this block. Also add strict mode and prereq checks.\n\nApply this diff to properly fence and harden the block: and this Tighten SLASH_COMMAND_EXECUTE pass-through to avoid unintended bypasses\n\nCurrent check matches anywhere in the payload and uses regex mode. This can unexpectedly short\u2011circuit normal processing if user text merely contains that substring. Prefer a fixed-string, start-of-input match. Also guard against leading whitespace. and these # Single command that's not a composition command - strip command and return text\noutput=\"$text\"\n@cursor cursor bot 2 days ago\nBug: Command Update Breaks Existing Workflows\nThe update for single commands now strips the command name, returning only the text. This breaks backward compatibility and existing workflows expecting the full command string to be preserved.\n\nFix in Cursor Fix in Web\n\n@jleechan2015 Reply...\n@cursor cursor bot 2 days ago\nBug: Command Prefix Removal Breaks Passthrough\nThe update for single, non-composition commands now strips the slash command prefix by setting output=\"$text\". This breaks the previous passthrough behavior, impacting backward compatibility and preventing downstream systems from recognizing commands.\n\nFix in Cursor Fix in Web\n\n@jleechan2015 Reply...\nfi\nelse @cursor cursor bot 3 days ago\nBug: Undefined Variables in Python Script\nThe embedded Python script's exception handler attempts to print the shell variable raw_input, which is undefined in its scope, leading to a NameError. Additionally, log_file and timestamp are conditionally defined in the initial debug block but used in subsequent blocks without being re-declared, creating fragile variable scope. cursor bot 2 days ago\nBug: Unquoted Shell Variable Causes Argument Parsing Issues\nThe printf command uses an unquoted $cmd_args variable, leading to shell word splitting. This incorrectly parses arguments with spaces or special characters, creating a potential for argument injection or unexpected command execution. echo \"\"\n\n# For specifically, execute the workflow directly\nif [[ \"$cmd_name\" == \"fake3\" ]]; then\nAuthor\n@jleechan2015 jleechan2015 now\nNo remove this. We should never hardcode any commands here\n\n@jleechan2015 Reply...\necho \"\ud83d\ude80 Starting - Automated Fake Code Detection and Fixing\"\necho \"\ud83d\udccd Branch: $(git branch --show-current)\"\nech o \" Also just analyze thse comments and run tests and see if you think the bugs are real. Do not try to fix them yet.\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>see if this is real fix pr number parsing to only match explicit pr pattern",
+      "extraction_order": 3951
+    },
+    {
+      "content": "<user-prompt-submit-hook>to fix these issues. Write failing test first, then code, then ensure tests pass\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>to fix these issues. write failing test first, then code, then ensure tests",
+      "extraction_order": 3952
+    },
+    {
+      "content": "# Context Usage Estimation Command\n\n**Usage**: `/context [--detailed] [--optimize]` or `/con`\n\n**Purpose**: Display estimated current context consumption, session complexity analysis, and optimization recommendations for Claude Code CLI conversations.\n\n## Features\n\n### Basic Context Estimation\n- **Current session token usage** (approximate)\n- **Remaining context capacity** \n- **Session complexity score**\n- **Tool operation count and types**\n\n### Detailed Analysis (`--detailed`)\n- **Token breakdown by operation type**\n- **Context-heavy operations identified**\n- **File read patterns and sizes**\n- **API response complexity analysis**\n\n### Optimization Mode (`--optimize`)\n- **Specific recommendations for current session**\n- **Serena MCP opportunities identified**\n- **Context-efficient alternatives suggested**\n- **Strategic checkpoint recommendations**\n\n## Implementation\n\n**Execution Method**: Direct analysis using conversation patterns and tool usage tracking\n\n### Context Estimation Algorithm:\n1. **Tool Usage Analysis**: Count and categorize all tool operations\n2. **Content Size Estimation**: Approximate tokens from tool outputs and responses\n3. **Complexity Scoring**: Weight different operation types by context consumption\n4. **Optimization Detection**: Identify inefficient patterns and suggest improvements\n\n### Token Estimation Rules:\n- **Base conversation**: ~500-1000 tokens\n- **Tool operations**: 100-500 tokens each (varies by type)\n- **File reads**: Estimated by file size (chars \u00f7 4)\n- **Web searches**: ~200-800 tokens per search\n- **Large responses**: Actual character count \u00f7 4\n- **Serena MCP**: 50-200 tokens (very efficient)\n\n### Claude Sonnet 4 Limits:\n- **Enterprise**: 500K tokens\n- **Paid Plans**: 200K tokens\n- **Estimation Accuracy**: \u00b120% variance expected\n\n## Output Formats\n\n### Basic Output:\n```\n\ud83d\udcca CONTEXT USAGE ESTIMATION\n\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\n\n\ud83d\udd39 Estimated Tokens Used: ~15,400 / 500,000 (3.1%)\n\ud83d\udd39 Session Complexity: Medium (Score: 34/100)  \n\ud83d\udd39 Tools Used: 8 operations (4 types)\n\ud83d\udd39 Context Status: \u2705 HEALTHY\n\n\ud83d\udca1 Quick Tip: Consider /checkpoint if planning complex analysis\n```\n\n### Detailed Analysis:\n- Token breakdown by operation type\n- Identification of context-heavy operations  \n- File read patterns and efficiency analysis\n- Optimization opportunities and recommendations\n\n## Integration\n\n### Auto-triggered Recommendations:\n- High complexity sessions (60+ score): Suggest optimization\n- Large file operations detected: Recommend Serena MCP  \n- Context approaching 50%: Recommend checkpoint\n\n### Command Composition:\n```bash  \n/context --optimize    # Show optimization suggestions\n/context --detailed    # Comprehensive analysis\n```",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "# context usage estimation command\n\n**usage**: `/context [--detailed] [--optimize]` or `/con`\n\n**pur",
+      "extraction_order": 3953
+    },
+    {
+      "content": "<user-prompt-submit-hook>/context\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/context\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3954
+    },
+    {
+      "content": "resolve merge conflicts",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resolve merge conflicts",
+      "extraction_order": 3955
+    },
+    {
+      "content": "<user-prompt-submit-hook>resolve merge conflicts\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>resolve merge conflicts\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3956
+    },
+    {
+      "content": "<user-prompt-submit-hook>git pull origin main\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:14.457Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>git pull origin main\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3957
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/commentfetch /reviewdeep \n\ud83c\udfaf Multi-Player Intelligence: Found nested commands:/actions /arch /cerebras /commands /commentfetch /commentreply /comments /copilot /execute /fixpr /github /guidelines /owner /pr /PR /pr-guidelines /repo /reviewdeep /reviewe /runs /tmp \n\nUse these approaches in combination:/actions /arch /cerebras /commands /commentfetch /commentreply /comments /copilot /execute /fixpr /github /guidelines /owner /pr /PR /pr-guidelines /repo /reviewdeep /reviewe /runs /tmp . Apply this to: for last 30 unresponded then focus on correctness or serious issues. Dont change anything yet\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/commentfetch /reviewdeep  and will combine them intelligently.\"\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T19:43:11.062Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/commentfetch /reviewdeep \n\ud83c\udfaf multi-player intelli",
+      "extraction_order": 3958
+    },
+    {
+      "content": "the github tests are broken, which tests look related to our pr",
+      "timestamp": "2025-08-28T20:01:23.916Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "the github tests are broken, which tests look related to our pr",
+      "extraction_order": 3959
+    },
+    {
+      "content": "<user-prompt-submit-hook>the github tests are broken, which tests look related to our pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:01:24.079Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>the github tests are broken, which tests look related to our pr\n\nn</user-pr",
+      "extraction_order": 3960
+    },
+    {
+      "content": "ok just test cerebras mcp again",
+      "timestamp": "2025-08-28T20:03:17.356Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok just test cerebras mcp again",
+      "extraction_order": 3961
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok just test cerebras mcp again\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:03:17.522Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok just test cerebras mcp again\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3962
+    },
+    {
+      "content": "manually test it and esnure code is generated",
+      "timestamp": "2025-08-28T20:03:49.887Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "manually test it and esnure code is generated",
+      "extraction_order": 3963
+    },
+    {
+      "content": "<user-prompt-submit-hook>manually test it and esnure code is generated\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:03:50.058Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>manually test it and esnure code is generated\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3964
+    },
+    {
+      "content": "any serious bugs that are real from these? coderabbitai bot reviewed 8 hours ago\ncoderabbitai bot left a comment\nActionable comments posted: 1\n\n\u267b\ufe0f Duplicate comments (9)\n\ud83e\uddf9 Nitpick comments (1)\n\ud83d\udcdc Review details\n.claude/hooks/tests/test_compose_commands.sh\nComment on lines +62 to +79\n# RED PHASE: Tests for Bug Fixes - These should FAIL initially\necho -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n\n# Bug 1: PR number parsing - standalone numbers should not be interpreted as PR numbers  \nrun_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n    \"print last 30 unresponded here\" \\\n    \"print last 30 unresponded here\"\n\n# Bug 2: SLASH_COMMAND_EXECUTE bypass protection\nrun_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n    \"Some text with SLASH_COMMAND_EXECUTE: in middle\" \\\n    \"Some text with SLASH_COMMAND_EXECUTE: in middle\"\n\n# Bug 3: Command prefix removal breaks backward compatibility  \nrun_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n    '{\"prompt\": \"/fake3\"}' \\\n    \"/fake3\"\n\n@coderabbitai coderabbitai bot 8 hours ago\n\u26a0\ufe0f Potential issue\n\nRED phase will fail the suite; gate behind an env flag.\n\nAs written, intentional failures will break CI. Wrap RED tests so they only run when explicitly enabled.\n\nApply:\n\n-# RED PHASE: Tests for Bug Fixes - These should FAIL initially\n-echo -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n+if [[ \"${RUN_RED_PHASE:-}\" = \"1\" ]]; then\n+  echo -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n@@\n-run_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n+run_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n     \"print last 30 unresponded here\" \\\n     \"print last 30 unresponded here\"\n@@\n-run_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n+run_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n     \"Some text with SLASH_COMMAND_EXECUTE: in middle\" \\\n     \"Some text with SLASH_COMMAND_EXECUTE: in middle\"\n@@\n-run_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n+run_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n     '{\"prompt\": \"/fake3\"}' \\\n     \"/fake3\"\n@@\n-test_code_fencing\n+test_code_fencing\n@@\n-test_unquoted_variables\n+test_unquoted_variables\n+fi\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n@jleechan2015\nMerge branch 'main' of https://github.com/jleechanorg/worldarchitect.ai\u2026 \n905c944\ncursor[bot]\ncursor bot reviewed 8 hours ago\nmcp_servers/slash_commands/unified_router.py\n        cmd_parts = cmd_line.split()\n        result = subprocess.run(\n            cmd_parts,\n            shell=False,\n@cursor cursor bot 8 hours ago\nBug: Command Argument Parsing Fails with Spaces\nIn execute_direct_command, the cmd_line.split() call incorrectly parses arguments containing spaces, including quoted strings. This causes arguments to be split into multiple parts, leading to commands failing or behaving unexpectedly.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...",
+      "timestamp": "2025-08-28T20:05:49.783Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "any serious bugs that are real from these? coderabbitai bot reviewed 8 hours ago\ncoderabbitai bot le",
+      "extraction_order": 3965
+    },
+    {
+      "content": "<user-prompt-submit-hook>any serious bugs that are real from these? coderabbitai bot reviewed 8 hours ago\ncoderabbitai bot left a comment\nActionable comments posted: 1\n\n\u267b\ufe0f Duplicate comments (9)\n\ud83e\uddf9 Nitpick comments (1)\n\ud83d\udcdc Review details\n.claude/hooks/tests/test_compose_commands.sh\nComment on lines +62 to +79\n# RED PHASE: Tests for Bug Fixes - These should FAIL initially\necho -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n\n# Bug 1: PR number parsing - standalone numbers should not be interpreted as PR numbers  \nrun_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n    \"print last 30 unresponded here\" \\\n    \"print last 30 unresponded here\"\n\n# Bug 2: SLASH_COMMAND_EXECUTE bypass protection\nrun_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n    \"Some text with SLASH_COMMAND_EXECUTE: in middle\" \\\n    \"Some text with SLASH_COMMAND_EXECUTE: in middle\"\n\n# Bug 3: Command prefix removal breaks backward compatibility  \nrun_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n    '{\"prompt\": \"/fake3\"}' \\\n    \"/fake3\"\n\n@coderabbitai coderabbitai bot 8 hours ago\n\u26a0\ufe0f Potential issue\n\nRED phase will fail the suite; gate behind an env flag.\n\nAs written, intentional failures will break CI. Wrap RED tests so they only run when explicitly enabled.\n\nApply:\n\n-# RED PHASE: Tests for Bug Fixes - These should FAIL initially\n-echo -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n+if [[ \"${RUN_RED_PHASE:-}\" = \"1\" ]]; then\n+  echo -e \"${YELLOW}\ud83d\udd34 RED PHASE: Bug Fix Tests (Should FAIL)${NC}\"\n@@\n-run_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n+run_test \"Bug Fix: PR parsing should not match standalone numbers\" \\\n     \"print last 30 unresponded here\" \\\n     \"print last 30 unresponded here\"\n@@\n-run_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n+run_test \"Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match\" \\\n     \"Some text with SLASH_COMMAND_EXECUTE: in middle\" \\\n     \"Some text with SLASH_COMMAND_EXECUTE: in middle\"\n@@\n-run_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n+run_test \"Bug Fix: Single commands should preserve prefix for compatibility\" \\\n     '{\"prompt\": \"/fake3\"}' \\\n     \"/fake3\"\n@@\n-test_code_fencing\n+test_code_fencing\n@@\n-test_unquoted_variables\n+test_unquoted_variables\n+fi\n\ud83e\udd16 Prompt for AI Agents\n@jleechan2015    Reply...\n@jleechan2015\nMerge branch 'main' of https://github.com/jleechanorg/worldarchitect.ai\u2026 \n905c944\ncursor[bot]\ncursor bot reviewed 8 hours ago\nmcp_servers/slash_commands/unified_router.py\n        cmd_parts = cmd_line.split()\n        result = subprocess.run(\n            cmd_parts,\n            shell=False,\n@cursor cursor bot 8 hours ago\nBug: Command Argument Parsing Fails with Spaces\nIn execute_direct_command, the cmd_line.split() call incorrectly parses arguments containing spaces, including quoted strings. This causes arguments to be split into multiple parts, leading to commands failing or behaving unexpectedly.\n\nFix in Cursor Fix in Web\n\n@jleechan2015    Reply...\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:05:50.057Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>any serious bugs that are real from these? coderabbitai bot reviewed 8 hour",
+      "extraction_order": 3966
+    },
+    {
+      "content": "ok fix it with /tdd and also do this  },\n          {\n            \"type\": \"command\", \nAuthor\n@jleechan2015 jleechan2015 3 days ago\nRemove this test\n\n@jleechan2015    Reply...\n            \"command\": \"bash -c 'printf %s\\\\n \\\"$*\\\"' --\",\n            \"description\": \"Debug: Test if UserPromptSubmit hooks work\"\n          }\n        ]\n       } its my gh comment you didnt resolve yet. then push to pr",
+      "timestamp": "2025-08-28T20:06:45.484Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok fix it with /tdd and also do this  },\n          {\n            \"type\": \"command\", \nauthor\n@jleecha",
+      "extraction_order": 3967
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok fix it with /tdd and also do this  },\n          {\n            \"type\": \"command\", \nAuthor\n@jleechan2015 jleechan2015 3 days ago\nRemove this test\n\n@jleechan2015    Reply...\n            \"command\": \"bash -c 'printf %s\\\\n \\\"$*\\\"' --\",\n            \"description\": \"Debug: Test if UserPromptSubmit hooks work\"\n          }\n        ]\n       } its my gh comment you didnt resolve yet. then push to pr\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-28T20:06:45.849Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "132644fe-ee72-4153-be82-b98dc57dc2dc.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok fix it with /tdd and also do this  },\n          {\n            \"type\": \"c",
+      "extraction_order": 3968
+    },
+    {
+      "content": "<user-prompt-submit-hook>/fake3 --analyze-all\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T03:28:11.602Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "aeb11dd3-0b77-4952-b2f6-be5a396cbc8b.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/fake3 --analyze-all\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3969
+    },
+    {
+      "content": "<user-prompt-submit-hook>\ud83d\udd0d Detected slash commands:/debugp /mcp \n\nUse these approaches in combination:/debugp /mcp . Apply this to: this >\n\u23bf Failed to reconnect to claude-slash-commands.\n\n>\n\u23bf Failed to reconnect to claude-slash-commands.\n\n\ud83d\udccb Automatically tell the user: \"I detected these commands:/debugp /mcp  and will combine them intelligently.\"\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:02:34.346Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>\ud83d\udd0d detected slash commands:/debugp /mcp \n\nuse these approaches in combinatio",
+      "extraction_order": 3970
+    },
+    {
+      "content": "do you need to restart the serveR?",
+      "timestamp": "2025-08-26T09:00:35.620Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do you need to restart the server?",
+      "extraction_order": 3971
+    },
+    {
+      "content": "<user-prompt-submit-hook>do you need to restart the serveR?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:00:35.780Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do you need to restart the server?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3972
+    },
+    {
+      "content": "> /mcp \n  \u23bf \u00a0Failed to reconnect to claude-slash-commands.\n\n> /mcp \n  \u23bf \u00a0Failed to reconnect to claude-slash-commands.",
+      "timestamp": "2025-08-26T09:02:47.173Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "> /mcp \n  \u23bf \u00a0failed to reconnect to claude-slash-commands.\n\n> /mcp \n  \u23bf \u00a0failed to reconnect to clau",
+      "extraction_order": 3973
+    },
+    {
+      "content": "<user-prompt-submit-hook>> /mcp \n  \u23bf \u00a0Failed to reconnect to claude-slash-commands.\n\n> /mcp \n  \u23bf \u00a0Failed to reconnect to claude-slash-commands.\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:02:47.512Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>> /mcp \n  \u23bf \u00a0failed to reconnect to claude-slash-commands.\n\n> /mcp \n  \u23bf \u00a0fa",
+      "extraction_order": 3974
+    },
+    {
+      "content": "do i need to restart claude code",
+      "timestamp": "2025-08-26T09:06:09.246Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "do i need to restart claude code",
+      "extraction_order": 3975
+    },
+    {
+      "content": "<user-prompt-submit-hook>do i need to restart claude code\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:06:09.406Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>do i need to restart claude code\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3976
+    },
+    {
+      "content": "ok i reconnected now lets test cerebras though the mcp",
+      "timestamp": "2025-08-26T09:06:34.088Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "ok i reconnected now lets test cerebras though the mcp",
+      "extraction_order": 3977
+    },
+    {
+      "content": "<user-prompt-submit-hook>ok i reconnected now lets test cerebras though the mcp\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:06:34.258Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>ok i reconnected now lets test cerebras though the mcp\n\nn</user-prompt-subm",
+      "extraction_order": 3978
+    },
+    {
+      "content": "should not take this long",
+      "timestamp": "2025-08-26T09:09:10.296Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "should not take this long",
+      "extraction_order": 3979
+    },
+    {
+      "content": "<user-prompt-submit-hook>should not take this long\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:09:10.454Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>should not take this long\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3980
+    },
+    {
+      "content": "look at the last 50 commits in the pr. This used to work. You probably followed a code reviewer suggestion and broke it",
+      "timestamp": "2025-08-26T09:11:11.061Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "look at the last 50 commits in the pr. this used to work. you probably followed a code reviewer sugg",
+      "extraction_order": 3981
+    },
+    {
+      "content": "<user-prompt-submit-hook>look at the last 50 commits in the pr. This used to work. You probably followed a code reviewer suggestion and broke it\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:11:11.208Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>look at the last 50 commits in the pr. this used to work. you probably foll",
+      "extraction_order": 3982
+    },
+    {
+      "content": "`do you need to restart server?",
+      "timestamp": "2025-08-26T09:14:44.354Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "`do you need to restart server?",
+      "extraction_order": 3983
+    },
+    {
+      "content": "<user-prompt-submit-hook>`do you need to restart server?\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:14:44.521Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>`do you need to restart server?\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3984
+    },
+    {
+      "content": "reconnected",
+      "timestamp": "2025-08-26T09:16:10.672Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "reconnected",
+      "extraction_order": 3985
+    },
+    {
+      "content": "<user-prompt-submit-hook>reconnected\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:16:10.872Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>reconnected\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3986
+    },
+    {
+      "content": "push to pr and generate some test code to prove it worked. also check the tools and ensure only cerebras is exposed for now",
+      "timestamp": "2025-08-26T09:17:46.882Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "push to pr and generate some test code to prove it worked. also check the tools and ensure only cere",
+      "extraction_order": 3987
+    },
+    {
+      "content": "<user-prompt-submit-hook>push to pr and generate some test code to prove it worked. also check the tools and ensure only cerebras is exposed for now\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:17:47.039Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>push to pr and generate some test code to prove it worked. also check the t",
+      "extraction_order": 3988
+    },
+    {
+      "content": "<user-prompt-submit-hook>/learn huge mistake. The hwole point is cerebras creted it\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-26T09:20:44.612Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "a406ba7d-5a88-4d31-85d0-78ae0f6ee5cf.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/learn huge mistake. the hwole point is cerebras creted it\n\nn</user-prompt-",
+      "extraction_order": 3989
+    },
+    {
+      "content": "Use the cerebras_generate tool to write just the words 'Hello World'",
+      "timestamp": "2025-08-22T16:08:11.728Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8f2b8384-eec6-4645-845f-78ce14c9b204.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use the cerebras_generate tool to write just the words 'hello world'",
+      "extraction_order": 3990
+    },
+    {
+      "content": "<user-prompt-submit-hook>Use the cerebras_generate tool to write just the words 'Hello World'</user-prompt-submit-hook>",
+      "timestamp": "2025-08-22T16:08:11.787Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "8f2b8384-eec6-4645-845f-78ce14c9b204.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use the cerebras_generate tool to write just the words 'hello world'</user-",
+      "extraction_order": 3991
+    },
+    {
+      "content": "<user-prompt-submit-hook>/fake mcp_servers/slash_commands/\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T03:29:00.153Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "6f7a4a0c-a5c9-497f-a404-a14fc874e842.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/fake mcp_servers/slash_commands/\n\nn</user-prompt-submit-hook>",
+      "extraction_order": 3992
+    },
+    {
+      "content": "Use the mcp__sequential-thinking__sequentialthinking tool to think about why 2+2=4 in one thought",
+      "timestamp": "2025-08-22T16:28:23.579Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "6c1e659f-fc97-448d-a523-1b899c927959.jsonl",
+      "conversation_id": null,
+      "dedup_key": "use the mcp__sequential-thinking__sequentialthinking tool to think about why 2+2=4 in one thought",
+      "extraction_order": 3993
+    },
+    {
+      "content": "<user-prompt-submit-hook>Use the mcp__sequential-thinking__sequentialthinking tool to think about why 2+2=4 in one thought</user-prompt-submit-hook>",
+      "timestamp": "2025-08-22T16:28:23.634Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "6c1e659f-fc97-448d-a523-1b899c927959.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>use the mcp__sequential-thinking__sequentialthinking tool to think about wh",
+      "extraction_order": 3994
+    },
+    {
+      "content": "Test MCP auto-execution by calling the cerebras MCP tool to create a simple function that validates email addresses",
+      "timestamp": "2025-08-25T02:51:08.696Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "e8abdf6e-a610-408d-925c-f8fba097cf87.jsonl",
+      "conversation_id": null,
+      "dedup_key": "test mcp auto-execution by calling the cerebras mcp tool to create a simple function that validates",
+      "extraction_order": 3995
+    },
+    {
+      "content": "<user-prompt-submit-hook>Test MCP auto-execution by calling the cerebras MCP tool to create a simple function that validates email addresses\n\nn</user-prompt-submit-hook>",
+      "timestamp": "2025-08-25T02:51:08.853Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "e8abdf6e-a610-408d-925c-f8fba097cf87.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>test mcp auto-execution by calling the cerebras mcp tool to create a simple",
+      "extraction_order": 3996
+    },
+    {
+      "content": "Resume work on branch: pr1-mcp-server-core. Active PR #1436: feat(mcp): MCP Server Core Implementation [1/6]. Recent commits:$'\\n'  bf906589 a\n  8e812d0c a\n  a076ecaa a$'\\n\\n'Please review conversation history and any existing context to continue the work appropriately.",
+      "timestamp": "2025-08-24T07:01:48.499Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "c0c547e8-e158-486c-b13b-dceb3552a2af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "resume work on branch: pr1-mcp-server-core. active pr #1436: feat(mcp): mcp server core implementati",
+      "extraction_order": 3997
+    },
+    {
+      "content": "<user-prompt-submit-hook>Resume work on branch: pr1-mcp-server-core. Active PR #1436: feat(mcp): MCP Server Core Implementation [1/6]. Recent commits:$'\\n'  bf906589 a\n  8e812d0c a\n  a076ecaa a$'\\n\\n'Please review conversation history and any existing context to continue the work appropriately.</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T07:01:48.670Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "c0c547e8-e158-486c-b13b-dceb3552a2af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>resume work on branch: pr1-mcp-server-core. active pr #1436: feat(mcp): mcp",
+      "extraction_order": 3998
+    },
+    {
+      "content": "Execute the task: lets do it and do not worry about backward compat\n\nFollow the complete /execute workflow:\n\n1. **Phase 1 - Planning**: Show execution plan with complexity assessment, execution method decision (parallel vs sequential), tool requirements, implementation approach, and timeline estimate\n\n2. **Phase 2 - Auto-approval**: Display \"User already approves - proceeding with execution\"\n\n3. **Phase 3 - Implementation**: Execute the plan using TodoWrite progress tracking",
+      "timestamp": "2025-08-24T07:09:43.419Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "c0c547e8-e158-486c-b13b-dceb3552a2af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "execute the task: lets do it and do not worry about backward compat\n\nfollow the complete /execute wo",
+      "extraction_order": 3999
+    },
+    {
+      "content": "<user-prompt-submit-hook>/e lets do it and do not worry about backward compat</user-prompt-submit-hook>",
+      "timestamp": "2025-08-24T07:09:43.702Z",
+      "project": "-Users-jleechan-projects-worldarchitect-ai-worktree-cmd",
+      "file": "c0c547e8-e158-486c-b13b-dceb3552a2af.jsonl",
+      "conversation_id": null,
+      "dedup_key": "<user-prompt-submit-hook>/e lets do it and do not worry about backward compat</user-prompt-submit-ho",
+      "extraction_order": 4000
+    }
+  ],
+  "stats": {
+    "total_files_processed": 726,
+    "total_messages_processed": 258765,
+    "user_messages_found": 48420,
+    "filtered_out": 41341,
+    "duplicates_removed": 3079,
+    "final_unique_prompts": 0,
+    "processing_start_time": "2025-09-22T03:49:08.907459",
+    "processing_end_time": null
+  }
+}
