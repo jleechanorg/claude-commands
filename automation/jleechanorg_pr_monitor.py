@@ -23,8 +23,9 @@ from automation_safety_manager import AutomationSafetyManager
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with worktree isolation"""
 
-    CODEX_COMMENT_TEXT = (
-        "@codex use your judgement to fix comments from everyone or explain why it should not be "
+    CODEX_COMMENT_ENV_VAR = "CODEX_COMMENT"
+    DEFAULT_CODEX_COMMENT_TEXT = (
+        "@codex use your judgment to fix comments from everyone or explain why it should not be "
         "fixed. Follow binary response protocol every comment needs done or not done classification "
         "explicitly with an explanation. Push any commits needed to remote so the PR is updated."
     )
@@ -33,6 +34,12 @@ class JleechanorgPRMonitor:
 
     def __init__(self, workspace_base: str = None):
         self.logger = self._setup_logging()
+
+        # Allow overriding the Codex instruction from the environment
+        self.CODEX_COMMENT_TEXT = os.environ.get(
+            self.CODEX_COMMENT_ENV_VAR,
+            self.DEFAULT_CODEX_COMMENT_TEXT,
+        )
 
         # Workspace for isolated worktrees
         self.workspace_base = workspace_base or (Path.home() / "tmp" / "pr-automation-workspaces")
@@ -412,7 +419,7 @@ class JleechanorgPRMonitor:
                     comment_cmd,
                     capture_output=True,
                     text=True,
-                    timeout=120,
+                    timeout=30,
                     check=True,
                 )
 

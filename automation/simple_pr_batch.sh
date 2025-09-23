@@ -20,7 +20,9 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
 }
 
-CODEX_COMMENT="@codex use your judgement to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+# Default Codex instruction (can be overridden by exporting CODEX_COMMENT)
+CODEX_COMMENT_DEFAULT="@codex use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+CODEX_COMMENT="${CODEX_COMMENT:-$CODEX_COMMENT_DEFAULT}"
 CODEX_COMMIT_MARKER_PREFIX="<!-- codex-automation-commit:"
 CODEX_COMMIT_MARKER_SUFFIX="-->"
 
@@ -125,13 +127,20 @@ reset_fix_attempts() {
 # Function to handle command execution with timeout and error detection
 execute_with_timeout() {
     local timeout_duration="$1"
-    local command="$2"
-    local pr_number="$3"
-    local operation_name="$4"
+    shift
+    local pr_number="$1"
+    shift
+    local operation_name="$1"
+    shift
+
+    if [ "$#" -eq 0 ]; then
+        log "❌ No command provided for $operation_name (PR #$pr_number)"
+        return 1
+    fi
 
     log "⏱️  Executing $operation_name for PR #$pr_number (timeout: ${timeout_duration}s)"
 
-    eval timeout "$timeout_duration" "$command"
+    timeout "$timeout_duration" "$@"
     local exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
@@ -144,6 +153,28 @@ execute_with_timeout() {
         log "❌ $operation_name failed for PR #$pr_number (exit code: $exit_code)"
         return 1
     fi
+}
+
+# Function to notify about automation completion
+notify_pr_completion() {
+    local pr_number="$1"
+    local status="$2"  # success, failure, timeout
+    local details="$3"
+
+    case "$status" in
+        "success")
+            log "✅ Automated processing completed successfully for PR #$pr_number"
+            ;;
+        "failure")
+            log "❌ Automated processing failed for PR #$pr_number. Details: $details"
+            ;;
+        "timeout")
+            log "⏰ Automated processing timed out for PR #$pr_number after ${COMMENT_TIMEOUT}s"
+            ;;
+        *)
+            log "📝 Automated processing completed with status: $status for PR #$pr_number"
+            ;;
+    esac
 }
 
 # Codex instruction handling - posts default comment to PR
@@ -226,9 +257,8 @@ PY
         comment_body=$(printf "%s\n\n%s%s%s" "$CODEX_COMMENT" "$CODEX_COMMIT_MARKER_PREFIX" "$head_sha" "$CODEX_COMMIT_MARKER_SUFFIX")
     fi
 
-    execute_with_timeout "$COMMENT_TIMEOUT" \
-        "gh pr comment $pr_number --repo $GH_REPO --body \"$comment_body\"" \
-        "$pr_number" "Codex instruction comment"
+    execute_with_timeout "$COMMENT_TIMEOUT" "$pr_number" "Codex instruction comment" \
+        gh pr comment "$pr_number" --repo "$GH_REPO" --body "$comment_body"
     local comment_result=$?
 
     case $comment_result in
@@ -244,28 +274,6 @@ PY
     esac
 
     return $comment_result
-}
-
-# Function to notify about automation completion
-notify_pr_completion() {
-    local pr_number="$1"
-    local status="$2"  # success, failure, timeout
-    local details="$3"
-
-    case "$status" in
-        "success")
-            log "✅ Automated processing completed successfully for PR #$pr_number"
-            ;;
-        "failure")
-            log "❌ Automated processing failed for PR #$pr_number. Details: $details"
-            ;;
-        "timeout")
-            log "⏰ Automated processing timed out for PR #$pr_number after ${COMMENT_TIMEOUT}s"
-            ;;
-        *)
-            log "📝 Automated processing completed with status: $status for PR #$pr_number"
-            ;;
-    esac
 }
 
 # Function to post threaded comment replies with AI Cron Responder prefix

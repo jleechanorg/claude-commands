@@ -114,11 +114,11 @@ rm -rf /tmp/pr-automation-*
 ### **Manual Processing**
 ```bash
 # Run manually for specific PR
-cd ~/projects/worldarchitect.ai/worktree_autofix
+cd ~/projects/worldarchitect.ai
 ./automation/simple_pr_batch.sh
 
-# Or post Codex instruction comment for a specific PR
-   gh pr comment [PR_NUMBER] --body "@codex use your judgement to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+# Or post Codex instruction comment for a specific PR (reuse CODEX_COMMENT from automation/simple_pr_batch.sh)
+   gh pr comment [PR_NUMBER] --body "$CODEX_COMMENT"
 ```
 
 ## 📊 **Monitoring**

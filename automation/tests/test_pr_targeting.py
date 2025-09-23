@@ -39,7 +39,7 @@ class TestPRTargeting(unittest.TestCase):
 
         # Mock the dependencies for process_single_pr_by_number
         with patch.object(monitor, 'post_codex_instruction', return_value=True) as mock_codex, \
-             patch.object(monitor, 'create_worktree_for_pr', return_value=True) as mock_worktree, \
+             patch.object(monitor, 'create_worktree_for_pr', return_value=Path(self.mock_workspace)) as mock_worktree, \
              patch.object(monitor, 'cleanup_workspace') as mock_cleanup, \
              patch('subprocess.run') as mock_subprocess:
 
