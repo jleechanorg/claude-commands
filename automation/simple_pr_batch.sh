@@ -56,7 +56,7 @@ Automated fix attempts have been exhausted. Please review and fix manually.
 $(tail -20 "$LOG_FILE")
 
 === Test Failure Details ===
-$(gh pr checks "$pr_number" 2>/dev/null || echo "Could not retrieve test details")
+$(gh pr checks "$pr_number" --repo "$GH_REPO" 2>/dev/null || echo "Could not retrieve test details")
 "
 
     # Send email using Python
@@ -187,13 +187,12 @@ post_codex_instruction() {
     local decision="post:"
 
     if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
-        decision=$(printf '%s' "$pr_state_json" | python3 - "$CODEX_COMMENT" "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
+        decision=$(printf '%s' "$pr_state_json" | python3 - "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
 import json
 import sys
 
-comment_text = sys.argv[1]
-marker_prefix = sys.argv[2]
-marker_suffix = sys.argv[3]
+marker_prefix = sys.argv[1]
+marker_suffix = sys.argv[2]
 
 try:
     pr_data = json.load(sys.stdin)
@@ -208,9 +207,6 @@ decision = "post"
 if head_sha:
     for comment in comments:
         body = (comment.get("body") or "").strip()
-        if not body.startswith(comment_text):
-            continue
-
         prefix_index = body.find(marker_prefix)
         if prefix_index == -1:
             continue
@@ -286,14 +282,14 @@ post_threaded_comment() {
 
     if [ -n "$in_reply_to" ]; then
         # Reply to specific comment thread
-        if \! gh pr comment "$pr_number" --body "$prefixed_message" --reply-to "$in_reply_to" 2>/dev/null; then
+        if \! gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message" --reply-to "$in_reply_to" 2>/dev/null; then
             log "❌ Failed to post threaded reply for PR #$pr_number"
             return 1
         fi
         log "💬 Posted threaded reply to PR #$pr_number (reply to: $in_reply_to)"
     else
         # Post general comment
-        if \! gh pr comment "$pr_number" --body "$prefixed_message" 2>/dev/null; then
+        if \! gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message" 2>/dev/null; then
             log "❌ Failed to post comment for PR #$pr_number"
             return 1
         fi
@@ -307,7 +303,7 @@ post_threaded_comment() {
 log "🚀 Starting simplified PR batch processing with Codex instruction comments"
 
 # Get PRs updated in last 24 hours
-RECENT_PRS=$(gh pr list --state open --limit 20 --json number,updatedAt | \
+RECENT_PRS=$(gh pr list --repo "$GH_REPO" --state open --limit 20 --json number,updatedAt | \
     jq -r '.[] | select((.updatedAt | fromdateiso8601) > (now - 86400)) | .number')
 
 if [ -z "$RECENT_PRS" ]; then
@@ -380,7 +376,7 @@ for PR in $RECENT_PRS; do
     else
         # Max attempts reached - send email notification
         log "📧 Max Codex instruction attempts reached for PR #$PR - sending email notification"
-        FAILURE_DETAILS_RAW=$(gh pr checks "$PR" 2>/dev/null | grep -E "(FAILURE|ERROR)" | head -5)
+        FAILURE_DETAILS_RAW=$(gh pr checks "$PR" --repo "$GH_REPO" 2>/dev/null | grep -E "(FAILURE|ERROR)" | head -5)
         FAILURE_DETAILS_FALLBACK="Could not retrieve failure details for PR #$PR. Last attempt may have timed out - check automation logs for timeout vs failure details."
         if [ -z "$FAILURE_DETAILS_RAW" ]; then
             FAILURE_DETAILS="$FAILURE_DETAILS_FALLBACK"

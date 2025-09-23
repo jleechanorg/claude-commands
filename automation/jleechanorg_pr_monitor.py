@@ -319,7 +319,8 @@ class JleechanorgPRMonitor:
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=60,
+                timeout=30,
+                shell=False,
             )
             pr_data = json.loads(result.stdout or "{}")
             head_sha = pr_data.get("headRefOid")
@@ -360,9 +361,6 @@ class JleechanorgPRMonitor:
 
         for comment in comments:
             body = comment.get("body", "")
-            if not body.strip().startswith(self.CODEX_COMMENT_TEXT):
-                continue
-
             marker_sha = self._extract_commit_marker(body)
             if marker_sha and marker_sha == head_sha:
                 return True
@@ -421,6 +419,7 @@ class JleechanorgPRMonitor:
                     text=True,
                     timeout=30,
                     check=True,
+                    shell=False,
                 )
 
                 stdout = result.stdout.strip()

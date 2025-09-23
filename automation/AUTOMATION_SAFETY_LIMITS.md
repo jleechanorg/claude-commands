@@ -118,7 +118,7 @@ cd ~/projects/worldarchitect.ai
 ./automation/simple_pr_batch.sh
 
 # Or post Codex instruction comment for a specific PR (reuse CODEX_COMMENT from automation/simple_pr_batch.sh)
-   gh pr comment [PR_NUMBER] --body "$CODEX_COMMENT"
+   gh pr comment [PR_NUMBER] --repo jleechanorg/worldarchitect.ai --body "$CODEX_COMMENT"
 ```
 
 ## 📊 **Monitoring**
