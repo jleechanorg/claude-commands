@@ -35,7 +35,7 @@ To unlock the "consultant consensus supermajority" workflow referenced in recent
 standard `/consensus` flow with an explicit PASS/REWORK vote tally across the consultant agents. The
 goal is to require broad agreement from the external specialist agents before declaring success.
 
-- **Eligible voters**: `codex-consultant`, `gemini-consultant`, and `grok-consultant`. The internal
+- **Eligible voters**: `codex-consultant`, `gemini-consultant`, and `cursor-consultant`. The internal
   `code-review` agent still runs for architecture validation, but it is not counted toward the
   consultant supermajority. (Rationale: keep architectural authority with Claude core while treating
   external tools as an advisory bloc.)
@@ -68,7 +68,7 @@ Implementation guidance:
    - Consultant supermajority evaluated to `True`
 
 This overlay keeps `/consensus` fast while ensuring the external consultant network (Codex, Gemini,
-Grok) broadly agrees before a change moves forward. Treat the supermajority flag as a hard gate for
+Cursor) broadly agrees before a change moves forward. Treat the supermajority flag as a hard gate for
 automation and as a status indicator to highlight conflicting consultant guidance.
 
 ### Agent Context & Execution Framework
@@ -94,10 +94,10 @@ automation and as a status indicator to highlight conflicting consultant guidanc
   - **Focus**: Modern patterns, performance optimization, framework alignment
   - **Implementation**: `Task(subagent_type="gemini-consultant", description="...", prompt="...")`
 
-- **`grok-consultant`** - Contrarian analysis and practical reality checks
+- **`cursor-consultant`** - Contrarian analysis and practical reality checks
   - **Context**: Solo developer reality vs enterprise theoretical concerns
   - **Focus**: Practical deployment concerns, real-world failure modes, pragmatic tradeoffs
-  - **Implementation**: `Task(subagent_type="grok-consultant", description="...", prompt="...")`
+  - **Implementation**: `Task(subagent_type="cursor-consultant", description="...", prompt="...")`
 
 **Speed Optimizations**:
 - **Parallel execution**: All agents run simultaneously (not sequential)
