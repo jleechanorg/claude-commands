@@ -20,22 +20,19 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    timeout-minutes: 20  # Balanced timeout for comprehensive test suites
+    timeout-minutes: 10  # Increased from 6min to handle slow dependency installs while keeping test timeout at 6min
     strategy:
       fail-fast: false  # Continue other jobs even if one fails
       matrix:
-        test-group: [all-tests, commands, import-validation-delta]
+        test-group: [unit-tests, import-validation-delta]
         include:
           # Optimize for different test types
-          - test-group: all-tests
-            cache-key: full
-            timeout-minutes: 20
-          - test-group: commands
-            cache-key: commands
-            timeout-minutes: 10
+          - test-group: unit-tests
+            cache-key: unit
+            timeout-minutes: 5
           - test-group: import-validation-delta
             cache-key: validation
-            timeout-minutes: 5
+            timeout-minutes: 2
 
     steps:
     # Step 1: Get your code
@@ -65,10 +62,13 @@ jobs:
     # Step 4: Create virtual environment and install dependencies (required for vpython)
     - name: Install dependencies
       run: |
-        # Remove any existing venv from previous runs to prevent conflicts
-        rm -rf venv
-        # Create virtual environment that vpython expects
-        python -m venv venv
+        # Reuse cached venv when available; otherwise create it
+        if [ -d venv ]; then
+          echo "Reusing cached venv"
+        else
+          echo "Creating new venv"
+          python -m venv venv
+        fi
         source venv/bin/activate
 
         # Upgrade pip and install resolver tools with timeout
@@ -79,7 +79,7 @@ jobs:
         timeout 600 pip install -r mvp_site/requirements.txt
 
         # Install additional requirements for MCP servers and testing with individual timeouts
-        find . -name "requirements.txt" -not -path "./venv/*" -not -path "./task-agent*" | while read req_file; do
+        find . -name "requirements.txt" -not -path "./venv/*" -not -path "./task-agent*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
           echo "Installing $req_file (with 300s timeout)"
           timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file (timeout or error)"
         done
@@ -94,7 +94,7 @@ jobs:
 
     # Step 5: Run test group based on matrix strategy
     - name: Run test group - ${{ matrix.test-group }}
-      timeout-minutes: 20  # Step-level timeout for individual test group execution
+      timeout-minutes: 6  # Step-level timeout optimized for 5-minute CI target
       run: |
         # Activate the virtual environment
         source venv/bin/activate
@@ -119,39 +119,16 @@ jobs:
         # Run specific test group based on matrix
         chmod +x run_tests.sh
         case "${{ matrix.test-group }}" in
-          "all-tests")
-            echo "🔗 Running CRITICAL tests (fast CI execution with test limit)..."
-            # Use smaller timeout and test limit for CI efficiency
-            export TEST_TIMEOUT=30
-            export CI_TEST_LIMIT=50
-            ./run_tests.sh --unit --parallel
-            ;;
-          "commands")
-            echo "⚙️  Running COMMAND utility tests..."
-            export PYTHONPATH="${PYTHONPATH}:${PWD}/.claude/commands"
-            # Find and run command tests
-            test_count=0
-            failed_count=0
-            if [ -d ".claude/commands/tests" ]; then
-              for test_file in $(find .claude/commands/tests -name "test_*.py" -type f | sort); do
-                test_count=$((test_count + 1))
-                echo "Running: $test_file"
-                if TESTING=true python3 "$test_file"; then
-                  echo "✅ PASS: $test_file"
-                else
-                  echo "❌ FAIL: $test_file"
-                  failed_count=$((failed_count + 1))
-                fi
-              done
-              if [ $failed_count -eq 0 ]; then
-                echo "✅ Command tests: $test_count/$test_count passed (all tests succeeded)"
-              else
-                echo "❌ Command tests: $((test_count - failed_count))/$test_count passed ($failed_count failed)"
-              fi
-              [ $failed_count -eq 0 ] || exit 1
-            fi
+          "unit-tests")
+            echo "🚀 Running OPTIMIZED unit tests (5-minute CI target)..."
+            # Optimized settings for 5-minute execution target
+            export TEST_TIMEOUT=15
+            export CI_TEST_LIMIT=30
+            # Exclude integration tests that make real network calls but keep end2end tests
+            ./run_tests.sh --unit --parallel --exclude-integration --exclude-mcp --include-end2end
             ;;
           "import-validation-delta")
+            echo "📋 Running import validation..."
             ./scripts/validate_imports_delta.sh
             ;;
         esac

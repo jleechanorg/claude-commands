@@ -53,11 +53,23 @@ def execute_claude_command(prompt, timeout=30, use_codex=False, use_cerebras=Fal
                 input_method = "arg"
             else:
                 # Fallback to claude if cerebras script not found
-                command = ["claude", "-p", "--dangerously-skip-permissions"]
+                command = [
+                    "claude",
+                    "-p",
+                    "--model",
+                    "sonnet",
+                    "--dangerously-skip-permissions",
+                ]
                 tool_name = "claude"
                 input_method = "stdin"
         else:
-            command = ["claude", "-p", "--dangerously-skip-permissions"]
+            command = [
+                "claude",
+                "-p",
+                "--model",
+                "sonnet",
+                "--dangerously-skip-permissions",
+            ]
             tool_name = "claude"
             input_method = "stdin"
 

@@ -19,6 +19,9 @@
 #   ./run_tests.sh --full --integration      # Full suite including integration tests
 #   ./run_tests.sh --dry-run --integration   # Preview intelligent selection with integration tests
 #   ./run_tests.sh --mcp                     # Run MCP server tests (requires MCP server running)
+#   ./run_tests.sh --exclude-integration      # Exclude integration tests (for CI optimization)
+#   ./run_tests.sh --exclude-mcp              # Exclude MCP tests (for CI optimization)
+#   ./run_tests.sh --include-end2end          # Include end2end tests specifically (for CI)
 #
 # CI Simulation Features:
 # - Always simulates GitHub Actions environment to catch deployment issues early
@@ -372,6 +375,9 @@ enable_coverage=false
 intelligent_mode=true
 dry_run_mode=false
 specific_test_files=()
+exclude_integration=false
+exclude_mcp=false
+include_end2end=false
 
 for arg in "$@"; do
     case $arg in
@@ -398,6 +404,15 @@ for arg in "$@"; do
         --dry-run)
             dry_run_mode=true
             # Don't force intelligent mode - let user override with --full
+            ;;
+        --exclude-integration)
+            exclude_integration=true
+            ;;
+        --exclude-mcp)
+            exclude_mcp=true
+            ;;
+        --include-end2end)
+            include_end2end=true
             ;;
         *)
             if [[ $arg == --* ]]; then
@@ -582,13 +597,60 @@ fi
 if [ "$include_integration" != true ]; then
     filtered_files=()
     for test_file in "${test_files[@]}"; do
-        # Skip integration test directories and files
-        if [[ "$test_file" == *test_integration* ]] || [[ "$test_file" == *integration_test* ]]; then
+        # Skip integration tests by filename or directory
+        if [[ "$test_file" == *test_integration* ]] || [[ "$test_file" == *integration_test* ]] || [[ "$test_file" == */integration/* ]]; then
             continue
         fi
         filtered_files+=("$test_file")
     done
     test_files=("${filtered_files[@]}")
+fi
+
+# Apply CI optimization filters (new flags for 5-minute CI target)
+if [ "$exclude_integration" = true ]; then
+    print_status "🚀 CI Optimization: Excluding integration tests that make real network calls..."
+    filtered_files=()
+    for test_file in "${test_files[@]}"; do
+        # Exclude integration test directories
+        if [[ "$test_file" == */integration/* ]]; then
+            print_status "  Excluding: $test_file (integration directory)"
+            continue
+        fi
+        # Exclude specific integration test patterns
+        if [[ "$test_file" == *real_browser* ]] || [[ "$test_file" == *browser_settings* ]]; then
+            print_status "  Excluding: $test_file (real browser test)"
+            continue
+        fi
+        filtered_files+=("$test_file")
+    done
+    test_files=("${filtered_files[@]}")
+fi
+
+if [ "$exclude_mcp" = true ]; then
+    print_status "🚀 CI Optimization: Excluding MCP tests that require real server connections..."
+    filtered_files=()
+    for test_file in "${test_files[@]}"; do
+        # Exclude MCP test directories and files
+        if [[ "$test_file" == */mcp_tests/* ]] || [[ "$test_file" == *mcp_integration* ]] || [[ "$test_file" == *test_mcp_cerebras* ]]; then
+            print_status "  Excluding: $test_file (MCP server test)"
+            continue
+        fi
+        filtered_files+=("$test_file")
+    done
+    test_files=("${filtered_files[@]}")
+fi
+
+if [ "$include_end2end" = true ]; then
+    print_status "🚀 CI Optimization: Including end2end tests as required..."
+    # Add end2end tests specifically
+    while IFS= read -r -d '' test_file; do
+        # Check if this test file is already in our list
+        if [[ " ${test_files[*]} " == *" $test_file "* ]]; then
+            continue
+        fi
+        print_status "  Including: $test_file (end2end test)"
+        test_files+=("$test_file")
+    done < <(find mvp_site/tests/test_end2end -name "test_*.py" -type f -print0 2>/dev/null)
 fi
 
 # Add MCP server tests if requested
@@ -622,12 +684,31 @@ if [ ${#test_files[@]} -gt 0 ]; then
 fi
 print_status "📊 Found ${#test_files[@]} test files to execute"
 
-# Apply CI test limit if set (for CI efficiency)
+# Apply CI test limit if set (for CI efficiency) - preserve end2end tests
 if [ -n "$CI_TEST_LIMIT" ] && [ "$CI_TEST_LIMIT" -gt 0 ] && [ ${#test_files[@]} -gt "$CI_TEST_LIMIT" ]; then
     print_warning "⚠️  Applying CI_TEST_LIMIT: ${#test_files[@]} → $CI_TEST_LIMIT tests (for CI timeout prevention)"
-    # Keep only the first N tests for CI efficiency
-    test_files=("${test_files[@]:0:$CI_TEST_LIMIT}")
-    print_status "📊 Limited to ${#test_files[@]} test files for CI execution"
+
+    # Prioritize end2end tests - they must be preserved
+    priority_files=()
+    other_files=()
+
+    for test_file in "${test_files[@]}"; do
+        if [[ "$test_file" == */test_end2end/* ]]; then
+            priority_files+=("$test_file")
+        else
+            other_files+=("$test_file")
+        fi
+    done
+
+    # Take all priority files + remaining slots from other files
+    remaining_slots=$((CI_TEST_LIMIT - ${#priority_files[@]}))
+    if [ $remaining_slots -gt 0 ]; then
+        test_files=("${priority_files[@]}" "${other_files[@]:0:$remaining_slots}")
+    else
+        test_files=("${priority_files[@]:0:$CI_TEST_LIMIT}")
+    fi
+
+    print_status "📊 Limited to ${#test_files[@]} test files (${#priority_files[@]} end2end preserved)"
 fi
 
 # Display first few test files as preview

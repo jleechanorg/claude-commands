@@ -77,7 +77,7 @@ create_planning_scratchpad() {
 # 🎯 HEADLESS COMMAND READY (Copy-paste when ready)
 
 \`\`\`bash
-claude -p "TASK: $prompt
+claude --model sonnet -p "TASK: $prompt
 
 CONTEXT: Complete analysis and implementation plan available
 WORKTREE: $(pwd)
@@ -239,7 +239,7 @@ echo "="*80
 echo -e "${GREEN}🤖 HEADLESS COMMAND READY (Copy & Paste)${NC}"
 echo "="*80
 echo ""
-echo -e "${YELLOW}claude -p \"TASK: $PROMPT"
+echo -e "${YELLOW}claude --model sonnet -p \"TASK: $PROMPT"
 echo ""
 echo "CONTEXT: Complete analysis and implementation plan available"
 echo "WORKTREE: $(pwd)"
