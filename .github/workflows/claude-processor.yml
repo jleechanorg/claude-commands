@@ -6,6 +6,7 @@ on:
 jobs:
   claude:
     runs-on: [self-hosted, claude]
+    timeout-minutes: 10  # Prevent hung processes
     steps:
       - name: Extract
         id: x

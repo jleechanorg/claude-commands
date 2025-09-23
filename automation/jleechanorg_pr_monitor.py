@@ -65,7 +65,7 @@ class JleechanorgPRMonitor:
         try:
             # Get all repositories in the organization
             repos_cmd = ["gh", "repo", "list", self.organization, "--limit", "100", "--json", "name,owner"]
-            repos_result = subprocess.run(repos_cmd, capture_output=True, text=True, check=True, timeout=30)
+            repos_result = subprocess.run(repos_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
             repositories = json.loads(repos_result.stdout)
 
             self.logger.info(f"📚 Found {len(repositories)} repositories")
@@ -85,7 +85,7 @@ class JleechanorgPRMonitor:
                         "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author"
                     ]
 
-                    prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30)
+                    prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
                     prs = json.loads(prs_result.stdout)
 
                     # Add repository context to each PR
@@ -123,10 +123,15 @@ class JleechanorgPRMonitor:
         pr_number = pr["number"]
         branch_name = pr["headRefName"]
 
+        # Create isolated automation branch name
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+        isolated_branch = f"automation-{timestamp}-{pr_number}"
+
         workspace_path = self.workspace_base / workspace_id
 
         self.logger.info(f"🏗️ Creating worktree for {repo_name} PR #{pr_number}")
-        self.logger.info(f"📂 Branch: {branch_name} → {workspace_path}")
+        self.logger.info(f"📂 Original branch: {branch_name}")
+        self.logger.info(f"🔒 Isolated branch: {isolated_branch} → {workspace_path}")
 
         try:
             # Clean up existing workspace
@@ -146,64 +151,42 @@ class JleechanorgPRMonitor:
 
             try:
                 # Fetch latest changes
-                subprocess.run(["git", "fetch", "--all"], check=True, capture_output=True, timeout=30)
+                subprocess.run(["git", "fetch", "--all"], check=True, capture_output=True, timeout=30, shell=False)
 
-                # Check if branch exists locally
+                # Check if original PR branch exists locally or remotely
                 local_branches = subprocess.run(
                     ["git", "branch", "--list", branch_name],
                     capture_output=True, text=True, timeout=30
                 ).stdout.strip()
 
-                # Create worktree
+                remote_branch = f"origin/{branch_name}"
+                remote_branches = subprocess.run(
+                    ["git", "branch", "-r", "--list", remote_branch],
+                    capture_output=True, text=True, timeout=30, shell=False
+                ).stdout.strip()
+
+                # Determine base branch for isolated branch
                 if local_branches:
-                    # Branch exists locally
-                    self.logger.info(f"📋 Using existing local branch: {branch_name}")
-                    worktree_cmd = ["git", "worktree", "add", str(workspace_path), branch_name]
+                    base_branch = branch_name
+                    self.logger.info(f"📋 Creating isolated branch from local: {branch_name}")
+                elif remote_branches:
+                    base_branch = remote_branch
+                    self.logger.info(f"🌐 Creating isolated branch from remote: {remote_branch}")
                 else:
-                    # Branch doesn't exist locally, create from remote
-                    remote_branch = f"origin/{branch_name}"
+                    self.logger.error(f"❌ Branch {branch_name} not found locally or remotely")
+                    return None
 
-                    # Check if remote branch exists
-                    remote_branches = subprocess.run(
-                        ["git", "branch", "-r", "--list", remote_branch],
-                        capture_output=True, text=True, timeout=30
-                    ).stdout.strip()
+                # Always create isolated branch for worktree
+                worktree_cmd = ["git", "worktree", "add", "-b", isolated_branch, str(workspace_path), base_branch]
 
-                    if remote_branches:
-                        self.logger.info(f"🌐 Creating local branch from remote: {remote_branch}")
-                        worktree_cmd = ["git", "worktree", "add", "-b", branch_name, str(workspace_path), remote_branch]
-                    else:
-                        self.logger.error(f"❌ Branch {branch_name} not found locally or remotely")
-                        return None
-
-                # Execute worktree creation
-                actual_branch = branch_name  # Track actual worktree branch
+                # Execute worktree creation with isolated branch
+                actual_branch = isolated_branch  # Track actual worktree branch (always isolated)
                 try:
-                    result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True, timeout=30)
-                    self.logger.info(f"✅ Worktree created successfully")
+                    result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
+                    self.logger.info(f"✅ Worktree created successfully with isolated branch: {isolated_branch}")
                 except subprocess.CalledProcessError as e:
-                    # Handle branch already checked out error
-                    if "already checked out" in e.stderr:
-                        # Create unique branch name for this worktree
-                        unique_branch = f"{branch_name}-automation-{pr_number}"
-                        actual_branch = unique_branch  # Update actual branch used
-                        self.logger.info(f"🔄 Branch conflict, creating unique branch: {unique_branch}")
-
-                        # Check if we have local or remote branch to base from
-                        if local_branches:
-                            # Create new branch from existing local branch
-                            unique_worktree_cmd = ["git", "worktree", "add", "-b", unique_branch, str(workspace_path), branch_name]
-                        else:
-                            # Create new branch from remote branch
-                            remote_branch = f"origin/{branch_name}"
-                            unique_worktree_cmd = ["git", "worktree", "add", "-b", unique_branch, str(workspace_path), remote_branch]
-
-                        # Try again with unique branch
-                        result = subprocess.run(unique_worktree_cmd, capture_output=True, text=True, check=True, timeout=30)
-                        self.logger.info(f"✅ Worktree created successfully with unique branch: {unique_branch}")
-                    else:
-                        # Re-raise if it's a different error
-                        raise
+                    self.logger.error(f"❌ Failed to create worktree with isolated branch: {e.stderr}")
+                    return None
 
                 # Verify workspace
                 if not workspace_path.exists():
@@ -216,8 +199,9 @@ class JleechanorgPRMonitor:
                     "repository": repo_name,
                     "repository_full_name": pr["repositoryFullName"],
                     "branch_name": branch_name,              # Original PR branch name
-                    "target_branch": branch_name,            # Remote branch to update
-                    "worktree_branch": actual_branch,        # Actual branch checked out in worktree
+                    "target_branch": branch_name,            # Remote branch to update (always original PR branch)
+                    "worktree_branch": actual_branch,        # Actual branch checked out in worktree (isolated)
+                    "isolated_branch": isolated_branch,      # The isolated automation branch
                     "base_branch": pr["baseRefName"],
                     "pr_url": pr["url"],
                     "author": pr["author"]["login"],
@@ -349,7 +333,7 @@ class JleechanorgPRMonitor:
                         self.logger.info(f"📝 Changes detected, preparing to push")
 
                         # Add changes
-                        subprocess.run(["git", "add", "-A"], check=True, timeout=30)
+                        subprocess.run(["git", "add", "-A"], check=True, timeout=30, shell=False)
 
                         # Check if there are still staged changes after pre-commit hooks
                         git_staged = subprocess.run(
@@ -394,7 +378,7 @@ class JleechanorgPRMonitor:
             return False
 
     def cleanup_workspace(self, workspace_path: Path):
-        """Clean up worktree workspace"""
+        """Clean up worktree workspace and isolated branches"""
         if not workspace_path.exists():
             return
 
@@ -404,6 +388,8 @@ class JleechanorgPRMonitor:
                 metadata = json.load(f)
 
             local_repo_path = metadata.get("local_repo_path")
+            isolated_branch = metadata.get("isolated_branch")
+
             if local_repo_path:
                 try:
                     # Change to local repository
@@ -417,6 +403,18 @@ class JleechanorgPRMonitor:
                             check=True, capture_output=True, timeout=30
                         )
                         self.logger.info(f"🧹 Worktree removed: {workspace_path}")
+
+                        # Clean up isolated branch if it exists
+                        if isolated_branch:
+                            try:
+                                subprocess.run(
+                                    ["git", "branch", "-D", isolated_branch],
+                                    check=True, capture_output=True, timeout=30
+                                )
+                                self.logger.info(f"🗑️ Isolated branch removed: {isolated_branch}")
+                            except subprocess.CalledProcessError as e:
+                                self.logger.warning(f"⚠️ Failed to remove isolated branch {isolated_branch}: {e}")
+
                     finally:
                         os.chdir(original_cwd)
 
@@ -430,6 +428,89 @@ class JleechanorgPRMonitor:
                 self.logger.info(f"🗑️ Workspace directory removed: {workspace_path}")
             except Exception as e:
                 self.logger.warning(f"⚠️ Failed to remove workspace dir {workspace_path}: {e}")
+
+    def process_single_pr_by_number(self, pr_number: int, repository: str) -> bool:
+        """Process a specific PR by number and repository"""
+        self.logger.info(f"🎯 Processing target PR: {repository} #{pr_number}")
+
+        # Check global automation limits
+        if not self.safety_manager.can_start_global_run():
+            self.logger.warning("🚫 Global automation limit reached - cannot process target PR")
+            return False
+
+        # Record global run
+        self.safety_manager.record_global_run()
+        global_run_number = self.safety_manager.get_global_runs()
+        max_global_runs = self.safety_manager.global_limit
+        self.logger.info(f"📊 Global run #{global_run_number}/{max_global_runs}")
+
+        try:
+            # Check safety limits for this specific PR
+            pr_key = f"{repository}-{pr_number}"
+            if not self.safety_manager.can_process_pr(pr_key):
+                self.logger.warning(f"🚫 Safety limits exceeded for PR {repository} #{pr_number}")
+                return False
+
+            # Get PR details using gh CLI
+            try:
+                result = subprocess.run(
+                    ["gh", "pr", "view", str(pr_number), "--repo", f"jleechanorg/{repository}", "--json", "title,headRefName,baseRefName,url,author"],
+                    capture_output=True, text=True, check=True, timeout=30
+                )
+                pr_data = json.loads(result.stdout)
+
+                self.logger.info(f"📝 Found PR: {pr_data['title']}")
+
+                # Clean up any existing workspace first
+                potential_workspace = self.workspace_base / f"{repository}-pr-{pr_number}"
+                if potential_workspace.exists():
+                    self.cleanup_workspace(potential_workspace)
+
+                # Create worktree
+                pr_dict = {
+                    'repository': repository,
+                    'number': pr_number,
+                    'title': pr_data['title'],
+                    'headRefName': pr_data['headRefName'],
+                    'baseRefName': pr_data['baseRefName'],
+                    'url': pr_data['url'],
+                    'author': pr_data['author'],
+                    'workspaceId': f"{repository}-pr-{pr_number}",
+                    'repositoryFullName': f"jleechanorg/{repository}"
+                }
+                workspace_path = self.create_worktree_for_pr(pr_dict)
+                if workspace_path:
+
+                    # Process with copilot
+                    success = self.process_pr_with_copilot(workspace_path)
+
+                    # Record PR processing attempt with result
+                    result = "success" if success else "failure"
+                    self.safety_manager.record_pr_attempt(pr_key, result)
+
+                    # Clean up workspace
+                    self.cleanup_workspace(workspace_path)
+
+                    if success:
+                        self.logger.info(f"✅ Successfully processed target PR {repository} #{pr_number}")
+                    else:
+                        self.logger.error(f"❌ Failed to process target PR {repository} #{pr_number}")
+
+                    return success
+                else:
+                    self.logger.error(f"❌ Failed to create worktree for PR {repository} #{pr_number}")
+                    return False
+
+            except subprocess.CalledProcessError as e:
+                self.logger.error(f"❌ Failed to get PR details for {repository} #{pr_number}: {e.stderr}")
+                return False
+            except json.JSONDecodeError as e:
+                self.logger.error(f"❌ Failed to parse PR data for {repository} #{pr_number}: {e}")
+                return False
+
+        except Exception as e:
+            self.logger.error(f"❌ Unexpected error processing target PR {repository} #{pr_number}: {e}")
+            return False
 
     def run_monitoring_cycle(self, single_repo=None, max_prs=10):
         """Run a complete monitoring cycle"""
@@ -516,10 +597,26 @@ def main():
                         help='Process only specific repository')
     parser.add_argument('--max-prs', type=int, default=10,
                         help='Maximum PRs to process per cycle')
+    parser.add_argument('--target-pr', type=int,
+                        help='Process specific PR number')
+    parser.add_argument('--target-repo',
+                        help='Repository for target PR (required with --target-pr)')
 
     args = parser.parse_args()
 
+    # Validate target PR arguments
+    if args.target_pr and not args.target_repo:
+        parser.error('--target-repo is required when using --target-pr')
+    if args.target_repo and not args.target_pr:
+        parser.error('--target-pr is required when using --target-repo')
+
     monitor = JleechanorgPRMonitor(workspace_base=args.workspace_base)
+
+    # Handle target PR processing
+    if args.target_pr and args.target_repo:
+        print(f"🎯 Processing target PR: {args.target_repo} #{args.target_pr}")
+        success = monitor.process_single_pr_by_number(args.target_pr, args.target_repo)
+        sys.exit(0 if success else 1)
 
     if args.dry_run:
         print("🔍 DRY RUN: Discovering PRs only")

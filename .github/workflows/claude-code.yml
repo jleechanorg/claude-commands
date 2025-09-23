@@ -13,10 +13,10 @@ on:
 jobs:
   claude-code-action:
     if: |
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
-      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
-      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude') && !github.event.comment.user.login == 'github-actions[bot]') ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude') && !github.event.comment.user.login == 'github-actions[bot]') ||
+      (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude') && !github.event.review.user.login == 'github-actions[bot]') ||
+      (github.event_name == 'issues' && contains(github.event.issue.body, '@claude') && !github.event.issue.user.login == 'github-actions[bot]')
     runs-on: ubuntu-latest
     permissions:
       contents: read

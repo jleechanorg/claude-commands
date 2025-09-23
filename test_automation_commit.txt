@@ -1,8 +1,0 @@
-This is a test file to verify automation PR commit workflow.
-
-Features tested:
-- Automation context detection based on branch name (copilot_automation)
-- Automatic push to PR after commit
-- Enhanced post-commit sync hook functionality
-
-Created for testing automation PR workflow.

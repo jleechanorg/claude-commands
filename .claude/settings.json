@@ -207,12 +207,12 @@
         ]
       },
       {
-        "matcher": "Bash(git commit *)",
+        "matcher": "DISABLED_Bash(git commit *)",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/post_commit_sync.sh\" ] && exec \"$ROOT/.claude/hooks/post_commit_sync.sh\"; fi; [ -x \"$HOME/.claude/hooks/post_commit_sync.sh\" ] && exec \"$HOME/.claude/hooks/post_commit_sync.sh\"; exit 0'",
-            "description": "Auto-sync commits to remote after git commit operations"
+            "command": "bash -c 'echo \"🚫 Automation disabled - manual push required\"; exit 0'",
+            "description": "DISABLED: Auto-sync commits to remote after git commit operations"
           }
         ]
       },
