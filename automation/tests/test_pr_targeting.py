@@ -6,6 +6,8 @@ Test PR targeting functionality for jleechanorg_pr_monitor
 import unittest
 import argparse
 import sys
+import json
+import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
@@ -89,6 +91,47 @@ class TestPRTargeting(unittest.TestCase):
         except SystemExit:
             # Expected to fail with current implementation
             pass
+
+    @patch('jleechanorg_pr_monitor.subprocess.run')
+    def test_post_codex_instruction_skips_for_existing_commit(self, mock_run):
+        """Codex comment is skipped when already posted for latest commit"""
+        monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            workspace = Path(tmpdir)
+            metadata = {
+                "pr_number": 1703,
+                "repository": "worldarchitect.ai",
+                "repository_full_name": "jleechanorg/worldarchitect.ai",
+            }
+            with open(workspace / ".pr-metadata.json", 'w') as f:
+                json.dump(metadata, f)
+
+            comment_body = (
+                f"{monitor.CODEX_COMMENT_TEXT}\n\n"
+                f"{monitor.CODEX_COMMIT_MARKER_PREFIX}deadbeef{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+            )
+
+            with patch.object(
+                monitor,
+                '_get_pr_comment_state',
+                return_value=("deadbeef", [{"body": comment_body}])
+            ) as mock_state:
+                result = monitor.post_codex_instruction(workspace)
+
+            mock_state.assert_called_once_with("jleechanorg/worldarchitect.ai", 1703)
+
+        self.assertTrue(result)
+        mock_run.assert_not_called()
+
+    def test_extract_commit_marker(self):
+        """Commit markers can be parsed from Codex comments"""
+        monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
+        marker = monitor._extract_commit_marker(
+            f"{monitor.CODEX_COMMENT_TEXT}\n\n"
+            f"{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+        )
+        self.assertEqual(marker, "abc123")
 
 
 if __name__ == '__main__':

@@ -21,6 +21,8 @@ log() {
 }
 
 CODEX_COMMENT="@codex use your judgement to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+CODEX_COMMIT_MARKER_PREFIX="<!-- codex-automation-commit:"
+CODEX_COMMIT_MARKER_SUFFIX="-->"
 
 GH_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
 if [ -z "$GH_REPO" ]; then
@@ -150,8 +152,82 @@ post_codex_instruction() {
 
     log "💬 Requesting Codex instruction comment for PR #$pr_number"
 
+    local pr_state_json
+    local decision="post:"
+
+    if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
+        decision=$(printf '%s' "$pr_state_json" | python3 - "$CODEX_COMMENT" "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
+import json
+import sys
+
+comment_text = sys.argv[1]
+marker_prefix = sys.argv[2]
+marker_suffix = sys.argv[3]
+
+try:
+    pr_data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    print("post:")
+    sys.exit(0)
+
+head_sha = pr_data.get("headRefOid")
+comments = (pr_data.get("comments") or {}).get("nodes", [])
+
+decision = "post"
+if head_sha:
+    for comment in comments:
+        body = (comment.get("body") or "").strip()
+        if not body.startswith(comment_text):
+            continue
+
+        prefix_index = body.find(marker_prefix)
+        if prefix_index == -1:
+            continue
+
+        start_index = prefix_index + len(marker_prefix)
+        end_index = body.find(marker_suffix, start_index)
+        if end_index == -1:
+            continue
+
+        marker_sha = body[start_index:end_index].strip()
+        if marker_sha == head_sha:
+            decision = "skip"
+            break
+
+print(f"{decision}:{head_sha or ''}")
+PY
+)
+    else
+        log "⚠️ Unable to fetch PR state; proceeding with Codex comment"
+    fi
+
+    local action
+    local head_sha
+    if [ -z "$decision" ]; then
+        action="post"
+        head_sha=""
+    else
+        action="${decision%%:*}"
+        head_sha="${decision#*:}"
+    fi
+
+    if [ "$action" = "skip" ]; then
+        if [ -n "$head_sha" ]; then
+            log "♻️ Codex instruction already posted for commit $head_sha on PR #$pr_number; skipping"
+        else
+            log "♻️ Codex instruction already posted for current head on PR #$pr_number; skipping"
+        fi
+        notify_pr_completion "$pr_number" "success" ""
+        return 0
+    fi
+
+    local comment_body="$CODEX_COMMENT"
+    if [ -n "$head_sha" ]; then
+        comment_body=$(printf "%s\n\n%s%s%s" "$CODEX_COMMENT" "$CODEX_COMMIT_MARKER_PREFIX" "$head_sha" "$CODEX_COMMIT_MARKER_SUFFIX")
+    fi
+
     execute_with_timeout "$COMMENT_TIMEOUT" \
-        "gh pr comment $pr_number --repo $GH_REPO --body '$CODEX_COMMENT'" \
+        "gh pr comment $pr_number --repo $GH_REPO --body \"$comment_body\"" \
         "$pr_number" "Codex instruction comment"
     local comment_result=$?
 

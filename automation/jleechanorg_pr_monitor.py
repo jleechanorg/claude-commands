@@ -23,6 +23,14 @@ from automation_safety_manager import AutomationSafetyManager
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with worktree isolation"""
 
+    CODEX_COMMENT_TEXT = (
+        "@codex use your judgement to fix comments from everyone or explain why it should not be "
+        "fixed. Follow binary response protocol every comment needs done or not done classification "
+        "explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+    )
+    CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
+    CODEX_COMMIT_MARKER_SUFFIX = "-->"
+
     def __init__(self, workspace_base: str = None):
         self.logger = self._setup_logging()
 
@@ -285,6 +293,84 @@ class JleechanorgPRMonitor:
 
         return None
 
+    def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> Tuple[Optional[str], List[Dict]]:
+        """Fetch PR comment data needed for Codex comment gating"""
+        view_cmd = [
+            "gh",
+            "pr",
+            "view",
+            str(pr_number),
+            "--repo",
+            repo_full_name,
+            "--json",
+            "headRefOid,comments",
+        ]
+
+        try:
+            result = subprocess.run(
+                view_cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=60,
+            )
+            pr_data = json.loads(result.stdout or "{}")
+            head_sha = pr_data.get("headRefOid")
+            comments = pr_data.get("comments", {}).get("nodes", []) if pr_data else []
+            return head_sha, comments
+        except subprocess.CalledProcessError as e:
+            error_message = e.stderr.strip() if e.stderr else str(e)
+            self.logger.warning(
+                f"⚠️ Failed to fetch PR comment state for PR #{pr_number}: {error_message}"
+            )
+        except json.JSONDecodeError as e:
+            self.logger.warning(
+                f"⚠️ Failed to parse PR comment state for PR #{pr_number}: {e}"
+            )
+
+        return None, []
+
+    def _extract_commit_marker(self, comment_body: str) -> Optional[str]:
+        """Extract commit marker from Codex automation comment"""
+        if not comment_body:
+            return None
+
+        prefix_index = comment_body.find(self.CODEX_COMMIT_MARKER_PREFIX)
+        if prefix_index == -1:
+            return None
+
+        start_index = prefix_index + len(self.CODEX_COMMIT_MARKER_PREFIX)
+        end_index = comment_body.find(self.CODEX_COMMIT_MARKER_SUFFIX, start_index)
+        if end_index == -1:
+            return None
+
+        return comment_body[start_index:end_index].strip()
+
+    def _has_codex_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
+        """Determine if Codex instruction already exists for the latest commit"""
+        if not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get("body", "")
+            if not body.strip().startswith(self.CODEX_COMMENT_TEXT):
+                continue
+
+            marker_sha = self._extract_commit_marker(body)
+            if marker_sha and marker_sha == head_sha:
+                return True
+
+        return False
+
+    def _build_codex_comment_body(self, head_sha: Optional[str]) -> str:
+        """Compose Codex instruction comment with commit marker"""
+        if head_sha:
+            marker = f"{self.CODEX_COMMIT_MARKER_PREFIX}{head_sha}{self.CODEX_COMMIT_MARKER_SUFFIX}"
+            return f"{self.CODEX_COMMENT_TEXT}\n\n{marker}"
+
+        # Fallback without marker if we could not determine the commit SHA
+        return self.CODEX_COMMENT_TEXT
+
     def post_codex_instruction(self, workspace_path: Path) -> bool:
         """Post codex instruction comment in isolated workspace"""
         metadata_file = workspace_path / ".pr-metadata.json"
@@ -298,23 +384,27 @@ class JleechanorgPRMonitor:
 
         pr_number = metadata["pr_number"]
         repo_name = metadata["repository"]
+        repo_full_name = metadata["repository_full_name"]
 
         self.logger.info(f"💬 Requesting Codex support for {repo_name} PR #{pr_number}")
+
+        head_sha, comments = self._get_pr_comment_state(repo_full_name, pr_number)
+        if head_sha and self._has_codex_comment_for_commit(comments, head_sha):
+            self.logger.info(
+                f"♻️ Codex instruction already posted for latest commit {head_sha} on PR #{pr_number}; skipping"
+            )
+            return True
 
         try:
             original_cwd = os.getcwd()
             os.chdir(workspace_path)
 
             try:
-                comment_body = (
-                    "@codex use your judgement to fix comments from everyone or explain why it should not be "
-                    "fixed. Follow binary response protocol every comment needs done or not done classification "
-                    "explicitly with an explanation. Push any commits needed to remote so the PR is updated."
-                )
+                comment_body = self._build_codex_comment_body(head_sha)
                 comment_cmd = [
                     "gh", "pr", "comment",
                     str(pr_number),
-                    "--repo", metadata["repository_full_name"],
+                    "--repo", repo_full_name,
                     "--body", comment_body,
                 ]
 
