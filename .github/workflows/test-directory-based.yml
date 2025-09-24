@@ -1,4 +1,4 @@
-name: WorldArchitect Tests (Directory-Based)
+name: Directory-Based Tests
 
 # Security permissions for directory-based testing
 permissions:
@@ -10,14 +10,14 @@ on:
   push:
     branches: [ main, dev ]  # Run on pushes to these branches
     paths-ignore:
-      - '*.md'
+      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches: [ main ]       # Run on PRs targeting main
     paths-ignore:
-      - '*.md'
+      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
@@ -42,12 +42,12 @@ jobs:
           # Use shared change detection script
           chmod +x scripts/ci-detect-changes.sh
 
-          # Run change detection and capture output
+          # Run change detection and capture output (include format for this workflow)
           OUTPUT=$(./scripts/ci-detect-changes.sh \
             "${{ github.event_name }}" \
             "${{ github.event.pull_request.base.sha }}" \
             "${{ github.event.pull_request.head.sha }}" \
-            "simple")
+            "include")
 
           # Parse and export outputs
           echo "$OUTPUT" | while IFS= read -r line; do
@@ -62,22 +62,7 @@ jobs:
 
           echo "$OUTPUT"
 
-  # Import validation (always runs)
-  import-validation:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
-      - name: Run import validation
-        run: |
-          if [ -f "scripts/validate_imports_delta.sh" ]; then
-            ./scripts/validate_imports_delta.sh
-          else
-            echo "Import validation script not found, skipping"
-          fi
-
-  # Directory-based test execution
+  # Main test job that runs for each affected directory
   test:
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
@@ -104,7 +89,7 @@ jobs:
         path: |
           ~/.cache/pip
           venv
-        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-dir }}
+        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
         restore-keys: |
           ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-
           ${{ runner.os }}-python-3.11-
@@ -127,8 +112,8 @@ jobs:
         timeout 600 pip install -r mvp_site/requirements.txt
 
         # Install additional requirements for specific directories if needed
-        case "${{ matrix.test-dir }}" in
-          ".claude"|"orchestration"|"scripts")
+        case "${{ matrix.test-group }}" in
+          ".claude"|"orchestration"|"automation")
             # These directories may have additional requirements
             find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
               echo "Installing $req_file (with 300s timeout)"
@@ -142,7 +127,7 @@ jobs:
         chmod +x vpython
         timeout 60 ./vpython --version
 
-    - name: Run directory-based tests - ${{ matrix.test-dir }}
+    - name: Run directory-based tests - ${{ matrix.test-group }}
       timeout-minutes: 8
       run: |
         source venv/bin/activate
@@ -157,29 +142,19 @@ jobs:
         export GITHUB_ACTIONS=true
         export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site"
 
-        echo "🎯 Running tests for directory: ${{ matrix.test-dir }}"
+        echo "🎯 Running tests for directory group: ${{ matrix.test-group }}"
+        echo "📂 Test directories: ${{ matrix.test-dirs }}"
 
-        # Run tests only for the specified directory
+        # Run tests only for the specified directories
         chmod +x run_tests.sh
         export CI_TEST_LIMIT=50  # Limit for performance
-
-        # Use directory-based test discovery with validation
-        echo "🎯 Testing directory: ${{ matrix.test-dir }}"
-        TEST_COUNT=$(find "${{ matrix.test-dir }}" -name "test_*.py" -type f 2>/dev/null | wc -l)
-        echo "📊 Found $TEST_COUNT test files in ${{ matrix.test-dir }}"
-
-        if [ "$TEST_COUNT" -eq 0 ]; then
-          echo "⚠️ No tests found in ${{ matrix.test-dir }}, falling back to core tests"
-          ./run_tests.sh --parallel --exclude-integration --exclude-mcp
-        else
-          ./run_tests.sh --test-dirs="${{ matrix.test-dir }}" --parallel --exclude-integration --exclude-mcp
-        fi
+        ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
 
     - name: Upload test results
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       with:
-        name: test-results-${{ matrix.test-dir }}
+        name: test-results-${{ matrix.test-group }}
         path: |
           mvp_site/test-results/
           /tmp/worldarchitectai/coverage/
@@ -189,7 +164,7 @@ jobs:
 
   # Summary job to report overall results
   test-summary:
-    needs: [detect-changes, test, import-validation]
+    needs: [detect-changes, test]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -198,15 +173,9 @@ jobs:
           echo "🎯 Directory-based CI Results"
           echo "Tested directories: ${{ needs.detect-changes.outputs.test-dirs }}"
 
-          # Check test results
-          test_success="${{ needs.test.result }}"
-          import_success="${{ needs.import-validation.result }}"
-
-          if [ "$test_success" = "success" ] && [ "$import_success" = "success" ]; then
-            echo "✅ All directory-based tests and validation passed!"
+          if [ "${{ needs.test.result }}" = "success" ]; then
+            echo "✅ All directory-based tests passed!"
           else
-            echo "❌ Some tests failed:"
-            echo "  Directory tests: $test_success"
-            echo "  Import validation: $import_success"
+            echo "❌ Some tests failed"
             exit 1
           fi

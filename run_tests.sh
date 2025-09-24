@@ -22,6 +22,8 @@
 #   ./run_tests.sh --exclude-integration      # Exclude integration tests (for CI optimization)
 #   ./run_tests.sh --exclude-mcp              # Exclude MCP tests (for CI optimization)
 #   ./run_tests.sh --include-end2end          # Include end2end tests specifically (for CI)
+#   ./run_tests.sh --test-dirs mvp_site,.claude # Run tests only for specified directories (comma-separated)
+#   ./run_tests.sh --test-dirs orchestration   # Run tests only for orchestration directory
 #
 # CI Simulation Features:
 # - Always simulates GitHub Actions environment to catch deployment issues early
@@ -378,6 +380,7 @@ specific_test_files=()
 exclude_integration=false
 exclude_mcp=false
 include_end2end=false
+test_dirs=""
 
 for arg in "$@"; do
     case $arg in
@@ -413,6 +416,19 @@ for arg in "$@"; do
             ;;
         --include-end2end)
             include_end2end=true
+            ;;
+        --test-dirs)
+            shift
+            if [ -z "$1" ]; then
+                print_error "--test-dirs requires a directory argument"
+                exit 1
+            fi
+            test_dirs="$1"
+            intelligent_mode=false  # Disable intelligent mode when using directory-based testing
+            ;;
+        --test-dirs=*)
+            test_dirs="${arg#*=}"
+            intelligent_mode=false  # Disable intelligent mode when using directory-based testing
             ;;
         *)
             if [[ $arg == --* ]]; then
@@ -520,12 +536,46 @@ if [ ${#test_files[@]} -eq 0 ]; then
         print_status "Running tests in parallel mode (use --coverage for coverage analysis)"
     fi
 
-    print_status "🔍 Discovering all test files (traditional mode)"
+    # Directory-based test discovery if --test-dirs specified
+    if [ -n "$test_dirs" ]; then
+        print_status "🎯 Directory-based test discovery for: $test_dirs"
 
-    # Standard test discovery - find all test_*.py files (excluding slow UI tests)
-    test_files=($(find mvp_site -name "test_*.py" -type f -not -path "*/testing_ui/*" 2>/dev/null | sort))
+        # Parse comma-separated directories
+        IFS=',' read -ra DIR_ARRAY <<< "$test_dirs"
+        for dir in "${DIR_ARRAY[@]}"; do
+            # Trim whitespace
+            dir=$(echo "$dir" | xargs)
 
-    # Add .claude/commands tests if directory exists
+            if [ -d "$dir" ]; then
+                print_status "🔍 Scanning directory: $dir"
+
+                # Find all test files in this directory (excluding browser tests in testing_ui)
+                while IFS= read -r -d '' test_file; do
+                    test_files+=("$test_file")
+                done < <(find "$dir" -name "test_*.py" -type f -not -path "*/testing_ui/*" -print0 2>/dev/null)
+
+                print_status "  Found $(find "$dir" -name "test_*.py" -type f -not -path "*/testing_ui/*" 2>/dev/null | wc -l) test files in $dir"
+            else
+                print_warning "  Directory $dir does not exist, skipping"
+            fi
+        done
+
+        if [ ${#test_files[@]} -eq 0 ]; then
+            print_warning "No test files found in specified directories: $test_dirs"
+            print_status "Falling back to default test discovery"
+        else
+            print_success "Found ${#test_files[@]} test files in specified directories"
+        fi
+    fi
+
+    # Default discovery if no test_dirs specified or no files found
+    if [ ${#test_files[@]} -eq 0 ]; then
+        print_status "🔍 Discovering all test files (traditional mode)"
+
+        # Standard test discovery - find all test_*.py files (excluding slow UI tests)
+        test_files=($(find mvp_site -name "test_*.py" -type f -not -path "*/testing_ui/*" 2>/dev/null | sort))
+
+        # Add .claude/commands tests if directory exists
     if [ -d ".claude/commands/tests" ]; then
         print_status "Including .claude/commands tests..."
         while IFS= read -r -d '' test_file; do
@@ -590,6 +640,7 @@ if [ ${#test_files[@]} -eq 0 ]; then
             echo "  - Found: $test_file"
             test_files+=("$test_file")
         done < <(find .claude/commands/cerebras/tests -name "test_*.py" -type f -print0 2>/dev/null)
+        fi
     fi
 fi
 
