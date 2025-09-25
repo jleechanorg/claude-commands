@@ -33,13 +33,14 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - Architecture pattern analysis
                                   - Performance bottleneck identification
                                   - Filter out enterprise paranoia (JSON schema validation for trusted APIs)
-   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis + gemini-consultant + cursor-consultant + codex-consultant
+   Track B (Technical - Deep):    /arch [target] + Independent code-review subagent synthesis + gemini-consultant + cursor-consultant + codex-consultant + code-centralization-consultant
                                   - System design and scalability analysis
                                   - Integration patterns and dependencies
                                   - Code quality and maintainability assessment
                                   - Comprehensive multi-dimensional analysis (Gemini CLI consultation)
                                   - Unconventional insights and contrarian analysis (Cursor consultation)
                                   - Multi-stage deep code analysis (Codex CLI consultation)
+                                  - Consolidation and duplication remediation roadmap (Code Centralization consultation)
    Track C (AI Research):         Perplexity MCP comprehensive review [target] (gpt-5 model)
                                   - OWASP security standards and latest vulnerability research
                                   - Industry best practices and proven approaches
@@ -97,6 +98,7 @@ Each command is executed with the same target parameter passed to `/reviewdeep`.
 - **Independent Analysis**: Uses code-review subagent for objective, unbiased assessment
 - **Comprehensive Multi-Dimensional Analysis**: gemini-consultant agent providing CodeRabbit/GitHub Copilot-style review covering correctness, architecture, security, performance, and PR goal alignment
 - **Multi-Stage Deep Code Analysis**: codex-consultant agent using BugBot/DeepCode methodologies for advanced bug detection, security vulnerability analysis, performance review, and architectural quality assessment
+- **Centralization & Reuse Strategy**: code-centralization-consultant agent inventories overlapping logic, recommends shared helpers, and plans safe migrations to reduce duplication
 
 ### 5. **Context7 + GitHub + Gemini MCP Integration** - Expert Knowledge Analysis (ALWAYS REQUIRED)
 - **Context7 MCP**: Real-time API documentation and framework-specific expertise
@@ -131,13 +133,14 @@ PARALLEL EXECUTION (Speed Optimized):
     │   ├─ Solo developer focus: Functional bugs, hangs, and real vulnerabilities only
     │   ├─ Architecture pattern analysis
     │   └─ Performance bottleneck identification
-    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + cursor-consultant + codex-consultant
+    ├─ Track B (Technical - Deep): /arch + Independent code-review subagent + gemini-consultant + cursor-consultant + codex-consultant + code-centralization-consultant
     │   ├─ System design and scalability assessment
     │   ├─ Integration patterns and dependencies
     │   ├─ Code quality and maintainability analysis
     │   ├─ Comprehensive multi-dimensional analysis (Gemini CLI consultation)
     │   ├─ Unconventional insights and contrarian analysis (Cursor consultation)
-    │   └─ Multi-stage deep code analysis (Codex CLI consultation)
+    │   ├─ Multi-stage deep code analysis (Codex CLI consultation)
+    │   └─ Consolidation blueprints and duplication risk assessment (Code Centralization consultation)
     └─ Track C (AI Research): Perplexity MCP review (gpt-5)
         ├─ OWASP security standards and vulnerability research
         ├─ Industry best practices and optimization insights
@@ -154,6 +157,8 @@ SYNTHESIS & GUIDELINES:
     │   ├─ Gemini CLI Consultation Summary (correctness, architecture, security findings)
     │   ├─ Cursor Consultation Summary (unconventional insights, practical reality checks)
     │   ├─ Codex CLI Deep Analysis Summary (bugs, vulnerabilities, performance issues)
+    │   ├─ Code Centralization Consultation Summary (duplication hotspots, shared utility plans)
+    │   │   └─ Metrics: Lines of code removed, modules unified, complexity reductions
     │   └─ External AI Perspective Synthesis (alternative viewpoints and validation)
     ├─ Generates prioritized recommendations across all analysis dimensions
     └─ Creates docs/pr-guidelines/{PR_NUMBER}/guidelines.md with agent insights

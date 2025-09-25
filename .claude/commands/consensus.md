@@ -27,7 +27,7 @@
 6. **Assemble review bundle** containing: PR description, latest commit message, diff summaries, and local-only edits.
 
 ## Parallel Agent Execution (2025 Optimization)
-Run all 4 agents simultaneously using Task tool parallel execution with proper context and role definitions:
+Run all 5 agents simultaneously using Task tool parallel execution with proper context and role definitions:
 
 ### Consultant Supermajority Overlay
 
@@ -35,31 +35,46 @@ To unlock the "consultant consensus supermajority" workflow referenced in recent
 standard `/consensus` flow with an explicit PASS/REWORK vote tally across the consultant agents. The
 goal is to require broad agreement from the external specialist agents before declaring success.
 
-- **Eligible voters**: `codex-consultant`, `gemini-consultant`, and `cursor-consultant`. The internal
-  `code-review` agent still runs for architecture validation, but it is not counted toward the
-  consultant supermajority. (Rationale: keep architectural authority with Claude core while treating
-  external tools as an advisory bloc.)
-- **Threshold**: Minimum 2-of-3 consultant votes must return `PASS` with confidence ≥7. If any
-  consultant requests `REWORK`, require another round unless the remaining two consultants both
-  register `PASS` with confidence ≥9.
+- **Eligible voters**: `codex-consultant`, `gemini-consultant`, `cursor-consultant`, and the new
+  `code-centralization-consultant`. The internal `code-review` agent still runs for architecture
+  validation, but it is not counted toward the consultant supermajority. (Rationale: keep
+  architectural authority with Claude core while treating external tools as an advisory bloc.)
+- **Threshold**: Minimum 3-of-4 consultant votes must return `PASS` with confidence ≥7. If that
+  bar is not met, two consultants with confidence ≥9 may still declare a provisional PASS provided
+  every outstanding concern is explicitly marked as deferrable (via an `accepted_deferrals` list in
+  the responsible consultant outputs). Each consultant that fails to meet the ≥7 confidence bar—
+  whether they voted `REWORK` or issued a low-confidence `PASS`—must log the deferrals for their
+  own domain (e.g., duplication, security, performance) along with mitigation plans and follow-up
+  owners. Consultants counted toward approval cannot self-certify deferrals they rely on.
 - **Escalation rule**: If two consecutive rounds fail to achieve the consultant supermajority, halt
   automatic approvals and surface the conflicting findings verbatim in the report. This ensures
   humans review disagreements rather than forcing another automated round.
 
 Implementation guidance:
 
-1. Run the three consultant agents in parallel (as already done for `/consensus`).
+1. Run the four consultant agents in parallel (as already done for `/consensus`).
 2. Capture each agent's PASS/REWORK verdict and numeric confidence.
 3. After collecting responses, compute the supermajority state:
    ```python
-   passes = [a for a in consultant_agents if a.verdict == "PASS" and a.confidence >= 7]
-   high_confidence = [a for a in passes if a.confidence >= 9]
-   if len(passes) >= 2:
-       consultant_supermajority = True
-   elif len(high_confidence) == 2 and all(b.verdict == "REWORK" for b in consultant_agents if b not in high_confidence):
-       consultant_supermajority = True
-   else:
-       consultant_supermajority = False
+    def get_deferrals(agent):
+        output = getattr(agent, "output", None)
+        if isinstance(output, dict):
+            return output.get("accepted_deferrals")
+        return None
+
+    passes = [a for a in consultant_agents if a.verdict == "PASS" and a.confidence >= 7]
+    high_confidence = [a for a in passes if a.confidence >= 9]
+    below_threshold = [
+        a for a in consultant_agents
+        if not (a.verdict == "PASS" and a.confidence >= 7)
+    ]
+    deferrals_ok = bool(below_threshold) and all(get_deferrals(a) for a in below_threshold)
+    if len(passes) >= 3:
+        consultant_supermajority = True
+    elif len(passes) == 2 and len(high_confidence) == 2 and deferrals_ok:
+        consultant_supermajority = True
+    else:
+        consultant_supermajority = False
    ```
 4. Annotate the round summary with `Consultant Supermajority: PASS|FAIL` so downstream tooling can
    react automatically.
@@ -98,6 +113,10 @@ automation and as a status indicator to highlight conflicting consultant guidanc
   - **Context**: Solo developer reality vs enterprise theoretical concerns
   - **Focus**: Practical deployment concerns, real-world failure modes, pragmatic tradeoffs
   - **Implementation**: `Task(subagent_type="cursor-consultant", description="...", prompt="...")`
+- **`code-centralization-consultant`** - Shared utility and duplication eradication specialist
+  - **Context**: Works best when multiple files implement similar behavior or abstractions
+  - **Focus**: Detect duplicated logic, recommend shared helpers, plan migrations to common modules
+  - **Implementation**: `Task(subagent_type="code-centralization-consultant", description="...", prompt="...")`
 
 **Speed Optimizations**:
 - **Parallel execution**: All agents run simultaneously (not sequential)
@@ -110,7 +129,7 @@ automation and as a status indicator to highlight conflicting consultant guidanc
 Streamlined workflow optimized for speed and simplicity:
 
 1. **Parallel Agent Consultation** (2-3 minutes)
-   - Launch all 4 agents simultaneously using Task tool with full context
+   - Launch all 5 agents simultaneously using Task tool with full context
    - **Context Provided to Each Agent**:
      - Solo MVP project status (pre-launch, rollback safety available)
      - Current PR/branch context and file changes
