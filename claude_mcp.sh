@@ -1240,6 +1240,7 @@ echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity sear
 
 # Remove existing web search servers to avoid conflicts
 claude mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
+claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
 claude mcp remove "perplexity-search" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
@@ -1254,20 +1255,21 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
     echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
     echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
 
-    # Add Perplexity server with API key
+    # Add Perplexity server with API key - using @chatmcp/server-perplexity-ask (working alternative)
+    # Note: Replaced problematic 'server-perplexity-ask' package with working distribution
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    add_output=$(claude mcp add --scope user "perplexity-search" "npx" "server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
+    add_output=$(claude mcp add --scope user "perplexity-ask" "npx" "@chatmcp/server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
         log_with_timestamp "Successfully added Perplexity search server with API key"
-        INSTALL_RESULTS["perplexity-search"]="SUCCESS"
+        INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
         echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
-        log_error_details "claude mcp add perplexity" "perplexity-search" "$add_output"
-        INSTALL_RESULTS["perplexity-search"]="ADD_FAILED"
+        log_error_details "claude mcp add perplexity" "perplexity-ask" "$add_output"
+        INSTALL_RESULTS["perplexity-ask"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi
 else
