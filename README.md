@@ -727,6 +727,35 @@ This isn't just command sharing - it's **cognitive capital transformation** thro
 
 ## 📚 Version History
 
+### v1.15.0 (2025-09-26)
+
+**Export Statistics**:
+- **166 Commands**: Complete workflow orchestration system
+- **37 Hooks**: Claude Code automation and workflow hooks
+- **17 Scripts**: Development and automation tools (scripts/ directory)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Scripts Included**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated scripts export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
+
 ### v1.14.0 (2025-09-26)
 
 **Export Statistics**:
