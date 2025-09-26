@@ -23,9 +23,18 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 **The command delegates to `/execute` for intelligent orchestration of components:**
 
 ```markdown
-/execute Perform enhanced parallel multi-perspective review:
-1. /guidelines                    # Centralized mistake prevention consultation
-2. PARALLEL EXECUTION:
+/execute Perform enhanced consensus + comprehensive review:
+1. /consensus [target]               # Fast consensus building (2-5 minutes)
+                                     - Multi-agent agreement using 4 parallel agents
+                                     - Quick architectural and correctness validation
+                                     - Early identification of critical issues
+                                     - 3-round maximum with early termination
+2. /guidelines                       # Centralized mistake prevention consultation
+3. Evaluate consensus result:
+   - If **CONSENSUS_REWORK**: Summarize blockers, halt here, and request fixes before deep review.
+   - If **MIXED_SIGNALS**: Proceed to Stage 2 with targeted focus areas provided by consensus agents.
+   - If **CONSENSUS_PASS**: Proceed to full Stage 2 execution.
+4. When Stage 2 runs, launch PARALLEL EXECUTION:
    Track A (Technical - Fast):    /cerebras comprehensive technical analysis [target] (SOLO DEV FOCUS)
                                   - Security vulnerability scanning (real vulnerabilities only)
                                   - Trusted source detection (GitHub API, package managers)
@@ -47,8 +56,8 @@ The command executes dual parallel review tracks by default with mandatory MCP i
                                   - Performance optimization and benchmarking insights
                                   - Emerging security patterns and prevention techniques
                                   - Real-world code review expertise from security communities
-3. /reviewe [target]             # Enhanced code review with security analysis
-4. Synthesis & PR guidelines     # Combine all three tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
+5. /reviewe [target]                 # Enhanced code review with security analysis
+6. Synthesis & PR guidelines         # Combine consensus + all three tracks + generate docs/pr-guidelines/{PR_NUMBER}/guidelines.md
 ```
 
 The `/execute` delegation ensures optimal execution with:
