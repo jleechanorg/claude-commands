@@ -664,6 +664,90 @@ npm test src/components/test_file.js
 **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step workflows
 **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
 **Operational Commands**: `/headless`, `/handoff`, `/orchestrate` - Protocol enforcement
+**Infrastructure Commands**: `/scaffold` - Repository setup and development environment scaffolding
+
+## 🛠️ Repository Scaffolding with `/scaffold`
+
+### Overview
+
+The `/scaffold` command is a powerful infrastructure automation tool that copies essential development scripts from the claude-commands repository to any target repository and provides intelligent adaptation instructions to help the LLM customize them for your specific technology stack.
+
+### What Gets Scaffolded
+
+The scaffold command copies **14 essential development scripts** that have been battle-tested across multiple repositories:
+
+#### Root Level Scripts:
+- **`create_worktree.sh`** - Git worktree management for parallel development
+- **`integrate.sh`** - Branch integration and merge workflow automation
+- **`schedule_branch_work.sh`** - Development task scheduling and branch coordination
+
+#### Scripts Directory (scripts/):
+- **`claude_mcp.sh`** & **`claude_start.sh`** - Claude Code integration and startup automation
+- **`codebase_loc.sh`**, **`loc.sh`**, **`loc_simple.sh`** - Lines of code analysis and metrics
+- **`coverage.sh`** - Test coverage reporting and validation
+- **`create_snapshot.sh`** - Development environment snapshots
+- **`push.sh`** - Enhanced git push with validation
+- **`resolve_conflicts.sh`** - Automated merge conflict resolution
+- **`run_lint.sh`** & **`run_tests_with_coverage.sh`** - Code quality and testing automation
+- **`setup-github-runner.sh`** & **`setup_email.sh`** - CI/CD and notification setup
+- **`sync_branch.sh`** - Branch synchronization utilities
+
+### Intelligent Technology Adaptation
+
+After copying scripts, the LLM automatically analyzes your repository and adapts scripts for your technology stack:
+
+**Node.js/TypeScript Projects:**
+- Updates `run_lint.sh` to use `npm run lint` or `npx eslint`
+- Configures `run_tests_with_coverage.sh` for `jest --coverage` or `nyc`
+- Adds npm script shortcuts to `package.json`
+
+**Python Projects:**
+- Adapts linting to use `flake8`, `black`, `ruff`, or `pylint`
+- Updates testing to use `pytest --cov=.` or `coverage run -m pytest`
+- Suggests `pyproject.toml` script integration
+
+**Go/Rust/Java Projects:**
+- Configures appropriate linting tools (`golangci-lint`, `cargo clippy`, etc.)
+- Updates testing commands (`go test -coverprofile`, `cargo test`, Maven/Gradle)
+- Adapts coverage reporting for each ecosystem
+
+### Usage Examples
+
+```bash
+# Basic scaffolding - copies all scripts and adapts them
+/scaffold
+
+# The LLM will:
+# 1. Copy all 14 scripts to your repository
+# 2. Analyze your technology stack (package.json, Cargo.toml, etc.)
+# 3. Adapt scripts to use your project's tools and conventions
+# 4. Update configurations and add documentation
+# 5. Suggest integration with CI/CD pipelines
+```
+
+### Integration Benefits
+
+**Consistency Across Projects**: Standardized development scripts across all your repositories
+
+**Immediate Productivity**: Common development tasks automated from day one
+
+**Quality Assurance**: Consistent linting, testing, and coverage practices
+
+**CI/CD Integration**: Scripts designed to integrate seamlessly with GitHub Actions, GitLab CI, etc.
+
+**Knowledge Transfer**: Best practices and development patterns embedded in every scaffolded repository
+
+### Post-Scaffolding Features
+
+After running `/scaffold`, you get:
+
+- ✅ **Adapted Scripts**: All scripts customized for your technology stack
+- ✅ **Documentation Updates**: README sections explaining each script
+- ✅ **Package Manager Integration**: Script shortcuts added to package.json/Cargo.toml/etc.
+- ✅ **CI/CD Suggestions**: Recommendations for pipeline integration
+- ✅ **Development Workflow**: Complete workflow using scaffolded scripts
+
+The scaffold command transforms any repository into a development powerhouse with proven automation patterns, giving you the same infrastructure advantages used to generate 900+ PRs with 42-minute median merge times.
 
 ## ⚠️ Important Notes
 
