@@ -89,7 +89,7 @@ WorldArchitect.AI requires several credentials and configuration files. Here's e
 #### Backend (Python/Flask) - Service Account Key
 ```bash
 # Location (required):
-/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json
+<PROJECT_ROOT>/serviceAccountKey.json
 
 # Purpose: Server-side Firebase Admin SDK operations
 # Used by: Backend Python code, integration tests, analytics scripts
@@ -99,7 +99,7 @@ WorldArchitect.AI requires several credentials and configuration files. Here's e
 #### Frontend (React V2) - Client Configuration
 ```bash
 # Location (required):
-/home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env
+<PROJECT_ROOT>/mvp_site/frontend_v2/.env
 
 # Setup Instructions:
 1. Copy the template: cp mvp_site/frontend_v2/.env.example mvp_site/frontend_v2/.env
@@ -126,8 +126,8 @@ export GEMINI_API_KEY=your-gemini-api-key-here
 ```bash
 # Any of these locations work:
 ~/.gemini_api_key.txt
-/home/jleechan/projects/worldarchitect.ai/gemini_api_key.txt
-/home/jleechan/projects/worldarchitect.ai/local_api_key.txt
+<PROJECT_ROOT>/gemini_api_key.txt
+<PROJECT_ROOT>/local_api_key.txt
 ```
 
 ### 🌍 Environment Files Summary
@@ -170,7 +170,7 @@ Error: Missing required Firebase environment variables: VITE_FIREBASE_API_KEY
 Error: Could not find Firebase key at /path/to/serviceAccountKey.json
 ```
 - **Cause**: Service account key not in project root
-- **Fix**: Copy `serviceAccountKey.json` to `/home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json`
+- **Fix**: Copy `serviceAccountKey.json` to `<PROJECT_ROOT>/serviceAccountKey.json`
 
 #### Gemini API Errors
 
@@ -181,8 +181,8 @@ Error: Could not find Firebase key at /path/to/serviceAccountKey.json
 #### Quick Setup Verification
 ```bash
 # Check if all credentials are in place:
-ls -la /home/jleechan/projects/worldarchitect.ai/serviceAccountKey.json
-ls -la /home/jleechan/projects/worldarchitect.ai/worktree_human/mvp_site/frontend_v2/.env
+ls -la <PROJECT_ROOT>/serviceAccountKey.json
+ls -la <PROJECT_ROOT>/mvp_site/frontend_v2/.env
 echo $GEMINI_API_KEY
 ```
 
@@ -208,7 +208,7 @@ For a comprehensive understanding of the platform, including detailed architectu
 WorldArchitect.AI has undergone a complete architectural transformation to implement the Model Context Protocol (MCP), representing the largest change in the project's history:
 
 - **Before**: Monolithic 1885-line main.py handling everything from HTTP routing to D&D game mechanics
-- **After**: Clean separation with 735-line MCP server (`world_logic.py`) and 477-line API gateway (`main.py`)
+- **After**: Clean separation with 1,373-line MCP server (`world_logic.py`) and 1,170-line API gateway (`main.py`)
 - **Benefits**: 75% code reduction in request handling, improved testability, AI tool integration ready, microservices foundation
 - **Compatibility**: 100% backward compatible - all existing APIs work identically
 
