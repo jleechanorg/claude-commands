@@ -74,7 +74,7 @@ Analyze the code across multiple dimensions with focus on correctness, architect
 ## Review Focus Areas:
 - Technical accuracy and implementation quality
 - Architecture alignment with best practices
-- Security considerations and vulnerability detection  
+- Security considerations and vulnerability detection
 - Performance implications and optimization opportunities
 - Code maintainability and readability
 - PR goal fulfillment and requirement verification
@@ -83,10 +83,16 @@ Analyze the code across multiple dimensions with focus on correctness, architect
 ## Enhanced Analysis Template
 
 ```bash
-# Execute gemini consultation with explicit error handling
+# Execute gemini consultation with explicit error handling and Pro→Flash fallback
 echo "🤖 Starting Gemini CLI consultation..."
 
-if timeout 300s gemini -p "You are a senior software engineer conducting comprehensive code analysis. 
+# Configuration variables for model management
+GEMINI_PRO_MODEL="${GEMINI_PRO_MODEL:-gemini-2.5-pro}"
+GEMINI_FLASH_MODEL="${GEMINI_FLASH_MODEL:-gemini-2.5-flash}"
+GEMINI_FALLBACK="${GEMINI_FALLBACK:-1}"  # Allow opt-out with GEMINI_FALLBACK=0
+
+# Prepare consultation prompt (preserve exact prompt across retries)
+CONSULTATION_PROMPT="You are a senior software engineer conducting comprehensive code analysis.
 Analyze for correctness, architectural soundness, security, performance, and PR goal alignment.
 Do not write code - provide analysis only.
 
@@ -105,15 +111,35 @@ PR Objectives: [Key goals and requirements]
 1. **Correctness Verification**: Logic accuracy, edge cases, error handling
 2. **Architectural Analysis**: SOLID principles, design patterns, scalability
 3. **Security Review**: OWASP compliance, input validation, authentication
-4. **Performance Analysis**: Bottlenecks, memory usage, algorithmic efficiency  
+4. **Performance Analysis**: Bottlenecks, memory usage, algorithmic efficiency
 5. **PR Goal Alignment**: Requirements fulfillment, completeness verification
 6. **Code Quality**: Maintainability, complexity, technical debt assessment
 
-Please provide detailed analysis across all dimensions."; then
-    echo "✅ Gemini consultation completed successfully"
+Please provide detailed analysis across all dimensions."
+
+# Attempt consultation with Pro model first
+echo "🎯 Attempting consultation with $GEMINI_PRO_MODEL..."
+if timeout 300s gemini --model "$GEMINI_PRO_MODEL" -p "$CONSULTATION_PROMPT" 2>&1; then
+    echo "✅ Gemini consultation completed successfully using $GEMINI_PRO_MODEL"
 else
     exit_code=$?
-    if [ $exit_code -eq 124 ]; then
+    consultation_output=$(timeout 300s gemini --model "$GEMINI_PRO_MODEL" -p "$CONSULTATION_PROMPT" 2>&1 || true)
+
+    # Check for quota exhaustion with comprehensive pattern matching
+    if echo "$consultation_output" | grep -iqE 'quota|exceeded|daily limit|out of credit|429' && [ "$GEMINI_FALLBACK" = "1" ]; then
+        echo "⚠️ QUOTA EXHAUSTED: $GEMINI_PRO_MODEL quota exceeded, falling back to $GEMINI_FLASH_MODEL"
+        echo "🔄 Retrying with Flash model (exact same prompt)..."
+
+        # Retry with Flash model using exact same prompt
+        if timeout 300s gemini --model "$GEMINI_FLASH_MODEL" -p "$CONSULTATION_PROMPT"; then
+            echo "✅ Gemini consultation completed successfully using $GEMINI_FLASH_MODEL (fallback due to Pro quota exhaustion)"
+            echo "📝 Note: Flash model used due to Pro quota limits"
+        else
+            flash_exit_code=$?
+            echo "💥 FLASH FALLBACK FAILED: Command failed with exit code $flash_exit_code"
+            echo "❌ Both Pro and Flash models failed"
+        fi
+    elif [ $exit_code -eq 124 ]; then
         echo "⏰ GEMINI CONSULTATION TIMEOUT: External consultation exceeded 5-minute limit"
         echo "❌ Gemini agent failed to provide analysis due to timeout"
     elif [ $exit_code -eq 127 ]; then
@@ -122,8 +148,9 @@ else
     else
         echo "💥 GEMINI CONSULTATION ERROR: Command failed with exit code $exit_code"
         echo "❌ Gemini agent failed with unexpected error"
+        echo "📋 Output: $consultation_output"
     fi
-    echo "⚠️  Proceeding without external Gemini analysis"
+    echo "⚠️ Proceeding without external Gemini analysis"
 fi
 ```
 
@@ -143,6 +170,7 @@ fi
 - Make sure to tell Gemini that you don't want it to write any code and this is just for guidance and consultation
 - Your primary function is to execute `gemini -p` commands, not to provide your own analysis
 - If you're not using the gemini command, you're not doing your job correctly
+- **Pro quota handling:** If the CLI reports that `gemini-2.5-pro` quota has been exceeded (HTTP 429, "quota exceeded", "daily limit reached", etc.), immediately retry the exact same prompt with Gemini Flash. Use the CLI's model flag to switch models: `timeout 300s gemini --model gemini-2.5-flash -p "..."`. Clearly note in your response that the consultation used Flash due to Pro quota exhaustion.
 
 ## Integration with Review Systems
 
