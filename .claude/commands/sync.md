@@ -44,6 +44,7 @@ fi
 HEAD_BRANCH=$(echo "$PR_INFO" | jq -r '.headRefName')
 BASE_BRANCH=$(echo "$PR_INFO" | jq -r '.baseRefName')
 HEAD_REPO=$(echo "$PR_INFO" | jq -r '.headRepository.owner.login')
+REMOTE_BRANCH="$HEAD_BRANCH"  # Store original remote branch name
 
 echo "📋 PR #$PR_NUMBER: $HEAD_BRANCH -> $BASE_BRANCH"
 
@@ -56,33 +57,46 @@ else
     echo "🔄 Fetching remote refs..."
     git fetch origin
 
-    # Check if local branch exists
+    # Try to switch to matching local branch name first
     if git rev-parse --verify "$HEAD_BRANCH" >/dev/null 2>&1; then
-        echo "🔄 Switching to existing branch: $HEAD_BRANCH"
-        git checkout "$HEAD_BRANCH"
+        # Check if branch is available (not checked out in another worktree)
+        if git checkout "$HEAD_BRANCH" 2>/dev/null; then
+            echo "🔄 Switched to existing branch: $HEAD_BRANCH"
+        else
+            echo "⚠️ Branch $HEAD_BRANCH exists but is checked out in another worktree"
+            echo "🔄 Staying on current branch and syncing with remote content"
+            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            echo "📍 Using current branch: $CURRENT_BRANCH"
+            # Update HEAD_BRANCH to current for tracking setup
+            HEAD_BRANCH="$CURRENT_BRANCH"
+        fi
     else
-        echo "✨ Creating new branch: $HEAD_BRANCH"
-        git checkout -b "$HEAD_BRANCH"
+        # Check if we need to switch from current branch to match remote name
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$CURRENT_BRANCH" != "$HEAD_BRANCH" ]; then
+            echo "🔄 Creating local branch to match remote: $HEAD_BRANCH"
+            git checkout -b "$HEAD_BRANCH"
+        fi
     fi
 
-    # Set upstream tracking to origin
+    # Set upstream tracking to origin (use original remote branch name)
     echo "🔗 Setting upstream tracking..."
-    git branch --set-upstream-to=origin/"$HEAD_BRANCH" "$HEAD_BRANCH"
+    git branch --set-upstream-to=origin/"$REMOTE_BRANCH" "$HEAD_BRANCH"
 
     # Pull latest changes
     echo "⬇️ Pulling latest changes..."
-    if git pull origin "$HEAD_BRANCH" 2>/dev/null; then
+    if git pull origin "$REMOTE_BRANCH" 2>/dev/null; then
         echo "✅ Successfully pulled changes"
     else
         echo "⚠️ Pull failed, trying to reset to remote state..."
-        git reset --hard origin/"$HEAD_BRANCH"
+        git reset --hard origin/"$REMOTE_BRANCH"
     fi
 fi
 
 # Verify sync status
 echo "🔍 Verifying sync status..."
 LOCAL_COMMIT=$(git rev-parse HEAD)
-REMOTE_COMMIT=$(git rev-parse origin/"$HEAD_BRANCH" 2>/dev/null || echo "unknown")
+REMOTE_COMMIT=$(git rev-parse origin/"$REMOTE_BRANCH" 2>/dev/null || echo "unknown")
 
 if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
     echo "✅ Local branch perfectly synced with remote"
@@ -96,7 +110,7 @@ fi
 echo "📊 Current status:"
 git status --short
 echo "📍 Current branch: $(git rev-parse --abbrev-ref HEAD)"
-echo "✨ Synced with PR #$PR_NUMBER ($HEAD_BRANCH)"
+echo "✨ Synced with PR #$PR_NUMBER ($REMOTE_BRANCH)"
 ```
 
 ## Success Criteria

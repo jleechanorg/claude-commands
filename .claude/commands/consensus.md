@@ -4,7 +4,7 @@
 
 **⚡ Performance**: 2-5 minutes total with parallel agent execution and smart early termination.
 
-**🚀 Solo MVP Context**: Optimized for pre-launch projects where rollbacks are easy via GitHub, enterprise security is overkill, and speed/architecture quality matter most.
+**🚀 Solo Unlaunched MVP Context**: Optimized for pre-launch projects with ZERO external users. Only serious external attacker security vulnerabilities matter (SQL injection, RCE, auth bypass). Enterprise security theater is counterproductive. GitHub rollbacks provide safety net.
 
 ## Usage
 ```
@@ -23,53 +23,34 @@
 4. **Verify synchronization with GitHub**:
    - Fetch PR files: `gh pr view <pr> --json files,headRefName,baseRefName`.
    - Confirm branch alignment (`git rev-parse HEAD` vs PR head SHA).
-5. **Basic credential filtering**: Remove obvious API keys/passwords from context (solo MVP appropriate)
+5. **Basic credential filtering**: Remove obvious API keys/passwords from context (unlaunched MVP with zero external users - basic filtering sufficient)
 6. **Assemble review bundle** containing: PR description, latest commit message, diff summaries, and local-only edits.
 
 ## Parallel Agent Execution (2025 Optimization)
-Run all 4 agents simultaneously using Task tool parallel execution with proper context and role definitions:
+Run all 5 agents simultaneously using Task tool parallel execution with proper context and role definitions:
 
-### Consultant Supermajority Overlay
+### Simplified Consensus Rules
 
-To unlock the "consultant consensus supermajority" workflow referenced in recent playbooks, layer the
-standard `/consensus` flow with an explicit PASS/REWORK vote tally across the consultant agents. The
-goal is to require broad agreement from the external specialist agents before declaring success.
+**Fast Multi-Agent Consensus**: Run 5 agents in parallel and calculate simple majority agreement:
+- **Eligible agents**: `code-review`, `codex-consultant`, `gemini-consultant`, `cursor-consultant`, `code-centralization-consultant` (5 total)
+- **Success threshold**: 3+ of 5 agents PASS with average confidence ≥6
+- **Failure threshold**: 3+ agents REWORK OR average confidence <5
+- **Mixed signals**: Document disagreements, proceed with majority decision
 
-- **Eligible voters**: `codex-consultant`, `gemini-consultant`, and `grok-consultant`. The internal
-  `code-review` agent still runs for architecture validation, but it is not counted toward the
-  consultant supermajority. (Rationale: keep architectural authority with Claude core while treating
-  external tools as an advisory bloc.)
-- **Threshold**: Minimum 2-of-3 consultant votes must return `PASS` with confidence ≥7. If any
-  consultant requests `REWORK`, require another round unless the remaining two consultants both
-  register `PASS` with confidence ≥9.
-- **Escalation rule**: If two consecutive rounds fail to achieve the consultant supermajority, halt
-  automatic approvals and surface the conflicting findings verbatim in the report. This ensures
-  humans review disagreements rather than forcing another automated round.
+**Simple Consensus Calculation**:
+1. Run all 5 agents in parallel using Task tool
+2. Collect PASS/REWORK + confidence (1-10) from each agent
+3. Calculate results:
+   - **CONSENSUS_PASS**: 3+ agents PASS AND average confidence ≥6
+   - **CONSENSUS_REWORK**: 3+ agents REWORK OR average confidence <5
+   - **MIXED_SIGNALS**: Document conflicts, use majority decision
 
-Implementation guidance:
-
-1. Run the three consultant agents in parallel (as already done for `/consensus`).
-2. Capture each agent's PASS/REWORK verdict and numeric confidence.
-3. After collecting responses, compute the supermajority state:
-   ```python
-   passes = [a for a in consultant_agents if a.verdict == "PASS" and a.confidence >= 7]
-   high_confidence = [a for a in passes if a.confidence >= 9]
-   if len(passes) >= 2:
-       consultant_supermajority = True
-   elif len(high_confidence) == 2 and all(b.verdict == "REWORK" for b in consultant_agents if b not in high_confidence):
-       consultant_supermajority = True
-   else:
-       consultant_supermajority = False
-   ```
-4. Annotate the round summary with `Consultant Supermajority: PASS|FAIL` so downstream tooling can
-   react automatically.
-5. Only mark the overall round as PASS when both conditions hold:
-   - Core consensus rules (all agents PASS + average confidence >7)
-   - Consultant supermajority evaluated to `True`
-
-This overlay keeps `/consensus` fast while ensuring the external consultant network (Codex, Gemini,
-Grok) broadly agrees before a change moves forward. Treat the supermajority flag as a hard gate for
-automation and as a status indicator to highlight conflicting consultant guidance.
+**Agent Specialization**:
+- **`code-review`**: Architecture validation, correctness, maintainability
+- **`codex-consultant`**: System design patterns, scalability foundations
+- **`gemini-consultant`**: 2025 best practices, performance optimization
+- **`cursor-consultant`**: Practical concerns, deployment readiness
+- **`code-centralization-consultant`**: Duplication detection, shared utility recommendations
 
 ### Agent Context & Execution Framework
 
@@ -79,25 +60,26 @@ automation and as a status indicator to highlight conflicting consultant guidanc
 
 ### Agent Role Definitions:
 
-- **`code-review`** - Architecture, correctness, maintainability (MVP-focused)
-  - **Context**: Solo MVP project, GitHub rollback safety net available
-  - **Focus**: Architecture quality, real bugs, maintainability over enterprise security theater
-  - **Implementation**: `Task(subagent_type="code-review", description="...", prompt="...")`
+**Agent Execution**: Launch 5 agents in parallel using Task tool with 180-second timeout:
 
-- **`codex-consultant`** - System design and scaling considerations
-  - **Context**: Pre-launch MVP, architecture decisions can break without user impact
-  - **Focus**: System design patterns, scalability foundations, technical architecture
-  - **Implementation**: `Task(subagent_type="codex-consultant", description="...", prompt="...")`
+1. **Architecture Review**: `code-review` agent for correctness, maintainability, architecture quality
+2. **System Design**: `codex-consultant` agent for scalability, technical architecture patterns
+3. **Best Practices**: `gemini-consultant` agent for 2025 patterns, performance optimization
+4. **Reality Check**: `cursor-consultant` agent for practical concerns, deployment readiness
+5. **Code Centralization**: `code-centralization-consultant` agent for duplication detection, shared utility recommendations
 
-- **`gemini-consultant`** - Best practices and optimization patterns
-  - **Context**: 2025 best practices adapted for solo developer workflow
-  - **Focus**: Modern patterns, performance optimization, framework alignment
-  - **Implementation**: `Task(subagent_type="gemini-consultant", description="...", prompt="...")`
+**Solo MVP Context Applied to All Agents**:
+- Pre-launch product with ZERO external users
+- GitHub rollback safety available
+- Focus on real bugs, architecture, and serious security vulnerabilities only
+- Skip enterprise security theater and theoretical concerns
 
-- **`grok-consultant`** - Contrarian analysis and practical reality checks
-  - **Context**: Solo developer reality vs enterprise theoretical concerns
-  - **Focus**: Practical deployment concerns, real-world failure modes, pragmatic tradeoffs
-  - **Implementation**: `Task(subagent_type="grok-consultant", description="...", prompt="...")`
+**Implementation Details**:
+- **`code-review`**: `Task(subagent_type="code-review", description="Architecture validation", prompt="...")`
+- **`codex-consultant`**: `Task(subagent_type="codex-consultant", description="System design analysis", prompt="...")`
+- **`gemini-consultant`**: `Task(subagent_type="gemini-consultant", description="Best practices review", prompt="...")`
+- **`cursor-consultant`**: `Task(subagent_type="cursor-consultant", description="Practical reality check", prompt="...")`
+- **`code-centralization-consultant`**: `Task(subagent_type="code-centralization-consultant", description="Duplication analysis", prompt="...")`
 
 **Speed Optimizations**:
 - **Parallel execution**: All agents run simultaneously (not sequential)
@@ -110,7 +92,7 @@ automation and as a status indicator to highlight conflicting consultant guidanc
 Streamlined workflow optimized for speed and simplicity:
 
 1. **Parallel Agent Consultation** (2-3 minutes)
-   - Launch all 4 agents simultaneously using Task tool with full context
+   - Launch all 5 agents simultaneously using Task tool with full context
    - **Context Provided to Each Agent**:
      - Solo MVP project status (pre-launch, rollback safety available)
      - Current PR/branch context and file changes
@@ -123,9 +105,9 @@ Streamlined workflow optimized for speed and simplicity:
    - **Agent Context Awareness**: Each agent understands the working multi-agent system and MVP context
 
 2. **Simple Consensus Calculation** (30 seconds)
-   - **CONSENSUS_PASS**: All agents PASS + average confidence >7
-   - **CONSENSUS_REWORK**: Any agent critical issues OR average confidence <5
-   - **MIXED_SIGNALS**: Disagreement between agents - document conflicts
+   - **CONSENSUS_PASS**: 3+ agents PASS + average confidence ≥6
+   - **CONSENSUS_REWORK**: 2+ agents REWORK OR average confidence <5
+   - **MIXED_SIGNALS**: Document conflicts, proceed with majority decision
 
 3. **Quick Fix Application** (If REWORK, 1-2 minutes)
    - Apply highest-confidence architectural fixes with clear file:line references
@@ -177,32 +159,24 @@ Streamlined workflow optimized for speed and simplicity:
 - **Medium Context**: Targeted test execution based on changed files
 - **Low Context**: Essential syntax and unit tests only
 
-**Auto-Detection of Test Commands**:
+**Simplified Test Detection**:
 ```bash
-# Project test command detection hierarchy
-if [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
-    npm test
+# Safe test command detection with proper validation
+if command -v npm >/dev/null 2>&1 && [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
+    timeout 300 npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
-    if command -v vpython >/dev/null 2>&1; then
-        env TESTING=true python -m pytest
-    elif command -v python3 >/dev/null 2>&1; then
-        env TESTING=true python3 -m pytest
-    else
-        env TESTING=true python -m pytest
-    fi
+    timeout 300 env TESTING=true python -m pytest 2>/dev/null || timeout 300 env TESTING=true python3 -m pytest
 elif [ -f "run_tests.sh" ] && [ -x "run_tests.sh" ]; then
-    ./run_tests.sh
-elif [ -f "Makefile" ] && grep -q "^test:" Makefile; then
-    make test
+    timeout 300 ./run_tests.sh
 else
-    echo "No automated tests detected - manual validation required"
+    echo "No automated tests detected - skipping test validation"
 fi
 ```
 
 5. **Round Completion Decision**
-   - **CONSENSUS_PASS**: All agents PASS + average confidence >7 + all tests pass
-   - **CONSENSUS_REWORK**: Any agent critical issues OR test failures OR average confidence <5
-   - **TEST_FAILURE_ABORT**: Any non-zero test/lint exit (critical or blocking) aborts the round immediately
+   - **CONSENSUS_PASS**: 3+ agents PASS + average confidence ≥6 + tests pass
+   - **CONSENSUS_REWORK**: 2+ agents REWORK OR test failures OR average confidence <5
+   - **TEST_FAILURE_ABORT**: Critical test failures abort the round
    - **ROUND_LIMIT_REACHED**: Maximum 3 rounds completed
 
 #### Consensus Calculation Rules:
@@ -216,7 +190,7 @@ The loop stops immediately when a round achieves PASS status or after three roun
 
 #### Early Termination Triggers:
 
-- **✅ CONSENSUS_PASS**: All agents agree + high confidence + tests pass
+- **✅ CONSENSUS_PASS**: 3+ agents PASS + average confidence ≥6 + tests pass
 - **❌ CRITICAL_BUG**: Any agent reports severity 9-10 issue
 - **❌ TEST_FAILURE**: Core functionality broken by Phase 4 changes
 - **❌ COMPILATION_ERROR**: Code doesn't compile/parse after changes
@@ -224,7 +198,7 @@ The loop stops immediately when a round achieves PASS status or after three roun
 ## Simple Consensus Rules (2025 MVP Optimization)
 - **Speed First**: Parallel execution, early termination, 3-round limit
 - **Evidence Based**: All findings require file:line references + confidence scores
-- **Clear Thresholds**: PASS >7 confidence, REWORK <5 confidence, mixed signals documented
+- **Clear Thresholds**: PASS ≥6 confidence, REWORK <5 confidence, mixed signals documented
 - **Architecture First**: Focus on system design, scalability, maintainability
 - **Practical Focus**: Fix obvious issues, document complex disagreements for later
 - **Basic Safety**: Filter obvious credentials, but don't over-engineer for solo MVP
