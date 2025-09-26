@@ -124,6 +124,19 @@ class OptimizedCommandOutputTrimmer:
                 'preserve_errors': True,
                 'max_output_lines': 100,
                 'performance_mode': True,  # New flag for aggressive optimization
+                'passthrough_markers': [
+                    '[claude:show-full-output]',
+                    '[claude:full-output]',
+                    '[claude:no-trim]'
+                ],
+                'passthrough_requests': [
+                    'show full output',
+                    'show the full output',
+                    'show output',
+                    'display full output',
+                    'need the full output',
+                    'full command output'
+                ],
                 'custom_rules': {
                     'test': {'max_passed_tests': 3, 'preserve_failures': True},
                     'pushl': {'max_git_lines': 5, 'preserve_pr_links': True},
@@ -171,11 +184,84 @@ class OptimizedCommandOutputTrimmer:
         trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
         return trimmed
     
+    def _should_bypass(self, output: str) -> bool:
+        """Determine if trimming should be skipped entirely."""
+        # Respect global enable flag first
+        if not self.config.get('enabled', True):
+            return True
+
+        # Allow interactive overrides via environment variables
+        env_toggle = os.environ.get('CLAUDE_TRIMMER_DISABLE', '')
+        if env_toggle.lower() in {'1', 'true', 'yes', 'on'}:
+            return True
+
+        env_mode = os.environ.get('CLAUDE_TRIMMER_MODE', '').strip().lower()
+        if env_mode in {'off', 'disable', 'disabled', 'passthrough', 'raw', 'full'}:
+            return True
+
+        # Normalize different output views lazily so we only compute them once
+        lowered_output: Optional[str] = None
+        collapsed_output: Optional[str] = None
+        collapsed_lowered_output: Optional[str] = None
+
+        def get_lowered_output() -> str:
+            nonlocal lowered_output
+            if lowered_output is None:
+                lowered_output = output.lower()
+            return lowered_output
+
+        def get_collapsed_output() -> str:
+            nonlocal collapsed_output
+            if collapsed_output is None:
+                # Collapse all whitespace to single spaces to make natural-language
+                # matching resilient to formatting differences.
+                collapsed_output = re.sub(r'\s+', ' ', output)
+            return collapsed_output
+
+        def get_collapsed_lowered_output() -> str:
+            nonlocal collapsed_lowered_output
+            if collapsed_lowered_output is None:
+                collapsed_lowered_output = get_collapsed_output().lower()
+            return collapsed_lowered_output
+
+        # Allow configurable magic markers inside the output
+        markers = self.config.get('passthrough_markers', [])
+        if markers:
+            lowered_markers_view = get_lowered_output()
+            for marker in markers:
+                if marker and marker.lower() in lowered_markers_view:
+                    return True
+
+        # Detect natural language requests for full output
+        requests = self.config.get('passthrough_requests', [])
+        if requests:
+            for request in requests:
+                if not request:
+                    continue
+                if isinstance(request, dict) and 'regex' in request:
+                    pattern = request.get('regex')
+                    if not isinstance(pattern, str):
+                        continue
+                    try:
+                        compiled = re.compile(pattern, re.IGNORECASE)
+                    except re.error:
+                        continue
+
+                    # Check both the original output and the collapsed view while
+                    # reusing the cached normalization to avoid redundant work.
+                    if compiled.search(output) or compiled.search(get_collapsed_output()):
+                        return True
+                elif isinstance(request, str):
+                    if request.lower() in get_collapsed_lowered_output():
+                        return True
+
+        return False
+
     def process_output(self, output: str) -> str:
         """Main processing with performance tracking"""
-        if not self.config['enabled']:
+        if self._should_bypass(output):
             return output
-            
+
         # Performance tracking
         start_time = time.perf_counter() if self.config.get('performance_mode') else 0
         

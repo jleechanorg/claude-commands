@@ -3,29 +3,10 @@
 # Multi-Player Intelligent Command Combination System
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
-# Source cross-platform timeout utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-if [ -r "$SCRIPT_DIR/timeout-utils.sh" ]; then
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/timeout-utils.sh"
-else
-  echo "compose-commands: timeout-utils.sh not found; proceeding without portable timeouts" >&2
-  safe_read_stdin() {
-    if [ -t 0 ]; then
-      printf ''
-    else
-      # Best-effort fallback without timeout enforcement
-      cat
-    fi
-  }
-fi
-
 # Read input from stdin (can be JSON or plain text)
-# Handle both interactive and non-interactive modes without hanging
-# CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
-# but the parent process context is different
-# FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat
-raw_input=$(safe_read_stdin 5)
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/timeout-utils.sh"
+raw_input=$(safe_read_stdin)
 
 # CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
 # Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
@@ -36,8 +17,14 @@ fi
 
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
-  # Allow customizing log location; include PID for uniqueness
-  log_file="${COMPOSE_LOG_FILE:-/tmp/compose-commands-$$.log}"
+  # Allow customizing log location; default to a secure temp file when unset
+  if [[ -n "${COMPOSE_LOG_FILE:-}" ]]; then
+    log_file="$COMPOSE_LOG_FILE"
+  else
+    if ! log_file="$(mktemp "${TMPDIR:-/tmp}/compose-commands.XXXXXX" 2>/dev/null)"; then
+      log_file="${TMPDIR:-/tmp}/compose-commands-$$.log"
+    fi
+  fi
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   printf '[%s] INPUT: %s\n' "$timestamp" "$raw_input" >> "$log_file"
 fi

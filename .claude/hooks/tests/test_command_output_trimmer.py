@@ -37,11 +37,25 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         with open(self.settings_file, 'w') as f:
             json.dump(settings, f)
 
+        original_expanduser = os.path.expanduser
+
+        def mock_expanduser(path):
+            if path == '~/.claude/settings.json':
+                return self.settings_file
+            return original_expanduser(path)
+
+        self.expanduser_patcher = patch('command_output_trimmer.os.path.expanduser', side_effect=mock_expanduser)
+        self.expanduser_patcher.start()
+
+        CommandOutputTrimmer._reset_singleton_for_testing()
         # Use the singleton OptimizedCommandOutputTrimmer
         self.trimmer = CommandOutputTrimmer()
 
     def tearDown(self):
         """Clean up test environment"""
+        CommandOutputTrimmer._reset_singleton_for_testing()
+        if hasattr(self, 'expanduser_patcher'):
+            self.expanduser_patcher.stop()
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
     def test_detect_command_type_test(self):
@@ -272,6 +286,26 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         self.assertGreaterEqual(stats.bytes_saved, 0)
         self.assertGreaterEqual(stats.compression_ratio, 0.0)
 
+    def test_natural_language_passthrough_detection(self):
+        """Natural language requests should bypass trimming"""
+        long_output = "Please show full output before trimming.\n" + "\n".join(
+            f"Line {i}: Some detailed output" for i in range(150)
+        )
+
+        processed = self.trimmer.process_command_output(long_output)
+        self.assertEqual(processed, long_output, "Natural language request should bypass trimming")
+
+        # Verify that without the request the output would be trimmed
+        CommandOutputTrimmer._reset_singleton_for_testing()
+        trimmer_without_request = CommandOutputTrimmer()
+        long_output_without_request = "\n".join(f"Line {i}: Some detailed output" for i in range(150))
+        processed_without_request = trimmer_without_request.process_command_output(long_output_without_request)
+        self.assertNotEqual(
+            processed_without_request,
+            long_output_without_request,
+            "Without bypass request, output should be trimmed"
+        )
+
     def test_settings_disabled(self):
         """Test that trimming can be disabled via settings"""
         # For the singleton pattern, we'll test the config loading directly
@@ -285,22 +319,14 @@ class TestCommandOutputTrimmer(unittest.TestCase):
             json.dump(settings, f)
 
         # Reset singleton and create new trimmer that will load from the test settings
-        # We need to temporarily override the settings path
-        original_expanduser = os.path.expanduser
-        def mock_expanduser(path):
-            if path == '~/.claude/settings.json':
-                return self.settings_file
-            return original_expanduser(path)
+        CommandOutputTrimmer._reset_singleton_for_testing()
+        trimmer = CommandOutputTrimmer()
 
-        with patch('os.path.expanduser', side_effect=mock_expanduser):
-            CommandOutputTrimmer._reset_singleton_for_testing()
-            trimmer = CommandOutputTrimmer()
+        test_output = "Line 1\nLine 2\nLine 3\n" * 100
+        processed_output = trimmer.process_command_output(test_output)
 
-            test_output = "Line 1\nLine 2\nLine 3\n" * 100
-            processed_output = trimmer.process_command_output(test_output)
-
-            # Should return original output unchanged when disabled
-            self.assertEqual(processed_output, test_output)
+        # Should return original output unchanged when disabled
+        self.assertEqual(processed_output, test_output)
 
     def test_main_function_with_args(self):
         """Test main function with command line arguments"""
