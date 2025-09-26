@@ -24,10 +24,13 @@ class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with worktree isolation"""
 
     CODEX_COMMENT_ENV_VAR = "CODEX_COMMENT"
-    DEFAULT_CODEX_COMMENT_TEXT = (
-        "@codex use your judgment to fix comments from everyone or explain why it should not be "
-        "fixed. Follow binary response protocol every comment needs done or not done classification "
-        "explicitly with an explanation. Push any commits needed to remote so the PR is updated."
+    ASSISTANT_HANDLE_ENV_VAR = "ASSISTANT_HANDLE"
+    DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
+    DEFAULT_CODEX_COMMENT_TEMPLATE = (
+        "@{assistant_handle} use your judgment to fix comments from everyone or explain why it "
+        "should not be fixed. Follow binary response protocol every comment needs done or not "
+        "done classification explicitly with an explanation. Push any commits needed to remote "
+        "so the PR is updated."
     )
     CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
     CODEX_COMMIT_MARKER_SUFFIX = "-->"
@@ -35,10 +38,17 @@ class JleechanorgPRMonitor:
     def __init__(self, workspace_base: str = None):
         self.logger = self._setup_logging()
 
+        assistant_handle = os.environ.get(
+            self.ASSISTANT_HANDLE_ENV_VAR, self.DEFAULT_ASSISTANT_HANDLE
+        )
+        default_comment = self.DEFAULT_CODEX_COMMENT_TEMPLATE.format(
+            assistant_handle=assistant_handle
+        )
+
         # Allow overriding the Codex instruction from the environment
         self.CODEX_COMMENT_TEXT = os.environ.get(
             self.CODEX_COMMENT_ENV_VAR,
-            self.DEFAULT_CODEX_COMMENT_TEXT,
+            default_comment,
         )
 
         # Workspace for isolated worktrees
