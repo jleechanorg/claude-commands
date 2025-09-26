@@ -60,6 +60,17 @@ Configure hooks in your project's `.claude/settings.json` using the hook scripts
 
 **Auto-Recognition**: Claude Code CLI knows to look in `.claude/hooks/` for hook scripts automatically.
 
+## Tuning the Command Output Trimmer
+
+The `command_output_trimmer.py` hook keeps chat transcripts concise, but you have full control over how aggressive it is:
+
+- **One-off full output** – Prefix any command with an environment override such as `CLAUDE_TRIMMER_DISABLE=1 <command>` or `CLAUDE_TRIMMER_MODE=full <command>` to bypass trimming for that run entirely.
+- **Magic markers in output** – If a command prints `[claude:show-full-output]`, `[claude:full-output]`, or `[claude:no-trim]` anywhere in its output, the trimmer will now pass everything through untouched.
+- **Plain-language overrides** – You can also say things like “show full output” or “display full output” in the transcript and the trimmer will recognize the request and skip trimming automatically.
+- **Persistent configuration** – Edit either `.claude/settings.json` (project default) or `~/.claude/settings.json` (user override) and adjust the `output_trimmer` section. You can disable it (`"enabled": false`), turn off performance mode, or tweak limits like `"max_output_lines"`.
+
+These options let you opt into full logs whenever you explicitly request them without disabling the savings for everyday commands.
+
 ## Testing
 
 Hook test files located in `.claude/hooks/tests/`:
