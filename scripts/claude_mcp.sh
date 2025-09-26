@@ -261,15 +261,9 @@ declare -a SERVER_QUEUE
 
 # Function to check if package is a pip package
 is_pip_package() {
-    local package="$1"
-    case "$package" in
-        "claude-slash-commands-mcp")
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
+    # No pip packages are currently installed directly by this script.
+    # Placeholder for future expansions that may require pip-based servers.
+    return 1
 }
 
 # Function to check if package exists in remote registry
@@ -552,7 +546,33 @@ add_mcp_server() {
 
     # Capture detailed error output from claude mcp add
     local add_output
-    local add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+    local add_cmd
+
+    # Special handling for grok-mcp which requires direct node execution
+    if [ "$name" = "grok-mcp" ]; then
+        echo -e "${BLUE}  🔧 Special setup for grok-mcp using direct node execution...${NC}"
+        local grok_path
+        if command -v npm >/dev/null 2>&1; then
+            grok_path="$(npm root -g)/grok-mcp/build/index.js"
+            if [ ! -f "$grok_path" ]; then
+                echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path, attempting global install...${NC}"
+                npm install -g grok-mcp >/dev/null 2>&1 || true
+            fi
+        else
+            grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
+        fi
+
+        # Add XAI_API_KEY environment variable for grok-mcp
+        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+        if [ -n "${XAI_API_KEY:-}" ] || [ -n "${GROK_API_KEY:-}" ]; then
+            local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
+            grok_env_flags+=(--env "XAI_API_KEY=$api_key")
+        fi
+        add_cmd=(claude mcp add --scope user "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+    else
+        add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+    fi
+
     add_output=$("${add_cmd[@]}" 2>&1)
     local add_exit_code=$?
 
@@ -725,150 +745,6 @@ server_already_exists() {
     echo "$EXISTING_SERVERS" | grep -q "^$name:"
 }
 
-# Helper function to setup Slash Commands MCP Server
-setup_slash_commands_server() {
-    echo -e "${BLUE}  🚀 Configuring Slash Commands MCP server for Your Project...${NC}"
-    log_with_timestamp "Setting up MCP server: slash-commands (ephemeral uvx with local fallback)"
-
-    # Check if server already exists
-    if server_already_exists "claude-slash-commands"; then
-        echo -e "${GREEN}  ✅ Server claude-slash-commands already exists, skipping installation${NC}"
-        log_with_timestamp "Server claude-slash-commands already exists, skipping"
-        INSTALL_RESULTS["claude-slash-commands"]="ALREADY_EXISTS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-        return 0
-    fi
-
-    # Remove existing server to reconfigure
-    claude mcp remove "claude-slash-commands" >/dev/null 2>&1 || true
-
-    local add_exit_code=1
-
-    # Try to use ephemeral uvx installation first
-    if command -v uvx >/dev/null 2>&1; then
-        echo -e "${BLUE}  📦 Attempting ephemeral uvx installation...${NC}"
-        log_with_timestamp "Attempting ephemeral uvx installation for slash commands MCP server"
-
-        # Check if the package is already available
-        if command -v claude-slash-commands-mcp >/dev/null 2>&1; then
-            echo -e "${GREEN}  ✅ claude-slash-commands MCP server command available${NC}"
-            log_with_timestamp "claude-slash-commands MCP server command available"
-        else
-            echo -e "${BLUE}  📥 Installing claude-slash-commands MCP server with uvx (ephemeral)...${NC}"
-            # For now, we'll use the current repository structure
-            # TODO: Replace with actual GitHub repository when published
-            if uvx --from "file://$SCRIPT_DIR/mcp_servers/slash_commands" claude-slash-commands-mcp >/dev/null 2>&1; then
-                echo -e "${GREEN}  ✅ Successfully installed claude-slash-commands MCP server (ephemeral)${NC}"
-                log_with_timestamp "Successfully installed claude-slash-commands MCP server (ephemeral)"
-            else
-                echo -e "${YELLOW}  ⚠️ Failed to install claude-slash-commands MCP server with uvx, falling back to local${NC}"
-                log_with_timestamp "uvx installation failed, falling back to local installation"
-            fi
-        fi
-
-        # Try to configure Claude MCP to use the command
-        echo -e "${BLUE}  ⚙️ Configuring Claude MCP to use slash commands server...${NC}"
-
-        # First try direct command approach (current method)
-        add_output=$(claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
-        add_exit_code=$?
-
-        # If direct approach fails, try add-json approach
-        if [ $add_exit_code -ne 0 ]; then
-            echo -e "${BLUE}  🔄 Trying add-json approach for enhanced reliability...${NC}"
-            add_output=$(claude mcp add-json --scope user "claude-slash-commands" \
-                "{\"command\":\"uvx\",\"args\":[\"--from\",\"file://$SCRIPT_DIR/mcp_servers/slash_commands\",\"claude-slash-commands-mcp\"],\"env\":{\"MCP_CLAUDE_DEBUG\":\"false\",\"MCP_VERBOSE_TOOLS\":\"false\",\"MCP_AUTO_DISCOVER\":\"false\"}}" 2>&1)
-            add_exit_code=$?
-
-            if [ $add_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully configured with add-json approach${NC}"
-                log_with_timestamp "Successfully configured slash commands MCP server using add-json approach"
-            fi
-        fi
-
-        if [ $add_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully configured Claude MCP with slash commands server${NC}"
-            echo -e "${BLUE}  📋 Server info:${NC}"
-            echo -e "     • Ephemeral installation via uvx (auto-cleaned on exit)"
-            echo -e "     • 29 tools available (cerebras_generate, converge_to_goal, etc.)"
-            echo -e "     • Worktree-independent operation"
-            echo -e "     • High-speed Cerebras code generation (19.6x faster)"
-            log_with_timestamp "Successfully configured Claude MCP with slash commands server"
-            INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
-            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-            return 0
-        else
-            echo -e "${YELLOW}  ⚠️ Failed to configure Claude MCP with ephemeral server, falling back to local installation${NC}"
-            log_with_timestamp "Ephemeral configuration failed: $add_output"
-        fi
-    else
-        echo -e "${YELLOW}  ⚠️ uvx not found, falling back to local installation${NC}"
-        log_with_timestamp "uvx not available, using local installation"
-    fi
-
-    # Fallback to local installation
-    SLASH_COMMANDS_PATH="$SCRIPT_DIR/mcp_servers/slash_commands"
-
-    if [ ! -f "$SLASH_COMMANDS_PATH/server.py" ]; then
-        echo -e "${RED}  ❌ Slash Commands MCP server not found at: $SLASH_COMMANDS_PATH/server.py${NC}"
-        log_with_timestamp "ERROR: Slash Commands MCP server not found at $SLASH_COMMANDS_PATH/server.py"
-        INSTALL_RESULTS["claude-slash-commands"]="PACKAGE_NOT_FOUND"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        return 1
-    fi
-
-    echo -e "${BLUE}  🔧 Using local slash commands MCP server installation...${NC}"
-    log_with_timestamp "Using local installation approach"
-
-    # Dynamically select a valid Python interpreter
-    local PY_INTERPRETER=""
-    if [ -x "$SCRIPT_DIR/vpython" ]; then
-        PY_INTERPRETER="$SCRIPT_DIR/vpython"
-        echo -e "${BLUE}  🐍 Using project vpython: $PY_INTERPRETER${NC}"
-    elif [ -x "$SCRIPT_DIR/venv/bin/python" ]; then
-        PY_INTERPRETER="$SCRIPT_DIR/venv/bin/python"
-        echo -e "${BLUE}  🐍 Using project venv: $PY_INTERPRETER${NC}"
-    elif command -v python3 >/dev/null 2>&1; then
-        PY_INTERPRETER="python3"
-        echo -e "${BLUE}  🐍 Using system python3: $PY_INTERPRETER${NC}"
-    elif command -v python >/dev/null 2>&1; then
-        PY_INTERPRETER="python"
-        echo -e "${BLUE}  🐍 Using system python: $PY_INTERPRETER${NC}"
-    else
-        echo -e "${RED}  ❌ Python not found, cannot add Slash Commands MCP server${NC}"
-        log_with_timestamp "ERROR: Python not found"
-        INSTALL_RESULTS["claude-slash-commands"]="DEPENDENCY_MISSING"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        return 1
-    fi
-
-    # Add the server using the selected Python interpreter
-    echo -e "${BLUE}  🔗 Adding Slash Commands MCP server...${NC}"
-    log_with_timestamp "Attempting to add Slash Commands MCP server using: $PY_INTERPRETER"
-
-    add_output=$(claude mcp add --scope user "claude-slash-commands" "$PY_INTERPRETER" "$SLASH_COMMANDS_PATH/server.py" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
-    add_exit_code=$?
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully added Slash Commands MCP server${NC}"
-        echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Local installation using $PY_INTERPRETER"
-        echo -e "     • 29 tools available (cerebras_generate, converge_to_goal, etc.)"
-        echo -e "     • Project-specific operation"
-        echo -e "     • High-speed Cerebras code generation (19.6x faster)"
-        log_with_timestamp "Successfully added Slash Commands MCP server using $PY_INTERPRETER"
-        INSTALL_RESULTS["claude-slash-commands"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-        return 0
-    else
-        echo -e "${RED}  ❌ Failed to add Slash Commands MCP server${NC}"
-        log_error_details "claude mcp add slash-commands" "claude-slash-commands" "$add_output"
-        INSTALL_RESULTS["claude-slash-commands"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-        return 1
-    fi
-}
-
 # Check environment requirements
 echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
 check_github_requirements
@@ -878,7 +754,7 @@ echo ""
 # Group servers that can be installed concurrently without conflicts
 
 # Environment flags for optional MCP servers (disabled by default for context optimization)
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
@@ -892,10 +768,6 @@ declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
     ["grok-mcp"]="grok-mcp"
-)
-
-declare -A BATCH_3=(
-    ["claude-slash-commands-mcp"]="claude-slash-commands-mcp"
 )
 
 # Function to install server batch in parallel
@@ -1363,14 +1235,12 @@ install_batch_parallel BATCH_2 "Batch 2"
 display_step "Installing iOS Simulator MCP Server..."
 install_ios_simulator_mcp
 
-display_step "Installing Batch 3 Servers (Development Tools)..."
-install_batch_parallel BATCH_3 "Batch 3"
-
 display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
 claude mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
+claude mcp remove "perplexity-ask" >/dev/null 2>&1 || true
 claude mcp remove "perplexity-search" >/dev/null 2>&1 || true
 claude mcp remove "ddg-search" >/dev/null 2>&1 || true
 
@@ -1385,20 +1255,21 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
     echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
     echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
 
-    # Add Perplexity server with API key
+    # Add Perplexity server with API key - using @chatmcp/server-perplexity-ask (working alternative)
+    # Note: Replaced problematic 'server-perplexity-ask' package with working distribution
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    add_output=$(claude mcp add --scope user "perplexity-search" "npx" "server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
+    add_output=$(claude mcp add --scope user "perplexity-ask" "npx" "@chatmcp/server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
         log_with_timestamp "Successfully added Perplexity search server with API key"
-        INSTALL_RESULTS["perplexity-search"]="SUCCESS"
+        INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
         echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
-        log_error_details "claude mcp add perplexity" "perplexity-search" "$add_output"
-        INSTALL_RESULTS["perplexity-search"]="ADD_FAILED"
+        log_error_details "claude mcp add perplexity" "perplexity-ask" "$add_output"
+        INSTALL_RESULTS["perplexity-ask"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi
 else
@@ -1556,10 +1427,6 @@ else
     fi
     fi
 fi
-
-display_step "Setting up Slash Commands MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-setup_slash_commands_server
 
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"
