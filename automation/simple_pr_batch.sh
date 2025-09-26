@@ -188,15 +188,16 @@ post_codex_instruction() {
     local decision="post:"
 
     if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
-        decision=$(printf '%s' "$pr_state_json" | python3 - "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
+        decision=$(PR_STATE_JSON="$pr_state_json" python3 - "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
 import json
+import os
 import sys
 
 marker_prefix = sys.argv[1]
 marker_suffix = sys.argv[2]
 
 try:
-    pr_data = json.load(sys.stdin)
+    pr_data = json.loads(os.environ.get("PR_STATE_JSON", ""))
 except json.JSONDecodeError:
     print("post:")
     sys.exit(0)
