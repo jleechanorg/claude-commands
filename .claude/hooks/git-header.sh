@@ -3,6 +3,19 @@
 # Usage: ./git-header.sh or git header (if aliased)
 # Works from any directory within a git repository or worktree
 
+# Source cross-platform timeout utilities
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [ -r "$SCRIPT_DIR/timeout-utils.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/timeout-utils.sh"
+else
+    gh_with_timeout() {
+        local _timeout="$1"
+        shift
+        gh "$@"
+    }
+fi
+
 # Find the git directory (works in worktrees and submodules)
 git_dir=$(git rev-parse --git-dir 2>/dev/null)
 if [ $? -ne 0 ]; then
@@ -110,12 +123,12 @@ else
 
             # First try to look up by branch name (works for local branches tied to PRs)
             if [ -n "$local_branch" ]; then
-                pr_info=$(timeout 5 gh pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
+                pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
             fi
 
             # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
             if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
-                pr_info=$(timeout 5 gh pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
             fi
 
             if [ -n "$pr_info" ]; then

@@ -4,17 +4,9 @@
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
 # Read input from stdin (can be JSON or plain text)
-# Handle both interactive and non-interactive modes without hanging
-# CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
-# but the parent process context is different
-if [ -t 0 ]; then
-    # stdin is a terminal (true interactive mode), no input expected
-    raw_input=""
-else
-    # stdin has data, read it all with timeout to prevent hanging
-    # Use cat with timeout to preserve full input without truncation
-    raw_input=$(timeout 5s cat 2>/dev/null || echo "")
-fi
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/timeout-utils.sh"
+raw_input=$(safe_read_stdin)
 
 # CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
 # Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
@@ -25,8 +17,14 @@ fi
 
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
-  # Allow customizing log location; include PID for uniqueness
-  log_file="${COMPOSE_LOG_FILE:-/tmp/compose-commands-$$.log}"
+  # Allow customizing log location; default to a secure temp file when unset
+  if [[ -n "${COMPOSE_LOG_FILE:-}" ]]; then
+    log_file="$COMPOSE_LOG_FILE"
+  else
+    if ! log_file="$(mktemp "${TMPDIR:-/tmp}/compose-commands.XXXXXX" 2>/dev/null)"; then
+      log_file="${TMPDIR:-/tmp}/compose-commands-$$.log"
+    fi
+  fi
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   printf '[%s] INPUT: %s\n' "$timestamp" "$raw_input" >> "$log_file"
 fi

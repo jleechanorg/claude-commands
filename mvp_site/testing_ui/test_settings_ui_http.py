@@ -5,11 +5,17 @@ Tests settings page using HTTP requests against a real prod server.
 This simulates user interactions via HTTP calls rather than browser automation.
 """
 
+import os
 import unittest
 
 import requests
 
 
+# Skip HTTP tests when network tests are disabled in CI
+@unittest.skipIf(
+    os.getenv("ENABLE_NETWORK_TESTS") == "0",
+    "HTTP tests disabled (ENABLE_NETWORK_TESTS=0)",
+)
 class TestSettingsUIHTTP(unittest.TestCase):
     """HTTP tests for settings page UI."""
 
@@ -21,13 +27,14 @@ class TestSettingsUIHTTP(unittest.TestCase):
             "X-Test-User-ID": "test-user-123",
             "Content-Type": "application/json",
         }
+        self.timeout = 10  # 10 second timeout for all requests
         self.test_mode_url = (
             f"{self.base_url}?test_mode=true&test_user_id=test-user-123"
         )
 
     def test_settings_button_in_homepage(self):
         """🔴 RED: Homepage should contain settings button."""
-        response = requests.get(self.test_mode_url)
+        response = requests.get(self.test_mode_url, timeout=10)
         assert response.status_code == 200
 
         # Should contain settings button
@@ -38,7 +45,8 @@ class TestSettingsUIHTTP(unittest.TestCase):
     def test_settings_page_loads(self):
         """🔴 RED: Settings page should load with proper content."""
         response = requests.get(
-            f"{self.base_url}/settings?test_mode=true&test_user_id=test-user-123"
+            f"{self.base_url}/settings?test_mode=true&test_user_id=test-user-123",
+            timeout=self.timeout,
         )
         assert response.status_code == 200
 
@@ -51,7 +59,9 @@ class TestSettingsUIHTTP(unittest.TestCase):
 
     def test_settings_api_get_empty_default(self):
         """🔴 RED: Settings API should return empty default for new user."""
-        response = requests.get(f"{self.base_url}/api/settings", headers=self.headers)
+        response = requests.get(
+            f"{self.base_url}/api/settings", headers=self.headers, timeout=self.timeout
+        )
         assert response.status_code == 200
 
         data = response.json()
@@ -62,7 +72,10 @@ class TestSettingsUIHTTP(unittest.TestCase):
         payload = {"gemini_model": "flash-2.5"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings", headers=self.headers, json=payload
+            f"{self.base_url}/api/settings",
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
         )
         assert response.status_code == 200
 
@@ -75,7 +88,10 @@ class TestSettingsUIHTTP(unittest.TestCase):
         payload = {"gemini_model": "invalid-model"}
 
         response = requests.post(
-            f"{self.base_url}/api/settings", headers=self.headers, json=payload
+            f"{self.base_url}/api/settings",
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
         )
         assert response.status_code == 400
 
@@ -88,12 +104,17 @@ class TestSettingsUIHTTP(unittest.TestCase):
         # Set a model preference
         payload = {"gemini_model": "pro-2.5"}
         response = requests.post(
-            f"{self.base_url}/api/settings", headers=self.headers, json=payload
+            f"{self.base_url}/api/settings",
+            headers=self.headers,
+            json=payload,
+            timeout=self.timeout,
         )
         assert response.status_code == 200
 
         # Retrieve and verify persistence
-        response = requests.get(f"{self.base_url}/api/settings", headers=self.headers)
+        response = requests.get(
+            f"{self.base_url}/api/settings", headers=self.headers, timeout=self.timeout
+        )
         assert response.status_code == 200
 
         data = response.json()
@@ -102,7 +123,8 @@ class TestSettingsUIHTTP(unittest.TestCase):
     def test_settings_page_javascript_functionality(self):
         """🔴 RED: Settings page should include required JavaScript."""
         response = requests.get(
-            f"{self.base_url}/settings?test_mode=true&test_user_id=test-user-123"
+            f"{self.base_url}/settings?test_mode=true&test_user_id=test-user-123",
+            timeout=self.timeout,
         )
         assert response.status_code == 200
 
@@ -120,12 +142,16 @@ class TestSettingsUIHTTP(unittest.TestCase):
         headers_no_auth = {"Content-Type": "application/json"}
 
         # Settings page
-        response = requests.get(f"{self.base_url}/settings", headers=headers_no_auth)
+        response = requests.get(
+            f"{self.base_url}/settings", headers=headers_no_auth, timeout=self.timeout
+        )
         assert response.status_code == 401
 
         # Settings API GET
         response = requests.get(
-            f"{self.base_url}/api/settings", headers=headers_no_auth
+            f"{self.base_url}/api/settings",
+            headers=headers_no_auth,
+            timeout=self.timeout,
         )
         assert response.status_code == 401
 
@@ -134,6 +160,7 @@ class TestSettingsUIHTTP(unittest.TestCase):
             f"{self.base_url}/api/settings",
             headers=headers_no_auth,
             json={"gemini_model": "pro-2.5"},
+            timeout=self.timeout,
         )
         assert response.status_code == 401
 

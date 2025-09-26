@@ -4,6 +4,13 @@ set -euo pipefail
 
 # Ultra-fast direct API wrapper for Cerebras with invisible context extraction
 
+# Source cross-platform timeout utilities
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+HOOKS_DIR="$SCRIPT_DIR/../../hooks"
+if [[ -f "$HOOKS_DIR/timeout-utils.sh" ]]; then
+    source "$HOOKS_DIR/timeout-utils.sh"
+fi
+
 # Pre-flight dependency checks
 if ! command -v jq >/dev/null 2>&1; then
   echo "Error: jq is required but not installed." >&2
@@ -162,14 +169,22 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CO
             if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
                 # Capture extractor exit code and emit minimal diagnostics when debug is on
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                if type portable_timeout >/dev/null 2>&1; then
+                    (cd "$PROJECT_ROOT" && portable_timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                else
+                    (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
+                fi
                 if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
                     echo "DEBUG: Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
                 fi
             else
                 # Mirror debug error handling to maintain invisible operation
                 EXTRACTOR_EXIT=0
-                (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                if type portable_timeout >/dev/null 2>&1; then
+                    (cd "$PROJECT_ROOT" && portable_timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                else
+                    (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
+                fi
                 # Continue silently regardless of extraction success - invisible operation maintained
             fi
 

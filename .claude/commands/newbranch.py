@@ -36,19 +36,46 @@ def auto_commit_changes():
     """Auto-commit any uncommitted changes with a standardized message"""
     print("📝 Auto-committing uncommitted changes...")
 
-    # Stage all changes
-    stdout, stderr, returncode = run_command(["git", "add", "."], check=False)
+    # Stage all changes, including deletions
+    stdout, stderr, returncode = run_command(
+        ["git", "add", "--all"], check=False
+    )
     if returncode != 0:
-        print(f"❌ ERROR: Failed to stage changes: {stderr}")
+        print("❌ ERROR: Failed to stage changes:")
+        if stdout:
+            print(f"stdout: {stdout}")
+        if stderr:
+            print(f"stderr: {stderr}")
         return False
+
+    # If nothing ended up staged, bail out early so we don't try to commit
+    staged_stdout, _, _ = run_command(
+        ["git", "diff", "--cached", "--name-status"], check=False
+    )
+    if not staged_stdout.strip():
+        print("ℹ️  No staged changes detected after auto-add; skipping auto-commit.")
+        return True
 
     # Commit with standardized message
     commit_message = "chore: Auto-commit changes before creating new branch"
     stdout, stderr, returncode = run_command(
         ["git", "commit", "-m", commit_message], check=False
     )
+
     if returncode != 0:
-        print(f"❌ ERROR: Failed to commit changes: {stderr}")
+        combined_output = (stdout + '\n' + stderr).strip()
+        print("❌ ERROR: Failed to commit changes:")
+        if combined_output:
+            print(combined_output)
+        # Show current status to help with debugging (e.g., merge conflicts)
+        status_stdout, status_stderr, _ = run_command(
+            ["git", "status", "--short"], check=False
+        )
+        if status_stdout:
+            print("📄 git status --short:")
+            print(status_stdout)
+        if status_stderr:
+            print(status_stderr)
         return False
 
     print("✅ Successfully committed uncommitted changes")
