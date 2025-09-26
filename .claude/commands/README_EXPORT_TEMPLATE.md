@@ -7,7 +7,7 @@
 Transform Claude Code from a productivity tool into development infrastructure that generates measurable velocity improvements. This command system demonstrates the paradigm shift from AI consumption to systematic workflow automation, achieving 5-20x development velocity through proven automation patterns.
 
 ### 🎯 Framework Metrics (Development Environment Results)
-- **900+ PRs generated** in 30-day validation period during active development  
+- **900+ PRs generated** in 30-day validation period during active development
 - **42-minute median merge time** with autonomous review pipeline (vs ~2-4 hours manual)
 - **78% test coverage** maintained automatically through command workflows
 - **156+ custom slash commands** creating systematic automation patterns
@@ -54,10 +54,10 @@ This isn't just a collection of commands - it's a **complete cognitive capital a
 
 ### 🏗️ Three Foundational Pillars Implementation
 
-#### 1. **Parallel Execution via Multiple Terminals** 
+#### 1. **Parallel Execution via Multiple Terminals**
 Our `/orch` command demonstrates this pillar by deploying multiple autonomous agents in isolated tmux sessions:
 - **Frontend Agent**: UI/UX implementation in parallel
-- **Backend Agent**: API development simultaneously  
+- **Backend Agent**: API development simultaneously
 - **Testing Agent**: Test automation concurrently
 - **Opus-Master**: Architecture coordination across all agents
 
@@ -70,7 +70,7 @@ Each command operates in isolated branch environments, enabling conflict-free pa
 #### 3. **Automation via Chained Commands**
 Command composition creates sophisticated autonomous workflows:
 - `/pr` chains: `/think` → `/execute` → `/push` → `/copilot` → `/review`
-- `/copilot` orchestrates: analyze → fix → test → document → verify  
+- `/copilot` orchestrates: analyze → fix → test → document → verify
 - `/execute` combines: plan → approve → implement → validate
 
 ### Command Chaining Examples
@@ -424,6 +424,34 @@ Integration Layer:
 /copilot  # If tests fail → /fix → /test → retry until success
 ```
 
+### `/scaffold` - Repository Setup and Infrastructure Deployment
+
+**What It Does**: Rapidly scaffolds essential development infrastructure by copying proven development scripts from the claude-commands repository into any target repository with intelligent technology stack adaptation.
+
+**Core Infrastructure Components**:
+1. **Root Level Scripts**: `create_worktree.sh`, `integrate.sh`, `schedule_branch_work.sh`
+2. **Scripts Directory**: `claude_mcp.sh`, `claude_start.sh`, `codebase_loc.sh`, `coverage.sh`, `create_snapshot.sh`, `loc.sh`, `push.sh`, `resolve_conflicts.sh`, `run_lint.sh`, `run_tests_with_coverage.sh`, `setup-github-runner.sh`, `sync_branch.sh`
+
+**LLM Adaptation Intelligence**:
+- **Technology Stack Detection**: Auto-detects Node.js, Python, Go, Rust, Java projects
+- **Tool Integration**: Adapts scripts for Jest, pytest, ESLint, golangci-lint, cargo clippy
+- **CI/CD Integration**: GitHub Actions, GitLab CI, and other CI system compatibility
+- **Configuration Updates**: Package manager script integration and toolchain setup
+
+**Real Example**:
+```bash
+/scaffold
+↓
+1. Copies 17 essential development scripts to your project
+2. Detects your tech stack (e.g., Node.js with TypeScript)
+3. Adapts run_lint.sh to use 'npm run lint' or 'npx eslint'
+4. Adapts run_tests_with_coverage.sh to use 'jest --coverage'
+5. Updates package.json with scaffold script shortcuts
+6. Provides integration guidelines for your specific stack
+```
+
+**Perfect For**: New project setup, standardizing development workflows, rapid infrastructure deployment, team onboarding acceleration
+
 ## 🧪 Meta-AI Testing Framework
 
 ### LLM-Native Test-Driven Development
@@ -600,7 +628,7 @@ This export contains **144 commands** that transform Claude Code from a producti
 1. **Cognitive Capital Deployment**: Commands as investment instruments for token budget optimization
 2. **Value Arbitrage Engine**: Systematic conversion of AI subscription costs into shippable work
 3. **Multi-Agent Portfolio**: Diversified cognitive workers across development domains
-4. **Quality Assurance ROI**: Automatic validation ensuring capital efficiency 
+4. **Quality Assurance ROI**: Automatic validation ensuring capital efficiency
 5. **Learning Compound Interest**: System improves returns through execution memory
 
 ### 📊 From Consumer to Capital Allocator
@@ -617,7 +645,7 @@ This export contains **144 commands** that transform Claude Code from a producti
 
 Claude Code will:
 1. **Analyze** your project structure and needs
-2. **Recommend** relevant commands for your workflow  
+2. **Recommend** relevant commands for your workflow
 3. **Install** selected commands to `.claude/commands/`
 4. **Configure** hook automation in `.claude/settings.json`
 5. **Test** setup and provide usage examples
@@ -632,7 +660,7 @@ Claude Code will:
 ```bash
 # After setup, use powerful workflow commands
 /execute "implement user authentication"  # → Full implementation workflow
-/pr "fix performance issues"             # → Analysis → fix → PR creation  
+/pr "fix performance issues"             # → Analysis → fix → PR creation
 /copilot                                # → Fix PR conflicts and comments
 ```
 
@@ -663,6 +691,7 @@ npm test src/components/test_file.js
 
 **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step workflows
 **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
+**Infrastructure Commands**: `/scaffold` - Repository setup and development environment configuration
 **Operational Commands**: `/headless`, `/handoff`, `/orchestrate` - Protocol enforcement
 
 ## ⚠️ Important Notes
@@ -691,7 +720,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ### 💡 Your First Steps as a Capital Allocator
 1. **Track Your "Touch Rate"**: Notice manual interventions needed - each is an automation opportunity
-2. **Build Your First Slash Command**: Automate one repetitive AI workflow 
+2. **Build Your First Slash Command**: Automate one repetitive AI workflow
 3. **Calculate Your Arbitrage Score**: Compare manual time vs AI cost for true capital efficiency
 
 This isn't just command sharing - it's **cognitive capital transformation** through the power of systematic AI orchestration.
@@ -706,12 +735,12 @@ This isn't just command sharing - it's **cognitive capital transformation** thro
      - Semantic versioning best practices (major.minor.patch)
      Example format:
      ### vX.Y.Z (YYYY-MM-DD)
-     
+
      **Export Statistics**:
      - Commands: N command definitions
-     - Hooks: N Claude Code automation hooks  
+     - Hooks: N Claude Code automation hooks
      - Scripts: N reusable scripts (scripts/ directory)
-     
+
      **Changes**:
      - Key change summaries based on actual modifications
      - Intelligent analysis of what's new/improved/fixed

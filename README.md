@@ -7,7 +7,7 @@
 Transform Claude Code from a productivity tool into development infrastructure that generates measurable velocity improvements. This command system demonstrates the paradigm shift from AI consumption to systematic workflow automation, achieving 5-20x development velocity through proven automation patterns.
 
 ### 🎯 Framework Metrics (Development Environment Results)
-- **900+ PRs generated** in 30-day validation period during active development  
+- **900+ PRs generated** in 30-day validation period during active development
 - **42-minute median merge time** with autonomous review pipeline (vs ~2-4 hours manual)
 - **78% test coverage** maintained automatically through command workflows
 - **156+ custom slash commands** creating systematic automation patterns
@@ -54,10 +54,10 @@ This isn't just a collection of commands - it's a **complete cognitive capital a
 
 ### 🏗️ Three Foundational Pillars Implementation
 
-#### 1. **Parallel Execution via Multiple Terminals** 
+#### 1. **Parallel Execution via Multiple Terminals**
 Our `/orch` command demonstrates this pillar by deploying multiple autonomous agents in isolated tmux sessions:
 - **Frontend Agent**: UI/UX implementation in parallel
-- **Backend Agent**: API development simultaneously  
+- **Backend Agent**: API development simultaneously
 - **Testing Agent**: Test automation concurrently
 - **Opus-Master**: Architecture coordination across all agents
 
@@ -70,7 +70,7 @@ Each command operates in isolated branch environments, enabling conflict-free pa
 #### 3. **Automation via Chained Commands**
 Command composition creates sophisticated autonomous workflows:
 - `/pr` chains: `/think` → `/execute` → `/push` → `/copilot` → `/review`
-- `/copilot` orchestrates: analyze → fix → test → document → verify  
+- `/copilot` orchestrates: analyze → fix → test → document → verify
 - `/execute` combines: plan → approve → implement → validate
 
 ### Command Chaining Examples
@@ -424,6 +424,34 @@ Integration Layer:
 /copilot  # If tests fail → /fix → /test → retry until success
 ```
 
+### `/scaffold` - Repository Setup and Infrastructure Deployment
+
+**What It Does**: Rapidly scaffolds essential development infrastructure by copying proven development scripts from the claude-commands repository into any target repository with intelligent technology stack adaptation.
+
+**Core Infrastructure Components**:
+1. **Root Level Scripts**: `create_worktree.sh`, `integrate.sh`, `schedule_branch_work.sh`
+2. **Scripts Directory**: `claude_mcp.sh`, `claude_start.sh`, `codebase_loc.sh`, `coverage.sh`, `create_snapshot.sh`, `loc.sh`, `push.sh`, `resolve_conflicts.sh`, `run_lint.sh`, `run_tests_with_coverage.sh`, `setup-github-runner.sh`, `sync_branch.sh`
+
+**LLM Adaptation Intelligence**:
+- **Technology Stack Detection**: Auto-detects Node.js, Python, Go, Rust, Java projects
+- **Tool Integration**: Adapts scripts for Jest, pytest, ESLint, golangci-lint, cargo clippy
+- **CI/CD Integration**: GitHub Actions, GitLab CI, and other CI system compatibility
+- **Configuration Updates**: Package manager script integration and toolchain setup
+
+**Real Example**:
+```bash
+/scaffold
+↓
+1. Copies 17 essential development scripts to your project
+2. Detects your tech stack (e.g., Node.js with TypeScript)
+3. Adapts run_lint.sh to use 'npm run lint' or 'npx eslint'
+4. Adapts run_tests_with_coverage.sh to use 'jest --coverage'
+5. Updates package.json with scaffold script shortcuts
+6. Provides integration guidelines for your specific stack
+```
+
+**Perfect For**: New project setup, standardizing development workflows, rapid infrastructure deployment, team onboarding acceleration
+
 ## 🧪 Meta-AI Testing Framework
 
 ### LLM-Native Test-Driven Development
@@ -588,7 +616,7 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting: A Cognitive Capital Management System
 
-This export contains **163 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
+This export contains **166 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
 
 > **Note**: Command count is automatically updated during export to reflect the actual number of commands, libraries, and utilities included.
 
@@ -600,7 +628,7 @@ This export contains **163 commands** that transform Claude Code from a producti
 1. **Cognitive Capital Deployment**: Commands as investment instruments for token budget optimization
 2. **Value Arbitrage Engine**: Systematic conversion of AI subscription costs into shippable work
 3. **Multi-Agent Portfolio**: Diversified cognitive workers across development domains
-4. **Quality Assurance ROI**: Automatic validation ensuring capital efficiency 
+4. **Quality Assurance ROI**: Automatic validation ensuring capital efficiency
 5. **Learning Compound Interest**: System improves returns through execution memory
 
 ### 📊 From Consumer to Capital Allocator
@@ -617,7 +645,7 @@ This export contains **163 commands** that transform Claude Code from a producti
 
 Claude Code will:
 1. **Analyze** your project structure and needs
-2. **Recommend** relevant commands for your workflow  
+2. **Recommend** relevant commands for your workflow
 3. **Install** selected commands to `.claude/commands/`
 4. **Configure** hook automation in `.claude/settings.json`
 5. **Test** setup and provide usage examples
@@ -632,7 +660,7 @@ Claude Code will:
 ```bash
 # After setup, use powerful workflow commands
 /execute "implement user authentication"  # → Full implementation workflow
-/pr "fix performance issues"             # → Analysis → fix → PR creation  
+/pr "fix performance issues"             # → Analysis → fix → PR creation
 /copilot                                # → Fix PR conflicts and comments
 ```
 
@@ -663,6 +691,7 @@ npm test src/components/test_file.js
 
 **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step workflows
 **Cognitive Commands**: `/think`, `/arch`, `/debug`, `/learn` - Analysis and planning
+**Infrastructure Commands**: `/scaffold` - Repository setup and development environment configuration
 **Operational Commands**: `/headless`, `/handoff`, `/orchestrate` - Protocol enforcement
 
 ## ⚠️ Important Notes
@@ -691,12 +720,41 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ### 💡 Your First Steps as a Capital Allocator
 1. **Track Your "Touch Rate"**: Notice manual interventions needed - each is an automation opportunity
-2. **Build Your First Slash Command**: Automate one repetitive AI workflow 
+2. **Build Your First Slash Command**: Automate one repetitive AI workflow
 3. **Calculate Your Arbitrage Score**: Compare manual time vs AI cost for true capital efficiency
 
 This isn't just command sharing - it's **cognitive capital transformation** through the power of systematic AI orchestration.
 
 ## 📚 Version History
+
+### v1.14.0 (2025-09-26)
+
+**Export Statistics**:
+- **166 Commands**: Complete workflow orchestration system
+- **37 Hooks**: Claude Code automation and workflow hooks
+- **17 Scripts**: Development and automation tools (scripts/ directory)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Scripts Included**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated scripts export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
 
 ### v1.13.0 (2025-09-21)
 

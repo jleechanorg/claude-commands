@@ -20,7 +20,7 @@
 **Quad-Perspective Analysis**:
 1. **Claude Perspective**: System architecture, design patterns, maintainability, technical debt
 2. **Gemini Perspective**: Performance optimization, scalability concerns, alternative approaches, industry best practices
-3. **Grok Perspective**: Unconventional insights, real-world practicality, contrarian analysis, creative solutions
+3. **Cursor Perspective**: Unconventional insights, real-world practicality, contrarian analysis, creative solutions
 4. **Perplexity (GPT-5) Perspective**: Latest architectural patterns, cutting-edge best practices, modern framework recommendations, state-of-the-art security approaches
 
 ## Scope Options
@@ -52,7 +52,7 @@
 4. **Documentation Review**: Check existing architecture docs against memory patterns
 5. **Dependencies Analysis**: Review external dependencies with memory context
 
-### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Grok + Perplexity GPT-5)
+### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Cursor + Perplexity GPT-5)
 **Execute in parallel for maximum speed:**
 
 **Track A - Claude Analysis (MVP Pragmatism):**
@@ -69,8 +69,8 @@
 - **Risk Assessment**: Focus on user-facing failures, not edge cases
 - **Innovation Opportunities**: Avoid shiny objects, stick to proven solutions
 
-**Track C - Grok Analysis (Unconventional Insights):**
-- **Implementation**: Use `grok-consultant` agent for xAI Grok perspective via Gemini MCP proxy
+**Track C - Cursor Analysis (Unconventional Insights):**
+- **Implementation**: Use `cursor-consultant` agent for Cursor's real-time perspective via the Cursor CLI
 - **Reality Check**: What will actually break in production vs theoretical concerns
 - **Unconventional Solutions**: Creative approaches that conventional analysis misses
 - **Contrarian Assessment**: Challenge established best practices and assumptions

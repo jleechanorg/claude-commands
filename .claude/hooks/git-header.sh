@@ -3,6 +3,19 @@
 # Usage: ./git-header.sh or git header (if aliased)
 # Works from any directory within a git repository or worktree
 
+# Source cross-platform timeout utilities
+SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+if [ -r "$SCRIPT_DIR/timeout-utils.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/timeout-utils.sh"
+else
+    gh_with_timeout() {
+        local _timeout="$1"
+        shift
+        gh "$@"
+    }
+fi
+
 # Find the git directory (works in worktrees and submodules)
 git_dir=$(git rev-parse --git-dir 2>/dev/null)
 if [ $? -ne 0 ]; then
@@ -86,7 +99,16 @@ else
 
     # Check if cache exists and is less than 5 minutes old
     if [ -f "$cache_file" ] && [ -n "$current_commit" ]; then
-        cache_age=$(($(date +%s) - $(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")))
+        # Portable file modification time detection
+        if command -v perl >/dev/null 2>&1; then
+            # Use perl for maximum portability
+            cache_mtime=$(perl -e 'print((stat($ARGV[0]))[9])' "$cache_file" 2>/dev/null || echo "0")
+        else
+            # Fallback to platform-specific stat commands
+            cache_mtime=$(stat -f%m "$cache_file" 2>/dev/null || stat -c%Y "$cache_file" 2>/dev/null || echo "0")
+        fi
+
+        cache_age=$(($(date +%s) - cache_mtime))
         if [ "$cache_age" -lt 300 ]; then  # 300 seconds = 5 minutes
             cache_valid=true
             pr_text=$(cat "$cache_file" 2>/dev/null || echo "none")
@@ -95,24 +117,39 @@ else
 
     # If no valid cache, perform network lookup with timeout
     if [ "$cache_valid" = false ] && [ -n "$current_commit" ]; then
-        pr_number=$(timeout 1 git ls-remote origin 'refs/pull/*/head' 2>/dev/null | \
-                   grep "$current_commit" | \
-                   sed 's/.*refs\/pull\/\([0-9]*\)\/head.*/\1/' | \
-                   head -1 2>/dev/null)
-        if [ -n "$pr_number" ]; then
-            # Extract repo info to build PR URL
-            repo_url=$(git remote get-url origin 2>/dev/null)
-            if [[ "$repo_url" =~ github\.com[:/]([^/]+/[^/]+)\.git ]]; then
-                repo_path="${BASH_REMATCH[1]}"
-                pr_text="#$pr_number https://github.com/$repo_path/pull/$pr_number"
-            else
-                pr_text="#$pr_number"
+        pr_text="none"
+        if command -v gh >/dev/null 2>&1; then
+            pr_info=""
+
+            # First try to look up by branch name (works for local branches tied to PRs)
+            if [ -n "$local_branch" ]; then
+                pr_info=$(gh_with_timeout 5 pr view --json number,url --template '{{.number}} {{.url}}' "$local_branch" 2>/dev/null)
             fi
-        else
-            pr_text="none"
+
+            # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
+            if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
+                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+            fi
+
+            if [ -n "$pr_info" ]; then
+                # Split the PR info into number and URL (preserve $1)
+                pr_number="${pr_info%% *}"
+                pr_url="${pr_info#* }"
+                # Handle case where there's no URL (only number)
+                if [ "$pr_number" = "$pr_url" ]; then
+                    pr_url=""
+                fi
+                if [ -n "$pr_number" ]; then
+                    if [ -n "$pr_url" ]; then
+                        pr_text="#$pr_number $pr_url"
+                    else
+                        pr_text="#$pr_number"
+                    fi
+                fi
+            fi
         fi
 
-        # Cache the result
+        # Cache the result (even if none to avoid repeated lookups)
         echo "$pr_text" > "$cache_file" 2>/dev/null
     fi
 fi
