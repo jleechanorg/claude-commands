@@ -8,13 +8,6 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/timeout-utils.sh"
 raw_input=$(safe_read_stdin)
 
-# CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
-# Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
-if [[ "$raw_input" == SLASH_COMMAND_EXECUTE:* ]]; then
-    echo "$raw_input"
-    exit 0
-fi
-
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; default to a secure temp file when unset
