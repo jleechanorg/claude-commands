@@ -14,6 +14,7 @@
 - **Enhanced UX**: Leverages the improved genesis.py interface
 - **🚨 Self-Determination**: Genesis automatically detects completion with rigorous exit criteria
 - **🔍 Validation Protocol**: End-to-end validation prevents false success claims
+- **🔄 Iterate Mode**: Uses --iterate flag to skip initial Cerebras generation, start with iterative refinement
 
 ## Execution Instructions
 
@@ -52,7 +53,7 @@ if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; th
     # Verify goal directory has required files
     if [[ -f "$GOAL_DIR/00-goal-definition.md" ]]; then
         echo "📁 Using existing goal directory: $GOAL_DIR"
-        GENESIS_CMD="python $PWD/genesis/genesis.py '$GOAL_DIR' $ITERATIONS"
+        GENESIS_CMD="python \"$PWD/genesis/genesis.py\" \"$GOAL_DIR\" \"$ITERATIONS\" --iterate"
     else
         echo "❌ Goal directory $GOAL_DIR exists but missing goal definition files"
         echo "💡 Use: /gene \"your goal description here\" to create new goals"
@@ -61,7 +62,7 @@ if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; th
 else
     # New goal mode - use --refine
     echo "🔄 Creating new goal with: $INPUT"
-    GENESIS_CMD="python $PWD/genesis/genesis.py --refine '$INPUT' $ITERATIONS"
+    GENESIS_CMD="python \"$PWD/genesis/genesis.py\" --refine \"$INPUT\" \"$ITERATIONS\" --iterate"
 fi
 
 # Generate unique session name
@@ -204,7 +205,7 @@ agent_config = {
     'type': 'genesis',
     'session_name': 'gene-20250923-0945',
     'working_dir': '/Users/jleechan/projects_other/codex_plus',
-    'genesis_cmd': 'python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine 'build a REST API for user management with authentication' 5',
+    'genesis_cmd': 'python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate',
     'environment': {},
     'requires_llm': False
 }
@@ -218,7 +219,7 @@ print(f'Genesis task result: {result}')
 =======================================
 
 📋 Alternative: Direct tmux execution
-tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects_other/codex_plus && python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine 'build a REST API for user management with authentication' 5; exec bash'
+tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects_other/codex_plus && python /Users/jleechan/projects/worktree_ralph/genesis/genesis.py --refine "build a REST API for user management with authentication" 5 --iterate; exec bash'
 
 🔄 Session Management:
   Attach:     tmux attach -t gene-20250923-0945

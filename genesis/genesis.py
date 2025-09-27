@@ -713,7 +713,7 @@ def load_goal_from_directory(goal_dir):
     if len(goal_dir) > 200:
         print(f"❌ Error: Goal directory path too long ({len(goal_dir)} chars > 200 limit)", flush=True)
         print(f"💡 Hint: Use --refine mode for long descriptions:", flush=True)
-        print(f"   python proto_genesis.py --refine 'short description' [iterations]", flush=True)
+        print(f"   python genesis/genesis.py --refine 'short description' [iterations]", flush=True)
         print(f"💡 Or create a proper goal directory with short name:", flush=True)
         print(f"   mkdir goals/2025-09-22-debug-codex && populate with goal files", flush=True)
         return None, None
@@ -727,7 +727,7 @@ def load_goal_from_directory(goal_dir):
     except OSError as e:
         if e.errno == 63:  # File name too long
             print(f"❌ Error: Goal directory name too long for filesystem", flush=True)
-            print(f"💡 Use --refine mode: python proto_genesis.py --refine 'description' [iterations]", flush=True)
+            print(f"💡 Use --refine mode: python genesis/genesis.py --refine 'description' [iterations]", flush=True)
             return None, None
         else:
             print(f"❌ Error accessing goal directory: {e}", flush=True)
@@ -1666,7 +1666,7 @@ def update_progress_file(goal_dir, iteration_data):
 
 
 
-def detect_workflow_phase(iteration_num, total_iterations):
+def detect_workflow_phase(iteration_num, total_iterations, skip_initial_generation=False):
     """
     Detect workflow phase based on iteration number.
 
@@ -1680,11 +1680,14 @@ def detect_workflow_phase(iteration_num, total_iterations):
     Args:
         iteration_num: Current iteration (1-based)
         total_iterations: Total planned iterations
+        skip_initial_generation: If True, skip bulk generation phase (--iterate flag)
 
     Returns:
         str: "BULK_GENERATION" or "ITERATIVE_REFINEMENT"
     """
-    if iteration_num <= 2:
+    if skip_initial_generation:
+        return "ITERATIVE_REFINEMENT"
+    elif iteration_num <= 2:
         return "BULK_GENERATION"
     else:
         return "ITERATIVE_REFINEMENT"
@@ -1880,13 +1883,19 @@ def main():
 
     # Parse arguments
     if len(sys.argv) < 2:
-        print("Usage: python proto_genesis.py <goal_directory> [max_iterations]")
-        print("   or: python proto_genesis.py --refine \"<goal>\" [max_iterations] [--interactive]")
+        print("Usage: python genesis/genesis.py <goal_directory> [max_iterations]")
+        print("   or: python genesis/genesis.py --refine \"<goal>\" [max_iterations] [--interactive] [--iterate]")
         print("")
         print("Examples:")
-        print("  python proto_genesis.py goals/2025-01-22-1530-rest-api/ 10")
-        print("  python proto_genesis.py --refine \"build a REST API\" 5")
-        print("  python proto_genesis.py --refine \"build a REST API\" 5 --interactive  # requires approval")
+        print("  python genesis/genesis.py goals/2025-01-22-1530-rest-api/ 10")
+        print("  python genesis/genesis.py --refine \"build a REST API\" 5")
+        print("  python genesis/genesis.py --refine \"build a REST API\" 5 --interactive  # requires approval")
+        print("  python genesis/genesis.py --refine \"build a REST API\" 5 --iterate     # skip initial generation")
+        print("")
+        print("Flags:")
+        print("  --interactive: Require manual approval for refinements")
+        print("  --iterate:     Skip initial Cerebras generation phase, start with iterative refinement")
+        print("  --codex:       Use Codex instead of Claude for generation")
         print("")
         print("Note: Refinement is auto-approved by default. Use --interactive for manual approval.")
         sys.exit(1)
@@ -1898,6 +1907,14 @@ def main():
         print("🔧 Using codex (explicit flag)", flush=True)
     else:
         print("🔧 Using claude (default)", flush=True)
+
+    # Check for --iterate flag to skip initial cerebras generation
+    skip_initial_generation = "--iterate" in sys.argv
+    if skip_initial_generation:
+        sys.argv.remove("--iterate")
+        print("🔄 Using --iterate flag: Skipping initial Cerebras generation phase", flush=True)
+    else:
+        print("🚀 Standard mode: Will perform initial Cerebras generation", flush=True)
 
     # Check for pool size
     pool_size = 5  # default
@@ -2083,8 +2100,10 @@ def main():
         }
 
         # ENHANCED WORKFLOW: Detect workflow phase based on iteration
-        workflow_phase = detect_workflow_phase(i + 1, max_iterations)
+        workflow_phase = detect_workflow_phase(i + 1, max_iterations, skip_initial_generation)
         print(f"📊 WORKFLOW PHASE: {workflow_phase}")
+        if skip_initial_generation:
+            print("🔄 --iterate flag active: Skipping Cerebras bulk generation, starting with iterative refinement")
 
         # Initialize milestone tracking in session if Stage B
         if workflow_phase == "ITERATIVE_REFINEMENT":

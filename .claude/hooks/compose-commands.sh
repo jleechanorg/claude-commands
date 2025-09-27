@@ -8,6 +8,7 @@ script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/timeout-utils.sh"
 raw_input=$(safe_read_stdin)
 
+# Note: SLASH_COMMAND_EXECUTE patterns removed - handled by SlashCommand MCP tool directly
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; default to a secure temp file when unset
