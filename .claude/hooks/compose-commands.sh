@@ -24,8 +24,21 @@ fi
 # Handle both interactive and non-interactive modes without hanging
 # CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
 # but the parent process context is different
-# FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat
-raw_input=$(safe_read_stdin 5)
+# FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat,
+#        while honoring CLI-provided fallbacks to avoid TTY hangs
+# Prefer explicit inputs before attempting to read stdin
+if [[ -n "${CLAUDE_COMPOSE_INPUT:-}" ]]; then
+  raw_input="$CLAUDE_COMPOSE_INPUT"
+elif [[ $# -gt 0 ]]; then
+  raw_input="$*"
+else
+  raw_input=""
+fi
+
+# Read stdin with timeout-aware helper if we still have no content
+if [[ -z "$raw_input" ]]; then
+  raw_input=$(safe_read_stdin 5)
+fi
 
 # CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
 # Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses

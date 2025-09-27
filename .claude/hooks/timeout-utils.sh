@@ -86,22 +86,18 @@ portable_timeout() {
 safe_read_stdin() {
     local timeout_duration="${1:-5}"
 
-    # Check if stdin is a terminal (interactive mode)
-    if [ -t 0 ]; then
-        # stdin is a terminal, no input expected
-        echo ""
-        return 0
-    fi
+    # Helper to perform the actual read with timeout-protected cat
+    safe_read_stdin__read_with_cat() {
+        local data=""
+        if data=$(portable_timeout "$timeout_duration" cat 2>/dev/null); then
+            printf '%s' "$data"
+            return 0
+        fi
 
-    # Read stdin content within the timeout using portable_timeout and cat
-    local input_data=""
-    if input_data=$(portable_timeout "$timeout_duration" cat 2>/dev/null); then
-        printf '%s' "$input_data"
-    else
         local status=$?
-        if [ -n "$input_data" ]; then
+        if [ -n "$data" ]; then
             # Even on timeout, return any buffered data that was read
-            printf '%s' "$input_data"
+            printf '%s' "$data"
         elif [ "$status" -eq 124 ]; then
             # Timed out without receiving input
             printf ''
@@ -109,7 +105,68 @@ safe_read_stdin() {
             # Unknown failure - degrade gracefully
             printf ''
         fi
+    }
+
+    # Check if stdin is a terminal (interactive mode)
+    if [ -t 0 ]; then
+        # Attempt to non-blockingly read any available data from the TTY
+        if command -v python3 >/dev/null 2>&1; then
+            local python_output
+            python_output=$(python3 - "$timeout_duration" <<'PY'
+import os
+import select
+import sys
+import time
+
+timeout = float(sys.argv[1])
+fd = sys.stdin.buffer.fileno()
+end_time = time.time() + timeout
+chunks = []
+
+while True:
+    remaining = end_time - time.time()
+    if remaining <= 0:
+        break
+
+    ready, _, _ = select.select([fd], [], [], remaining)
+    if not ready:
+        break
+
+    try:
+        data = os.read(fd, 4096)
+    except BlockingIOError:
+        continue
+
+    if not data:
+        break
+
+    chunks.append(data)
+
+    if len(data) < 4096:
+        ready_again, _, _ = select.select([fd], [], [], 0)
+        if not ready_again:
+            break
+
+sys.stdout.buffer.write(b"".join(chunks))
+PY
+)
+            local python_status=$?
+            if [ $python_status -eq 0 ] && [ -n "$python_output" ]; then
+                printf '%s' "$python_output"
+                return 0
+            elif [ $python_status -eq 0 ]; then
+                # No data was available within the timeout
+                printf ''
+                return 0
+            fi
+            # Fall back to cat-based reader if Python fails
+        fi
+
+        safe_read_stdin__read_with_cat
+        return 0
     fi
+
+    safe_read_stdin__read_with_cat
 }
 
 # GitHub CLI operations with portable timeout
