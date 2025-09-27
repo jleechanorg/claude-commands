@@ -704,11 +704,11 @@ class TestInvisibleContextExtraction(unittest.TestCase):
 
         # Verify branch-safe temp file creation
         self.assertIn('git branch --show-current', script_content)
-        # Check for current branch-safe patterns in the script
+        # Check for current branch-safe patterns in the script (updated for macOS compatibility)
         self.assertTrue(
-            'cerebras_ctx_XXXXXX.txt' in script_content or
-            'cerebras_request_${CURRENT_BRANCH_FOR_TEMP}_' in script_content,
-            "Script should contain branch-safe temporary file naming patterns"
+            'cerebras_ctxXXXXXX' in script_content or
+            'cerebras_request_${CURRENT_BRANCH_FOR_TEMP}XXXXXX' in script_content,
+            "Script should contain branch-safe temporary file naming patterns with trailing X's for macOS compatibility"
         )
         self.assertIn("sed 's/[^a-zA-Z0-9_-]/_/g'", script_content)  # Character sanitization
 
