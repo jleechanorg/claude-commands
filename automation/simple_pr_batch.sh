@@ -188,17 +188,22 @@ post_codex_instruction() {
     local decision="post:"
 
     if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
-        decision=$(PR_STATE_JSON="$pr_state_json" python3 - "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
+        local pr_state_tmp
+        pr_state_tmp=$(mktemp)
+        printf "%s" "$pr_state_json" > "$pr_state_tmp"
+
+        decision=$(python3 - "$pr_state_tmp" "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
 import json
-import os
 import sys
 
-marker_prefix = sys.argv[1]
-marker_suffix = sys.argv[2]
+state_path = sys.argv[1]
+marker_prefix = sys.argv[2]
+marker_suffix = sys.argv[3]
 
 try:
-    pr_data = json.loads(os.environ.get("PR_STATE_JSON", ""))
-except json.JSONDecodeError:
+    with open(state_path, "r", encoding="utf-8") as fh:
+        pr_data = json.load(fh)
+except (OSError, json.JSONDecodeError):
     print("post:")
     sys.exit(0)
 
@@ -226,6 +231,13 @@ if head_sha:
 print(f"{decision}:{head_sha or ''}")
 PY
 )
+        local python_status=$?
+        rm -f "$pr_state_tmp"
+
+        if [ $python_status -ne 0 ]; then
+            log "⚠️ Failed to analyze PR state for PR #$pr_number; proceeding with Codex comment"
+            decision="post:"
+        fi
     else
         log "⚠️ Unable to fetch PR state; proceeding with Codex comment"
     fi
