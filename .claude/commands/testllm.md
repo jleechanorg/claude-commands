@@ -140,7 +140,9 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - Create systematic validation approach before any execution
 
 ### Step 2: Test Environment Setup
-- Verify real backend servers are running (Flask on :5005, React V2 on :3002)
+- Review `run_local_server.sh` to understand how the local environment should be launched
+- Detect whether the local server stack started by `run_local_server.sh` is already running
+- If servers are not running, execute `run_local_server.sh` and wait for successful startup
 - Ensure real authentication is configured (no test mode)
 - Validate Playwright MCP availability for browser automation
 - Confirm network connectivity for real API calls
@@ -198,7 +200,8 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
    └── ⚠️ GATE: Cannot proceed without complete requirements checklist
 
 2. Environment Validation
-   ├── Check server status (backend :5005, frontend :3002)
+   ├── Inspect `run_local_server.sh` for the expected services and health checks
+   ├── Determine if the local server stack is already running; start it with `run_local_server.sh` if needed
    ├── Verify authentication configuration
    ├── Confirm Playwright MCP availability
    ├── Validate network connectivity
