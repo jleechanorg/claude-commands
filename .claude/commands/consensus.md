@@ -52,13 +52,13 @@ Run all 5 agents simultaneously using Task tool parallel execution with proper c
 - **`cursor-consultant`**: Practical concerns, deployment readiness
 - **`code-centralization-consultant`**: Duplication detection, shared utility recommendations
 
-### Agent Context & Execution Framework
+### Enhanced Agent Context & Execution Framework
 
-**Agent Infrastructure**: Uses existing `Task` tool with `subagent_type` parameter for parallel multi-agent coordination. This is the same infrastructure used successfully by `/reviewdeep` and `/arch` commands.
+**Agent Infrastructure**: Uses existing `Task` tool with `subagent_type` parameter for parallel multi-agent coordination. Follows proven patterns from `/reviewdeep` and `/arch` commands with optimized execution orchestration.
 
-**Execution Guards**: Per-agent timeout (180 seconds), token caps (5000 tokens max), and maximum 10 findings per round to prevent runaway executions.
+**Execution Guards**: Per-agent timeout (180 seconds), token caps (5000 tokens max), and maximum 10 findings per round to prevent runaway executions. Enhanced with context-aware resource allocation.
 
-### Agent Role Definitions:
+**Command Orchestration**: Delegates to `/execute` for intelligent coordination following `/reviewdeep` optimization patterns:
 
 **Agent Execution**: Launch 5 agents in parallel using Task tool with 180-second timeout:
 
@@ -257,22 +257,33 @@ Following reviewdeep.md patterns for solo developer optimization:
 
 Following `/reviewdeep` and `/arch` patterns for proper agent context:
 
-### **Enhanced Agent Prompt Template** (Bot-Level Implementation Analysis)
+### **Enhanced Agent Prompt Template** (Context-Aware Multi-Agent Analysis)
+
+Following proven patterns from `/reviewdeep` and `/arch` commands with enhanced context specialization:
+
 ```markdown
-[Agent Role] analysis of [target] for solo MVP project context.
+[Agent Role] consensus analysis of [target] for solo MVP project context.
 
-**Context**:
-- Solo MVP project (pre-launch, GitHub rollbacks available)
-- Current PR: [PR details]
-- Modified files: [file list]
-- Focus: Implementation correctness AND architecture quality
-- Infrastructure: This is a working multi-agent system using Task tool parallel execution
+**ENHANCED CONTEXT FRAMEWORK**:
+- **Project Type**: Solo MVP (pre-launch, GitHub rollbacks available for safety)
+- **Current Scope**: [PR details, modified files, scope definition]
+- **Infrastructure**: Working multi-agent consensus system using Task tool parallel execution
+- **Agent Network**: Part of 4-agent consensus (code-review, codex-consultant, gemini-consultant, cursor-consultant)
+- **Goal**: Fast consensus-building with 3-round maximum, early termination on agreement
+- **Focus Balance**: Implementation correctness AND architecture quality (both strategic and tactical)
 
-**DUAL-LAYER ANALYSIS FRAMEWORK**:
-1. **Strategic Layer**: [Role-specific focus areas], architecture, patterns
-2. **Tactical Layer**: Implementation logic, shell scripting, error handling
-3. **Solo MVP Context**: No team coordination, practical deployment focus
-4. **Rollback Safety**: GitHub provides recovery, allow measured risk-taking
+**ROLE-SPECIFIC CONTEXT SPECIALIZATION**:
+- **code-review**: Architectural correctness & MVP maintainability expert
+- **codex-consultant**: System design & scaling intelligence specialist
+- **gemini-consultant**: 2025 best practices & optimization patterns authority
+- **cursor-consultant**: Pragmatic reality check & deployment readiness validator
+
+**COMPREHENSIVE ANALYSIS FRAMEWORK**:
+1. **Strategic Layer**: [Role-specific expertise], architecture patterns, system design
+2. **Tactical Layer**: Implementation logic, code correctness, error handling
+3. **Consensus Layer**: Inter-agent agreement consideration, conflict resolution
+4. **Solo MVP Reality**: No team constraints, practical deployment focus, rollback safety net
+5. **Speed Optimization**: Fast analysis with early termination on critical issues
 
 **FOCUSED ANALYSIS FOR SOLO MVP** (Bugs, Correctness, Critical Security Only):
 
@@ -314,21 +325,73 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context:
 - ❌ Team workflow and collaboration patterns
 - ❌ Advanced accessibility and compliance requirements
 
-**Output Required**:
-- PASS/REWORK verdict with confidence score (1-10)
-- Specific issues with file:line@commit-sha references (MANDATORY) plus 3-5 line snippet anchors
-- Both strategic AND tactical concerns
-- Implementation bugs and logic errors
-- Solo developer deployment readiness assessment
+**OUTPUT REQUIREMENTS FOR CONSENSUS**:
+- **Verdict**: PASS/REWORK with confidence score (1-10)
+- **Evidence**: Specific issues with file:line@commit-sha references (MANDATORY)
+- **Code Anchors**: 3-5 line snippet anchors for validation
+- **Dual Analysis**: Both strategic AND tactical concerns addressed
+- **Implementation Focus**: Real bugs, logic errors, deployment blockers
+- **Consensus Awareness**: Consider inter-agent agreement and conflict resolution
+- **Solo MVP Readiness**: Practical deployment assessment for solo developer
 
-Provide [role] perspective covering BOTH architecture AND implementation correctness.
+**AGENT-SPECIFIC CONTEXT ENHANCEMENT**:
 ```
 
-### **Context Variables Populated**
+### **Specialized Agent Context Templates**
+
+Each agent receives role-specific context enhancement following successful patterns from `/reviewdeep` and `/arch`:
+
+#### **`code-review` Agent Context**:
+```markdown
+ARCHITECTURAL CORRECTNESS & MVP MAINTAINABILITY analysis for solo MVP consensus.
+
+**Your Specialization**: Architecture quality, SOLID principles, code maintainability
+**Context Awareness**: You are the architectural authority in 4-agent consensus system
+**Focus Priority**: Design patterns, technical debt, scalability foundations
+**Consensus Role**: Architecture quality gatekeeper - block on fundamental design flaws
+**Solo MVP Lens**: Practical architecture that supports rapid iteration and deployment
+```
+
+#### **`codex-consultant` Agent Context**:
+```markdown
+SYSTEM DESIGN & SCALING INTELLIGENCE analysis for solo MVP consensus.
+
+**Your Specialization**: Advanced system architecture, performance, distributed patterns
+**Context Awareness**: You provide scaling perspective in consensus-building process
+**Focus Priority**: Performance bottlenecks, database design, system integration patterns
+**Consensus Role**: Scalability validator - ensure architecture supports growth
+**Solo MVP Lens**: Foundation for scaling without over-engineering initial implementation
+```
+
+#### **`gemini-consultant` Agent Context**:
+```markdown
+2025 BEST PRACTICES & OPTIMIZATION PATTERNS analysis for solo MVP consensus.
+
+**Your Specialization**: Modern frameworks, security best practices, optimization patterns
+**Context Awareness**: You ensure modern standards in consensus evaluation
+**Focus Priority**: Latest patterns, security (practical not paranoid), performance optimization
+**Consensus Role**: Best practices validator - ensure code follows 2025 standards
+**Solo MVP Lens**: Modern practices adapted for solo developer speed and efficiency
+```
+
+#### **`cursor-consultant` Agent Context**:
+```markdown
+PRAGMATIC REALITY CHECK & DEPLOYMENT READINESS analysis for solo MVP consensus.
+
+**Your Specialization**: Contrarian analysis, real-world deployment, practical concerns
+**Context Awareness**: You are the final reality check in consensus process
+**Focus Priority**: Deployment practicalities, real failure modes, solo developer workflow
+**Consensus Role**: Reality validator - ensure recommendations are actually implementable
+**Solo MVP Lens**: What actually works in production vs theoretical perfection
+```
+
+### **Dynamic Context Variables**
 - `{PR_NUMBER}`: Auto-detected from current branch context
 - `{FILE_LIST}`: From git diff and PR analysis
 - `{TARGET_SCOPE}`: User-specified scope or default PR context
 - `{MVP_STAGE}`: Pre-launch, rollback-safe development phase
+- `{AGENT_NETWORK}`: 4-agent consensus system with role specializations
+- `{CONSENSUS_ROUND}`: Current round (1-3) in consensus-building process
 
 ## Post-Run Clean Up
 1. Ensure working tree cleanliness (`git status --short`).

@@ -149,7 +149,7 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CO
     # Create branch-safe temporary file for auto-extracted context
     BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
     [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
-    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_auto_context_${BRANCH_NAME}_XXXXXX.txt" 2>/dev/null)"
+    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_ctx_XXXXXX.txt" 2>/dev/null)"
 
     # Validate temporary file creation (graceful degradation on failure)
     if [ -z "$AUTO_CONTEXT_FILE" ]; then

@@ -1,8 +1,8 @@
-# /pgen Command (Alias)
+# /gen Command (Alias)
 
 **Alias for**: [`/proto_genesis`](./proto_genesis.md)
 
-**Usage**: `/pgen "goal description"`
+**Usage**: `/gen "goal description"`
 
 Refer to [`proto_genesis.md`](./proto_genesis.md) for full details.
 
