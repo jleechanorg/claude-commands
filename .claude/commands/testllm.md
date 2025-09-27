@@ -25,6 +25,9 @@ Execute test specifications directly as an LLM without generating intermediate s
 - **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
 
+### Mandatory First Step
+- **Read the Entire Suite First**: Before planning, checklist creation, or any execution, explicitly read every test specification in the `testing_llm/` directory to internalize scope, dependencies, and evidence requirements.
+
 ## Core Principles
 - **LLM-Native Execution**: Drive tests directly as Claude, no script generation
 - **Real Mode Only**: NEVER use mock mode, test mode, or simulated authentication
