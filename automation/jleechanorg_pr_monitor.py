@@ -17,7 +17,16 @@ import logging
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
+
 from automation_safety_manager import AutomationSafetyManager
+from codex_config import (
+    CODEX_COMMIT_MARKER_PREFIX,
+    CODEX_COMMIT_MARKER_SUFFIX,
+    CODEX_COMMENT_TEMPLATE,
+    DEFAULT_ASSISTANT_HANDLE as CODEX_DEFAULT_ASSISTANT_HANDLE,
+    build_default_comment,
+    normalise_handle,
+)
 
 
 class JleechanorgPRMonitor:
@@ -25,15 +34,8 @@ class JleechanorgPRMonitor:
 
     CODEX_COMMENT_ENV_VAR = "CODEX_COMMENT"
     ASSISTANT_HANDLE_ENV_VAR = "ASSISTANT_HANDLE"
-    DEFAULT_ASSISTANT_HANDLE = "codex"
-    DEFAULT_CODEX_COMMENT_TEMPLATE = (
-        "@{assistant_handle} use your judgment to fix comments from everyone or explain why it "
-        "should not be fixed. Follow binary response protocol every comment needs done or not "
-        "done classification explicitly with an explanation. Push any commits needed to remote "
-        "so the PR is updated."
-    )
-    CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
-    CODEX_COMMIT_MARKER_SUFFIX = "-->"
+    DEFAULT_ASSISTANT_HANDLE = CODEX_DEFAULT_ASSISTANT_HANDLE
+    DEFAULT_CODEX_COMMENT_TEMPLATE = CODEX_COMMENT_TEMPLATE
 
     def __init__(self):
         self.logger = self._setup_logging()
@@ -41,15 +43,20 @@ class JleechanorgPRMonitor:
         assistant_handle = os.environ.get(
             self.ASSISTANT_HANDLE_ENV_VAR, self.DEFAULT_ASSISTANT_HANDLE
         )
-        default_comment = self.DEFAULT_CODEX_COMMENT_TEMPLATE.format(
-            assistant_handle=assistant_handle
-        )
+        self.assistant_handle = normalise_handle(assistant_handle)
+        default_comment = build_default_comment(self.assistant_handle)
 
         # Allow overriding the Codex instruction from the environment
         self.CODEX_COMMENT_TEXT = os.environ.get(
             self.CODEX_COMMENT_ENV_VAR,
             default_comment,
         )
+
+        self.commit_marker_prefix = CODEX_COMMIT_MARKER_PREFIX
+        self.commit_marker_suffix = CODEX_COMMIT_MARKER_SUFFIX
+        # Backwards compatibility for tests/consumers accessing old attributes
+        self.CODEX_COMMIT_MARKER_PREFIX = self.commit_marker_prefix
+        self.CODEX_COMMIT_MARKER_SUFFIX = self.commit_marker_suffix
 
 
         # Safety manager integration
@@ -204,7 +211,7 @@ class JleechanorgPRMonitor:
         head_sha, comments = self._get_pr_comment_state(repository, pr_number)
 
         # Check if we already have an automation comment for this commit
-        if head_sha and self._has_automation_comment_for_commit(comments, head_sha):
+        if head_sha and self._has_codex_comment_for_commit(comments, head_sha):
             self.logger.info(f"♻️ Automation comment already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping")
             return True
 
@@ -245,7 +252,14 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30)
+            result = subprocess.run(
+                comment_cmd,
+                capture_output=True,
+                text=True,
+                check=True,
+                timeout=30,
+                shell=False,
+            )
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number}")
             return True
@@ -306,12 +320,15 @@ class JleechanorgPRMonitor:
         if '[ai automation]' in body.lower() or author.endswith('[bot]'):
             return False
 
-        # Known AI assistant usernames that we recognize as doing work
+        extra_handles = os.environ.get("ADDITIONAL_AI_HANDLES", "")
         ai_usernames = {
+            self.assistant_handle.lower(),
+            'coderabbitai',
             'claude-dev', 'codex-assistant', 'github-copilot',
             'claude', 'anthropic-claude', 'openai-codex', 'ai-assistant',
             'chatgpt-codex-connector'
         }
+        ai_usernames.update(h.strip().lstrip('@').lower() for h in extra_handles.split(',') if h.strip())
 
         # Must be from a known AI assistant
         if author not in ai_usernames:
@@ -358,6 +375,12 @@ class JleechanorgPRMonitor:
         # Check last few comments for human AI requests
         recent_comments = comments[-3:] if len(comments) >= 3 else comments
 
+        extra_handles = os.environ.get("ADDITIONAL_AI_HANDLES", "")
+        dynamic_mentions = {f"@{self.assistant_handle}"}
+        dynamic_mentions.update(
+            f"@{h.lstrip('@')}" for h in extra_handles.split(',') if h.strip()
+        )
+
         for comment in recent_comments:
             body = comment.get('body', '').lower()
             author = comment.get('author', {}).get('login', '')
@@ -368,22 +391,9 @@ class JleechanorgPRMonitor:
 
             # Look for humans addressing other AI assistants
             # We skip if they mention other assistants to avoid interference
-            other_ai_mentions = ['@github-copilot', '@claude', '@coderabbitai']
-            if any(mention in body for mention in other_ai_mentions):
+            other_ai_mentions = {'@github-copilot', '@claude', '@coderabbitai', '@codex'} | dynamic_mentions
+            if any(mention.lower() in body for mention in other_ai_mentions):
                 self.logger.debug(f"Found recent human AI request from {author}")
-                return True
-
-        return False
-
-    def _has_automation_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
-        """Check if we already have an automation comment for this specific commit"""
-        if not comments or not head_sha:
-            return False
-
-        for comment in comments:
-            body = comment.get('body', '')
-            if '[AI automation]' in body and head_sha[:8] in body:
-                self.logger.debug(f"Found existing automation comment for commit {head_sha[:8]}")
                 return True
 
         return False
@@ -396,7 +406,7 @@ class JleechanorgPRMonitor:
                 "gh", "pr", "view", str(pr_number),
                 "--repo", repository,
                 "--json", "statusCheckRollup"
-            ], capture_output=True, text=True, check=True, timeout=30)
+            ], capture_output=True, text=True, check=True, timeout=30, shell=False)
 
             pr_status = json.loads(result.stdout)
             status_checks = pr_status.get('statusCheckRollup', [])
@@ -436,7 +446,8 @@ class JleechanorgPRMonitor:
             if body.strip():
                 review_feedback.append(f"- {author}: {body[:200]}{'...' if len(body) > 200 else ''}")
 
-        comment_body = f"""@codex [AI automation] Please review and fix this PR
+        handle = f"@{self.assistant_handle}"
+        comment_body = f"""{handle} [AI automation] Please review and fix this PR
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
@@ -479,6 +490,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 {chr(10).join(f"- {action}" for action in required_actions)}
 
 {final_instruction}"""
+
+        if head_sha:
+            comment_body += f"\n\n{self.commit_marker_prefix}{head_sha}{self.commit_marker_suffix}"
 
         return comment_body
 
@@ -538,12 +552,12 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         if not comment_body:
             return None
 
-        prefix_index = comment_body.find(self.CODEX_COMMIT_MARKER_PREFIX)
+        prefix_index = comment_body.find(self.commit_marker_prefix)
         if prefix_index == -1:
             return None
 
-        start_index = prefix_index + len(self.CODEX_COMMIT_MARKER_PREFIX)
-        end_index = comment_body.find(self.CODEX_COMMIT_MARKER_SUFFIX, start_index)
+        start_index = prefix_index + len(self.commit_marker_prefix)
+        end_index = comment_body.find(self.commit_marker_suffix, start_index)
         if end_index == -1:
             return None
 
@@ -565,7 +579,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
     def _build_codex_comment_body(self, head_sha: Optional[str]) -> str:
         """Compose Codex instruction comment with commit marker"""
         if head_sha:
-            marker = f"{self.CODEX_COMMIT_MARKER_PREFIX}{head_sha}{self.CODEX_COMMIT_MARKER_SUFFIX}"
+            marker = f"{self.commit_marker_prefix}{head_sha}{self.commit_marker_suffix}"
             return f"{self.CODEX_COMMENT_TEXT}\n\n{marker}"
 
         # Fallback without marker if we could not determine the commit SHA
@@ -575,7 +589,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
     def process_single_pr_by_number(self, pr_number: int, repository: str) -> bool:
         """Process a specific PR by number and repository"""
-        self.logger.info(f"🎯 Processing target PR: {repository} #{pr_number}")
+        repo_full = self._normalize_repo(repository)
+        repo_name = repo_full.split("/", 1)[1] if "/" in repo_full else repo_full
+        self.logger.info(f"🎯 Processing target PR: {repo_full} #{pr_number}")
 
         # Check global automation limits
         if not self.safety_manager.can_start_global_run():
@@ -590,47 +606,55 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         try:
             # Check safety limits for this specific PR
-            pr_key = f"{repository}-{pr_number}"
-            if not self.safety_manager.can_process_pr(pr_key):
-                self.logger.warning(f"🚫 Safety limits exceeded for PR {repository} #{pr_number}")
+            if not self.safety_manager.can_process_pr(pr_number, repo=repo_name):
+                self.logger.warning(f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number}")
                 return False
 
             # Get PR details using gh CLI
             try:
                 result = subprocess.run(
-                    ["gh", "pr", "view", str(pr_number), "--repo", repository, "--json", "title,headRefName,baseRefName,url,author"],
-                    capture_output=True, text=True, check=True, timeout=30
+                    [
+                        "gh", "pr", "view", str(pr_number),
+                        "--repo", repo_full,
+                        "--json", "title,headRefName,baseRefName,url,author"
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                    timeout=30,
+                    shell=False,
                 )
                 pr_data = json.loads(result.stdout)
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
                 # Post codex instruction comment
-                success = self.post_codex_instruction_simple(repository, pr_number, pr_data)
+                success = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
 
                 # Record PR processing attempt with result
                 result = "success" if success else "failure"
-                self.safety_manager.record_pr_attempt(pr_key, result)
+                self.safety_manager.record_pr_attempt(pr_number, result, repo=repo_name)
 
                 if success:
-                    self.logger.info(f"✅ Successfully processed target PR {repository} #{pr_number}")
+                    self.logger.info(f"✅ Successfully processed target PR {repo_full} #{pr_number}")
                 else:
-                    self.logger.error(f"❌ Failed to process target PR {repository} #{pr_number}")
+                    attempts = self.safety_manager.get_pr_attempts(pr_number, repo=repo_name)
+                    self.logger.error(f"❌ Failed to process target PR {repo_full} #{pr_number} (attempt {attempts})")
 
                 return success
 
             except subprocess.CalledProcessError as e:
-                self.logger.error(f"❌ Failed to get PR details for {repository} #{pr_number}: {e.stderr}")
+                self.logger.error(f"❌ Failed to get PR details for {repo_full} #{pr_number}: {e.stderr}")
                 return False
             except json.JSONDecodeError as e:
-                self.logger.error(f"❌ Failed to parse PR data for {repository} #{pr_number}: {e}")
+                self.logger.error(f"❌ Failed to parse PR data for {repo_full} #{pr_number}: {e}")
                 return False
 
         except Exception as e:
-            self.logger.error(f"❌ Unexpected error processing target PR {repository} #{pr_number}: {e}")
+            self.logger.error(f"❌ Unexpected error processing target PR {repo_full} #{pr_number}: {e}")
             return False
 
-    def run_monitoring_cycle(self, single_repo=None, max_prs=10):
+    def run_monitoring_cycle(self, single_repo: Optional[str] = None, max_prs: int = 10) -> None:
         """Run a complete monitoring cycle"""
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
 
@@ -661,36 +685,43 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         for pr in open_prs[:max_prs_per_cycle]:
             repo_name = pr["repository"]
+            repo_full = pr.get("repositoryFullName", f"{self.organization}/{repo_name}")
             pr_number = pr["number"]
-            pr_key = f"{repo_name}-{pr_number}"
 
             # Check PR-specific limits
-            if not self.safety_manager.can_process_pr(pr_key):
-                attempts = self.safety_manager.get_pr_attempts(pr_key)
-                self.logger.info(f"⏸️ PR {pr_key} blocked ({attempts}/{self.safety_manager.pr_limit} attempts)")
+            if not self.safety_manager.can_process_pr(pr_number, repo=repo_name):
+                attempts = self.safety_manager.get_pr_attempts(pr_number, repo=repo_name)
+                self.logger.info(f"⏸️ PR {repo_name}-{pr_number} blocked ({attempts}/{self.safety_manager.pr_limit} attempts)")
                 continue
 
-            self.logger.info(f"🎯 Processing PR: {pr_key} - {pr['title']}")
+            self.logger.info(f"🎯 Processing PR: {repo_name}-{pr_number} - {pr['title']}")
 
             # Post codex instruction comment directly (comment-only approach)
-            success = self.post_codex_instruction_simple(repo_name, pr_number, pr)
+            success = self.post_codex_instruction_simple(repo_full, pr_number, pr)
 
             # Record attempt
             result = "success" if success else "failure"
-            self.safety_manager.record_pr_attempt(pr_key, result)
+            self.safety_manager.record_pr_attempt(pr_number, result, repo=repo_name)
 
             if success:
-                self.logger.info(f"✅ Successfully processed PR {pr_key}")
+                self.logger.info(f"✅ Successfully processed PR {repo_name}-{pr_number}")
                 processed_count += 1
             else:
-                attempts = self.safety_manager.get_pr_attempts(pr_key)
-                self.logger.error(f"❌ Failed to process PR {pr_key} (attempt {attempts})")
+                attempts = self.safety_manager.get_pr_attempts(pr_number, repo=repo_name)
+                self.logger.error(f"❌ Failed to process PR {repo_name}-{pr_number} (attempt {attempts})")
 
         self.logger.info(f"🏁 Monitoring cycle complete: {processed_count} PRs processed")
 
         # Check and notify about limits
         self.safety_manager.check_and_notify_limits()
 
+
+    def _normalize_repo(self, repository: str) -> str:
+        """Return repository in owner/name format."""
+
+        if "/" in repository:
+            return repository
+        return f"{self.organization}/{repository}"
 
 def main():
     """CLI interface for jleechanorg PR monitor"""

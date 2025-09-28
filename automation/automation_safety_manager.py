@@ -12,6 +12,7 @@ Minimal implementation to pass the RED phase tests with:
 
 import argparse
 import fcntl
+import importlib
 import json
 import os
 import threading
@@ -21,11 +22,9 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional
-try:
-    import keyring
-    KEYRING_AVAILABLE = True
-except ImportError:
-    KEYRING_AVAILABLE = False
+
+_keyring_spec = importlib.util.find_spec("keyring")
+keyring = importlib.import_module("keyring") if _keyring_spec else None
 
 
 class AutomationSafetyManager:
@@ -47,6 +46,7 @@ class AutomationSafetyManager:
         # In-memory counters for thread safety
         self._pr_attempts_cache = {}
         self._global_runs_cache = 0
+        self._pr_inflight_cache: Dict[str, int] = {}
 
         # Initialize files if they don't exist
         self._ensure_files_exist()
@@ -97,13 +97,13 @@ class AutomationSafetyManager:
 
     def _make_pr_key(self, pr_number: int, repo: str = None, branch: str = None) -> str:
         """Create a standardized key for PR attempts tracking"""
-        if repo and branch:
-            return f"{repo}-{pr_number}-{branch}"
-        elif isinstance(pr_number, int):
-            # For backward compatibility and simple testing
-            return str(pr_number)
-        else:
-            return str(pr_number)
+        components = []
+        if repo:
+            components.append(str(repo))
+        components.append(str(pr_number))
+        if branch:
+            components.append(str(branch))
+        return "::".join(components)
 
     def _read_json_file(self, file_path: str) -> dict:
         """Safely read JSON file with file locking"""
@@ -118,13 +118,16 @@ class AutomationSafetyManager:
 
     def _write_json_file(self, file_path: str, data: dict):
         """Atomically write JSON file with file locking to prevent corruption"""
-        # Use system temp directory for better security
         temp_path = None
         try:
-            # Create temporary file in system temp directory with secure permissions
+            target_dir = os.path.dirname(file_path) or "."
+            os.makedirs(target_dir, exist_ok=True)
+
+            # Create temporary file alongside the target for atomic replace
             with tempfile.NamedTemporaryFile(
                 mode='w',
-                suffix=".tmp",
+                dir=target_dir,
+                prefix='.tmp-',
                 delete=False
             ) as temp_file:
                 fcntl.flock(temp_file.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
@@ -137,11 +140,11 @@ class AutomationSafetyManager:
             # Set restrictive permissions before moving
             os.chmod(temp_path, 0o600)  # Owner read/write only
 
-            # Atomic rename - this operation is atomic on POSIX systems
-            os.rename(temp_path, file_path)
+            # Atomic replace within same directory
+            os.replace(temp_path, file_path)
             temp_path = None  # Successful, don't clean up
 
-        except (OSError, IOError, json.JSONEncodeError) as e:
+        except (OSError, IOError, TypeError, ValueError) as e:
             # Clean up temp file on error
             if temp_path and os.path.exists(temp_path):
                 try:
@@ -157,26 +160,17 @@ class AutomationSafetyManager:
             return attempts < self.pr_limit
 
     def try_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
-        """Atomically check if PR can be processed and increment failure counter if so"""
+        """Atomically check if PR can be processed without mutating state."""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
+            attempts = self._pr_attempts_cache.get(pr_key, 0)
+            inflight = self._pr_inflight_cache.get(pr_key, 0)
 
-            # Use a more robust approach: check and increment in single atomic operation
-            current_attempts = self._pr_attempts_cache.get(pr_key, 0)
+            if attempts + inflight >= self.pr_limit:
+                return False
 
-            # Critical: Only proceed if we are UNDER the limit
-            if current_attempts < self.pr_limit:
-                # Increment BEFORE allowing the operation to proceed
-                # This ensures the next thread will see the updated count
-                self._pr_attempts_cache[pr_key] = current_attempts + 1
-
-                # Sync to file immediately for persistence across restarts
-                self._sync_state_to_files()
-
-                return True
-
-            # If we reach here, we're at or over the limit
-            return False
+            self._pr_inflight_cache[pr_key] = inflight + 1
+            return True
 
     def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None) -> int:
         """Get number of attempts for a specific PR"""
@@ -188,6 +182,13 @@ class AutomationSafetyManager:
         """Record a PR attempt (success or failure)"""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
+
+            inflight = self._pr_inflight_cache.get(pr_key, 0)
+            if inflight > 0:
+                if inflight == 1:
+                    self._pr_inflight_cache.pop(pr_key, None)
+                else:
+                    self._pr_inflight_cache[pr_key] = inflight - 1
 
             if result == "success":
                 # Reset counter on success
@@ -253,22 +254,23 @@ class AutomationSafetyManager:
         """Check limits and send email notifications if thresholds are reached"""
         notifications_sent = []
 
-        # Check for PR limits reached
-        for pr_key, attempts in self._pr_attempts_cache.items():
-            if attempts >= self.pr_limit:
-                self._send_limit_notification(
-                    f"PR Automation Limit Reached",
-                    f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
-                )
-                notifications_sent.append(f"PR {pr_key}")
+        with self.lock:
+            # Check for PR limits reached
+            for pr_key, attempts in self._pr_attempts_cache.items():
+                if attempts >= self.pr_limit:
+                    self._send_limit_notification(
+                        f"PR Automation Limit Reached",
+                        f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
+                    )
+                    notifications_sent.append(f"PR {pr_key}")
 
-        # Check for global limit reached
-        if self._global_runs_cache >= self.global_limit:
-            self._send_limit_notification(
-                f"Global Automation Limit Reached",
-                f"Global automation runs have reached the maximum limit of {self.global_limit}."
-            )
-            notifications_sent.append("Global limit")
+            # Check for global limit reached
+            if self._global_runs_cache >= self.global_limit:
+                self._send_limit_notification(
+                    f"Global Automation Limit Reached",
+                    f"Global automation runs have reached the maximum limit of {self.global_limit}."
+                )
+                notifications_sent.append("Global limit")
 
         return notifications_sent
 
@@ -301,15 +303,14 @@ class AutomationSafetyManager:
         username = None
         password = None
 
-        if KEYRING_AVAILABLE:
+        if keyring is not None:
             try:
-                # Try to get credentials from secure keyring first
                 username = keyring.get_password("worldarchitect-automation", "smtp_username")
                 password = keyring.get_password("worldarchitect-automation", "smtp_password")
             except Exception:
-                pass  # Fall back to environment variables
+                username = None
+                password = None
 
-        # Fallback to environment variables if keyring fails or unavailable
         if not username:
             username = os.environ.get('SMTP_USERNAME')
         if not password:

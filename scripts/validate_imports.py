@@ -61,7 +61,7 @@ class ImportValidator(ast.NodeVisitor):
             # Test infrastructure modules that need sys.path manipulation
             'orchestrate', 'pr_comment_formatter', 'command_output_trimmer',
             'helpers', 'mcp_api', 'mcp_test_client', 'commentreply',
-            'mvp_site.logging_util', 'psutil', 'importlib.util', 'datetime',
+            'mvp_site.logging_util', 'psutil', 'importlib.util',
             'unified_router', 'mvp_site.testing_framework',
             # Automation modules that need sys.path manipulation
             'automation_safety_manager', 'jleechanorg_pr_monitor',
@@ -81,7 +81,10 @@ class ImportValidator(ast.NodeVisitor):
             if node.module and node.module in self.allowed_conditional_imports:
                 return True
             # Check for from http.server import ...
-            if node.module and any(allowed in node.module for allowed in self.allowed_conditional_imports):
+            if node.module and any(
+                node.module == allowed or node.module.startswith(f"{allowed}.")
+                for allowed in self.allowed_conditional_imports
+            ):
                 return True
         return False
 
