@@ -51,11 +51,15 @@ test_contains "reads commands from stdin when available" "$stdin_output" "Detect
 cli_precedence_output=$(printf '/plan' | bash "$HOOK_SCRIPT" /think /debug "focus on root cause")
 test_contains "CLI arguments take precedence over stdin" "$cli_precedence_output" "Detected slash commands:/think /debug"
 
-# 3. Environment variable precedence over CLI and stdin
-env_precedence_output=$(CLAUDE_COMPOSE_INPUT='/review /execute check the repo' bash "$HOOK_SCRIPT" /think)
-test_contains "CLAUDE_COMPOSE_INPUT overrides CLI arguments" "$env_precedence_output" "Detected slash commands:/review /execute"
+# 3. CLI arguments remain authoritative when CLAUDE_COMPOSE_INPUT is set
+cli_over_env_output=$(CLAUDE_COMPOSE_INPUT='/review /execute check the repo' bash "$HOOK_SCRIPT" /think)
+test_contains "CLI arguments override CLAUDE_COMPOSE_INPUT" "$cli_over_env_output" "Detected slash commands:/think"
 
-# 4. Pass-through for SLASH_COMMAND_EXECUTE patterns
+# 4. Environment variable used when CLI args are absent
+env_fallback_output=$(CLAUDE_COMPOSE_INPUT='/review /execute check the repo' bash "$HOOK_SCRIPT")
+test_contains "CLAUDE_COMPOSE_INPUT used when CLI args absent" "$env_fallback_output" "Detected slash commands:/review /execute"
+
+# 5. Pass-through for SLASH_COMMAND_EXECUTE patterns
 pass_through_output=$(bash "$HOOK_SCRIPT" SLASH_COMMAND_EXECUTE:/research)
 test_contains "passes through SLASH_COMMAND_EXECUTE invocations" "$pass_through_output" "SLASH_COMMAND_EXECUTE:/research"
 

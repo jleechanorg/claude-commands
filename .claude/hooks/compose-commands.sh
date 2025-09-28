@@ -27,10 +27,10 @@ fi
 # FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat,
 #        while honoring CLI-provided fallbacks to avoid TTY hangs
 # Prefer explicit inputs before attempting to read stdin
-if [[ -n "${CLAUDE_COMPOSE_INPUT:-}" ]]; then
-  raw_input="$CLAUDE_COMPOSE_INPUT"
-elif [[ $# -gt 0 ]]; then
+if [[ $# -gt 0 ]]; then
   raw_input="$*"
+elif [[ -n "${CLAUDE_COMPOSE_INPUT:-}" ]]; then
+  raw_input="$CLAUDE_COMPOSE_INPUT"
 else
   raw_input=""
 fi

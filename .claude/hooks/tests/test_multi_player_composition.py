@@ -195,6 +195,16 @@ class TestMultiPlayerComposition(unittest.TestCase):
 
         self.assertEqual(output.strip(), "/help show commands")
 
+    def test_cli_arguments_override_environment_variable(self):
+        """Explicit CLI arguments should win over environment defaults"""
+        env = os.environ.copy()
+        env["CLAUDE_COMPOSE_INPUT"] = "/debug investigate issue"
+
+        output = self.run_hook(args=["/help", "show", "commands"], env=env)
+
+        self.assertEqual(output.strip(), "/help show commands")
+        self.assertNotIn("/debug", output)
+
     def test_environment_variable_input_takes_precedence(self):
         """CLAUDE_COMPOSE_INPUT should be honored even without stdin"""
         env = os.environ.copy()
