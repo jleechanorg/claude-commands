@@ -21,9 +21,18 @@ Execute test specifications directly as an LLM without generating intermediate s
 ```
 
 ### Default Behavior (No Arguments Provided)
-- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
-- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
+- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
+- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
+
+> [!TIP]
+> Set `CLAUDE_TESTLLM_DIR` to override the default directory. For example:
+> - Bash / Zsh: `export CLAUDE_TESTLLM_DIR=qa/tests`
+> - Fish: `set -x CLAUDE_TESTLLM_DIR qa/tests`
+> - PowerShell: `$env:CLAUDE_TESTLLM_DIR = "qa/tests"`
+
+### Mandatory First Step
+- **Read the Entire Suite First**: Before planning, checklist creation, or any execution, explicitly read every test specification in the `testing_llm/` directory to internalize scope, dependencies, and evidence requirements.
 
 ## Core Principles
 - **LLM-Native Execution**: Drive tests directly as Claude, no script generation
@@ -140,7 +149,9 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - Create systematic validation approach before any execution
 
 ### Step 2: Test Environment Setup
-- Verify real backend servers are running (Flask on :5005, React V2 on :3002)
+- Review `run_local_server.sh` to understand how the local environment should be launched
+- Detect whether the local server stack started by `run_local_server.sh` is already running
+- If servers are not running, execute `run_local_server.sh` and wait for successful startup
 - Ensure real authentication is configured (no test mode)
 - Validate Playwright MCP availability for browser automation
 - Confirm network connectivity for real API calls
@@ -198,7 +209,8 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
    └── ⚠️ GATE: Cannot proceed without complete requirements checklist
 
 2. Environment Validation
-   ├── Check server status (backend :5005, frontend :3002)
+   ├── Inspect `run_local_server.sh` for the expected services and health checks
+   ├── Determine if the local server stack is already running; start it with `run_local_server.sh` if needed
    ├── Verify authentication configuration
    ├── Confirm Playwright MCP availability
    ├── Validate network connectivity

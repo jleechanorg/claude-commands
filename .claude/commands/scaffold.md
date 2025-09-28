@@ -30,6 +30,31 @@ This command scaffolds essential development scripts from the claude-commands re
 
 ## Execution Instructions
 
+## Repository Location
+
+The source scripts live in the [`jleechanorg/claude-commands`](https://github.com/jleechanorg/claude-commands) repository.
+Clone that repository locally and set `CLAUDE_COMMANDS_PATH` to the absolute path of the clone (for example,
+`~/workspace/claude-commands`). The slash command assumes that location unless you override the variable.
+
+### Setting `CLAUDE_COMMANDS_PATH` in Common Shells
+
+- **Bash / Zsh (Linux, macOS)**
+  ```bash
+  export CLAUDE_COMMANDS_PATH=~/workspace/claude-commands
+  ```
+- **Fish shell**
+  ```fish
+  set -x CLAUDE_COMMANDS_PATH ~/workspace/claude-commands
+  ```
+- **Windows Command Prompt**
+  ```
+  set CLAUDE_COMMANDS_PATH=C:\\Users\\yourname\\workspace\\claude-commands
+  ```
+- **Windows PowerShell**
+  ```powershell
+  $env:CLAUDE_COMMANDS_PATH = "C:\\Users\\yourname\\workspace\\claude-commands"
+  ```
+
 When this command is run:
 
 ```bash
@@ -37,7 +62,7 @@ When this command is run:
 mkdir -p scripts
 
 # 2. Copy all specified scripts from claude-commands repository
-# Note: Replace CLAUDE_COMMANDS_PATH with actual path to claude-commands repo
+# Note: CLAUDE_COMMANDS_PATH must point at your local claude-commands clone
 cp "$CLAUDE_COMMANDS_PATH/create_worktree.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/integrate.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/schedule_branch_work.sh" ./

@@ -251,6 +251,9 @@ SUCCESSFUL_INSTALLS=0
 FAILED_INSTALLS=0
 CURRENT_STEP=0
 
+# Ensure GitHub token availability per scripting guidelines without exporting globally
+GITHUB_TOKEN="${GITHUB_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"
+
 # Parallel processing configuration
 MAX_PARALLEL_JOBS=3
 declare -A PARALLEL_PIDS
@@ -1031,7 +1034,13 @@ install_ios_simulator_mcp() {
 
     # Install dependencies in the cloned repository
     echo -e "${BLUE}  📦 Installing dependencies...${NC}"
-    if ! npm --prefix "$TEMP_DIR/ios-simulator-mcp" install >/dev/null 2>&1; then
+    local -a dep_cmd
+    if [ -f "$TEMP_DIR/ios-simulator-mcp/package-lock.json" ]; then
+        dep_cmd=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" ci)
+    else
+        dep_cmd=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" install)
+    fi
+    if ! "${dep_cmd[@]}" >/dev/null 2>&1; then
         echo -e "${RED}  ❌ Failed to install dependencies${NC}"
         log_with_timestamp "Failed to install dependencies for ios-simulator-mcp"
         rm -rf "$TEMP_DIR"
@@ -1039,6 +1048,32 @@ install_ios_simulator_mcp() {
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         return 1
     fi
+
+    # Build the TypeScript source so the runtime entrypoint exists
+    echo -e "${BLUE}  🛠️  Building iOS Simulator MCP server...${NC}"
+    local BUILD_LOG_FILE
+    BUILD_LOG_FILE="$(mktemp)"
+    trap 'rm -f "$BUILD_LOG_FILE"' RETURN
+    local -a build_runner
+    build_runner=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" run build)
+    if [ -n "$TIMEOUT_CMD" ]; then
+        build_runner=("$TIMEOUT_CMD" 180s "${build_runner[@]}")
+    fi
+    if ! "${build_runner[@]}" >"$BUILD_LOG_FILE" 2>&1; then
+        echo -e "${RED}  ❌ Failed to build ios-simulator-mcp${NC}"
+        echo -e "${YELLOW}  --- Build output below ---${NC}"
+        cat "$BUILD_LOG_FILE"
+        echo -e "${YELLOW}  --- End build output ---${NC}"
+        log_with_timestamp "Failed to build ios-simulator-mcp"
+        rm -rf "$TEMP_DIR"
+        INSTALL_RESULTS["$name"]="BUILD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        rm -f "$BUILD_LOG_FILE"
+        trap - RETURN
+        return 1
+    fi
+    rm -f "$BUILD_LOG_FILE"
+    trap - RETURN
 
     # Move to permanent location in ~/.mcp/servers/
     # Use robust home directory detection for cross-platform compatibility
@@ -1061,6 +1096,17 @@ install_ios_simulator_mcp() {
         case "$IOS_MCP_PATH" in
             */\.mcp/servers/ios-simulator-mcp)
                 echo -e "${BLUE}  🧹 Removing existing installation...${NC}"
+                if [ -d "$IOS_MCP_PATH/.git" ]; then
+                    local backup_archive
+                    backup_archive="${IOS_MCP_PATH%/}.backup.$(date +%s).tgz"
+                    if tar -czf "$backup_archive" -C "$(dirname "$IOS_MCP_PATH")" "$(basename "$IOS_MCP_PATH")" >/dev/null 2>&1; then
+                        echo -e "${BLUE}  💾 Backed up existing installation to: $backup_archive${NC}"
+                        log_with_timestamp "Backed up existing ios-simulator-mcp to $backup_archive"
+                    else
+                        echo -e "${YELLOW}  ⚠️ Unable to create backup of existing installation; proceeding with removal${NC}"
+                        log_with_timestamp "Failed to create ios-simulator-mcp backup prior to removal"
+                    fi
+                fi
                 rm -rf "$IOS_MCP_PATH"
                 ;;
             *)
@@ -1084,20 +1130,37 @@ install_ios_simulator_mcp() {
     # Cleanup temporary directory
     rm -rf "$TEMP_DIR"
 
+    # Determine the correct runtime entrypoint (TypeScript build output vs. plain JS)
+    local IOS_MCP_ENTRYPOINT
+    if [ -f "$IOS_MCP_PATH/build/index.js" ]; then
+        IOS_MCP_ENTRYPOINT="$IOS_MCP_PATH/build/index.js"
+        log_with_timestamp "Using built entrypoint: $IOS_MCP_ENTRYPOINT"
+    elif [ -f "$IOS_MCP_PATH/index.js" ]; then
+        IOS_MCP_ENTRYPOINT="$IOS_MCP_PATH/index.js"
+        echo -e "${YELLOW}  ⚠️ build/index.js not found; falling back to index.js${NC}"
+        log_with_timestamp "build/index.js missing, using index.js for ios-simulator-mcp"
+    else
+        echo -e "${RED}  ❌ Could not locate ios-simulator-mcp entrypoint after install${NC}"
+        log_with_timestamp "Failed to locate ios-simulator-mcp entrypoint"
+        INSTALL_RESULTS["$name"]="ENTRYPOINT_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+
     # Add server to Claude MCP configuration
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to Claude configuration...${NC}"
 
     # Remove existing server if present
     claude mcp remove "$name" >/dev/null 2>&1 || true
 
-    # Add server using node to run the index.js file
-    add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_PATH/index.js" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
+    # Add server using node to run the compiled entrypoint
+    add_output=$(claude mcp add --scope user "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT" "${DEFAULT_MCP_ENV_FLAGS[@]}" 2>&1)
     add_exit_code=$?
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Path: $IOS_MCP_PATH/index.js"
+        echo -e "     • Path: $IOS_MCP_ENTRYPOINT"
         echo -e "     • Platform: macOS with iOS Simulator support"
         echo -e "     • Features: iOS app control, simulator management, screenshot capture"
         echo -e "     • Repository: https://github.com/joshuayoes/ios-simulator-mcp"

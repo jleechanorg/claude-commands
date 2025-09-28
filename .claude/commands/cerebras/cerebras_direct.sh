@@ -132,6 +132,8 @@ fi
 # Initialize variables for cleanup
 AUTO_CONTEXT_FILE=""
 DEBUG_FILE=""
+SYSTEM_TEMP_FILE=""
+USER_TEMP_FILE=""
 
 # Guaranteed cleanup for auto-extracted context and debug files (handles errors/interrupts)
 cleanup() {
@@ -142,14 +144,46 @@ cleanup() {
   if [ -n "$DEBUG_FILE" ] && [ -f "$DEBUG_FILE" ]; then
     rm -f "$DEBUG_FILE" 2>/dev/null
   fi
+  if [ -n "$SYSTEM_TEMP_FILE" ] && [ -f "$SYSTEM_TEMP_FILE" ]; then
+    rm -f "$SYSTEM_TEMP_FILE" 2>/dev/null
+  fi
+  if [ -n "$USER_TEMP_FILE" ] && [ -f "$USER_TEMP_FILE" ]; then
+    rm -f "$USER_TEMP_FILE" 2>/dev/null
+  fi
 }
 trap cleanup EXIT INT TERM
+
+create_temp_file_with_extension() {
+  local template="$1"
+  local extension="${2:-}"
+  local temp_file
+
+  if ! temp_file=$(mktemp "$template" 2>/dev/null); then
+    echo ""
+    return 1
+  fi
+
+  if [ -z "$extension" ]; then
+    printf '%s' "$temp_file"
+    return 0
+  fi
+
+  local target="${temp_file}${extension}"
+  if mv "$temp_file" "$target"; then
+    printf '%s' "$target"
+    return 0
+  fi
+
+  rm -f "$temp_file" 2>/dev/null
+  echo ""
+  return 1
+}
 
 if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CONTEXT_FILE" ]; then
     # Create branch-safe temporary file for auto-extracted context
     BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
     [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
-    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_auto_context_${BRANCH_NAME}_XXXXXX.txt" 2>/dev/null)"
+    AUTO_CONTEXT_FILE="$(create_temp_file_with_extension "/tmp/cerebras_ctxXXXXXX" ".txt")"
 
     # Validate temporary file creation (graceful degradation on failure)
     if [ -z "$AUTO_CONTEXT_FILE" ]; then
@@ -378,7 +412,7 @@ fi
 # Create temporary file for large JSON to avoid bash variable size limits
 CURRENT_BRANCH_FOR_TEMP="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
 [ -z "$CURRENT_BRANCH_FOR_TEMP" ] && CURRENT_BRANCH_FOR_TEMP="main"
-JSON_TEMP_FILE="$(mktemp "/tmp/cerebras_request_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.json" 2>/dev/null)"
+JSON_TEMP_FILE="$(create_temp_file_with_extension "/tmp/cerebras_request_${CURRENT_BRANCH_FOR_TEMP}XXXXXX" ".json")"
 if [ -z "$JSON_TEMP_FILE" ]; then
     echo "Error: Could not create temporary file for request" >&2
     exit 4
@@ -386,33 +420,59 @@ fi
 
 # Build request body using temporary files to handle large prompts and system prompts
 if [ -n "$SYSTEM_PROMPT" ]; then
-    # For large system prompts, use separate temp files to avoid bash variable size limits
-    SYSTEM_TEMP_FILE="$(mktemp "/tmp/cerebras_system_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.txt")"
-    USER_TEMP_FILE="$(mktemp "/tmp/cerebras_user_${CURRENT_BRANCH_FOR_TEMP}_XXXXXX.txt")"
+    SYSTEM_TEMP_FILE="$(create_temp_file_with_extension "/tmp/cerebras_system_${CURRENT_BRANCH_FOR_TEMP}XXXXXX" ".txt")"
+    USER_TEMP_FILE="$(create_temp_file_with_extension "/tmp/cerebras_user_${CURRENT_BRANCH_FOR_TEMP}XXXXXX" ".txt")"
 
-    echo "$SYSTEM_PROMPT" > "$SYSTEM_TEMP_FILE"
-    echo "$USER_PROMPT" > "$USER_TEMP_FILE"
+    if [ -n "$SYSTEM_TEMP_FILE" ] && [ -n "$USER_TEMP_FILE" ]; then
+        echo "$SYSTEM_PROMPT" > "$SYSTEM_TEMP_FILE"
+        echo "$USER_PROMPT" > "$USER_TEMP_FILE"
 
-    # Build JSON using file inputs to avoid command line length limits
-    jq -n \
-        --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
-        --rawfile system_content "$SYSTEM_TEMP_FILE" \
-        --rawfile user_content "$USER_TEMP_FILE" \
-        --argjson max_tokens "${CEREBRAS_MAX_TOKENS:-1000000}" \
-        --argjson temperature "${CEREBRAS_TEMPERATURE:-0.1}" \
-        '{
-            model: $model,
-            messages: [
-                {role: "system", content: $system_content},
-                {role: "user", content: $user_content}
-            ],
-            max_tokens: $max_tokens,
-            temperature: $temperature,
-            stream: false
-        }' > "$JSON_TEMP_FILE"
+        # Build JSON using file inputs to avoid command line length limits
+        jq -n \
+            --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
+            --rawfile system_content "$SYSTEM_TEMP_FILE" \
+            --rawfile user_content "$USER_TEMP_FILE" \
+            --argjson max_tokens "${CEREBRAS_MAX_TOKENS:-1000000}" \
+            --argjson temperature "${CEREBRAS_TEMPERATURE:-0.1}" \
+            '{
+                model: $model,
+                messages: [
+                    {role: "system", content: $system_content},
+                    {role: "user", content: $user_content}
+                ],
+                max_tokens: $max_tokens,
+                temperature: $temperature,
+                stream: false
+            }' > "$JSON_TEMP_FILE"
 
-    # Clean up temp files immediately
-    rm -f "$SYSTEM_TEMP_FILE" "$USER_TEMP_FILE"
+        # Clean up temp files immediately
+        rm -f "$SYSTEM_TEMP_FILE" "$USER_TEMP_FILE"
+        SYSTEM_TEMP_FILE=""
+        USER_TEMP_FILE=""
+    else
+        # Fallback to in-memory construction if temporary files cannot be created
+        [ -n "$SYSTEM_TEMP_FILE" ] && rm -f "$SYSTEM_TEMP_FILE" 2>/dev/null
+        [ -n "$USER_TEMP_FILE" ] && rm -f "$USER_TEMP_FILE" 2>/dev/null
+        SYSTEM_TEMP_FILE=""
+        USER_TEMP_FILE=""
+
+        jq -n \
+            --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
+            --arg system_content "$SYSTEM_PROMPT" \
+            --arg user_content "$USER_PROMPT" \
+            --argjson max_tokens "${CEREBRAS_MAX_TOKENS:-1000000}" \
+            --argjson temperature "${CEREBRAS_TEMPERATURE:-0.1}" \
+            '{
+                model: $model,
+                messages: [
+                    {role: "system", content: $system_content},
+                    {role: "user", content: $user_content}
+                ],
+                max_tokens: $max_tokens,
+                temperature: $temperature,
+                stream: false
+            }' > "$JSON_TEMP_FILE"
+    fi
 else
     jq -n \
         --arg model "${CEREBRAS_MODEL:-qwen-3-coder-480b}" \
@@ -443,7 +503,8 @@ cleanup_request() {
         rm -f "$JSON_TEMP_FILE" 2>/dev/null
     fi
 }
-trap cleanup_request EXIT INT TERM
+# Ensure both the general cleanup and request cleanup fire on exit/interrupt
+trap 'cleanup; cleanup_request' EXIT INT TERM
 
 HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 30 --max-time 600 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
