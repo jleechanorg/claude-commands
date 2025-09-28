@@ -105,8 +105,8 @@ safe_read_stdin() {
             printf '%s' "$data"
             return 0
         elif [ -n "$data" ]; then
-            # Even on timeout, return any buffered data that was read
-            printf '%s' "$data"
+            # Partial data on timeout - indicate truncation
+            printf '%s[TIMEOUT_TRUNCATED]' "$data"
         elif [ "$status" -eq 124 ]; then
             # Timed out without receiving input
             printf ''

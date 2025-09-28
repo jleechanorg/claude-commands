@@ -113,14 +113,13 @@ normalize_whitespace() {
     printf '%s' "$input" | tr '\n' ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/[[:space:]][[:space:]]*/ /g'
 }
 
-# Count total valid commands first to inform filtering decision
-cmd_count_in_input=0
+# Count valid commands first to inform filtering decision
+valid_cmd_count=0
 for cmd in $raw_commands; do
-    # Escape command for safe regex usage (properly escape all regex special chars)
     escaped_cmd=$(printf '%s' "$cmd" | sed 's/[][().^$*+?{}|\\]/\\&/g')
     if echo "$input" | grep -qE "(^|[[:space:]])$escaped_cmd([[:space:]]|[[:punct:]]|$)" && \
        ! echo "$input" | grep -qE "$escaped_cmd/"; then
-        cmd_count_in_input=$((cmd_count_in_input + 1))
+        valid_cmd_count=$((valid_cmd_count + 1))
     fi
 done
 
@@ -142,7 +141,7 @@ for cmd in $raw_commands; do
         if [[ "$is_pasted_content" == "true" ]]; then
             # Accept all commands if there are 2 or fewer (likely intentional)
             # Otherwise, only accept commands at boundaries
-            if [[ $cmd_count_in_input -le $PASTE_COMMAND_THRESHOLD ]]; then
+            if [[ $valid_cmd_count -le $PASTE_COMMAND_THRESHOLD ]]; then
                 if [[ "$seen_commands" != *" $cmd "* ]]; then
                     commands="$commands$cmd "
                     actual_cmd_count=$((actual_cmd_count + 1))
