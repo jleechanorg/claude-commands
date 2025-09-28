@@ -266,6 +266,20 @@ class JleechanorgPRMonitor:
 
     def _find_local_repository(self, repo_name: str) -> Optional[Path]:
         """Find local repository path for given repo name"""
+
+        def is_git_repository(path: Path) -> bool:
+            """Check if path is a git repository (handles both .git dir and worktree .git file)"""
+            git_path = path / ".git"
+            return git_path.exists()  # Works for both .git directory and .git file (worktree)
+
+        # Check current working directory first (for worktree case)
+        current_dir = Path.cwd()
+        if is_git_repository(current_dir):
+            # For worktree, check if this is related to the target repository
+            if repo_name.lower() in current_dir.name.lower() or "worldarchitect" in current_dir.name.lower():
+                self.logger.debug(f"🎯 Found local repo (current dir): {current_dir}")
+                return current_dir
+
         # Common patterns for local repositories
         search_paths = [
             # Standard patterns in ~/projects/
@@ -282,7 +296,7 @@ class JleechanorgPRMonitor:
         ]
 
         for path in search_paths:
-            if path.exists() and (path / ".git").exists():
+            if path.exists() and is_git_repository(path):
                 self.logger.debug(f"🎯 Found local repo: {path}")
                 return path
 
@@ -290,7 +304,7 @@ class JleechanorgPRMonitor:
         if self.base_project_dir.exists():
             for path in self.base_project_dir.iterdir():
                 if path.is_dir() and repo_name.lower() in path.name.lower():
-                    if (path / ".git").exists():
+                    if is_git_repository(path):
                         self.logger.debug(f"🎯 Found local repo (fuzzy): {path}")
                         return path
 
@@ -299,16 +313,256 @@ class JleechanorgPRMonitor:
         for path in home_dir.iterdir():
             if path.is_dir() and path.name.startswith(f"project_{repo_name}"):
                 # Check if it's a direct repo
-                if (path / ".git").exists():
+                if is_git_repository(path):
                     self.logger.debug(f"🎯 Found local repo (home): {path}")
                     return path
                 # Check if repo is nested inside
                 nested_repo = path / repo_name
-                if nested_repo.exists() and (nested_repo / ".git").exists():
+                if nested_repo.exists() and is_git_repository(nested_repo):
                     self.logger.debug(f"🎯 Found local repo (nested): {nested_repo}")
                     return nested_repo
 
         return None
+
+    def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: Dict) -> bool:
+        """Post codex instruction comment directly without worktree"""
+        self.logger.info(f"💬 Requesting Codex support for {repository} PR #{pr_number}")
+
+        # Get current PR state including comments and test status
+        head_sha, comments = self._get_pr_comment_state(repository, pr_number)
+
+        # Check if we already have an automation comment for this commit
+        if head_sha and self._has_automation_comment_for_commit(comments, head_sha):
+            self.logger.info(f"♻️ Automation comment already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping")
+            return True
+
+        # Check if latest comment is from AI automation
+        if comments and self._is_latest_comment_from_automation(comments):
+            self.logger.info(f"🤖 Latest comment is from AI automation, checking test status...")
+
+            # Check if tests are now passing
+            if self._are_tests_passing(repository, pr_number):
+                self.logger.info(f"✅ Tests are passing, skipping PR {pr_number}")
+                return True
+            else:
+                # Tests still failing, check if Codex has replied to our automation comment
+                if self._has_codex_replied_to_automation(comments):
+                    self.logger.info(f"🤖 Codex has already replied to automation comment, skipping PR {pr_number}")
+                    return True
+                else:
+                    self.logger.info(f"❌ Tests still failing and no Codex reply, will post new automation comment")
+
+        # Check if latest comment is from Codex doing work (not review)
+        elif comments and self._is_latest_comment_from_codex_work(comments):
+            self.logger.info(f"🤖 Latest comment is from Codex doing work, skipping PR {pr_number}")
+            return True
+
+        # Build comment body that tells Codex to fix PR comments and failing tests
+        comment_body = self._build_codex_comment_body_simple(repository, pr_number, pr_data, head_sha, comments)
+
+        # Post the comment
+        try:
+            comment_cmd = [
+                "gh", "pr", "comment", str(pr_number),
+                "--repo", repository,
+                "--body", comment_body
+            ]
+
+            result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30)
+
+            self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number}")
+            return True
+
+        except subprocess.CalledProcessError as e:
+            self.logger.error(f"❌ Failed to post comment on PR #{pr_number}: {e.stderr}")
+            return False
+        except Exception as e:
+            self.logger.error(f"💥 Unexpected error posting comment: {e}")
+            return False
+
+    def _is_latest_comment_from_automation(self, comments: List[Dict]) -> bool:
+        """Check if the latest comment is from AI automation"""
+        if not comments:
+            return False
+
+        latest_comment = comments[-1]  # Comments should be ordered by creation time
+        body = latest_comment.get('body', '')
+        return body.startswith('[AI automation]')
+
+    def _has_codex_replied_to_automation(self, comments: List[Dict]) -> bool:
+        """Check if Codex has replied after our latest automation comment"""
+        if not comments:
+            return False
+
+        # Find the most recent automation comment
+        latest_automation_index = -1
+        for i in range(len(comments) - 1, -1, -1):
+            if comments[i].get('body', '').startswith('[AI automation]'):
+                latest_automation_index = i
+                break
+
+        if latest_automation_index == -1:
+            return False  # No automation comment found
+
+        # Check if there are any non-automation comments after the latest automation comment
+        for i in range(latest_automation_index + 1, len(comments)):
+            comment_body = comments[i].get('body', '')
+            author = comments[i].get('author', {}).get('login', '')
+
+            # Skip bot comments, but include any human comments (including Codex responses)
+            if not author.endswith('[bot]') and not comment_body.startswith('[AI automation]'):
+                self.logger.debug(f"Found reply from {author} after automation comment")
+                return True
+
+        return False
+
+    def _is_latest_comment_from_codex_work(self, comments: List[Dict]) -> bool:
+        """Check if the latest comment is from Codex indicating work done"""
+        if not comments:
+            return False
+
+        latest_comment = comments[-1]
+        body = latest_comment.get('body', '').lower()
+        author = latest_comment.get('author', {}).get('login', '').lower()
+
+        # Skip if it's from automation or a bot
+        if body.startswith('[ai automation]') or author.endswith('[bot]'):
+            return False
+
+        # Known AI assistant usernames (Claude Code, Codex, etc.)
+        ai_usernames = {
+            'claude-dev', 'coderabbitai', 'codex-assistant', 'github-copilot',
+            'claude', 'anthropic-claude', 'openai-codex', 'ai-assistant'
+        }
+
+        # Must be from a known AI assistant
+        if author not in ai_usernames:
+            self.logger.debug(f"Comment from {author} not recognized as AI assistant")
+            return False
+
+        # Look for patterns that indicate Codex did work (not just review)
+        work_indicators = [
+            'i\'ve fixed',
+            'i fixed',
+            'i\'ve updated',
+            'i updated',
+            'i\'ve implemented',
+            'i implemented',
+            'i\'ve addressed',
+            'i addressed',
+            'i\'ve modified',
+            'i modified',
+            'i\'ve changed',
+            'i changed',
+            'made the following changes',
+            'here are the changes',
+            'i\'ve made changes',
+            'changes have been made',
+            'updated the code',
+            'fixed the issue',
+            'resolved the problem',
+            'applied the fix'
+        ]
+
+        # Check if the comment contains work indicators
+        for indicator in work_indicators:
+            if indicator in body:
+                self.logger.debug(f"Found Codex work indicator: '{indicator}' in comment from {author}")
+                return True
+
+        return False
+
+    def _has_automation_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
+        """Check if we already have an automation comment for this specific commit"""
+        if not comments or not head_sha:
+            return False
+
+        for comment in comments:
+            body = comment.get('body', '')
+            if body.startswith('[AI automation]') and head_sha[:8] in body:
+                self.logger.debug(f"Found existing automation comment for commit {head_sha[:8]}")
+                return True
+
+        return False
+
+    def _are_tests_passing(self, repository: str, pr_number: int) -> bool:
+        """Check if tests are passing on the PR"""
+        try:
+            # Get PR status checks
+            result = subprocess.run([
+                "gh", "pr", "view", str(pr_number),
+                "--repo", repository,
+                "--json", "statusCheckRollup"
+            ], capture_output=True, text=True, check=True, timeout=30)
+
+            pr_status = json.loads(result.stdout)
+            status_checks = pr_status.get('statusCheckRollup', [])
+
+            # If no status checks are configured, assume tests are failing
+            if not status_checks:
+                self.logger.debug(f"⚠️ No status checks configured for PR #{pr_number}, assuming failing")
+                return False
+
+            # Check if all status checks are successful
+            for check in status_checks:
+                if check.get('state') not in ['SUCCESS', 'NEUTRAL']:
+                    self.logger.debug(f"❌ Status check failed: {check.get('name')} - {check.get('state')}")
+                    return False
+
+            self.logger.debug(f"✅ All {len(status_checks)} status checks passing for PR #{pr_number}")
+            return True
+
+        except Exception as e:
+            self.logger.warning(f"⚠️ Could not check test status for PR #{pr_number}: {e}")
+            return False  # Assume tests are failing if we can't check
+
+    def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
+        """Build comment body that tells Codex to fix PR comments and tests"""
+
+        # Extract review comments and feedback
+        review_feedback = []
+        for comment in comments:
+            body = comment.get('body', '')
+            author = comment.get('author', {}).get('login', 'unknown')
+
+            # Skip our own automation comments
+            if body.startswith('[AI automation]'):
+                continue
+
+            # Include human review comments
+            if body.strip() and not author.endswith('[bot]'):
+                review_feedback.append(f"- {author}: {body[:200]}{'...' if len(body) > 200 else ''}")
+
+        comment_body = f"""[AI automation] Codex: Please review and fix this PR
+
+**PR Details:**
+- Title: {pr_data.get('title', 'Unknown')}
+- Author: {pr_data.get('author', {}).get('login', 'unknown')}
+- Branch: {pr_data.get('headRefName', 'unknown')}
+- Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
+
+**Tasks:**
+1. **Fix failing tests** - Review test failures and implement fixes
+2. **Address review comments** - Implement feedback from reviewers
+3. **Ensure code quality** - Follow project standards and best practices
+
+"""
+
+        if review_feedback:
+            comment_body += f"""**Review Feedback to Address:**
+{chr(10).join(review_feedback)}
+
+"""
+
+        comment_body += f"""**Instructions:**
+- Use `/cerebras` for substantial code changes
+- Run tests after changes: `./run_tests.sh`
+- Address ALL review comments systematically
+- Ensure all status checks pass before requesting re-review
+
+/cerebras Please fix the failing tests and address all review comments in this PR."""
+
+        return comment_body
 
     def _get_pr_comment_state(self, repo_full_name: str, pr_number: int) -> Tuple[Optional[str], List[Dict]]:
         """Fetch PR comment data needed for Codex comment gating"""
@@ -334,7 +588,20 @@ class JleechanorgPRMonitor:
             )
             pr_data = json.loads(result.stdout or "{}")
             head_sha = pr_data.get("headRefOid")
-            comments = pr_data.get("comments", {}).get("nodes", []) if pr_data else []
+
+            # Handle different comment structures from GitHub API
+            comments_data = pr_data.get("comments", [])
+            if isinstance(comments_data, dict):
+                comments = comments_data.get("nodes", [])
+            elif isinstance(comments_data, list):
+                comments = comments_data
+            else:
+                comments = []
+
+            # Ensure comments are sorted by creation time (oldest first)
+            # GitHub API should return them sorted, but let's be explicit
+            comments.sort(key=lambda c: c.get('createdAt', ''))
+
             return head_sha, comments
         except subprocess.CalledProcessError as e:
             error_message = e.stderr.strip() if e.stderr else str(e)
@@ -534,52 +801,26 @@ class JleechanorgPRMonitor:
             # Get PR details using gh CLI
             try:
                 result = subprocess.run(
-                    ["gh", "pr", "view", str(pr_number), "--repo", f"jleechanorg/{repository}", "--json", "title,headRefName,baseRefName,url,author"],
+                    ["gh", "pr", "view", str(pr_number), "--repo", repository, "--json", "title,headRefName,baseRefName,url,author"],
                     capture_output=True, text=True, check=True, timeout=30
                 )
                 pr_data = json.loads(result.stdout)
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
-                # Clean up any existing workspace first
-                potential_workspace = self.workspace_base / f"{repository}-pr-{pr_number}"
-                if potential_workspace.exists():
-                    self.cleanup_workspace(potential_workspace)
+                # Post codex instruction comment directly (no worktree needed)
+                success = self.post_codex_instruction_simple(repository, pr_number, pr_data)
 
-                # Create worktree
-                pr_dict = {
-                    'repository': repository,
-                    'number': pr_number,
-                    'title': pr_data['title'],
-                    'headRefName': pr_data['headRefName'],
-                    'baseRefName': pr_data['baseRefName'],
-                    'url': pr_data['url'],
-                    'author': pr_data['author'],
-                    'workspaceId': f"{repository}-pr-{pr_number}",
-                    'repositoryFullName': f"jleechanorg/{repository}"
-                }
-                workspace_path = self.create_worktree_for_pr(pr_dict)
-                if workspace_path:
+                # Record PR processing attempt with result
+                result = "success" if success else "failure"
+                self.safety_manager.record_pr_attempt(pr_key, result)
 
-                    # Post codex instruction comment
-                    success = self.post_codex_instruction(workspace_path)
-
-                    # Record PR processing attempt with result
-                    result = "success" if success else "failure"
-                    self.safety_manager.record_pr_attempt(pr_key, result)
-
-                    # Clean up workspace
-                    self.cleanup_workspace(workspace_path)
-
-                    if success:
-                        self.logger.info(f"✅ Successfully processed target PR {repository} #{pr_number}")
-                    else:
-                        self.logger.error(f"❌ Failed to process target PR {repository} #{pr_number}")
-
-                    return success
+                if success:
+                    self.logger.info(f"✅ Successfully processed target PR {repository} #{pr_number}")
                 else:
-                    self.logger.error(f"❌ Failed to create worktree for PR {repository} #{pr_number}")
-                    return False
+                    self.logger.error(f"❌ Failed to process target PR {repository} #{pr_number}")
+
+                return success
 
             except subprocess.CalledProcessError as e:
                 self.logger.error(f"❌ Failed to get PR details for {repository} #{pr_number}: {e.stderr}")

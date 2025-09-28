@@ -259,18 +259,14 @@ class AutomationSafetyManager:
 
     def _send_limit_notification(self, subject: str, message: str):
         """Send email notification for limit reached"""
-
-        # Create SMTP connection - this will be mocked in tests
-        smtp = smtplib.SMTP('localhost')
-
-        # In production, would implement actual email sending
-        # For now, just having the SMTP call is enough for the tests
-
-        # Real implementation would be:
-        # msg = MIMEText(message)
-        # msg['Subject'] = subject
-        # smtp.send_message(msg)
-        # smtp.quit()
+        try:
+            # Try to use the more complete email notification method
+            self._send_notification(subject, message)
+        except Exception as e:
+            # If email fails, just log it - don't break automation
+            print(f"Failed to send email notification: {e}")
+            print(f"Subject: {subject}")
+            print(f"Message: {message}")
 
     def grant_manual_approval(self, approver_email: str, approval_time: Optional[datetime] = None):
         """Grant manual approval for continued automation"""

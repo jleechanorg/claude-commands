@@ -64,14 +64,14 @@ def main():
         # Get project root
         project_root = Path(__file__).parent.parent
 
-        # Run the actual automation script with safety checks
-        automation_script = project_root / "automation" / "simple_pr_batch.sh"
+        # Run the improved PR monitor with safety checks
+        automation_script = project_root / "automation" / "jleechanorg_pr_monitor.py"
 
         if not automation_script.exists():
             logger.error(f"❌ Automation script not found: {automation_script}")
             return 1
 
-        logger.info(f"🚀 Executing automation script: {automation_script}")
+        logger.info(f"🚀 Executing PR automation monitor: {automation_script}")
 
         # Execute with environment variables for safety integration
         env = os.environ.copy()
@@ -79,7 +79,7 @@ def main():
         env['AUTOMATION_SAFETY_WRAPPER'] = '1'
 
         result = subprocess.run([
-            str(automation_script)
+            'python3', str(automation_script)
         ], env=env, capture_output=True, text=True, timeout=3600)  # 1 hour timeout
 
         # Log results
