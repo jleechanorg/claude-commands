@@ -14,6 +14,8 @@ from unittest.mock import Mock, patch, MagicMock
 # Add automation directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+# Import after path setup
+import jleechanorg_pr_monitor
 from jleechanorg_pr_monitor import JleechanorgPRMonitor, main
 
 

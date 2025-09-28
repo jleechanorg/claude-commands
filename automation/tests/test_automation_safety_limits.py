@@ -210,9 +210,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         results = []
 
         def attempt_pr():
-            result = self.automation_manager.can_process_pr(1001)
-            if result:
-                self.automation_manager.record_pr_attempt(1001, "failure")
+            result = self.automation_manager.try_process_pr(1001)
             results.append(result)
 
         # Start 10 concurrent threads
@@ -255,7 +253,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     def automation_manager(self):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
         # This will fail until we implement the class in GREEN phase
-        return AutomationSafetyManager(self.test_dir)
+        if not hasattr(self, '_automation_manager'):
+            self._automation_manager = AutomationSafetyManager(self.test_dir)
+        return self._automation_manager
 
 
 # Matrix 8: Integration with Existing Automation
