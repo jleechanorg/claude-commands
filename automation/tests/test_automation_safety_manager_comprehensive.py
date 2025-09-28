@@ -466,7 +466,7 @@ class TestFileLocking:
 
     def test_permission_error_handling(self, manager):
         """Test handling of file permission errors"""
-        with patch('builtins.open', side_effect=PermissionError("Access denied")):
+        with patch('utils.json_manager.write_json', return_value=False):
             with patch.object(manager.logger, 'error') as mock_error:
                 # Should not raise exception
                 manager.record_global_run()

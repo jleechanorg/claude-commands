@@ -281,13 +281,14 @@ class AutomationSafetyManager:
             if not data.get("approved", False):
                 return False
 
-            # Check if approval has expired (24 hours)
+            # Check if approval has expired (configurable hours)
             approval_date_str = data.get("approval_date")
             if not approval_date_str:
                 return False
 
             approval_date = datetime.fromisoformat(approval_date_str)
-            expiry = approval_date + timedelta(hours=24)
+            approval_hours = get_automation_limits()['approval_hours']
+            expiry = approval_date + timedelta(hours=approval_hours)
 
             return datetime.now() < expiry
 

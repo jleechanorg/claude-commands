@@ -19,7 +19,7 @@ from typing import Dict, Any, Optional
 
 
 class SafeJSONManager:
-    """Thread-safe JSON file operations with consistent error handling"""
+    """Thread-safe and cross-process safe JSON file operations with file locking"""
 
     def __init__(self):
         self._locks = {}
@@ -32,14 +32,26 @@ class SafeJSONManager:
                 self._locks[file_path] = threading.RLock()
             return self._locks[file_path]
 
+    def _get_file_lock_path(self, file_path: str) -> str:
+        """Get file lock path for cross-process safety"""
+        return f"{file_path}.lock"
+
     def read_json(self, file_path: str, default: Any = None) -> Any:
-        """Thread-safe JSON file reading with default fallback"""
+        """Cross-process safe JSON file reading with default fallback"""
         lock = self._get_lock(file_path)
         with lock:
             try:
+                import fcntl
+                import tempfile
+
                 if os.path.exists(file_path):
                     with open(file_path, 'r') as f:
-                        return json.load(f)
+                        # Add file lock for cross-process safety
+                        fcntl.flock(f.fileno(), fcntl.LOCK_SH)
+                        try:
+                            return json.load(f)
+                        finally:
+                            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
                 else:
                     return default if default is not None else {}
             except (json.JSONDecodeError, IOError) as e:
@@ -47,32 +59,57 @@ class SafeJSONManager:
                 return default if default is not None else {}
 
     def write_json(self, file_path: str, data: Any) -> bool:
-        """Thread-safe JSON file writing with error handling"""
+        """Cross-process safe JSON file writing with atomic operations"""
         lock = self._get_lock(file_path)
         with lock:
             try:
+                import fcntl
+                import tempfile
+
                 # Ensure directory exists
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
-                # Write with atomic operation using temp file
-                temp_path = f"{file_path}.tmp"
-                with open(temp_path, 'w') as f:
-                    json.dump(data, f, indent=2, default=str)
+                # Create temp file in same directory for atomic replace
+                dir_path = os.path.dirname(file_path)
+                fd, temp_path = tempfile.mkstemp(dir=dir_path, prefix=os.path.basename(file_path), suffix=".tmp")
 
-                # Atomic move
-                os.rename(temp_path, file_path)
-                return True
+                try:
+                    with os.fdopen(fd, 'w') as f:
+                        # Add exclusive file lock for cross-process safety
+                        fcntl.flock(f.fileno(), fcntl.LOCK_EX)
+                        try:
+                            json.dump(data, f, indent=2, default=str)
+                            f.flush()
+                            os.fsync(f.fileno())
+                        finally:
+                            fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+
+                    # Atomic replace
+                    os.replace(temp_path, file_path)
+                    return True
+                finally:
+                    # Clean up temp file if replace failed
+                    if os.path.exists(temp_path):
+                        try:
+                            os.remove(temp_path)
+                        except OSError:
+                            pass
+
             except (IOError, OSError) as e:
                 logging.error(f"Failed to write JSON to {file_path}: {e}")
                 return False
 
-    def update_json(self, file_path: str, update_func) -> bool:
-        """Thread-safe JSON file update with callback function"""
+    def update_json(self, file_path: str, update_func, lock_timeout: int = 10) -> bool:
+        """Cross-process safe JSON file update with callback function"""
         lock = self._get_lock(file_path)
         with lock:
-            data = self.read_json(file_path, {})
-            updated_data = update_func(data)
-            return self.write_json(file_path, updated_data)
+            try:
+                data = self.read_json(file_path, {})
+                updated_data = update_func(data)
+                return self.write_json(file_path, updated_data)
+            except Exception as e:
+                logging.error(f"Failed to update JSON {file_path}: {e}")
+                return False
 
 
 # Global instance for shared use
@@ -145,7 +182,8 @@ def get_automation_limits() -> Dict[str, int]:
     return {
         'pr_limit': int(os.getenv('AUTOMATION_PR_LIMIT', '5')),
         'global_limit': int(os.getenv('AUTOMATION_GLOBAL_LIMIT', '50')),
-        'approval_hours': int(os.getenv('AUTOMATION_APPROVAL_HOURS', '24'))
+        'approval_hours': int(os.getenv('AUTOMATION_APPROVAL_HOURS', '24')),
+        'subprocess_timeout': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '3600'))
     }
 
 

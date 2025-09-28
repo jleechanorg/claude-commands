@@ -974,16 +974,7 @@ TEST_SUITE_TIMEOUT=${TEST_SUITE_TIMEOUT:-600}  # 10 minutes default
 
 print_status "⏱️  Test suite timeout: ${TEST_SUITE_TIMEOUT} seconds ($(($TEST_SUITE_TIMEOUT / 60)) minutes)"
 
-# Run tests with overall timeout wrapper
-run_tests_with_timeout() {
-    # Force sequential execution for now to debug hanging issue
-    print_status "🔧 DEBUG: Running tests sequentially to avoid parallel hang"
-    for test_file in "${test_files[@]}"; do
-        print_status "🧪 Running test: $test_file"
-        run_single_test "$test_file"
-        print_status "✅ Completed test: $test_file"
-    done
-}
+
 
 # Note: Using bash subshells for parallel execution, so no exports needed
 

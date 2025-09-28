@@ -238,20 +238,6 @@ class JleechanorgPRMonitor:
         except Exception as e:
             self.logger.error(f"Error processing comment for PR {repo_name}#{pr_number}: {e}")
             return False
-    def _setup_logging(self) -> logging.Logger:
-        """Set up logging for PR monitor"""
-        log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
-        log_dir.mkdir(parents=True, exist_ok=True)
-
-        logging.basicConfig(
-            level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-            handlers=[
-                logging.FileHandler(log_dir / "jleechanorg_pr_monitor.log"),
-                logging.StreamHandler()
-            ]
-        )
-        return logging.getLogger(__name__)
 
     def discover_open_prs(self) -> List[Dict]:
         """Discover open PRs from last 24 hours across jleechanorg organization, ordered by most recent updates"""

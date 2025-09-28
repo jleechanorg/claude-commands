@@ -41,7 +41,7 @@ class AutomationUtils:
         'SMTP_PORT': 587,
         'LOG_DIR': '~/Library/Logs/worldarchitect-automation',
         'DATA_DIR': '~/Library/Application Support/worldarchitect-automation',
-        'MAX_SUBPROCESS_TIMEOUT': 3600,  # 1 hour
+        'MAX_SUBPROCESS_TIMEOUT': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '3600')),  # 1 hour (configurable)
         'EMAIL_SUBJECT_PREFIX': '[WorldArchitect Automation]'
     }
 
