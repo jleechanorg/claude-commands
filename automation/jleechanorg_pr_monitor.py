@@ -387,7 +387,7 @@ class JleechanorgPRMonitor:
 
         latest_comment = comments[-1]  # Comments should be ordered by creation time
         body = latest_comment.get('body', '')
-        return body.startswith('[AI automation]')
+        return '[AI automation]' in body
 
     def _has_codex_replied_to_automation(self, comments: List[Dict]) -> bool:
         """Check if Codex has replied after our latest automation comment"""
@@ -397,7 +397,7 @@ class JleechanorgPRMonitor:
         # Find the most recent automation comment
         latest_automation_index = -1
         for i in range(len(comments) - 1, -1, -1):
-            if comments[i].get('body', '').startswith('[AI automation]'):
+            if '[AI automation]' in comments[i].get('body', ''):
                 latest_automation_index = i
                 break
 
@@ -410,7 +410,7 @@ class JleechanorgPRMonitor:
             author = comments[i].get('author', {}).get('login', '')
 
             # Skip bot comments, but include any human comments (including Codex responses)
-            if not author.endswith('[bot]') and not comment_body.startswith('[AI automation]'):
+            if not author.endswith('[bot]') and '[AI automation]' not in comment_body:
                 self.logger.debug(f"Found reply from {author} after automation comment")
                 return True
 
@@ -426,7 +426,7 @@ class JleechanorgPRMonitor:
         author = latest_comment.get('author', {}).get('login', '').lower()
 
         # Skip if it's from automation or a bot
-        if body.startswith('[ai automation]') or author.endswith('[bot]'):
+        if '[ai automation]' in body.lower() or author.endswith('[bot]'):
             return False
 
         # Known AI assistant usernames (Claude Code, Codex, etc.)
@@ -479,7 +479,7 @@ class JleechanorgPRMonitor:
 
         for comment in comments:
             body = comment.get('body', '')
-            if body.startswith('[AI automation]') and head_sha[:8] in body:
+            if '[AI automation]' in body and head_sha[:8] in body:
                 self.logger.debug(f"Found existing automation comment for commit {head_sha[:8]}")
                 return True
 
@@ -533,13 +533,16 @@ class JleechanorgPRMonitor:
             if body.strip() and not author.endswith('[bot]'):
                 review_feedback.append(f"- {author}: {body[:200]}{'...' if len(body) > 200 else ''}")
 
-        comment_body = f"""[AI automation] Codex: Please review and fix this PR
+        comment_body = f"""@codex [AI automation] Please review and fix this PR
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
 - Author: {pr_data.get('author', {}).get('login', 'unknown')}
 - Branch: {pr_data.get('headRefName', 'unknown')}
 - Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
+
+**Instructions:**
+Use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification explicitly with an explanation. Push any commits needed to remote so the PR is updated.
 
 **Tasks:**
 1. **Fix failing tests** - Review test failures and implement fixes
@@ -554,11 +557,12 @@ class JleechanorgPRMonitor:
 
 """
 
-        comment_body += f"""**Instructions:**
+        comment_body += f"""**Required Actions:**
 - Use `/cerebras` for substantial code changes
 - Run tests after changes: `./run_tests.sh`
 - Address ALL review comments systematically
 - Ensure all status checks pass before requesting re-review
+- Push commits to update the PR
 
 /cerebras Please fix the failing tests and address all review comments in this PR."""
 
