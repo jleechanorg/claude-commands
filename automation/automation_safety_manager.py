@@ -546,9 +546,10 @@ def main():
 
         if pr_data:
             print("PR attempts:")
-            for pr_number, attempts in pr_data.items():
-                status = "BLOCKED" if attempts >= manager.pr_limit else "OK"
-                print(f"  PR #{pr_number}: {attempts}/{manager.pr_limit} ({status})")
+            for pr_key, attempts in pr_data.items():
+                count = len(attempts) if isinstance(attempts, list) else int(attempts or 0)
+                status = "BLOCKED" if count >= manager.pr_limit else "OK"
+                print(f"  PR {pr_key}: {count}/{manager.pr_limit} ({status})")
         else:
             print("No PR attempts recorded")
 

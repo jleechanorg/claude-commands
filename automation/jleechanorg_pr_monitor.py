@@ -15,7 +15,7 @@ import tempfile
 import shutil
 import logging
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 from automation_safety_manager import AutomationSafetyManager
 from utils import setup_logging
@@ -135,7 +135,7 @@ class JleechanorgPRMonitor:
     def is_pr_actionable(self, pr_data: Dict) -> bool:
         """Determine if a PR is actionable (should be processed)"""
         # Closed PRs are not actionable
-        if pr_data.get('state') != 'open':
+        if pr_data.get('state', '').lower() != 'open':
             return False
 
         # PRs with no commits are not actionable
@@ -184,9 +184,12 @@ class JleechanorgPRMonitor:
         eligible_prs = self.filter_eligible_prs(all_prs)
         return eligible_prs[:limit]
 
-    def run_monitoring_cycle_with_actionable_count(self, target_actionable_count: int = 10) -> Dict:
+    def run_monitoring_cycle_with_actionable_count(self, target_actionable_count: int = 20) -> Dict:
         """Enhanced monitoring cycle that processes exactly target actionable PRs"""
         all_prs = self.discover_open_prs()
+
+        # Sort by most recently updated first
+        all_prs.sort(key=lambda pr: pr.get('updatedAt', ''), reverse=True)
 
         actionable_processed = 0
         skipped_count = 0
@@ -254,7 +257,7 @@ class JleechanorgPRMonitor:
         """Discover open PRs from last 24 hours across jleechanorg organization, ordered by most recent updates"""
         self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last 24 hours)")
 
-        from datetime import datetime, timedelta
+
 
         # Get current time and 24 hours ago
         now = datetime.now()
@@ -429,7 +432,7 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30)
+            result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number}")
 
@@ -641,7 +644,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             try:
                 result = subprocess.run(
                     ["gh", "pr", "view", str(pr_number), "--repo", repository, "--json", "title,headRefName,baseRefName,url,author"],
-                    capture_output=True, text=True, check=True, timeout=30
+                    capture_output=True, text=True, check=True, timeout=30, shell=False
                 )
                 pr_data = json.loads(result.stdout)
 
