@@ -28,11 +28,8 @@ echo "📊 Fetching GitHub data via /commentfetch orchestration..."
 ```
 
 ### Phase 2: Comprehensive Status Display with CI Analysis
-```bash
-# Execute Python implementation with enhanced CI status checking
-echo "🔄 Generating comprehensive status with CI analysis..."
-python3 .claude/commands/gstatus.py "$ARGUMENTS"
-```
+Claude: Check for `gstatus.py` in the trusted locations (look in `~/.claude/commands` first, then in the repository `.claude/commands`). Once you find it, run `python3` with the script path and original arguments. If the script is missing from both locations, surface an error explaining the lookup failure.
+
 
 ## 🏗️ Architecture Benefits
 

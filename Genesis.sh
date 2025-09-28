@@ -143,7 +143,7 @@ cat > index.html << 'EOF'
     <div class="container">
         <h1>Swift Code Generator</h1>
         <p style="text-align: center; color: #666;">Powered by Cerberus AI</p>
-        
+
         <div class="info">
             <p><strong>How to get your Cerberus AI API key:</strong></p>
             <ol>
@@ -152,26 +152,26 @@ cat > index.html << 'EOF'
                 <li>Paste the key below to start generating Swift code</li>
             </ol>
         </div>
-        
+
         <div class="input-group">
             <label for="apiKey">Cerberus AI API Key:</label>
             <input type="password" id="apiKey" placeholder="Enter your API key">
         </div>
-        
+
         <div class="input-group">
             <label for="prompt">Code Generation Prompt:</label>
             <textarea id="prompt" placeholder="Describe the iOS feature you want to generate code for..."></textarea>
         </div>
-        
+
         <button id="generateBtn">Generate Swift Code</button>
-        
+
         <div class="loading" id="loading">
             <div class="spinner"></div>
             <p>Generating code with Cerberus AI...</p>
         </div>
-        
+
         <div class="error" id="error"></div>
-        
+
         <div class="code-container">
             <label>Generated Swift Code:</label>
             <pre><code id="codeOutput">// Generated code will appear here</code></pre>
@@ -183,7 +183,7 @@ cat > index.html << 'EOF'
     <script>
         document.getElementById('generateBtn').addEventListener('click', generateCode);
         document.getElementById('copyBtn').addEventListener('click', copyCode);
-        
+
         async function generateCode() {
             const apiKey = document.getElementById('apiKey').value;
             const prompt = document.getElementById('prompt').value;
@@ -191,23 +191,23 @@ cat > index.html << 'EOF'
             const errorElement = document.getElementById('error');
             const outputElement = document.getElementById('codeOutput');
             const button = document.getElementById('generateBtn');
-            
+
             if (!apiKey) {
                 showError('Please enter your Cerberus AI API key');
                 return;
             }
-            
+
             if (!prompt) {
                 showError('Please enter a code generation prompt');
                 return;
             }
-            
+
             // Reset UI
             errorElement.style.display = 'none';
             loadingElement.style.display = 'block';
             button.disabled = true;
             outputElement.textContent = '// Generating code...';
-            
+
             try {
                 const response = await fetch('https://api.cerberusai.com/v1/completions', {
                     method: 'POST',
@@ -222,15 +222,15 @@ cat > index.html << 'EOF'
                         temperature: 0.7
                     })
                 });
-                
+
                 if (!response.ok) {
                     const errorData = await response.json();
                     throw new Error(`API Error: ${errorData.error?.message || response.statusText}`);
                 }
-                
+
                 const data = await response.json();
                 const generatedCode = data.choices[0].text.trim();
-                
+
                 outputElement.textContent = generatedCode || '// No code generated';
             } catch (error) {
                 showError(`Error: ${error.message}`);
@@ -240,11 +240,11 @@ cat > index.html << 'EOF'
                 button.disabled = false;
             }
         }
-        
+
         function copyCode() {
             const codeOutput = document.getElementById('codeOutput');
             const copySuccess = document.getElementById('copySuccess');
-            
+
             navigator.clipboard.writeText(codeOutput.textContent)
                 .then(() => {
                     copySuccess.style.display = 'block';
@@ -256,7 +256,7 @@ cat > index.html << 'EOF'
                     showError('Failed to copy: ' + err);
                 });
         }
-        
+
         function showError(message) {
             const errorElement = document.getElementById('error');
             errorElement.textContent = message;

@@ -3,22 +3,9 @@
 # Multi-Player Intelligent Command Combination System
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
-# Source cross-platform timeout utilities
-SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
-if [ -r "$SCRIPT_DIR/timeout-utils.sh" ]; then
-  # shellcheck source=/dev/null
-  source "$SCRIPT_DIR/timeout-utils.sh"
-else
-  echo "compose-commands: timeout-utils.sh not found; proceeding without portable timeouts" >&2
-  safe_read_stdin() {
-    if [ -t 0 ]; then
-      printf ''
-    else
-      # Best-effort fallback without timeout enforcement
-      cat
-    fi
-  }
-fi
+# Source timeout utilities for safe_read_stdin function
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$script_dir/timeout-utils.sh"
 
 # Read input from stdin (can be JSON or plain text)
 # Handle both interactive and non-interactive modes without hanging
@@ -47,10 +34,17 @@ if [[ "$raw_input" == SLASH_COMMAND_EXECUTE:* ]]; then
     exit 0
 fi
 
+# Note: SLASH_COMMAND_EXECUTE patterns removed - handled by SlashCommand MCP tool directly
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
-  # Allow customizing log location; include PID for uniqueness
-  log_file="${COMPOSE_LOG_FILE:-/tmp/compose-commands-$$.log}"
+  # Allow customizing log location; default to a secure temp file when unset
+  if [[ -n "${COMPOSE_LOG_FILE:-}" ]]; then
+    log_file="$COMPOSE_LOG_FILE"
+  else
+    if ! log_file="$(mktemp "${TMPDIR:-/tmp}/compose-commands.XXXXXX" 2>/dev/null)"; then
+      log_file="${TMPDIR:-/tmp}/compose-commands-$$.log"
+    fi
+  fi
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
   printf '[%s] INPUT: %s\n' "$timestamp" "$raw_input" >> "$log_file"
 fi
@@ -110,6 +104,13 @@ function find_nested_commands() {
 
         echo "$nested $workflow_nested" | tr ' ' '\n' | sort -u | tr '\n' ' '
     fi
+}
+
+# Normalize whitespace across aggregated command strings in a consistent way
+normalize_whitespace() {
+    local input
+    input=$(cat)
+    printf '%s' "$input" | tr '\n' ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/[[:space:]][[:space:]]*/ /g'
 }
 
 # Count total valid commands first to inform filtering decision
@@ -188,6 +189,10 @@ for cmd in $raw_commands; do
     fi
 done
 
+# Normalize whitespace for aggregated command strings before further processing
+commands=$(printf '%s' "$commands" | normalize_whitespace)
+nested_commands=$(printf '%s' "$nested_commands" | normalize_whitespace)
+
 # Exit early if no real slash commands found
 if [[ -z "$commands" ]]; then
     echo "$input"
@@ -218,7 +223,9 @@ command_count=$actual_cmd_count
 
 # MULTI-PLAYER OUTPUT: Combine detected + nested commands intelligently
 # Clean and deduplicate nested commands
-nested_commands=$(echo "$nested_commands" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')
+if [[ -n "$nested_commands" ]]; then
+    nested_commands=$(printf '%s' "$nested_commands" | tr ' ' '\n' | sed '/^$/d' | sort -u | normalize_whitespace)
+fi
 
 # ENHANCED: Check if we have any valid commands to process
 # Process single commands with composition potential OR multiple commands
@@ -295,8 +302,11 @@ if [[ $command_count -gt 1 ]] || ( [[ $command_count -eq 1 ]] && should_process_
     all_commands="$commands"
     if [[ -n "$nested_commands" ]]; then
         # CORRECTNESS FIX: Use printf for proper deduplication across merged sources
-        all_commands=$(printf '%s\n%s' "$commands" "$nested_commands" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')
+        all_commands=$(printf '%s\n%s' "$commands" "$nested_commands" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')
     fi
+
+    # Ensure combined command list has clean whitespace for user-facing output
+    all_commands=$(printf '%s' "$all_commands" | normalize_whitespace)
 
     # Add context awareness to the output
     if [[ "$is_pasted_content" == "true" && $command_count -le $PASTE_COMMAND_THRESHOLD ]]; then
@@ -340,25 +350,27 @@ else
     # MULTI-PLAYER: Single commands only trigger multi-player intelligence for composition commands
     # Simple commands like /think, /help, etc. should pass through unchanged
     if [[ $command_count -eq 1 ]]; then
-        # Check if this is a known composition command that should trigger multi-player intelligence
-        if [[ "$commands" == "/pr " || "$commands" == "/execute " || "$commands" == "/copilot " || "$commands" == "/orchestrate " ]] && [[ -n "$nested_commands" ]]; then
+        # For single commands, only trigger multi-player intelligence when meaningful nested commands exist
+        single_command="${commands%% *}"
+
+        if [[ -n "$single_command" && -n "$nested_commands" ]]; then
             # Filter out self-references and extract meaningful nested commands
-            filtered_nested=$(echo "$nested_commands" | tr ' ' '\n' | grep -v "^${commands% }$" | grep -v '^$' | tr '\n' ' ')
+            filtered_nested=$(echo "$nested_commands" | tr ' ' '\n' | grep -v "^${single_command}$" | grep -v '^$' | sort -u | tr '\n' ' ' | sed 's/[[:space:]]*$//')
 
             if [[ -n "$filtered_nested" ]]; then
-                all_commands=$(printf '%s\n%s' "$commands" "$filtered_nested" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ')
-                output="🔍 Detected slash command:$commands
+                all_commands=$(printf '%s\n%s' "$single_command" "$filtered_nested" | tr ' ' '\n' | sort -u | grep -v '^$' | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+                output="🔍 Detected slash command:$single_command
 🎯 Multi-Player Intelligence: Found nested commands:$filtered_nested
 
 Use these approaches in combination:$all_commands. Apply this to: $text
 
-📋 Automatically tell the user: \"I detected these commands:$commands and will combine them intelligently.\""
+📋 Automatically tell the user: \"I detected these commands:$single_command and will combine them intelligently.\""
             else
                 # No meaningful nested commands, pass through unchanged
                 output="$input"
             fi
         else
-            # Single command that's not a composition command - preserve for backward compatibility
+            # Single command without nested intelligence - preserve for backward compatibility
             # Fixed: Don't strip command prefix to maintain compatibility with existing workflows
             output="$input"
         fi

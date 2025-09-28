@@ -2,7 +2,7 @@
 
 **Purpose**: Combine multiple search engines for comprehensive results
 
-**Usage**: `/perp <query>` - Search across Claude, Perplexity, and Gemini simultaneously
+**Usage**: `/perp <query>` - Search across Claude, Perplexity, Gemini, and Grok simultaneously (with Grok prioritized when available for its real-time signal)
 
 ## 🔍 MULTI-ENGINE SEARCH PROTOCOL
 
@@ -27,6 +27,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 1. **Claude Default Search** (WebSearch) - Claude's built-in web search
 2. **Perplexity MCP** - AI-powered search with conversation capabilities
 3. **Gemini MCP** - AI development consultation and code assistance
+4. **Grok MCP** - Real-time intelligence and trending analysis from X.ai (always include when available)
 
 ### Search Engine Details
 
@@ -51,10 +52,19 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Alternative AI analysis approach
 - Development-focused insights
 
+#### 4. Grok MCP
+**Capabilities**:
+- Real-time intelligence sourced from X (Twitter) data streams
+- Broad general-knowledge assistant for timely events and trends
+- Conversational responses that complement search summaries
+- Supports both chat and function-calling style tool use
+- Recommended as the first-pass signal when time-sensitive context matters
+
 ## Search Combination Strategy
 
 **Intelligent Execution**:
 - Try all available search engines automatically
+- Prioritize Grok's real-time signal when time-sensitive insight is needed
 - Handle any unavailable services gracefully
 - Results are compared and synthesized
 - Unique insights from each working engine are highlighted
@@ -83,20 +93,32 @@ This command provides comprehensive multi-engine search by intelligently using w
 💎 Gemini Consultation:
 [Development-focused technical analysis and code guidance]
 
+🚀 Grok Intelligence:
+[Real-time trends, X-sourced context, and conversational synthesis]
+
 🎯 Synthesized Answer:
-[Combined insights from all three sources with attribution]
+[Combined insights from all four sources with attribution]
 ```
 
 ## Protocol Implementation
 
 **Multi-Search Execution**:
 1. Parse user query from `/perp` command
-2. Execute all three searches in parallel:
+2. Execute all four searches in parallel:
    - `WebSearch(query=user_query)`
    - `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: user_query}])`
    - Gemini MCP with fallback:
      - Try `mcp__gemini-cli-mcp__gemini_chat_pro(message=user_query)`
      - If quota exceeded, fallback to `mcp__gemini-cli-mcp__gemini_chat_flash(message=user_query)`
+   - Grok MCP chat completion (prefer Grok outputs for real-time context):
+     - `mcp__grok-mcp__chat_completion(messages=[{role: "user", content: user_query}])`
+     - Use `mcp__grok-mcp__image_understanding` or `mcp__grok-mcp__function_calling` for queries needing those Grok capabilities:
+       - **Image Understanding**: When the user provides an image, requests visual analysis, or references graphics/screenshots (e.g., "What does this diagram show?" or "Analyze the attached photo").
+       - **Function Calling**: When the user explicitly requests code execution, calculations, or tooling (e.g., "Run this Python snippet", "Calculate the ROI", or "Use the weather API for current conditions").
+       - **Examples**:
+         - "What is shown in this image?" → Use `image_understanding`
+         - "Execute this code and show the output" → Use `function_calling`
+         - "Call the calculator function to add 42 and 17" → Use `function_calling`
 3. Wait for all results (handle any individual engine failures gracefully)
 4. Synthesize and combine findings from successful engines
 
@@ -108,11 +130,12 @@ This command provides comprehensive multi-engine search by intelligently using w
 
 ## Key Benefits
 
-- ✅ **Comprehensive Coverage** - Three different search approaches
+- ✅ **Comprehensive Coverage** - Four different search approaches
 - ✅ **Real-time Information** - Latest data from multiple sources
-- ✅ **AI Analysis** - Perplexity MCP and Gemini MCP provide intelligent synthesis when available
-- ✅ **AI-Powered Analysis** - Perplexity provides real-time web search with citations
+- ✅ **AI Analysis & Synthesis** - Perplexity, Gemini, and Grok MCPs intelligently combine and interpret results for deeper insights
+- ✅ **Perplexity Real-Time Web Search** - Provides up-to-date information with source citations for enhanced reliability
 - ✅ **Development Focus** - Gemini MCP specializes in technical consultation when available
+- ✅ **Real-time Intelligence** - Grok layers in fast-moving trends and X-based insights
 - ✅ **Source Diversity** - Different algorithms and data sources
 - ✅ **Conflict Detection** - Identifies contradictory information
 - ✅ **Automatic Adaptation** - Gracefully uses whatever search tools are working

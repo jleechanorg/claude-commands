@@ -348,6 +348,13 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 3. **Edit/MultiEdit** - In-place changes vs creating backup files
 4. **Bash** - OS operations only (not content analysis)
 
+🚨 **SLASHCOMMAND EXECUTION PROTOCOL:** ⚠️ MANDATORY - Prevent analysis paralysis
+- **SlashCommand returns workflow instructions, NOT execution results**
+- **ALWAYS execute the returned workflow immediately**
+- **NEVER assume SlashCommand "failed" - assume you need to execute manually**
+- **User says "it failed" → Check: "Did I actually execute what was returned?"**
+- **Default action: Read returned .md content → Execute the workflow steps**
+
 ### Context Management
 
 🚨 **LIMITS:** 500K tokens (Enterprise) / 200K (Paid). Use `/context` and `/checkpoint` commands.

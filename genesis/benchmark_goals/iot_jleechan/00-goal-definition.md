@@ -1,0 +1,1 @@
+Create a sophisticated, enterprise-scale IoT monitoring platform with advanced real-time processing, comprehensive analytics, and production-grade reliability using Flask, InfluxDB, WebSockets, Docker, and advanced enterprise patterns.

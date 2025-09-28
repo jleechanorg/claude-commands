@@ -82,7 +82,39 @@ The generated command assumes `proto_genesis.py` behavior:
 - **Default**: Skip interactive refinement, use goal from directory
 - **Progress Tracking**: Update files in goal directory during execution
 - **Session Persistence**: Save iteration state in goal directory
-- **Validation**: Use exit criteria from goal directory for consensus
+- **Self-Determination**: Genesis automatically detects completion using rigorous exit criteria
+- **Validation Protocol**: End-to-end validation prevents false success claims
+
+### 🚨 Enhanced Exit Criteria & Self-Determination
+
+**Genesis Self-Determination Protocol**:
+Genesis automatically detects completion using rigorous validation:
+
+**Primary Completion Indicators**:
+- ✅ **All Success Criteria Met**: Every goal criterion shows validated completion
+- ✅ **Evidence-Based Validation**: Demonstrable results with actual output artifacts
+- ✅ **End-to-End Testing**: Complete workflows verified, not just component startup
+- ✅ **No Critical Gaps**: All identified implementation gaps resolved
+- ✅ **Performance Targets**: Measurable outcomes meeting specified targets
+
+**Consensus Response Analysis**:
+Genesis automatically completes when consensus assessment contains:
+- **Explicit Completion**: "All exit criteria satisfied", "100% complete", "Implementation complete"
+- **High Progress**: Overall progress ≥95% with no critical implementation gaps
+- **Evidence Validation**: "Objective achieved", "Requirements met", "Fully operational"
+- **Gap Resolution**: "No critical gaps remaining", "All requirements satisfied"
+
+**🚨 Validation Requirements**:
+- **Functional Tests**: All claimed functionality must execute successfully end-to-end
+- **Performance Benchmarks**: Measurable outcomes meeting specified targets
+- **Integration Tests**: Complete workflows verified in target environment
+- **Documentation Complete**: Implementation guides enable independent reproduction
+
+**Anti-Patterns Prevented**:
+- ❌ Startup signal success (claiming "working" because process starts)
+- ❌ Partial signal validation (interpreting initialization as completion)
+- ❌ Component-only testing (testing parts instead of complete workflows)
+- ❌ Assumption-based fixes (assuming problems are solved without verification)
 
 ## Example Usage
 

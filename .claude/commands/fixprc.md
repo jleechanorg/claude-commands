@@ -1,19 +1,19 @@
 # /fixprc - Fix PR Comments (Autonomous PR Comment Resolution)
 
 ## 🎯 Purpose
-**Autonomous PR comment fixing system combining convergence + copilot specialized for PR comment resolution**
+**Autonomous PR comment fixing system combining genesis + copilot specialized for PR comment resolution**
 
 Similar to `/copilotc` but specifically optimized for PR comment threads, code review feedback, and merge-blocking issues.
 
 ## 🚀 Command Architecture - PR-Focused Universal Composition
 
-**Pattern**: Autonomous PR-specific comment resolution system
+**Pattern**: Autonomous PR-specific comment resolution system powered by genesis
 
 **Flow**:
 ```
-1. `/conv "fix all PR comments and make PR mergeable"`
+1. `/gene "fix all PR comments and make PR mergeable" 7 --iterate`
 2. Auto-execute `/copilot` with PR comment focus for each iteration
-3. Continue until PR is clean and mergeable
+3. Continue until PR is clean and mergeable within the 7-iteration cap
 4. Success when all PR comment threads resolved
 ```
 
@@ -25,14 +25,15 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 **Phase 1: PR Comment Analysis & Goal Setup**
 ```bash
-# Execute convergence with PR-specific comment resolution goal
-/conv "analyze and fix all PR comments, review feedback, and merge-blocking issues"
+# Execute genesis with PR-specific comment resolution goal (7 iteration cap by default)
+# Uses --iterate flag to skip initial Cerebras generation for faster iteration
+/gene "analyze and fix all PR comments, review feedback, and merge-blocking issues" 7 --iterate
 ```
 
 **Phase 2: PR-Focused Copilot Processing**
-- Within each convergence iteration, automatically execute `/copilot` with PR focus
+- Within each genesis iteration, automatically execute `/copilot` with PR focus
 - Prioritize merge-blocking comments and review feedback
-- Address code quality issues identified in PR comments  
+- Address code quality issues identified in PR comments
 - Handle CI failures and test issues mentioned in comments
 - Validate PR mergeable status after each iteration
 
@@ -45,8 +46,8 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 ## 🎛️ PR-Specific Configuration
 
-**Default Behavior**: 
-- **Max Iterations**: 8 (optimized for PR comment cycles)
+**Default Behavior**:
+- **Max Iterations**: 7 (caps `/gene` cycles for focused PR remediation)
 - **Success Criteria**: All PR comments resolved + Mergeable status achieved
 - **Focus Areas**: Review feedback, merge conflicts, CI issues, code quality
 
@@ -58,14 +59,14 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 ## 🚨 PR-Focused Autonomous Rules
 
-**PR-CENTRIC CONVERGENCE**: Uses `/conv` with PR-specific success criteria
+**PR-CENTRIC GENESIS**: Uses `/gene` with PR-specific success criteria
 - **Merge-blocking priority**: Addresses comments preventing merge first
 - **Review thread resolution**: Ensures all comment threads properly closed
 - **CI integration**: Fixes issues mentioned in automated comments
 - **Code quality focus**: Addresses review feedback on code improvements
 
 **SPECIALIZED COPILOT INTEGRATION**: PR comment processing optimization
-- **Comment thread tracking**: Systematic processing of all PR comment threads  
+- **Comment thread tracking**: Systematic processing of all PR comment threads
 - **Review feedback priority**: Addresses human reviewer feedback first
 - **Automated comment handling**: Processes bot comments and CI feedback
 - **Merge conflict resolution**: Handles merge-related comment issues
@@ -86,7 +87,7 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 ## ⚡ PR Processing Performance
 
-**Target Performance**: 
+**Target Performance**:
 - **Per Iteration**: 2-3 minutes (PR-focused copilot processing)
 - **Total Time**: 8-25 minutes (depending on PR comment complexity)
 - **Success Rate**: High (specialized for PR comment patterns)
@@ -95,9 +96,9 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 ## 🔗 Related Commands
 
-- `/copilotc` - General convergent copilot (broader GitHub comment scope)
+- `/copilotc` - General genesis-driven copilot (broader GitHub comment scope)
 - `/copilot` - Single-pass fast PR processing
-- `/conv` - Base convergence system (autonomous goal achievement)  
+- `/gene` - Genesis execution system (autonomous goal achievement)
 - `/pr` - Complete development lifecycle (includes PR creation + processing)
 
 ## 🎯 PR Success Criteria
@@ -115,18 +116,18 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 **`/fixprc`** (PR Comment Focused):
 - ✅ Specialized for PR comment threads and review feedback
-- ✅ Optimized iteration count for PR comment patterns (8 vs 10)
+- ✅ Tuned 7-iteration cap for PR comment patterns
 - ✅ Merge-blocking issue prioritization
 - ✅ Review thread resolution tracking
 
 **`/copilotc`** (General GitHub Comments):
 - ✅ Broader scope including issue comments, discussions
 - ✅ General GitHub comment resolution (not just PRs)
-- ✅ Standard convergence iteration count (10)
+- ✅ Shared genesis-driven iteration cap with flexibility for custom limits
 - ✅ General mergeable status validation
 
 ## Implementation Notes
 
 **PR-Specialized Composition**: This command uses universal composition optimized for PR comment resolution workflows, with specialized success criteria and validation methods focused on PR merge readiness.
 
-**Context Efficiency**: Inherits convergence system optimizations while adding PR-specific processing patterns for maximum efficiency in comment resolution cycles.
+**Context Efficiency**: Inherits genesis system optimizations while adding PR-specific processing patterns for maximum efficiency in comment resolution cycles.
