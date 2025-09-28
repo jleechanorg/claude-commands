@@ -42,7 +42,7 @@ With safety mechanisms in effect:
 # Configuration in script
 MAX_BATCH_SIZE=5        # PRs per run
 MAX_FIX_ATTEMPTS=3      # Attempts per PR
-COMMENT_TIMEOUT=300     # 5 minutes per Codex comment attempt
+COMMENT_TIMEOUT=1200    # 20 minutes per Codex comment attempt
 
 # Status tracking files
 /tmp/pr_automation_processed.txt    # Successfully processed PRs with timestamps
@@ -53,7 +53,7 @@ COMMENT_TIMEOUT=300     # 5 minutes per Codex comment attempt
 ### **Cron Configuration**
 ```bash
 # ENABLED (processes every 10 minutes)
-*/10 * * * * cd ~/projects/worldarchitect.ai/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
+*/10 * * * * cd ~/projects/worldarchitect.ai && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
 
 # DISABLED (commented out for safety)
 # */10 * * * * cd ~/projects/worldarchitect.ai/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1

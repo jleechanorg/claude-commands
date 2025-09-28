@@ -16,6 +16,7 @@ import json
 import shutil
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+from pathlib import Path
 
 # Add automation directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -276,6 +277,26 @@ class TestAutomationSafetyLimits(unittest.TestCase):
 class TestAutomationIntegration(unittest.TestCase):
     """Integration tests with existing simple_pr_batch.sh script"""
 
+    PLIST_PATH = "/Users/jleechan/Library/LaunchAgents/com.worldarchitect.pr-automation.plist"
+
+    def setUp(self):
+        plist_dir = Path(self.PLIST_PATH).parent
+        plist_dir.mkdir(parents=True, exist_ok=True)
+        plist_dir.chmod(0o755)
+        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+    </array>
+</dict>
+</plist>
+"""
+        with open(self.PLIST_PATH, "w", encoding="utf-8") as plist_file:
+            plist_file.write(plist_content)
+
     def test_shell_script_respects_safety_limits(self):
         """RED: Shell script should check safety limits before processing"""
         # This test will fail - existing script doesn't have safety checks
@@ -305,7 +326,7 @@ class TestAutomationIntegration(unittest.TestCase):
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
         # This will fail - plist doesn't exist yet
-        with open("/Users/jleechan/Library/LaunchAgents/com.worldarchitect.pr-automation.plist") as f:
+        with open(self.PLIST_PATH, encoding="utf-8") as f:
             return f.read()
 
 

@@ -1,5 +1,15 @@
 #!/bin/bash
 
+set -euo pipefail
+IFS=$'\n\t'
+
+# Ensure only one instance runs at a time
+exec 9>/tmp/pr-batch.lock
+if ! flock -n 9; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Another batch instance is running; exiting." | tee -a "/tmp/pr_automation.log"
+    exit 0
+fi
+
 # Simplified PR automation - posts Codex comment instructions to drive follow-up agents
 # Focuses on batch processing, attempt tracking, cooldowns, and notifications
 
@@ -10,7 +20,7 @@ MAX_BATCH_SIZE=5
 MAX_FIX_ATTEMPTS=3
 
 # Timeout configuration (in seconds)
-COMMENT_TIMEOUT=300   # Allow Codex comment posting with generous buffer
+COMMENT_TIMEOUT=1200   # Allow Codex comment posting with generous buffer (20 minutes)
 
 # Create files if they don't exist
 touch "$PROCESSED_FILE" "$ATTEMPT_FILE"
@@ -21,13 +31,33 @@ log() {
 }
 
 # Default Codex instruction (can be overridden by exporting CODEX_COMMENT)
-ASSISTANT_HANDLE="${ASSISTANT_HANDLE:-codex}"
-CODEX_COMMENT_DEFAULT="@${ASSISTANT_HANDLE} use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
-CODEX_COMMENT="${CODEX_COMMENT:-$CODEX_COMMENT_DEFAULT}"
-CODEX_COMMIT_MARKER_PREFIX="<!-- codex-automation-commit:"
-CODEX_COMMIT_MARKER_SUFFIX="-->"
+RAW_ASSISTANT_HANDLE="${ASSISTANT_HANDLE:-$(python3 - <<'PY'
+from automation.codex_config import DEFAULT_ASSISTANT_HANDLE
+print(DEFAULT_ASSISTANT_HANDLE)
+PY
+)}"
+CLEAN_ASSISTANT_HANDLE="${RAW_ASSISTANT_HANDLE#@}"
+ASSISTANT_HANDLE="@${CLEAN_ASSISTANT_HANDLE}"
+CODEX_COMMENT_DEFAULT="$(python3 - "$CLEAN_ASSISTANT_HANDLE" <<'PY'
+import sys
+from automation.codex_config import build_default_comment
 
-GH_REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)
+print(build_default_comment(sys.argv[1]))
+PY
+)"
+CODEX_COMMENT="${CODEX_COMMENT:-$CODEX_COMMENT_DEFAULT}"
+CODEX_COMMIT_MARKER_PREFIX="$(python3 - <<'PY'
+from automation.codex_config import CODEX_COMMIT_MARKER_PREFIX
+print(CODEX_COMMIT_MARKER_PREFIX)
+PY
+)"
+CODEX_COMMIT_MARKER_SUFFIX="$(python3 - <<'PY'
+from automation.codex_config import CODEX_COMMIT_MARKER_SUFFIX
+print(CODEX_COMMIT_MARKER_SUFFIX)
+PY
+)"
+
+GH_REPO="${GH_REPO:-$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null)}"
 if [ -z "$GH_REPO" ]; then
     log "❌ Unable to determine GitHub repository context for Codex automation"
     exit 1
@@ -40,8 +70,12 @@ send_email_notification() {
     local details="$3"
     local attempt_count="$4"
 
-    # Load email configuration
-    source ~/.memory_email_config
+    # Load email configuration if present
+    if [ -f "$HOME/.memory_email_config" ]; then
+        set -a
+        . "$HOME/.memory_email_config"
+        set +a
+    fi
 
     local subject="PR #$pr_number Automation Failed: $issue_type"
     local body="PR #$pr_number requires manual intervention after $attempt_count automated fix attempts.
@@ -57,15 +91,14 @@ Automated fix attempts have been exhausted. Please review and fix manually.
 $(tail -20 "$LOG_FILE")
 
 === Test Failure Details ===
-$(gh pr checks "$pr_number" --repo "$GH_REPO" 2>/dev/null || echo "Could not retrieve test details")
+$(timeout 30 gh pr checks "$pr_number" --repo "$GH_REPO" 2>/dev/null || echo "Could not retrieve test details")
 "
 
-    # Send email using Python
-    python3 -c "
+    SUBJECT="$subject" BODY="$body" python3 - <<'PY'
+import os
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import os
 
 smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
 smtp_port = int(os.environ.get('SMTP_PORT', '587'))
@@ -73,24 +106,29 @@ username = os.environ.get('SMTP_USERNAME')
 password = os.environ.get('SMTP_PASSWORD')
 from_email = os.environ.get('MEMORY_EMAIL_FROM')
 to_email = os.environ.get('MEMORY_EMAIL_TO')
+subject = os.environ.get('SUBJECT', '')
+body = os.environ.get('BODY', '')
+
+if not all([smtp_server, smtp_port, from_email, to_email]):
+    print('Email configuration incomplete - skipping notification')
+    raise SystemExit(0)
 
 msg = MIMEMultipart()
 msg['From'] = from_email
 msg['To'] = to_email
-msg['Subject'] = '''$subject'''
-
-msg.attach(MIMEText('''$body''', 'plain'))
+msg['Subject'] = subject
+msg.attach(MIMEText(body, 'plain'))
 
 try:
-    server = smtplib.SMTP(smtp_server, smtp_port)
-    server.starttls()
-    server.login(username, password)
-    server.send_message(msg)
-    server.quit()
+    with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+        server.starttls()
+        if username and password:
+            server.login(username, password)
+        server.send_message(msg)
     print('Email sent successfully')
-except Exception as e:
-    print(f'Email failed: {e}')
-"
+except Exception as exc:  # pragma: no cover - best effort logging
+    print(f'Email failed: {exc}')
+PY
 }
 
 # Function to count fix attempts for a PR
@@ -107,13 +145,21 @@ get_fix_attempts() {
 # Function to increment fix attempts
 increment_fix_attempts() {
     local pr_number="$1"
-    local current_attempts=$(get_fix_attempts "$pr_number")
-    local new_attempts=$((current_attempts + 1))
+    local lock_file="${ATTEMPT_FILE}.lock"
+    local new_attempts
 
-    # Remove old entry and add new one
-    grep -v "^$pr_number:" "$ATTEMPT_FILE" > "${ATTEMPT_FILE}.tmp" 2>/dev/null || true
-    echo "$pr_number:$new_attempts" >> "${ATTEMPT_FILE}.tmp"
-    mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
+    new_attempts=$(
+        flock -x 200 || exit 1
+        local current_attempts=$(grep "^$pr_number:" "$ATTEMPT_FILE" 2>/dev/null | cut -d':' -f2)
+        if [ -z "$current_attempts" ]; then
+            current_attempts=0
+        fi
+        local updated=$((current_attempts + 1))
+        grep -v "^$pr_number:" "$ATTEMPT_FILE" > "${ATTEMPT_FILE}.tmp" 2>/dev/null || true
+        echo "$pr_number:$updated" >> "${ATTEMPT_FILE}.tmp"
+        mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
+        echo "$updated"
+    ) 200>"$lock_file"
 
     echo "$new_attempts"
 }
@@ -121,8 +167,40 @@ increment_fix_attempts() {
 # Function to reset fix attempts (on success)
 reset_fix_attempts() {
     local pr_number="$1"
-    grep -v "^$pr_number:" "$ATTEMPT_FILE" > "${ATTEMPT_FILE}.tmp" 2>/dev/null || true
-    mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
+    local lock_file="${ATTEMPT_FILE}.lock"
+
+    (
+        flock -x 200
+        if [ -s "$ATTEMPT_FILE" ]; then
+            grep -v "^$pr_number:" "$ATTEMPT_FILE" > "${ATTEMPT_FILE}.tmp" 2>/dev/null || true
+            mv "${ATTEMPT_FILE}.tmp" "$ATTEMPT_FILE"
+        fi
+    ) 200>"$lock_file"
+}
+
+write_processed_timestamp() {
+    local pr_number="$1"
+    local timestamp="$2"
+    local lock_file="${PROCESSED_FILE}.lock"
+
+    (
+        flock -x 201
+        grep -v "^$pr_number:" "$PROCESSED_FILE" > "${PROCESSED_FILE}.tmp" 2>/dev/null || true
+        echo "$pr_number:$timestamp" >> "${PROCESSED_FILE}.tmp"
+        mv "${PROCESSED_FILE}.tmp" "$PROCESSED_FILE"
+    ) 201>"$lock_file"
+}
+
+run_with_timeout() {
+    local duration="$1"
+    shift
+
+    if command -v timeout >/dev/null 2>&1; then
+        timeout "$duration" "$@"
+    else
+        log "⚠️ 'timeout' command not found; running without explicit limit for $1"
+        "$@"
+    fi
 }
 
 # Function to handle command execution with timeout and error detection
@@ -141,7 +219,7 @@ execute_with_timeout() {
 
     log "⏱️  Executing $operation_name for PR #$pr_number (timeout: ${timeout_duration}s)"
 
-    timeout "$timeout_duration" "$@"
+    run_with_timeout "$timeout_duration" "$@"
     local exit_code=$?
 
     if [ $exit_code -eq 0 ]; then
@@ -188,56 +266,7 @@ post_codex_instruction() {
     local decision="post:"
 
     if pr_state_json=$(gh pr view "$pr_number" --repo "$GH_REPO" --json headRefOid,comments 2>/dev/null); then
-        local pr_state_tmp
-        pr_state_tmp=$(mktemp)
-        printf "%s" "$pr_state_json" > "$pr_state_tmp"
-
-        decision=$(python3 - "$pr_state_tmp" "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" <<'PY'
-import json
-import sys
-
-state_path = sys.argv[1]
-marker_prefix = sys.argv[2]
-marker_suffix = sys.argv[3]
-
-try:
-    with open(state_path, "r", encoding="utf-8") as fh:
-        pr_data = json.load(fh)
-except (OSError, json.JSONDecodeError):
-    print("post:")
-    sys.exit(0)
-
-head_sha = pr_data.get("headRefOid")
-comments = (pr_data.get("comments") or {}).get("nodes", [])
-
-decision = "post"
-if head_sha:
-    for comment in comments:
-        body = (comment.get("body") or "").strip()
-        prefix_index = body.find(marker_prefix)
-        if prefix_index == -1:
-            continue
-
-        start_index = prefix_index + len(marker_prefix)
-        end_index = body.find(marker_suffix, start_index)
-        if end_index == -1:
-            continue
-
-        marker_sha = body[start_index:end_index].strip()
-        if marker_sha == head_sha:
-            decision = "skip"
-            break
-
-print(f"{decision}:{head_sha or ''}")
-PY
-)
-        local python_status=$?
-        rm -f "$pr_state_tmp"
-
-        if [ $python_status -ne 0 ]; then
-            log "⚠️ Failed to analyze PR state for PR #$pr_number; proceeding with Codex comment"
-            decision="post:"
-        fi
+        decision=$(printf '%s' "$pr_state_json" | python3 automation/check_codex_comment.py "$CODEX_COMMIT_MARKER_PREFIX" "$CODEX_COMMIT_MARKER_SUFFIX" 2>/dev/null || echo "post:")
     else
         log "⚠️ Unable to fetch PR state; proceeding with Codex comment"
     fi
@@ -267,9 +296,15 @@ PY
         comment_body=$(printf "%s\n\n%s%s%s" "$CODEX_COMMENT" "$CODEX_COMMIT_MARKER_PREFIX" "$head_sha" "$CODEX_COMMIT_MARKER_SUFFIX")
     fi
 
+    local tmp_body
+    tmp_body=$(mktemp)
+    printf "%s" "$comment_body" > "$tmp_body"
+
     execute_with_timeout "$COMMENT_TIMEOUT" "$pr_number" "Codex instruction comment" \
-        gh pr comment "$pr_number" --repo "$GH_REPO" --body "$comment_body"
+        gh pr comment "$pr_number" --repo "$GH_REPO" --body-file "$tmp_body"
     local comment_result=$?
+
+    rm -f "$tmp_body"
 
     case $comment_result in
         0)
@@ -296,18 +331,40 @@ post_threaded_comment() {
 
     if [ -n "$in_reply_to" ]; then
         # Reply to specific comment thread
-        if \! gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message" --reply-to "$in_reply_to" 2>/dev/null; then
-            log "❌ Failed to post threaded reply for PR #$pr_number"
-            return 1
-        fi
-        log "💬 Posted threaded reply to PR #$pr_number (reply to: $in_reply_to)"
+        execute_with_timeout "$COMMENT_TIMEOUT" "$pr_number" "Codex threaded reply" \
+            gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message" --reply-to "$in_reply_to"
+        local reply_result=$?
+        case $reply_result in
+            0)
+                log "💬 Posted threaded reply to PR #$pr_number (reply to: $in_reply_to)"
+                ;;
+            2)
+                log "⏰ Codex threaded reply timed out for PR #$pr_number"
+                return 1
+                ;;
+            *)
+                log "❌ Failed to post threaded reply for PR #$pr_number"
+                return 1
+                ;;
+        esac
     else
         # Post general comment
-        if \! gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message" 2>/dev/null; then
-            log "❌ Failed to post comment for PR #$pr_number"
-            return 1
-        fi
-        log "💬 Posted comment to PR #$pr_number"
+        execute_with_timeout "$COMMENT_TIMEOUT" "$pr_number" "Codex general reply" \
+            gh pr comment "$pr_number" --repo "$GH_REPO" --body "$prefixed_message"
+        local comment_result=$?
+        case $comment_result in
+            0)
+                log "💬 Posted comment to PR #$pr_number"
+                ;;
+            2)
+                log "⏰ Codex general reply timed out for PR #$pr_number"
+                return 1
+                ;;
+            *)
+                log "❌ Failed to post comment for PR #$pr_number"
+                return 1
+                ;;
+        esac
     fi
 
     return 0
@@ -362,9 +419,7 @@ for PR in $RECENT_PRS; do
         if [ $result -eq 0 ]; then
             # Processing succeeded - mark as completed
             TIMESTAMP=$(date +%s)
-            grep -v "^$PR:" "$PROCESSED_FILE" > "${PROCESSED_FILE}.tmp" 2>/dev/null || true
-            echo "$PR:$TIMESTAMP" >> "${PROCESSED_FILE}.tmp"
-            mv "${PROCESSED_FILE}.tmp" "$PROCESSED_FILE"
+            write_processed_timestamp "$PR" "$TIMESTAMP"
             reset_fix_attempts "$PR"
             log "✅ Successfully posted Codex instruction comment for PR #$PR"
             PROCESSED_COUNT=$((PROCESSED_COUNT + 1))

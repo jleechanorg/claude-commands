@@ -46,7 +46,7 @@ class TestPRTargeting(unittest.TestCase):
             # Mock gh pr view response
             mock_subprocess.return_value.stdout = '{"title": "Test PR", "headRefName": "test-branch", "baseRefName": "main", "url": "http://test.com", "author": {"login": "testuser"}}'
 
-            result = monitor.process_single_pr_by_number(1702, "worldarchitect.ai")
+            result = monitor.process_single_pr_by_number(1702, "jleechanorg/worldarchitect.ai")
 
             self.assertTrue(result)
             mock_codex.assert_called_once()
@@ -65,15 +65,15 @@ class TestPRTargeting(unittest.TestCase):
             parser.add_argument('--target-repo', help='Repository for target PR (required with --target-pr)')
 
             # Test parsing with target-pr
-            args = parser.parse_args(['--target-pr', '1702', '--target-repo', 'worldarchitect.ai'])
+            args = parser.parse_args(['--target-pr', '1702', '--target-repo', 'jleechanorg/worldarchitect.ai'])
 
             self.assertEqual(args.target_pr, 1702)
-            self.assertEqual(args.target_repo, 'worldarchitect.ai')
+            self.assertEqual(args.target_repo, 'jleechanorg/worldarchitect.ai')
 
         except Exception as e:
             self.fail(f"CLI should support --target-pr argument: {e}")
 
-    @patch('sys.argv', ['jleechanorg_pr_monitor.py', '--target-pr', '1702', '--target-repo', 'worldarchitect.ai'])
+    @patch('sys.argv', ['jleechanorg_pr_monitor.py', '--target-pr', '1702', '--target-repo', 'jleechanorg/worldarchitect.ai'])
     @patch('jleechanorg_pr_monitor.JleechanorgPRMonitor')
     def test_main_with_target_pr(self, mock_monitor_class):
         """Test main function with target PR arguments"""
@@ -84,7 +84,7 @@ class TestPRTargeting(unittest.TestCase):
         # This will fail because main() doesn't handle --target-pr yet
         try:
             main()
-            mock_monitor.process_single_pr_by_number.assert_called_once_with(1702, 'worldarchitect.ai')
+            mock_monitor.process_single_pr_by_number.assert_called_once_with(1702, 'jleechanorg/worldarchitect.ai')
         except SystemExit:
             # Expected to fail with current implementation
             pass
@@ -98,6 +98,21 @@ class TestPRTargeting(unittest.TestCase):
             f"{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
         )
         self.assertEqual(marker, "abc123")
+
+    def test_build_comment_includes_marker_and_handle(self):
+        """Generated comments include dynamic handle and commit marker."""
+        monitor = JleechanorgPRMonitor()
+        head_sha = "abc123def456"
+        body = monitor._build_codex_comment_body_simple(
+            repository="jleechanorg/worldarchitect.ai",
+            pr_number=1702,
+            pr_data={"title": "Test", "author": {"login": "tester"}, "headRefName": "feature"},
+            head_sha=head_sha,
+            comments=[],
+        )
+        expected_marker = f"{monitor.CODEX_COMMIT_MARKER_PREFIX}{head_sha}{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+        self.assertIn(expected_marker, body)
+        self.assertIn(f"@{monitor.assistant_handle}", body)
 
 
 if __name__ == '__main__':
