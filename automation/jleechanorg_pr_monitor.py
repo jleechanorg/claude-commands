@@ -357,6 +357,11 @@ class JleechanorgPRMonitor:
             self.logger.info(f"🤖 Latest comment is from Codex doing work, skipping PR {pr_number}")
             return True
 
+        # Check if recent human comment is asking another AI assistant to handle the PR
+        elif comments and self._has_recent_human_ai_request(comments):
+            self.logger.info(f"👤 Recent human comment requesting other AI assistance, skipping PR {pr_number}")
+            return True
+
         # Build comment body that tells Codex to fix PR comments and failing tests
         comment_body = self._build_codex_comment_body_simple(repository, pr_number, pr_data, head_sha, comments)
 
@@ -472,6 +477,30 @@ class JleechanorgPRMonitor:
 
         return False
 
+    def _has_recent_human_ai_request(self, comments: List[Dict]) -> bool:
+        """Check if recent human comment is requesting another AI assistant to handle PR"""
+        if not comments:
+            return False
+
+        # Check last few comments for human AI requests
+        recent_comments = comments[-3:] if len(comments) >= 3 else comments
+
+        for comment in recent_comments:
+            body = comment.get('body', '').lower()
+            author = comment.get('author', {}).get('login', '')
+
+            # Skip automation and bot comments
+            if '[ai automation]' in body or author.endswith('[bot]'):
+                continue
+
+            # Look for humans addressing AI assistants
+            ai_mentions = ['@coderabbitai', '@github-copilot', '@codex', '@claude']
+            if any(mention in body for mention in ai_mentions):
+                self.logger.debug(f"Found recent human AI request from {author}")
+                return True
+
+        return False
+
     def _has_automation_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
         """Check if we already have an automation comment for this specific commit"""
         if not comments or not head_sha:
@@ -526,11 +555,11 @@ class JleechanorgPRMonitor:
             author = comment.get('author', {}).get('login', 'unknown')
 
             # Skip our own automation comments
-            if body.startswith('[AI automation]'):
+            if '[AI automation]' in body:
                 continue
 
-            # Include human review comments
-            if body.strip() and not author.endswith('[bot]'):
+            # Include ALL other comments (human and bot)
+            if body.strip():
                 review_feedback.append(f"- {author}: {body[:200]}{'...' if len(body) > 200 else ''}")
 
         comment_body = f"""@codex [AI automation] Please review and fix this PR
