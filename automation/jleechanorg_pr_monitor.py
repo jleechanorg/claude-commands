@@ -29,8 +29,8 @@ class JleechanorgPRMonitor:
     DEFAULT_CODEX_COMMENT_TEMPLATE = (
         "@{assistant_handle} use your judgment to fix comments from everyone or explain why it "
         "should not be fixed. Follow binary response protocol every comment needs done or not "
-        "done classification explicitly with an explanation. Push any commits needed to remote "
-        "so the PR is updated."
+        "done classification explicitly with an explanation. Fix any failing tests and resolve "
+        "merge conflicts. Push any commits needed to remote so the PR is updated."
     )
     CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
     CODEX_COMMIT_MARKER_SUFFIX = "-->"
@@ -51,19 +51,72 @@ class JleechanorgPRMonitor:
             default_comment,
         )
 
-
-        # Safety manager integration
-        data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
-        self.safety_manager = AutomationSafetyManager(str(data_dir))
+        # Processing history in /tmp organized by repo/branch
+        self.history_base_dir = Path("/tmp/pr_automation_history")
+        self.history_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Organization settings
         self.organization = "jleechanorg"
         self.base_project_dir = Path.home() / "projects"
 
         self.logger.info(f"🏢 Initialized jleechanorg PR monitor")
-        self.logger.info(f"🛡️ Safety data: {data_dir}")
+        self.logger.info(f"📁 History storage: {self.history_base_dir}")
         self.logger.info(f"💬 Comment-only automation mode")
+    def _get_history_file(self, repo_name: str, branch_name: str) -> Path:
+        """Get history file path for specific repo/branch"""
+        repo_dir = self.history_base_dir / repo_name
+        repo_dir.mkdir(parents=True, exist_ok=True)
 
+        # Replace slashes in branch names to avoid creating nested directories
+        safe_branch_name = branch_name.replace('/', '_')
+        return repo_dir / f"{safe_branch_name}.json"
+
+    def _load_branch_history(self, repo_name: str, branch_name: str) -> Dict[str, str]:
+        """Load processed PRs for a specific repo/branch"""
+        history_file = self._get_history_file(repo_name, branch_name)
+        try:
+            if history_file.exists():
+                with open(history_file, 'r') as f:
+                    return json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            self.logger.warning(f"⚠️ Error loading history for {repo_name}/{branch_name}: {e}")
+        return {}
+
+    def _save_branch_history(self, repo_name: str, branch_name: str, history: Dict[str, str]) -> None:
+        """Save processed PRs for a specific repo/branch"""
+        history_file = self._get_history_file(repo_name, branch_name)
+        try:
+            with open(history_file, 'w') as f:
+                json.dump(history, f, indent=2)
+        except OSError as e:
+            self.logger.error(f"❌ Error saving history for {repo_name}/{branch_name}: {e}")
+
+    def _should_skip_pr(self, repo_name: str, branch_name: str, pr_number: int, current_commit: str) -> bool:
+        """Check if PR should be skipped based on recent processing"""
+        history = self._load_branch_history(repo_name, branch_name)
+        pr_key = str(pr_number)
+
+        # If we haven't processed this PR before, don't skip
+        if pr_key not in history:
+            return False
+
+        # If commit has changed since we processed it, don't skip
+        last_processed_commit = history[pr_key]
+        if last_processed_commit != current_commit:
+            self.logger.info(f"🔄 PR {repo_name}/{branch_name}#{pr_number} has new commit ({current_commit[:8]} vs {last_processed_commit[:8]})")
+            return False
+
+        # We processed this PR with this exact commit, skip it
+        self.logger.info(f"⏭️ Skipping PR {repo_name}/{branch_name}#{pr_number} - already processed commit {current_commit[:8]}")
+        return True
+
+    def _record_processed_pr(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
+        """Record that we've processed a PR with a specific commit"""
+        history = self._load_branch_history(repo_name, branch_name)
+        pr_key = str(pr_number)
+        history[pr_key] = commit_sha
+        self._save_branch_history(repo_name, branch_name, history)
+        self.logger.debug(f"📝 Recorded processing of PR {repo_name}/{branch_name}#{pr_number} with commit {commit_sha[:8]}")
     def _setup_logging(self) -> logging.Logger:
         """Set up logging for PR monitor"""
         log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
@@ -80,8 +133,15 @@ class JleechanorgPRMonitor:
         return logging.getLogger(__name__)
 
     def discover_open_prs(self) -> List[Dict]:
-        """Discover all open PRs across jleechanorg organization"""
-        self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization")
+        """Discover open PRs from last 24 hours across jleechanorg organization, ordered by most recent updates"""
+        self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last 24 hours)")
+
+        from datetime import datetime, timedelta
+
+        # Get current time and 24 hours ago
+        now = datetime.now()
+        one_day_ago = now - timedelta(hours=24)
+        self.logger.info(f"📅 Filtering PRs updated since: {one_day_ago.strftime('%Y-%m-%d %H:%M:%S')}")
 
         try:
             # Get all repositories in the organization
@@ -91,7 +151,7 @@ class JleechanorgPRMonitor:
 
             self.logger.info(f"📚 Found {len(repositories)} repositories")
 
-            all_prs = []
+            recent_prs = []
 
             for repo in repositories:
                 repo_name = repo["name"]
@@ -109,15 +169,29 @@ class JleechanorgPRMonitor:
                     prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
                     prs = json.loads(prs_result.stdout)
 
-                    # Add repository context to each PR
+                    # Filter PRs updated in last 3 days and add repository context
                     for pr in prs:
-                        pr["repository"] = repo_name
-                        pr["repositoryFullName"] = repo_full_name
+                        updated_str = pr.get('updatedAt', '')
+                        if updated_str:
+                            try:
+                                # Parse ISO format: 2025-09-28T07:00:00Z
+                                updated_time = datetime.fromisoformat(updated_str.replace('Z', '+00:00'))
+                                updated_time = updated_time.replace(tzinfo=None)  # Remove timezone for comparison
 
-                    all_prs.extend(prs)
+                                if updated_time >= one_day_ago:
+                                    pr["repository"] = repo_name
+                                    pr["repositoryFullName"] = repo_full_name
+                                    pr["updated_datetime"] = updated_time
+                                    recent_prs.append(pr)
+                            except ValueError:
+                                # Skip PRs with invalid date format
+                                self.logger.debug(f"⚠️ Invalid date format for PR {pr.get('number')}: {updated_str}")
+                                continue
 
-                    if prs:
-                        self.logger.info(f"📋 {repo_name}: {len(prs)} open PRs")
+                    recent_prs_count = len([pr for pr in prs if pr.get('updatedAt', '') and
+                                          datetime.fromisoformat(pr['updatedAt'].replace('Z', '+00:00')).replace(tzinfo=None) >= one_day_ago])
+                    if recent_prs_count > 0:
+                        self.logger.info(f"📋 {repo_name}: {recent_prs_count} recent PRs (of {len(prs)} total)")
 
                 except subprocess.CalledProcessError as e:
                     # Skip repositories we don't have access to
@@ -126,8 +200,19 @@ class JleechanorgPRMonitor:
                     else:
                         self.logger.warning(f"❌ Error getting PRs for {repo_full_name}: {e.stderr}")
 
-            self.logger.info(f"🎯 Total open PRs discovered: {len(all_prs)}")
-            return all_prs
+            # Sort by most recently updated first
+            recent_prs.sort(key=lambda x: x.get('updated_datetime', datetime.min), reverse=True)
+
+            self.logger.info(f"🎯 Total recent PRs discovered (last 24 hours): {len(recent_prs)}")
+
+            # Log top 5 most recent for visibility
+            if recent_prs:
+                self.logger.info("📊 Most recently updated PRs:")
+                for i, pr in enumerate(recent_prs[:5], 1):
+                    updated_str = pr['updated_datetime'].strftime('%Y-%m-%d %H:%M')
+                    self.logger.info(f"  {i}. {pr['repositoryFullName']} #{pr['number']} - {updated_str}")
+
+            return recent_prs
 
         except subprocess.CalledProcessError as e:
             self.logger.error(f"❌ Failed to discover repositories: {e.stderr}")
@@ -200,38 +285,19 @@ class JleechanorgPRMonitor:
         """Post codex instruction comment to PR"""
         self.logger.info(f"💬 Requesting Codex support for {repository} PR #{pr_number}")
 
-        # Get current PR state including comments and test status
+        # Get current PR state including commit SHA
         head_sha, comments = self._get_pr_comment_state(repository, pr_number)
 
-        # Check if we already have an automation comment for this commit
-        if head_sha and self._has_automation_comment_for_commit(comments, head_sha):
-            self.logger.info(f"♻️ Automation comment already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping")
-            return True
+        if not head_sha:
+            self.logger.warning(f"⚠️ Could not get commit SHA for PR #{pr_number}")
+            return False
 
-        # Check if latest comment is from AI automation
-        if comments and self._is_latest_comment_from_automation(comments):
-            self.logger.info(f"🤖 Latest comment is from AI automation, checking test status...")
+        # Extract repo name and branch from PR data
+        repo_name = repository.split('/')[-1]  # Get repo name from full path
+        branch_name = pr_data.get('headRefName', 'unknown')
 
-            # Check if tests are now passing
-            if self._are_tests_passing(repository, pr_number):
-                self.logger.info(f"✅ Tests are passing, skipping PR {pr_number}")
-                return True
-            else:
-                # Tests still failing, check if Codex has replied to our automation comment
-                if self._has_codex_replied_to_automation(comments):
-                    self.logger.info(f"🤖 Codex has already replied to automation comment, skipping PR {pr_number}")
-                    return True
-                else:
-                    self.logger.info(f"❌ Tests still failing and no Codex reply, will post new automation comment")
-
-        # Check if latest comment is from Codex doing work (not review)
-        elif comments and self._is_latest_comment_from_codex_work(comments):
-            self.logger.info(f"🤖 Latest comment is from Codex doing work, skipping PR {pr_number}")
-            return True
-
-        # Check if recent human comment is asking another AI assistant to handle the PR
-        elif comments and self._has_recent_human_ai_request(comments):
-            self.logger.info(f"👤 Recent human comment requesting other AI assistance, skipping PR {pr_number}")
+        # Check if we should skip this PR based on commit-based tracking
+        if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
             return True
 
         # Build comment body that tells Codex to fix PR comments and failing tests
@@ -248,6 +314,10 @@ class JleechanorgPRMonitor:
             result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30)
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number}")
+
+            # Record that we've processed this PR with this commit
+            self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+
             return True
 
         except subprocess.CalledProcessError as e:
@@ -257,123 +327,15 @@ class JleechanorgPRMonitor:
             self.logger.error(f"💥 Unexpected error posting comment: {e}")
             return False
 
-    def _is_latest_comment_from_automation(self, comments: List[Dict]) -> bool:
-        """Check if the latest comment is from AI automation"""
-        if not comments:
-            return False
 
-        latest_comment = comments[-1]  # Comments should be ordered by creation time
-        body = latest_comment.get('body', '')
-        return '[AI automation]' in body
 
-    def _has_codex_replied_to_automation(self, comments: List[Dict]) -> bool:
-        """Check if Codex has replied after our latest automation comment"""
-        if not comments:
-            return False
 
-        # Find the most recent automation comment
-        latest_automation_index = -1
-        for i in range(len(comments) - 1, -1, -1):
-            if '[AI automation]' in comments[i].get('body', ''):
-                latest_automation_index = i
-                break
 
-        if latest_automation_index == -1:
-            return False  # No automation comment found
 
-        # Check if there are any non-automation comments after the latest automation comment
-        for i in range(latest_automation_index + 1, len(comments)):
-            comment_body = comments[i].get('body', '')
-            author = comments[i].get('author', {}).get('login', '')
 
-            # Skip bot comments, but include any human comments (including Codex responses)
-            if not author.endswith('[bot]') and '[AI automation]' not in comment_body:
-                self.logger.debug(f"Found reply from {author} after automation comment")
-                return True
 
-        return False
 
-    def _is_latest_comment_from_codex_work(self, comments: List[Dict]) -> bool:
-        """Check if the latest comment is from Codex indicating work done"""
-        if not comments:
-            return False
 
-        latest_comment = comments[-1]
-        body = latest_comment.get('body', '').lower()
-        author = latest_comment.get('author', {}).get('login', '').lower()
-
-        # Skip if it's from automation or a bot
-        if '[ai automation]' in body.lower() or author.endswith('[bot]'):
-            return False
-
-        # Known AI assistant usernames that we recognize as doing work
-        ai_usernames = {
-            'claude-dev', 'codex-assistant', 'github-copilot',
-            'claude', 'anthropic-claude', 'openai-codex', 'ai-assistant',
-            'chatgpt-codex-connector'
-        }
-
-        # Must be from a known AI assistant
-        if author not in ai_usernames:
-            self.logger.debug(f"Comment from {author} not recognized as AI assistant")
-            return False
-
-        # Look for patterns that indicate Codex did work (not just review)
-        work_indicators = [
-            'i\'ve fixed',
-            'i fixed',
-            'i\'ve updated',
-            'i updated',
-            'i\'ve implemented',
-            'i implemented',
-            'i\'ve addressed',
-            'i addressed',
-            'i\'ve modified',
-            'i modified',
-            'i\'ve changed',
-            'i changed',
-            'made the following changes',
-            'here are the changes',
-            'i\'ve made changes',
-            'changes have been made',
-            'updated the code',
-            'fixed the issue',
-            'resolved the problem',
-            'applied the fix'
-        ]
-
-        # Check if the comment contains work indicators
-        for indicator in work_indicators:
-            if indicator in body:
-                self.logger.debug(f"Found Codex work indicator: '{indicator}' in comment from {author}")
-                return True
-
-        return False
-
-    def _has_recent_human_ai_request(self, comments: List[Dict]) -> bool:
-        """Check if recent human comment is requesting another AI assistant to handle PR"""
-        if not comments:
-            return False
-
-        # Check last few comments for human AI requests
-        recent_comments = comments[-3:] if len(comments) >= 3 else comments
-
-        for comment in recent_comments:
-            body = comment.get('body', '').lower()
-            author = comment.get('author', {}).get('login', '')
-
-            # Skip automation and bot comments
-            if '[ai automation]' in body or author.endswith('[bot]'):
-                continue
-
-            # Look for humans addressing other AI assistants
-            # We skip if they mention other assistants to avoid interference
-            other_ai_mentions = ['@github-copilot', '@claude', '@coderabbitai']
-            if any(mention in body for mention in other_ai_mentions):
-                self.logger.debug(f"Found recent human AI request from {author}")
-                return True
-
-        return False
 
     def _has_automation_comment_for_commit(self, comments: List[Dict], head_sha: str) -> bool:
         """Check if we already have an automation comment for this specific commit"""
@@ -420,21 +382,7 @@ class JleechanorgPRMonitor:
             return False  # Assume tests are failing if we can't check
 
     def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
-        """Build comment body that tells Codex to fix PR comments and tests"""
-
-        # Extract review comments and feedback
-        review_feedback = []
-        for comment in comments:
-            body = comment.get('body', '')
-            author = comment.get('author', {}).get('login', 'unknown')
-
-            # Skip our own automation comments
-            if '[AI automation]' in body:
-                continue
-
-            # Include ALL other comments (human and bot)
-            if body.strip():
-                review_feedback.append(f"- {author}: {body[:200]}{'...' if len(body) > 200 else ''}")
+        """Build comment body that tells Codex to fix PR comments, tests, and merge conflicts"""
 
         comment_body = f"""@codex [AI automation] Please review and fix this PR
 
@@ -445,40 +393,15 @@ class JleechanorgPRMonitor:
 - Commit: {head_sha[:8] if head_sha else 'unknown'} ({head_sha or 'unknown'})
 
 **Instructions:**
-Use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification explicitly with an explanation. Push any commits needed to remote so the PR is updated.
+Use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification explicitly with an explanation. Address all comments on this PR. Fix any failing tests and resolve merge conflicts. Push any commits needed to remote so the PR is updated.
 
 **Tasks:**
-1. **Fix failing tests** - Review test failures and implement fixes
-2. **Address review comments** - Implement feedback from reviewers
-3. **Ensure code quality** - Follow project standards and best practices
+1. **Address all comments** - Review and implement ALL feedback from reviewers
+2. **Fix failing tests** - Review test failures and implement fixes
+3. **Resolve merge conflicts** - Handle any conflicts with the base branch
+4. **Ensure code quality** - Follow project standards and best practices
 
 """
-
-        if review_feedback:
-            comment_body += f"""**Review Feedback to Address:**
-{chr(10).join(review_feedback)}
-
-"""
-
-        # Build dynamic required actions based on actual needs
-        required_actions = [
-            "Use `/cerebras` for substantial code changes",
-            "Run tests after changes: `./run_tests.sh`",
-            "Ensure all status checks pass before requesting re-review",
-            "Push commits to update the PR"
-        ]
-
-        # Only add review comment action if there are actual review comments
-        if review_feedback:
-            required_actions.insert(2, "Address ALL review comments systematically")
-            final_instruction = "/cerebras Please fix the failing tests and address all review comments in this PR."
-        else:
-            final_instruction = "/cerebras Please fix the failing tests and ensure this PR is ready for merge."
-
-        comment_body += f"""**Required Actions:**
-{chr(10).join(f"- {action}" for action in required_actions)}
-
-{final_instruction}"""
 
         return comment_body
 
@@ -634,16 +557,6 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         """Run a complete monitoring cycle"""
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
 
-        # Check global automation limits
-        if not self.safety_manager.can_start_global_run():
-            self.logger.warning("🚫 Global automation limit reached - skipping cycle")
-            return
-
-        # Record global run
-        self.safety_manager.record_global_run()
-        runs = self.safety_manager.get_global_runs()
-        self.logger.info(f"📊 Global run #{runs}/{self.safety_manager.global_limit}")
-
         # Discover all open PRs
         open_prs = self.discover_open_prs()
 
@@ -661,35 +574,21 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         for pr in open_prs[:max_prs_per_cycle]:
             repo_name = pr["repository"]
+            repo_full_name = pr["repositoryFullName"]  # Use full name for GitHub API calls
             pr_number = pr["number"]
-            pr_key = f"{repo_name}-{pr_number}"
 
-            # Check PR-specific limits
-            if not self.safety_manager.can_process_pr(pr_key):
-                attempts = self.safety_manager.get_pr_attempts(pr_key)
-                self.logger.info(f"⏸️ PR {pr_key} blocked ({attempts}/{self.safety_manager.pr_limit} attempts)")
-                continue
-
-            self.logger.info(f"🎯 Processing PR: {pr_key} - {pr['title']}")
+            self.logger.info(f"🎯 Processing PR: {repo_name}-{pr_number} - {pr['title']}")
 
             # Post codex instruction comment directly (comment-only approach)
-            success = self.post_codex_instruction_simple(repo_name, pr_number, pr)
-
-            # Record attempt
-            result = "success" if success else "failure"
-            self.safety_manager.record_pr_attempt(pr_key, result)
+            success = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
 
             if success:
-                self.logger.info(f"✅ Successfully processed PR {pr_key}")
+                self.logger.info(f"✅ Successfully processed PR {repo_name}-{pr_number}")
                 processed_count += 1
             else:
-                attempts = self.safety_manager.get_pr_attempts(pr_key)
-                self.logger.error(f"❌ Failed to process PR {pr_key} (attempt {attempts})")
+                self.logger.error(f"❌ Failed to process PR {repo_name}-{pr_number}")
 
         self.logger.info(f"🏁 Monitoring cycle complete: {processed_count} PRs processed")
-
-        # Check and notify about limits
-        self.safety_manager.check_and_notify_limits()
 
 
 def main():
