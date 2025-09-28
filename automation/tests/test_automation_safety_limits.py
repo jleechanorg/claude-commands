@@ -150,6 +150,12 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertFalse(self.automation_manager.has_manual_approval())
 
     # Matrix 4: Email Notification System
+    @patch.dict(os.environ, {
+        'SMTP_USERNAME': 'test@example.com',
+        'SMTP_PASSWORD': 'testpass',
+        'MEMORY_EMAIL_FROM': 'test@example.com',
+        'MEMORY_EMAIL_TO': 'admin@example.com'
+    })
     @patch('smtplib.SMTP')
     def test_email_sent_when_pr_limit_reached(self, mock_smtp):
         """RED: Email should be sent when PR reaches 5 attempts"""
@@ -163,6 +169,12 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         # Verify email was sent
         mock_smtp.assert_called_once()
 
+    @patch.dict(os.environ, {
+        'SMTP_USERNAME': 'test@example.com',
+        'SMTP_PASSWORD': 'testpass',
+        'MEMORY_EMAIL_FROM': 'test@example.com',
+        'MEMORY_EMAIL_TO': 'admin@example.com'
+    })
     @patch('smtplib.SMTP')
     def test_email_sent_when_global_limit_reached(self, mock_smtp):
         """RED: Email should be sent when global limit of 50 is reached"""

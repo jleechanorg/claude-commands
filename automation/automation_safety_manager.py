@@ -21,6 +21,11 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional
+try:
+    import keyring
+    KEYRING_AVAILABLE = True
+except ImportError:
+    KEYRING_AVAILABLE = False
 
 
 class AutomationSafetyManager:
@@ -113,27 +118,37 @@ class AutomationSafetyManager:
 
     def _write_json_file(self, file_path: str, data: dict):
         """Atomically write JSON file with file locking to prevent corruption"""
-        # Use temporary file with atomic rename for safety
-        dir_path = os.path.dirname(file_path)
-        file_name = os.path.basename(file_path)
+        # Use system temp directory for better security
+        temp_path = None
+        try:
+            # Create temporary file in system temp directory with secure permissions
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                suffix=".tmp",
+                delete=False
+            ) as temp_file:
+                fcntl.flock(temp_file.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
+                json.dump(data, temp_file, indent=2)
+                temp_file.flush()
+                os.fsync(temp_file.fileno())  # Force write to disk
+                fcntl.flock(temp_file.fileno(), fcntl.LOCK_UN)  # Unlock
+                temp_path = temp_file.name
 
-        # Create temporary file in same directory to ensure atomic rename works
-        with tempfile.NamedTemporaryFile(
-            mode='w',
-            dir=dir_path,
-            prefix=f".{file_name}.",
-            suffix=".tmp",
-            delete=False
-        ) as temp_file:
-            fcntl.flock(temp_file.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
-            json.dump(data, temp_file, indent=2)
-            temp_file.flush()
-            os.fsync(temp_file.fileno())  # Force write to disk
-            fcntl.flock(temp_file.fileno(), fcntl.LOCK_UN)  # Unlock
-            temp_path = temp_file.name
+            # Set restrictive permissions before moving
+            os.chmod(temp_path, 0o600)  # Owner read/write only
 
-        # Atomic rename - this operation is atomic on POSIX systems
-        os.rename(temp_path, file_path)
+            # Atomic rename - this operation is atomic on POSIX systems
+            os.rename(temp_path, file_path)
+            temp_path = None  # Successful, don't clean up
+
+        except (OSError, IOError, json.JSONEncodeError) as e:
+            # Clean up temp file on error
+            if temp_path and os.path.exists(temp_path):
+                try:
+                    os.unlink(temp_path)
+                except OSError:
+                    pass  # Best effort cleanup
+            raise RuntimeError(f"Failed to write safety data file {file_path}: {e}") from e
 
     def can_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
@@ -281,42 +296,40 @@ class AutomationSafetyManager:
 
             self._write_json_file(self.approval_file, data)
 
-    def check_and_notify_limits(self):
-        """Check limits and send email notifications if thresholds are reached"""
-        notifications_sent = []
+    def _get_smtp_credentials(self):
+        """Get SMTP credentials securely from keyring or environment fallback"""
+        username = None
+        password = None
 
-        # Check for PR limits reached
-        for pr_key, attempts in self._pr_attempts_cache.items():
-            if attempts >= self.pr_limit:
-                self._send_limit_notification(
-                    f"PR Automation Limit Reached",
-                    f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
-                )
-                notifications_sent.append(f"PR {pr_key}")
+        if KEYRING_AVAILABLE:
+            try:
+                # Try to get credentials from secure keyring first
+                username = keyring.get_password("worldarchitect-automation", "smtp_username")
+                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+            except Exception:
+                pass  # Fall back to environment variables
 
-        # Check for global limit reached
-        if self._global_runs_cache >= self.global_limit:
-            self._send_limit_notification(
-                f"Global Automation Limit Reached",
-                f"Global automation runs have reached the maximum limit of {self.global_limit}."
-            )
-            notifications_sent.append("Global limit")
+        # Fallback to environment variables if keyring fails or unavailable
+        if not username:
+            username = os.environ.get('SMTP_USERNAME')
+        if not password:
+            password = os.environ.get('SMTP_PASSWORD')
 
-        return notifications_sent
+        return username, password
 
     def _send_notification(self, subject: str, message: str):
-        """Send email notification"""
+        """Send email notification with secure credential handling"""
         try:
             # Load email configuration
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
             smtp_port = int(os.environ.get('SMTP_PORT', '587'))
-            username = os.environ.get('SMTP_USERNAME')
-            password = os.environ.get('SMTP_PASSWORD')
+            username, password = self._get_smtp_credentials()
             from_email = os.environ.get('MEMORY_EMAIL_FROM')
             to_email = os.environ.get('MEMORY_EMAIL_TO')
 
             if not all([username, password, from_email, to_email]):
                 # Skip email if configuration is missing
+                print("Email configuration incomplete - skipping notification")
                 return
 
             msg = MIMEMultipart()
@@ -335,15 +348,24 @@ This is an automated notification from the WorldArchitect.AI automation system.
 
             msg.attach(MIMEText(body, 'plain'))
 
-            server = smtplib.SMTP(smtp_server, smtp_port)
-            server.starttls()
-            server.login(username, password)
-            server.send_message(msg)
-            server.quit()
+            # Connect with timeout and proper error handling
+            with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+                server.starttls()
+                server.login(username, password)
+                server.send_message(msg)
+                print(f"Email notification sent successfully: {subject}")
 
+        except smtplib.SMTPAuthenticationError as e:
+            print(f"SMTP authentication failed - check credentials: {e}")
+        except smtplib.SMTPRecipientsRefused as e:
+            print(f"Email recipients refused: {e}")
+        except smtplib.SMTPException as e:
+            print(f"SMTP error sending notification: {e}")
+        except OSError as e:
+            print(f"Network error sending notification: {e}")
         except Exception as e:
             # Log error but don't fail automation
-            print(f"Failed to send notification: {e}")
+            print(f"Unexpected error sending notification: {e}")
 
 
 def main():

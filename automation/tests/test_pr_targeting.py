@@ -40,9 +40,7 @@ class TestPRTargeting(unittest.TestCase):
         monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
 
         # Mock the dependencies for process_single_pr_by_number
-        with patch.object(monitor, 'post_codex_instruction', return_value=True) as mock_codex, \
-             patch.object(monitor, 'create_worktree_for_pr', return_value=Path(self.mock_workspace)) as mock_worktree, \
-             patch.object(monitor, 'cleanup_workspace') as mock_cleanup, \
+        with patch.object(monitor, 'post_codex_instruction_simple', return_value=True) as mock_codex, \
              patch('subprocess.run') as mock_subprocess:
 
             # Mock gh pr view response
@@ -52,8 +50,6 @@ class TestPRTargeting(unittest.TestCase):
 
             self.assertTrue(result)
             mock_codex.assert_called_once()
-            mock_worktree.assert_called_once()
-            mock_cleanup.assert_called()
 
     def test_cli_argument_parsing_target_pr(self):
         """Test that CLI accepts --target-pr argument"""
