@@ -18,6 +18,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Optional, Tuple
 from automation_safety_manager import AutomationSafetyManager
+from utils import setup_logging
 
 
 class JleechanorgPRMonitor:
@@ -36,7 +37,7 @@ class JleechanorgPRMonitor:
     CODEX_COMMIT_MARKER_SUFFIX = "-->"
 
     def __init__(self):
-        self.logger = self._setup_logging()
+        self.logger = setup_logging(__name__)
 
         assistant_handle = os.environ.get(
             self.ASSISTANT_HANDLE_ENV_VAR, self.DEFAULT_ASSISTANT_HANDLE

@@ -25,6 +25,13 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional
 
+# Import shared utilities
+from utils import (
+    json_manager, setup_logging, get_email_config,
+    validate_email_config, get_automation_limits,
+    format_timestamp, parse_timestamp
+)
+
 _keyring_spec = importlib.util.find_spec("keyring")
 keyring = importlib.import_module("keyring") if _keyring_spec else None
 
@@ -35,11 +42,12 @@ class AutomationSafetyManager:
     def __init__(self, data_dir: str):
         self.data_dir = data_dir
         self.lock = threading.RLock()  # Use RLock to prevent deadlock
-        self.logger = logging.getLogger(__name__)
+        self.logger = setup_logging(__name__)
 
-        # Default limits
-        self.pr_limit = int(os.environ.get('AUTOMATION_PR_LIMIT', '5'))
-        self.global_limit = int(os.environ.get('AUTOMATION_GLOBAL_LIMIT', '50'))
+        # Get limits from shared utility
+        limits = get_automation_limits()
+        self.pr_limit = limits['pr_limit']
+        self.global_limit = limits['global_limit']
 
         # File paths
         self.pr_attempts_file = os.path.join(data_dir, "pr_attempts.json")
@@ -136,55 +144,16 @@ class AutomationSafetyManager:
         return "::".join(components)
 
     def _read_json_file(self, file_path: str) -> dict:
-        """Safely read JSON file with file locking"""
-        try:
-            with open(file_path, 'r') as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
-                data = json.load(f)
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)  # Unlock
-                return data
-        except (FileNotFoundError, json.JSONDecodeError):
-            return {}
-        except (PermissionError, OSError) as e:
-            self.logger.error(f"Permission/IO error reading {file_path}: {e}")
-            return {}
+        """Safely read JSON file using shared utility"""
+        return json_manager.read_json(file_path, {})
 
     def _write_json_file(self, file_path: str, data: dict):
-        """Atomically write JSON file with file locking to prevent corruption"""
-        temp_path = None
+        """Atomically write JSON file using shared utility"""
         try:
-            target_dir = os.path.dirname(file_path) or "."
-            os.makedirs(target_dir, exist_ok=True)
-
-            # Create temporary file alongside the target for atomic replace
-            with tempfile.NamedTemporaryFile(
-                mode='w',
-                dir=target_dir,
-                prefix='.tmp-',
-                delete=False
-            ) as temp_file:
-                fcntl.flock(temp_file.fileno(), fcntl.LOCK_EX)  # Exclusive lock for writing
-                json.dump(data, temp_file, indent=2)
-                temp_file.flush()
-                os.fsync(temp_file.fileno())  # Force write to disk
-                fcntl.flock(temp_file.fileno(), fcntl.LOCK_UN)  # Unlock
-                temp_path = temp_file.name
-
-            # Set restrictive permissions before moving
-            os.chmod(temp_path, 0o600)  # Owner read/write only
-
-            # Atomic replace within same directory
-            os.replace(temp_path, file_path)
-            temp_path = None  # Successful, don't clean up
-
-        except (OSError, IOError, TypeError, ValueError) as e:
-            # Clean up temp file on error
-            if temp_path and os.path.exists(temp_path):
-                try:
-                    os.unlink(temp_path)
-                except OSError:
-                    pass  # Best effort cleanup
-            raise RuntimeError(f"Failed to write safety data file {file_path}: {e}") from e
+            if not json_manager.write_json(file_path, data):
+                self.logger.error(f"Failed to write safety data file {file_path}")
+        except Exception as e:
+            self.logger.error(f"Exception writing safety data file {file_path}: {e}")
 
     def can_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
