@@ -183,7 +183,7 @@ def get_automation_limits() -> Dict[str, int]:
         'pr_limit': int(os.getenv('AUTOMATION_PR_LIMIT', '5')),
         'global_limit': int(os.getenv('AUTOMATION_GLOBAL_LIMIT', '50')),
         'approval_hours': int(os.getenv('AUTOMATION_APPROVAL_HOURS', '24')),
-        'subprocess_timeout': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '3600'))
+        'subprocess_timeout': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '300'))
     }
 
 
