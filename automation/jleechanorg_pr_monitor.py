@@ -3,7 +3,7 @@
 jleechanorg PR Monitor - Cross-Organization Automation
 
 Discovers and processes ALL open PRs across jleechanorg organization
-with worktree isolation and safety limits integration.
+by posting @codex automation comments with safety limits integration.
 """
 
 import argparse
@@ -21,11 +21,11 @@ from automation_safety_manager import AutomationSafetyManager
 
 
 class JleechanorgPRMonitor:
-    """Cross-organization PR monitoring with worktree isolation"""
+    """Cross-organization PR monitoring with @codex automation comments"""
 
     CODEX_COMMENT_ENV_VAR = "CODEX_COMMENT"
     ASSISTANT_HANDLE_ENV_VAR = "ASSISTANT_HANDLE"
-    DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
+    DEFAULT_ASSISTANT_HANDLE = "codex"
     DEFAULT_CODEX_COMMENT_TEMPLATE = (
         "@{assistant_handle} use your judgment to fix comments from everyone or explain why it "
         "should not be fixed. Follow binary response protocol every comment needs done or not "
@@ -51,10 +51,8 @@ class JleechanorgPRMonitor:
             default_comment,
         )
 
-        # Workspace for isolated worktrees
-        self.workspace_base = workspace_base or (Path.home() / "tmp" / "pr-automation-workspaces")
-        self.workspace_base = Path(self.workspace_base)
-        self.workspace_base.mkdir(parents=True, exist_ok=True)
+        # Legacy workspace parameter (no longer used in comment-only approach)
+        self.workspace_base = workspace_base  # Kept for backward compatibility
 
         # Safety manager integration
         data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
@@ -65,8 +63,8 @@ class JleechanorgPRMonitor:
         self.base_project_dir = Path.home() / "projects"
 
         self.logger.info(f"🏢 Initialized jleechanorg PR monitor")
-        self.logger.info(f"📁 Workspace: {self.workspace_base}")
         self.logger.info(f"🛡️ Safety data: {data_dir}")
+        self.logger.info(f"💬 Comment-only automation mode")
 
     def _setup_logging(self) -> logging.Logger:
         """Set up logging for PR monitor"""
@@ -141,128 +139,6 @@ class JleechanorgPRMonitor:
             self.logger.error(f"❌ Failed to parse repository data: {e}")
             return []
 
-    def create_worktree_for_pr(self, pr: Dict) -> Optional[Path]:
-        """Create isolated worktree for PR processing"""
-        workspace_id = pr["workspaceId"]
-        repo_name = pr["repository"]
-        pr_number = pr["number"]
-        branch_name = pr["headRefName"]
-
-        # Create isolated automation branch name
-        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-        isolated_branch = f"automation-{timestamp}-{pr_number}"
-
-        workspace_path = self.workspace_base / workspace_id
-
-        self.logger.info(f"🏗️ Creating worktree for {repo_name} PR #{pr_number}")
-        self.logger.info(f"📂 Original branch: {branch_name}")
-        self.logger.info(f"🔒 Isolated branch: {isolated_branch} → {workspace_path}")
-
-        try:
-            # Clean up existing workspace
-            if workspace_path.exists():
-                self.logger.info(f"🧹 Cleaning existing workspace: {workspace_path}")
-                shutil.rmtree(workspace_path)
-
-            # Find local repository
-            local_repo_path = self._find_local_repository(repo_name)
-            if not local_repo_path:
-                self.logger.warning(f"⚠️ No local repository found for {repo_name}")
-                return None
-
-            # Change to local repository directory
-            original_cwd = os.getcwd()
-            os.chdir(local_repo_path)
-
-            try:
-                # Fetch latest changes
-                subprocess.run(["git", "fetch", "--all"], check=True, capture_output=True, timeout=30, shell=False)
-
-                # Check if original PR branch exists locally or remotely
-                local_branches = subprocess.run(
-                    ["git", "branch", "--list", branch_name],
-                    capture_output=True, text=True, timeout=30
-                ).stdout.strip()
-
-                remote_branch = f"origin/{branch_name}"
-                remote_branches = subprocess.run(
-                    ["git", "branch", "-r", "--list", remote_branch],
-                    capture_output=True, text=True, timeout=30, shell=False
-                ).stdout.strip()
-
-                # Determine base branch for isolated branch
-                if local_branches:
-                    base_branch = branch_name
-                    self.logger.info(f"📋 Creating isolated branch from local: {branch_name}")
-                elif remote_branches:
-                    base_branch = remote_branch
-                    self.logger.info(f"🌐 Creating isolated branch from remote: {remote_branch}")
-                else:
-                    self.logger.error(f"❌ Branch {branch_name} not found locally or remotely")
-                    return None
-
-                # Always create isolated branch for worktree
-                worktree_cmd = ["git", "worktree", "add", "-b", isolated_branch, str(workspace_path), base_branch]
-
-                # Execute worktree creation with isolated branch
-                actual_branch = isolated_branch  # Track actual worktree branch (always isolated)
-                try:
-                    result = subprocess.run(worktree_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
-                    self.logger.info(f"✅ Worktree created successfully with isolated branch: {isolated_branch}")
-                except subprocess.CalledProcessError as e:
-                    self.logger.error(f"❌ Failed to create worktree with isolated branch: {e.stderr}")
-                    return None
-
-                # Verify workspace
-                if not workspace_path.exists():
-                    self.logger.error(f"❌ Worktree creation failed: {workspace_path} doesn't exist")
-                    return None
-
-                # Set up PR metadata in workspace
-                metadata = {
-                    "pr_number": pr_number,
-                    "repository": repo_name,
-                    "repository_full_name": pr["repositoryFullName"],
-                    "branch_name": branch_name,              # Original PR branch name
-                    "target_branch": branch_name,            # Remote branch to update (always original PR branch)
-                    "worktree_branch": actual_branch,        # Actual branch checked out in worktree (isolated)
-                    "isolated_branch": isolated_branch,      # The isolated automation branch
-                    "base_branch": pr["baseRefName"],
-                    "pr_url": pr["url"],
-                    "author": pr["author"]["login"],
-                    "title": pr["title"],
-                    "created_at": datetime.now().isoformat(),
-                    "local_repo_path": str(local_repo_path)
-                }
-
-                metadata_file = workspace_path / ".pr-metadata.json"
-                # Atomic write for metadata to prevent corruption
-                with tempfile.NamedTemporaryFile(
-                    mode='w',
-                    dir=workspace_path,
-                    prefix=".pr-metadata.",
-                    suffix=".tmp",
-                    delete=False
-                ) as temp_file:
-                    json.dump(metadata, temp_file, indent=2)
-                    temp_file.flush()
-                    os.fsync(temp_file.fileno())
-                    temp_path = temp_file.name
-
-                os.rename(temp_path, str(metadata_file))
-
-                self.logger.info(f"📝 PR metadata saved: {metadata_file}")
-                return workspace_path
-
-            finally:
-                os.chdir(original_cwd)
-
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ Failed to create worktree: {e.stderr}")
-            return None
-        except Exception as e:
-            self.logger.error(f"💥 Unexpected error creating worktree: {e}")
-            return None
 
     def _find_local_repository(self, repo_name: str) -> Optional[Path]:
         """Find local repository path for given repo name"""
@@ -434,10 +310,11 @@ class JleechanorgPRMonitor:
         if '[ai automation]' in body.lower() or author.endswith('[bot]'):
             return False
 
-        # Known AI assistant usernames (Claude Code, Codex, etc.)
+        # Known AI assistant usernames that we recognize as doing work
         ai_usernames = {
-            'claude-dev', 'coderabbitai', 'codex-assistant', 'github-copilot',
-            'claude', 'anthropic-claude', 'openai-codex', 'ai-assistant'
+            'claude-dev', 'codex-assistant', 'github-copilot',
+            'claude', 'anthropic-claude', 'openai-codex', 'ai-assistant',
+            'chatgpt-codex-connector'
         }
 
         # Must be from a known AI assistant
@@ -493,9 +370,10 @@ class JleechanorgPRMonitor:
             if '[ai automation]' in body or author.endswith('[bot]'):
                 continue
 
-            # Look for humans addressing AI assistants
-            ai_mentions = ['@coderabbitai', '@github-copilot', '@codex', '@claude']
-            if any(mention in body for mention in ai_mentions):
+            # Look for humans addressing other AI assistants
+            # We skip if they mention other assistants to avoid interference
+            other_ai_mentions = ['@github-copilot', '@claude', '@coderabbitai']
+            if any(mention in body for mention in other_ai_mentions):
                 self.logger.debug(f"Found recent human AI request from {author}")
                 return True
 
@@ -697,128 +575,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         # Fallback without marker if we could not determine the commit SHA
         return self.CODEX_COMMENT_TEXT
 
-    def post_codex_instruction(self, workspace_path: Path) -> bool:
-        """Post codex instruction comment in isolated workspace"""
-        metadata_file = workspace_path / ".pr-metadata.json"
 
-        if not metadata_file.exists():
-            self.logger.error(f"❌ PR metadata not found: {metadata_file}")
-            return False
-
-        with open(metadata_file, 'r') as f:
-            metadata = json.load(f)
-
-        pr_number = metadata["pr_number"]
-        repo_name = metadata["repository"]
-        repo_full_name = metadata["repository_full_name"]
-
-        self.logger.info(f"💬 Requesting Codex support for {repo_name} PR #{pr_number}")
-
-        head_sha, comments = self._get_pr_comment_state(repo_full_name, pr_number)
-        if head_sha and self._has_codex_comment_for_commit(comments, head_sha):
-            self.logger.info(
-                f"♻️ Codex instruction already posted for latest commit {head_sha} on PR #{pr_number}; skipping"
-            )
-            return True
-
-        try:
-            original_cwd = os.getcwd()
-            os.chdir(workspace_path)
-
-            try:
-                comment_body = self._build_codex_comment_body(head_sha)
-                comment_cmd = [
-                    "gh", "pr", "comment",
-                    str(pr_number),
-                    "--repo", repo_full_name,
-                    "--body", comment_body,
-                ]
-
-                result = subprocess.run(
-                    comment_cmd,
-                    capture_output=True,
-                    text=True,
-                    timeout=30,
-                    check=True,
-                    shell=False,
-                )
-
-                stdout = result.stdout.strip()
-                if stdout:
-                    self.logger.info(
-                        f"✅ Posted codex instruction comment for PR #{pr_number}: {stdout}"
-                    )
-                else:
-                    self.logger.info(f"✅ Posted codex instruction comment for PR #{pr_number}")
-
-                return True
-            finally:
-                os.chdir(original_cwd)
-
-        except subprocess.TimeoutExpired:
-            self.logger.error(f"⏰ Posting codex instruction comment timed out for PR #{pr_number}")
-            return False
-        except subprocess.CalledProcessError as e:
-            error_message = e.stderr.strip() if e.stderr else str(e)
-            self.logger.error(
-                f"❌ Failed to post codex instruction comment for PR #{pr_number}: {error_message}"
-            )
-            return False
-        except Exception as e:
-            self.logger.error(f"💥 Unexpected error processing PR #{pr_number}: {e}")
-            return False
-
-    def cleanup_workspace(self, workspace_path: Path):
-        """Clean up worktree workspace and isolated branches"""
-        if not workspace_path.exists():
-            return
-
-        metadata_file = workspace_path / ".pr-metadata.json"
-        if metadata_file.exists():
-            with open(metadata_file, 'r') as f:
-                metadata = json.load(f)
-
-            local_repo_path = metadata.get("local_repo_path")
-            isolated_branch = metadata.get("isolated_branch")
-
-            if local_repo_path:
-                try:
-                    # Change to local repository
-                    original_cwd = os.getcwd()
-                    os.chdir(local_repo_path)
-
-                    try:
-                        # Remove worktree
-                        subprocess.run(
-                            ["git", "worktree", "remove", str(workspace_path), "--force"],
-                            check=True, capture_output=True, timeout=30
-                        )
-                        self.logger.info(f"🧹 Worktree removed: {workspace_path}")
-
-                        # Clean up isolated branch if it exists
-                        if isolated_branch:
-                            try:
-                                subprocess.run(
-                                    ["git", "branch", "-D", isolated_branch],
-                                    check=True, capture_output=True, timeout=30
-                                )
-                                self.logger.info(f"🗑️ Isolated branch removed: {isolated_branch}")
-                            except subprocess.CalledProcessError as e:
-                                self.logger.warning(f"⚠️ Failed to remove isolated branch {isolated_branch}: {e}")
-
-                    finally:
-                        os.chdir(original_cwd)
-
-                except subprocess.CalledProcessError as e:
-                    self.logger.warning(f"⚠️ Failed to remove worktree cleanly: {e}")
-
-        # Force remove directory if it still exists
-        if workspace_path.exists():
-            try:
-                shutil.rmtree(workspace_path)
-                self.logger.info(f"🗑️ Workspace directory removed: {workspace_path}")
-            except Exception as e:
-                self.logger.warning(f"⚠️ Failed to remove workspace dir {workspace_path}: {e}")
 
     def process_single_pr_by_number(self, pr_number: int, repository: str) -> bool:
         """Process a specific PR by number and repository"""
@@ -919,30 +676,19 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             self.logger.info(f"🎯 Processing PR: {pr_key} - {pr['title']}")
 
-            # Create isolated workspace
-            workspace = self.create_worktree_for_pr(pr)
-            if not workspace:
-                self.logger.error(f"❌ Failed to create workspace for PR {pr_key}")
-                continue
+            # Post codex instruction comment directly (comment-only approach)
+            success = self.post_codex_instruction_simple(repo_name, pr_number, pr)
 
-            try:
-                # Post codex instruction comment
-                success = self.post_codex_instruction(workspace)
+            # Record attempt
+            result = "success" if success else "failure"
+            self.safety_manager.record_pr_attempt(pr_key, result)
 
-                # Record attempt
-                result = "success" if success else "failure"
-                self.safety_manager.record_pr_attempt(pr_key, result)
-
-                if success:
-                    self.logger.info(f"✅ Successfully processed PR {pr_key}")
-                    processed_count += 1
-                else:
-                    attempts = self.safety_manager.get_pr_attempts(pr_key)
-                    self.logger.error(f"❌ Failed to process PR {pr_key} (attempt {attempts})")
-
-            finally:
-                # Always clean up workspace
-                self.cleanup_workspace(workspace)
+            if success:
+                self.logger.info(f"✅ Successfully processed PR {pr_key}")
+                processed_count += 1
+            else:
+                attempts = self.safety_manager.get_pr_attempts(pr_key)
+                self.logger.error(f"❌ Failed to process PR {pr_key} (attempt {attempts})")
 
         self.logger.info(f"🏁 Monitoring cycle complete: {processed_count} PRs processed")
 

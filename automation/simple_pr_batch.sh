@@ -21,7 +21,7 @@ log() {
 }
 
 # Default Codex instruction (can be overridden by exporting CODEX_COMMENT)
-ASSISTANT_HANDLE="${ASSISTANT_HANDLE:-coderabbitai}"
+ASSISTANT_HANDLE="${ASSISTANT_HANDLE:-codex}"
 CODEX_COMMENT_DEFAULT="@${ASSISTANT_HANDLE} use your judgment to fix comments from everyone or explain why it should not be fixed. Follow binary response protocol every comment needs done or not done classification explicitly with an explanation. Push any commits needed to remote so the PR is updated."
 CODEX_COMMENT="${CODEX_COMMENT:-$CODEX_COMMENT_DEFAULT}"
 CODEX_COMMIT_MARKER_PREFIX="<!-- codex-automation-commit:"
