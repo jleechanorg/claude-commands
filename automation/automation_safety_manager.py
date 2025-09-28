@@ -242,12 +242,19 @@ class AutomationSafetyManager:
     def can_start_global_run(self) -> bool:
         """Check if a global run can be started"""
         with self.lock:
-            runs = self.get_global_runs()
+            # Use cache for testing, file for production
+            runs = self._global_runs_cache if hasattr(self, '_global_runs_cache') else self.get_global_runs()
+
             if runs < self.global_limit:
                 return True
 
-            # Check if we have valid manual approval for beyond limit
-            return self.has_manual_approval()
+            # Manual override allows limited additional runs (max 2x limit)
+            # Never allow unlimited runs even with override
+            if self.has_manual_approval() and runs < (self.global_limit * 2):
+                return True
+
+            # Hard stop at 2x limit regardless of approval status
+            return False
 
     def get_global_runs(self) -> int:
         """Get total number of global runs"""
@@ -496,8 +503,8 @@ def main():
                         help='Check if global run can start')
     parser.add_argument('--record-global', action='store_true',
                         help='Record global run')
-    parser.add_argument('--approve', type=str, metavar='EMAIL',
-                        help='Grant manual approval')
+    parser.add_argument('--manual_override', type=str, metavar='EMAIL',
+                        help='Grant manual override (emergency use only)')
     parser.add_argument('--status', action='store_true',
                         help='Show current status')
 
@@ -530,9 +537,9 @@ def main():
         runs = manager.get_global_runs()
         print(f"Recorded global run #{runs}")
 
-    elif args.approve:
-        manager.grant_manual_approval(args.approve)
-        print(f"Manual approval granted by {args.approve}")
+    elif args.manual_override:
+        manager.grant_manual_approval(args.manual_override)
+        print(f"Manual override granted by {args.manual_override}")
 
     elif args.status:
         runs = manager.get_global_runs()

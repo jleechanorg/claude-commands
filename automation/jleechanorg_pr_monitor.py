@@ -717,7 +717,7 @@ def main():
                         help='Discover PRs but do not process them')
     parser.add_argument('--single-repo',
                         help='Process only specific repository')
-    parser.add_argument('--max-prs', type=int, default=10,
+    parser.add_argument('--max-prs', type=int, default=5,
                         help='Maximum PRs to process per cycle')
     parser.add_argument('--target-pr', type=int,
                         help='Process specific PR number')
