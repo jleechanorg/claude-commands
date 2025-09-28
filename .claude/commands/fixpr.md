@@ -8,7 +8,78 @@
 
 **CRITICAL RULE**: GitHub PR status is the ONLY source of truth. Local conditions (tests, conflicts, etc.) may differ from GitHub's reality.
 
-**🚨 CRITICAL LEARNING (2025-09-09)**: GitHub `mergeable: "MERGEABLE"` can be MISLEADING - it indicates no merge conflicts but does NOT guarantee tests are passing. Always explicitly check `statusCheckRollup[]` for failing tests before declaring success.
+**🚨 CRITICAL LEARNING (2025-09-09)**: GitHub `mergeable: "MERGEABLE"` can be MISLEADING - it indicates no merge conflicts but does NOT guarantee tests are passing. Always explicitly inspect `statusCheckRollup.contexts.nodes[]` for failing checks before declaring success.
+
+## ⏺ 🧠 Learning & Thinking: How to Improve /fixpr
+
+### 🚨 Critical Improvements Needed
+
+1. **Mandatory Authentication Verification**
+   ```bash
+   if ! gh auth status; then
+     echo "❌ GitHub CLI not authenticated - run 'gh auth login' first"
+     exit 1
+   fi
+   ```
+   *POSIX-shell friendly; works in bash, zsh, and dash.*
+2. **Correct GitHub Status Interpretation**
+   ```bash
+   status=$(gh pr view "$PR" --json mergeStateStatus,statusCheckRollup)
+   merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
+
+   # Extract the individual CI checks from the nested statusCheckRollup payload
+   checks=$(echo "$status" | jq '.statusCheckRollup.contexts.nodes // []')
+   # Filter to outcomes that indicate hard failures
+   failed_checks=$(echo "$checks" | jq '[.[]
+     | select((.conclusion // .state // "")
+         | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$"))
+   ]')
+   # Count how many failing checks remain
+   failed_count=$(echo "$failed_checks" | jq 'length')
+
+   if [[ "$merge_state" == "CLEAN" ]] && [[ "$failed_count" -eq 0 ]]; then
+     echo "✅ Actually ready to merge"
+   else
+     echo "❌ Tests failing or unstable: $merge_state, $failed_count failures"
+   fi
+   ```
+3. **Enhanced Validation Protocol**
+   - ✅ Pre-flight: Verify GitHub CLI authentication before any API calls
+   - ✅ Parse safely: Confirm response types before accessing fields
+   - ✅ Check thoroughly: Inspect every entry in `statusCheckRollup.contexts.nodes`
+   - ✅ Re-verify: After applying fixes, wait for CI to update and fetch fresh status
+   - ❌ Never trust `mergeable: "MERGEABLE"` alone
+4. **Better Error Detection Patterns**
+   *(The snippet below assumes `status_data` is the parsed JSON payload from
+   `gh pr view --json statusCheckRollup`. GitHub returns a dictionary whose
+   failing checks live under `statusCheckRollup.contexts.nodes`, but defensive
+   code should tolerate unexpected shapes.)*
+   ```python
+   nodes = []
+   if isinstance(status_data, dict):
+       nodes = (
+           ((status_data.get('statusCheckRollup') or {}).get('contexts') or {})
+           .get('nodes')
+       ) or []
+
+   for check in nodes:
+       if isinstance(check, dict):
+           outcome = (check.get('conclusion') or check.get('state') or '')
+           if outcome in ('FAILURE', 'ERROR', 'TIMED_OUT', 'CANCELLED', 'ACTION_REQUIRED'):
+               name = check.get('name') or check.get('context') or 'unknown'
+               print(f"❌ Failed: {name}")
+   ```
+
+### 🎯 Root Cause: False Security from `mergeable`
+
+- `mergeable: "MERGEABLE"` only means there are no merge conflicts.
+- It does **not** guarantee CI checks passed or that the PR is production-ready.
+- Rely on `mergeStateStatus` and the individual `statusCheckRollup` conclusions for truth.
+
+### 📝 Implementation Plan
+
+- Short-term: Update `/fixpr` to enforce authentication and authoritative status validation.
+- Long-term: Maintain comprehensive validation and defensive programming to prevent regressions.
 
 **MANDATORY APPROACH**:
 - ✅ **ALWAYS start by fetching fresh GitHub PR status**
@@ -52,6 +123,20 @@ The `/fixpr` command leverages Claude's natural language understanding to analyz
 
 ## Workflow
 
+### Step 0: Verify GitHub CLI Authentication
+
+**MANDATORY PRE-FLIGHT CHECK**: `/fixpr` MUST verify GitHub CLI authentication before making any API requests.
+
+```bash
+if ! gh auth status; then
+  echo "❌ GitHub CLI not authenticated - run 'gh auth login' first"
+  exit 1
+fi
+```
+*POSIX-shell friendly; works in bash, zsh, and dash.*
+
+Only proceed once authentication succeeds.
+
 ### Step 1: Gather Repository Context
 
 Dynamically detect repository information from the git environment:
@@ -76,6 +161,27 @@ Dynamically detect repository information from the git environment:
 - ❌ **NEVER fix local issues without confirming they exist on GitHub**
 - ❌ **NEVER trust cached or stale GitHub data**
 
+```bash
+status=$(gh pr view "$PR" --json mergeStateStatus,statusCheckRollup)
+merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
+
+# Extract check contexts safely from the nested GraphQL payload
+checks=$(echo "$status" | jq '.statusCheckRollup.contexts.nodes // []')
+# Identify failure-like outcomes from GitHub (covers failure, error, cancelled, etc.)
+failed_checks=$(echo "$checks" | jq '[.[]
+  | select((.conclusion // .state // "")
+      | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$"))
+]')
+failed_count=$(echo "$failed_checks" | jq 'length')
+
+echo "🔍 GitHub merge state: $merge_state"
+echo "🔍 Failing checks: $failed_count"
+
+if [[ "$merge_state" != "CLEAN" ]] || [[ "$failed_count" -ne 0 ]]; then
+  echo "❌ Tests failing or merge state not clean - investigate before claiming success"
+fi
+```
+
 🚨 **DEFENSIVE PROGRAMMING FOR GITHUB API RESPONSES**:
 - ✅ **ALWAYS handle both list and dict responses** from GitHub API
 - ✅ **NEVER use .get() on variables that might be lists**
@@ -98,23 +204,27 @@ else:
 
 1. **CI State & Test Failures** (GitHub Authoritative):
    - **MANDATORY**: `gh pr view <PR> --json statusCheckRollup` - Get ALL CI check results
-   - **DEFENSIVE**: statusCheckRollup is often a LIST of checks, not a single object
-   - **SAFE ACCESS**: Use list iteration, never .get() on the rollup array
+   - **DEFENSIVE**: `statusCheckRollup` is a GraphQL object whose `contexts.nodes` field is the LIST of checks
+   - **SAFE ACCESS**: Iterate over `contexts.nodes[]`; never call `.get()` on the rollup wrapper itself
    - **DISPLAY INLINE**: Print exact GitHub CI status: `❌ FAILING: test-unit (exit code 1)`
    - **FETCH LOGS (Primary)**: Use statusCheckRollup descriptions for failing checks (authoritative and fast):
-     ```bash
-     gh pr view "$PR_NUMBER" --json statusCheckRollup --jq \
-       '.statusCheckRollup[] | select(.state == "FAILURE") | "\(.context): \(.description)"'
-     ```
+    ```bash
+    gh pr view "$PR_NUMBER" --json statusCheckRollup --jq \
+      '(.statusCheckRollup.contexts.nodes // [])
+       | map(select((.conclusion // .state // "")
+           | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$")))
+       | map("\((.name // .context) // "unknown"): \((.description // "no description provided"))")
+       | .[]'
+    ```
    - **Roadmap (non-executable)**: Future enhancements will include workflow/job log retrieval via the Actions API for deeper analysis (job logs, step-level errors, artifact links).
    - **VERIFY AUTHORITY**: Cross-check GitHub vs local - local is NEVER authoritative
    - **SAFE PROCESSING PATTERN**:
-     ```
-     # When processing statusCheckRollup (which is a list):
-     for check in statusCheckRollup:  # DON'T use .get() on statusCheckRollup itself
-         status = check.get('state', 'unknown')  # OK - check is a dict
-         name = check.get('context', 'unknown')
-     ```
+    ```
+    # When processing statusCheckRollup.contexts.nodes (list of individual checks):
+    for check in (statusCheckRollup.get('contexts', {}).get('nodes', [])):
+        status = check.get('state', 'unknown')
+        name = check.get('context') or check.get('name', 'unknown')
+    ```
    - **EXAMPLE OUTPUT**:
      ```
      🔍 GITHUB CI STATUS (Authoritative):
@@ -124,7 +234,7 @@ else:
      ```
 
 2. **Merge Conflicts** (GitHub Authoritative):
-   - **MANDATORY**: `gh pr view <PR> --json mergeable,mergeableState` - Get GitHub merge status
+   - **MANDATORY**: `gh pr view <PR> --json mergeable,mergeStateStatus` - Get GitHub merge status
    - **DISPLAY INLINE**: Print exact GitHub merge state: `❌ CONFLICTING: 3 files have conflicts`
    - **FETCH DETAILS**: `gh pr diff <PR>` - Get actual conflict content from GitHub
    - **NEVER ASSUME LOCAL**: Local git status may not match GitHub's merge analysis
@@ -222,7 +332,7 @@ grep -r "@patch" . --include="test_*.py" -A 10 | grep -E "(return_value.*MagicMo
 Examine the collected data to understand what needs fixing:
 
 **CI Status Analysis**:
-- **SAFE APPROACH**: Remember statusCheckRollup is a list - iterate through checks
+- **SAFE APPROACH**: Remember `statusCheckRollup.contexts.nodes` is the list of checks - iterate through those nodes
 - **DETAILED LOG ANALYSIS**: Parse GitHub Actions logs to extract specific failures:
   ```bash
   set -o pipefail
@@ -295,9 +405,10 @@ gh pr view <PR> --json statusCheckRollup
 PR_NUMBER=<PR>  # Replace with the numeric PR identifier
 failing_check="test-unit"  # Replace with actual failing check name from GitHub
 ci_failure_log=$(gh pr view "$PR_NUMBER" --json statusCheckRollup --jq '
-  (.statusCheckRollup // [])
-  | map(select((.state == "FAILURE") or (.conclusion == "FAILURE")))
-  | map("\(.context // .name): \(.description // "no description")")
+  (.statusCheckRollup.contexts.nodes // [])
+  | map(select(((.conclusion // .state) // "")
+      | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$")))
+  | map("\((.context // .name) // \"unknown\"): \((.description // \"no description\"))")
   | join("\n")
 ')
 /redgreen --pr "$PR_NUMBER" --check "$failing_check" --gh-log "$ci_failure_log" --local "./run_tests.sh"
@@ -332,7 +443,7 @@ Based on the analysis, apply appropriate fixes:
 #### RED PHASE: Reproduce GitHub Failure Locally
 ```bash
 # 1. Extract specific GitHub CI failure details
-gh pr view <PR> --json statusCheckRollup | jq '.[] | select(.state == "FAILURE")'
+gh pr view <PR> --json statusCheckRollup --jq '(.statusCheckRollup.contexts.nodes // [])[] | select(((.conclusion // .state) // "") | test("^(FAILURE|ERROR|TIMED_OUT|ACTION_REQUIRED|CANCELLED)$"))'
 # Example: "AssertionError: Expected 'foo' but got 'FOO' in test_case_sensitivity"
 
 # 2. Create a failing test that reproduces the CI environment condition
@@ -426,35 +537,31 @@ EOF
      ```bash
      # CRITICAL: Check for any failing required checks
      failing_checks=$(gh pr view "$PR" --json statusCheckRollup --jq '
-       [
-         (.statusCheckRollup // [])[]
-         | select(.isRequired == true)
-         | select(
-             (.conclusion == "FAILURE") or
-             (.conclusion == "TIMED_OUT") or
-             (.conclusion == "CANCELLED") or
-             (.conclusion == "ACTION_REQUIRED") or
-             (.state == "FAILURE") or
-             (.state == "ERROR")
-           )
-       ] | length
-     ')
+      [
+        (.statusCheckRollup.contexts.nodes // [])[]
+        | select((.isRequired // false) == true)
+        | ((.conclusion // .state) // "") as $outcome
+        | select($outcome == "FAILURE"
+                 or $outcome == "ERROR"
+                 or $outcome == "TIMED_OUT"
+                 or $outcome == "CANCELLED"
+                 or $outcome == "ACTION_REQUIRED")
+      ] | length
+    ')
 
      if [ "$failing_checks" -gt 0 ]; then
        echo "❌ BLOCKING: $failing_checks required checks failing"
        gh pr view "$PR" --json statusCheckRollup --jq '
-         (.statusCheckRollup // [])[]
-         | select(.isRequired == true)
-         | select(
-             (.conclusion == "FAILURE") or
-             (.conclusion == "TIMED_OUT") or
-             (.conclusion == "CANCELLED") or
-             (.conclusion == "ACTION_REQUIRED") or
-             (.state == "FAILURE") or
-             (.state == "ERROR")
-           )
-         | "❌ \((.context // .name) // "unknown"): \((.conclusion // .state) // "unknown") - \((.description // "No description"))"
-       '
+        (.statusCheckRollup.contexts.nodes // [])[]
+        | select((.isRequired // false) == true)
+        | ((.conclusion // .state) // "") as $outcome
+        | select($outcome == "FAILURE"
+                 or $outcome == "ERROR"
+                 or $outcome == "TIMED_OUT"
+                 or $outcome == "CANCELLED"
+                 or $outcome == "ACTION_REQUIRED")
+        | "❌ \((.context // .name) // \"unknown\"): \($outcome) - \((.description // \"No description\"))"
+      '
        echo "🚨 /fixpr MUST NOT declare success with failing tests"
        exit 1
      fi
@@ -666,3 +773,7 @@ The focus is on describing intent and letting Claude determine the best implemen
 **🚨 NEVER MERGE**: This command's job is to make PRs mergeable, not to merge them. The user retains control over when/if to actually merge.
 
 **📊 Success Metric**: A successful run means GitHub would show a green merge button with no blockers - all CI passing, no conflicts, no blocking reviews.
+
+## Regression Testing Notes
+
+- `./run_tests.sh` *(2025-09-27)* – Completed with 177/178 tests passing. The remaining failure (`$PROJECT_ROOT/tests/test_main_state_helper.py`) surfaces an existing `ResourceWarning` about an unclosed log file handle in `$PROJECT_ROOT/main.py`. Investigate the logging lifecycle before treating `/fixpr` updates as production-ready.

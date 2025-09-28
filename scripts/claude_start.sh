@@ -368,17 +368,7 @@ else
     if [ -f "venv/bin/activate" ]; then
         if source venv/bin/activate 2>/dev/null; then
             if ! python -c "import fastmcp" >/dev/null 2>&1; then
-                echo -e "${YELLOW}⚠️  FastMCP not found in virtual environment - installing MCP dependencies...${NC}"
-                if [ -f "mcp_servers/slash_commands/requirements.txt" ]; then
-                    if pip install -r mcp_servers/slash_commands/requirements.txt; then
-                        echo -e "${GREEN}✅ MCP dependencies installed successfully${NC}"
-                    else
-                        echo -e "${RED}❌ Failed to install MCP dependencies${NC}"
-                        echo -e "${YELLOW}💡 Try running: ./scripts/setup-dev-env.sh${NC}"
-                    fi
-                else
-                    echo -e "${YELLOW}⚠️  Cannot auto-install MCP dependencies - you may need to run setup-dev-env.sh${NC}"
-                fi
+                echo -e "${YELLOW}⚠️  FastMCP not found in virtual environment - install MCP dependencies with ./scripts/setup-dev-env.sh${NC}"
             fi
         else
             echo -e "${YELLOW}⚠️  Cannot check FastMCP - virtual environment activation failed${NC}"

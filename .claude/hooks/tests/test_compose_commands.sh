@@ -527,6 +527,11 @@ run_test "Enhanced: /copilot triggers main composition logic" \
     '{"prompt": "/copilot fix the failing tests"}' \
     "🔍 Detected slash commands:/copilot"
 
+# Regression: Single command compositions should leverage nested metadata without hardcoded allowlists
+run_test "Enhanced: /pr command composes using nested command metadata" \
+    '{"prompt": "/pr Investigate release"}' \
+    "Use these approaches in combination:/copilot /execute /pr /push /review /think. Apply this to: Investigate release"
+
 # Test 64: Robustness - function should work without trailing spaces (FIXED)
 run_test "Robustness: Command detection without format dependency" \
     '{"prompt": "/research quantum computing"}' \
