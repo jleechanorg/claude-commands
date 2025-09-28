@@ -21,9 +21,15 @@ Execute test specifications directly as an LLM without generating intermediate s
 ```
 
 ### Default Behavior (No Arguments Provided)
-- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
-- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
+- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
+- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
+
+> [!TIP]
+> Set `CLAUDE_TESTLLM_DIR` to override the default directory. For example:
+> - Bash / Zsh: `export CLAUDE_TESTLLM_DIR=qa/tests`
+> - Fish: `set -x CLAUDE_TESTLLM_DIR qa/tests`
+> - PowerShell: `$env:CLAUDE_TESTLLM_DIR = "qa/tests"`
 
 ### Mandatory First Step
 - **Read the Entire Suite First**: Before planning, checklist creation, or any execution, explicitly read every test specification in the `testing_llm/` directory to internalize scope, dependencies, and evidence requirements.

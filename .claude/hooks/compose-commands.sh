@@ -9,6 +9,10 @@ source "$script_dir/timeout-utils.sh"
 raw_input=$(safe_read_stdin)
 
 # Note: SLASH_COMMAND_EXECUTE patterns removed - handled by SlashCommand MCP tool directly
+# DEPRECATION NOTICE: SLASH_COMMAND_EXECUTE handling has been removed from this hook.
+# If your workflow depends on SLASH_COMMAND_EXECUTE, please migrate to the SlashCommand MCP tool.
+# For migration instructions, see: https://github.com/your-org/slashcommand-mcp#migration
+# This script will no longer process SLASH_COMMAND_EXECUTE events.
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; default to a secure temp file when unset

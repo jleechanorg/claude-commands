@@ -251,8 +251,8 @@ SUCCESSFUL_INSTALLS=0
 FAILED_INSTALLS=0
 CURRENT_STEP=0
 
-# Ensure GitHub token availability per scripting guidelines
-export GITHUB_TOKEN="${GITHUB_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"
+# Ensure GitHub token availability per scripting guidelines without exporting globally
+GITHUB_TOKEN="${GITHUB_TOKEN:-$GITHUB_PERSONAL_ACCESS_TOKEN}"
 
 # Parallel processing configuration
 MAX_PARALLEL_JOBS=3
