@@ -321,6 +321,10 @@ intelligent_test_selection() {
                         test_patterns+=("mvp_site/test_*.py")
                         test_patterns+=("mvp_site/tests/test_*.py")
                         ;;
+                    automation/*)
+                        test_patterns+=("automation/tests/test_*.py")
+                        test_patterns+=("automation/test_*.py")
+                        ;;
                     *api*)
                         test_patterns+=("**/test_api*.py")
                         test_patterns+=("**/test_*api*.py")
@@ -631,6 +635,14 @@ if [ ${#test_files[@]} -eq 0 ]; then
         while IFS= read -r -d '' test_file; do
             test_files+=("$test_file")
         done < <(find scripts/tests -name "test_*.py" -type f -print0 2>/dev/null)
+    fi
+
+    # Add automation/tests if directory exists
+    if [ -d "automation/tests" ]; then
+        print_status "Including automation/tests..."
+        while IFS= read -r -d '' test_file; do
+            test_files+=("$test_file")
+        done < <(find automation/tests -name "test_*.py" -type f -print0 2>/dev/null)
     fi
 
     # Discover cerebras command tests
