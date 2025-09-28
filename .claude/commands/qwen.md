@@ -22,7 +22,9 @@ This command automatically redirects to the new `/cerebras` command for backward
 While `/qwen` continues to work, please update your workflows to use `/cerebras` for the primary command.
 
 ## Task Execution
-!`.claude/commands/cerebras/cerebras_direct.sh "$ARGUMENTS"`
+
+Claude: Check for `cerebras_direct.sh` in the trusted locations (look in `~/.claude/commands/cerebras` first, then in the repository `.claude/commands/cerebras`). Once you find it, run the script with the original arguments. If the script is missing from both locations, surface a clear error explaining the lookup failure.
+
 
 ## Post-Generation Analysis
 

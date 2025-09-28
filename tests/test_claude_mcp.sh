@@ -560,181 +560,37 @@ EOF
     export PATH="$OLD_PATH"
 }
 
-# Test MCP global installation logic
-test_mcp_global_installation_logic() {
-    print_test "MCP global installation attempt flow"
+# Verify deprecated slash commands server is absent
+test_slash_commands_removed_from_script() {
+    print_test "Ensure claude-slash-commands is not referenced"
 
-    # Create mock environment
-    mkdir -p "$TEST_DIR/bin"
-
-    # Mock uvx command that simulates successful global installation
-    cat > "$TEST_DIR/bin/uvx" <<'EOF'
-#!/bin/bash
-if [ "$1" = "--from" ] && { [ "$2" = "./mcp_servers/slash_commands" ] || [[ "$2" == file://*"/mcp_servers/slash_commands" ]]; } && [ "$3" = "claude-slash-commands-mcp" ]; then
-    echo "Successfully installed claude-slash-commands-mcp"
-    exit 0
-else
-    echo "uvx: command not recognized"
-    exit 1
-fi
-EOF
-    chmod +x "$TEST_DIR/bin/uvx"
-
-    # Mock claude command that simulates successful MCP add
-    cat > "$TEST_DIR/bin/claude" <<'EOF'
-#!/bin/bash
-if [ "$1" = "mcp" ] && [ "$2" = "add" ] && [ "$3" = "--scope" ] && [ "$4" = "user" ] && [ "$5" = "claude-slash-commands" ] && [ "$6" = "claude-slash-commands-mcp" ]; then
-    echo "Successfully added MCP server claude-slash-commands"
-    exit 0
-else
-    echo "claude: command failed"
-    exit 1
-fi
-EOF
-    chmod +x "$TEST_DIR/bin/claude"
-
-    OLD_PATH="$PATH"
-    export PATH="$TEST_DIR/bin:$PATH"
-
-    # Simulate the global installation logic
-    global_install_success=0
-    if command -v uvx >/dev/null 2>&1; then
-        # Simulate uvx installation
-        if uvx --from ./mcp_servers/slash_commands claude-slash-commands-mcp >/dev/null 2>&1; then
-            # Simulate claude mcp add
-            if claude mcp add --scope user "claude-slash-commands" "claude-slash-commands-mcp" >/dev/null 2>&1; then
-                global_install_success=1
-            fi
-        fi
+    if [ ! -f "$CLAUDE_MCP_SCRIPT" ]; then
+        echo -e "${YELLOW}⚠️  SKIP: claude_mcp.sh not found${NC}"
+        return 0
     fi
 
-    assert_equals "1" "$global_install_success" "(global installation succeeds)"
-
-    # Restore PATH
-    export PATH="$OLD_PATH"
-}
-
-# Test installation fallback logic
-test_installation_fallback_logic() {
-    print_test "Installation fallback from global to local"
-
-    # Create mock environment
-    mkdir -p "$TEST_DIR/bin"
-
-    # Mock uvx command that simulates failure
-    cat > "$TEST_DIR/bin/uvx" <<'EOF'
-#!/bin/bash
-echo "uvx: installation failed"
-exit 1
-EOF
-    chmod +x "$TEST_DIR/bin/uvx"
-
-    # Mock python command for local fallback
-    cat > "$TEST_DIR/bin/python3" <<'EOF'
-#!/bin/bash
-if [[ "$1" == "-m" ]] && [[ "$2" == "pip" ]] && [[ "$3" == "install" ]] && [[ "$4" == "-e" ]] && [[ "$5" == *"mcp_servers/slash_commands"* ]]; then
-    echo "Successfully installed local package"
-    exit 0
-else
-    echo "python: unknown command"
-    exit 1
-fi
-EOF
-    chmod +x "$TEST_DIR/bin/python3"
-
-    OLD_PATH="$PATH"
-    export PATH="$TEST_DIR/bin:$PATH"
-
-    # Simulate the fallback logic
-    installation_success=0
-    fallback_used=0
-
-    if command -v uvx >/dev/null 2>&1; then
-        # Try global installation (will fail)
-        if ! uvx --from ./mcp_servers/slash_commands claude-slash-commands-mcp >/dev/null 2>&1; then
-            # Fall back to local installation
-            fallback_used=1
-            if python3 -m pip install -e ./mcp_servers/slash_commands >/dev/null 2>&1; then
-                installation_success=1
-            fi
-        fi
-    fi
-
-    assert_equals "1" "$fallback_used" "(fallback triggered)"
-    assert_equals "1" "$installation_success" "(local installation succeeds)"
-
-    # Restore PATH
-    export PATH="$OLD_PATH"
-}
-
-# Test complete slash commands server setup process
-test_slash_commands_server_setup() {
-    print_test "Complete slash commands server setup process"
-
-    # Check if pyproject.toml exists (required for uvx installation)
-    if [ -f "mcp_servers/slash_commands/pyproject.toml" ]; then
-        echo -e "${GREEN}✅ PASS: pyproject.toml exists for uvx packaging${NC}"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-        echo -e "${RED}❌ FAIL: pyproject.toml missing - required for global installation${NC}"
+    if grep -q "claude-slash-commands" "$CLAUDE_MCP_SCRIPT"; then
+        echo -e "${RED}❌ FAIL: Deprecated claude-slash-commands reference still present${NC}"
         TESTS_FAILED=$((TESTS_FAILED + 1))
         return 1
     fi
 
-    # Check if server.py exists
-    if [ -f "mcp_servers/slash_commands/server.py" ]; then
-        echo -e "${GREEN}✅ PASS: server.py exists${NC}"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-        echo -e "${RED}❌ FAIL: server.py missing${NC}"
+    echo -e "${GREEN}✅ PASS: No references to claude-slash-commands found${NC}"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
+    return 0
+}
+
+test_slash_commands_installer_removed() {
+    print_test "Ensure standalone slash commands installer is deleted"
+
+    if [ -f "setup_slash_commands_mcp.sh" ]; then
+        echo -e "${RED}❌ FAIL: setup_slash_commands_mcp.sh still exists${NC}"
         TESTS_FAILED=$((TESTS_FAILED + 1))
         return 1
     fi
 
-    # Validate pyproject.toml structure
-    if command -v python3 >/dev/null 2>&1; then
-        local toml_check
-        toml_check=$(python3 -c "
-import sys, os
-sys.path.insert(0, '.')
-try:
-    import tomllib
-except ImportError:
-    try:
-        import tomli as tomllib
-    except ImportError:
-        print('toml_parser_unavailable')
-        sys.exit(0)
-
-if os.path.exists('mcp_servers/slash_commands/pyproject.toml'):
-    with open('mcp_servers/slash_commands/pyproject.toml', 'rb') as f:
-        try:
-            data = tomllib.load(f)
-            if 'project' in data and 'name' in data['project'] and data['project']['name'] == 'claude-slash-commands-mcp':
-                if 'project' in data and 'scripts' in data['project'] and 'claude-slash-commands-mcp' in data['project']['scripts']:
-                    print('toml_valid')
-                else:
-                    print('toml_missing_scripts')
-            else:
-                print('toml_invalid_project')
-        except Exception as e:
-            print(f'toml_parse_error: {e}')
-else:
-    print('toml_file_missing')
-" 2>/dev/null)
-
-        if [ "$toml_check" = "toml_valid" ]; then
-            echo -e "${GREEN}✅ PASS: pyproject.toml has valid structure${NC}"
-            TESTS_PASSED=$((TESTS_PASSED + 1))
-        elif [ "$toml_check" = "toml_parser_unavailable" ]; then
-            echo -e "${YELLOW}⚠️  SKIP: TOML parser not available for validation${NC}"
-        else
-            echo -e "${RED}❌ FAIL: pyproject.toml validation failed: $toml_check${NC}"
-            TESTS_FAILED=$((TESTS_FAILED + 1))
-            return 1
-        fi
-    fi
-
+    echo -e "${GREEN}✅ PASS: setup_slash_commands_mcp.sh removed${NC}"
+    TESTS_PASSED=$((TESTS_PASSED + 1))
     return 0
 }
 
@@ -891,11 +747,10 @@ main() {
     test_shell_script_guidelines
     test_error_handling_robustness
 
-    # Run new uvx/global installation tests
+    # Run uvx detection and regression checks
     test_uvx_command_detection
-    test_mcp_global_installation_logic
-    test_installation_fallback_logic
-    test_slash_commands_server_setup
+    test_slash_commands_removed_from_script
+    test_slash_commands_installer_removed
 
     # Run cross-platform compatibility tests
     test_os_detection_logic
