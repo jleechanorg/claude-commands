@@ -14,10 +14,16 @@ from pathlib import Path
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-import sys
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from automation_safety_manager import AutomationSafetyManager
+# Import the automation safety manager using proper Python module path
+try:
+    from automation.automation_safety_manager import AutomationSafetyManager
+except ImportError:
+    # Fallback for when running tests directly
+    import sys
+    automation_dir = Path(__file__).parent.parent
+    if str(automation_dir) not in sys.path:
+        sys.path.append(str(automation_dir))
+    from automation_safety_manager import AutomationSafetyManager
 
 
 class TestAutomationSafetyManagerInit:
@@ -198,7 +204,7 @@ class TestPRLimits:
         manager.record_pr_attempt(pr_key, "success")
 
         # Should have one attempt recorded
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 1
         assert attempts[0]["result"] == "success"
 
@@ -208,7 +214,7 @@ class TestPRLimits:
 
         manager.record_pr_attempt(pr_key, "failure")
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 1
         assert attempts[0]["result"] == "failure"
 
@@ -219,7 +225,7 @@ class TestPRLimits:
 
         manager.record_pr_attempt(pr_key, result)
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 1
         assert attempts[0]["result"] == result
 
@@ -231,7 +237,7 @@ class TestPRLimits:
         manager.record_pr_attempt(pr_key, "success")
         after_time = datetime.now()
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 1
 
         timestamp_str = attempts[0]["timestamp"]
@@ -240,7 +246,7 @@ class TestPRLimits:
 
     def test_get_pr_attempts_empty(self, manager):
         """Test getting attempts for PR with no history"""
-        attempts = manager.get_pr_attempts("nonexistent-pr")
+        attempts = manager.get_pr_attempt_list("nonexistent-pr")
         assert attempts == []
 
     def test_get_pr_attempts_multiple(self, manager):
@@ -251,7 +257,7 @@ class TestPRLimits:
         manager.record_pr_attempt(pr_key, "success")
         manager.record_pr_attempt(pr_key, "success")
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 3
         assert attempts[0]["result"] == "failure"
         assert attempts[1]["result"] == "success"
@@ -264,7 +270,7 @@ class TestPRLimits:
 
         # Create new manager with same data dir
         new_manager = AutomationSafetyManager(manager.data_dir)
-        attempts = new_manager.get_pr_attempts(pr_key)
+        attempts = new_manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 1
         assert attempts[0]["result"] == "success"
 
@@ -282,7 +288,7 @@ class TestPRLimits:
         for thread in threads:
             thread.join()
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 15  # 3 threads × 5 attempts each
 
 
@@ -442,7 +448,7 @@ class TestFileLocking:
 
         # All operations should succeed
         assert all(result == "success" for result in results)
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) == 15
 
     def test_file_corruption_recovery(self, manager):
@@ -552,7 +558,7 @@ class TestIntegrationScenarios:
         # Verify state
         assert manager.get_global_runs() == 1
         for pr_key in pr_keys:
-            attempts = manager.get_pr_attempts(pr_key)
+            attempts = manager.get_pr_attempt_list(pr_key)
             assert len(attempts) == 1
             assert attempts[0]["result"] == "success"
 
@@ -588,7 +594,7 @@ class TestIntegrationScenarios:
             if manager.can_process_pr(pr_key):
                 manager.record_pr_attempt(pr_key, result)
 
-        attempts = manager.get_pr_attempts(pr_key)
+        attempts = manager.get_pr_attempt_list(pr_key)
         assert len(attempts) <= manager.pr_limit
 
         # Verify results are recorded correctly
@@ -608,8 +614,8 @@ class TestIntegrationScenarios:
 
         # Verify second manager sees the data
         assert manager2.get_global_runs() == manager.get_global_runs()
-        attempts1 = manager.get_pr_attempts("test-pr")
-        attempts2 = manager2.get_pr_attempts("test-pr")
+        attempts1 = manager.get_pr_attempt_list("test-pr")
+        attempts2 = manager2.get_pr_attempt_list("test-pr")
         assert len(attempts1) == len(attempts2)
 
 

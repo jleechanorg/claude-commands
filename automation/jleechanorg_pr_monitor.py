@@ -409,6 +409,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 3. **Resolve merge conflicts** - Handle any conflicts with the base branch
 4. **Ensure code quality** - Follow project standards and best practices
 
+{self.CODEX_COMMIT_MARKER_PREFIX}{head_sha}{self.CODEX_COMMIT_MARKER_SUFFIX}
 """
 
         return comment_body

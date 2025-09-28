@@ -152,10 +152,11 @@ class TestAutomationSafetyLimits(unittest.TestCase):
 
     # Matrix 4: Email Notification System
     @patch.dict(os.environ, {
-        'SMTP_USERNAME': 'test@example.com',
-        'SMTP_PASSWORD': 'testpass',
-        'MEMORY_EMAIL_FROM': 'test@example.com',
-        'MEMORY_EMAIL_TO': 'admin@example.com'
+        'SMTP_SERVER': 'smtp.example.com',
+        'SMTP_PORT': '587',
+        'EMAIL_USER': 'test@example.com',
+        'EMAIL_PASS': 'testpass',
+        'EMAIL_TO': 'admin@example.com'
     })
     @patch('smtplib.SMTP')
     def test_email_sent_when_pr_limit_reached(self, mock_smtp):
@@ -171,10 +172,11 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         mock_smtp.assert_called_once()
 
     @patch.dict(os.environ, {
-        'SMTP_USERNAME': 'test@example.com',
-        'SMTP_PASSWORD': 'testpass',
-        'MEMORY_EMAIL_FROM': 'test@example.com',
-        'MEMORY_EMAIL_TO': 'admin@example.com'
+        'SMTP_SERVER': 'smtp.example.com',
+        'SMTP_PORT': '587',
+        'EMAIL_USER': 'test@example.com',
+        'EMAIL_PASS': 'testpass',
+        'EMAIL_TO': 'admin@example.com'
     })
     @patch('smtplib.SMTP')
     def test_email_sent_when_global_limit_reached(self, mock_smtp):

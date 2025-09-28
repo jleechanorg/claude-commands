@@ -15,6 +15,7 @@ import fcntl
 import importlib
 import importlib.util
 import json
+import logging
 import os
 import threading
 import smtplib
@@ -34,8 +35,9 @@ class AutomationSafetyManager:
     def __init__(self, data_dir: str):
         self.data_dir = data_dir
         self.lock = threading.RLock()  # Use RLock to prevent deadlock
+        self.logger = logging.getLogger(__name__)
 
-        # Configurable limits via environment
+        # Default limits
         self.pr_limit = int(os.environ.get('AUTOMATION_PR_LIMIT', '5'))
         self.global_limit = int(os.environ.get('AUTOMATION_GLOBAL_LIMIT', '50'))
 
@@ -43,6 +45,7 @@ class AutomationSafetyManager:
         self.pr_attempts_file = os.path.join(data_dir, "pr_attempts.json")
         self.global_runs_file = os.path.join(data_dir, "global_runs.json")
         self.approval_file = os.path.join(data_dir, "manual_approval.json")
+        self.config_file = os.path.join(data_dir, "automation_safety_config.json")
 
         # In-memory counters for thread safety
         self._pr_attempts_cache = {}
@@ -51,6 +54,9 @@ class AutomationSafetyManager:
 
         # Initialize files if they don't exist
         self._ensure_files_exist()
+
+        # Load configuration from file if it exists
+        self._load_config_if_exists()
 
         # Load initial state from files
         self._load_state_from_files()
@@ -73,6 +79,29 @@ class AutomationSafetyManager:
                 "approved": False,
                 "approval_date": None
             })
+
+    def _load_config_if_exists(self):
+        """Load configuration from file if it exists, create default if not"""
+        if os.path.exists(self.config_file):
+            # Load existing config
+            try:
+                with open(self.config_file, 'r') as f:
+                    config = json.load(f)
+                    # Update limits from config
+                    if 'pr_limit' in config:
+                        self.pr_limit = config['pr_limit']
+                    if 'global_limit' in config:
+                        self.global_limit = config['global_limit']
+            except (FileNotFoundError, json.JSONDecodeError):
+                pass  # Use defaults
+        else:
+            # Create default config
+            default_config = {
+                "global_limit": self.global_limit,
+                "pr_limit": self.pr_limit,
+                "daily_limit": 100
+            }
+            self._write_json_file(self.config_file, default_config)
 
     def _load_state_from_files(self):
         """Load state from files into memory cache"""
@@ -116,6 +145,9 @@ class AutomationSafetyManager:
                 return data
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
+        except (PermissionError, OSError) as e:
+            self.logger.error(f"Permission/IO error reading {file_path}: {e}")
+            return {}
 
     def _write_json_file(self, file_path: str, data: dict):
         """Atomically write JSON file with file locking to prevent corruption"""
@@ -157,14 +189,26 @@ class AutomationSafetyManager:
     def can_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
         with self.lock:
-            attempts = self.get_pr_attempts(pr_number, repo, branch)
-            return attempts < self.pr_limit
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            attempts = self._pr_attempts_cache.get(pr_key, [])
+
+            # Check total attempts limit
+            total_attempts = len(attempts)
+            if total_attempts >= self.pr_limit:
+                return False
+
+            # Check consecutive failures limit
+            consecutive_failures = self.get_pr_attempts(pr_number, repo, branch)
+            if consecutive_failures >= self.pr_limit:
+                return False
+
+            return True
 
     def try_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Atomically check if PR can be processed without mutating state."""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
-            attempts = self._pr_attempts_cache.get(pr_key, 0)
+            attempts = len(self._pr_attempts_cache.get(pr_key, []))
             inflight = self._pr_inflight_cache.get(pr_key, 0)
 
             if attempts + inflight >= self.pr_limit:
@@ -173,31 +217,55 @@ class AutomationSafetyManager:
             self._pr_inflight_cache[pr_key] = inflight + 1
             return True
 
-    def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None) -> int:
-        """Get number of attempts for a specific PR"""
+    def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None):
+        """Get count of consecutive failures for a specific PR (for backward compatibility)"""
         with self.lock:
+            # Use get_pr_attempt_list which already reloads from disk
+            attempts = self.get_pr_attempt_list(pr_number, repo, branch)
+
+            # Count consecutive failures from the end
+            failure_count = 0
+            for attempt in reversed(attempts):
+                if attempt["result"] == "failure":
+                    failure_count += 1
+                else:
+                    break  # Stop at first success
+            return failure_count
+
+    def get_pr_attempt_list(self, pr_number: int, repo: str = None, branch: str = None):
+        """Get list of attempts for a specific PR (for detailed analysis)"""
+        with self.lock:
+            # Reload from disk to ensure consistency across multiple managers
+            self._pr_attempts_cache = self._read_json_file(self.pr_attempts_file)
             pr_key = self._make_pr_key(pr_number, repo, branch)
-            return self._pr_attempts_cache.get(pr_key, 0)
+            return self._pr_attempts_cache.get(pr_key, [])
 
     def record_pr_attempt(self, pr_number: int, result: str, repo: str = None, branch: str = None):
         """Record a PR attempt (success or failure)"""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
 
+            # Create attempt record
+            attempt_record = {
+                "result": result,
+                "timestamp": datetime.now().isoformat(),
+                "pr_number": pr_number,
+                "repo": repo,
+                "branch": branch
+            }
+
+            # Get existing attempts list and append new attempt
+            attempts = self._pr_attempts_cache.get(pr_key, [])
+            attempts.append(attempt_record)
+            self._pr_attempts_cache[pr_key] = attempts
+
+            # Update inflight cache
             inflight = self._pr_inflight_cache.get(pr_key, 0)
             if inflight > 0:
                 if inflight == 1:
                     self._pr_inflight_cache.pop(pr_key, None)
                 else:
                     self._pr_inflight_cache[pr_key] = inflight - 1
-
-            if result == "success":
-                # Reset counter on success
-                if pr_key in self._pr_attempts_cache:
-                    del self._pr_attempts_cache[pr_key]
-            else:
-                # Increment counter on failure
-                self._pr_attempts_cache[pr_key] = self._pr_attempts_cache.get(pr_key, 0) + 1
 
             # Sync to file for persistence
             self._sync_state_to_files()
@@ -215,6 +283,9 @@ class AutomationSafetyManager:
     def get_global_runs(self) -> int:
         """Get total number of global runs"""
         with self.lock:
+            # Reload from disk to ensure consistency across multiple managers
+            data = self._read_json_file(self.global_runs_file)
+            self._global_runs_cache = data.get("total_runs", 0)
             return self._global_runs_cache
 
     def record_global_run(self):
@@ -258,7 +329,7 @@ class AutomationSafetyManager:
         with self.lock:
             # Check for PR limits reached
             for pr_key, attempts in self._pr_attempts_cache.items():
-                if attempts >= self.pr_limit:
+                if len(attempts) >= self.pr_limit:
                     self._send_limit_notification(
                         f"PR Automation Limit Reached",
                         f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
@@ -319,20 +390,21 @@ class AutomationSafetyManager:
 
         return username, password
 
-    def _send_notification(self, subject: str, message: str):
+    def _send_notification(self, subject: str, message: str) -> bool:
         """Send email notification with secure credential handling"""
         try:
+            # Check if email is configured first
+            if not self._is_email_configured():
+                self.logger.info("Email configuration incomplete - skipping notification")
+                return False
+
             # Load email configuration
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
             smtp_port = int(os.environ.get('SMTP_PORT', '587'))
-            username, password = self._get_smtp_credentials()
-            from_email = os.environ.get('MEMORY_EMAIL_FROM')
-            to_email = os.environ.get('MEMORY_EMAIL_TO')
-
-            if not all([username, password, from_email, to_email]):
-                # Skip email if configuration is missing
-                print("Email configuration incomplete - skipping notification")
-                return
+            username = os.environ.get('EMAIL_USER')
+            password = os.environ.get('EMAIL_PASS')
+            from_email = os.environ.get('EMAIL_USER')  # Use same as username
+            to_email = os.environ.get('EMAIL_TO')
 
             msg = MIMEMultipart()
             msg['From'] = from_email
@@ -350,24 +422,94 @@ This is an automated notification from the WorldArchitect.AI automation system.
 
             msg.attach(MIMEText(body, 'plain'))
 
-            # Connect with timeout and proper error handling
-            with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
+            # Connect and send email
+            server = smtplib.SMTP(smtp_server, smtp_port)
+            try:
                 server.starttls()
                 server.login(username, password)
                 server.send_message(msg)
+            finally:
+                server.quit()
                 print(f"Email notification sent successfully: {subject}")
+            return True
 
         except smtplib.SMTPAuthenticationError as e:
-            print(f"SMTP authentication failed - check credentials: {e}")
+            self.logger.error(f"SMTP authentication failed - check credentials: {e}")
+            return False
         except smtplib.SMTPRecipientsRefused as e:
-            print(f"Email recipients refused: {e}")
+            self.logger.error(f"Email recipients refused: {e}")
+            return False
         except smtplib.SMTPException as e:
-            print(f"SMTP error sending notification: {e}")
+            self.logger.error(f"SMTP error sending notification: {e}")
+            return False
         except OSError as e:
-            print(f"Network error sending notification: {e}")
+            self.logger.error(f"Network error sending notification: {e}")
+            return False
         except Exception as e:
             # Log error but don't fail automation
-            print(f"Unexpected error sending notification: {e}")
+            self.logger.error(f"Unexpected error sending notification: {e}")
+            return False
+
+    def _clear_global_runs(self):
+        """Clear global runs counter (for testing)"""
+        with self.lock:
+            self._global_runs_cache = 0
+            data = self._read_json_file(self.global_runs_file)
+            data["total_runs"] = 0
+            data["last_run"] = None
+            self._write_json_file(self.global_runs_file, data)
+
+    def _clear_pr_attempts(self):
+        """Clear PR attempts cache (for testing)"""
+        with self.lock:
+            self._pr_attempts_cache.clear()
+            self._write_json_file(self.pr_attempts_file, {})
+
+    def load_config(self, config_file: str) -> dict:
+        """Load configuration from file"""
+        try:
+            with open(config_file, 'r') as f:
+                config = json.load(f)
+                # Update limits from config
+                if 'pr_limit' in config:
+                    self.pr_limit = config['pr_limit']
+                if 'global_limit' in config:
+                    self.global_limit = config['global_limit']
+                return config
+        except (FileNotFoundError, json.JSONDecodeError):
+            return {}
+
+    def save_config(self, config_file: str, config: dict):
+        """Save configuration to file"""
+        self._write_json_file(config_file, config)
+
+    def has_email_config(self) -> bool:
+        """Check if email configuration is available"""
+        try:
+            smtp_server = os.environ.get('SMTP_SERVER')
+            email_user = os.environ.get('EMAIL_USER')
+            return bool(smtp_server and email_user)
+        except Exception:
+            return False
+
+    def send_notification(self, subject: str, message: str) -> bool:
+        """Send email notification - wrapper for _send_notification"""
+        try:
+            return self._send_notification(subject, message)
+        except Exception:
+            return False
+
+    def _is_email_configured(self) -> bool:
+        """Check if email configuration is complete"""
+        try:
+            smtp_server = os.environ.get('SMTP_SERVER')
+            email_user = os.environ.get('EMAIL_USER')
+            email_pass = os.environ.get('EMAIL_PASS')
+            smtp_port = os.environ.get('SMTP_PORT')
+            email_to = os.environ.get('EMAIL_TO')
+            return bool(smtp_server and email_user and email_pass and smtp_port and email_to)
+        except Exception:
+            return False
 
 
 def main():
