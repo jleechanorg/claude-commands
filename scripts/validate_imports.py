@@ -55,7 +55,7 @@ class ImportValidator(ast.NodeVisitor):
             'ssl', 'socket', 'subprocess', 'shutil', 're', 'math',
             'random', 'statistics', 'contextlib', 'dataclasses',
             'abc', 'enum', 'copy', 'pickle', 'base64', 'hashlib',
-            'traceback', 'warnings', 'pytest', 'unittest',
+            'traceback', 'warnings', 'pytest', 'unittest', 'keyring',
             # Test module imports that need sys.path manipulation
             'main', 'mcp_client', 'tests.fake_firestore', 'logging_util',
             # Test infrastructure modules that need sys.path manipulation
@@ -65,6 +65,7 @@ class ImportValidator(ast.NodeVisitor):
             'unified_router', 'mvp_site.testing_framework',
             # Automation modules that need sys.path manipulation
             'automation_safety_manager', 'jleechanorg_pr_monitor',
+            'automation.automation_safety_manager',
             # Test script modules that need sys.path manipulation
             'test_dependency_analyzer',
             # Testing framework integration utilities (optional for test stability)

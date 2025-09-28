@@ -9,9 +9,11 @@ Consolidates common patterns:
 - Email configuration management
 """
 
+import fcntl
 import json
 import logging
 import os
+import tempfile
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -41,9 +43,6 @@ class SafeJSONManager:
         lock = self._get_lock(file_path)
         with lock:
             try:
-                import fcntl
-                import tempfile
-
                 if os.path.exists(file_path):
                     with open(file_path, 'r') as f:
                         # Add file lock for cross-process safety
@@ -63,9 +62,6 @@ class SafeJSONManager:
         lock = self._get_lock(file_path)
         with lock:
             try:
-                import fcntl
-                import tempfile
-
                 # Ensure directory exists
                 os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
