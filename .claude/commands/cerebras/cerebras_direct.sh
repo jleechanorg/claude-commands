@@ -503,7 +503,8 @@ cleanup_request() {
         rm -f "$JSON_TEMP_FILE" 2>/dev/null
     fi
 }
-trap cleanup_request EXIT INT TERM
+# Ensure both the general cleanup and request cleanup fire on exit/interrupt
+trap 'cleanup; cleanup_request' EXIT INT TERM
 
 HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 30 --max-time 600 \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
