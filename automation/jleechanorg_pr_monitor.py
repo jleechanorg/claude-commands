@@ -35,7 +35,7 @@ class JleechanorgPRMonitor:
     CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
     CODEX_COMMIT_MARKER_SUFFIX = "-->"
 
-    def __init__(self, workspace_base: str = None):
+    def __init__(self):
         self.logger = self._setup_logging()
 
         assistant_handle = os.environ.get(
@@ -51,8 +51,6 @@ class JleechanorgPRMonitor:
             default_comment,
         )
 
-        # Legacy workspace parameter (no longer used in comment-only approach)
-        self.workspace_base = workspace_base  # Kept for backward compatibility
 
         # Safety manager integration
         data_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
@@ -115,7 +113,6 @@ class JleechanorgPRMonitor:
                     for pr in prs:
                         pr["repository"] = repo_name
                         pr["repositoryFullName"] = repo_full_name
-                        pr["workspaceId"] = f"{repo_name}-pr-{pr['number']}"
 
                     all_prs.extend(prs)
 
@@ -144,14 +141,14 @@ class JleechanorgPRMonitor:
         """Find local repository path for given repo name"""
 
         def is_git_repository(path: Path) -> bool:
-            """Check if path is a git repository (handles both .git dir and worktree .git file)"""
+            """Check if path is a git repository"""
             git_path = path / ".git"
-            return git_path.exists()  # Works for both .git directory and .git file (worktree)
+            return git_path.exists()
 
-        # Check current working directory first (for worktree case)
+        # Check current working directory first
         current_dir = Path.cwd()
         if is_git_repository(current_dir):
-            # For worktree, check if this is related to the target repository
+            # Check if this is related to the target repository
             if repo_name.lower() in current_dir.name.lower() or "worldarchitect" in current_dir.name.lower():
                 self.logger.debug(f"🎯 Found local repo (current dir): {current_dir}")
                 return current_dir
@@ -160,7 +157,6 @@ class JleechanorgPRMonitor:
         search_paths = [
             # Standard patterns in ~/projects/
             self.base_project_dir / repo_name,
-            self.base_project_dir / f"worktree_{repo_name}",
             self.base_project_dir / f"{repo_name}_worker",
             self.base_project_dir / f"{repo_name}_worker1",
             self.base_project_dir / f"{repo_name}_worker2",
@@ -201,7 +197,7 @@ class JleechanorgPRMonitor:
         return None
 
     def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: Dict) -> bool:
-        """Post codex instruction comment directly without worktree"""
+        """Post codex instruction comment to PR"""
         self.logger.info(f"💬 Requesting Codex support for {repository} PR #{pr_number}")
 
         # Get current PR state including comments and test status
@@ -609,7 +605,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
-                # Post codex instruction comment directly (no worktree needed)
+                # Post codex instruction comment
                 success = self.post_codex_instruction_simple(repository, pr_number, pr_data)
 
                 # Record PR processing attempt with result
@@ -700,8 +696,6 @@ def main():
     """CLI interface for jleechanorg PR monitor"""
 
     parser = argparse.ArgumentParser(description='jleechanorg PR Monitor')
-    parser.add_argument('--workspace-base',
-                        help='Base directory for PR workspaces')
     parser.add_argument('--dry-run', action='store_true',
                         help='Discover PRs but do not process them')
     parser.add_argument('--single-repo',
@@ -721,7 +715,7 @@ def main():
     if args.target_repo and not args.target_pr:
         parser.error('--target-pr is required when using --target-repo')
 
-    monitor = JleechanorgPRMonitor(workspace_base=args.workspace_base)
+    monitor = JleechanorgPRMonitor()
 
     # Handle target PR processing
     if args.target_pr and args.target_repo:

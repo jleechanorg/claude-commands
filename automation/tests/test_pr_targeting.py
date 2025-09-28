@@ -24,12 +24,12 @@ class TestPRTargeting(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        self.mock_workspace = "/tmp/test-workspace"
+        pass
 
     @patch('jleechanorg_pr_monitor.AutomationSafetyManager')
     def test_monitor_init_with_target_pr(self, mock_safety_manager):
         """Test monitor initialization with target PR option"""
-        monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
+        monitor = JleechanorgPRMonitor()
 
         # Test that monitor can accept target_pr parameter
         self.assertIsInstance(monitor, JleechanorgPRMonitor)
@@ -37,7 +37,7 @@ class TestPRTargeting(unittest.TestCase):
     @patch('jleechanorg_pr_monitor.AutomationSafetyManager')
     def test_process_single_pr_by_number(self, mock_safety_manager):
         """Test processing a single PR by number"""
-        monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
+        monitor = JleechanorgPRMonitor()
 
         # Mock the dependencies for process_single_pr_by_number
         with patch.object(monitor, 'post_codex_instruction_simple', return_value=True) as mock_codex, \
@@ -55,7 +55,6 @@ class TestPRTargeting(unittest.TestCase):
         """Test that CLI accepts --target-pr argument"""
         # This should fail initially because --target-pr doesn't exist yet
         parser = argparse.ArgumentParser(description='jleechanorg PR Monitor')
-        parser.add_argument('--workspace-base', help='Base directory for PR workspaces')
         parser.add_argument('--dry-run', action='store_true', help='Discover PRs but do not process them')
         parser.add_argument('--single-repo', help='Process only specific repository')
         parser.add_argument('--max-prs', type=int, default=10, help='Maximum PRs to process per cycle')
@@ -93,7 +92,7 @@ class TestPRTargeting(unittest.TestCase):
 
     def test_extract_commit_marker(self):
         """Commit markers can be parsed from Codex comments"""
-        monitor = JleechanorgPRMonitor(workspace_base=self.mock_workspace)
+        monitor = JleechanorgPRMonitor()
         marker = monitor._extract_commit_marker(
             f"{monitor.CODEX_COMMENT_TEXT}\n\n"
             f"{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
