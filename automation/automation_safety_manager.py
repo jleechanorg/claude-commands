@@ -13,6 +13,7 @@ Minimal implementation to pass the RED phase tests with:
 import argparse
 import fcntl
 import importlib
+import importlib.util
 import json
 import os
 import threading

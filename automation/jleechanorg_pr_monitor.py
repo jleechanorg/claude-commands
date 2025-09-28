@@ -59,6 +59,14 @@ class JleechanorgPRMonitor:
         self.organization = "jleechanorg"
         self.base_project_dir = Path.home() / "projects"
 
+        safety_data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
+        if not safety_data_dir:
+            default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
+            default_dir.mkdir(parents=True, exist_ok=True)
+            safety_data_dir = str(default_dir)
+
+        self.safety_manager = AutomationSafetyManager(safety_data_dir)
+
         self.logger.info(f"🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
         self.logger.info(f"💬 Comment-only automation mode")
@@ -384,7 +392,7 @@ class JleechanorgPRMonitor:
     def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
         """Build comment body that tells Codex to fix PR comments, tests, and merge conflicts"""
 
-        comment_body = f"""@codex [AI automation] Please review and fix this PR
+        comment_body = f"""@codex [AI automation] Please make the following changes to this PR
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
