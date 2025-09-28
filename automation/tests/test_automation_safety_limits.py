@@ -207,10 +207,12 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         import threading
         import time
 
+        # Create a single manager instance explicitly for this test
+        manager = AutomationSafetyManager(self.test_dir)
         results = []
 
         def attempt_pr():
-            result = self.automation_manager.try_process_pr(1001)
+            result = manager.try_process_pr(1001)
             results.append(result)
 
         # Start 10 concurrent threads
