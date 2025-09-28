@@ -30,6 +30,12 @@ This command scaffolds essential development scripts from the claude-commands re
 
 ## Execution Instructions
 
+## Repository Location
+
+The source scripts live in the [`jleechanorg/claude-commands`](https://github.com/jleechanorg/claude-commands) repository.
+Clone that repository locally and set `CLAUDE_COMMANDS_PATH` to the absolute path of the clone (for example,
+`~/workspace/claude-commands`). The slash command assumes that location unless you override the variable.
+
 When this command is run:
 
 ```bash
@@ -37,7 +43,7 @@ When this command is run:
 mkdir -p scripts
 
 # 2. Copy all specified scripts from claude-commands repository
-# Note: Replace CLAUDE_COMMANDS_PATH with actual path to claude-commands repo
+# Note: CLAUDE_COMMANDS_PATH must point at your local claude-commands clone
 cp "$CLAUDE_COMMANDS_PATH/create_worktree.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/integrate.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/schedule_branch_work.sh" ./
