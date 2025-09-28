@@ -557,14 +557,25 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
 """
 
-        comment_body += f"""**Required Actions:**
-- Use `/cerebras` for substantial code changes
-- Run tests after changes: `./run_tests.sh`
-- Address ALL review comments systematically
-- Ensure all status checks pass before requesting re-review
-- Push commits to update the PR
+        # Build dynamic required actions based on actual needs
+        required_actions = [
+            "Use `/cerebras` for substantial code changes",
+            "Run tests after changes: `./run_tests.sh`",
+            "Ensure all status checks pass before requesting re-review",
+            "Push commits to update the PR"
+        ]
 
-/cerebras Please fix the failing tests and address all review comments in this PR."""
+        # Only add review comment action if there are actual review comments
+        if review_feedback:
+            required_actions.insert(2, "Address ALL review comments systematically")
+            final_instruction = "/cerebras Please fix the failing tests and address all review comments in this PR."
+        else:
+            final_instruction = "/cerebras Please fix the failing tests and ensure this PR is ready for merge."
+
+        comment_body += f"""**Required Actions:**
+{chr(10).join(f"- {action}" for action in required_actions)}
+
+{final_instruction}"""
 
         return comment_body
 
