@@ -133,16 +133,13 @@ safe_read_stdin() {
                 python_returned_data=true
             fi
 
-            if [ "$python_status" -eq 0 ]; then
-                # Python helper completed successfully; no fallback needed
-                if [ "$python_returned_data" = false ]; then
-                    # No data became available within the timeout window
-                    printf ''
-                fi
+            if [ "$python_status" -eq 0 ] && [ "$python_returned_data" = false ]; then
+                # Python helper completed successfully without reading any data
+                printf ''
                 return 0
             fi
 
-            # Fall back to cat-based reader if Python fails (e.g., partial read or probe error)
+            # Fall back to cat-based reader if Python returned data or exited abnormally
         fi
 
         safe_read_stdin__read_with_cat
