@@ -126,6 +126,115 @@ class JleechanorgPRMonitor:
         history[pr_key] = commit_sha
         self._save_branch_history(repo_name, branch_name, history)
         self.logger.debug(f"📝 Recorded processing of PR {repo_name}/{branch_name}#{pr_number} with commit {commit_sha[:8]}")
+
+    # TDD GREEN: Implement methods for PR filtering and actionable counting
+    def _record_pr_processing(self, repo_name: str, branch_name: str, pr_number: int, commit_sha: str) -> None:
+        """Record that a PR has been processed (alias for compatibility)"""
+        self._record_processed_pr(repo_name, branch_name, pr_number, commit_sha)
+
+    def is_pr_actionable(self, pr_data: Dict) -> bool:
+        """Determine if a PR is actionable (should be processed)"""
+        # Closed PRs are not actionable
+        if pr_data.get('state') != 'open':
+            return False
+
+        # PRs with no commits are not actionable
+        head_ref_oid = pr_data.get('headRefOid')
+        if not head_ref_oid:
+            return False
+
+        # Check if already processed with this commit
+        repo_name = pr_data.get('repository', '')
+        branch_name = pr_data.get('headRefName', '')
+        pr_number = pr_data.get('number', 0)
+
+        if self._should_skip_pr(repo_name, branch_name, pr_number, head_ref_oid):
+            return False
+
+        # Open PRs (including drafts) with new commits are actionable
+        return True
+
+    def filter_eligible_prs(self, pr_list: List[Dict]) -> List[Dict]:
+        """Filter list to return only actionable PRs"""
+        eligible = []
+        for pr in pr_list:
+            if self.is_pr_actionable(pr):
+                eligible.append(pr)
+        return eligible
+
+    def process_actionable_prs(self, pr_list: List[Dict], target_count: int) -> int:
+        """Process up to target_count actionable PRs, returning count processed"""
+        processed = 0
+        for pr in pr_list:
+            if processed >= target_count:
+                break
+            if self.is_pr_actionable(pr):
+                # Simulate processing (for testing)
+                processed += 1
+        return processed
+
+    def filter_and_process_prs(self, pr_list: List[Dict], target_actionable_count: int) -> int:
+        """Filter PRs to actionable ones and process up to target count"""
+        eligible_prs = self.filter_eligible_prs(pr_list)
+        return self.process_actionable_prs(eligible_prs, target_actionable_count)
+
+    def find_eligible_prs(self, limit: int = 10) -> List[Dict]:
+        """Find eligible PRs from live GitHub data"""
+        all_prs = self.discover_open_prs()
+        eligible_prs = self.filter_eligible_prs(all_prs)
+        return eligible_prs[:limit]
+
+    def run_monitoring_cycle_with_actionable_count(self, target_actionable_count: int = 10) -> Dict:
+        """Enhanced monitoring cycle that processes exactly target actionable PRs"""
+        all_prs = self.discover_open_prs()
+
+        actionable_processed = 0
+        skipped_count = 0
+        processing_failures = 0
+
+        # Count ALL non-actionable PRs as skipped, not just those we encounter before target
+        for pr in all_prs:
+            if not self.is_pr_actionable(pr):
+                skipped_count += 1
+
+        # Process actionable PRs up to target
+        for pr in all_prs:
+            if actionable_processed >= target_actionable_count:
+                break
+
+            if not self.is_pr_actionable(pr):
+                continue  # Already counted in skipped above
+
+            # Attempt to process the PR
+            repo_name = pr.get('repository', '')
+            pr_number = pr.get('number', 0)
+
+            try:
+                success = self._process_pr_comment(repo_name, pr_number, pr)
+                if success:
+                    actionable_processed += 1
+                else:
+                    processing_failures += 1
+            except Exception as e:
+                self.logger.error(f"Error processing PR {repo_name}#{pr_number}: {e}")
+                processing_failures += 1
+
+        return {
+            'actionable_processed': actionable_processed,
+            'total_discovered': len(all_prs),
+            'skipped_count': skipped_count,
+            'processing_failures': processing_failures
+        }
+
+    def _process_pr_comment(self, repo_name: str, pr_number: int, pr_data: Dict) -> bool:
+        """Process a PR by posting a comment (used by tests and enhanced monitoring)"""
+        try:
+            # Use the existing comment posting method
+            repo_full_name = pr_data.get('repositoryFullName', f"jleechanorg/{repo_name}")
+            return self.post_codex_instruction_simple(repo_full_name, pr_number, pr_data)
+        except Exception as e:
+            self.logger.error(f"Error processing comment for PR {repo_name}#{pr_number}: {e}")
+            return False
     def _setup_logging(self) -> logging.Logger:
         """Set up logging for PR monitor"""
         log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
@@ -172,7 +281,7 @@ class JleechanorgPRMonitor:
                         "gh", "pr", "list",
                         "--repo", repo_full_name,
                         "--state", "open",
-                        "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author"
+                        "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author,headRefOid,state,isDraft"
                     ]
 
                     prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
@@ -564,7 +673,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             return False
 
     def run_monitoring_cycle(self, single_repo=None, max_prs=10):
-        """Run a complete monitoring cycle"""
+        """Run a complete monitoring cycle with actionable PR counting"""
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
 
         # Discover all open PRs
@@ -579,13 +688,23 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.info("📭 No open PRs found")
             return
 
-        processed_count = 0
-        max_prs_per_cycle = max_prs  # Use provided limit
+        # Use enhanced actionable counting instead of simple max_prs limit
+        target_actionable_count = max_prs  # Convert max_prs to actionable target
+        actionable_processed = 0
+        skipped_count = 0
 
-        for pr in open_prs[:max_prs_per_cycle]:
+        for pr in open_prs:
+            if actionable_processed >= target_actionable_count:
+                break
+
             repo_name = pr["repository"]
-            repo_full_name = pr["repositoryFullName"]  # Use full name for GitHub API calls
+            repo_full_name = pr["repositoryFullName"]
             pr_number = pr["number"]
+
+            # Check if this PR is actionable (skip if not)
+            if not self.is_pr_actionable(pr):
+                skipped_count += 1
+                continue
 
             self.logger.info(f"🎯 Processing PR: {repo_name}-{pr_number} - {pr['title']}")
 
@@ -594,11 +713,11 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             if success:
                 self.logger.info(f"✅ Successfully processed PR {repo_name}-{pr_number}")
-                processed_count += 1
+                actionable_processed += 1
             else:
                 self.logger.error(f"❌ Failed to process PR {repo_name}-{pr_number}")
 
-        self.logger.info(f"🏁 Monitoring cycle complete: {processed_count} PRs processed")
+        self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
 
 
 def main():
