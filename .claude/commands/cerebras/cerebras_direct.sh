@@ -166,25 +166,32 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CO
         if [ -f "$EXTRACT_SCRIPT" ]; then
             # Extract context using script's default token limit
             # Run from project root to ensure correct path resolution
+            CONTEXT_TIMEOUT="${CEREBRAS_CONTEXT_TIMEOUT:-10}"
+            if ! [[ "$CONTEXT_TIMEOUT" =~ ^[0-9]+$ ]] || [ "$CONTEXT_TIMEOUT" -lt 1 ]; then
+                CONTEXT_TIMEOUT=10
+            fi
+
+            run_context_extractor() {
+                if type portable_timeout >/dev/null 2>&1; then
+                    (cd "$PROJECT_ROOT" && portable_timeout "$CONTEXT_TIMEOUT" python3 "$EXTRACT_SCRIPT")
+                elif command -v timeout >/dev/null 2>&1; then
+                    (cd "$PROJECT_ROOT" && timeout "$CONTEXT_TIMEOUT" python3 "$EXTRACT_SCRIPT")
+                else
+                    (cd "$PROJECT_ROOT" && python3 "$EXTRACT_SCRIPT")
+                fi
+            }
+
             if [ -n "${DEBUG:-}" ] || [ -n "${CEREBRAS_DEBUG:-}" ]; then
                 # Capture extractor exit code and emit minimal diagnostics when debug is on
                 EXTRACTOR_EXIT=0
-                if type portable_timeout >/dev/null 2>&1; then
-                    (cd "$PROJECT_ROOT" && portable_timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
-                else
-                    (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
-                fi
+                run_context_extractor >"$AUTO_CONTEXT_FILE" 2>>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}" || EXTRACTOR_EXIT=$?
                 if [ "$EXTRACTOR_EXIT" -ne 0 ]; then
                     echo "DEBUG: Context extractor exit code: $EXTRACTOR_EXIT" >>"${CEREBRAS_DEBUG_LOG:-/tmp/cerebras_context_debug.log}"
                 fi
             else
                 # Mirror debug error handling to maintain invisible operation
                 EXTRACTOR_EXIT=0
-                if type portable_timeout >/dev/null 2>&1; then
-                    (cd "$PROJECT_ROOT" && portable_timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
-                else
-                    (cd "$PROJECT_ROOT" && timeout 10 python3 "$EXTRACT_SCRIPT") >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
-                fi
+                run_context_extractor >"$AUTO_CONTEXT_FILE" 2>/dev/null || EXTRACTOR_EXIT=$?
                 # Continue silently regardless of extraction success - invisible operation maintained
             fi
 
@@ -362,7 +369,7 @@ Generate the code."
 fi
 
 # Start timing
-START_TIME=$(date +%s%N)
+START_MS=$(date +%s)
 
 # Direct API call to Cerebras with error handling and timeouts
 # Prevent set -e from aborting on curl errors so we can map them explicitly
@@ -430,11 +437,16 @@ else
         }' > "$JSON_TEMP_FILE"
 fi
 
+REQUEST_TIMEOUT="${CEREBRAS_REQUEST_TIMEOUT:-600}"
+if ! [[ "$REQUEST_TIMEOUT" =~ ^[0-9]+$ ]] || [ "$REQUEST_TIMEOUT" -lt 1 ]; then
+    REQUEST_TIMEOUT=600
+fi
+
 if [ -n "${CEREBRAS_DEBUG:-}" ]; then
     echo "DEBUG: Messages array prepared successfully" >&2
     echo "DEBUG: Making API call to Cerebras..." >&2
     echo "DEBUG: Request body size: $(wc -c < "$JSON_TEMP_FILE")" >&2
-    echo "DEBUG: Using timeout of 600 seconds" >&2
+    echo "DEBUG: Using timeout of $REQUEST_TIMEOUT seconds" >&2
 fi
 
 # Cleanup function for temporary request file
@@ -443,9 +455,9 @@ cleanup_request() {
         rm -f "$JSON_TEMP_FILE" 2>/dev/null
     fi
 }
-trap cleanup_request EXIT INT TERM
+trap 'cleanup_request; cleanup' EXIT INT TERM
 
-HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 30 --max-time 600 \
+HTTP_RESPONSE=$(curl -sS "$CURL_FAIL_FLAG" --connect-timeout 30 --max-time "$REQUEST_TIMEOUT" \
   -w "HTTPSTATUS:%{http_code}" -X POST "${CEREBRAS_API_BASE:-https://api.cerebras.ai}/v1/chat/completions" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "Content-Type: application/json" \
@@ -485,8 +497,8 @@ fi
 RESPONSE="$HTTP_BODY"
 
 # Calculate elapsed time
-END_TIME=$(date +%s%N)
-ELAPSED_MS=$(( (END_TIME - START_TIME) / 1000000 ))
+END_MS=$(date +%s)
+ELAPSED_MS=$(( (END_MS - START_MS) * 1000 ))
 
 # Debug: Save raw response for analysis (branch-safe) - skip for now to avoid hanging
 if [ -n "${CEREBRAS_DEBUG:-}" ]; then
@@ -506,7 +518,11 @@ fi
 # Debug: If content extraction fails, try alternative parsing
 if [ -z "$CONTENT" ] || [ "$CONTENT" = "null" ]; then
     echo "Debug: Standard parsing failed, trying alternative methods..." >&2
-    echo "Raw response saved to: $DEBUG_FILE" >&2
+    if [ -n "$DEBUG_FILE" ]; then
+        echo "Raw response saved to: $DEBUG_FILE" >&2
+    else
+        echo "Raw response not persisted because debug file output is disabled" >&2
+    fi
 
     # Try different extraction paths
     CONTENT=$(echo "$RESPONSE" | jq -r '.choices[0].content // .content // .message // .text // empty')

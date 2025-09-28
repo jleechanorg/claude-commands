@@ -25,7 +25,7 @@ The command executes dual parallel review tracks by default with mandatory MCP i
 ```markdown
 /execute Perform enhanced consensus + comprehensive review:
 1. /consensus [target]               # Fast consensus building (2-5 minutes)
-                                     - Multi-agent agreement using 4 parallel agents
+                                     - Multi-agent agreement using 5 parallel agents
                                      - Quick architectural and correctness validation
                                      - Early identification of critical issues
                                      - 3-round maximum with early termination

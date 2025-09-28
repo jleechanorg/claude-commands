@@ -13,9 +13,14 @@ else
   safe_read_stdin() {
     if [ -t 0 ]; then
       printf ''
+      return 0
     else
-      # Best-effort fallback without timeout enforcement
-      cat
+      # Non-interactive: avoid hanging if no data is present
+      if IFS= read -t 0 -r _; then
+        cat
+      else
+        printf ''
+      fi
     fi
   }
 fi
@@ -44,17 +49,17 @@ fi
 
 # Try to parse as JSON first, fall back to plain text if that fails
 # This maintains backward compatibility with plain text input
-input=$(printf '%s' "$raw_input" | python3 -c '
-import sys, json
+input=$(python3 - "$raw_input" 2>/dev/null <<'PY' || echo "$raw_input")
+import json
+import sys
+
+raw = sys.argv[1]
 try:
-    data = json.load(sys.stdin)
-    # If it is valid JSON, extract the prompt field
+    data = json.loads(raw)
     print(data.get("prompt", ""))
-except (json.JSONDecodeError, ValueError):
-    # Not JSON, treat as plain text
-    sys.stdin.seek(0)
-    print(sys.stdin.read())
-' 2>/dev/null || echo "$raw_input")
+except Exception:
+    print(raw)
+PY
 
 # Detect if this is likely pasted content (like a GitHub PR page)
 # Heuristics: GitHub UI patterns, PR formatting, commit stats

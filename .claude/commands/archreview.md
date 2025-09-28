@@ -95,7 +95,7 @@ All four AI perspectives synthesized for MVP shipping priorities:
 - **Breaking Change Freedom**: Take advantage of MVP flexibility
 - **Next Feature Readiness**: Will this help or hinder next features?
 
-### Phase 5: Memory MCP Integration (Capture New Learnings)
+### Phase 4: Memory MCP Integration (Capture New Learnings)
 Store new architectural insights discovered during review:
 - **New Decision Capture**: Store key architectural decisions with rationale and trade-offs
 - **Pattern Documentation**: Record successful and failed design patterns discovered
@@ -186,7 +186,7 @@ Store new architectural insights discovered during review:
 ### MVP Recommendations
 [Focus on shipping, iterate later]
 
-### Phase 5: Architectural Learnings Captured
+### Phase 4: Architectural Learnings Captured
 #### Key Decisions Stored
 [Architectural decisions captured in memory for future reference]
 #### Patterns Identified

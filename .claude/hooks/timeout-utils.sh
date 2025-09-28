@@ -10,13 +10,61 @@
 
 # Portable timeout function
 # Usage: portable_timeout <seconds> <command> [args...]
+perl_timeout_fallback() {
+    local timeout_duration="$1"
+    shift
+
+    local perl_bin="$(command -v perl 2>/dev/null || echo /usr/bin/perl)"
+    TIMEOUT_DURATION="$timeout_duration" "$perl_bin" - "$@" <<'PERL'
+use strict;
+use warnings;
+use POSIX ':sys_wait_h';
+
+my $timeout = $ENV{TIMEOUT_DURATION} || 0;
+die "Invalid timeout" unless $timeout =~ /^[0-9]+$/ && $timeout > 0;
+
+my $pid = fork();
+if (!defined $pid) {
+    die "fork failed: $!";
+}
+
+if ($pid == 0) {
+    exec @ARGV or die "exec failed: $!";
+}
+
+my $start = time();
+while (time() - $start < $timeout) {
+    my $result = waitpid($pid, WNOHANG);
+    if ($result == $pid) {
+        exit($? >> 8);
+    }
+    sleep 1;
+}
+
+kill 'TERM', $pid;
+my $terminated = waitpid($pid, 0);
+if ($terminated != $pid) {
+    kill 'KILL', $pid;
+    waitpid($pid, 0);
+}
+
+exit 124;  # Standard timeout exit code
+PERL
+}
+
 portable_timeout() {
     local timeout_duration="$1"
     shift
 
+    # Determine maximum allowed timeout duration (configurable via MAX_TIMEOUT_DURATION env var)
+    local max_timeout="${MAX_TIMEOUT_DURATION:-3600}"
+    if ! [[ "$max_timeout" =~ ^[0-9]+$ ]] || [[ "$max_timeout" -lt 1 ]]; then
+        max_timeout=3600
+    fi
+
     # Validate timeout duration
-    if ! [[ "$timeout_duration" =~ ^[0-9]+$ ]] || [[ "$timeout_duration" -lt 1 ]] || [[ "$timeout_duration" -gt 3600 ]]; then
-        echo "Error: Invalid timeout duration: $timeout_duration (must be 1-3600 seconds)" >&2
+    if ! [[ "$timeout_duration" =~ ^[0-9]+$ ]] || [[ "$timeout_duration" -lt 1 ]] || [[ "$timeout_duration" -gt $max_timeout ]]; then
+        echo "Error: Invalid timeout duration: $timeout_duration (must be 1-$max_timeout seconds)" >&2
         return 1
     fi
 
@@ -32,41 +80,18 @@ portable_timeout() {
                 timeout "$timeout_duration" "$@"
             else
                 # Fallback using Perl (always available on macOS)
-                /usr/bin/perl -e "
-                    use POSIX ':sys_wait_h';
-                    my \$timeout = $timeout_duration;
-                    my \$pid = fork();
-                    if (\$pid == 0) {
-                        exec(@ARGV) or die \"exec failed: \$!\";
-                    } elsif (\$pid > 0) {
-                        my \$start = time();
-                        while (time() - \$start < \$timeout) {
-                            my \$result = waitpid(\$pid, WNOHANG);
-                            if (\$result == \$pid) {
-                                exit(\$? >> 8);
-                            }
-                            sleep(1);
-                        }
-                        kill('TERM', \$pid);
-                        my \$terminated = waitpid(\$pid, 0);
-                        if (\$terminated != \$pid) {
-                            kill('KILL', \$pid);
-                            waitpid(\$pid, 0);
-                        }
-                        exit(124);  # Standard timeout exit code
-                    } else {
-                        die \"fork failed: \$!\";
-                    }
-                " -- "$@"
+                perl_timeout_fallback "$timeout_duration" "$@"
             fi
             ;;
         Linux*)
             # Linux - use standard GNU timeout command
             if command -v timeout >/dev/null 2>&1; then
                 timeout "$timeout_duration" "$@"
+            elif command -v perl >/dev/null 2>&1; then
+                perl_timeout_fallback "$timeout_duration" "$@"
             else
-                echo "Error: timeout command not available on Linux system" >&2
-                return 1
+                echo "Warning: timeout command not available on Linux system, executing without timeout" >&2
+                "$@"
             fi
             ;;
         *)
@@ -84,7 +109,7 @@ portable_timeout() {
 # Safe read with timeout for stdin operations
 # Usage: safe_read_stdin <timeout_seconds>
 safe_read_stdin() {
-    local timeout_duration="${1:-5}"
+    local timeout_duration="${1:-${SAFE_READ_TIMEOUT:-5}}"
 
     # Check if stdin is a terminal (interactive mode)
     if [ -t 0 ]; then

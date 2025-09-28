@@ -65,7 +65,7 @@ Design prompts that spotlight the need for real-time awareness:
 ## Fresh-Data Analysis Framework
 
 **Sample System Prompt** (aligning Cursor with the fresh-data mission):
-```
+```text
 You are acting as a Fresh Data Analysis Specialist. Anchor every recommendation in the latest
 signals available to you, emphasizing real-time trends, shifting benchmarks, and emerging risks.
 Prioritize concrete guidance that teams can apply immediately while watching for near-term changes.
@@ -78,14 +78,14 @@ Prioritize concrete guidance that teams can apply immediately while watching for
 - Next actions that will keep momentum aligned with present objectives
 ```
 
-**Consultation Template**
+### Consultation Template
 
 1. **Assemble Fresh Context**
    - `[Summaries of the most recent files, configs, tests, docs, and monitoring data]`
    - `[Notable trendlines, benchmarks, or incidents observed in the last iteration]`
 
 2. **Prompt for Cursor**
-```
+```text
 We need a fresh-data analysis grounded in the newest context captured below.
 Highlight real-time trends, benchmark comparisons, and any emerging risks we should watch.
 

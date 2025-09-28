@@ -7,7 +7,7 @@
 **🚀 Solo Unlaunched MVP Context**: Optimized for pre-launch projects with ZERO external users. Only serious external attacker security vulnerabilities matter (SQL injection, RCE, auth bypass). Enterprise security theater is counterproductive. GitHub rollbacks provide safety net.
 
 ## Usage
-```
+```text
 /consensus [<scope>]
 /cons [<scope>]          # Alias
 ```
@@ -106,7 +106,7 @@ Streamlined workflow optimized for speed and simplicity:
 
 2. **Simple Consensus Calculation** (30 seconds)
    - **CONSENSUS_PASS**: 3+ agents PASS + average confidence ≥6
-   - **CONSENSUS_REWORK**: 2+ agents REWORK OR average confidence <5
+   - **CONSENSUS_REWORK**: 3+ agents REWORK OR average confidence <5
    - **MIXED_SIGNALS**: Document conflicts, proceed with majority decision
 
 3. **Quick Fix Application** (If REWORK, 1-2 minutes)
@@ -129,7 +129,7 @@ Streamlined workflow optimized for speed and simplicity:
      else
        echo "No supported linter found - manual validation required"
      fi
-     ```
+     ```bash
    - **Unit Tests**: Focused tests for modified components
      ```bash
      # Auto-detect test framework and run relevant tests
@@ -162,12 +162,13 @@ Streamlined workflow optimized for speed and simplicity:
 **Simplified Test Detection**:
 ```bash
 # Safe test command detection with proper validation
+source .claude/hooks/timeout-utils.sh
 if command -v npm >/dev/null 2>&1 && [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
-    timeout 300 npm test
+    portable_timeout 300 npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
-    timeout 300 env TESTING=true python -m pytest 2>/dev/null || timeout 300 env TESTING=true python3 -m pytest
+    portable_timeout 300 env TESTING=true python -m pytest 2>/dev/null || portable_timeout 300 env TESTING=true python3 -m pytest
 elif [ -f "run_tests.sh" ] && [ -x "run_tests.sh" ]; then
-    timeout 300 ./run_tests.sh
+    portable_timeout 300 ./run_tests.sh
 else
     echo "No automated tests detected - skipping test validation"
 fi
@@ -175,7 +176,7 @@ fi
 
 5. **Round Completion Decision**
    - **CONSENSUS_PASS**: 3+ agents PASS + average confidence ≥6 + tests pass
-   - **CONSENSUS_REWORK**: 2+ agents REWORK OR test failures OR average confidence <5
+   - **CONSENSUS_REWORK**: 3+ agents REWORK OR test failures OR average confidence <5
    - **TEST_FAILURE_ABORT**: Critical test failures abort the round
    - **ROUND_LIMIT_REACHED**: Maximum 3 rounds completed
 
@@ -205,7 +206,7 @@ The loop stops immediately when a round achieves PASS status or after three roun
 - **GitHub Safety Net**: Easy rollbacks available for any problematic changes
 
 ## Output Format
-```
+```markdown
 # Consensus Review Report
 
 ## Summary
@@ -225,7 +226,8 @@ The loop stops immediately when a round achieves PASS status or after three roun
   - code-review: <key takeaways>
   - codex-consultant: <key takeaways>
   - gemini-consultant: <key takeaways>
-  - grok-consultant: <key takeaways>
+  - cursor-consultant: <key takeaways>
+  - code-centralization-consultant: <key takeaways>
 
 ## Remaining Follow-Ups
 - <nitpicks or deferred improvements>

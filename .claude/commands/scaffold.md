@@ -58,7 +58,11 @@ cp "$CLAUDE_COMMANDS_PATH/scripts/setup_email.sh" ./scripts/
 cp "$CLAUDE_COMMANDS_PATH/scripts/sync_branch.sh" ./scripts/
 
 # 3. Make all scripts executable
-chmod +x *.sh scripts/*.sh
+shopt -s nullglob
+chmod +x ./*.sh scripts/*.sh
+shopt -u nullglob
+# or (portable):
+# find . -maxdepth 1 -name '*.sh' -exec chmod +x {} +; find scripts -type f -name '*.sh' -exec chmod +x {} +
 ```
 
 ## LLM Adaptation Instructions

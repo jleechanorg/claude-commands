@@ -387,41 +387,43 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
-            # Apply transformations - Enhanced for portability
-            content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-            content = re.sub(r'\bjleechan\b', '$USER', content)
-            content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
-            content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+            transformations = [
+                (r'\bmvp_site/', '$PROJECT_ROOT/'),
+                (r'worldarchitect\\.ai', 'your-project.com'),
+                (r'WorldArchitect\\.AI', 'Your Project'),
+                (r'\bjleechan\b', '$USER'),
+                (r'TESTING=true vpython', 'TESTING=true python'),
+                (r'~/worldarchitect\\.ai', '$(git rev-parse --show-toplevel)'),
+                (r'~/your-project\\.com', '$(git rev-parse --show-toplevel)'),
+                (r'jleechantest@gmail\\.com', '<your-email@gmail.com>'),
+                (r'/tmp/mvp_site', '/tmp/$PROJECT_NAME'),
+                (r'/tmp/worldarchitect\\.ai', '/tmp/$PROJECT_NAME'),
+                (r'https://github\\.com/jleechanorg/[^/\\s"]+(?:\\.git)?(?=\${NC}")', '$(git config --get remote.origin.url)'),
+            ]
 
-            # New portable patterns
-            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
-            content = re.sub(r'/tmp/$PROJECT_NAME', '/tmp/$PROJECT_NAME', content)
-            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
-            # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
-            content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+            for pattern, replacement in transformations:
+                content = re.sub(pattern, replacement, content)
 
-            # SOURCE_DIR variable patterns - improved matching
-            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
-            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+            if 'mvp_site' in content:
+                content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+                content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
 
-            # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
-            if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
-                # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
-                if 'PROJECT_ROOT=' in content:
+                if not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE):
+                    if re.search(r'^\s*PROJECT_ROOT=', content, re.MULTILINE):
+                        content = re.sub(
+                            r'(PROJECT_ROOT=[^\n]*\n)',
+                            r'\1# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n',
+                            content,
+                        )
+                    else:
+                        content = re.sub(
+                            r'(#![^\n]*\n(?:#[^\n]*\n)*)',
+                            r'\1# Source directory for project files\nSOURCE_DIR="$(git rev-parse --show-toplevel)"\n',
+                            content,
+                            count=1,
+                        )
 
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
-                    content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
-                else:
-                    # Insert after shebang and initial comments (flexible for any shebang)
-                    content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
+                content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)

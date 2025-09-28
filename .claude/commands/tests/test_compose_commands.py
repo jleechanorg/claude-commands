@@ -11,39 +11,43 @@ Test coverage:
 - Pasted content detection
 """
 
-import subprocess
-import tempfile
-import os
 import json
+import os
+import shutil
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
+import pytest
+
 # Test constants for better maintainability
 LARGE_CONTENT_REPEAT_COUNT = 100
-LARGE_CONTENT_PATTERN = "Type / to search\n"
+LARGE_CONTENT_PATTERN = f"Type / to search{os.linesep}"
 LARGE_CONTENT_SUFFIX = "Large content here"
 
 class TestComposeCommands:
-    def __init__(self):
-        self.hook_path = Path(__file__).parent.parent.parent / "hooks" / "compose-commands.sh"
-        assert self.hook_path.exists(), f"Hook not found at {self.hook_path}"
+    hook_path: Path
+
+    @classmethod
+    def setup_class(cls):
+        cls.hook_path = Path(__file__).parent.parent.parent / "hooks" / "compose-commands.sh"
+        assert cls.hook_path.exists(), f"Hook not found at {cls.hook_path}"
 
     def run_hook(self, input_text, timeout=5):
         """Run the compose-commands.sh hook with given input"""
         try:
-            process = subprocess.Popen(
+            result = subprocess.run(
                 [str(self.hook_path)],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True
+                input=input_text,
+                capture_output=True,
+                text=True,
+                timeout=timeout,
+                check=False,
             )
-
-            stdout, stderr = process.communicate(input=input_text, timeout=timeout)
-            return stdout, stderr, process.returncode
+            return result.stdout, result.stderr, result.returncode
         except subprocess.TimeoutExpired:
-            process.kill()
             return None, "TIMEOUT", -1
 
     def test_simple_text_passthrough(self):
@@ -69,22 +73,23 @@ class TestComposeCommands:
     def test_actual_claude_p_no_hang(self):
         """Test that actual claude -p doesn't hang"""
         # This is the real test - using actual claude -p
-        try:
-            process = subprocess.Popen(
-                ["claude", "-p", "make a hello world function"],
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-                cwd=str(Path(__file__).parent.parent.parent)  # Run from project root
-            )
+        if shutil.which("claude") is None:
+            pytest.skip("'claude' CLI not found; skipping integration check")
 
-            stdout, stderr = process.communicate(timeout=10)
+        try:
+            result = subprocess.run(
+                ["claude", "-p", "make a hello world function"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=str(Path(__file__).parent.parent.parent),  # Run from project root
+                check=False,
+            )
             print("✅ PASS: Real claude -p doesn't hang")
-            return stdout, stderr, process.returncode
-        except subprocess.TimeoutExpired:
-            process.kill()
+            return result.stdout, result.stderr, result.returncode
+        except subprocess.TimeoutExpired as exc:
             print("❌ FAIL: Real claude -p hangs")
-            raise AssertionError("Real claude -p should not hang")
+            raise AssertionError("Real claude -p should not hang") from exc
 
     def test_json_input_parsing(self):
         """Test that JSON input is parsed correctly"""
@@ -136,9 +141,11 @@ class TestComposeCommands:
 def run_failing_tests():
     """Run tests that should currently fail (red phase)"""
     print("🔴 RED PHASE: Running tests that should fail...")
+    TestComposeCommands.setup_class()
     test_suite = TestComposeCommands()
 
     failed_tests = []
+    skipped_tests = []
 
     try:
         test_suite.test_simple_text_passthrough()
@@ -184,13 +191,18 @@ def run_failing_tests():
 
     try:
         test_suite.test_actual_claude_p_no_hang()
+    except pytest.skip.Exception as e:
+        print(f"⏭️ SKIP: Real claude -p hanging test - {e}")
+        skipped_tests.append("test_actual_claude_p_no_hang")
     except Exception as e:
         print(f"❌ FAIL: Real claude -p hanging - {e}")
         failed_tests.append("test_actual_claude_p_no_hang")
 
-    print(f"\n🔴 RED PHASE COMPLETE: {len(failed_tests)} failing tests")
+    print(f"\n🔴 RED PHASE COMPLETE: {len(failed_tests)} failing tests, {len(skipped_tests)} skipped")
     if failed_tests:
         print(f"Failed tests: {', '.join(failed_tests)}")
+    if skipped_tests:
+        print(f"Skipped tests: {', '.join(skipped_tests)}")
 
     return len(failed_tests) > 0
 
@@ -198,10 +210,12 @@ def run_failing_tests():
 def run_green_tests():
     """Run tests after fixes (green phase)"""
     print("🟢 GREEN PHASE: Running tests after fixes...")
+    TestComposeCommands.setup_class()
     test_suite = TestComposeCommands()
 
     passed_tests = []
     failed_tests = []
+    skipped_tests = []
 
     tests = [
         ("Simple text passthrough", test_suite.test_simple_text_passthrough),
@@ -218,11 +232,14 @@ def run_green_tests():
         try:
             test_func()
             passed_tests.append(test_name)
+        except pytest.skip.Exception as e:
+            print(f"⏭️ SKIP: {test_name} - {e}")
+            skipped_tests.append(test_name)
         except Exception as e:
             print(f"❌ FAIL: {test_name} - {e}")
             failed_tests.append(test_name)
 
-    print(f"\n🟢 GREEN PHASE COMPLETE: {len(passed_tests)} passing, {len(failed_tests)} failing")
+    print(f"\n🟢 GREEN PHASE COMPLETE: {len(passed_tests)} passing, {len(failed_tests)} failing, {len(skipped_tests)} skipped")
     return len(failed_tests) == 0
 
 

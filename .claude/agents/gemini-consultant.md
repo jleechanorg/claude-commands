@@ -119,11 +119,13 @@ Please provide detailed analysis across all dimensions."
 
 # Attempt consultation with Pro model first
 echo "🎯 Attempting consultation with $GEMINI_PRO_MODEL..."
-if timeout 300s gemini --model "$GEMINI_PRO_MODEL" -p "$CONSULTATION_PROMPT" 2>&1; then
+consultation_output=""
+if consultation_output=$(timeout 300s gemini --model "$GEMINI_PRO_MODEL" -p "$CONSULTATION_PROMPT" 2>&1); then
+    echo "$consultation_output"
     echo "✅ Gemini consultation completed successfully using $GEMINI_PRO_MODEL"
 else
     exit_code=$?
-    consultation_output=$(timeout 300s gemini --model "$GEMINI_PRO_MODEL" -p "$CONSULTATION_PROMPT" 2>&1 || true)
+    echo "$consultation_output"
 
     # Check for quota exhaustion with comprehensive pattern matching
     if echo "$consultation_output" | grep -iqE 'quota|exceeded|daily limit|out of credit|429' && [ "$GEMINI_FALLBACK" = "1" ]; then
@@ -152,6 +154,7 @@ else
     fi
     echo "⚠️ Proceeding without external Gemini analysis"
 fi
+
 ```
 
 ## Key Characteristics

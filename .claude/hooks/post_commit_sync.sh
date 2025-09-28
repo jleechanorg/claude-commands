@@ -16,7 +16,7 @@
 set -euo pipefail
 
 # AUTOMATION DISABLED FLAG - Check immediately before any git operations
-AUTOMATION_DISABLED=${AUTOMATION_DISABLED:-1}
+AUTOMATION_DISABLED=${AUTOMATION_DISABLED:-0}
 
 if [[ "$AUTOMATION_DISABLED" == "1" ]]; then
     echo "🚫 Automation is disabled - skipping post-commit sync"
@@ -33,8 +33,17 @@ fi
 # Get current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 
-# Source shared automation context logic
-source "$(dirname "$0")/lib/automation.sh"
+# Source shared automation context logic when available
+AUTOMATION_HELPER="$(dirname "$0")/lib/automation.sh"
+if [[ -r "$AUTOMATION_HELPER" ]]; then
+    # shellcheck source=/dev/null
+    source "$AUTOMATION_HELPER"
+else
+    echo "ℹ️  Automation helper not found at $AUTOMATION_HELPER - using fallback context detection" >&2
+    is_automation_context() {
+        [[ "${AUTOMATION_CONTEXT:-}" == "1" ]]
+    }
+fi
 
 # Function to add automation prefix to the last commit if needed
 add_automation_prefix_if_needed() {
@@ -61,6 +70,8 @@ add_automation_prefix_if_needed() {
 
     # Add [AI automation] prefix using git commit --amend (safe from injection)
     local new_msg="[AI automation] $last_msg"
+    # --no-verify is used here intentionally in automation context to avoid recursive hook invocation
+    # and redundant validation, since this script is triggered by a commit hook itself.
     if git commit --amend --no-verify --file=- >/dev/null 2>&1 <<< "$new_msg"; then
         echo "✅ Added [AI automation] prefix to commit message"
     else

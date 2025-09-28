@@ -28,14 +28,10 @@ Execute /gstatus:
 
     run_gstatus() {
         local script="$1"
-        if [ "${ARGUMENTS+x}" = 'x' ]; then
-            if [ -n "$ARGUMENTS" ]; then
-                python3 "$script" "$ARGUMENTS"
-            else
-                python3 "$script" ""
-            fi
+        if [ "${ARGUMENTS+x}" = 'x' ] && [ -n "$ARGUMENTS" ]; then
+            python3 "$script" "$ARGUMENTS"
         else
-            python3 "$script" ""
+            python3 "$script"
         fi
     }
 

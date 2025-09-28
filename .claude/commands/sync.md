@@ -79,9 +79,13 @@ else
         fi
     fi
 
-    # Set upstream tracking to origin (use original remote branch name)
-    echo "🔗 Setting upstream tracking..."
-    git branch --set-upstream-to=origin/"$REMOTE_BRANCH" "$HEAD_BRANCH"
+    # Set upstream tracking to origin (use original remote branch name) when not already configured
+    if ! git rev-parse --abbrev-ref --symbolic-full-name "${HEAD_BRANCH}@{u}" >/dev/null 2>&1; then
+        echo "🔗 Setting upstream tracking..."
+        if ! git branch --set-upstream-to=origin/"$REMOTE_BRANCH" "$HEAD_BRANCH" >/dev/null 2>&1; then
+            echo "⚠️ Unable to set upstream to origin/$REMOTE_BRANCH automatically" >&2
+        fi
+    fi
 
     # Pull latest changes
     echo "⬇️ Pulling latest changes..."
@@ -96,7 +100,12 @@ fi
 # Verify sync status
 echo "🔍 Verifying sync status..."
 LOCAL_COMMIT=$(git rev-parse HEAD)
-REMOTE_COMMIT=$(git rev-parse origin/"$REMOTE_BRANCH" 2>/dev/null || echo "unknown")
+UPSTREAM_REF=$(git rev-parse --abbrev-ref --symbolic-full-name @{u} 2>/dev/null || echo "")
+if [ -n "$UPSTREAM_REF" ]; then
+    REMOTE_COMMIT=$(git rev-parse "$UPSTREAM_REF" 2>/dev/null || echo "unknown")
+else
+    REMOTE_COMMIT=$(git rev-parse origin/"$REMOTE_BRANCH" 2>/dev/null || echo "unknown")
+fi
 
 if [ "$LOCAL_COMMIT" = "$REMOTE_COMMIT" ]; then
     echo "✅ Local branch perfectly synced with remote"
@@ -110,7 +119,7 @@ fi
 echo "📊 Current status:"
 git status --short
 echo "📍 Current branch: $(git rev-parse --abbrev-ref HEAD)"
-echo "✨ Synced with PR #$PR_NUMBER ($REMOTE_BRANCH)"
+echo "✨ Synced with PR #$PR_NUMBER (${UPSTREAM_REF:-origin/$REMOTE_BRANCH})"
 ```
 
 ## Success Criteria

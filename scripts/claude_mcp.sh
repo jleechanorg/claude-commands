@@ -551,15 +551,18 @@ add_mcp_server() {
     # Special handling for grok-mcp which requires direct node execution
     if [ "$name" = "grok-mcp" ]; then
         echo -e "${BLUE}  🔧 Special setup for grok-mcp using direct node execution...${NC}"
-        local grok_path
-        if command -v npm >/dev/null 2>&1; then
+        local grok_path=""
+        if [ "$USE_GLOBAL" = true ] && command -v npm >/dev/null 2>&1; then
             grok_path="$(npm root -g)/grok-mcp/build/index.js"
             if [ ! -f "$grok_path" ]; then
                 echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path, attempting global install...${NC}"
-                npm install -g grok-mcp >/dev/null 2>&1 || true
+                if npm install -g grok-mcp >/dev/null 2>&1; then
+                    grok_path="$(npm root -g)/grok-mcp/build/index.js"
+                else
+                    echo -e "${YELLOW}  ⚠️ Global install failed, falling back to npx execution${NC}"
+                    grok_path=""
+                fi
             fi
-        else
-            grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
         fi
 
         # Add XAI_API_KEY environment variable for grok-mcp
@@ -568,7 +571,12 @@ add_mcp_server() {
             local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
-        add_cmd=(claude mcp add --scope user "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+
+        if [ -n "$grok_path" ] && [ -f "$grok_path" ]; then
+            add_cmd=(claude mcp add --scope user "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        else
+            add_cmd=(claude mcp add --scope user "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "grok-mcp" "${cmd_args[@]}")
+        fi
     else
         add_cmd=(claude mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi

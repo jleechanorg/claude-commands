@@ -128,7 +128,7 @@ else
 
             # If branch lookup failed, fall back to searching by commit SHA (covers detached HEADs, renamed branches, etc.)
             if [ -z "$pr_info" ] && [ -n "$current_commit" ]; then
-                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "sha:$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
+                pr_info=$(gh_with_timeout 5 pr list --state all --json number,url --search "$current_commit" --limit 1 --template '{{- range $i, $pr := . -}}{{- if eq $i 0 -}}{{printf "%v %v" $pr.number $pr.url}}{{- end -}}{{- end -}}' 2>/dev/null)
             fi
 
             if [ -n "$pr_info" ]; then

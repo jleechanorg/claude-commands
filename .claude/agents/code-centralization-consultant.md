@@ -91,7 +91,7 @@ remains maintainable, cohesive, and easy to evolve.
 
 Structure prompts for external tools with clear delimiters to avoid ambiguity:
 
-```
+```text
 You are auditing a code change for centralization opportunities. Compare the new implementation with existing utilities and recommend consolidation steps while preserving behavior.
 ## Change Summary
 - <Key goals of the change and new functionality>
