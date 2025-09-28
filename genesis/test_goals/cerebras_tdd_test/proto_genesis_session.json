@@ -1,0 +1,10 @@
+{
+  "goal_directory": "test_goals/cerebras_tdd_test/",
+  "refined_goal": "Create a simple Python calculator module with basic arithmetic operations (add, subtract, multiply, divide) that includes comprehensive error handling and input validation.",
+  "exit_criteria": "1. Calculator module with add, subtract, multiply, divide functions\n2. Comprehensive test suite covering all operations and edge cases\n3. Error handling for division by zero and invalid inputs\n4. Input validation and type checking\n5. All tests passing with 100% coverage\n6. Clean, documented, production-ready code",
+  "max_iterations": 1,
+  "current_iteration": 0,
+  "latest_summary": "",
+  "latest_consensus": null,
+  "genesis_principles": "One item per loop | Direct execution | Enhanced context"
+}

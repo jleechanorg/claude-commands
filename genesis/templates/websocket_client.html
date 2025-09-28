@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>IoT WebSocket Client</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>IoT WebSocket Client</h1>
+    <div id="connection-status">Disconnected</div>
+    <div id="auth-status"></div>
+    <div id="data-display"></div>
+
+    <button id="connect-btn">Connect</button>
+    <button id="disconnect-btn">Disconnect</button>
+
+    <script>
+        $(document).ready(function() {
+            const socket = io();
+
+            socket.on('connect', function() {
+                $('#connection-status').text('Connected to server');
+                $('#connection-status').css('color', 'green');
+            });
+
+            socket.on('disconnect', function() {
+                $('#connection-status').text('Disconnected from server');
+                $('#connection-status').css('color', 'red');
+            });
+
+            socket.on('auth_response', function(data) {
+                $('#auth-status').text(data.message);
+                if (data.success) {
+                    $('#auth-status').css('color', 'green');
+                } else {
+                    $('#auth-status').css('color', 'red');
+                }
+            });
+
+            socket.on('iot_data', function(data) {
+                $('#data-display').append('<p>' + JSON.stringify(data) + '</p>');
+            });
+
+            socket.on('data_stored', function(data) {
+                console.log('Data storage response:', data);
+            });
+
+            socket.on('error', function(data) {
+                console.error('Error:', data.message);
+                $('#data-display').append('<p style="color:red;">Error: ' + data.message + '</p>');
+            });
+
+            $('#connect-btn').click(function() {
+                socket.connect();
+            });
+
+            $('#disconnect-btn').click(function() {
+                socket.disconnect();
+            });
+
+            // Authenticate with a device token
+            socket.emit('authenticate', {
+                device_id: 'device_001',
+                token: 'valid_token_123'
+            });
+        });
+    </script>
+</body>
+</html>

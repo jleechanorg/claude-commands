@@ -42,7 +42,7 @@ show_help() {
     echo "PR Intelligence Options:"
     echo "  pr --smart            Create PR with auto-generated labels and description"
     echo "  --update-description  Refresh existing PR description vs origin/main"
-    echo "  --labels-only         Update PR labels without changing description"  
+    echo "  --labels-only         Update PR labels without changing description"
     echo "  --detect-outdated     Check if PR description matches current changes"
     echo ""
     echo "Description:"
@@ -221,7 +221,7 @@ get_github_repo_info() {
         log_verbose "Could not get origin remote URL"
         return 1
     fi
-    
+
     # Parse repository info from SSH/HTTPS/git URLs
     # Examples:
     #   git@github.com:owner/repo.git
@@ -229,7 +229,7 @@ get_github_repo_info() {
     #   ssh://git@github.example.com/owner/repo.git
     #   https://github.example.com/owner/repo
     local host owner repo
-    
+
     # Handle HTTPS URLs: https://host/owner/repo.git
     if [[ "$remote_url" =~ ^https://([^/]+)/([^/]+)/([^/]+)(\.git)?/?$ ]]; then
         host="${BASH_REMATCH[1]}"
@@ -263,18 +263,18 @@ get_github_repo_info() {
 # Generate Git commit URL from commit hash (supports GitHub, GHES, and other Git hosts)
 get_commit_url() {
     local commit_sha="$1"
-    
+
     if [[ -z "$commit_sha" ]]; then
         log_verbose "No commit SHA provided for URL generation"
         return 1
     fi
-    
+
     # Get Git repository info
     if ! get_github_repo_info; then
         log_verbose "Could not get Git repository info"
         return 1
     fi
-    
+
     # Construct the commit URL using parsed host
     local host="${GITHUB_HOST:-github.com}"
     local commit_url="https://${host}/${GITHUB_OWNER}/${GITHUB_REPO}/commit/${commit_sha}"
@@ -342,20 +342,20 @@ EOF
 analyze_git_diff_vs_main() {
     local main_branch="${1:-main}"
     local diff_stats diff_files file_count lines_added lines_deleted
-    
+
     # Get comprehensive diff stats vs origin/main
     if ! diff_stats=$(git diff --stat "origin/${main_branch}...HEAD" 2>/dev/null); then
         log_verbose "Could not get diff stats vs origin/$main_branch, trying main"
         diff_stats=$(git diff --stat "main...HEAD" 2>/dev/null || echo "No diff available")
     fi
-    
+
     # Get changed files list
     if ! diff_files=$(git diff --name-only "origin/${main_branch}...HEAD" 2>/dev/null); then
         diff_files=$(git diff --name-only "main...HEAD" 2>/dev/null || echo "")
     fi
-    
+
     file_count=$(echo "$diff_files" | grep -v '^$' | wc -l)
-    
+
     # Parse lines added/deleted from diff --stat
     if [[ "$diff_stats" =~ ([0-9]+)\ file.*([0-9]+)\ insertion.*([0-9]+)\ deletion ]]; then
         lines_added="${BASH_REMATCH[2]}"
@@ -373,21 +373,21 @@ analyze_git_diff_vs_main() {
         lines_added="0"
         lines_deleted="0"
     fi
-    
+
     # Export results for use in other functions
     export DIFF_FILE_COUNT="$file_count"
     export DIFF_LINES_ADDED="$lines_added"
     export DIFF_LINES_DELETED="$lines_deleted"
     export DIFF_FILES="$diff_files"
     export DIFF_STATS="$diff_stats"
-    
+
     log_verbose "Diff analysis: $file_count files, +$lines_added -$lines_deleted"
 }
 
 generate_pr_labels() {
     local commit_msg="${1:-$(git log -1 --pretty=format:'%s' 2>/dev/null)}"
     local labels=()
-    
+
     # Type classification based on commit message and files
     if [[ "$commit_msg" =~ (fix|error|bug|crash|fail|critical|urgent|hotfix|regression) ]]; then
         labels+=("type: bug")
@@ -396,24 +396,24 @@ generate_pr_labels() {
     elif [[ "$commit_msg" =~ (improve|enhance|optimize|performance|refactor|upgrade) ]]; then
         labels+=("type: improvement")
     fi
-    
+
     # Infrastructure detection by file patterns
     if echo "$DIFF_FILES" | grep -qE '\.(yml|yaml|sh|Dockerfile)$|^(\.github|scripts|ci)/'; then
         labels+=("type: infrastructure")
     fi
-    
+
     # Documentation detection
     local doc_files=$(echo "$DIFF_FILES" | grep -cE '\.(md|txt|rst|doc)$|^docs/')
     if [[ $doc_files -gt 0 ]] && [[ $((doc_files * 100 / DIFF_FILE_COUNT)) -gt 70 ]]; then
         labels+=("type: documentation")
     fi
-    
+
     # Test detection
     local test_files=$(echo "$DIFF_FILES" | grep -cE 'test_|_test\.|\.test\.|/test/')
     if [[ $test_files -gt 0 ]] && [[ $((test_files * 100 / DIFF_FILE_COUNT)) -gt 70 ]]; then
         labels+=("type: testing")
     fi
-    
+
     # Size classification
     local total_changes=$((DIFF_LINES_ADDED + DIFF_LINES_DELETED))
     if [[ $total_changes -lt 100 ]]; then
@@ -425,11 +425,11 @@ generate_pr_labels() {
     else
         labels+=("size: epic")
     fi
-    
+
     # Scope classification
     local frontend_files=$(echo "$DIFF_FILES" | grep -cE '\.(js|jsx|ts|tsx|html|css|vue)$')
     local backend_files=$(echo "$DIFF_FILES" | grep -cE '\.(py|java|go|rb|php)$')
-    
+
     if [[ $frontend_files -gt 0 ]] && [[ $((frontend_files * 100 / DIFF_FILE_COUNT)) -gt 50 ]]; then
         labels+=("scope: frontend")
     elif [[ $backend_files -gt 0 ]] && [[ $((backend_files * 100 / DIFF_FILE_COUNT)) -gt 50 ]]; then
@@ -437,7 +437,7 @@ generate_pr_labels() {
     elif [[ $frontend_files -gt 0 ]] && [[ $backend_files -gt 0 ]]; then
         labels+=("scope: fullstack")
     fi
-    
+
     # Priority classification based on keywords
     if [[ "$commit_msg" =~ (critical|urgent|security|data.loss|production.down) ]]; then
         labels+=("priority: critical")
@@ -446,7 +446,7 @@ generate_pr_labels() {
     else
         labels+=("priority: normal")
     fi
-    
+
     # Return comma-separated labels
     IFS=","
     echo "${labels[*]}"
@@ -455,14 +455,14 @@ generate_pr_labels() {
 generate_smart_pr_description() {
     local pr_title="${1:-$(git log -1 --pretty=format:'%s')}"
     local main_branch="${2:-main}"
-    
+
     # Analyze diff vs main
     analyze_git_diff_vs_main "$main_branch"
-    
+
     # Generate labels
     local labels
     labels=$(generate_pr_labels "$pr_title")
-    
+
     # Get top changed files with line counts
     local top_files=""
     local counter=1
@@ -476,20 +476,20 @@ generate_smart_pr_description() {
             ((counter++))
         fi
     done <<< "$(git diff --stat "origin/${main_branch}...HEAD" 2>/dev/null | head -5)"
-    
+
     # Generate change summary from commit messages
     local change_summary=""
     while IFS= read -r commit; do
         [[ -z "$commit" ]] && continue
         change_summary="$change_summary- $commit\n"
     done <<< "$(git log --oneline --no-merges "origin/${main_branch}...HEAD" 2>/dev/null | head -10 | cut -d' ' -f2-)"
-    
+
     # Auto-detect type, size, scope
     local auto_type auto_size auto_scope
     auto_type=$(echo "$labels" | grep -o 'type: [^,]*' | head -1 | cut -d' ' -f2 || echo "improvement")
-    auto_size=$(echo "$labels" | grep -o 'size: [^,]*' | head -1 | cut -d' ' -f2 || echo "medium")  
+    auto_size=$(echo "$labels" | grep -o 'size: [^,]*' | head -1 | cut -d' ' -f2 || echo "medium")
     auto_scope=$(echo "$labels" | grep -o 'scope: [^,]*' | head -1 | cut -d' ' -f2 || echo "backend")
-    
+
     # Generate the complete PR description
     cat << EOF
 ## 🔄 Changes vs origin/main
@@ -512,17 +512,17 @@ EOF
 detect_outdated_pr_description() {
     local pr_number="$1"
     local current_files current_file_count pr_body pr_file_count
-    
+
     # Get current files vs origin/main
     current_files=$(git diff --name-only "origin/main...HEAD" 2>/dev/null || echo "")
     current_file_count=$(echo "$current_files" | grep -v '^$' | wc -l)
-    
+
     # Get PR body
     if ! pr_body=$(gh pr view "$pr_number" --json body --jq '.body' 2>/dev/null); then
         log_warning "Could not fetch PR #$pr_number body"
         return 1
     fi
-    
+
     # Extract file count from PR body (look for "Files Changed: X files")
     if [[ "$pr_body" =~ Files\ Changed.*:\ ([0-9]+)\ files ]]; then
         pr_file_count="${BASH_REMATCH[1]}"
@@ -530,14 +530,14 @@ detect_outdated_pr_description() {
         log_verbose "Could not extract file count from PR description"
         return 0  # Not outdated, just different format
     fi
-    
+
     # Calculate deviation percentage
     local deviation
     if [[ $pr_file_count -gt 0 ]]; then
         deviation=$(( (current_file_count - pr_file_count) * 100 / pr_file_count ))
         # Use absolute value
         deviation=${deviation#-}
-        
+
         if [[ $deviation -gt 20 ]]; then
             log_warning "PR description appears outdated:"
             log_warning "  PR shows: $pr_file_count files"
@@ -546,7 +546,7 @@ detect_outdated_pr_description() {
             return 1  # Outdated
         fi
     fi
-    
+
     return 0  # Up to date
 }
 
@@ -563,13 +563,13 @@ apply_file_filters() {
             # Git status --porcelain format: "XY filename" where X and Y are status codes
             # Extract filename starting from position 3 (after "XY ")
             local file_path="${line:3}"
-            
+
             # Handle renamed files (format: "R  old -> new")
             if [[ "${line:0:1}" == "R" ]]; then
                 # Extract the new filename after " -> "
                 file_path="${file_path#* -> }"
             fi
-            
+
             for pattern in "${INCLUDE_PATTERNS[@]}"; do
                 # Use bash glob matching
                 if [[ "$file_path" == $pattern ]] || [[ "$(basename "$file_path")" == $pattern ]]; then
@@ -590,13 +590,13 @@ apply_file_filters() {
             # Git status --porcelain format: "XY filename" where X and Y are status codes
             # Extract filename starting from position 3 (after "XY ")
             local file_path="${line:3}"
-            
+
             # Handle renamed files (format: "R  old -> new")
             if [[ "${line:0:1}" == "R" ]]; then
                 # Extract the new filename after " -> "
                 file_path="${file_path#* -> }"
             fi
-            
+
             local should_exclude=false
             for pattern in "${EXCLUDE_PATTERNS[@]}"; do
                 # Use bash glob matching
@@ -606,7 +606,7 @@ apply_file_filters() {
                     break
                 fi
             done
-            
+
             if [[ "$should_exclude" == false ]]; then
                 excluded="$excluded$line"$'\n'
             fi
@@ -643,7 +643,7 @@ safe_execute() {
 safe_exec() {
     local description="$1"
     shift  # Remove description from arguments
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         echo -e "${YELLOW}[DRY RUN]${NC} Would execute: $*"
         log_verbose "Dry run - skipping: $description"
@@ -873,11 +873,26 @@ apply_conditional_lint_fixes() {
         # Get list of staged Python files for targeted linting
         local staged_py_files
         staged_py_files=$(git diff --cached --name-only --diff-filter=d | grep '\.py$' || true)
-        
+
         if [[ -n "$staged_py_files" ]]; then
-            # Run lint fixes only on the staged files
-            if echo "$staged_py_files" | xargs ./run_lint.sh fix 2>>"$ERROR_LOG"; then
-                log_verbose "Lint fixes applied successfully"
+            # Run ruff and isort directly on the staged files (more efficient than run_lint.sh)
+            log_verbose "Running ruff check --fix on staged files"
+            if echo "$staged_py_files" | xargs ruff check --fix 2>>"$ERROR_LOG"; then
+                log_verbose "Ruff fixes applied successfully"
+
+                log_verbose "Running ruff format on staged files"
+                if echo "$staged_py_files" | xargs ruff format 2>>"$ERROR_LOG"; then
+                    log_verbose "Ruff formatting applied successfully"
+
+                    log_verbose "Running isort on staged files"
+                    if echo "$staged_py_files" | xargs isort 2>>"$ERROR_LOG"; then
+                        log_verbose "Lint fixes applied successfully"
+                    else
+                        log_warning "isort encountered issues on staged files (non-fatal)"
+                    fi
+                else
+                    log_warning "Ruff formatting encountered issues on staged files (non-fatal)"
+                fi
 
                 # Re-stage any files that were modified by lint fixes
                 local modified_by_lint
@@ -903,7 +918,7 @@ apply_conditional_lint_fixes() {
                     fi
                 fi
             else
-                log_warning "Lint fixes encountered issues (non-fatal)"
+                log_warning "Ruff check encountered issues on staged files (non-fatal)"
                 log_verbose "Check $ERROR_LOG for lint fix details"
             fi
         fi
@@ -1157,21 +1172,21 @@ if [[ "$CREATE_PR" == "true" ]]; then
             pr_url=$(echo "$existing_pr" | jq -r '.[0].url')
             log_info "Existing PR found: #$pr_number"
             echo "  URL: $pr_url"
-            
+
             # Handle PR intelligence operations for existing PRs
             if [[ "$DETECT_OUTDATED" == "true" ]]; then
                 log_info "Checking if PR description is outdated..."
-                
+
                 # Use Python script for enhanced outdated detection if available
                 local outdated_result
                 if command -v python3 &> /dev/null && [[ -f "scripts/analyze_git_stats.py" ]]; then
                     log_verbose "Using enhanced Python outdated detection..."
                     outdated_result=$(python3 scripts/analyze_git_stats.py --check-outdated "$pr_number" --json 2>/dev/null)
-                    
+
                     if [[ $? -eq 0 ]] && [[ -n "$outdated_result" ]]; then
                         local is_outdated
                         is_outdated=$(echo "$outdated_result" | jq -r '.is_outdated // false' 2>/dev/null)
-                        
+
                         if [[ "$is_outdated" == "true" ]]; then
                             local deviation
                             deviation=$(echo "$outdated_result" | jq -r '.deviation // 0' 2>/dev/null)
@@ -1215,7 +1230,7 @@ if [[ "$CREATE_PR" == "true" ]]; then
                     fi
                 fi
             fi
-            
+
             # Update PR description if requested
             if [[ "$UPDATE_DESCRIPTION" == "true" ]]; then
                 log_info "Updating PR description with current changes..."
@@ -1223,10 +1238,10 @@ if [[ "$CREATE_PR" == "true" ]]; then
                 default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f2 || echo "main")
                 local pr_title
                 pr_title=$(gh pr view "$pr_number" --json title --jq '.title' 2>/dev/null || echo "$(git log -1 --pretty=format:'%s')")
-                
+
                 local smart_body
                 smart_body=$(generate_smart_pr_description "$pr_title" "$default_branch")
-                
+
                 if [[ "$DRY_RUN" == "true" ]]; then
                     echo -e "${YELLOW}[DRY RUN]${NC} Would update PR description:"
                     echo "$smart_body" | head -10
@@ -1238,20 +1253,20 @@ if [[ "$CREATE_PR" == "true" ]]; then
                     fi
                 fi
             fi
-            
+
             # Update labels if requested or in smart mode
             if [[ "$LABELS_ONLY" == "true" ]] || [[ "$PR_SMART_MODE" == "true" ]]; then
                 log_info "Updating PR labels..."
                 local default_branch
                 default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f2 || echo "main")
-                
+
                 # Analyze current changes for labeling
                 analyze_git_diff_vs_main "$default_branch"
                 local pr_title
                 pr_title=$(gh pr view "$pr_number" --json title --jq '.title' 2>/dev/null || echo "$(git log -1 --pretty=format:'%s')")
                 local labels
                 labels=$(generate_pr_labels "$pr_title")
-                
+
                 if [[ "$DRY_RUN" == "true" ]]; then
                     echo -e "${YELLOW}[DRY RUN]${NC} Would add labels: $labels"
                 else
@@ -1265,22 +1280,22 @@ if [[ "$CREATE_PR" == "true" ]]; then
                     fi
                 fi
             fi
-            
+
         else
             # Create new PR with intelligence
             log_info "Creating new intelligent PR..."
             local pr_title="${COMMIT_MESSAGE:-$(git log -1 --pretty=format:'%s')}"
             local default_branch
             default_branch=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | cut -d'/' -f2 || echo "main")
-            
+
             local pr_body
             if [[ "$PR_SMART_MODE" == "true" ]]; then
                 log_info "Generating smart PR description and labels..."
-                
+
                 # Use Python script for enhanced PR intelligence if available
                 if command -v python3 &> /dev/null && [[ -f "scripts/analyze_git_stats.py" ]]; then
                     log_verbose "Using enhanced Python PR intelligence..."
-                    
+
                     # Generate smart description with Python script
                     if pr_body=$(python3 scripts/analyze_git_stats.py --generate-description --title "$pr_title" --branch "$default_branch" 2>/dev/null); then
                         # Remove the header lines from Python output
@@ -1289,30 +1304,30 @@ if [[ "$CREATE_PR" == "true" ]]; then
                         log_verbose "Python PR intelligence failed, using fallback..."
                         pr_body=$(generate_smart_pr_description "$pr_title" "$default_branch")
                     fi
-                    
+
                     # Generate labels with Python script
                     local labels_output
                     if labels_output=$(python3 scripts/analyze_git_stats.py --generate-labels --title "$pr_title" --json 2>/dev/null); then
                         # Extract labels from JSON output
                         labels=$(echo "$labels_output" | jq -r '.labels | join(",")' 2>/dev/null || echo "")
                     fi
-                    
+
                     # Fallback to shell functions if Python fails
                     if [[ -z "$labels" ]]; then
                         log_verbose "Python label generation failed, using fallback..."
-                        analyze_git_diff_vs_main "$default_branch" 
+                        analyze_git_diff_vs_main "$default_branch"
                         labels=$(generate_pr_labels "$pr_title")
                     fi
                 else
                     log_verbose "Python PR intelligence not available, using shell functions..."
                     pr_body=$(generate_smart_pr_description "$pr_title" "$default_branch")
-                    
+
                     # Generate labels for new PR
-                    analyze_git_diff_vs_main "$default_branch" 
+                    analyze_git_diff_vs_main "$default_branch"
                     local labels
                     labels=$(generate_pr_labels "$pr_title")
                 fi
-                
+
                 log_verbose "Generated labels: $labels"
             else
                 # Standard PR body
@@ -1340,7 +1355,7 @@ $(git log --oneline --no-merges "origin/${default_branch}"..HEAD | head -5 | sed
                     pr_number=$(gh pr list --head "$current_branch" --json number --limit 1 --jq '.[0].number' 2>/dev/null)
                     log_success "PR created successfully: #$pr_number"
                     echo "  URL: $pr_url"
-                    
+
                     # Add labels if smart mode
                     if [[ "$PR_SMART_MODE" == "true" ]] && [[ -n "$labels" ]]; then
                         log_info "Adding smart labels to PR..."

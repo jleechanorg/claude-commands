@@ -1,0 +1,10 @@
+{
+  "goal_directory": "benchmark_goals/iot_baseline",
+  "refined_goal": "Create an IoT device monitoring platform using Flask with InfluxDB, WebSockets, and Docker for real-time data processing and visualization.",
+  "exit_criteria": "# Success Criteria\n\n1. FastAPI application with RESTful API endpoints\n2. PostgreSQL database with proper schema\n3. Redis caching layer\n4. Celery background task processing\n5. User authentication system\n6. Order lifecycle management\n7. Inventory management\n8. Payment integration\n9. Admin dashboard\n10. Docker containerization\n11. API documentation\n12. Error handling and validation\n13. Environment configuration\n14. Production-ready logging\n15. Requirements.txt with dependencies",
+  "max_iterations": 3,
+  "current_iteration": 1,
+  "latest_summary": null,
+  "latest_consensus": null,
+  "genesis_principles": "One item per loop | Direct execution | Enhanced context"
+}

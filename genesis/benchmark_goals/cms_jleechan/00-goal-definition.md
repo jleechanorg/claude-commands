@@ -1,0 +1,1 @@
+Create an enterprise-grade, highly sophisticated multi-tenant content management system with advanced architectural patterns, comprehensive security, and production-scale deployment capabilities using Django, PostgreSQL, GraphQL, and full AWS integration.

@@ -1,0 +1,1 @@
+Create an enterprise-grade e-commerce order management system with advanced architectural patterns, comprehensive security, and production-ready deployment strategies using FastAPI, PostgreSQL, Redis, Celery, and advanced enterprise patterns.
