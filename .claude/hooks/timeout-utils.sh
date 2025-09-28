@@ -97,14 +97,14 @@ safe_read_stdin() {
 
     # Helper to perform the actual read with timeout-protected cat
     safe_read_stdin__read_with_cat() {
-        local data=""
-        if data=$(portable_timeout "$timeout_duration" cat 2>/dev/null); then
+        local data
+        data=$(portable_timeout "$timeout_duration" cat 2>/dev/null)
+        local status=$?
+
+        if [ "$status" -eq 0 ]; then
             printf '%s' "$data"
             return 0
-        fi
-
-        local status=$?
-        if [ -n "$data" ]; then
+        elif [ -n "$data" ]; then
             # Even on timeout, return any buffered data that was read
             printf '%s' "$data"
         elif [ "$status" -eq 124 ]; then
@@ -123,7 +123,7 @@ safe_read_stdin() {
             local python_script
             local python_output
             local python_status
-            python_script=$'import os\nimport select\nimport sys\nimport time\n\ntry:\n    timeout = float(sys.argv[1])\nexcept (IndexError, ValueError):\n    timeout = 0.0\n\nif timeout <= 0:\n    sys.exit(0)\n\nfd = sys.stdin.buffer.fileno()\nend_time = time.time() + timeout\nchunks = []\n\nwhile True:\n    remaining = end_time - time.time()\n    if remaining <= 0:\n        break\n\n    try:\n        ready, _, _ = select.select([fd], [], [], remaining)\n    except (OSError, ValueError):\n        break\n\n    if not ready:\n        break\n\n    try:\n        data = os.read(fd, 4096)\n    except BlockingIOError:\n        continue\n    except OSError:\n        break\n\n    if not data:\n        break\n\n    chunks.append(data)\n\n    if len(data) < 4096:\n        try:\n            ready_again, _, _ = select.select([fd], [], [], 0)\n        except (OSError, ValueError):\n            break\n        if not ready_again:\n            break\n\nsys.stdout.buffer.write(b"".join(chunks))'
+            python_script=$'import os\nimport select\nimport sys\nimport time\n\ntry:\n    timeout = float(sys.argv[1])\nexcept (IndexError, ValueError):\n    timeout = 0.0\n\nif timeout <= 0:\n    sys.exit(0)\n\nfd = sys.stdin.buffer.fileno()\nend_time = time.time() + timeout\nchunks = []\n\nwhile True:\n    remaining = end_time - time.time()\n    if remaining <= 0:\n        break\n\n    try:\n        ready, _, _ = select.select([fd], [], [], remaining)\n    except (OSError, ValueError):\n        break\n\n    if not ready:\n        break\n\n    try:\n        data = os.read(fd, 4096)\n    except BlockingIOError:\n        continue\n    except OSError:\n        break\n\n    if not data:\n        break\n\n    chunks.append(data)\n\n    if len(data) < 4096:\n        try:\n            ready_again, _, _ = select.select([fd], [], [], 0)\n        except (OSError, ValueError):\n            break\n        if not ready_again:\n            break\n\ntry:\n    sys.stdout.buffer.write(b"".join(chunks))\nexcept BrokenPipeError:\n    pass'
             python_output=$(python3 -c "$python_script" "$timeout_duration" 2>/dev/null)
             python_status=$?
             if [ -n "$python_output" ]; then
