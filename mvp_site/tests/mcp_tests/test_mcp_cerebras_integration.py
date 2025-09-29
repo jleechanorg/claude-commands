@@ -124,12 +124,12 @@ class TestMCPCerebrasIntegration:
     )
     def test_slash_command_execution_pattern(self):
         """
-        🔧 EXECUTION TEST: Verify cerebras command responses are well-formed.
+        🔧 RESPONSE TEST: Verify cerebras command responses are well-formed.
 
         This test ensures that the MCP tool returns a properly formatted
         command string rather than falling back to empty or malformed data.
         """
-        print("🔧 Testing slash command execution response format...")
+        print("🔧 Testing slash command response format...")
 
         # Test various input arguments
         test_cases = [
@@ -146,7 +146,7 @@ class TestMCPCerebrasIntegration:
             assert actual_output.strip(), "Execution returned an empty response"
             assert "/cerebras" in actual_output, "Response did not include the cerebras command"
 
-        print("✅ Slash command execution pattern validated")
+        print("✅ Slash command response pattern validated")
 
     @pytest.mark.skipif(
         not MCP_AVAILABLE, reason=SKIP_REASON if not MCP_AVAILABLE else ""

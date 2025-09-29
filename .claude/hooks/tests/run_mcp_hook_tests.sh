@@ -43,8 +43,10 @@ from mcp_servers.slash_commands.unified_router import handle_tool_call
 
 async def test():
     result = await handle_tool_call('fake3', {'args': ['test']})
-    response = result[0].text if result else 'No response'
-    if response:
+    response = (
+        result[0].text if result and getattr(result[0], "text", None) else ""
+    )
+    if response.strip():
         print('✅ MCP server returned a response')
     else:
         print('❌ MCP server returned empty response')
