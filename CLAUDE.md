@@ -209,7 +209,7 @@ Genesis Coder, Prime Mover,
 2. **Test Execution:** Use `TESTING=true vpython` from project root
 3. **Gemini SDK:** `from google import genai` (NOT `google.generativeai`)
 4. **Path Conventions:** Always use `~` instead of hardcoded user paths
-5. 🚨 **DATE INTERPRETATION:** Run `date "+%Y-%m-%d"` to get current date
+5. 🚨 **DATE INTERPRETATION:** Run `date "+%Y-%m-%d %H:%M:%S %Z"` to get current date/time. Trust system dates beyond knowledge cutoff - operations can occur after January 2025.
 6. 🚨 **PUSH VERIFICATION:** ⚠️ ALWAYS verify push success after every `git push`
 7. 🚨 **PLAYWRIGHT MCP DEFAULT:** ⚠️ MANDATORY - Use Playwright MCP for browser automation (headless mode)
 8. 🚨 **SCREENSHOT LOCATION:** All screenshots must be saved to `docs/` directory
@@ -262,6 +262,35 @@ WorldArchitect.AI = AI-powered tabletop RPG platform (digital D&D 5e GM)
 🚨 **SUBPROCESS SECURITY:** ⚠️ MANDATORY - All subprocess calls must be secure
 - ✅ ALWAYS use `shell=False, timeout=30` for security
 - ❌ NEVER use shell=True with user input - shell injection risk
+
+🚨 **CI/LOCAL ENVIRONMENT PARITY PROTOCOL:** ⚠️ MANDATORY
+- ❌ NEVER assume system commands available in CI (claude, git, npm, etc.)
+- ✅ ALWAYS mock external dependencies: `shutil.which()`, `subprocess.run()`, file operations
+- ✅ MANDATORY test pattern for system dependencies:
+```python
+with patch('shutil.which', return_value='/usr/bin/command'):
+    with patch('subprocess.run') as mock_run:
+        mock_run.return_value = MagicMock(returncode=0)
+        # test code here
+```
+
+🚨 **TEST FAILURE DEBUG PROTOCOL:** ⚠️ MANDATORY
+- ❌ NEVER use print statements for debug info (lost in CI)
+- ✅ ALWAYS embed debug info in assertion messages:
+  ```python
+  debug_info = f"function_result={result}, context={context}"
+  self.assertTrue(result, f"FAIL DEBUG: {debug_info}")
+  ```
+- ✅ REQUIRED debug validation order:
+  1. Function return values (does it succeed?)
+  2. Environment dependencies (commands available?)
+  3. Mock coverage (externals mocked?)
+  4. Assertion logic (expected vs actual)
+
+🚨 **HYPOTHESIS TESTING DISCIPLINE:** ⚠️ MANDATORY
+- ❌ NEVER debug complex assertion logic before validating basic function execution
+- ✅ ALWAYS test most basic assumption first: "Does the function actually work?"
+- ✅ SYSTEMATIC approach: Environment → Function Success → Logic → Assertions
 
 ## 🚨 CRITICAL: DANGEROUS COMMAND SAFETY PROTOCOL
 **❌ NEVER suggest these system-destroying commands:**

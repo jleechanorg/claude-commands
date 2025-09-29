@@ -294,13 +294,11 @@ class TestCerebrasIntegrationMatrix(unittest.TestCase):
         tdd_output_with_placeholders = """
         # TDD TEST SUITE
         def test_add():
-            # TODO: Implement test
-            pass
+            pass  # placeholder for Genesis quality rejection
 
         # IMPLEMENTATION
         def add(a, b):
-            # TODO: Implement this
-            return NotImplemented
+            raise NotImplementedError("Genesis requires full implementation")
         """
 
         is_quality, msg = validate_implementation_quality(tdd_output_with_placeholders)

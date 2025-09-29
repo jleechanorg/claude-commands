@@ -186,10 +186,12 @@ class TestDetailedB1ToB5Workflow(unittest.TestCase):
             # Should have retried once and completed B5
             self.assertEqual(result, b5_output)
 
-    @patch('sys.argv', ['test'])  # No --codex flag
+    @patch('sys.argv', ['test', '--claude'])  # Claude override flag
     @patch('genesis.smart_model_call')
     def test_claude_model_selection(self, mock_smart_model):
-        """Test Claude model selection when --codex flag not present"""
+        """Test Claude model selection when --claude flag present"""
+        genesis.GENESIS_USE_CODEX = None
+        genesis._SANITIZED_ARGV = None
         mock_smart_model.return_value = "Claude response"
 
         # Test Claude-specific prompt construction in B4.1
@@ -216,14 +218,17 @@ class TestDetailedB1ToB5Workflow(unittest.TestCase):
             with patch('genesis.cerebras_call', return_value="generated code"):
                 result = execute_detailed_b1_to_b5_workflow(self.current_suite, self.goal, self.tmp_path)
 
-                # Check that Claude-specific prompt was used in B4.1
-                claude_b41_calls = [call for call in mock_smart_model.call_args_list if 'jleechan_simulation_prompt.md' in str(call)]
-                self.assertTrue(len(claude_b41_calls) > 0)
+                claude_prompts = [args[0] for args, _ in mock_smart_model.call_args_list if args]
+                self.assertTrue(
+                    any("jleechan_simulation_prompt.md" in prompt for prompt in claude_prompts)
+                )
 
-    @patch('sys.argv', ['test', '--codex'])  # With --codex flag
+    @patch('sys.argv', ['test'])  # Default Codex path
     @patch('genesis.smart_model_call')
     def test_codex_model_selection(self, mock_smart_model):
-        """Test Codex model selection when --codex flag present"""
+        """Test Codex model selection when running with default settings"""
+        genesis.GENESIS_USE_CODEX = None
+        genesis._SANITIZED_ARGV = None
         mock_smart_model.return_value = "Codex response"
 
         with patch('builtins.open', create=True) as mock_open:
@@ -248,9 +253,10 @@ class TestDetailedB1ToB5Workflow(unittest.TestCase):
             with patch('genesis.cerebras_call', return_value="generated code"):
                 result = execute_detailed_b1_to_b5_workflow(self.current_suite, self.goal, self.tmp_path)
 
-                # Check that Codex-specific prompt was used (no jleechan_simulation_prompt.md)
-                codex_b41_calls = [call for call in mock_smart_model.call_args_list if 'jleechan_simulation_prompt.md' not in str(call)]
-                self.assertTrue(len(codex_b41_calls) > 0)
+                codex_prompts = [args[0] for args, _ in mock_smart_model.call_args_list if args]
+                self.assertTrue(
+                    all("jleechan_simulation_prompt.md" not in prompt for prompt in codex_prompts)
+                )
 
 
 class TestHelperFunctions(unittest.TestCase):
@@ -262,7 +268,10 @@ class TestHelperFunctions(unittest.TestCase):
 
         result = cerebras_call("Test prompt")
 
-        mock_execute.assert_called_once_with("Test prompt", use_cerebras=True)
+        mock_execute.assert_called_once()
+        args, kwargs = mock_execute.call_args
+        self.assertEqual(args[0], "Test prompt")
+        self.assertTrue(kwargs.get("use_cerebras"))
         self.assertEqual(result, "Cerebras response")
 
     @patch('genesis.execute_claude_command')
@@ -272,29 +281,42 @@ class TestHelperFunctions(unittest.TestCase):
 
         result = execute_codex_command("Test prompt")
 
-        mock_execute.assert_called_once_with("Test prompt", use_codex=True)
+        mock_execute.assert_called_once()
+        args, kwargs = mock_execute.call_args
+        self.assertEqual(args[0], "Test prompt")
+        self.assertTrue(kwargs.get("use_codex"))
         self.assertEqual(result, "Codex response")
 
-    @patch('sys.argv', ['test'])  # No --codex flag
+    @patch('sys.argv', ['test', '--claude'])  # Claude override flag
     @patch('genesis.execute_claude_command')
     def test_smart_model_call_claude(self, mock_execute):
-        """Test smart_model_call uses Claude when --codex flag not present"""
+        """Test smart_model_call uses Claude when --claude flag present"""
+        genesis.GENESIS_USE_CODEX = None
+        genesis._SANITIZED_ARGV = None
         mock_execute.return_value = "Claude response"
 
         result = smart_model_call("Test prompt")
 
-        mock_execute.assert_called_once_with("Test prompt", use_cerebras=False)
+        mock_execute.assert_called_once()
+        args, kwargs = mock_execute.call_args
+        self.assertEqual(args[0], "Test prompt")
+        self.assertFalse(kwargs.get("use_cerebras"))
         self.assertEqual(result, "Claude response")
 
-    @patch('sys.argv', ['test', '--codex'])  # With --codex flag
+    @patch('sys.argv', ['test'])  # Default Codex path
     @patch('genesis.execute_claude_command')
     def test_smart_model_call_codex(self, mock_execute):
-        """Test smart_model_call uses Codex when --codex flag present"""
+        """Test smart_model_call uses Codex by default"""
+        genesis.GENESIS_USE_CODEX = None
+        genesis._SANITIZED_ARGV = None
         mock_execute.return_value = "Codex response"
 
         result = smart_model_call("Test prompt")
 
-        mock_execute.assert_called_once_with("Test prompt", use_codex=True)
+        mock_execute.assert_called_once()
+        args, kwargs = mock_execute.call_args
+        self.assertEqual(args[0], "Test prompt")
+        self.assertTrue(kwargs.get("use_codex"))
         self.assertEqual(result, "Codex response")
 
 

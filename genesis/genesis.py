@@ -20,6 +20,33 @@ from typing import Optional, Dict, Any, List
 from dataclasses import field
 import fcntl
 
+
+GENESIS_USE_CODEX: Optional[bool] = None
+
+
+def is_codex_enabled(argv: Optional[List[str]] = None) -> bool:
+    """Determine whether Codex should be used (Codex default)."""
+    global GENESIS_USE_CODEX
+
+    if GENESIS_USE_CODEX is not None:
+        return GENESIS_USE_CODEX
+
+    args = list(sys.argv) if argv is None else list(argv)
+
+    use_codex = True
+
+    if "--claude" in args:
+        while "--claude" in args:
+            args.remove("--claude")
+        use_codex = False
+    elif "--codex" in args:
+        while "--codex" in args:
+            args.remove("--codex")
+        use_codex = True
+
+    GENESIS_USE_CODEX = use_codex
+    return use_codex
+
 # SlashCommand import removed to comply with mandatory import patterns
 # Code review integration disabled to prevent import violations
 
@@ -56,7 +83,7 @@ class WorkflowState:
     # Enhanced Tracking Fields
     phase_history: List[str] = field(default_factory=list)
     iteration_count: int = 0
-    max_iterations: int = 10
+    max_iterations: int = 20
     start_timestamp: Optional[float] = None
     end_timestamp: Optional[float] = None
 
@@ -290,7 +317,7 @@ class WorkflowState:
             error_message=data.get('error_message'),
             phase_history=data.get('phase_history', []),
             iteration_count=data.get('iteration_count', 0),
-            max_iterations=data.get('max_iterations', 10),
+            max_iterations=data.get('max_iterations', 20),
             start_timestamp=data.get('start_timestamp'),
             end_timestamp=data.get('end_timestamp'),
             validation_errors=data.get('validation_errors', []),
@@ -388,8 +415,8 @@ def execute_codex_command(prompt):
     return execute_claude_command(prompt, use_codex=True)
 
 def smart_model_call(prompt):
-    """Smart model wrapper - Claude by default, Codex if --codex flag"""
-    use_codex = "--codex" in sys.argv  # Global flag affects all calls within single Genesis instance
+    """Smart model wrapper - Codex by default, Claude if override flag."""
+    use_codex = is_codex_enabled()  # Global flag affects all calls within single Genesis instance
     if use_codex:
         return execute_codex_command(prompt)
     else:
@@ -413,7 +440,7 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
 
     try:
         if use_codex:
-            command = ["codex", "exec", "--yolo"]
+            command = ["codex", "exec", "--yolo", "--skip-git-repo-check"]
             # Add maximum verbosity config overrides for codex
             if verbose_mode:
                 command.extend(["-c", "verbose=true"])
@@ -572,6 +599,9 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
 
         except Exception as e:
             print(f"❌ Error reading output: {e}", flush=True)
+            print(f"❌ Exception type: {type(e).__name__}", flush=True)
+            import traceback
+            print(f"❌ Full traceback: {traceback.format_exc()}", flush=True)
 
         # Wait for process completion with timeout
         try:
@@ -614,12 +644,31 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
 
             return output
         else:
-            error_output = ""  # stderr merged into stdout (line 118), so empty
+            # Enhanced error diagnostics for codex failures
+            full_output = result.stdout.strip()
+            error_output = full_output if full_output else "No output captured"
+
             print(f"    └─ Error: {error_output}")
+            print(f"    └─ Full stdout: {repr(full_output)}")
 
-            # Note: Codex now works with OPENAI_BASE_URL proxy setup
+            # Specific codex error pattern detection
+            if use_codex:
+                print(f"    🔍 CODEX ERROR ANALYSIS:")
+                if "Broken pipe" in full_output:
+                    print(f"    └─ Issue: Broken pipe - codex process terminated unexpectedly")
+                    print(f"    └─ Check: Is codex proxy running on localhost:10000?")
+                elif "Not inside a trusted directory" in full_output:
+                    print(f"    └─ Issue: Git trust directory error")
+                    print(f"    └─ Solution: Using --skip-git-repo-check flag")
+                elif "permission" in full_output.lower():
+                    print(f"    └─ Issue: Permission error")
+                elif "connection" in full_output.lower() or "refused" in full_output.lower():
+                    print(f"    └─ Issue: Connection error to codex proxy")
+                    print(f"    └─ Check: curl http://localhost:10000/health")
+                else:
+                    print(f"    └─ Issue: Unknown codex error - see full output above")
 
-            print(f"{tool_name.title()} error: {error_output}")
+            print(f"Error running {tool_name}: {error_output}")
             return None
     except subprocess.TimeoutExpired:
         end_time = time.time()
@@ -709,6 +758,10 @@ def load_goal_from_directory(goal_dir):
     """Load goal specification from goal directory structure."""
     print(f"📂 LOADING GOAL FROM DIRECTORY: {goal_dir}", flush=True)
 
+    if goal_dir is None:
+        print(f"❌ Error: Goal directory is None", flush=True)
+        return None, None
+
     # Validate goal directory path length before attempting filesystem operations
     if len(goal_dir) > 200:
         print(f"❌ Error: Goal directory path too long ({len(goal_dir)} chars > 200 limit)", flush=True)
@@ -796,6 +849,61 @@ def load_goal_from_directory(goal_dir):
     except Exception as e:
         print(f"❌ Error loading goal files: {e}", flush=True)
         return None, None
+
+
+def generate_goal_files_fast(goal_description, goal_dir):
+    """Use cerebras_direct.sh to generate all goal files at once (fast generation)"""
+    prompt = f"""Generate complete goal directory structure for: {goal_description}
+
+Create these files for proto_genesis workflow:
+
+1. 00-goal-definition.md - Goal definition with refined goal analysis
+2. 01-success-criteria.md - Clear success criteria and exit conditions
+3. 02-implementation-notes.md - Technical approach and considerations
+4. 03-testing-strategy.md - How to validate the implementation
+
+Each file should be complete and detailed. Format as:
+
+=== 00-goal-definition.md ===
+[Complete markdown content]
+
+=== 01-success-criteria.md ===
+[Complete markdown content]
+
+=== 02-implementation-notes.md ===
+[Complete markdown content]
+
+=== 03-testing-strategy.md ===
+[Complete markdown content]
+
+Generate all files now:"""
+
+    try:
+        # Use cerebras_direct.sh for fast generation
+        output = execute_claude_command(prompt, timeout=60, use_cerebras=True)
+
+        if output:
+            # Parse and write files
+            os.makedirs(goal_dir, exist_ok=True)
+
+            # Split by file markers and write each file
+            sections = output.split("=== ")
+            for section in sections[1:]:  # Skip first empty section
+                if " ===" in section:
+                    filename, content = section.split(" ===", 1)
+                    filepath = os.path.join(goal_dir, filename.strip())
+                    with open(filepath, "w") as f:
+                        f.write(content.strip())
+                    print(f"✅ Generated: {filename.strip()}")
+
+            return True
+        else:
+            print(f"❌ Fast generation failed")
+            return False
+
+    except Exception as e:
+        print(f"❌ Fast generation error: {e}")
+        return False
 
 
 def refine_goal_interactive(original_goal, use_codex=False):
@@ -928,6 +1036,9 @@ def update_plan_document(goal_dir, learnings, iteration_num, use_codex=False):
     """Genesis pattern: Maintain living @fix_plan.md with priority scoring"""
     from pathlib import Path
 
+    if goal_dir is None:
+        return ""  # Return empty string if no goal directory available
+
     plan_file = Path(goal_dir) / "fix_plan.md"
     existing_plan = ""
 
@@ -1001,12 +1112,12 @@ def generate_execution_strategy(
 ):
     """Genesis pattern: Generate single-focus strategy with validation using user simulation"""
 
-    # Load jleechan simulation prompt for authentic command prediction - but skip for Cerebras
+    # Load jleechan simulation prompt for authentic command prediction - but skip for Cerebras and Codex
     simulation_prompt = ""
     # Switch from Cerebras to claude -p user mimicry after iteration 2 (TDD phase)
     use_cerebras = iteration_num <= 2
 
-    if not use_cerebras:  # Only load user simulation for non-Cerebras calls
+    if not use_cerebras and not use_codex:  # Only load user simulation for Claude (non-Cerebras, non-Codex)
         try:
             simulation_file = Path(__file__).parent / "jleechan_simulation_prompt.md"
             if simulation_file.exists():
@@ -1016,16 +1127,65 @@ def generate_execution_strategy(
                 print(f"  ⚠️  User simulation prompt not found at {simulation_file}")
         except Exception as e:
             print(f"  ⚠️  Error loading simulation prompt: {e}")
+    elif use_codex:
+        print(f"  🔧 Skipping user simulation prompt for Codex (direct instruction mode)")
     else:
         print(f"  🚀 Skipping user simulation prompt for Cerebras (fast generation mode)")
 
-    # Use different prompt structure for Cerebras vs Claude
+    # Use different prompt structure for Cerebras vs Claude vs Codex
     if use_cerebras:
         prompt_header = "GENESIS PRIMARY SCHEDULER - FAST CEREBRAS GENERATION"
+    elif use_codex:
+        prompt_header = "GENESIS PRIMARY SCHEDULER - DIRECT CODEX EXECUTION"
     else:
         prompt_header = "GENESIS PRIMARY SCHEDULER - SINGLE TASK ENFORCEMENT WITH USER SIMULATION"
 
-    prompt = f"""{simulation_prompt}
+    # Build dynamic prompt based on agent type
+    if use_codex:
+        # Codex-specific prompt - no jleechan simulation, no slash commands
+        prompt = f"""{prompt_header}
+
+CODEX EXECUTION PRINCIPLES:
+- ONE ITEM PER LOOP: Choose exactly ONE specific task (validation enforced)
+- DIRECT IMPLEMENTATION: Write code directly, no command delegation
+- CONTEXT ENHANCEMENT: Detailed context within 2000 tokens
+- NO PLACEHOLDERS: Full implementations only
+- AUTONOMOUS BREAKDOWN: Intelligently decompose complex goals into manageable tasks
+
+GOAL: {refined_goal}
+ITERATION: {iteration_num}
+PLAN CONTEXT: {plan_context}
+PREVIOUS SUMMARY: {previous_summary}
+
+🎯 LARGE GOAL BREAKDOWN STRATEGY:
+When facing complex/comprehensive goals (like "comprehensive testing"):
+1. IDENTIFY core components of the goal
+2. PRIORITIZE the most fundamental component first
+3. SELECT ONE specific, implementable task from that component
+4. ENSURE the task can be completed in a single iteration
+
+SCHEDULER REQUIREMENTS:
+1. SELECT ONE SPECIFIC ITEM from plan context (if available)
+2. REJECT multi-tasking (will be validated)
+3. PROVIDE direct implementation approach
+4. DEMAND full implementation (no TODOs)
+5. BREAK DOWN large goals into incremental progress
+
+EXECUTION STRATEGY FORMAT:
+SINGLE FOCUS: [ONE specific task only - if goal is large, pick first logical component]
+EXECUTION PLAN: [direct implementation approach]
+SUCCESS CRITERIA: [clear completion criteria]
+NO PLACEHOLDERS: [enforcement approach]
+INCREMENTAL PROGRESS: [how this task contributes to larger goal]
+
+GENESIS VALIDATION: Strategy will be rejected if multiple tasks detected.
+AUTONOMOUS GUIDANCE: For large goals, start with foundation/setup tasks first.
+
+OUTPUT REQUIREMENTS: Keep response to 2-3 sentences maximum. Be direct and specific about what code to write or task to complete.
+"""
+    else:
+        # Claude-specific prompt - includes jleechan simulation and slash commands
+        prompt = f"""{simulation_prompt}
 
 {prompt_header}
 
@@ -1179,7 +1339,47 @@ def make_progress(
     print("  🔍 Genesis Search-First Validation...")
     task_validation = validate_task_necessity(execution_strategy, plan_context)
 
-    prompt = f"""GENESIS EXECUTION - SEARCH-FIRST WITH SUBAGENTS
+    # Build dynamic prompt based on agent type
+    if use_codex:
+        prompt = f"""GENESIS EXECUTION - SEARCH-FIRST DIRECT IMPLEMENTATION
+
+CORE CODEX PRINCIPLES:
+- ONE ITEM PER LOOP: Execute exactly one task (enforced)
+- DIRECT IMPLEMENTATION: Write code directly, no delegation
+- SEARCH FIRST: Validate before building (see validation below)
+- NO PLACEHOLDERS: Full implementations only
+- CONTEXT ENHANCEMENT: Detailed context within 2000 tokens
+
+GOAL: {refined_goal}
+ITERATION: {iteration_num}
+PLAN CONTEXT: {plan_context}
+
+SEARCH VALIDATION RESULT:
+{task_validation}
+
+EXECUTION STRATEGY:
+{execution_strategy}
+
+CODEX EXECUTION REQUIREMENTS:
+1. Honor search validation result above
+2. Implement code directly without delegation
+3. Write complete, working implementations
+4. NO TODO/placeholder comments allowed
+5. Full implementation or nothing
+
+STRUCTURED OUTPUT:
+SEARCH VALIDATION: [honored/ignored and why]
+WORK COMPLETED: [specific accomplishments]
+CODE WRITTEN: [what code was implemented directly]
+FULL IMPLEMENTATION: [confirm no placeholders]
+DISCOVERIES: [codebase learnings]
+COMPLETION STATUS: [percentage for this iteration's focus]
+NEXT PRIORITY: [single next focus item]
+
+Execute using Codex principles now.
+"""
+    else:
+        prompt = f"""GENESIS EXECUTION - SEARCH-FIRST WITH SUBAGENTS
 
 CORE GENESIS PRINCIPLES:
 - ONE ITEM PER LOOP: Execute exactly one task (enforced)
@@ -1394,6 +1594,9 @@ def append_genesis_learning(goal_dir, iteration_num, learning_note):
     """Append fallback learning entry to GENESIS.md when automation fails."""
     from pathlib import Path
 
+    if goal_dir is None:
+        return  # Skip if no goal directory available
+
     genesis_file = Path(goal_dir) / "GENESIS.md"
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
     header = "# Genesis Learnings\n\n" if not genesis_file.exists() else ""
@@ -1416,6 +1619,9 @@ def append_genesis_learning(goal_dir, iteration_num, learning_note):
 def update_genesis_instructions(goal_dir, learnings, use_codex=False, iteration_num=None):
     """Genesis pattern: Update GENESIS.md with self-improvement learnings"""
     from pathlib import Path
+
+    if goal_dir is None:
+        return  # Skip if no goal directory available
 
     genesis_file = Path(goal_dir) / "GENESIS.md"
     existing_instructions = ""
@@ -1647,6 +1853,9 @@ Return git workflow actions:
 
 def update_progress_file(goal_dir, iteration_data):
     """Update the progress tracking file in goal directory."""
+    if goal_dir is None:
+        return  # Skip if no goal directory available
+
     goal_path = Path(goal_dir)
     progress_file = goal_path / "02-progress-tracking.md"
 
@@ -1726,6 +1935,9 @@ def define_milestones_from_failures(test_results, refined_goal, session_data):
 
 def main():
     """Main goal refinement execution."""
+
+    global GENESIS_USE_CODEX
+    GENESIS_USE_CODEX = None
 
     # Set up logging to /tmp/repo_name/branch_name/
     try:
@@ -1897,16 +2109,25 @@ def main():
         print("  --iterate:     Skip initial Cerebras generation phase, start with iterative refinement")
         print("  --codex:       Use Codex instead of Claude for generation")
         print("")
+        print("Optional flags:")
+        print("  --claude          Use Claude instead of Codex")
+        print("  --codex           Explicitly use Codex (default)")
+        print("  --pool-size <n>   Override subagent pool size")
+        print("")
         print("Note: Refinement is auto-approved by default. Use --interactive for manual approval.")
         sys.exit(1)
 
-    # Check for flags - default to claude (not codex)
-    use_codex = "--codex" in sys.argv
+    # Check model selection flags - Codex by default
+    original_args = list(sys.argv)
+    use_codex = is_codex_enabled()
+
     if use_codex:
-        sys.argv.remove("--codex")
-        print("🔧 Using codex (explicit flag)", flush=True)
+        if "--codex" in original_args:
+            print("🔧 Using codex (explicit flag)", flush=True)
+        else:
+            print("🔧 Using codex (default)", flush=True)
     else:
-        print("🔧 Using claude (default)", flush=True)
+        print("🔧 Using claude (override: --claude)", flush=True)
 
     # Check for --iterate flag to skip initial cerebras generation
     skip_initial_generation = "--iterate" in sys.argv
@@ -1945,7 +2166,7 @@ def main():
             sys.exit(1)
 
         original_goal = sys.argv[2]
-        max_iterations = int(sys.argv[3]) if len(sys.argv) > 3 else 10
+        max_iterations = int(sys.argv[3]) if len(sys.argv) > 3 else 20
         print(f"📝 Goal: {original_goal[:100]}...", flush=True)
         print(f"🔢 Max Iterations: {max_iterations}", flush=True)
 
@@ -2003,12 +2224,36 @@ def main():
                 print("Error refining goal. Please try again.")
                 return
 
-        session_file = "proto_genesis_session.json"
+        # Generate goal directory using refined goal
+        print("\n📋 STEP 2: Creating Goal Directory from Refined Goal")
+        print("-" * 50)
+
+        # Create goal directory with timestamp
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%Y-%m-%d-%H%M")
+        goal_slug = "-".join(original_goal.lower().split()[:4])  # First 4 words
+        goal_dir = f"goals/{timestamp}-{goal_slug}"
+
+        print(f"🎯 Creating goal directory: {goal_dir}")
+        success = generate_goal_files_fast(f"REFINED GOAL: {refined_goal}\n\nEXIT CRITERIA:\n{exit_criteria}", goal_dir)
+
+        if not success:
+            print("\n❌ Goal directory generation failed, falling back to session mode")
+            goal_dir = None  # Fall back to session mode
+            session_file = "proto_genesis_session.json"
+        else:
+            print(f"\n✅ Goal directory created: {goal_dir}")
+            session_file = os.path.join(goal_dir, "proto_genesis_session.json")
+            print(f"📁 Session file: {session_file}")
+
+        if goal_dir is None:
+            # Fallback to session mode if goal directory creation failed
+            session_file = "proto_genesis_session.json"
 
     else:
         # Standard mode: use goal directory
         goal_dir = sys.argv[1]
-        max_iterations = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+        max_iterations = int(sys.argv[2]) if len(sys.argv) > 2 else 20
 
         print(f"📁 ENTERING GOAL DIRECTORY MODE", flush=True)
         print(f"📂 Goal Directory: {goal_dir}", flush=True)
@@ -2117,14 +2362,15 @@ def main():
             human_logger.start_iteration(i + 1, max_iterations)
 
         # Load current plan context if available
-        if "goal_dir" in locals():
-            plan_file = Path(goal_dir) / "fix_plan.md"
-            if plan_file.exists():
-                try:
+        plan_context = ""
+        if "goal_dir" in locals() and goal_dir is not None:
+            try:
+                plan_file = Path(goal_dir) / "fix_plan.md"
+                if plan_file.exists():
                     with open(plan_file) as f:
                         plan_context = f.read()
-                except Exception:
-                    plan_context = ""
+            except Exception:
+                plan_context = ""
 
         # ENHANCED WORKFLOW: Execute appropriate phase
         if workflow_phase == "BULK_GENERATION":
@@ -2379,9 +2625,12 @@ ORIGINAL STRATEGY CONTEXT:
                 print("🎉 GENESIS SELF-DETERMINATION: GOAL COMPLETED!")
                 print("✅ All exit criteria satisfied based on consensus assessment")
                 try:
+                    if goal_dir is None:
+                        # Handle fallback case where goal_dir is None
+                        goal_dir = "refine_mode_completion"
                     completion_file = Path(goal_dir) / "GENESIS_COMPLETE.md"
-                except NameError:
-                    # Handle refine mode where goal_dir may not be defined
+                except (NameError, TypeError):
+                    # Handle refine mode where goal_dir may not be defined or is None
                     goal_dir = "refine_mode_completion"
                     completion_file = Path(goal_dir) / "GENESIS_COMPLETE.md"
                     # Ensure directory exists
@@ -2414,7 +2663,7 @@ ORIGINAL STRATEGY CONTEXT:
                 return  # Exit the iteration loop
 
             # Update plan document (Genesis living plan maintenance)
-            if "goal_dir" in locals():
+            if "goal_dir" in locals() and goal_dir is not None:
                 updated_plan = update_plan_document(
                     goal_dir, f"{execution_summary}\n{consensus_response}", i + 1, use_codex
                 )
@@ -2674,7 +2923,7 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
 
     # Initialize structured workflow state
     workflow_state = WorkflowState()
-    max_iterations = 10  # Prevent infinite loops
+    max_iterations = 20  # Prevent infinite loops
 
     for iteration in range(max_iterations):
         print(f"\n🔄 B-Stage Iteration {iteration + 1}/{max_iterations}")
@@ -2751,7 +3000,7 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
                     f"{tmp_path}/genesis_milestones.txt"
                 )
 
-                use_codex = "--codex" in sys.argv
+                use_codex = is_codex_enabled()
                 if not use_codex:  # Claude path
                     b41_prompt = f"Generate execution plan for goal '{goal}' milestones using jleechan_simulation_prompt.md: {milestones}"
                 else:  # Codex path
@@ -2808,7 +3057,7 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
 
             # B5: Code Review (Model-Specific)
             workflow_state.current_phase = "B5"
-            use_codex = "--codex" in sys.argv
+            use_codex = is_codex_enabled()
             if not use_codex:  # Claude path - simulate /cons command
                 b5_prompt = f"Code Review: Review current implementation using /cons methodology for goal '{goal}'"
             else:  # Codex path

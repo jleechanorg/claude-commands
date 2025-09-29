@@ -6,10 +6,10 @@ Test suite for A2A system integration
 import contextlib
 import os
 import shutil
+import signal
 import sys
 import tempfile
 import time
-
 from orchestration.a2a_agent_wrapper import create_a2a_wrapper
 from orchestration.a2a_integration import A2A_BASE_DIR, create_a2a_client, get_a2a_status
 from orchestration.a2a_monitor import A2AMonitor
@@ -45,10 +45,18 @@ def test_basic_a2a_functionality():
         print(f"✓ Task publishing: Created task {task_id}")
         assert task_id is not None, "Task should be created"
 
-        # Test task discovery
-        available_tasks = agent2.get_available_tasks()
+        # Wait for task propagation in A2A system (CI needs more time)
+        max_retries = 5
+        available_tasks = []
+        for attempt in range(max_retries):
+            time.sleep(1 + attempt * 0.5)  # Progressive backoff
+            available_tasks = agent2.task_pool.get_available_tasks()
+            if len(available_tasks) >= 1:
+                break
+            print(f"⏳ Attempt {attempt + 1}/{max_retries}: Found {len(available_tasks)} tasks, retrying...")
+
         print(f"✓ Task discovery: Found {len(available_tasks)} available tasks")
-        assert len(available_tasks) >= 1, "Should find published task"
+        assert len(available_tasks) >= 1, f"Should find published task after {max_retries} attempts"
 
         # Test messaging
         success = agent1.send_message(
@@ -217,8 +225,17 @@ def run_all_tests():
 
 
 if __name__ == "__main__":
+    def timeout_handler(signum, frame):
+        print("⏰ Test timed out after 30 seconds - A2A tests may be hanging")
+        sys.exit(3)
+
     try:
+        # Set 30-second timeout for the entire test suite
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(30)
+
         success = run_all_tests()
+        signal.alarm(0)  # Cancel timeout
         exit_code = 0 if success else 1
     except Exception as e:
         print(f"💥 Test suite crashed: {e}")

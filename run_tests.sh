@@ -24,6 +24,7 @@
 #   ./run_tests.sh --include-end2end          # Include end2end tests specifically (for CI)
 #   ./run_tests.sh --test-dirs mvp_site,.claude # Run tests only for specified directories (comma-separated)
 #   ./run_tests.sh --test-dirs orchestration   # Run tests only for orchestration directory
+#   ./run_tests.sh --ci-exact                  # Run tests exactly like CI (direct python execution, no pytest)
 #
 # CI Simulation Features:
 # - Always simulates GitHub Actions environment to catch deployment issues early
@@ -385,6 +386,7 @@ exclude_integration=false
 exclude_mcp=false
 include_end2end=false
 test_dirs=""
+ci_exact=true  # Default to CI-exact mode for consistency
 
 for arg in "$@"; do
     case $arg in
@@ -434,6 +436,10 @@ for arg in "$@"; do
             test_dirs="${arg#*=}"
             intelligent_mode=false  # Disable intelligent mode when using directory-based testing
             ;;
+        --ci-exact)
+            ci_exact=true
+            intelligent_mode=false  # Disable intelligent mode for CI-exact execution
+            ;;
         *)
             if [[ $arg == --* ]]; then
                 print_warning "Unknown argument: $arg"
@@ -447,7 +453,9 @@ for arg in "$@"; do
 done
 
 # Display mode information
-if [ ${#specific_test_files[@]} -gt 0 ]; then
+if [ "$ci_exact" = true ]; then
+    print_status "🔥 CI-EXACT MODE: Running tests exactly like CI (direct python execution, no pytest protection)"
+elif [ ${#specific_test_files[@]} -gt 0 ]; then
     print_status "🎯 Specific Test Mode: Running ${#specific_test_files[@]} specified test file(s)"
     for test_file in "${specific_test_files[@]}"; do
         print_status "  - $test_file"
@@ -467,6 +475,30 @@ if [ "$include_integration" = true ]; then
 else
     print_status "Skipping integration tests (include_integration=${include_integration:-false}, use --integration to include them)"
 fi
+
+# Quick dependency check for common CI discrepancies
+check_optional_dependencies() {
+    local missing_deps=()
+    local import_names=("fastapi" "django" "influxdb_client" "flask_socketio")
+    local package_names=("fastapi" "django" "influxdb-client" "flask-socketio")
+
+    for i in "${!import_names[@]}"; do
+        if ! python3 -c "import ${import_names[$i]}" 2>/dev/null; then
+            missing_deps+=("${package_names[$i]}")
+        fi
+    done
+
+    if [ ${#missing_deps[@]} -gt 0 ]; then
+        print_warning "⚠️ Missing optional dependencies that may cause import failures:"
+        for dep in "${missing_deps[@]}"; do
+            print_warning "  - $dep"
+        done
+        print_warning "To align with CI: pip install ${missing_deps[*]}"
+    fi
+}
+
+# Check dependencies before running tests
+check_optional_dependencies
 
 # Validate Claude settings before running tests
 if ! validate_claude_settings; then
@@ -1064,7 +1096,13 @@ else
 
                 # Show failure details
                 echo -e "    ${RED}Error details:${NC}"
-                grep -v "^\(TESTFILE:\|START:\|RESULT:\|DURATION:\|END:\)" "$result_file" | head -10 | sed 's/^/      /'
+                # Show more lines and prioritize FAIL DEBUG messages
+                if grep -q "FAIL DEBUG" "$result_file"; then
+                    echo -e "      ${RED}🐛 DEBUG OUTPUT:${NC}"
+                    grep "FAIL DEBUG" "$result_file" | head -5 | sed 's/^/      /'
+                    echo -e "      ${RED}📝 FULL OUTPUT:${NC}"
+                fi
+                grep -v "^\(TESTFILE:\|START:\|RESULT:\|DURATION:\|END:\)" "$result_file" | head -20 | sed 's/^/      /'
                 ;;
             *)
                 skipped_tests=$((skipped_tests + 1))

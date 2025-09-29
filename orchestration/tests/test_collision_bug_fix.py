@@ -7,6 +7,7 @@ Verifies that custom workspace names properly prevent collisions and use correct
 import os
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -19,6 +20,22 @@ class TestCollisionBugFix(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.dispatcher = TaskDispatcher()
+        # CI-specific: Add small delay to prevent race conditions
+        if os.getenv('GITHUB_ACTIONS'):
+            time.sleep(0.1)
+
+    def tearDown(self):
+        """Clean up test environment"""
+        # CI-specific: Ensure proper cleanup with retries
+        if hasattr(self, 'dispatcher'):
+            try:
+                # Clean up any created directories/files
+                self.dispatcher = None
+            except Exception:
+                pass
+        # CI-specific: Additional delay for cleanup completion
+        if os.getenv('GITHUB_ACTIONS'):
+            time.sleep(0.1)
 
     def test_original_collision_bug_scenario(self):
         """Test the exact scenario that caused the original bug"""
@@ -34,13 +51,15 @@ class TestCollisionBugFix(unittest.TestCase):
         agent_spec = agent_specs[0]
 
         # Should have workspace config
-        self.assertIn("workspace_config", agent_spec)
+        debug_info = f"agent_spec keys: {list(agent_spec.keys())}, agent_spec: {agent_spec}"
+        self.assertIn("workspace_config", agent_spec, f"FAIL DEBUG: workspace_config missing. {debug_info}")
         workspace_config = agent_spec["workspace_config"]
-        self.assertEqual(workspace_config["workspace_name"], "tmux-pr1234")
+        self.assertEqual(workspace_config["workspace_name"], "tmux-pr1234", f"FAIL DEBUG: wrong workspace_name. {debug_info}")
 
         # The original agent name should be meaningful
         original_name = agent_spec["name"]
-        self.assertIn("task-agent", original_name)
+        debug_info = f"original_name={original_name}"
+        self.assertIn("task-agent", original_name, f"FAIL DEBUG: expected task-agent in name. {debug_info}")
 
         # Mock existing agents to force collision with FINAL name
         with patch.object(self.dispatcher, '_check_existing_agents', return_value={'tmux-pr1234'}):
@@ -51,8 +70,11 @@ class TestCollisionBugFix(unittest.TestCase):
                         with patch('os.path.exists', return_value=True):
                             with patch('builtins.open', create=True):
                                 # This should NOT fail - collision should be resolved
-                                result = self.dispatcher.create_dynamic_agent(agent_spec)
-                                self.assertTrue(result)
+                                # Mock shutil.which to ensure claude is found in CI
+                                with patch('shutil.which', return_value='/usr/bin/claude'):
+                                    result = self.dispatcher.create_dynamic_agent(agent_spec)
+                                debug_info = f"create_dynamic_agent result={result}"
+                                self.assertTrue(result, f"FAIL DEBUG: expected True result. {debug_info}")
 
     def test_cleanup_uses_final_name(self):
         """Test that cleanup operations use the final resolved agent name"""
@@ -89,8 +111,10 @@ class TestCollisionBugFix(unittest.TestCase):
             with patch('os.makedirs'):
                 with patch('os.path.exists', return_value=True):
                     with patch('builtins.open', create=True):
-                        # Capture the tmux command to verify agent name
-                        result = self.dispatcher.create_dynamic_agent(agent_spec)
+                        # Mock shutil.which to ensure claude is found in CI
+                        with patch('shutil.which', return_value='/usr/bin/claude'):
+                            # Capture the tmux command to verify agent name
+                            result = self.dispatcher.create_dynamic_agent(agent_spec)
                         self.assertTrue(result)
 
                         # Check that tmux session was created with workspace name
@@ -105,7 +129,8 @@ class TestCollisionBugFix(unittest.TestCase):
         agent_spec = agent_specs[0]
 
         # Should not have workspace config
-        self.assertNotIn("workspace_config", agent_spec)
+        debug_info = f"agent_spec keys: {list(agent_spec.keys())}, agent_spec: {agent_spec}"
+        self.assertNotIn("workspace_config", agent_spec, f"FAIL DEBUG: workspace_config found. {debug_info}")
 
         # Original name should be preserved
         original_name = agent_spec["name"]
@@ -116,11 +141,17 @@ class TestCollisionBugFix(unittest.TestCase):
                 with patch('os.makedirs'):
                     with patch('os.path.exists', return_value=True):
                         with patch('builtins.open', create=True):
-                            result = self.dispatcher.create_dynamic_agent(agent_spec)
+                            # Mock shutil.which to ensure claude is found in CI
+                            with patch('shutil.which', return_value='/usr/bin/claude'):
+                                result = self.dispatcher.create_dynamic_agent(agent_spec)
                             self.assertTrue(result)
 
                             # Cleanup should use original name
-                            mock_cleanup.assert_called_once_with(original_name)
+                            debug_info = f"original_name={original_name}, mock_calls={mock_cleanup.call_args_list}"
+                            try:
+                                mock_cleanup.assert_called_once_with(original_name)
+                            except AssertionError as e:
+                                self.fail(f"FAIL DEBUG: {debug_info}. Original error: {e}")
 
 
 if __name__ == '__main__':

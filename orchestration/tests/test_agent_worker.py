@@ -4,10 +4,10 @@ Simple test agent that processes tasks and returns results.
 Used to verify A2A integration functionality.
 """
 
+import os
 import sys
 import time
-
-from message_broker import MessageBroker, MessageType
+from orchestration.message_broker import MessageBroker, MessageType
 
 
 class TestWorkerAgent:
@@ -18,17 +18,25 @@ class TestWorkerAgent:
         self.broker = MessageBroker()
         self.running = False
 
-    def start(self):
+    def start(self, max_iterations=None):
         """Start the test agent"""
         # Register with broker
         self.broker.register_agent(self.agent_id, "test", ["task_execution", "testing"])
 
         print(f"Test worker {self.agent_id} started")
         self.running = True
+        iteration_count = 0
 
         # Process messages
         while self.running:
             try:
+                # Check iteration limit when run directly
+                if max_iterations is not None:
+                    iteration_count += 1
+                    if iteration_count > max_iterations:
+                        print(f"Reached max iterations ({max_iterations}), stopping test worker")
+                        break
+
                 # Get task from queue
                 message = self.broker.get_task(self.agent_id)
 
@@ -86,7 +94,15 @@ if __name__ == "__main__":
     agent = TestWorkerAgent(agent_id)
 
     try:
-        agent.start()
+        # When run directly for testing, limit iterations to prevent infinite loops
+        print("Starting test worker with 10 iteration limit for testing")
+        agent.start(max_iterations=10)
+        print("Test worker completed successfully")
+        sys.exit(0)
     except KeyboardInterrupt:
         print("\nStopping test worker...")
         agent.running = False
+        sys.exit(0)
+    except Exception as e:
+        print(f"Test worker failed: {e}")
+        sys.exit(1)

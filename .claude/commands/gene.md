@@ -2,7 +2,7 @@
 
 **Command Summary**: Enhanced `/gen` that automatically executes the genesis.py workflow with fast-gen default mode
 
-**Usage**: `/gene "goal description" [iterations]`
+**Usage**: `/gene "goal description" [iterations] [working_directory]`
 
 **Purpose**: Single-command goal refinement and execution using the enhanced genesis/genesis.py with fast-gen default mode
 
@@ -14,30 +14,33 @@
 - **Enhanced UX**: Leverages the improved genesis.py interface
 - **🚨 Self-Determination**: Genesis automatically detects completion with rigorous exit criteria
 - **🔍 Validation Protocol**: End-to-end validation prevents false success claims
-- **🔄 Iterate Mode**: Uses --iterate flag to skip initial Cerebras generation, start with iterative refinement
+- **🔄 Iterate Mode**: Can use --iterate flag to skip initial Cerebras generation (when working with existing goals)
 
 ## Execution Instructions
 
-**CRITICAL**: Before running genesis, ensure current project's goal directory is copied to genesis working directory:
+When this command is invoked with a goal:
 
 ```bash
-# Copy goals to genesis working directory for context
-GENESIS_WORKDIR="/Users/jleechan/projects_other/codex_plus"
-CURRENT_GOALS="/Users/jleechan/projects/worktree_ralph/goals"
+# Parse command arguments
+INPUT="$1"
+ITERATIONS="${2:-30}"
+WORKDIR="${3:-/tmp/genesis_$(date +%Y%m%d_%H%M%S)}"
 
+# Set up genesis working directory (default: /tmp with timestamp)
+GENESIS_WORKDIR="$WORKDIR"
+CURRENT_GOALS="$PWD/goals"
+
+# Create working directory if it doesn't exist
+mkdir -p "$GENESIS_WORKDIR"
+
+# Copy goals to genesis working directory for context (if they exist)
 if [[ -d "$CURRENT_GOALS" ]]; then
     echo "📋 Copying goals directory to genesis working directory..."
     cp -r "$CURRENT_GOALS" "$GENESIS_WORKDIR/"
     echo "✅ Goals copied to $GENESIS_WORKDIR/goals"
 fi
-```
 
-When this command is invoked with a goal:
-
-```bash
 # Smart goal detection: goal directory vs. new prompt
-INPUT="$1"
-ITERATIONS="${2:-30}"
 
 # Check if input looks like a goal directory path
 if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; then
@@ -53,7 +56,7 @@ if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; th
     # Verify goal directory has required files
     if [[ -f "$GOAL_DIR/00-goal-definition.md" ]]; then
         echo "📁 Using existing goal directory: $GOAL_DIR"
-        GENESIS_CMD="python \"$PWD/genesis/genesis.py\" \"$GOAL_DIR\" \"$ITERATIONS\" --iterate"
+        GENESIS_CMD="python \"$PWD/genesis/genesis.py\" \"$GOAL_DIR\" \"$ITERATIONS\""
     else
         echo "❌ Goal directory $GOAL_DIR exists but missing goal definition files"
         echo "💡 Use: /gene \"your goal description here\" to create new goals"
@@ -62,7 +65,7 @@ if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; th
 else
     # New goal mode - use --refine
     echo "🔄 Creating new goal with: $INPUT"
-    GENESIS_CMD="python \"$PWD/genesis/genesis.py\" --refine \"$INPUT\" \"$ITERATIONS\" --iterate"
+    GENESIS_CMD="python \"$PWD/genesis/genesis.py\" --refine \"$INPUT\" \"$ITERATIONS\""
 fi
 
 # Generate unique session name
@@ -85,7 +88,7 @@ echo "agent_config = {"
 echo "    'id': 'genesis-${SESSION_NAME}',"
 echo "    'type': 'genesis',"
 echo "    'session_name': '${SESSION_NAME}',"
-echo "    'working_dir': '/Users/jleechan/projects_other/codex_plus',"
+echo "    'working_dir': '$GENESIS_WORKDIR',"
 echo "    'genesis_cmd': '${GENESIS_CMD}',"
 echo "    'environment': {"
 echo "        # No environment variables needed - using reasonable defaults"
@@ -102,7 +105,7 @@ echo ""
 echo "======================================="
 echo ""
 echo "📋 Alternative: Direct tmux execution"
-echo "tmux new-session -d -s '$SESSION_NAME' env CEREBRAS_API_KEY=\"$CEREBRAS_API_KEY\" bash -c 'source \$HOME/.bashrc && cd /Users/jleechan/projects_other/codex_plus && $GENESIS_CMD; exec bash'"
+echo "tmux new-session -d -s '$SESSION_NAME' env CEREBRAS_API_KEY=\"$CEREBRAS_API_KEY\" bash -c 'source \$HOME/.bashrc && cd $GENESIS_WORKDIR && $GENESIS_CMD; exec bash'"
 echo ""
 echo "🔄 Session Management:"
 echo "  Attach:     tmux attach -t $SESSION_NAME"
@@ -110,11 +113,11 @@ echo "  Kill:       tmux kill-session -t $SESSION_NAME"
 echo "  Observer:   $PWD/scripts/genesis_observer.sh $SESSION_NAME"
 echo ""
 echo "📋 Genesis Log Paths (Available after startup):"
-echo "  Technical:  /tmp/\$(basename \$GENESIS_WORKDIR)/\$(git branch --show-current 2>/dev/null || echo unknown)/genesis_\$(date +%s).log"
-echo "  Human:      /tmp/\$(basename \$GENESIS_WORKDIR)/\$(git branch --show-current 2>/dev/null || echo unknown)/genesis_\$(date +%s)_human.log"
+echo "  Technical:  /tmp/\$(basename $GENESIS_WORKDIR)/\$(cd $GENESIS_WORKDIR && git branch --show-current 2>/dev/null || echo unknown)/genesis_\$(date +%s).log"
+echo "  Human:      /tmp/\$(basename $GENESIS_WORKDIR)/\$(cd $GENESIS_WORKDIR && git branch --show-current 2>/dev/null || echo unknown)/genesis_\$(date +%s)_human.log"
 echo ""
 echo "📊 Monitor Progress:"
-echo "  tail -f /tmp/\$(basename \$GENESIS_WORKDIR)/\$(git branch --show-current 2>/dev/null || echo unknown)/genesis_*_human.log"
+echo "  tail -f /tmp/\$(basename $GENESIS_WORKDIR)/\$(cd $GENESIS_WORKDIR && git branch --show-current 2>/dev/null || echo unknown)/genesis_*_human.log"
 echo "  tmux capture-pane -t $SESSION_NAME -p | tail -20"
 ```
 
@@ -129,6 +132,7 @@ echo "  tmux capture-pane -t $SESSION_NAME -p | tail -20"
 ### Command Parameters
 - `goal_description`: Required - description of what to build
 - `iterations`: Optional - number of iterations (default: 30)
+- `working_directory`: Optional - where Genesis runs (default: /tmp/genesis_YYYYMMDD_HHMMSS)
 
 ## 🚨 Enhanced Exit Criteria & Self-Determination
 
@@ -183,7 +187,17 @@ Genesis automatically completes when consensus assessment contains:
 ## Example Usage
 
 ```bash
+# Default: runs in /tmp with timestamp
 /gene "build a REST API for user management with authentication"
+
+# Custom iterations
+/gene "build calculator app" 15
+
+# Custom working directory
+/gene "build web scraper" 20 "/tmp/my_project"
+
+# Run in current directory for benchmarking
+/gene "text processing CLI" 30 "$PWD"
 ```
 
 **Expected Output**:

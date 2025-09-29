@@ -8,6 +8,7 @@ import importlib
 import os
 import sys
 import tempfile
+import time
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -21,6 +22,22 @@ class TestUnifiedNaming(unittest.TestCase):
     def setUp(self):
         """Set up test environment"""
         self.dispatcher = TaskDispatcher()
+        # CI-specific: Add small delay to prevent race conditions
+        if os.getenv('GITHUB_ACTIONS'):
+            time.sleep(0.1)
+
+    def tearDown(self):
+        """Clean up test environment"""
+        # CI-specific: Ensure proper cleanup with retries
+        if hasattr(self, 'dispatcher'):
+            try:
+                # Clean up any created directories/files
+                self.dispatcher = None
+            except Exception:
+                pass
+        # CI-specific: Additional delay for cleanup completion
+        if os.getenv('GITHUB_ACTIONS'):
+            time.sleep(0.1)
 
     def test_meaningful_pr_naming(self):
         """Test that PR tasks generate meaningful pr-based names"""
@@ -64,13 +81,19 @@ class TestUnifiedNaming(unittest.TestCase):
             mock_run.return_value = MagicMock(returncode=0)
             with patch('os.makedirs'):
                 with patch('os.path.exists', return_value=True):
-                    result = self.dispatcher.create_dynamic_agent(agent_spec)
+                    # Mock shutil.which to ensure claude is found in CI
+                    with patch('shutil.which', return_value='/usr/bin/claude'):
+                        result = self.dispatcher.create_dynamic_agent(agent_spec)
 
         # Agent name should be updated to match workspace name
-        self.assertTrue(result)
+        debug_info = f"create_dynamic_agent result={result}"
+        self.assertTrue(result, f"FAIL DEBUG: expected True result. {debug_info}")
+
         # Check that git worktree was called with correct directory name
         git_calls = [call for call in mock_run.call_args_list if 'git' in str(call)]
-        self.assertTrue(any('tmux-pr456' in str(call) for call in git_calls))
+        has_tmux_pr456 = any('tmux-pr456' in str(call) for call in git_calls)
+        debug_info = f"mock_calls={mock_run.call_args_list}, git_calls={git_calls}, has_tmux_pr456={has_tmux_pr456}"
+        self.assertTrue(has_tmux_pr456, f"FAIL DEBUG: tmux-pr456 not found in git calls. {debug_info}")
 
     def test_fallback_to_timestamp_when_no_description(self):
         """Test fallback to timestamp when no meaningful description available"""
