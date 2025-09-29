@@ -23,10 +23,7 @@ try:
     from utils import setup_logging, json_manager
 except ImportError:
     from .utils import setup_logging, json_manager
-try:
-    from automation_utils import AutomationUtils
-except ImportError:
-    from .automation_utils import AutomationUtils
+from automation_utils import AutomationUtils
 
 try:
     from codex_config import (
@@ -282,9 +279,12 @@ class JleechanorgPRMonitor:
         self.logger.info(f"📅 Filtering PRs updated since: {one_day_ago.strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
         try:
-            # Get all repositories in the organization
+            # Get all repositories in the organization (use check=False for graceful degradation)
             repos_cmd = ["gh", "repo", "list", self.organization, "--limit", "100", "--json", "name,owner"]
-            repos_result = AutomationUtils.execute_subprocess_with_timeout(repos_cmd, timeout=30)
+            repos_result = AutomationUtils.execute_subprocess_with_timeout(repos_cmd, timeout=30, check=False)
+            if repos_result.returncode != 0:
+                self.logger.error(f"❌ Failed to list repositories: {repos_result.stderr}")
+                return []
             repositories = json.loads(repos_result.stdout)
 
             self.logger.info(f"📚 Found {len(repositories)} repositories")
@@ -304,7 +304,10 @@ class JleechanorgPRMonitor:
                         "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author,headRefOid,state,isDraft"
                     ]
 
-                    prs_result = AutomationUtils.execute_subprocess_with_timeout(prs_cmd, timeout=30)
+                    prs_result = AutomationUtils.execute_subprocess_with_timeout(prs_cmd, timeout=30, check=False)
+                    if prs_result.returncode != 0:
+                        self.logger.warning(f"⚠️ Failed to list PRs for {repo_full_name}: {prs_result.stderr}")
+                        continue  # Skip this repo and continue with others
                     prs = json.loads(prs_result.stdout)
 
                     # Filter PRs updated in last 3 days and add repository context

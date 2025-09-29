@@ -191,7 +191,8 @@ This is an automated notification from the WorldArchitect.AI automation system."
 
     @classmethod
     def execute_subprocess_with_timeout(cls, command: list, timeout: int = None,
-                                      cwd: str = None, capture_output: bool = True) -> subprocess.CompletedProcess:
+                                      cwd: str = None, capture_output: bool = True,
+                                      check: bool = True) -> subprocess.CompletedProcess:
         """Execute subprocess with standardized timeout and error handling
 
         Args:
@@ -199,18 +200,19 @@ This is an automated notification from the WorldArchitect.AI automation system."
             timeout: Timeout in seconds (uses default if None)
             cwd: Working directory
             capture_output: Whether to capture stdout/stderr
+            check: Whether to raise CalledProcessError on non-zero exit (default True)
 
         Returns:
             CompletedProcess instance
 
         Raises:
             subprocess.TimeoutExpired: If command times out
-            subprocess.CalledProcessError: If command fails
+            subprocess.CalledProcessError: If command fails and check=True
         """
         if timeout is None:
             timeout = cls.get_config_value('MAX_SUBPROCESS_TIMEOUT')
 
-        # Ensure shell=False for security and check=True for error handling
+        # Ensure shell=False for security, check parameter controls error handling
         result = subprocess.run(
             command,
             timeout=timeout,
@@ -218,7 +220,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             capture_output=capture_output,
             text=True,
             shell=False,
-            check=True
+            check=check
         )
 
         return result
