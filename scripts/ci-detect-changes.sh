@@ -55,96 +55,126 @@ generate_test_matrix() {
     echo "Changed files:"
     echo "$changed_files"
 
-    # Initialize directory flags (compatible with older bash)
-    local mvp_changed=0
-    local claude_changed=0
-    local orch_changed=0
-    local scripts_changed=0
-    local mcp_changed=0
-    local auto_changed=0
+    # Directory groups allow us to fan out to multiple test jobs while
+    # maintaining stable cache keys and predictable ordering.
+    declare -A GROUP_CONFIG=(
+        [core]="mvp_site"
+        [claude]=".claude"
+        [orchestration]="orchestration"
+        [automation]="automation"
+        [scripts]="scripts"
+        [mcp]="mcp_servers"
+    )
+
+    # Preserve deterministic ordering when emitting the matrix
+    local ordered_groups=(core claude orchestration automation scripts mcp)
+
+    # Map the top-level directory to its logical group
+    declare -A DIR_TO_GROUP=()
+    for group in "${!GROUP_CONFIG[@]}"; do
+        IFS=',' read -ra group_dirs <<< "${GROUP_CONFIG[$group]}"
+        for raw_dir in "${group_dirs[@]}"; do
+            local dir="${raw_dir#"${raw_dir%%[![:space:]]*}"}"
+            dir="${dir%"${dir##*[![:space:]]}"}"
+            [ -z "$dir" ] && continue
+            DIR_TO_GROUP["$dir"]="$group"
+        done
+    done
+
+    declare -A SELECTED_GROUPS=()
 
     # Analyze changes by directory (safe for files with spaces)
-    # Use process substitution to avoid subshell variable scope issues
     while IFS= read -r file; do
         [ -z "$file" ] && continue
-        dir="${file%%/*}"  # Extract first directory component efficiently
-        case "$dir" in
-            "mvp_site")
-                mvp_changed=1
-                ;;
-            ".claude")
-                claude_changed=1
-                ;;
-            "orchestration")
-                orch_changed=1
-                ;;
-            "scripts")
-                scripts_changed=1
-                ;;
-            "mcp_servers")
-                mcp_changed=1
-                ;;
-            "automation")
-                auto_changed=1
-                ;;
-            *)
-                # For root-level files or other dirs, run core tests (mvp_site)
-                mvp_changed=1
-                ;;
-        esac
+
+        local dir_component=""
+        if [[ "$file" == */* ]]; then
+            dir_component="${file%%/*}"
+        else
+            dir_component="$file"
+        fi
+
+        local group="${DIR_TO_GROUP[$dir_component]}"
+        if [ -z "$group" ]; then
+            # For root-level files or other dirs, run core tests (mvp_site)
+            group="core"
+        fi
+
+        SELECTED_GROUPS["$group"]=1
     done <<< "$changed_files"
 
-    # Build test directories list and matrix
+    # Fallback to core tests if no specific changes detected
+    if [ "${#SELECTED_GROUPS[@]}" -eq 0 ]; then
+        SELECTED_GROUPS[core]=1
+    fi
+
     local test_dirs=""
     local matrix_output=""
     local has_changes="false"
+    declare -A added_dirs=()
+    declare -A added_simple_dirs=()
 
-    # Helper function to add directory to outputs
-    add_directory() {
-        local dir="$1"
-        if [ -n "$test_dirs" ]; then
-            test_dirs="$test_dirs,$dir"
-        else
-            test_dirs="$dir"
+    for group in "${ordered_groups[@]}"; do
+        if [ -z "${SELECTED_GROUPS[$group]}" ]; then
+            continue
         fi
+
         has_changes="true"
 
-        # Build matrix based on output format
+        local cleaned_dirs=""
+        IFS=',' read -ra group_dirs <<< "${GROUP_CONFIG[$group]}"
+        for raw_dir in "${group_dirs[@]}"; do
+            local dir="${raw_dir#"${raw_dir%%[![:space:]]*}"}"
+            dir="${dir%"${dir##*[![:space:]]}"}"
+            [ -z "$dir" ] && continue
+
+            if [ -z "${added_dirs[$dir]}" ]; then
+                if [ -n "$test_dirs" ]; then
+                    test_dirs="$test_dirs,$dir"
+                else
+                    test_dirs="$dir"
+                fi
+                added_dirs["$dir"]=1
+            fi
+
+            if [ -n "$cleaned_dirs" ]; then
+                cleaned_dirs="$cleaned_dirs,$dir"
+            else
+                cleaned_dirs="$dir"
+            fi
+        done
+
         if [ "$output_format" = "include" ]; then
             if [ -n "$matrix_output" ]; then
                 matrix_output="$matrix_output,"
             fi
-            matrix_output="$matrix_output{\"test-group\":\"$dir\",\"test-dirs\":\"$dir\"}"
+            matrix_output="$matrix_output{\"test-group\":\"$group\",\"test-dirs\":\"$cleaned_dirs\"}"
         else
-            # Simple format
-            if [ -n "$matrix_output" ]; then
-                matrix_output="$matrix_output,\"$dir\""
-            else
-                matrix_output="\"$dir\""
+            local primary_dir="${cleaned_dirs%%,*}"
+            if [ -z "${added_simple_dirs[$primary_dir]}" ]; then
+                if [ -n "$matrix_output" ]; then
+                    matrix_output="$matrix_output,\"$primary_dir\""
+                else
+                    matrix_output="\"$primary_dir\""
+                fi
+                added_simple_dirs["$primary_dir"]=1
             fi
         fi
-    }
-
-    # Add directories based on changes
-    [ "$mvp_changed" = "1" ] && add_directory "mvp_site"
-    [ "$claude_changed" = "1" ] && add_directory ".claude"
-    [ "$orch_changed" = "1" ] && add_directory "orchestration"
-    [ "$scripts_changed" = "1" ] && add_directory "scripts"
-    [ "$mcp_changed" = "1" ] && add_directory "mcp_servers"
-    [ "$auto_changed" = "1" ] && add_directory "automation"
-
-    # Fallback to core tests if no specific changes detected
-    if [ "$has_changes" = "false" ]; then
-        test_dirs="mvp_site"
-        if [ "$output_format" = "include" ]; then
-            matrix_output="{\"test-group\":\"core\",\"test-dirs\":\"mvp_site\"}"
-        else
-            matrix_output="\"mvp_site\""
-        fi
-        has_changes="true"
-    fi
+    done
 
     # Output results
+    local selected_groups_list=""
+    for group in "${ordered_groups[@]}"; do
+        if [ -n "${SELECTED_GROUPS[$group]}" ]; then
+            if [ -n "$selected_groups_list" ]; then
+                selected_groups_list="$selected_groups_list,$group"
+            else
+                selected_groups_list="$group"
+            fi
+        fi
+    done
+
+    echo "selected-groups=$selected_groups_list"
     echo "test-dirs=$test_dirs"
     if [ "$output_format" = "include" ]; then
         echo "matrix={\"include\":[$matrix_output]}"
@@ -153,6 +183,7 @@ generate_test_matrix() {
     fi
     echo "has-changes=$has_changes"
 
+    echo "Selected groups: $selected_groups_list"
     echo "Final test directories: $test_dirs"
     echo "Matrix output: $matrix_output"
 }
