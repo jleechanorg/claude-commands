@@ -54,7 +54,7 @@ class ClaudeCommandsExporter:
             'converge.md', 'converge.py', 'orchc.md', 'orchc.py',          # orchestration commands to exclude
             'conv.md', 'orchconverge.md',                                   # additional orchestration exclusions
             'copilotc.md', 'fixprc.md',                                     # new autonomous composition commands
-            'pgen.md', 'pgene.md', 'proto_genesis.md'                      # proto genesis commands (project-specific)
+            'gen.md', 'gene.md', 'pgen.md', 'pgene.md', 'proto_genesis.md' # proto genesis commands (project-specific)
         ]
 
         # Counters for summary
