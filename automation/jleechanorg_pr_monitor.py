@@ -262,7 +262,9 @@ class JleechanorgPRMonitor:
         try:
             # Use the existing comment posting method
             repo_full_name = pr_data.get('repositoryFullName', f"jleechanorg/{repo_name}")
-            return self.post_codex_instruction_simple(repo_full_name, pr_number, pr_data)
+            result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr_data)
+            # Return True only if comment was actually posted
+            return result == "posted"
         except Exception as e:
             self.logger.error(f"Error processing comment for PR {repo_name}#{pr_number}: {e}")
             return False
@@ -422,7 +424,7 @@ class JleechanorgPRMonitor:
 
         return None
 
-    def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: Dict) -> bool:
+    def post_codex_instruction_simple(self, repository: str, pr_number: int, pr_data: Dict) -> str:
         """Post codex instruction comment to PR"""
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"💬 Requesting Codex support for {repo_full} PR #{pr_number}")
@@ -441,14 +443,15 @@ class JleechanorgPRMonitor:
         else:
             # Check if we should skip this PR based on commit-based tracking
             if self._should_skip_pr(repo_name, branch_name, pr_number, head_sha):
-                return True
+                self.logger.info(f"⏭️ Skipping PR #{pr_number} - already processed this commit")
+                return "skipped"
 
             if self._has_codex_comment_for_commit(comments, head_sha):
                 self.logger.info(
                     f"♻️ Codex instruction already posted for commit {head_sha[:8]} on PR #{pr_number}, skipping"
                 )
                 self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
-                return True
+                return "skipped"
 
         # Build comment body that tells Codex to fix PR comments and failing tests
         comment_body = self._build_codex_comment_body_simple(repo_full, pr_number, pr_data, head_sha, comments)
@@ -469,14 +472,14 @@ class JleechanorgPRMonitor:
             if head_sha:
                 self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
 
-            return True
+            return "posted"
 
         except subprocess.CalledProcessError as e:
             self.logger.error(f"❌ Failed to post comment on PR #{pr_number}: {e.stderr}")
-            return False
+            return "failed"
         except Exception as e:
             self.logger.error(f"💥 Unexpected error posting comment: {e}")
-            return False
+            return "failed"
 
 
 
@@ -662,7 +665,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 self.logger.info(f"📝 Found PR: {pr_data['title']}")
 
                 # Post codex instruction comment
-                success = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
+                comment_result = self.post_codex_instruction_simple(repo_full, pr_number, pr_data)
+                success = comment_result == "posted"
 
                 # Record PR processing attempt with result
                 result = "success" if success else "failure"
@@ -743,7 +747,8 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             try:
                 # Post codex instruction comment directly (comment-only approach)
-                success = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
+                comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
+                success = comment_result == "posted"
 
                 result = "success" if success else "failure"
                 self.safety_manager.record_pr_attempt(

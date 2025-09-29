@@ -12,6 +12,7 @@ import sys
 import os
 import unittest
 import tempfile
+import subprocess
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
@@ -298,6 +299,109 @@ class TestPRFilteringMatrix(unittest.TestCase):
             # All returned PRs should be actionable
             for pr in eligible_prs:
                 self.assertTrue(self.monitor.is_pr_actionable(pr))
+
+    # Matrix 5: Comment Posting Return Values (Bug Fix Tests)
+    def test_comment_posting_returns_posted_on_success(self):
+        """GREEN: Comment posting should return 'posted' when successful"""
+        with patch.object(self.monitor, '_get_pr_comment_state') as mock_state, \
+             patch.object(self.monitor, '_should_skip_pr') as mock_skip, \
+             patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment, \
+             patch.object(self.monitor, '_build_codex_comment_body_simple') as mock_build_body, \
+             patch.object(self.monitor, '_record_processed_pr') as mock_record, \
+             patch('automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
+
+            # Setup: PR not skipped, no existing comment, successful command
+            mock_state.return_value = ('sha123', [])
+            mock_skip.return_value = False
+            mock_has_comment.return_value = False
+            mock_build_body.return_value = 'Test comment body'
+            mock_subprocess.return_value = Mock(returncode=0, stdout='success', stderr='')
+
+            pr_data = {
+                'repositoryFullName': 'org/repo',
+                'headRefName': 'feature'
+            }
+
+            result = self.monitor.post_codex_instruction_simple('org/repo', 123, pr_data)
+            self.assertEqual(result, 'posted')
+            mock_record.assert_called_once()
+
+    def test_comment_posting_returns_skipped_when_already_processed(self):
+        """GREEN: Comment posting should return 'skipped' when PR already processed"""
+        with patch.object(self.monitor, '_get_pr_comment_state') as mock_state, \
+             patch.object(self.monitor, '_should_skip_pr') as mock_skip:
+
+            # Setup: PR should be skipped
+            mock_state.return_value = ('sha123', [])
+            mock_skip.return_value = True
+
+            pr_data = {
+                'repositoryFullName': 'org/repo',
+                'headRefName': 'feature'
+            }
+
+            result = self.monitor.post_codex_instruction_simple('org/repo', 123, pr_data)
+            self.assertEqual(result, 'skipped')
+
+    def test_comment_posting_returns_skipped_when_comment_exists(self):
+        """GREEN: Comment posting should return 'skipped' when comment already exists for commit"""
+        with patch.object(self.monitor, '_get_pr_comment_state') as mock_state, \
+             patch.object(self.monitor, '_should_skip_pr') as mock_skip, \
+             patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment:
+
+            # Setup: PR not skipped but has existing comment
+            mock_state.return_value = ('sha123', [])
+            mock_skip.return_value = False
+            mock_has_comment.return_value = True
+
+            pr_data = {
+                'repositoryFullName': 'org/repo',
+                'headRefName': 'feature'
+            }
+
+            result = self.monitor.post_codex_instruction_simple('org/repo', 123, pr_data)
+            self.assertEqual(result, 'skipped')
+
+    def test_comment_posting_returns_failed_on_subprocess_error(self):
+        """GREEN: Comment posting should return 'failed' when subprocess fails"""
+        with patch.object(self.monitor, '_get_pr_comment_state') as mock_state, \
+             patch.object(self.monitor, '_should_skip_pr') as mock_skip, \
+             patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment, \
+             patch.object(self.monitor, '_build_codex_comment_body_simple') as mock_build_body, \
+             patch('automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
+
+            # Setup: PR not skipped, no existing comment, but command fails
+            mock_state.return_value = ('sha123', [])
+            mock_skip.return_value = False
+            mock_has_comment.return_value = False
+            mock_build_body.return_value = 'Test comment body'
+            mock_subprocess.side_effect = Exception('Command failed')
+
+            pr_data = {
+                'repositoryFullName': 'org/repo',
+                'headRefName': 'feature'
+            }
+
+            result = self.monitor.post_codex_instruction_simple('org/repo', 123, pr_data)
+            self.assertEqual(result, 'failed')
+
+    def test_process_pr_comment_only_returns_true_for_posted(self):
+        """GREEN: _process_pr_comment should only return True when comment actually posted"""
+        with patch.object(self.monitor, 'post_codex_instruction_simple') as mock_post:
+
+            pr_data = {'repositoryFullName': 'org/repo'}
+
+            # Test: Returns True only for 'posted'
+            mock_post.return_value = 'posted'
+            self.assertTrue(self.monitor._process_pr_comment('repo', 123, pr_data))
+
+            # Test: Returns False for 'skipped'
+            mock_post.return_value = 'skipped'
+            self.assertFalse(self.monitor._process_pr_comment('repo', 123, pr_data))
+
+            # Test: Returns False for 'failed'
+            mock_post.return_value = 'failed'
+            self.assertFalse(self.monitor._process_pr_comment('repo', 123, pr_data))
 
 
 if __name__ == '__main__':
