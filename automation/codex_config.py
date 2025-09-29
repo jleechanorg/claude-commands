@@ -24,9 +24,13 @@ CODEX_COMMIT_MARKER_SUFFIX = "-->"
 def normalise_handle(assistant_handle: str | None) -> str:
     """Return a sanitized assistant handle without a leading '@'."""
 
-    if not assistant_handle:
+    if assistant_handle is None:
         return DEFAULT_ASSISTANT_HANDLE
-    return assistant_handle.lstrip("@") or DEFAULT_ASSISTANT_HANDLE
+
+    # Treat an empty string as "unspecified" so we fall back to the default
+    # handle rather than emitting a bare "@" mention in comments.
+    cleaned = assistant_handle.lstrip("@")
+    return cleaned or DEFAULT_ASSISTANT_HANDLE
 
 
 def build_default_comment(assistant_handle: str | None = None) -> str:

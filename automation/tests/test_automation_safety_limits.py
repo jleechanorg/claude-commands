@@ -35,6 +35,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.global_runs_file = os.path.join(self.test_dir, "global_runs.json")
         self.approval_file = os.path.join(self.test_dir, "manual_approval.json")
 
+        if hasattr(self, '_automation_manager'):
+            del self._automation_manager
+
         # Initialize empty tracking files
         with open(self.pr_attempts_file, 'w') as f:
             json.dump({}, f)
@@ -279,10 +282,10 @@ class TestAutomationSafetyLimits(unittest.TestCase):
 class TestAutomationIntegration(unittest.TestCase):
     """Integration tests with existing simple_pr_batch.sh script"""
 
-    PLIST_PATH = "/Users/jleechan/Library/LaunchAgents/com.worldarchitect.pr-automation.plist"
-
     def setUp(self):
-        plist_dir = Path(self.PLIST_PATH).parent
+        self.launchd_root = Path(tempfile.mkdtemp(prefix="launchd-plist-"))
+        self.plist_path = self.launchd_root / "com.worldarchitect.pr-automation.plist"
+        plist_dir = self.plist_path.parent
         plist_dir.mkdir(parents=True, exist_ok=True)
         plist_dir.chmod(0o755)
         plist_content = """<?xml version="1.0" encoding="UTF-8"?>
@@ -296,8 +299,11 @@ class TestAutomationIntegration(unittest.TestCase):
 </dict>
 </plist>
 """
-        with open(self.PLIST_PATH, "w", encoding="utf-8") as plist_file:
+        with open(self.plist_path, "w", encoding="utf-8") as plist_file:
             plist_file.write(plist_content)
+
+    def tearDown(self):
+        shutil.rmtree(self.launchd_root, ignore_errors=True)
 
     def test_shell_script_respects_safety_limits(self):
         """RED: Shell script should check safety limits before processing"""
@@ -328,7 +334,7 @@ class TestAutomationIntegration(unittest.TestCase):
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
         # This will fail - plist doesn't exist yet
-        with open(self.PLIST_PATH, encoding="utf-8") as f:
+        with open(self.plist_path, encoding="utf-8") as f:
             return f.read()
 
 

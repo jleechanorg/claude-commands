@@ -79,6 +79,14 @@ def main() -> int:
         env['AUTOMATION_SAFETY_DATA_DIR'] = str(data_dir)
         env['AUTOMATION_SAFETY_WRAPPER'] = '1'
 
+        # Record the global run *before* launching the monitor so the attempt
+        # is counted even if the subprocess fails to start or exits early.
+        manager.record_global_run()
+        logger.info(
+            f"📊 Recorded global run {manager.get_global_runs()}/"
+            f"{manager.global_limit} prior to monitor execution"
+        )
+
         result = subprocess.run(
             ['python3', str(automation_script)],
             env=env,
@@ -88,8 +96,6 @@ def main() -> int:
             shell=False,
         )  # 1 hour timeout
 
-        # Record global run for safety tracking (CRITICAL FIX)
-        manager.record_global_run()
         global_runs_after = manager.get_global_runs()
         logger.info(f"📊 Global runs after execution: {global_runs_after}/{manager.global_limit}")
 

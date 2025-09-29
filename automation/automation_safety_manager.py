@@ -12,8 +12,6 @@ Minimal implementation to pass the RED phase tests with:
 
 import argparse
 import fcntl
-import importlib
-import importlib.util
 import json
 import logging
 import os
@@ -24,16 +22,18 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional
+import keyring
 
 # Import shared utilities
 from utils import (
-    json_manager, setup_logging, get_email_config,
-    validate_email_config, get_automation_limits,
-    format_timestamp, parse_timestamp
+    json_manager,
+    setup_logging,
+    get_email_config,
+    validate_email_config,
+    get_automation_limits,
+    format_timestamp,
+    parse_timestamp,
 )
-
-_keyring_spec = importlib.util.find_spec("keyring")
-keyring = importlib.import_module("keyring") if _keyring_spec else None
 
 
 class AutomationSafetyManager:
@@ -114,9 +114,8 @@ class AutomationSafetyManager:
     def _load_state_from_files(self):
         """Load state from files into memory cache"""
         with self.lock:
-            # Load PR attempts - keep all string keys as-is
             pr_data = self._read_json_file(self.pr_attempts_file)
-            self._pr_attempts_cache = pr_data.copy()
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(pr_data)
 
             # Load global runs
             global_data = self._read_json_file(self.global_runs_file)
@@ -125,7 +124,7 @@ class AutomationSafetyManager:
     def _sync_state_to_files(self):
         """Sync in-memory state to files"""
         with self.lock:
-            # Sync PR attempts - keys are already strings
+            # Sync PR attempts - keys already normalized
             self._write_json_file(self.pr_attempts_file, self._pr_attempts_cache)
 
             # Sync global runs
@@ -133,15 +132,58 @@ class AutomationSafetyManager:
             global_data["total_runs"] = self._global_runs_cache
             self._write_json_file(self.global_runs_file, global_data)
 
-    def _make_pr_key(self, pr_number: int, repo: str = None, branch: str = None) -> str:
-        """Create a standardized key for PR attempts tracking"""
-        components = []
-        if repo:
-            components.append(str(repo))
-        components.append(str(pr_number))
-        if branch:
-            components.append(str(branch))
-        return "::".join(components)
+    def _make_pr_key(
+        self,
+        pr_number: int | str,
+        repo: Optional[str] = None,
+        branch: Optional[str] = None,
+    ) -> str:
+        """Create a labeled key for PR attempt tracking."""
+
+        repo_part = f"r={repo or ''}"
+        pr_part = f"p={str(pr_number)}"
+        branch_part = f"b={branch or ''}"
+        return "||".join((repo_part, pr_part, branch_part))
+
+    def _normalize_pr_attempt_keys(self, raw_data: Dict) -> Dict[str, list]:
+        """Normalize legacy PR attempt keys to the labeled format."""
+
+        normalized: Dict[str, list] = {}
+
+        for key, value in (raw_data or {}).items():
+            if not isinstance(value, list):
+                # Older versions stored counts; coerce to list of failures
+                try:
+                    count = int(value)
+                    value = [{"result": "failure"}] * count
+                except (TypeError, ValueError):
+                    value = []
+
+            if isinstance(key, str) and "||p=" in key:
+                normalized[key] = value
+                continue
+
+            repo = None
+            branch = None
+            pr_number: str | int = ""
+
+            if isinstance(key, str):
+                parts = key.split("::")
+                if len(parts) == 1:
+                    pr_number = parts[0]
+                elif len(parts) == 2:
+                    repo, pr_number = parts
+                elif len(parts) >= 3:
+                    repo, pr_number, branch = parts[0], parts[1], parts[2]
+                else:
+                    pr_number = key
+            else:
+                pr_number = key
+
+            normalized_key = self._make_pr_key(pr_number, repo, branch)
+            normalized[normalized_key] = value
+
+        return normalized
 
     def _read_json_file(self, file_path: str) -> dict:
         """Safely read JSON file using shared utility"""
@@ -158,24 +200,32 @@ class AutomationSafetyManager:
     def can_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
         with self.lock:
+            raw_data = self._read_json_file(self.pr_attempts_file)
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
+
             pr_key = self._make_pr_key(pr_number, repo, branch)
-            attempts = self._pr_attempts_cache.get(pr_key, [])
+            attempts = list(self._pr_attempts_cache.get(pr_key, []))
 
             # Check total attempts limit
-            total_attempts = len(attempts)
-            if total_attempts >= self.pr_limit:
+            if len(attempts) >= self.pr_limit:
                 return False
 
-            # Check consecutive failures limit
-            consecutive_failures = self.get_pr_attempts(pr_number, repo, branch)
-            if consecutive_failures >= self.pr_limit:
-                return False
+            # Count consecutive failures from latest attempts
+            consecutive_failures = 0
+            for attempt in reversed(attempts):
+                if attempt.get("result") == "failure":
+                    consecutive_failures += 1
+                else:
+                    break
 
-            return True
+            return consecutive_failures < self.pr_limit
 
     def try_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
         """Atomically check if PR can be processed without mutating state."""
         with self.lock:
+            raw_data = self._read_json_file(self.pr_attempts_file)
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
+
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = len(self._pr_attempts_cache.get(pr_key, []))
             inflight = self._pr_inflight_cache.get(pr_key, 0)
@@ -187,25 +237,25 @@ class AutomationSafetyManager:
             return True
 
     def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None):
-        """Get count of consecutive failures for a specific PR (for backward compatibility)"""
+        """Get count of consecutive failures for a specific PR."""
         with self.lock:
-            # Use get_pr_attempt_list which already reloads from disk
-            attempts = self.get_pr_attempt_list(pr_number, repo, branch)
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            attempts = list(self._pr_attempts_cache.get(pr_key, []))
 
-            # Count consecutive failures from the end
             failure_count = 0
             for attempt in reversed(attempts):
-                if attempt["result"] == "failure":
+                if attempt.get("result") == "failure":
                     failure_count += 1
                 else:
-                    break  # Stop at first success
+                    break
             return failure_count
 
     def get_pr_attempt_list(self, pr_number: int, repo: str = None, branch: str = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
         with self.lock:
             # Reload from disk to ensure consistency across multiple managers
-            self._pr_attempts_cache = self._read_json_file(self.pr_attempts_file)
+            raw_data = self._read_json_file(self.pr_attempts_file)
+            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
             pr_key = self._make_pr_key(pr_number, repo, branch)
             return self._pr_attempts_cache.get(pr_key, [])
 
@@ -293,7 +343,10 @@ class AutomationSafetyManager:
             if not approval_date_str:
                 return False
 
-            approval_date = datetime.fromisoformat(approval_date_str)
+            try:
+                approval_date = datetime.fromisoformat(approval_date_str)
+            except (TypeError, ValueError):
+                return False
             approval_hours = get_automation_limits()['approval_hours']
             expiry = approval_date + timedelta(hours=approval_hours)
 
@@ -352,17 +405,16 @@ class AutomationSafetyManager:
         username = None
         password = None
 
-        if keyring is not None:
-            try:
-                username = keyring.get_password("worldarchitect-automation", "smtp_username")
-                password = keyring.get_password("worldarchitect-automation", "smtp_password")
-            except Exception:
-                username = None
-                password = None
+        try:
+            username = keyring.get_password("worldarchitect-automation", "smtp_username")
+            password = keyring.get_password("worldarchitect-automation", "smtp_password")
+        except Exception:
+            username = None
+            password = None
 
-        if not username:
+        if username is None:
             username = os.environ.get('SMTP_USERNAME')
-        if not password:
+        if password is None:
             password = os.environ.get('SMTP_PASSWORD')
 
         return username, password
@@ -402,8 +454,11 @@ This is an automated notification from the WorldArchitect.AI automation system.
             # Connect and send email
             server = smtplib.SMTP(smtp_server, smtp_port)
             try:
+                server.ehlo()
                 server.starttls()
-                server.login(username, password)
+                server.ehlo()
+                if username and password:
+                    server.login(username, password)
                 server.send_message(msg)
             finally:
                 server.quit()
@@ -499,6 +554,10 @@ def main():
                         help='Check if PR can be processed')
     parser.add_argument('--record-pr', nargs=2, metavar=('PR_NUMBER', 'RESULT'),
                         help='Record PR attempt (result: success|failure)')
+    parser.add_argument('--repo', type=str,
+                        help='Repository name (owner/repo) for PR attempt operations')
+    parser.add_argument('--branch', type=str,
+                        help='Branch name for PR attempt tracking')
     parser.add_argument('--check-global', action='store_true',
                         help='Check if global run can start')
     parser.add_argument('--record-global', action='store_true',
@@ -516,15 +575,24 @@ def main():
     manager = AutomationSafetyManager(args.data_dir)
 
     if args.check_pr:
-        can_process = manager.can_process_pr(args.check_pr)
-        attempts = manager.get_pr_attempts(args.check_pr)
-        print(f"PR #{args.check_pr}: {'ALLOWED' if can_process else 'BLOCKED'} ({attempts}/{manager.pr_limit} attempts)")
+        can_process = manager.can_process_pr(args.check_pr, repo=args.repo, branch=args.branch)
+        attempts = manager.get_pr_attempts(args.check_pr, repo=args.repo, branch=args.branch)
+        repo_label = f" ({args.repo})" if args.repo else ""
+        branch_label = f" [{args.branch}]" if args.branch else ""
+        print(
+            f"PR #{args.check_pr}{repo_label}{branch_label}: "
+            f"{'ALLOWED' if can_process else 'BLOCKED'} ({attempts}/{manager.pr_limit} attempts)"
+        )
         exit(0 if can_process else 1)
 
     elif args.record_pr:
         pr_number, result = args.record_pr
-        manager.record_pr_attempt(int(pr_number), result)
-        print(f"Recorded {result} for PR #{pr_number}")
+        manager.record_pr_attempt(int(pr_number), result, repo=args.repo, branch=args.branch)
+        print(
+            f"Recorded {result} for PR #{pr_number}"
+            f"{' in ' + args.repo if args.repo else ''}"
+            f"{' [' + args.branch + ']' if args.branch else ''}"
+        )
 
     elif args.check_global:
         can_start = manager.can_start_global_run()
@@ -557,7 +625,28 @@ def main():
             for pr_key, attempts in pr_data.items():
                 count = len(attempts) if isinstance(attempts, list) else int(attempts or 0)
                 status = "BLOCKED" if count >= manager.pr_limit else "OK"
-                print(f"  PR {pr_key}: {count}/{manager.pr_limit} ({status})")
+
+                repo_label = ""
+                branch_label = ""
+                pr_label = pr_key
+
+                if "||" in pr_key:
+                    segments = {}
+                    for segment in pr_key.split("||"):
+                        if "=" in segment:
+                            k, v = segment.split("=", 1)
+                            segments[k] = v
+                    repo_label = segments.get("r", "")
+                    pr_label = segments.get("p", pr_label)
+                    branch_label = segments.get("b", "")
+
+                display = f"PR #{pr_label}"
+                if repo_label:
+                    display += f" ({repo_label})"
+                if branch_label:
+                    display += f" [{branch_label}]"
+
+                print(f"  {display}: {count}/{manager.pr_limit} ({status})")
         else:
             print("No PR attempts recorded")
 
