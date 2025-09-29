@@ -11,7 +11,7 @@ import os
 import time
 import threading
 from collections import deque
-from typing import List, Dict, Optional, Pattern
+from typing import List, Dict, Optional, Pattern, Any
 from dataclasses import dataclass
 
 @dataclass
@@ -59,7 +59,7 @@ class Config:
     # Threshold for aggressive trimming (lines)
     AGGRESSIVE_TRIM_THRESHOLD = 100
     # Default max lines for fast trim
-    FAST_TRIM_MAX_LINES = 75
+    FAST_TRIM_MAX_LINES = 50
     # First N lines to keep in fast trim
     FAST_TRIM_KEEP_FIRST = 25
     # Last N lines to keep in fast trim
@@ -72,6 +72,8 @@ class Config:
     MAX_STATS_ENTRIES = 1000
     # Stats reset threshold
     STATS_RESET_THRESHOLD = 10000
+    # Argument length limit to prevent DoS
+    ARG_LENGTH_LIMIT = 1000
 
 class OptimizedCommandOutputTrimmer:
     # Pre-compiled regex patterns for performance
@@ -151,13 +153,65 @@ class OptimizedCommandOutputTrimmer:
                     with open(settings_path, 'r') as f:
                         settings = json.load(f)
                         if 'output_trimmer' in settings:
-                            default_config.update(settings['output_trimmer'])
-            except Exception:
+                            user_config = settings['output_trimmer']
+                            # Validate config for solo dev debugging efficiency
+                            validated_config = self._validate_config(user_config, settings_path)
+                            default_config.update(validated_config)
+            except FileNotFoundError:
+                # Settings file doesn't exist - use defaults (normal case)
                 pass
+            except json.JSONDecodeError as e:
+                # Malformed JSON - help solo dev debug quickly
+                sys.stderr.write(f"⚠️ CONFIG ERROR: {settings_path} has invalid JSON at line {e.lineno}: {e.msg}\n")
+                sys.stderr.write("Using default configuration. Fix JSON syntax to customize output trimmer.\n")
+            except Exception as e:
+                # Other errors - provide helpful context for debugging
+                sys.stderr.write(f"⚠️ CONFIG WARNING: Error loading {settings_path}: {e}\n")
+                sys.stderr.write("Using default configuration. Check file permissions and format.\n")
 
             OptimizedCommandOutputTrimmer._config = default_config
 
         return OptimizedCommandOutputTrimmer._config
+
+    def _validate_config(self, user_config: dict, settings_path: str) -> dict:
+        """Validate user configuration with helpful error messages for solo dev debugging"""
+        validated = {}
+
+        # Define expected types for key config values
+        expected_types = {
+            'enabled': bool,
+            'compression_threshold': (int, float),
+            'log_statistics': bool,
+            'preserve_errors': bool,
+            'max_output_lines': int,
+            'performance_mode': bool
+        }
+
+        for key, value in user_config.items():
+            if key in expected_types:
+                expected_type = expected_types[key]
+                # Handle both single type and tuple of types
+                if isinstance(expected_type, tuple):
+                    if not isinstance(value, expected_type):
+                        sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {' or '.join(t.__name__ for t in expected_type)}, got {type(value).__name__}. Using default.\n")
+                        continue
+                else:
+                    if not isinstance(value, expected_type):
+                        sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {expected_type.__name__}, got {type(value).__name__}. Using default.\n")
+                        continue
+
+                # Additional validation for specific keys
+                if key == 'compression_threshold' and not (0.0 <= value <= 1.0):
+                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'compression_threshold' should be between 0.0 and 1.0, got {value}. Using default.\n")
+                    continue
+                elif key == 'max_output_lines' and value < 1:
+                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'max_output_lines' should be positive, got {value}. Using default.\n")
+                    continue
+
+            # Accept the validated value
+            validated[key] = value
+
+        return validated
 
     def detect_command_type(self, output: str) -> Optional[str]:
         """Detect command type using pre-compiled patterns"""
@@ -170,7 +224,7 @@ class OptimizedCommandOutputTrimmer:
         return 'generic'
 
     def fast_trim(self, lines: List[str], max_lines: int = None) -> List[str]:
-        """Ultra-fast generic trimming for performance mode"""
+        """Ultra-fast generic trimming with intelligent middle summarization"""
         if max_lines is None:
             max_lines = Config.FAST_TRIM_MAX_LINES
 
@@ -180,9 +234,116 @@ class OptimizedCommandOutputTrimmer:
         # Keep first N and last M lines based on config
         keep_total = Config.FAST_TRIM_KEEP_FIRST + Config.FAST_TRIM_KEEP_LAST
         trimmed = lines[:Config.FAST_TRIM_KEEP_FIRST]
-        trimmed.append(f"\n... [{len(lines) - keep_total} lines trimmed] ...\n")
+
+        # Summarize the middle section instead of just excluding it
+        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST:-Config.FAST_TRIM_KEEP_LAST]
+        summary = self._summarize_middle_content(middle_lines)
+        trimmed.extend(summary)
+
         trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
         return trimmed
+
+    def _summarize_middle_content(self, middle_lines: List[str], max_summary_lines: int = 25) -> List[str]:
+        """
+        Create an intelligent summary of middle content with bounded memory usage.
+        Extracts key patterns, errors, URLs, and important information.
+
+        Args:
+            middle_lines: Lines to summarize
+            max_summary_lines: Maximum lines in summary to prevent unbounded growth
+        """
+        if not middle_lines:
+            return []
+
+        summary_lines = []
+        summary_lines.append(f"\n... [SUMMARY of {len(middle_lines)} middle lines] ...")
+
+        # Extract important patterns from middle content with collection limits
+        MAX_COLLECTED_ITEMS = 10  # Prevent memory exhaustion
+        errors = []
+        urls = []
+        important_info = []
+        status_updates = []
+
+        for line in middle_lines:
+            line_stripped = line.strip()
+            if not line_stripped:
+                continue
+
+            # Limit line length to prevent individual long lines from causing issues
+            if len(line_stripped) > 200:
+                line_stripped = line_stripped[:200] + "..."
+
+            # Collect errors and warnings (with limit)
+            if len(errors) < MAX_COLLECTED_ITEMS and any(pattern in line.upper() for pattern in ['ERROR', 'FAILED', 'EXCEPTION', 'WARNING']):
+                errors.append(line_stripped)
+
+            # Collect URLs (with limit)
+            if len(urls) < MAX_COLLECTED_ITEMS and 'http' in line and ('://' in line):
+                urls.append(line_stripped)
+
+            # Collect status indicators (with limit)
+            if len(status_updates) < MAX_COLLECTED_ITEMS and any(pattern in line for pattern in ['✅', '❌', '🔄', 'PASSED', 'SUCCESS', 'COMPLETED']):
+                status_updates.append(line_stripped)
+
+            # Collect PR/commit references (with limit)
+            if len(important_info) < MAX_COLLECTED_ITEMS and any(pattern in line for pattern in ['PR #', 'commit', 'merge', 'branch']):
+                important_info.append(line_stripped)
+
+        # Add collected information to summary (limit each category)
+        if errors:
+            summary_lines.append("  Errors/Warnings found:")
+            for error in errors[:3]:  # Limit to first 3 errors
+                summary_lines.append(f"    • {error}")
+            if len(errors) > 3:
+                summary_lines.append(f"    ... and {len(errors) - 3} more errors")
+
+        if urls:
+            summary_lines.append("  URLs found:")
+            for url in urls[:2]:  # Limit to first 2 URLs
+                summary_lines.append(f"    • {url}")
+            if len(urls) > 2:
+                summary_lines.append(f"    ... and {len(urls) - 2} more URLs")
+
+        if status_updates:
+            summary_lines.append("  Status updates:")
+            for status in status_updates[:5]:  # Limit to first 5 status updates
+                summary_lines.append(f"    • {status}")
+            if len(status_updates) > 5:
+                summary_lines.append(f"    ... and {len(status_updates) - 5} more status updates")
+
+        if important_info:
+            summary_lines.append("  Important references:")
+            for info in important_info[:3]:  # Limit to first 3 references
+                summary_lines.append(f"    • {info}")
+            if len(important_info) > 3:
+                summary_lines.append(f"    ... and {len(important_info) - 3} more references")
+
+        # If no important patterns found, show basic stats
+        if not (errors or urls or status_updates or important_info):
+            # Count unique line patterns
+            unique_patterns = set()
+            for line in middle_lines[:20]:  # Sample first 20 lines
+                # Extract first few words as pattern
+                words = line.strip().split()[:3]
+                if words:
+                    pattern = ' '.join(words)
+                    unique_patterns.add(pattern)
+
+            summary_lines.append(f"  Content types found: {len(unique_patterns)} different patterns")
+            if unique_patterns:
+                summary_lines.append("  Sample patterns:")
+                for pattern in list(unique_patterns)[:3]:
+                    summary_lines.append(f"    • {pattern}...")
+
+        summary_lines.append("... [END SUMMARY] ...\n")
+
+        # Cap summary length to prevent unbounded growth
+        if max_summary_lines > 0 and len(summary_lines) > max_summary_lines:
+            summary_lines = summary_lines[:max_summary_lines - 1]
+            summary_lines.append("... [SUMMARY TRUNCATED] ...\n")
+
+        return summary_lines
 
     def _should_bypass(self, output: str) -> bool:
         """Determine if trimming should be skipped entirely."""
@@ -327,13 +488,18 @@ class OptimizedCommandOutputTrimmer:
         self.stats_summary['total_trimmed'] += trimmed_count
         self.stats_summary['count'] += 1
 
+        # Calculate and update saved lines
+        lines_saved = original_count - trimmed_count
+        if lines_saved > 0:
+            self.stats_summary['total_saved'] += lines_saved
+
         # Reset summary periodically to prevent unbounded growth
         if self.stats_summary['count'] > Config.STATS_RESET_THRESHOLD:
             self.stats_summary = {
                 'total_original': 0,
                 'total_trimmed': 0,
                 'count': 0,
-                'total_saved': self.stats_summary.get('total_saved', 0)
+                'total_saved': 0
             }
 
     def trim_test_output(self, lines: List[str]) -> List[str]:
@@ -412,26 +578,91 @@ class OptimizedCommandOutputTrimmer:
         Returns:
             A tuple containing the compressed output string and CompressionStats object
         """
-        original_line_count = len(output.splitlines())
         compressed_output = self.process_output(output)
-        compressed_line_count = len(compressed_output.splitlines())
 
-        # Calculate bytes saved
-        original_bytes = len(output.encode('utf-8'))
-        compressed_bytes = len(compressed_output.encode('utf-8'))
-        bytes_saved = original_bytes - compressed_bytes
-
-        # Calculate compression ratio
-        compression_ratio = 1 - (compressed_bytes / original_bytes) if original_bytes > 0 else 0.0
-
-        stats = CompressionStats(
-            original_lines=original_line_count,
-            compressed_lines=compressed_line_count,
-            bytes_saved=bytes_saved,
-            compression_ratio=compression_ratio
+        stats = CompressionStats.from_compression(
+            original_output=output,
+            compressed_output=compressed_output
         )
 
         return compressed_output, stats
+
+    def trim_args(self, args: Any) -> Any:
+        """
+        Trim argument length to prevent DoS attacks with proper type preservation and recursion.
+        Implements simple length-only trimming without security filtering.
+
+        Args:
+            args: Arguments to sanitize (can be list, string, or other types)
+
+        Returns:
+            Sanitized arguments with length limits applied and types preserved
+        """
+        # Defensive programming: validate input types and handle edge cases
+        if args is None:
+            return None
+
+        if isinstance(args, list):
+            trimmed_list = []
+            for arg in args:
+                # Recurse into nested structures
+                if isinstance(arg, (list, dict)):
+                    trimmed_list.append(self.trim_args(arg))
+                else:
+                    arg_str = str(arg)
+                    if len(arg_str) > Config.ARG_LENGTH_LIMIT:
+                        # Only convert to string if it exceeds the limit
+                        trimmed_list.append(arg_str[:Config.ARG_LENGTH_LIMIT])
+                    else:
+                        # Preserve original type and value if under limit
+                        trimmed_list.append(arg)
+            return trimmed_list
+        elif isinstance(args, str):
+            if len(args) > Config.ARG_LENGTH_LIMIT:
+                return args[:Config.ARG_LENGTH_LIMIT]
+            return args
+        elif isinstance(args, dict):
+            trimmed_dict = {}
+            collision_counter = {}
+
+            for key, value in args.items():
+                # Handle nested structures in values
+                if isinstance(value, (list, dict)):
+                    final_value = self.trim_args(value)
+                else:
+                    value_str = str(value)
+                    final_value = value_str[:Config.ARG_LENGTH_LIMIT] if len(value_str) > Config.ARG_LENGTH_LIMIT else value
+
+                # Handle keys with collision protection and length validation
+                key_str = str(key)
+                if len(key_str) > Config.ARG_LENGTH_LIMIT:
+                    base_key = key_str[:Config.ARG_LENGTH_LIMIT]
+
+                    # Check for key collisions and handle them with length validation
+                    if base_key in trimmed_dict or base_key in collision_counter:
+                        collision_counter[base_key] = collision_counter.get(base_key, 0) + 1
+                        # Create collision suffix and ensure total length doesn't exceed limit
+                        suffix = f"__dup{collision_counter[base_key]}"
+                        if len(base_key) + len(suffix) > Config.ARG_LENGTH_LIMIT:
+                            # Truncate base_key to fit suffix within limit
+                            max_base_length = Config.ARG_LENGTH_LIMIT - len(suffix)
+                            final_key = base_key[:max_base_length] + suffix
+                        else:
+                            final_key = base_key + suffix
+                    else:
+                        final_key = base_key
+                        collision_counter[base_key] = 0
+                else:
+                    final_key = key
+
+                trimmed_dict[final_key] = final_value
+            return trimmed_dict
+        else:
+            # For other types (int, float, bool, etc.), preserve type unless string representation is too long
+            arg_str = str(args)
+            if len(arg_str) > Config.ARG_LENGTH_LIMIT:
+                return arg_str[:Config.ARG_LENGTH_LIMIT]
+            return args
 
     def process_command_output(self, output: str) -> str:
         """
@@ -532,26 +763,14 @@ class OptimizedCommandOutputTrimmer:
 
         # Preserve important patterns and first/last lines
         trimmed = []
-        important_patterns = ['ERROR:', 'https://', 'http://']
 
         # Keep first few lines
-        for i, line in enumerate(lines[:Config.FAST_TRIM_KEEP_FIRST]):
-            trimmed.append(line)
+        trimmed.extend(lines[:Config.FAST_TRIM_KEEP_FIRST])
 
-        # Keep lines with important patterns
-        for line in lines[Config.FAST_TRIM_KEEP_FIRST:-Config.FAST_TRIM_KEEP_LAST]:
-            if any(pattern in line for pattern in important_patterns):
-                trimmed.append(line)
-
-        # Add compression indicator
-        if len(lines) >= Config.FAST_TRIM_MAX_LINES:
-            suppressed = len(lines) - Config.FAST_TRIM_KEEP_FIRST - Config.FAST_TRIM_KEEP_LAST
-            # Count important lines we kept
-            kept_important = len([line for line in trimmed[Config.FAST_TRIM_KEEP_FIRST:]
-                                 if any(pattern in line for pattern in important_patterns)])
-            if kept_important > 0:
-                suppressed -= kept_important
-            trimmed.append(f"... [{suppressed} lines compressed] ...")
+        # Summarize middle content instead of just excluding it
+        middle_lines = lines[Config.FAST_TRIM_KEEP_FIRST:-Config.FAST_TRIM_KEEP_LAST]
+        summary = self._summarize_middle_content(middle_lines)
+        trimmed.extend(summary)
 
         # Keep last few lines
         trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
@@ -564,14 +783,17 @@ def main():
     try:
         trimmer = OptimizedCommandOutputTrimmer()
 
+        # Note: trim_args is for API function arguments, not command-line arguments
+        # Command-line arguments for this hook don't need sanitization
+
         # Read input with size limit to prevent DoS
         input_data = sys.stdin.read(Config.MAX_INPUT_SIZE)
 
         # Check if input was truncated
         if len(input_data) >= Config.MAX_INPUT_SIZE:
-            sys.stderr.write(f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} bytes, truncating\n")
+            sys.stderr.write(f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} characters, truncating\n")
 
-        # Process with timeout protection
+        # Process command output directly (trim_args is for function arguments, not output)
         trimmed_output = trimmer.process_output(input_data)
 
         # Write output

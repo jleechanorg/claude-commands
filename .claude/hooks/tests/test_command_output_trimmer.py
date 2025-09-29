@@ -256,8 +256,8 @@ class TestCommandOutputTrimmer(unittest.TestCase):
 
     def test_compress_generic_output_fallback(self):
         """Test generic compression fallback"""
-        # Create long generic output (more than FAST_TRIM_MAX_LINES=75)
-        generic_lines = [f"Line {i}: Some generic content" for i in range(80)]
+        # Create long generic output (>50 lines to trigger trimming)
+        generic_lines = [f"Line {i}: Some generic content" for i in range(75)]
         generic_lines[10] = "ERROR: Important error message"
         generic_lines[30] = "https://important-link.com"
 
@@ -271,9 +271,9 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         important_lines = [line for line in compressed if 'ERROR:' in line or 'https://' in line]
         self.assertTrue(len(important_lines) >= 2, "Should preserve important patterns")
 
-        # Should indicate compression
-        compression_indicator = [line for line in compressed if 'compressed' in line]
-        self.assertTrue(len(compression_indicator) >= 1, "Should indicate compression")
+        # Should indicate intelligent summarization
+        summary_indicator = [line for line in compressed if 'SUMMARY' in line or 'compressed' in line]
+        self.assertTrue(len(summary_indicator) >= 1, "Should indicate compression or summarization")
 
     def test_compression_stats_calculation(self):
         """Test compression statistics calculation"""
