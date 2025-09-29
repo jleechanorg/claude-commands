@@ -22,7 +22,14 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional
-import keyring
+
+# Optional keyring import for email functionality
+try:
+    import keyring
+    HAS_KEYRING = True
+except ImportError:
+    keyring = None
+    HAS_KEYRING = False
 
 # Import shared utilities
 from utils import (
@@ -405,10 +412,14 @@ class AutomationSafetyManager:
         username = None
         password = None
 
-        try:
-            username = keyring.get_password("worldarchitect-automation", "smtp_username")
-            password = keyring.get_password("worldarchitect-automation", "smtp_password")
-        except Exception:
+        if HAS_KEYRING:
+            try:
+                username = keyring.get_password("worldarchitect-automation", "smtp_username")
+                password = keyring.get_password("worldarchitect-automation", "smtp_password")
+            except Exception:
+                username = None
+                password = None
+        else:
             username = None
             password = None
 
