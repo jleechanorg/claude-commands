@@ -51,7 +51,7 @@ def main() -> int:
 
             if manager.requires_manual_approval() and not manager.has_manual_approval():
                 logger.error("❌ Manual approval required to continue automation")
-                logger.info("💡 To grant approval: python3 automation_safety_manager.py --approve user@example.com")
+                logger.info("💡 To grant approval: python3 automation_safety_manager.py --manual_override user@example.com")
 
                 # Send notification
                 manager.check_and_notify_limits()
@@ -87,6 +87,11 @@ def main() -> int:
             timeout=3600,
             shell=False,
         )  # 1 hour timeout
+
+        # Record global run for safety tracking (CRITICAL FIX)
+        manager.record_global_run()
+        global_runs_after = manager.get_global_runs()
+        logger.info(f"📊 Global runs after execution: {global_runs_after}/{manager.global_limit}")
 
         # Log results
         if result.returncode == 0:

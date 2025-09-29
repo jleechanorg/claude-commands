@@ -29,10 +29,12 @@ class SafeJSONManager:
 
     def _get_lock(self, file_path: str) -> threading.RLock:
         """Get or create a lock for a specific file"""
+        # Normalize path to prevent duplicate locks for same file
+        norm_path = os.path.abspath(file_path)
         with self._locks_lock:
-            if file_path not in self._locks:
-                self._locks[file_path] = threading.RLock()
-            return self._locks[file_path]
+            if norm_path not in self._locks:
+                self._locks[norm_path] = threading.RLock()
+            return self._locks[norm_path]
 
     def _get_file_lock_path(self, file_path: str) -> str:
         """Get file lock path for cross-process safety"""
@@ -62,12 +64,18 @@ class SafeJSONManager:
         lock = self._get_lock(file_path)
         with lock:
             try:
-                # Ensure directory exists
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
+                # Ensure directory exists (guard against empty dirname for root files)
+                directory = os.path.dirname(file_path)
+                if directory:
+                    os.makedirs(directory, exist_ok=True)
 
                 # Create temp file in same directory for atomic replace
-                dir_path = os.path.dirname(file_path)
-                fd, temp_path = tempfile.mkstemp(dir=dir_path, prefix=os.path.basename(file_path), suffix=".tmp")
+                dir_path = directory or "."
+                fd, temp_path = tempfile.mkstemp(
+                    dir=dir_path,
+                    prefix=os.path.basename(file_path),
+                    suffix=".tmp"
+                )
 
                 try:
                     with os.fdopen(fd, 'w') as f:
