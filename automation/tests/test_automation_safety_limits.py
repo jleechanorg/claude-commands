@@ -16,6 +16,7 @@ import json
 import shutil
 from datetime import datetime, timedelta
 from unittest.mock import patch, MagicMock
+from pathlib import Path
 
 # Add automation directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
@@ -33,6 +34,9 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.pr_attempts_file = os.path.join(self.test_dir, "pr_attempts.json")
         self.global_runs_file = os.path.join(self.test_dir, "global_runs.json")
         self.approval_file = os.path.join(self.test_dir, "manual_approval.json")
+
+        if hasattr(self, '_automation_manager'):
+            del self._automation_manager
 
         # Initialize empty tracking files
         with open(self.pr_attempts_file, 'w') as f:
@@ -150,6 +154,13 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertFalse(self.automation_manager.has_manual_approval())
 
     # Matrix 4: Email Notification System
+    @patch.dict(os.environ, {
+        'SMTP_SERVER': 'smtp.example.com',
+        'SMTP_PORT': '587',
+        'EMAIL_USER': 'test@example.com',
+        'EMAIL_PASS': 'testpass',
+        'EMAIL_TO': 'admin@example.com'
+    })
     @patch('smtplib.SMTP')
     def test_email_sent_when_pr_limit_reached(self, mock_smtp):
         """RED: Email should be sent when PR reaches 5 attempts"""
@@ -163,6 +174,13 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         # Verify email was sent
         mock_smtp.assert_called_once()
 
+    @patch.dict(os.environ, {
+        'SMTP_SERVER': 'smtp.example.com',
+        'SMTP_PORT': '587',
+        'EMAIL_USER': 'test@example.com',
+        'EMAIL_PASS': 'testpass',
+        'EMAIL_TO': 'admin@example.com'
+    })
     @patch('smtplib.SMTP')
     def test_email_sent_when_global_limit_reached(self, mock_smtp):
         """RED: Email should be sent when global limit of 50 is reached"""
@@ -207,12 +225,12 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         import threading
         import time
 
+        # Create a single manager instance explicitly for this test
+        manager = AutomationSafetyManager(self.test_dir)
         results = []
 
         def attempt_pr():
-            result = self.automation_manager.can_process_pr(1001)
-            if result:
-                self.automation_manager.record_pr_attempt(1001, "failure")
+            result = manager.try_process_pr(1001)
             results.append(result)
 
         # Start 10 concurrent threads
@@ -255,12 +273,37 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     def automation_manager(self):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
         # This will fail until we implement the class in GREEN phase
-        return AutomationSafetyManager(self.test_dir)
+        if not hasattr(self, '_automation_manager'):
+            self._automation_manager = AutomationSafetyManager(self.test_dir)
+        return self._automation_manager
 
 
 # Matrix 8: Integration with Existing Automation
 class TestAutomationIntegration(unittest.TestCase):
     """Integration tests with existing simple_pr_batch.sh script"""
+
+    def setUp(self):
+        self.launchd_root = Path(tempfile.mkdtemp(prefix="launchd-plist-"))
+        self.plist_path = self.launchd_root / "com.worldarchitect.pr-automation.plist"
+        plist_dir = self.plist_path.parent
+        plist_dir.mkdir(parents=True, exist_ok=True)
+        plist_dir.chmod(0o755)
+        plist_content = """<?xml version="1.0" encoding="UTF-8"?>
+<plist version="1.0">
+<dict>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/usr/bin/python3</string>
+        <string>/Users/jleechan/projects/worldarchitect.ai/automation/automation_safety_wrapper.py</string>
+    </array>
+</dict>
+</plist>
+"""
+        with open(self.plist_path, "w", encoding="utf-8") as plist_file:
+            plist_file.write(plist_content)
+
+    def tearDown(self):
+        shutil.rmtree(self.launchd_root, ignore_errors=True)
 
     def test_shell_script_respects_safety_limits(self):
         """RED: Shell script should check safety limits before processing"""
@@ -291,7 +334,7 @@ class TestAutomationIntegration(unittest.TestCase):
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
         # This will fail - plist doesn't exist yet
-        with open("/Users/jleechan/Library/LaunchAgents/com.worldarchitect.pr-automation.plist") as f:
+        with open(self.plist_path, encoding="utf-8") as f:
             return f.read()
 
 

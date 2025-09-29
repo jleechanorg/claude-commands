@@ -92,10 +92,9 @@ launchctl list | grep jleechanorg
 ### Processing Phase (Per PR)
 1. **Worktree Creation**: `git worktree add [workspace] [branch]`
 2. **Branch Sync**: Ensures local branch tracks correct remote
-3. **Copilot Integration**: `/copilot [pr-number] --workspace-isolation`
-4. **Change Detection**: Checks for modifications to push
-5. **Auto-Push**: Commits and pushes changes if any
-6. **Workspace Cleanup**: `git worktree remove [workspace]`
+3. **Codex Instruction Comment**: Posts the Codex directive once per head commit, appending a hidden commit marker so future automation passes only re-request help after new commits are pushed.
+4. **Result Tracking**: Records success/failure for safety counters
+5. **Workspace Cleanup**: `git worktree remove [workspace]`
 
 ### Safety Recording
 1. **Attempt Tracking**: Records success/failure per PR

@@ -16,7 +16,7 @@ from pathlib import Path
 from automation_safety_manager import AutomationSafetyManager
 
 
-def setup_logging():
+def setup_logging() -> logging.Logger:
     """Set up logging for automation wrapper"""
     log_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation"
     log_dir.mkdir(parents=True, exist_ok=True)
@@ -32,7 +32,7 @@ def setup_logging():
     return logging.getLogger(__name__)
 
 
-def main():
+def main() -> int:
     """Main wrapper function with safety checks"""
     logger = setup_logging()
     logger.info("🛡️  Starting automation safety wrapper")
@@ -51,36 +51,53 @@ def main():
 
             if manager.requires_manual_approval() and not manager.has_manual_approval():
                 logger.error("❌ Manual approval required to continue automation")
-                logger.info("💡 To grant approval: python3 automation_safety_manager.py --approve user@example.com")
+                logger.info("💡 To grant approval: python3 automation_safety_manager.py --manual_override user@example.com")
 
                 # Send notification
                 manager.check_and_notify_limits()
                 return 1
 
-        # Record this global run
-        manager.record_global_run()
-        logger.info(f"📊 Global run #{manager.get_global_runs()}/{manager.global_limit} recorded")
+        logger.info(
+            f"📊 Global runs before execution: {manager.get_global_runs()}"
+            f"/{manager.global_limit}"
+        )
 
         # Get project root
         project_root = Path(__file__).parent.parent
 
-        # Run the actual automation script with safety checks
-        automation_script = project_root / "automation" / "simple_pr_batch.sh"
+        # Run the improved PR monitor with safety checks
+        automation_script = project_root / "automation" / "jleechanorg_pr_monitor.py"
 
         if not automation_script.exists():
             logger.error(f"❌ Automation script not found: {automation_script}")
             return 1
 
-        logger.info(f"🚀 Executing automation script: {automation_script}")
+        logger.info(f"🚀 Executing PR automation monitor: {automation_script}")
 
         # Execute with environment variables for safety integration
         env = os.environ.copy()
         env['AUTOMATION_SAFETY_DATA_DIR'] = str(data_dir)
         env['AUTOMATION_SAFETY_WRAPPER'] = '1'
 
-        result = subprocess.run([
-            str(automation_script)
-        ], env=env, capture_output=True, text=True, timeout=3600)  # 1 hour timeout
+        # Record the global run *before* launching the monitor so the attempt
+        # is counted even if the subprocess fails to start or exits early.
+        manager.record_global_run()
+        logger.info(
+            f"📊 Recorded global run {manager.get_global_runs()}/"
+            f"{manager.global_limit} prior to monitor execution"
+        )
+
+        result = subprocess.run(
+            ['python3', str(automation_script)],
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=3600,
+            shell=False,
+        )  # 1 hour timeout
+
+        global_runs_after = manager.get_global_runs()
+        logger.info(f"📊 Global runs after execution: {global_runs_after}/{manager.global_limit}")
 
         # Log results
         if result.returncode == 0:

@@ -42,7 +42,7 @@ With safety mechanisms in effect:
 # Configuration in script
 MAX_BATCH_SIZE=5        # PRs per run
 MAX_FIX_ATTEMPTS=3      # Attempts per PR
-COPILOT_TIMEOUT=1200    # 20 minutes per PR
+COMMENT_TIMEOUT=1200    # 20 minutes per Codex comment attempt
 
 # Status tracking files
 /tmp/pr_automation_processed.txt    # Successfully processed PRs with timestamps
@@ -53,7 +53,7 @@ COPILOT_TIMEOUT=1200    # 20 minutes per PR
 ### **Cron Configuration**
 ```bash
 # ENABLED (processes every 10 minutes)
-*/10 * * * * cd ~/projects/worldarchitect.ai/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
+*/10 * * * * cd ~/projects/worldarchitect.ai && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
 
 # DISABLED (commented out for safety)
 # */10 * * * * cd ~/projects/worldarchitect.ai/worktree_autofix && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1
@@ -62,15 +62,14 @@ COPILOT_TIMEOUT=1200    # 20 minutes per PR
 ## ⚡ **Performance Impact**
 
 ### **Resource Usage per Run**
-- **Memory**: ~500MB per concurrent PR (isolated workspaces)
-- **Storage**: ~500MB temporary per PR (auto-cleaned)
-- **Network**: GitHub API calls + git clone operations
-- **CPU**: Moderate during /copilot analysis (20 min max)
+- **Memory**: Minimal (gh CLI comment invocation)
+- **Storage**: Negligible temporary data
+- **Network**: GitHub API call to post comment
+- **CPU**: Minimal during Codex comment posting (CLI invocation only)
 
 ### **API Usage Limits**
 - **GitHub API**: Rate limited by GitHub (5000 requests/hour)
-- **Claude API**: Rate limited by Anthropic usage tiers
-- **Git Operations**: Limited by network bandwidth
+- **Git Operations**: Limited by network bandwidth (light usage)
 
 ## 🛡️ **Safety Mechanisms**
 
@@ -115,11 +114,12 @@ rm -rf /tmp/pr-automation-*
 ### **Manual Processing**
 ```bash
 # Run manually for specific PR
-cd ~/projects/worldarchitect.ai/worktree_autofix
+cd ~/projects/worldarchitect.ai
 ./automation/simple_pr_batch.sh
 
-# Or process specific PR with copilot
-claude '/copilot [PR_NUMBER]'
+# Or trigger the orchestrator to post a Codex instruction for a specific PR
+# (see automation/JLEECHANORG_AUTOMATION.md for the /commentreply command summary)
+   /commentreply [PR_NUMBER] "$CODEX_COMMENT"
 ```
 
 ## 📊 **Monitoring**

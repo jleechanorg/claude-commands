@@ -1,2 +1,2 @@
-# Simple PR automation - run batchcopilot every 10 minutes
+# Simple PR automation - run Codex comment automation every 10 minutes
 */10 * * * * cd ~/projects/worldarchitect.ai && ./automation/simple_pr_batch.sh >> /tmp/pr_automation.log 2>&1

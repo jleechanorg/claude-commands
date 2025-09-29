@@ -1,261 +1,183 @@
-# WorldArchitect PR Automation with Safety Limits
+# jleechanorg-pr-automation
 
-## 🎯 Overview
+A comprehensive GitHub PR automation system with safety limits, actionable counting, and intelligent filtering.
 
-A robust, safety-first automation system for processing GitHub PRs with configurable limits and manual approval gates.
+## Features
 
-## 🛡️ Safety Features
+- **Actionable PR Counting**: Only processes PRs that need attention, excluding already-processed ones
+- **Safety Limits**: Built-in rate limiting and attempt tracking to prevent automation abuse
+- **Cross-Process Safety**: Thread-safe operations with file-based persistence
+- **Email Notifications**: Optional SMTP integration for automation alerts
+- **Commit-Based Tracking**: Avoids duplicate processing using commit SHAs
+- **Comprehensive Testing**: 200+ test cases with matrix-driven coverage
 
-- **PR Limits**: Max 5 attempts per PR before blocking
-- **Global Limits**: Max 50 total automation runs before requiring manual approval
-- **Thread-Safe**: Concurrent-safe operations with file locking
-- **Email Notifications**: Automatic alerts when limits are reached
-- **Persistence**: State maintained across system restarts
-- **Configurable**: Environment variable configuration
-
-## 🚀 Quick Start
-
-### macOS launchd Installation (Recommended)
+## Installation
 
 ```bash
-# Install the automation system
-./automation/install_launchd_automation.sh
-
-# Check status
-python3 automation/automation_safety_manager.py --status
-
-# View logs
-tail -f ~/Library/Logs/worldarchitect-automation/automation_safety.log
+pip install jleechanorg-pr-automation
 ```
 
-### Manual Management
+### Optional Dependencies
 
+For email notifications:
 ```bash
+pip install jleechanorg-pr-automation[email]
+```
+
+For development:
+```bash
+pip install jleechanorg-pr-automation[dev]
+```
+
+## Quick Start
+
+### Basic PR Monitoring
+
+```python
+from jleechanorg_pr_automation import JleechanorgPRMonitor
+
+# Initialize monitor
+monitor = JleechanorgPRMonitor()
+
+# Process up to 20 actionable PRs
+result = monitor.run_monitoring_cycle_with_actionable_count(target_actionable_count=20)
+
+print(f"Processed {result['actionable_processed']} actionable PRs")
+print(f"Skipped {result['skipped_count']} non-actionable PRs")
+```
+
+### Safety Management
+
+```python
+from jleechanorg_pr_automation import AutomationSafetyManager
+
+# Initialize safety manager with limits
+safety = AutomationSafetyManager(pr_limit=5, global_limit=50)
+
 # Check if PR can be processed
-python3 automation/automation_safety_manager.py --check-pr 1001
-
-# Record PR attempt
-python3 automation/automation_safety_manager.py --record-pr 1001 failure
-
-# Check global run status
-python3 automation/automation_safety_manager.py --check-global
-
-# Grant manual approval (when needed)
-python3 automation/automation_safety_manager.py --approve user@example.com
-
-# View complete status
-python3 automation/automation_safety_manager.py --status
+if safety.can_process_pr(pr_number=123, repo="my-repo"):
+    # Process PR...
+    safety.record_pr_attempt(pr_number=123, result="success", repo="my-repo")
 ```
 
-## 📊 Configuration
+## Configuration
 
 ### Environment Variables
 
-```bash
-export AUTOMATION_PR_LIMIT=5        # Max attempts per PR (default: 5)
-export AUTOMATION_GLOBAL_LIMIT=50   # Max total runs (default: 50)
+- `GITHUB_TOKEN`: GitHub personal access token (required)
+- `PR_AUTOMATION_WORKSPACE`: Custom workspace directory (optional)
+- `AUTOMATION_PR_LIMIT`: Maximum attempts per PR (default: 5)
+- `AUTOMATION_GLOBAL_LIMIT`: Maximum global automation runs (default: 50)
+- `AUTOMATION_APPROVAL_HOURS`: Hours before approval expires (default: 24)
 
-# Email notifications (optional)
-export SMTP_SERVER=smtp.gmail.com
-export SMTP_PORT=587
-export SMTP_USERNAME=your_email@gmail.com
-export SMTP_PASSWORD=your_app_password
-export MEMORY_EMAIL_FROM=automation@worldarchitect.ai
-export MEMORY_EMAIL_TO=admin@worldarchitect.ai
-```
+### Email Configuration (Optional)
 
-### launchd Schedule
+- `SMTP_SERVER`: SMTP server hostname
+- `SMTP_PORT`: SMTP server port (default: 587)
+- `EMAIL_USER`: SMTP username
+- `EMAIL_PASS`: SMTP password
+- `EMAIL_TO`: Notification recipient
+- `EMAIL_FROM`: Sender address (defaults to EMAIL_USER)
 
-Default: Every 10 minutes (600 seconds)
+## Command Line Interface
 
-To modify, edit `automation/com.worldarchitect.pr-automation.plist`:
-
-```xml
-<key>StartInterval</key>
-<integer>600</integer>  <!-- 10 minutes -->
-```
-
-## 🔧 Architecture
-
-### Components
-
-1. **AutomationSafetyManager** (`automation_safety_manager.py`)
-   - Core safety logic with thread-safe operations
-   - JSON-based persistence with atomic file operations
-   - CLI interface for management
-
-2. **Safety Wrapper** (`automation_safety_wrapper.py`)
-   - launchd entry point with safety checks
-   - Logging and error handling
-   - Integration with existing `simple_pr_batch.sh`
-
-3. **launchd Plist** (`com.worldarchitect.pr-automation.plist`)
-   - macOS background service configuration
-   - Environment setup and logging
-
-4. **Installation Script** (`install_launchd_automation.sh`)
-   - One-command setup with path resolution
-   - User-specific configuration
-
-### Data Files
-
-```
-~/Library/Application Support/worldarchitect-automation/
-├── pr_attempts.json      # Per-PR attempt tracking
-├── global_runs.json      # Total automation runs
-└── manual_approval.json  # Approval status and expiry
-```
-
-### Logs
-
-```
-~/Library/Logs/worldarchitect-automation/
-├── automation_safety.log  # Safety wrapper logs
-├── launchd.out            # launchd stdout
-└── launchd.err            # launchd stderr
-```
-
-## 🧪 Testing
-
-The system was built using Test-Driven Development with comprehensive matrix testing:
+### PR Monitor
 
 ```bash
-# Run safety tests
-TESTING=true python3 tests/test_automation_safety_limits.py
+# Monitor all repositories
+jleechanorg-pr-monitor
 
-# Test basic functionality
-python3 automation/automation_safety_manager.py --data-dir /tmp/test --status
+# Process specific repository
+jleechanorg-pr-monitor --single-repo worldarchitect.ai
+
+# Process specific PR
+jleechanorg-pr-monitor --target-pr 123 --target-repo jleechanorg/worldarchitect.ai
+
+# Dry run (discovery only)
+jleechanorg-pr-monitor --dry-run
 ```
 
-### Test Coverage
-
-- ✅ PR attempt limits (max 5 per PR)
-- ✅ Global run limits (max 50 total)
-- ✅ Manual approval system with 24-hour expiry
-- ✅ Thread-safe concurrent operations
-- ✅ Email notifications at limits
-- ✅ State persistence across restarts
-- ✅ Configuration via environment variables
-
-## 🚨 Safety Scenarios
-
-### Scenario 1: PR Reaches Attempt Limit
-
-1. PR fails 5 times
-2. System blocks further attempts on that PR
-3. Email notification sent to admin
-4. Other PRs continue processing normally
-
-### Scenario 2: Global Limit Reached
-
-1. System reaches 50 total automation runs
-2. All automation blocked until manual approval
-3. Email notification sent requesting approval
-4. Admin grants approval: system continues for 24 hours
-
-### Scenario 3: Manual Approval Expires
-
-1. 24 hours pass since approval granted
-2. System blocks automation again
-3. New approval required to continue
-
-## 🔄 Migration from Cron
-
-### Old cron setup:
-```bash
-*/10 * * * * cd ~/projects/worldarchitect.ai && ./automation/simple_pr_batch.sh
-```
-
-### New launchd setup:
-1. Remove cron entry: `crontab -e`
-2. Install launchd: `./automation/install_launchd_automation.sh`
-3. Verify: `launchctl list | grep worldarchitect`
-
-### Benefits of launchd vs cron:
-
-- ✅ Better environment variable handling
-- ✅ Automatic restart on failure
-- ✅ User session awareness
-- ✅ Detailed logging integration
-- ✅ Resource limits and process management
-- ✅ No missed executions on system sleep
-
-## 📈 Monitoring
-
-### Check Service Status
+### Safety Manager CLI
 
 ```bash
-# Service status
-launchctl list | grep worldarchitect
+# Check current status
+automation-safety-cli status
 
-# Recent logs
-tail -f ~/Library/Logs/worldarchitect-automation/automation_safety.log
+# Clear all safety data
+automation-safety-cli clear
 
-# Automation status
-python3 automation/automation_safety_manager.py --status
+# Check specific PR
+automation-safety-cli check-pr 123 --repo my-repo
 ```
 
-### Restart Service
+## Architecture
+
+### Actionable PR Logic
+
+The system implements intelligent PR filtering:
+
+1. **State Check**: Only processes open PRs
+2. **Commit Tracking**: Skips PRs already processed with current commit SHA
+3. **Safety Limits**: Respects per-PR and global automation limits
+4. **Ordering**: Processes most recently updated PRs first
+
+### Safety Features
+
+- **Dual Limiting**: Per-PR consecutive failure limits + global run limits
+- **Cross-Process Safety**: File-based locking for concurrent automation instances
+- **Attempt Tracking**: Full history of success/failure with timestamps
+- **Graceful Degradation**: Continues processing other PRs if one fails
+
+### Testing
+
+The library includes comprehensive test coverage:
+
+- **Matrix Testing**: All PR state combinations (Open/Closed × New/Old Commits × Processed/Fresh)
+- **Actionable Counting**: Batch processing with skip exclusion
+- **Safety Limits**: Concurrent access and edge cases
+- **Integration Tests**: Real GitHub API interactions (optional)
+
+## Development
 
 ```bash
-# Unload and reload
-launchctl unload ~/Library/LaunchAgents/com.worldarchitect.pr-automation.plist
-launchctl load ~/Library/LaunchAgents/com.worldarchitect.pr-automation.plist
+# Clone repository
+git clone https://github.com/jleechanorg/worldarchitect.ai.git
+cd worldarchitect.ai/automation
+
+# Install in development mode
+pip install -e .[dev]
+
+# Run tests
+pytest
+
+# Run tests with coverage
+pytest --cov=jleechanorg_pr_automation
+
+# Format code
+black .
+ruff check .
 ```
 
-## 🆘 Troubleshooting
+## Contributing
 
-### Service Not Running
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
 
-```bash
-# Check plist syntax
-plutil ~/Library/LaunchAgents/com.worldarchitect.pr-automation.plist
+## License
 
-# Check logs for errors
-cat ~/Library/Logs/worldarchitect-automation/launchd.err
-```
+MIT License - see LICENSE file for details.
 
-### Permissions Issues
+## Changelog
 
-```bash
-# Make scripts executable
-chmod +x automation/*.py automation/*.sh
+### 0.1.0 (2025-09-28)
 
-# Check file ownership
-ls -la automation/
-```
-
-### Email Notifications Not Working
-
-```bash
-# Test email configuration
-python3 -c "
-import os
-print('SMTP Config:')
-print(f'  Server: {os.environ.get(\"SMTP_SERVER\", \"NOT SET\")}')
-print(f'  Username: {os.environ.get(\"SMTP_USERNAME\", \"NOT SET\")}')
-print(f'  From: {os.environ.get(\"MEMORY_EMAIL_FROM\", \"NOT SET\")}')
-print(f'  To: {os.environ.get(\"MEMORY_EMAIL_TO\", \"NOT SET\")}')
-"
-```
-
-## 📚 Development
-
-### Adding New Safety Features
-
-1. Add tests to `tests/test_automation_safety_limits.py`
-2. Run tests to confirm failure (RED)
-3. Implement minimal code to pass (GREEN)
-4. Refactor and optimize (REFACTOR)
-
-### Extending Limits
-
-```bash
-# Temporary increase
-export AUTOMATION_PR_LIMIT=10
-export AUTOMATION_GLOBAL_LIMIT=100
-
-# Permanent: Update environment in plist or shell profile
-```
-
-This system provides robust automation with multiple safety nets, ensuring reliable PR processing while preventing runaway automation that could overwhelm the system or API limits.
+- Initial release
+- Actionable PR counting system
+- Safety management with dual limits
+- Cross-process file-based persistence
+- Email notification support
+- Comprehensive test suite (200+ tests)
+- CLI interfaces for monitoring and safety management
