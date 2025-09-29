@@ -149,6 +149,13 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - Ensure real authentication is configured (no test mode)
 - Validate Playwright MCP availability for browser automation
 - Confirm network connectivity for real API calls
+- Determine the current repository name (`git rev-parse --show-toplevel | xargs basename`) and active branch (`git rev-parse --abbrev-ref HEAD`) to construct result paths under `/tmp/<repo_name>/<branch_name>/`
+
+### Step 2.5: Result Output Directory Standard
+- Create (if necessary) the directory `/tmp/<repo_name>/<branch_name>/`
+- Store **all** test outputs, logs, screenshots, and evidence artifacts inside this directory or its subdirectories
+- After execution, enumerate every created file and subdirectory so the user receives a complete inventory
+- Explicitly communicate the absolute path to the `/tmp/<repo_name>/<branch_name>/` directory and its contents in the final summary
 
 ### Step 3: Test Execution
 - Follow test instructions step-by-step with LLM reasoning
@@ -176,7 +183,7 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 ### Browser Automation
 - ✅ USE Playwright MCP as primary browser automation
 - ✅ ALWAYS use headless mode for automation
-- ✅ CAPTURE screenshots to docs/ directory with descriptive names
+- ✅ CAPTURE screenshots to the `/tmp/<repo_name>/<branch_name>/` results directory with descriptive names
 - ✅ MONITOR console errors and network requests
 
 ### API Integration
@@ -186,10 +193,11 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - ✅ TEST end-to-end data flow from frontend to backend
 
 ### Evidence Collection
-- ✅ SAVE all screenshots to filesystem (not inline)
-- ✅ REFERENCE screenshots by filename in results
+- ✅ SAVE all screenshots and artifacts to `/tmp/<repo_name>/<branch_name>/` (never inline)
+- ✅ REFERENCE screenshots by filename in results and include the absolute path within `/tmp/<repo_name>/<branch_name>/`
 - ✅ DOCUMENT exact error messages and console output
 - ✅ PROVIDE specific line numbers and code references
+- ✅ ALWAYS inform the user of the `/tmp/<repo_name>/<branch_name>/` directory location and list every file created within it
 
 ## Execution Flow with Validation Gates
 
@@ -237,10 +245,11 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 ## Success Metrics
 - All test steps executed without mock mode
 - Real API calls made and documented
-- Screenshots saved to filesystem with proper naming
+- Screenshots saved under `/tmp/<repo_name>/<branch_name>/` with proper naming
 - Console errors captured and analyzed
 - Findings classified by priority (CRITICAL/HIGH/MEDIUM)
 - Actionable recommendations provided
+- Final report clearly states the `/tmp/<repo_name>/<branch_name>/` directory path and inventories all artifacts within it
 
 ## Anti-Patterns to Avoid
 - ❌ Generating Python or shell scripts unless explicitly requested
@@ -307,7 +316,7 @@ else:
 
 ### Evidence Package Handoff (Dual-Agent Only)
 1. **TestExecutor Creates**: Structured JSON evidence package + artifact files
-2. **File System Storage**: Evidence saved to `docs/test_evidence_TIMESTAMP/`
+2. **File System Storage**: Evidence saved to `/tmp/<repo_name>/<branch_name>/test_evidence_TIMESTAMP/`
 3. **Validator Receives**: Original test spec + evidence package only
 4. **Independent Assessment**: Validator evaluates without execution context
 5. **Cross-Validation**: Final report combines both agent perspectives
