@@ -65,7 +65,8 @@ class ImportValidator(ast.NodeVisitor):
             'unified_router', 'mvp_site.testing_framework',
             # Automation modules that need sys.path manipulation
             'automation_safety_manager', 'jleechanorg_pr_monitor',
-            'automation.automation_safety_manager',
+            'automation.automation_safety_manager', 'automation.utils',
+            'utils', '.automation_safety_manager', '.utils',
             # Test script modules that need sys.path manipulation
             'test_dependency_analyzer',
             # Testing framework integration utilities (optional for test stability)

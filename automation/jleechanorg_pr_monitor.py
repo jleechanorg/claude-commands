@@ -17,8 +17,14 @@ import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-from automation_safety_manager import AutomationSafetyManager
-from utils import setup_logging
+try:
+    from automation_safety_manager import AutomationSafetyManager
+except ImportError:
+    from .automation_safety_manager import AutomationSafetyManager
+try:
+    from utils import setup_logging
+except ImportError:
+    from .utils import setup_logging
 
 
 class JleechanorgPRMonitor:
