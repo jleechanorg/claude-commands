@@ -10,14 +10,14 @@ on:
   push:
     branches: [ main, dev ]  # Run on pushes to these branches
     paths-ignore:
-      - '*.md'
+      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches: [ main ]       # Run on PRs targeting main
     paths-ignore:
-      - '*.md'
+      - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
@@ -28,6 +28,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       test-dirs: ${{ steps.changes.outputs.test-dirs }}
+      selected-groups: ${{ steps.changes.outputs.selected-groups }}
       matrix: ${{ steps.changes.outputs.matrix }}
       has-changes: ${{ steps.changes.outputs.has-changes }}
     steps:
@@ -47,11 +48,13 @@ jobs:
             "${{ github.event_name }}" \
             "${{ github.event.pull_request.base.sha }}" \
             "${{ github.event.pull_request.head.sha }}" \
-            "simple")
+            "include")
 
           # Parse and export outputs
           echo "$OUTPUT" | while IFS= read -r line; do
             if [[ "$line" =~ ^test-dirs= ]]; then
+              echo "$line" >> $GITHUB_OUTPUT
+            elif [[ "$line" =~ ^selected-groups= ]]; then
               echo "$line" >> $GITHUB_OUTPUT
             elif [[ "$line" =~ ^matrix= ]]; then
               echo "$line" >> $GITHUB_OUTPUT
@@ -79,6 +82,7 @@ jobs:
 
   # Directory-based test execution
   test:
+    name: Directory tests (${{ matrix.test-group }})
     needs: detect-changes
     if: needs.detect-changes.outputs.has-changes == 'true'
     runs-on: ubuntu-latest
@@ -104,7 +108,7 @@ jobs:
         path: |
           ~/.cache/pip
           venv
-        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-dir }}
+        key: ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-${{ matrix.test-group }}
         restore-keys: |
           ${{ runner.os }}-python-3.11-${{ hashFiles('**/requirements.txt') }}-
           ${{ runner.os }}-python-3.11-
@@ -127,8 +131,8 @@ jobs:
         timeout 600 pip install -r mvp_site/requirements.txt
 
         # Install additional requirements for specific directories if needed
-        case "${{ matrix.test-dir }}" in
-          ".claude"|"orchestration"|"scripts")
+        case "${{ matrix.test-group }}" in
+          "claude"|"orchestration"|"automation"|"scripts"|"mcp")
             # These directories may have additional requirements
             find . -name "requirements.txt" -not -path "./venv/*" -not -path "./mvp_site/requirements.txt" | while read req_file; do
               echo "Installing $req_file (with 300s timeout)"
@@ -142,7 +146,7 @@ jobs:
         chmod +x vpython
         timeout 60 ./vpython --version
 
-    - name: Run directory-based tests - ${{ matrix.test-dir }}
+    - name: Run directory-based tests - ${{ matrix.test-group }}
       timeout-minutes: 8
       run: |
         source venv/bin/activate
@@ -157,29 +161,36 @@ jobs:
         export GITHUB_ACTIONS=true
         export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site"
 
-        echo "🎯 Running tests for directory: ${{ matrix.test-dir }}"
+        echo "🎯 Running tests for directory group: ${{ matrix.test-group }}"
+        echo "📂 Test directories: ${{ matrix.test-dirs }}"
 
-        # Run tests only for the specified directory
+        # Run tests only for the specified directory/directories
         chmod +x run_tests.sh
         export CI_TEST_LIMIT=50  # Limit for performance
 
         # Use directory-based test discovery with validation
-        echo "🎯 Testing directory: ${{ matrix.test-dir }}"
-        TEST_COUNT=$(find "${{ matrix.test-dir }}" -name "test_*.py" -type f 2>/dev/null | wc -l)
-        echo "📊 Found $TEST_COUNT test files in ${{ matrix.test-dir }}"
+        IFS=',' read -ra SELECTED_DIRS <<< "${{ matrix.test-dirs }}"
+        TOTAL_TESTS=0
+        for DIR in "${SELECTED_DIRS[@]}"; do
+          DIR=$(echo "$DIR" | xargs)
+          [ -z "$DIR" ] && continue
+          COUNT=$(find "$DIR" -name "test_*.py" -type f 2>/dev/null | wc -l)
+          echo "📊 Found $COUNT test files in $DIR"
+          TOTAL_TESTS=$((TOTAL_TESTS + COUNT))
+        done
 
-        if [ "$TEST_COUNT" -eq 0 ]; then
-          echo "⚠️ No tests found in ${{ matrix.test-dir }}, falling back to core tests"
+        if [ "$TOTAL_TESTS" -eq 0 ]; then
+          echo "⚠️ No tests found in specified directories, falling back to core tests"
           ./run_tests.sh --parallel --exclude-integration --exclude-mcp
         else
-          ./run_tests.sh --test-dirs="${{ matrix.test-dir }}" --parallel --exclude-integration --exclude-mcp
+          ./run_tests.sh --test-dirs="${{ matrix.test-dirs }}" --parallel --exclude-integration --exclude-mcp
         fi
 
     - name: Upload test results
       uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
       if: always()
       with:
-        name: test-results-${{ matrix.test-dir }}
+        name: test-results-${{ matrix.test-group }}
         path: |
           mvp_site/test-results/
           /tmp/worldarchitectai/coverage/
@@ -197,6 +208,7 @@ jobs:
         run: |
           echo "🎯 Directory-based CI Results"
           echo "Tested directories: ${{ needs.detect-changes.outputs.test-dirs }}"
+          echo "Test groups: ${{ needs.detect-changes.outputs.selected-groups }}"
 
           # Check test results
           test_success="${{ needs.test.result }}"
