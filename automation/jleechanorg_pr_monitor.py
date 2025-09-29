@@ -20,9 +20,9 @@ try:
 except ImportError:
     from .automation_safety_manager import AutomationSafetyManager
 try:
-    from utils import setup_logging
+    from utils import setup_logging, json_manager
 except ImportError:
-    from .utils import setup_logging
+    from .utils import setup_logging, json_manager
 
 try:
     from codex_config import (
@@ -98,22 +98,13 @@ class JleechanorgPRMonitor:
     def _load_branch_history(self, repo_name: str, branch_name: str) -> Dict[str, str]:
         """Load processed PRs for a specific repo/branch"""
         history_file = self._get_history_file(repo_name, branch_name)
-        try:
-            if history_file.exists():
-                with open(history_file, 'r') as f:
-                    return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            self.logger.warning(f"⚠️ Error loading history for {repo_name}/{branch_name}: {e}")
-        return {}
+        return json_manager.read_json(str(history_file), {})
 
     def _save_branch_history(self, repo_name: str, branch_name: str, history: Dict[str, str]) -> None:
         """Save processed PRs for a specific repo/branch"""
         history_file = self._get_history_file(repo_name, branch_name)
-        try:
-            with open(history_file, 'w') as f:
-                json.dump(history, f, indent=2)
-        except OSError as e:
-            self.logger.error(f"❌ Error saving history for {repo_name}/{branch_name}: {e}")
+        if not json_manager.write_json(str(history_file), history):
+            self.logger.error(f"❌ Error saving history for {repo_name}/{branch_name}: write failed")
 
     def _should_skip_pr(self, repo_name: str, branch_name: str, pr_number: int, current_commit: str) -> bool:
         """Check if PR should be skipped based on recent processing"""
