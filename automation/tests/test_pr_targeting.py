@@ -20,10 +20,8 @@ class TestPRTargeting(unittest.TestCase):
     def test_extract_commit_marker(self):
         """Commit markers can be parsed from Codex comments"""
         monitor = JleechanorgPRMonitor()
-        marker = monitor._extract_commit_marker(
-            f"{monitor.CODEX_COMMENT_TEXT}\n\n"
-            f"{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
-        )
+        test_comment = f"@codex @coderabbitai @copilot @cursor [AI automation] Test comment\n\n{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+        marker = monitor._extract_commit_marker(test_comment)
         self.assertEqual(marker, "abc123")
 
 
