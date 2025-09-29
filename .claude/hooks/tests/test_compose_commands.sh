@@ -67,34 +67,12 @@ run_test "Bug Fix: PR parsing should not match standalone numbers" \
     "print last 30 unresponded here" \
     "print last 30 unresponded here"
 
-# Bug 2: SLASH_COMMAND_EXECUTE bypass protection
-run_test "Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match" \
-    "Some text with SLASH_COMMAND_EXECUTE: in middle" \
-    "Some text with SLASH_COMMAND_EXECUTE: in middle"
-
-# Bug 3: Command prefix removal breaks backward compatibility
+# Bug 2: Command prefix removal breaks backward compatibility
 run_test "Bug Fix: Single commands should preserve prefix for compatibility" \
     '{"prompt": "/fake3"}' \
     "/fake3"
 
-# Bug 4: SLASH_COMMAND_EXECUTE pass-through patterns should work correctly
-test_slash_execute_passthrough() {
-    TESTS_RUN=$((TESTS_RUN + 1))
-    # Test that SLASH_COMMAND_EXECUTE patterns pass through unchanged (no JSON parsing)
-    pass_through_output=$(bash "$HOOK_SCRIPT" SLASH_COMMAND_EXECUTE:/research)
-    if [[ "$pass_through_output" == "SLASH_COMMAND_EXECUTE:/research" ]]; then
-        echo -e "${GREEN}✓${NC} Bug Fix: SLASH_COMMAND_EXECUTE patterns pass through unchanged"
-        TESTS_PASSED=$((TESTS_PASSED + 1))
-    else
-        echo -e "${RED}✗${NC} Bug Fix: SLASH_COMMAND_EXECUTE patterns should pass through unchanged"
-        echo "  Expected: SLASH_COMMAND_EXECUTE:/research"
-        echo "  Actual: $pass_through_output"
-        TESTS_FAILED=$((TESTS_FAILED + 1))
-    fi
-}
-test_slash_execute_passthrough
-
-# Bug 5: Code fencing should be properly formatted
+# Bug 3: Code fencing should be properly formatted
 test_code_fencing() {
     local broken_fencing
     broken_fencing=$(grep -c "^!\`" ../../commands/commentfetch.md 2>/dev/null || echo "0")
@@ -109,7 +87,7 @@ test_code_fencing() {
 }
 test_code_fencing
 
-# Bug 6: Shell variables should be properly quoted to prevent word splitting
+# Bug 4: Shell variables should be properly quoted to prevent word splitting
 test_unquoted_variables() {
     local has_unquoted
     if grep -q 'printf.*\$cmd_args[^"]' ../mcp_slash_command_executor.sh 2>/dev/null; then

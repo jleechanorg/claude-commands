@@ -65,7 +65,7 @@ class TestMCPComprehensive:
         assert result is not None
         assert len(result) > 0
         response_text = result[0].text
-        assert "SLASH_COMMAND_EXECUTE:" in response_text
+        assert response_text.strip(), "Cerebras execution returned empty response"
         print("✅ Cerebras tool executed successfully")
 
     @pytest.mark.asyncio()
@@ -77,7 +77,7 @@ class TestMCPComprehensive:
         malicious_inputs = ["../../../etc/passwd", "'; DROP TABLE users; --"]
         for malicious_input in malicious_inputs:
             result = await handle_tool_call("cerebras", {"args": [malicious_input]})
-            assert "SLASH_COMMAND_EXECUTE:" in result[0].text
+            assert result[0].text.strip(), "Sanitized input should still produce a response"
         print("✅ Input validation working correctly")
 
     @pytest.mark.asyncio()
@@ -102,7 +102,7 @@ class TestMCPComprehensive:
         )
         assert result is not None
         response_text = result[0].text
-        assert "SLASH_COMMAND_EXECUTE:" in response_text
+        assert response_text.strip(), "JSON-RPC call returned empty response"
         assert "/cerebras" in response_text
         print("✅ JSON-RPC communication working")
 
@@ -145,7 +145,7 @@ class TestMCPComprehensive:
         )
         assert red_result is not None
         red_response = red_result[0].text
-        assert "SLASH_COMMAND_EXECUTE:" in red_response
+        assert red_response.strip(), "Red phase response was empty"
         assert "/cerebras" in red_response
 
         # Green phase - test cerebras command with implementation
@@ -155,7 +155,7 @@ class TestMCPComprehensive:
         )
         assert green_result is not None
         green_response = green_result[0].text
-        assert "SLASH_COMMAND_EXECUTE:" in green_response
+        assert green_response.strip(), "Green phase response was empty"
 
         print("✅ Red-green-refactor cycle working through MCP")
 
@@ -171,7 +171,7 @@ class TestMCPComprehensive:
         # Test with empty args
         result = await handle_tool_call("cerebras", {"args": []})
         assert result is not None
-        assert "SLASH_COMMAND_EXECUTE: /cerebras" in result[0].text
+        assert "/cerebras" in result[0].text
 
         print("✅ Argument handling working correctly")
 
@@ -217,7 +217,7 @@ class TestMCPComprehensive:
         # Test that cerebras tool still works
         result = await handle_tool_call("cerebras", {"args": ["working"]})
         assert result is not None
-        assert "SLASH_COMMAND_EXECUTE:" in result[0].text or "working" in result[0].text
+        assert "/cerebras" in result[0].text or "working" in result[0].text
 
         print("✅ Tool restriction logic working correctly")
 

@@ -27,14 +27,6 @@ if [[ -z "$raw_input" ]]; then
   raw_input=$(safe_read_stdin 5)
 fi
 
-# CRITICAL: Pass through SLASH_COMMAND_EXECUTE patterns unchanged - these are for PostToolUse hooks
-# Fixed: Use fixed-string, start-of-input match to prevent unintended bypasses
-if [[ "$raw_input" == SLASH_COMMAND_EXECUTE:* ]]; then
-    echo "$raw_input"
-    exit 0
-fi
-
-# Note: SLASH_COMMAND_EXECUTE patterns removed - handled by SlashCommand MCP tool directly
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; default to a secure temp file when unset
