@@ -40,7 +40,12 @@ def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
         return "post", ""
 
     for comment in comments:
-        body = (comment or {}).get("body", "")
+        # Safely handle comment data that may not be a dictionary
+        if isinstance(comment, dict):
+            body = comment.get("body", "")
+        else:
+            # Skip malformed comment data
+            continue
         prefix_index = body.find(marker_prefix)
         if prefix_index == -1:
             continue
