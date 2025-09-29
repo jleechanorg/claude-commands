@@ -213,7 +213,7 @@ class AutomationSafetyManager:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             attempts = list(self._pr_attempts_cache.get(pr_key, []))
 
-            # Check total attempts limit
+            # Check total attempts limit first
             if len(attempts) >= self.pr_limit:
                 return False
 
@@ -225,23 +225,34 @@ class AutomationSafetyManager:
                 else:
                     break
 
+            # Also block if too many consecutive failures (earlier than total limit)
             return consecutive_failures < self.pr_limit
 
     def try_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
-        """Atomically check if PR can be processed without mutating state."""
+        """Atomically reserve a processing slot for PR."""
         with self.lock:
-            raw_data = self._read_json_file(self.pr_attempts_file)
-            self._pr_attempts_cache = self._normalize_pr_attempt_keys(raw_data)
-
-            pr_key = self._make_pr_key(pr_number, repo, branch)
-            attempts = len(self._pr_attempts_cache.get(pr_key, []))
-            inflight = self._pr_inflight_cache.get(pr_key, 0)
-
-            if attempts + inflight >= self.pr_limit:
+            # Check consecutive failure limit first
+            if not self.can_process_pr(pr_number, repo, branch):
                 return False
 
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            inflight = self._pr_inflight_cache.get(pr_key, 0)
+
+            # Check if we're at the concurrent processing limit for this PR
+            if inflight >= self.pr_limit:
+                return False
+
+            # Reserve a processing slot
             self._pr_inflight_cache[pr_key] = inflight + 1
             return True
+
+    def release_pr_slot(self, pr_number: int, repo: str = None, branch: str = None):
+        """Release a processing slot for PR (call in finally block)"""
+        with self.lock:
+            pr_key = self._make_pr_key(pr_number, repo, branch)
+            inflight = self._pr_inflight_cache.get(pr_key, 0)
+            if inflight > 0:
+                self._pr_inflight_cache[pr_key] = inflight - 1
 
     def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None):
         """Get count of consecutive failures for a specific PR."""

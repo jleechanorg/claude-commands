@@ -237,6 +237,13 @@ class JleechanorgPRMonitor:
             # Attempt to process the PR
             repo_name = pr.get('repository', '')
             pr_number = pr.get('number', 0)
+            repo_full = pr.get('repositoryFullName', f"jleechanorg/{repo_name}")
+
+            # Check if we can process this PR (rate limiting)
+            if not self.safety_manager.can_process_pr(pr_number, repo=repo_full):
+                self.logger.info(f"⚠️ PR {repo_full}#{pr_number} blocked by safety manager - consecutive failures or rate limit")
+                processing_failures += 1
+                continue
 
             try:
                 success = self._process_pr_comment(repo_name, pr_number, pr)
@@ -247,6 +254,9 @@ class JleechanorgPRMonitor:
             except Exception as e:
                 self.logger.error(f"Error processing PR {repo_name}#{pr_number}: {e}")
                 processing_failures += 1
+            finally:
+                # Always release the processing slot
+                self.safety_manager.release_pr_slot(pr_number, repo=repo_full)
 
         return {
             'actionable_processed': actionable_processed,
@@ -271,10 +281,10 @@ class JleechanorgPRMonitor:
 
 
 
-        # Get current time and 24 hours ago
-        now = datetime.now()
+        # Get current time and 24 hours ago (in UTC to match GitHub timestamps)
+        now = datetime.utcnow()
         one_day_ago = now - timedelta(hours=24)
-        self.logger.info(f"📅 Filtering PRs updated since: {one_day_ago.strftime('%Y-%m-%d %H:%M:%S')}")
+        self.logger.info(f"📅 Filtering PRs updated since: {one_day_ago.strftime('%Y-%m-%d %H:%M:%S')} UTC")
 
         try:
             # Get all repositories in the organization
@@ -321,10 +331,10 @@ class JleechanorgPRMonitor:
                                 self.logger.debug(f"⚠️ Invalid date format for PR {pr.get('number')}: {updated_str}")
                                 continue
 
-                    recent_prs_count = len([pr for pr in prs if pr.get('updatedAt', '') and
-                                          datetime.fromisoformat(pr['updatedAt'].replace('Z', '+00:00')).replace(tzinfo=None) >= one_day_ago])
-                    if recent_prs_count > 0:
-                        self.logger.info(f"📋 {repo_name}: {recent_prs_count} recent PRs (of {len(prs)} total)")
+                    # Use already filtered recent_prs count to avoid duplicate parsing
+                    repo_recent_count = len([pr for pr in recent_prs if pr.get('repository') == repo_name])
+                    if repo_recent_count > 0:
+                        self.logger.info(f"📋 {repo_name}: {repo_recent_count} recent PRs (of {len(prs)} total)")
 
                 except subprocess.CalledProcessError as e:
                     # Skip repositories we don't have access to
@@ -646,8 +656,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 self.logger.warning(f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number}")
                 return False
 
-            # Get PR details using gh CLI
+            # Process PR with guaranteed cleanup
             try:
+                # Get PR details using gh CLI
                 result = subprocess.run(
                     ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author"],
                     capture_output=True, text=True, check=True, timeout=30, shell=False
@@ -681,6 +692,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             except json.JSONDecodeError as e:
                 self.logger.error(f"❌ Failed to parse PR data for {repo_full} #{pr_number}: {e}")
                 return False
+            finally:
+                # Always release the processing slot
+                self.safety_manager.release_pr_slot(pr_number, repo=repo_full)
 
         except Exception as e:
             self.logger.error(f"❌ Unexpected error processing target PR {repo_full} #{pr_number}: {e}")
