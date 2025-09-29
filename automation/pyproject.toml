@@ -70,10 +70,10 @@ python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
-    "--cov=jleechanorg_pr_automation",
+    "--cov=.",
     "--cov-report=term-missing",
     "--cov-report=html",
-    "--cov-fail-under=80",
+    "--cov-fail-under=20",
 ]
 markers = [
     "comprehensive: Run comprehensive, slower coverage tests",

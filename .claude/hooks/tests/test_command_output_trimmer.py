@@ -256,8 +256,8 @@ class TestCommandOutputTrimmer(unittest.TestCase):
 
     def test_compress_generic_output_fallback(self):
         """Test generic compression fallback"""
-        # Create long generic output
-        generic_lines = [f"Line {i}: Some generic content" for i in range(50)]
+        # Create long generic output (more than FAST_TRIM_MAX_LINES=75)
+        generic_lines = [f"Line {i}: Some generic content" for i in range(80)]
         generic_lines[10] = "ERROR: Important error message"
         generic_lines[30] = "https://important-link.com"
 
