@@ -403,6 +403,31 @@ class TestPRFilteringMatrix(unittest.TestCase):
             mock_post.return_value = 'failed'
             self.assertFalse(self.monitor._process_pr_comment('repo', 123, pr_data))
 
+    def test_comment_template_contains_all_ai_assistants(self):
+        """GREEN: Comment template should mention all 4 AI assistants"""
+        pr_data = {
+            'title': 'Test PR',
+            'author': {'login': 'testuser'},
+            'headRefName': 'test-branch'
+        }
+
+        comment_body = self.monitor._build_codex_comment_body_simple(
+            'test/repo', 123, pr_data, 'abc12345', []
+        )
+
+        # Verify all 4 AI assistant mentions are present
+        self.assertIn('@codex', comment_body, "Comment should mention @codex")
+        self.assertIn('@coderabbitai', comment_body, "Comment should mention @coderabbitai")
+        self.assertIn('@copilot', comment_body, "Comment should mention @copilot")
+        self.assertIn('@cursor', comment_body, "Comment should mention @cursor")
+
+        # Verify they appear at the beginning of the comment
+        first_line = comment_body.split('\n')[0]
+        self.assertIn('@codex', first_line, "@codex should be in first line")
+        self.assertIn('@coderabbitai', first_line, "@coderabbitai should be in first line")
+        self.assertIn('@copilot', first_line, "@copilot should be in first line")
+        self.assertIn('@cursor', first_line, "@cursor should be in first line")
+
 
 if __name__ == '__main__':
     # RED Phase: Run tests to confirm they FAIL

@@ -27,44 +27,27 @@ from automation_utils import AutomationUtils
 
 try:
     from codex_config import (
-        DEFAULT_ASSISTANT_HANDLE as CODEX_DEFAULT_ASSISTANT_HANDLE,
-        CODEX_COMMENT_TEMPLATE as SHARED_CODEX_COMMENT_TEMPLATE,
         CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
         CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
-        build_default_comment,
-        normalise_handle,
     )
 except ImportError:
     from .codex_config import (
-        DEFAULT_ASSISTANT_HANDLE as CODEX_DEFAULT_ASSISTANT_HANDLE,
-        CODEX_COMMENT_TEMPLATE as SHARED_CODEX_COMMENT_TEMPLATE,
         CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
         CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
-        build_default_comment,
-        normalise_handle,
     )
 
 
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with Codex automation comments"""
 
-    CODEX_COMMENT_ENV_VAR = "CODEX_COMMENT"
-    ASSISTANT_HANDLE_ENV_VAR = "ASSISTANT_HANDLE"
-    DEFAULT_ASSISTANT_HANDLE = CODEX_DEFAULT_ASSISTANT_HANDLE
-    DEFAULT_CODEX_COMMENT_TEMPLATE = SHARED_CODEX_COMMENT_TEMPLATE
     CODEX_COMMIT_MARKER_PREFIX = SHARED_MARKER_PREFIX
     CODEX_COMMIT_MARKER_SUFFIX = SHARED_MARKER_SUFFIX
 
     def __init__(self):
         self.logger = setup_logging(__name__)
 
-        raw_assistant_handle = os.environ.get(self.ASSISTANT_HANDLE_ENV_VAR)
-        self.assistant_handle = normalise_handle(raw_assistant_handle)
-        self.assistant_mention = f"@{self.assistant_handle}" if self.assistant_handle else ""
-
-        default_comment = build_default_comment(self.assistant_handle)
-        env_comment = os.environ.get(self.CODEX_COMMENT_ENV_VAR)
-        self.CODEX_COMMENT_TEXT = env_comment if env_comment else default_comment
+        # Environment variable handling removed - using hardcoded mentions
+        # All AI assistants are now hardcoded in the comment template
 
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
 
@@ -523,11 +506,9 @@ class JleechanorgPRMonitor:
             return False  # Assume tests are failing if we can't check
 
     def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
-        """Build comment body that tells Codex to fix PR comments, tests, and merge conflicts"""
+        """Build comment body that tells all AI assistants to fix PR comments, tests, and merge conflicts"""
 
-        mention_prefix = f"{self.assistant_mention} " if self.assistant_mention else ""
-
-        comment_body = f"""{mention_prefix}[AI automation] Please make the following changes to this PR
+        comment_body = f"""@codex @coderabbitai @copilot @cursor [AI automation] Please make the following changes to this PR
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}

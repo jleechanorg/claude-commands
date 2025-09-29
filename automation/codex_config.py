@@ -7,14 +7,13 @@ from dataclasses import dataclass
 
 DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
 
-# Core instruction template that both shell and Python tooling rely on.
-# The assistant handle is injected at runtime so operators can override it
-# through the ASSISTANT_HANDLE environment variable.
+# Core instruction template with hardcoded AI assistant mentions
 CODEX_COMMENT_TEMPLATE = (
-    "@{assistant_handle} use your judgment to fix comments from everyone or explain "
-    "why it should not be fixed. Follow binary response protocol every comment "
-    "needs done or not done classification explicitly with an explanation. Push "
-    "any commits needed to remote so the PR is updated."
+    "@codex @coderabbitai @copilot @cursor [AI automation] Please make the following changes to this PR\n\n"
+    "Use your judgment to fix comments from everyone or explain why it should not be fixed. "
+    "Follow binary response protocol - every comment needs \"DONE\" or \"NOT DONE\" classification "
+    "explicitly with an explanation. Address all comments on this PR. Fix any failing tests and "
+    "resolve merge conflicts. Push any commits needed to remote so the PR is updated."
 )
 
 CODEX_COMMIT_MARKER_PREFIX = "<!-- codex-automation-commit:"
@@ -56,4 +55,3 @@ class CodexConfig:
             assistant_handle=handle,
             comment_text=build_default_comment(handle),
         )
-
