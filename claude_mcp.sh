@@ -748,6 +748,73 @@ server_already_exists() {
     echo "$EXISTING_SERVERS" | grep -q "^$name:"
 }
 
+# Function to setup Render MCP Server
+setup_render_mcp_server() {
+    display_step "Setting up Render MCP Server..."
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  ☁️ Configuring Render MCP server for cloud infrastructure management...${NC}"
+    log_with_timestamp "Setting up MCP server: render (HTTP: https://mcp.render.com/mcp)"
+
+    # Check if server already exists
+    if server_already_exists "render"; then
+        echo -e "${GREEN}  ✅ Server render already exists, skipping installation${NC}"
+        log_with_timestamp "Server render already exists, skipping"
+        INSTALL_RESULTS["render"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        # Check if RENDER_API_KEY is available
+        if [ -n "$RENDER_API_KEY" ]; then
+            echo -e "${GREEN}  ✅ Render API key found - setting up cloud infrastructure server${NC}"
+            echo -e "${BLUE}  📋 Features: Service management, database queries, deployment monitoring${NC}"
+
+            # Remove existing render server to reconfigure
+            claude mcp remove "render" >/dev/null 2>&1 || true
+
+            # Add Render MCP server using HTTP transport with secure JSON configuration
+            echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
+            log_with_timestamp "Attempting to add Render MCP server with API key"
+
+            # 🚨 SECURITY FIX: Use add-json with stdin to prevent API key exposure in command line
+            # 🔧 ESCAPING FIX: Properly escape API key for JSON to handle special characters
+            escaped_api_key="${RENDER_API_KEY//\\/\\\\}"  # Escape backslashes
+            escaped_api_key="${escaped_api_key//\"/\\\"}"    # Escape quotes
+            add_output=$(claude mcp add-json --scope user "render" - 2>&1 <<EOF
+{"type":"http","url":"https://mcp.render.com/mcp","headers":{"Authorization":"Bearer $escaped_api_key"}}
+EOF
+            )
+            add_exit_code=$?
+
+            # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
+            add_output_redacted=${add_output//${RENDER_API_KEY}/<RENDER_API_KEY>}
+
+            if [ $add_exit_code -eq 0 ]; then
+                echo -e "${GREEN}  ✅ Successfully configured Render MCP server${NC}"
+                echo -e "${BLUE}  📋 Server info:${NC}"
+                echo -e "     • API URL: https://mcp.render.com/mcp"
+                echo -e "     • Features: Service creation, database management, metrics analysis"
+                echo -e "     • Documentation: https://render.com/docs/mcp-server"
+                log_with_timestamp "Successfully added Render MCP server with HTTP transport"
+                INSTALL_RESULTS["render"]="SUCCESS"
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+            else
+                echo -e "${RED}  ❌ Failed to add Render MCP server${NC}"
+                log_error_details "claude mcp add render" "render" "$add_output_redacted"
+                echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
+                INSTALL_RESULTS["render"]="ADD_FAILED"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            fi
+        else
+            echo -e "${YELLOW}  ⚠️ Render API key not found - skipping cloud infrastructure server${NC}"
+            echo -e "${YELLOW}  💡 Render server provides cloud infrastructure management with natural language${NC}"
+            echo -e "${YELLOW}  💡 Add RENDER_API_KEY to ~/.token file or environment to enable${NC}"
+            log_with_timestamp "Render API key not found, skipping server installation"
+            INSTALL_RESULTS["render"]="API_KEY_MISSING"
+            # Don't count as failure since this is expected without API key
+            # Total servers already counted at start - no adjustment needed
+        fi
+    fi
+}
+
 # Check environment requirements
 echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
 check_github_requirements
@@ -1435,6 +1502,9 @@ else
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi
 fi
+
+# Setup Render MCP Server
+setup_render_mcp_server
 
 display_step "Setting up Serena MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
