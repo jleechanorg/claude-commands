@@ -17,6 +17,7 @@ import tempfile
 import os
 import sys
 import json
+import shutil
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
@@ -40,7 +41,6 @@ class TestRedGreenCriticalBugs(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment"""
-        import shutil
         shutil.rmtree(self.test_dir, ignore_errors=True)
 
     def test_GREEN_global_run_recording_in_safety_wrapper(self):

@@ -11,6 +11,8 @@ This test reproduces the exact issue discovered:
 import unittest
 import tempfile
 import os
+import shutil
+import argparse
 from datetime import datetime, timedelta
 import json
 from automation_safety_manager import AutomationSafetyManager
@@ -26,7 +28,6 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
 
     def tearDown(self):
         """Clean up test environment"""
-        import shutil
         shutil.rmtree(self.test_dir)
 
     def test_automation_blocks_unlimited_runs_with_manual_override(self):
@@ -71,8 +72,6 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
         Verify the CLI command has been properly renamed.
         """
         # Test that we can use --manual_override
-        import argparse
-
         # Parse the new arguments
         parser = argparse.ArgumentParser()
         parser.add_argument('--manual_override', type=str, help='Correct command')
