@@ -23,6 +23,10 @@ try:
     from utils import setup_logging, json_manager
 except ImportError:
     from .utils import setup_logging, json_manager
+try:
+    from automation_utils import AutomationUtils
+except ImportError:
+    from .automation_utils import AutomationUtils
 
 try:
     from codex_config import (
@@ -280,7 +284,7 @@ class JleechanorgPRMonitor:
         try:
             # Get all repositories in the organization
             repos_cmd = ["gh", "repo", "list", self.organization, "--limit", "100", "--json", "name,owner"]
-            repos_result = subprocess.run(repos_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
+            repos_result = AutomationUtils.execute_subprocess_with_timeout(repos_cmd, timeout=30)
             repositories = json.loads(repos_result.stdout)
 
             self.logger.info(f"📚 Found {len(repositories)} repositories")
@@ -300,7 +304,7 @@ class JleechanorgPRMonitor:
                         "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author,headRefOid,state,isDraft"
                     ]
 
-                    prs_result = subprocess.run(prs_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
+                    prs_result = AutomationUtils.execute_subprocess_with_timeout(prs_cmd, timeout=30)
                     prs = json.loads(prs_result.stdout)
 
                     # Filter PRs updated in last 3 days and add repository context
@@ -454,7 +458,7 @@ class JleechanorgPRMonitor:
                 "--body", comment_body
             ]
 
-            result = subprocess.run(comment_cmd, capture_output=True, text=True, check=True, timeout=30, shell=False)
+            result = AutomationUtils.execute_subprocess_with_timeout(comment_cmd, timeout=30)
 
             self.logger.info(f"✅ Posted Codex instruction comment on PR #{pr_number} ({repo_full})")
 
@@ -485,11 +489,11 @@ class JleechanorgPRMonitor:
         """Check if tests are passing on the PR"""
         try:
             # Get PR status checks
-            result = subprocess.run([
+            result = AutomationUtils.execute_subprocess_with_timeout([
                 "gh", "pr", "view", str(pr_number),
                 "--repo", repository,
                 "--json", "statusCheckRollup"
-            ], capture_output=True, text=True, check=True, timeout=30, shell=False)
+            ], timeout=30)
 
             pr_status = json.loads(result.stdout)
             status_checks = pr_status.get('statusCheckRollup', [])
@@ -557,13 +561,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
         ]
 
         try:
-            result = subprocess.run(
+            result = AutomationUtils.execute_subprocess_with_timeout(
                 view_cmd,
-                capture_output=True,
-                text=True,
-                check=True,
-                timeout=30,
-                shell=False,
+                timeout=30
             )
             pr_data = json.loads(result.stdout or "{}")
             head_sha = pr_data.get("headRefOid")
@@ -650,9 +650,9 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Process PR with guaranteed cleanup
             try:
                 # Get PR details using gh CLI
-                result = subprocess.run(
+                result = AutomationUtils.execute_subprocess_with_timeout(
                     ["gh", "pr", "view", str(pr_number), "--repo", repo_full, "--json", "title,headRefName,baseRefName,url,author"],
-                    capture_output=True, text=True, check=True, timeout=30, shell=False
+                    timeout=30
                 )
                 pr_data = json.loads(result.stdout)
 

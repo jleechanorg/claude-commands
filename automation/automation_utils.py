@@ -210,14 +210,15 @@ This is an automated notification from the WorldArchitect.AI automation system."
         if timeout is None:
             timeout = cls.get_config_value('MAX_SUBPROCESS_TIMEOUT')
 
-        # Ensure shell=False for security
+        # Ensure shell=False for security and check=True for error handling
         result = subprocess.run(
             command,
             timeout=timeout,
             cwd=cwd,
             capture_output=capture_output,
             text=True,
-            shell=False
+            shell=False,
+            check=True
         )
 
         return result

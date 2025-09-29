@@ -7,10 +7,19 @@ import json
 import sys
 from typing import Tuple
 
+# Safety limits for JSON parsing to prevent memory exhaustion
+MAX_JSON_SIZE = 10 * 1024 * 1024  # 10MB limit for PR data
+
 
 def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
     try:
-        pr_data = json.load(sys.stdin)
+        # Read stdin with size limit to prevent memory exhaustion
+        stdin_data = sys.stdin.read(MAX_JSON_SIZE)
+        if len(stdin_data) >= MAX_JSON_SIZE:
+            sys.stderr.write("ERROR: PR data exceeds maximum size limit\n")
+            return "post", ""
+
+        pr_data = json.loads(stdin_data)
     except json.JSONDecodeError:
         return "post", ""
 
