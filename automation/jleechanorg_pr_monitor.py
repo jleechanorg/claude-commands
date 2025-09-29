@@ -20,9 +20,9 @@ try:
 except ImportError:
     from .automation_safety_manager import AutomationSafetyManager
 try:
-    from utils import setup_logging
+    from utils import setup_logging, json_manager
 except ImportError:
-    from .utils import setup_logging
+    from .utils import setup_logging, json_manager
 
 try:
     from codex_config import (
@@ -98,22 +98,13 @@ class JleechanorgPRMonitor:
     def _load_branch_history(self, repo_name: str, branch_name: str) -> Dict[str, str]:
         """Load processed PRs for a specific repo/branch"""
         history_file = self._get_history_file(repo_name, branch_name)
-        try:
-            if history_file.exists():
-                with open(history_file, 'r') as f:
-                    return json.load(f)
-        except (json.JSONDecodeError, OSError) as e:
-            self.logger.warning(f"⚠️ Error loading history for {repo_name}/{branch_name}: {e}")
-        return {}
+        return json_manager.read_json(str(history_file), {})
 
     def _save_branch_history(self, repo_name: str, branch_name: str, history: Dict[str, str]) -> None:
         """Save processed PRs for a specific repo/branch"""
         history_file = self._get_history_file(repo_name, branch_name)
-        try:
-            with open(history_file, 'w') as f:
-                json.dump(history, f, indent=2)
-        except OSError as e:
-            self.logger.error(f"❌ Error saving history for {repo_name}/{branch_name}: {e}")
+        if not json_manager.write_json(str(history_file), history):
+            self.logger.error(f"❌ Error saving history for {repo_name}/{branch_name}: write failed")
 
     def _should_skip_pr(self, repo_name: str, branch_name: str, pr_number: int, current_commit: str) -> bool:
         """Check if PR should be skipped based on recent processing"""
@@ -239,8 +230,8 @@ class JleechanorgPRMonitor:
             pr_number = pr.get('number', 0)
             repo_full = pr.get('repositoryFullName', f"jleechanorg/{repo_name}")
 
-            # Check if we can process this PR (rate limiting)
-            if not self.safety_manager.can_process_pr(pr_number, repo=repo_full):
+            # Reserve a processing slot for this PR
+            if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
                 self.logger.info(f"⚠️ PR {repo_full}#{pr_number} blocked by safety manager - consecutive failures or rate limit")
                 processing_failures += 1
                 continue
@@ -747,22 +738,30 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             self.logger.info(f"🎯 Processing PR: {repo_full_name} #{pr_number} - {pr['title']}")
 
-            # Post codex instruction comment directly (comment-only approach)
-            success = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
+            try:
+                # Post codex instruction comment directly (comment-only approach)
+                success = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
 
-            result = "success" if success else "failure"
-            self.safety_manager.record_pr_attempt(
-                pr_number,
-                result,
-                repo=repo_full_name,
-                branch=branch_name,
-            )
+                result = "success" if success else "failure"
+                self.safety_manager.record_pr_attempt(
+                    pr_number,
+                    result,
+                    repo=repo_full_name,
+                    branch=branch_name,
+                )
 
-            if success:
-                self.logger.info(f"✅ Successfully processed PR {repo_full_name} #{pr_number}")
-                actionable_processed += 1
-            else:
-                self.logger.error(f"❌ Failed to process PR {repo_full_name} #{pr_number}")
+                if success:
+                    self.logger.info(f"✅ Successfully processed PR {repo_full_name} #{pr_number}")
+                    actionable_processed += 1
+                else:
+                    self.logger.error(f"❌ Failed to process PR {repo_full_name} #{pr_number}")
+            except Exception as e:
+                self.logger.error(f"❌ Exception processing PR {repo_full_name} #{pr_number}: {e}")
+                # Record failure for safety manager
+                self.safety_manager.record_pr_attempt(pr_number, "failure", repo=repo_full_name, branch=branch_name)
+            finally:
+                # Always release the processing slot
+                self.safety_manager.release_pr_slot(pr_number, repo=repo_full_name, branch=branch_name)
 
         self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
 

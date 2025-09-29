@@ -15,7 +15,17 @@ def decide(marker_prefix: str, marker_suffix: str) -> Tuple[str, str]:
         return "post", ""
 
     head_sha = pr_data.get("headRefOid") or ""
-    comments = (pr_data.get("comments") or {}).get("nodes", [])
+
+    # Handle GitHub API comments structure variations
+    comments_data = pr_data.get("comments", [])
+    if isinstance(comments_data, dict):
+        # GraphQL format: {"nodes": [...]}
+        comments = comments_data.get("nodes", [])
+    elif isinstance(comments_data, list):
+        # REST API format: [...]
+        comments = comments_data
+    else:
+        comments = []
 
     if not head_sha:
         return "post", ""
@@ -50,4 +60,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
