@@ -48,8 +48,8 @@ Create comprehensive prompts following BugBot and Snyk/DeepCode methodologies:
 
 ### 3. MANDATORY: Execute Codex Consultation
 Use bash to run the codex CLI tool with your crafted prompt:
-- Format: `timeout 300s codex exec --sandbox read-only "Your detailed prompt with context"`
-- Always use `--sandbox read-only` for safe automated analysis (no additional approval flags are supported by the current Codex CLI)
+- Format: `timeout 300s codex exec --sandbox read-only --yolo "Your detailed prompt with context"`
+- Always use `--sandbox read-only --yolo` for safe automated analysis with repo-wide read permissions (no additional approval flags are supported by the current Codex CLI)
 - Always include the instruction that Codex should provide guidance only, not implementation
 - Ensure the prompt includes file contents when relevant
 - **EXPLICIT ERROR REPORTING**: Never fail silently - always report timeouts, command failures, or missing tools
@@ -80,7 +80,7 @@ Focus on production-critical issues that could impact system stability.
 # Execute codex consultation with explicit error handling
 echo "🤖 Starting Codex CLI consultation..."
 
-if timeout 300s codex exec --sandbox read-only "You are an expert code analyst conducting multi-stage deep code analysis.
+if timeout 300s codex exec --sandbox read-only --yolo "You are an expert code analyst conducting multi-stage deep code analysis.
 Analyze for bugs, security vulnerabilities, architectural issues, and performance problems.
 Do not write code - provide analysis only.
 
@@ -151,13 +151,13 @@ fi
 
 ## Safety Configuration
 
-- Always use `--sandbox read-only` for automated analysis tasks
+- Always use `--sandbox read-only --yolo` for automated analysis tasks with repository-wide read access
 - Read-only access with no approval prompts for safe automation
 - Keep consultations focused on analysis, not execution
 
 ## IMPORTANT EXECUTION NOTES
 
-- Always use `codex exec --sandbox read-only` for safe automated execution without prompts
+- Always use `codex exec --sandbox read-only --yolo` for safe automated execution without prompts and full repository read access
 - Your primary function is to execute `codex exec` commands, not to provide your own analysis
 - If you're not using the codex command, you're not doing your job correctly
 - This agent shines when Claude seems to run in a circle and gets stuck with anything
