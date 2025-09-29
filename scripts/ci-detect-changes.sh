@@ -74,7 +74,8 @@ generate_test_matrix() {
     for group in "${!GROUP_CONFIG[@]}"; do
         IFS=',' read -ra group_dirs <<< "${GROUP_CONFIG[$group]}"
         for raw_dir in "${group_dirs[@]}"; do
-            local dir="$(echo "$raw_dir" | xargs)"
+            local dir="${raw_dir#"${raw_dir%%[![:space:]]*}"}"
+            dir="${dir%"${dir##*[![:space:]]}"}"
             [ -z "$dir" ] && continue
             DIR_TO_GROUP["$dir"]="$group"
         done
@@ -123,7 +124,8 @@ generate_test_matrix() {
         local cleaned_dirs=""
         IFS=',' read -ra group_dirs <<< "${GROUP_CONFIG[$group]}"
         for raw_dir in "${group_dirs[@]}"; do
-            local dir="$(echo "$raw_dir" | xargs)"
+            local dir="${raw_dir#"${raw_dir%%[![:space:]]*}"}"
+            dir="${dir%"${dir##*[![:space:]]}"}"
             [ -z "$dir" ] && continue
 
             if [ -z "${added_dirs[$dir]}" ]; then
