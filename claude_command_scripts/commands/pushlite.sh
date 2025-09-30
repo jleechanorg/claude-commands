@@ -213,6 +213,70 @@ log_info() {
     echo -e "${BLUE}ℹ️ $1${NC}"
 }
 
+ensure_staged_changes_or_skip() {
+    local context="$1"
+
+    # Return codes: 0 = staged changes present, 1 = skip (no staged changes), 2 = inspection failure.
+    git diff --cached --quiet
+    local diff_status=$?
+    if [[ $diff_status -eq 0 ]]; then
+        log_info "No staged changes detected ${context} - skipping commit"
+        return 1
+    elif [[ $diff_status -eq 1 ]]; then
+        return 0
+    else
+        log_error "Failed to inspect staged changes ${context}"
+        return 2
+    fi
+}
+
+commit_staged_if_any() {
+    local commit_msg="$1"
+    local context="$2"
+    local description="$3"
+    local result_var="${4:-}"
+
+    local staged_check_status
+    local commit_performed="false"
+    if ensure_staged_changes_or_skip "$context"; then
+        staged_check_status=0
+    else
+        staged_check_status=$?
+    fi
+
+    case "$staged_check_status" in
+        0)
+            apply_conditional_lint_fixes
+            if safe_exec "$description" git commit -m "$commit_msg"; then
+                commit_performed="true"
+                if [[ -n "$result_var" ]]; then
+                    printf -v "$result_var" '%s' "$commit_performed"
+                fi
+                return 0
+            else
+                local commit_rc=$?
+                if [[ -n "$result_var" ]]; then
+                    printf -v "$result_var" '%s' "$commit_performed"
+                fi
+                return $commit_rc
+            fi
+            ;;
+        1)
+            if [[ -n "$result_var" ]]; then
+                printf -v "$result_var" '%s' "$commit_performed"
+            fi
+            # Nothing staged, treat as successful no-op for callers.
+            return 0
+            ;;
+        *)
+            if [[ -n "$result_var" ]]; then
+                printf -v "$result_var" '%s' "$commit_performed"
+            fi
+            return $staged_check_status
+            ;;
+    esac
+}
+
 # Git repository info extraction (supports GitHub, GHES, and other Git hosts)
 get_github_repo_info() {
     # Get the origin remote URL
@@ -967,10 +1031,7 @@ handle_files() {
             fi
         fi
 
-        # Apply lint fixes to staged files before committing
-        apply_conditional_lint_fixes
-
-        safe_execute "git commit -m '$commit_msg'" "Commit $file_type files"
+        commit_staged_if_any "$commit_msg" "after staging $file_type files" "Commit $file_type files"
         return $?
     fi
 
@@ -1002,10 +1063,7 @@ handle_files() {
                 log_info "Adding all $file_type files..."
                 safe_exec "Stage all $file_type files" git add -A
 
-                # Apply lint fixes to staged files before committing
-                apply_conditional_lint_fixes
-
-                safe_execute "git commit -m '$commit_msg'" "Commit $file_type files"
+                commit_staged_if_any "$commit_msg" "after staging all $file_type files" "Commit $file_type files"
                 return $?
                 ;;
             2)
@@ -1030,10 +1088,8 @@ handle_files() {
                     done
 
                     local commit_msg="${COMMIT_MESSAGE:-Add selected $file_type files}"
-                    # Apply lint fixes to staged files before committing
-                    apply_conditional_lint_fixes
 
-                    safe_execute "git commit -m '$commit_msg'" "Commit selected files"
+                    commit_staged_if_any "$commit_msg" "after staging selected $file_type files" "Commit selected files"
                     return $?
                 else
                     log_warning "No valid files selected"
@@ -1415,9 +1471,15 @@ verify_clean_state() {
                     log_info "Staging and committing remaining changes..."
                     if safe_exec "Stage remaining changes (including deletions)" git add -A; then
                         local commit_msg="Additional changes after push"
-                        if safe_execute "git commit -m '$commit_msg'" "Commit remaining changes"; then
-                            log_warning "Additional commit created - consider pushing again"
-                            return 1  # Indicate more work needed
+                        local commit_created="false"
+                        if commit_staged_if_any "$commit_msg" "during post-push cleanup" "Commit remaining changes" commit_created; then
+                            if [[ "$commit_created" == "true" ]]; then
+                                log_warning "Additional commit created - consider pushing again"
+                                return 1  # Indicate more work needed
+                            fi
+                        else
+                            local commit_status=$?
+                            return $commit_status
                         fi
                     fi
                     break
