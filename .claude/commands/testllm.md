@@ -36,6 +36,34 @@ Execute test specifications directly as an LLM without generating intermediate s
 - **Real Authentication**: Use actual Google OAuth with real credentials
 - **🚨 TOTAL FAILURE PROTOCOL**: Apply [Total Failure Protocol](total_failure.md) - 100% working or TOTAL FAILURE
 
+## 🚨 ANTI-FALSE-POSITIVE PROTOCOL (MANDATORY)
+
+### Evidence File Verification (CRITICAL)
+Before generating ANY test report, you MUST:
+
+1. **Run File System Check**: Execute `ls -laR /tmp/<repo>/<branch>/`
+2. **Compare Claims vs Reality**: Cross-reference every file mentioned in report against actual directory listing
+3. **Remove Phantom Files**: Delete ANY file references that don't appear in the `ls` output
+4. **Zero Tolerance**: If you claim a file exists, it MUST be verified by command output
+
+### Exit Status Validation (CRITICAL)
+Before declaring test SUCCESS, you MUST:
+
+1. **Track All Exit Codes**: Monitor exit status of every command executed
+2. **Aggregate Status**: If ANY command exits with code 1, overall result is FAILURE
+3. **Align Report with Reality**: FORBIDDEN to report "SUCCESS" with exit code 1
+4. **Evidence of Success**: Success requires BOTH exit code 0 AND complete verified evidence
+
+### Report Integrity Checklist (MANDATORY)
+Before submitting final report, verify:
+
+- [ ] Every claimed evidence file verified with `ls -la` command
+- [ ] No references to non-existent files or screenshots
+- [ ] Exit status tracked for all commands
+- [ ] Final SUCCESS/FAILURE aligned with actual exit codes
+- [ ] No contradictions between claims and evidence
+- [ ] All TodoWrite items have corresponding verified evidence
+
 ## Dual-Agent Architecture (Enhanced Reliability)
 
 ### Independent Verification System
@@ -198,6 +226,9 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - ✅ DOCUMENT exact error messages and console output
 - ✅ PROVIDE specific line numbers and code references
 - ✅ ALWAYS inform the user of the `/tmp/<repo_name>/<branch_name>/` directory location and list every file created within it
+- 🚨 **MANDATORY FILE VERIFICATION**: Before mentioning ANY evidence file in reports, VERIFY it exists using `ls -la`
+- 🚨 **NO PHANTOM FILES**: NEVER claim evidence files exist without explicit verification command output
+- 🚨 **VERIFY BEFORE REPORTING**: After test completion, run `ls -la /tmp/<repo_name>/<branch_name>/` and ONLY list files that actually appear in output
 
 ## Execution Flow with Validation Gates
 
@@ -230,9 +261,14 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
    ├── Verify ALL TodoWrite items marked completed with evidence
    ├── Cross-check findings against original specification
    ├── Validate that failure conditions were tested (not just success)
-   ├── Generate evidence-backed report with file references
+   ├── 🚨 MANDATORY: Run `ls -la /tmp/<repo_name>/<branch_name>/` to verify all claimed evidence files
+   ├── 🚨 MANDATORY: Compare claimed evidence files against actual directory listing
+   ├── 🚨 MANDATORY: Remove any phantom file references from report
+   ├── Generate evidence-backed report with ONLY verified file references
    ├── Apply priority classification with specific evidence
-   └── ⚠️ FINAL GATE: Success only declared with complete evidence portfolio
+   ├── 🚨 MANDATORY: Check exit status of all executed commands
+   ├── 🚨 MANDATORY: Align final SUCCESS/FAILURE with actual exit codes
+   └── ⚠️ FINAL GATE: Success only declared with exit code 0 AND complete verified evidence portfolio
 ```
 
 ## Error Handling
@@ -250,6 +286,15 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 - Findings classified by priority (CRITICAL/HIGH/MEDIUM)
 - Actionable recommendations provided
 - Final report clearly states the `/tmp/<repo_name>/<branch_name>/` directory path and inventories all artifacts within it
+
+### 🚨 EXIT STATUS VALIDATION (MANDATORY)
+- **CRITICAL**: Test execution MUST track and report actual exit status
+- **Status Code 0**: Success - all tests passed, all evidence collected
+- **Status Code 1**: Failure - tests failed OR incomplete evidence
+- **FORBIDDEN**: Reporting "TOTAL SUCCESS" with exit code 1
+- **REQUIRED**: Final report MUST align with actual exit status
+- **VALIDATION**: If ANY command fails, overall status MUST be FAILURE
+- **EVIDENCE ALIGNMENT**: Success claims require both exit code 0 AND complete evidence
 
 ## Anti-Patterns to Avoid
 - ❌ Generating Python or shell scripts unless explicitly requested
