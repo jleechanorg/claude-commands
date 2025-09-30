@@ -12,27 +12,30 @@ Minimal implementation to pass the RED phase tests with:
 
 import argparse
 import fcntl
+import importlib.util
 import json
 import logging
 import os
-import threading
 import smtplib
+import sys
 import tempfile
+import threading
 from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 # Optional keyring import for email functionality
-try:
-    import keyring
+_keyring_spec = importlib.util.find_spec("keyring")
+if _keyring_spec:
+    import keyring  # type: ignore
     HAS_KEYRING = True
-except ImportError:
-    keyring = None
+else:
+    keyring = None  # type: ignore
     HAS_KEYRING = False
 
 # Import shared utilities
-from utils import (
+from .utils import (
     json_manager,
     setup_logging,
     get_email_config,
@@ -61,6 +64,7 @@ class AutomationSafetyManager:
         self.global_runs_file = os.path.join(data_dir, "global_runs.json")
         self.approval_file = os.path.join(data_dir, "manual_approval.json")
         self.config_file = os.path.join(data_dir, "automation_safety_config.json")
+        self.inflight_file = os.path.join(data_dir, "pr_inflight.json")  # NEW: Persist inflight cache
 
         # In-memory counters for thread safety
         self._pr_attempts_cache = {}
@@ -95,6 +99,9 @@ class AutomationSafetyManager:
                 "approval_date": None
             })
 
+        if not os.path.exists(self.inflight_file):
+            self._write_json_file(self.inflight_file, {})
+
     def _load_config_if_exists(self):
         """Load configuration from file if it exists, create default if not"""
         if os.path.exists(self.config_file):
@@ -128,6 +135,10 @@ class AutomationSafetyManager:
             global_data = self._read_json_file(self.global_runs_file)
             self._global_runs_cache = global_data.get("total_runs", 0)
 
+            # Load inflight cache
+            inflight_data = self._read_json_file(self.inflight_file)
+            self._pr_inflight_cache = {k: int(v) for k, v in inflight_data.items()}
+
     def _sync_state_to_files(self):
         """Sync in-memory state to files"""
         with self.lock:
@@ -139,9 +150,12 @@ class AutomationSafetyManager:
             global_data["total_runs"] = self._global_runs_cache
             self._write_json_file(self.global_runs_file, global_data)
 
+            # Sync inflight cache to prevent concurrent processing
+            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+
     def _make_pr_key(
         self,
-        pr_number: int | str,
+        pr_number: Union[int, str],
         repo: Optional[str] = None,
         branch: Optional[str] = None,
     ) -> str:
@@ -172,7 +186,7 @@ class AutomationSafetyManager:
 
             repo = None
             branch = None
-            pr_number: str | int = ""
+            pr_number: Union[str, int] = ""
 
             if isinstance(key, str):
                 parts = key.split("::")
@@ -204,7 +218,7 @@ class AutomationSafetyManager:
         except Exception as e:
             self.logger.error(f"Exception writing safety data file {file_path}: {e}")
 
-    def can_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
+    def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
         with self.lock:
             raw_data = self._read_json_file(self.pr_attempts_file)
@@ -228,7 +242,7 @@ class AutomationSafetyManager:
             # Also block if too many consecutive failures (earlier than total limit)
             return consecutive_failures < self.pr_limit
 
-    def try_process_pr(self, pr_number: int, repo: str = None, branch: str = None) -> bool:
+    def try_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Atomically reserve a processing slot for PR."""
         with self.lock:
             # Check consecutive failure limit first
@@ -244,17 +258,23 @@ class AutomationSafetyManager:
 
             # Reserve a processing slot
             self._pr_inflight_cache[pr_key] = inflight + 1
+
+            # Persist immediately to prevent race conditions with concurrent cron jobs
+            self._write_json_file(self.inflight_file, self._pr_inflight_cache)
+
             return True
 
-    def release_pr_slot(self, pr_number: int, repo: str = None, branch: str = None):
+    def release_pr_slot(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Release a processing slot for PR (call in finally block)"""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             inflight = self._pr_inflight_cache.get(pr_key, 0)
             if inflight > 0:
                 self._pr_inflight_cache[pr_key] = inflight - 1
+                # Persist immediately to prevent race conditions
+                self._write_json_file(self.inflight_file, self._pr_inflight_cache)
 
-    def get_pr_attempts(self, pr_number: int, repo: str = None, branch: str = None):
+    def get_pr_attempts(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get count of consecutive failures for a specific PR."""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
@@ -268,7 +288,7 @@ class AutomationSafetyManager:
                     break
             return failure_count
 
-    def get_pr_attempt_list(self, pr_number: int, repo: str = None, branch: str = None):
+    def get_pr_attempt_list(self, pr_number: Union[int, str], repo: str = None, branch: str = None):
         """Get list of attempts for a specific PR (for detailed analysis)"""
         with self.lock:
             # Reload from disk to ensure consistency across multiple managers
@@ -277,7 +297,7 @@ class AutomationSafetyManager:
             pr_key = self._make_pr_key(pr_number, repo, branch)
             return self._pr_attempts_cache.get(pr_key, [])
 
-    def record_pr_attempt(self, pr_number: int, result: str, repo: str = None, branch: str = None):
+    def record_pr_attempt(self, pr_number: Union[int, str], result: str, repo: str = None, branch: str = None):
         """Record a PR attempt (success or failure)"""
         with self.lock:
             pr_key = self._make_pr_key(pr_number, repo, branch)
@@ -333,16 +353,21 @@ class AutomationSafetyManager:
             return self._global_runs_cache
 
     def record_global_run(self):
-        """Record a global automation run"""
+        """Record a global automation run atomically"""
         with self.lock:
-            # Update in-memory cache
-            self._global_runs_cache += 1
+            try:
+                # Update in-memory cache
+                self._global_runs_cache += 1
 
-            # Sync to file for persistence
-            data = self._read_json_file(self.global_runs_file)
-            data["total_runs"] = self._global_runs_cache
-            data["last_run"] = datetime.now().isoformat()
-            self._write_json_file(self.global_runs_file, data)
+                # Sync to file for persistence (atomic operation)
+                data = self._read_json_file(self.global_runs_file)
+                data["total_runs"] = self._global_runs_cache
+                data["last_run"] = datetime.now().isoformat()
+                self._write_json_file(self.global_runs_file, data)
+            except Exception:
+                # Rollback cache if file write failed
+                self._global_runs_cache -= 1
+                raise
 
     def requires_manual_approval(self) -> bool:
         """Check if manual approval is required"""
@@ -401,9 +426,9 @@ class AutomationSafetyManager:
             self._send_notification(subject, message)
         except Exception as e:
             # If email fails, just log it - don't break automation
-            print(f"Failed to send email notification: {e}")
-            print(f"Subject: {subject}")
-            print(f"Message: {message}")
+            self.logger.error("Failed to send email notification: %s", e)
+            self.logger.debug("Notification subject: %s", subject)
+            self.logger.debug("Notification body: %s", message)
 
     def grant_manual_approval(self, approver_email: str, approval_time: Optional[datetime] = None):
         """Grant manual approval for continued automation"""
@@ -428,34 +453,30 @@ class AutomationSafetyManager:
                 username = keyring.get_password("worldarchitect-automation", "smtp_username")
                 password = keyring.get_password("worldarchitect-automation", "smtp_password")
             except Exception:
+                self.logger.debug("Keyring lookup failed for SMTP credentials", exc_info=True)
                 username = None
                 password = None
-        else:
-            username = None
-            password = None
 
         if username is None:
-            username = os.environ.get('SMTP_USERNAME')
+            username = os.environ.get('SMTP_USERNAME') or os.environ.get('EMAIL_USER')
         if password is None:
-            password = os.environ.get('SMTP_PASSWORD')
+            password = os.environ.get('SMTP_PASSWORD') or os.environ.get('EMAIL_PASS')
 
         return username, password
 
     def _send_notification(self, subject: str, message: str) -> bool:
         """Send email notification with secure credential handling"""
         try:
-            # Check if email is configured first
-            if not self._is_email_configured():
-                self.logger.info("Email configuration incomplete - skipping notification")
-                return False
-
             # Load email configuration
             smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
             smtp_port = int(os.environ.get('SMTP_PORT', '587'))
-            username = os.environ.get('EMAIL_USER')
-            password = os.environ.get('EMAIL_PASS')
-            from_email = os.environ.get('EMAIL_USER')  # Use same as username
+            username, password = self._get_smtp_credentials()
             to_email = os.environ.get('EMAIL_TO')
+            from_email = os.environ.get('EMAIL_FROM') or username
+
+            if not (username and password and to_email and from_email):
+                self.logger.info("Email configuration incomplete - skipping notification")
+                return False
 
             msg = MIMEMultipart()
             msg['From'] = from_email
@@ -484,7 +505,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
                 server.send_message(msg)
             finally:
                 server.quit()
-                print(f"Email notification sent successfully: {subject}")
+                self.logger.info("Email notification sent successfully: %s", subject)
             return True
 
         except smtplib.SMTPAuthenticationError as e:
@@ -541,8 +562,8 @@ This is an automated notification from the WorldArchitect.AI automation system.
         """Check if email configuration is available"""
         try:
             smtp_server = os.environ.get('SMTP_SERVER')
-            email_user = os.environ.get('EMAIL_USER')
-            return bool(smtp_server and email_user)
+            username, password = self._get_smtp_credentials()
+            return bool(smtp_server and username and password)
         except Exception:
             return False
 
@@ -557,11 +578,10 @@ This is an automated notification from the WorldArchitect.AI automation system.
         """Check if email configuration is complete"""
         try:
             smtp_server = os.environ.get('SMTP_SERVER')
-            email_user = os.environ.get('EMAIL_USER')
-            email_pass = os.environ.get('EMAIL_PASS')
             smtp_port = os.environ.get('SMTP_PORT')
             email_to = os.environ.get('EMAIL_TO')
-            return bool(smtp_server and email_user and email_pass and smtp_port and email_to)
+            username, password = self._get_smtp_credentials()
+            return bool(smtp_server and smtp_port and email_to and username and password)
         except Exception:
             return False
 
@@ -605,7 +625,7 @@ def main():
             f"PR #{args.check_pr}{repo_label}{branch_label}: "
             f"{'ALLOWED' if can_process else 'BLOCKED'} ({attempts}/{manager.pr_limit} attempts)"
         )
-        exit(0 if can_process else 1)
+        sys.exit(0 if can_process else 1)
 
     elif args.record_pr:
         pr_number, result = args.record_pr
@@ -620,7 +640,7 @@ def main():
         can_start = manager.can_start_global_run()
         runs = manager.get_global_runs()
         print(f"Global runs: {'ALLOWED' if can_start else 'BLOCKED'} ({runs}/{manager.global_limit} runs)")
-        exit(0 if can_start else 1)
+        sys.exit(0 if can_start else 1)
 
     elif args.record_global:
         manager.record_global_run()

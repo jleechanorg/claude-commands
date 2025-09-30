@@ -213,7 +213,7 @@ class OptimizedCommandOutputTrimmer:
 
         return validated
 
-    def detect_command_type(self, output: str) -> Optional[str]:
+    def detect_command_type(self, output: str) -> str:
         """Detect command type using pre-compiled patterns"""
         # Quick check on first N chars for performance
         sample = output[:Config.DETECTION_SAMPLE_SIZE] if len(output) > Config.DETECTION_SAMPLE_SIZE else output
@@ -758,7 +758,7 @@ class OptimizedCommandOutputTrimmer:
         Returns:
             List of compressed output lines
         """
-        if len(lines) < Config.FAST_TRIM_MAX_LINES:
+        if len(lines) <= Config.FAST_TRIM_MAX_LINES:
             return lines
 
         # Preserve important patterns and first/last lines
@@ -786,12 +786,47 @@ def main():
         # Note: trim_args is for API function arguments, not command-line arguments
         # Command-line arguments for this hook don't need sanitization
 
-        # Read input with size limit to prevent DoS
-        input_data = sys.stdin.read(Config.MAX_INPUT_SIZE)
+        # Read input with size limit to prevent DoS (byte-aware)
+        stdin_buffer = getattr(sys.stdin, "buffer", None)
+        truncated = False
 
-        # Check if input was truncated
-        if len(input_data) >= Config.MAX_INPUT_SIZE:
-            sys.stderr.write(f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} characters, truncating\n")
+        if stdin_buffer is not None:
+            raw_input = stdin_buffer.read(Config.MAX_INPUT_SIZE + 1)
+            truncated = len(raw_input) > Config.MAX_INPUT_SIZE
+            if truncated:
+                raw_input = raw_input[:Config.MAX_INPUT_SIZE]
+        else:
+            byte_buffer = bytearray()
+            while True:
+                chunk = sys.stdin.read(1024)
+                if not chunk:
+                    break
+
+                chunk_bytes = chunk.encode("utf-8")
+                remaining = Config.MAX_INPUT_SIZE - len(byte_buffer)
+
+                if remaining <= 0:
+                    truncated = True
+                    break
+
+                if len(chunk_bytes) > remaining:
+                    byte_buffer.extend(chunk_bytes[:remaining])
+                    truncated = True
+                    break
+
+                byte_buffer.extend(chunk_bytes)
+
+            if not truncated:
+                extra_char = sys.stdin.read(1)
+                if extra_char:
+                    truncated = True
+
+            raw_input = bytes(byte_buffer[:Config.MAX_INPUT_SIZE])
+
+        if truncated:
+            sys.stderr.write(f"Warning: Input exceeds {Config.MAX_INPUT_SIZE} bytes, truncating\n")
+
+        input_data = raw_input.decode("utf-8", errors="replace")
 
         # Process command output directly (trim_args is for function arguments, not output)
         trimmed_output = trimmer.process_output(input_data)

@@ -5,19 +5,26 @@ Test suite for Command Output Trimmer Hook
 Tests all compression rules and integration scenarios.
 """
 
+import io
 import os
 import sys
 import json
 import shutil
 import tempfile
+import types
 import unittest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, call
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from command_output_trimmer import OptimizedCommandOutputTrimmer as CommandOutputTrimmer, CompressionStats, main
+from command_output_trimmer import (
+    Config,
+    OptimizedCommandOutputTrimmer as CommandOutputTrimmer,
+    CompressionStats,
+    main,
+)
 
 class TestCommandOutputTrimmer(unittest.TestCase):
     """Test cases for CommandOutputTrimmer"""
@@ -256,8 +263,11 @@ class TestCommandOutputTrimmer(unittest.TestCase):
 
     def test_compress_generic_output_fallback(self):
         """Test generic compression fallback"""
-        # Create long generic output (>50 lines to trigger trimming)
-        generic_lines = [f"Line {i}: Some generic content" for i in range(75)]
+        # Create long generic output (>FAST_TRIM_MAX_LINES to trigger trimming)
+        generic_lines = [
+            f"Line {i}: Some generic content"
+            for i in range(Config.FAST_TRIM_MAX_LINES + 25)
+        ]
         generic_lines[10] = "ERROR: Important error message"
         generic_lines[30] = "https://important-link.com"
 
@@ -333,13 +343,14 @@ class TestCommandOutputTrimmer(unittest.TestCase):
         test_args = ["script_name", "test", "output", "content"]
 
         with patch('sys.argv', test_args):
-            with patch('sys.stdin.isatty', return_value=True):
-                with patch('sys.stdin.read', return_value="test input data"):
-                    with patch('sys.stdout.write') as mock_stdout:
-                        result = main()
+            fake_buf = io.BytesIO(b"test input data")
+            stdin_stub = types.SimpleNamespace(buffer=fake_buf)
+            with patch('command_output_trimmer.sys.stdin', new=stdin_stub):
+                with patch('sys.stdout.write') as mock_stdout:
+                    result = main()
 
-                        self.assertEqual(result, 0)
-                        mock_stdout.assert_called()
+                    self.assertEqual(result, 0)
+                    mock_stdout.assert_called()
 
     def test_error_handling(self):
         """Test error handling in compression"""
@@ -354,6 +365,26 @@ class TestCommandOutputTrimmer(unittest.TestCase):
 
         # Should return some output (either original or processed)
         self.assertIsInstance(processed, str)
+
+    def test_main_enforces_byte_limit_with_unicode(self):
+        """Ensure byte-based truncation works for multi-byte input"""
+
+        unicorn_text = "🦄" * 32  # Multi-byte characters
+        raw_bytes = unicorn_text.encode('utf-8')
+
+        with patch('sys.argv', ['command_output_trimmer']):
+            fake_buf = io.BytesIO(raw_bytes)
+            stdin_stub = types.SimpleNamespace(buffer=fake_buf)
+            with patch.object(Config, 'MAX_INPUT_SIZE', 16):
+                with patch('command_output_trimmer.sys.stdin', new=stdin_stub):
+                    with patch('sys.stderr.write') as mock_stderr:
+                        with patch('sys.stdout.write') as mock_stdout:
+                            result = main()
+
+        self.assertEqual(result, 0)
+        self.assertTrue(mock_stdout.called)
+        warning_calls = [call for call in mock_stderr.call_args_list if 'Warning: Input exceeds' in ''.join(call.args)]
+        self.assertTrue(warning_calls, "Expected byte-limit warning for unicode input")
 
 class TestIntegration(unittest.TestCase):
     """Integration tests for the command output trimmer"""

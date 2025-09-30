@@ -13,15 +13,10 @@ import tempfile
 import os
 import shutil
 import argparse
-import sys
-from datetime import datetime, timedelta
 import json
+from datetime import datetime, timedelta
 
-# Add automation directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-# Import after path modification
-from automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 class TestAutomationOverRunningReproduction(unittest.TestCase):

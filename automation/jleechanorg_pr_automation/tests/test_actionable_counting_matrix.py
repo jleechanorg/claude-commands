@@ -6,18 +6,13 @@ Test Matrix: Actionable PR counting should exclude skipped PRs and only count
 PRs that actually get processed with comments.
 """
 
-import sys
 import os
 import unittest
 import tempfile
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 
-# Add automation directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from jleechanorg_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
 class TestActionableCountingMatrix(unittest.TestCase):

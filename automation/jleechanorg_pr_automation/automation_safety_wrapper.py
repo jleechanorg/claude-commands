@@ -13,7 +13,7 @@ import os
 import subprocess
 import logging
 from pathlib import Path
-from automation_safety_manager import AutomationSafetyManager
+from .automation_safety_manager import AutomationSafetyManager
 
 
 def setup_logging() -> logging.Logger:
@@ -51,7 +51,7 @@ def main() -> int:
 
             if manager.requires_manual_approval() and not manager.has_manual_approval():
                 logger.error("❌ Manual approval required to continue automation")
-                logger.info("💡 To grant approval: python3 automation_safety_manager.py --manual_override user@example.com")
+                logger.info("💡 To grant approval: automation-safety-cli --manual_override user@example.com")
 
                 # Send notification
                 manager.check_and_notify_limits()
@@ -62,17 +62,7 @@ def main() -> int:
             f"/{manager.global_limit}"
         )
 
-        # Get project root
-        project_root = Path(__file__).parent.parent
-
-        # Run the improved PR monitor with safety checks
-        automation_script = project_root / "automation" / "jleechanorg_pr_monitor.py"
-
-        if not automation_script.exists():
-            logger.error(f"❌ Automation script not found: {automation_script}")
-            return 1
-
-        logger.info(f"🚀 Executing PR automation monitor: {automation_script}")
+        logger.info("🚀 Executing PR automation monitor: jleechanorg_pr_automation.jleechanorg_pr_monitor")
 
         # Execute with environment variables for safety integration
         env = os.environ.copy()
@@ -88,7 +78,7 @@ def main() -> int:
         )
 
         result = subprocess.run(
-            ['python3', str(automation_script)],
+            [sys.executable, '-m', 'jleechanorg_pr_automation.jleechanorg_pr_monitor'],
             env=env,
             capture_output=True,
             text=True,
@@ -123,4 +113,4 @@ def main() -> int:
 
 
 if __name__ == '__main__':
-    exit(main())
+    sys.exit(main())

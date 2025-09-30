@@ -1,3 +1,34 @@
+Metadata-Version: 2.4
+Name: jleechanorg-pr-automation
+Version: 0.1.0
+Summary: GitHub PR automation system with safety limits and actionable counting
+Author-email: jleechan <jlee@jleechan.org>
+License: MIT
+Project-URL: Homepage, https://github.com/jleechanorg/worldarchitect.ai
+Project-URL: Repository, https://github.com/jleechanorg/worldarchitect.ai
+Project-URL: Issues, https://github.com/jleechanorg/worldarchitect.ai/issues
+Keywords: github,automation,pr,pull-request,monitoring
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Software Development :: Version Control :: Git
+Requires-Python: >=3.9
+Description-Content-Type: text/markdown
+Requires-Dist: requests>=2.25.0
+Provides-Extra: email
+Requires-Dist: keyring>=23.0.0; extra == "email"
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: ruff>=0.1.0; extra == "dev"
+
 # jleechanorg-pr-automation
 
 A comprehensive GitHub PR automation system with safety limits, actionable counting, and intelligent filtering.

@@ -1,0 +1,3 @@
+[console_scripts]
+automation-safety-cli = jleechanorg_pr_automation.automation_safety_manager:main
+jleechanorg-pr-monitor = jleechanorg_pr_automation.jleechanorg_pr_monitor:main

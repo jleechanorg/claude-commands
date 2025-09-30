@@ -12,29 +12,19 @@ import sys
 import json
 import subprocess
 import logging
+import traceback
+from collections import Counter
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
-try:
-    from automation_safety_manager import AutomationSafetyManager
-except ImportError:
-    from .automation_safety_manager import AutomationSafetyManager
-try:
-    from utils import setup_logging, json_manager
-except ImportError:
-    from .utils import setup_logging, json_manager
-from automation_utils import AutomationUtils
+from .automation_safety_manager import AutomationSafetyManager
+from .utils import setup_logging, json_manager
+from .automation_utils import AutomationUtils
 
-try:
-    from codex_config import (
-        CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
-        CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
-    )
-except ImportError:
-    from .codex_config import (
-        CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
-        CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
-    )
+from .codex_config import (
+    CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
+    CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
+)
 
 
 class JleechanorgPRMonitor:
@@ -46,13 +36,15 @@ class JleechanorgPRMonitor:
     def __init__(self):
         self.logger = setup_logging(__name__)
 
-        # Environment variable handling removed - using hardcoded mentions
-        # All AI assistants are now hardcoded in the comment template
+        self.assistant_mentions = os.environ.get(
+            "AI_ASSISTANT_MENTIONS",
+            "@codex @coderabbitai @copilot @cursor",
+        )
 
         self.wrapper_managed = os.environ.get("AUTOMATION_SAFETY_WRAPPER") == "1"
 
-        # Processing history in /tmp organized by repo/branch
-        self.history_base_dir = Path("/tmp/pr_automation_history")
+        # Processing history persisted to permanent location
+        self.history_base_dir = Path.home() / "Library" / "Logs" / "worldarchitect-automation" / "pr_history"
         self.history_base_dir.mkdir(parents=True, exist_ok=True)
 
         # Organization settings
@@ -253,99 +245,137 @@ class JleechanorgPRMonitor:
             return False
 
     def discover_open_prs(self) -> List[Dict]:
-        """Discover open PRs from last 24 hours across jleechanorg organization, ordered by most recent updates"""
+        """Discover open PRs updated in the last 24 hours across the organization."""
+
         self.logger.info(f"🔍 Discovering open PRs in {self.organization} organization (last 24 hours)")
 
-
-
-        # Get current time and 24 hours ago (in UTC to match GitHub timestamps)
         now = datetime.utcnow()
         one_day_ago = now - timedelta(hours=24)
-        self.logger.info(f"📅 Filtering PRs updated since: {one_day_ago.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+        self.logger.info("📅 Filtering PRs updated since: %s UTC", one_day_ago.strftime('%Y-%m-%d %H:%M:%S'))
 
-        try:
-            # Get all repositories in the organization (use check=False for graceful degradation)
-            repos_cmd = ["gh", "repo", "list", self.organization, "--limit", "100", "--json", "name,owner"]
-            repos_result = AutomationUtils.execute_subprocess_with_timeout(repos_cmd, timeout=30, check=False)
-            if repos_result.returncode != 0:
-                self.logger.error(f"❌ Failed to list repositories: {repos_result.stderr}")
-                return []
-            repositories = json.loads(repos_result.stdout)
+        graphql_query = '''
+        query($searchQuery: String!, $cursor: String) {
+          search(type: ISSUE, query: $searchQuery, first: 100, after: $cursor) {
+            nodes {
+              __typename
+              ... on PullRequest {
+                number
+                title
+                headRefName
+                baseRefName
+                updatedAt
+                url
+                author { login resourcePath url }
+                headRefOid
+                state
+                isDraft
+                repository { name nameWithOwner }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+        '''
 
-            self.logger.info(f"📚 Found {len(repositories)} repositories")
+        search_query = f"org:{self.organization} is:pr is:open"
+        cursor: Optional[str] = None
+        recent_prs: List[Dict] = []
 
-            recent_prs = []
+        while True:
+            gh_api_cmd = [
+                "gh",
+                "api",
+                "graphql",
+                "-f",
+                f"query={graphql_query}",
+                "-f",
+                f"searchQuery={search_query}",
+            ]
+            if cursor:
+                gh_api_cmd.extend(["-f", f"cursor={cursor}"])
 
-            for repo in repositories:
-                repo_name = repo["name"]
-                repo_full_name = f"{self.organization}/{repo_name}"
+            api_result = AutomationUtils.execute_subprocess_with_timeout(gh_api_cmd, timeout=60, check=False)
+            if api_result.returncode != 0:
+                raise RuntimeError(f"GraphQL search failed: {api_result.stderr.strip()}")
+
+            try:
+                api_data = json.loads(api_result.stdout)
+            except json.JSONDecodeError as exc:
+                self.logger.error("❌ Failed to parse GraphQL response: %s", exc)
+                raise
+
+            search_data = api_data.get('data', {}).get('search')
+            if not search_data:
+                break
+
+            nodes = search_data.get('nodes', [])
+            for node in nodes:
+                if node.get('__typename') != 'PullRequest':
+                    continue
+
+                updated_str = node.get('updatedAt')
+                if not updated_str:
+                    continue
 
                 try:
-                    # Get open PRs for this repository
-                    prs_cmd = [
-                        "gh", "pr", "list",
-                        "--repo", repo_full_name,
-                        "--state", "open",
-                        "--json", "number,title,headRefName,headRepository,baseRefName,updatedAt,url,author,headRefOid,state,isDraft"
-                    ]
+                    updated_time = datetime.fromisoformat(updated_str.replace('Z', '+00:00')).replace(tzinfo=None)
+                except ValueError:
+                    self.logger.debug(
+                        "⚠️ Invalid date format for PR %s: %s", node.get('number'), updated_str
+                    )
+                    continue
 
-                    prs_result = AutomationUtils.execute_subprocess_with_timeout(prs_cmd, timeout=30, check=False)
-                    if prs_result.returncode != 0:
-                        self.logger.warning(f"⚠️ Failed to list PRs for {repo_full_name}: {prs_result.stderr}")
-                        continue  # Skip this repo and continue with others
-                    prs = json.loads(prs_result.stdout)
+                if updated_time < one_day_ago:
+                    continue
 
-                    # Filter PRs updated in last 3 days and add repository context
-                    for pr in prs:
-                        updated_str = pr.get('updatedAt', '')
-                        if updated_str:
-                            try:
-                                # Parse ISO format: 2025-09-28T07:00:00Z
-                                updated_time = datetime.fromisoformat(updated_str.replace('Z', '+00:00'))
-                                updated_time = updated_time.replace(tzinfo=None)  # Remove timezone for comparison
+                repo_info = node.get('repository') or {}
+                author_info = node.get('author') or {}
+                if 'login' not in author_info:
+                    author_info = {**author_info, 'login': author_info.get('login')}
 
-                                if updated_time >= one_day_ago:
-                                    pr["repository"] = repo_name
-                                    pr["repositoryFullName"] = repo_full_name
-                                    pr["updated_datetime"] = updated_time
-                                    recent_prs.append(pr)
-                            except ValueError:
-                                # Skip PRs with invalid date format
-                                self.logger.debug(f"⚠️ Invalid date format for PR {pr.get('number')}: {updated_str}")
-                                continue
+                normalized = {
+                    'number': node.get('number'),
+                    'title': node.get('title'),
+                    'headRefName': node.get('headRefName'),
+                    'baseRefName': node.get('baseRefName'),
+                    'updatedAt': updated_str,
+                    'url': node.get('url'),
+                    'author': author_info,
+                    'headRefOid': node.get('headRefOid'),
+                    'state': node.get('state'),
+                    'isDraft': node.get('isDraft'),
+                    'repository': repo_info.get('name'),
+                    'repositoryFullName': repo_info.get('nameWithOwner'),
+                    'updated_datetime': updated_time,
+                }
+                recent_prs.append(normalized)
 
-                    # Use already filtered recent_prs count to avoid duplicate parsing
-                    repo_recent_count = len([pr for pr in recent_prs if pr.get('repository') == repo_name])
-                    if repo_recent_count > 0:
-                        self.logger.info(f"📋 {repo_name}: {repo_recent_count} recent PRs (of {len(prs)} total)")
+            page_info = search_data.get('pageInfo') or {}
+            if not page_info.get('hasNextPage'):
+                break
 
-                except subprocess.CalledProcessError as e:
-                    # Skip repositories we don't have access to
-                    if "Not Found" in e.stderr or "404" in e.stderr:
-                        self.logger.debug(f"⚠️ No access to {repo_full_name}")
-                    else:
-                        self.logger.warning(f"❌ Error getting PRs for {repo_full_name}: {e.stderr}")
+            cursor = page_info.get('endCursor')
+            if not cursor:
+                break
 
-            # Sort by most recently updated first
-            recent_prs.sort(key=lambda x: x.get('updated_datetime', datetime.min), reverse=True)
-
-            self.logger.info(f"🎯 Total recent PRs discovered (last 24 hours): {len(recent_prs)}")
-
-            # Log top 5 most recent for visibility
-            if recent_prs:
-                self.logger.info("📊 Most recently updated PRs:")
-                for i, pr in enumerate(recent_prs[:5], 1):
-                    updated_str = pr['updated_datetime'].strftime('%Y-%m-%d %H:%M')
-                    self.logger.info(f"  {i}. {pr['repositoryFullName']} #{pr['number']} - {updated_str}")
-
-            return recent_prs
-
-        except subprocess.CalledProcessError as e:
-            self.logger.error(f"❌ Failed to discover repositories: {e.stderr}")
+        if not recent_prs:
+            self.logger.info("📭 No recent open PRs discovered")
             return []
-        except json.JSONDecodeError as e:
-            self.logger.error(f"❌ Failed to parse repository data: {e}")
-            return []
+
+        recent_prs.sort(key=lambda x: x.get('updated_datetime', datetime.min), reverse=True)
+
+        repo_counter = Counter(pr.get('repository') for pr in recent_prs if pr.get('repository'))
+        for repo_name, count in repo_counter.items():
+            self.logger.info("📋 %s: %s recent PRs", repo_name, count)
+
+        self.logger.info("🎯 Total recent PRs discovered (last 24 hours): %s", len(recent_prs))
+
+        self.logger.info("📊 Most recently updated PRs:")
+        for i, pr in enumerate(recent_prs[:5], 1):
+            updated_str = pr['updated_datetime'].strftime('%Y-%m-%d %H:%M')
+            self.logger.info("  %s. %s #%s - %s", i, pr['repositoryFullName'], pr['number'], updated_str)
+
+        return recent_prs
 
 
     def _find_local_repository(self, repo_name: str) -> Optional[Path]:
@@ -508,7 +538,7 @@ class JleechanorgPRMonitor:
     def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
         """Build comment body that tells all AI assistants to fix PR comments, tests, and merge conflicts"""
 
-        comment_body = f"""@codex @coderabbitai @copilot @cursor [AI automation] Please make the following changes to this PR
+        comment_body = f"""{self.assistant_mentions} [AI automation] Please make the following changes to this PR
 
 **PR Details:**
 - Title: {pr_data.get('title', 'Unknown')}
@@ -622,17 +652,21 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             self.logger.warning("🚫 Global automation limit reached - cannot process target PR")
             return False
 
-        if not self.wrapper_managed:
-            self.safety_manager.record_global_run()
-        global_run_number = self.safety_manager.get_global_runs()
-        max_global_runs = self.safety_manager.global_limit
-        self.logger.info(f"📊 Global run #{global_run_number}/{max_global_runs}")
-
         try:
-            # Check safety limits for this specific PR
+            # Check safety limits for this specific PR first
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
                 self.logger.warning(f"🚫 Safety limits exceeded for PR {repo_full} #{pr_number}")
                 return False
+
+            # Only record global run AFTER confirming we can process the PR
+            if not self.wrapper_managed:
+                self.safety_manager.record_global_run()
+                current_runs = self.safety_manager.get_global_runs()
+                self.logger.info(
+                    "📊 Recorded global run %s/%s before processing target PR",
+                    current_runs,
+                    self.safety_manager.global_limit,
+                )
 
             # Process PR with guaranteed cleanup
             try:
@@ -677,14 +711,32 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         except Exception as e:
             self.logger.error(f"❌ Unexpected error processing target PR {repo_full} #{pr_number}: {e}")
+            self.logger.debug("Traceback: %s", traceback.format_exc())
             return False
 
     def run_monitoring_cycle(self, single_repo=None, max_prs=10):
         """Run a complete monitoring cycle with actionable PR counting"""
         self.logger.info("🚀 Starting jleechanorg PR monitoring cycle")
 
-        # Discover all open PRs
-        open_prs = self.discover_open_prs()
+        if not self.safety_manager.can_start_global_run():
+            current_runs = self.safety_manager.get_global_runs()
+            self.logger.warning(
+                "🚫 Global automation limit reached %s/%s",
+                current_runs,
+                self.safety_manager.global_limit,
+            )
+            self.safety_manager.check_and_notify_limits()
+            return
+
+        global_run_recorded = self.wrapper_managed
+
+        try:
+            open_prs = self.discover_open_prs()
+        except Exception as exc:
+            self.logger.error("❌ Failed to discover PRs: %s", exc)
+            self.logger.debug("Traceback: %s", traceback.format_exc())
+            self.safety_manager.check_and_notify_limits()
+            return
 
         # Apply single repo filter if specified
         if single_repo:
@@ -726,7 +778,18 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
             self.logger.info(f"🎯 Processing PR: {repo_full_name} #{pr_number} - {pr['title']}")
 
+            attempt_recorded = False
             try:
+                if not global_run_recorded:
+                    self.safety_manager.record_global_run()
+                    global_run_recorded = True
+                    current_runs = self.safety_manager.get_global_runs()
+                    self.logger.info(
+                        "📊 Recorded global run %s/%s before processing PRs",
+                        current_runs,
+                        self.safety_manager.global_limit,
+                    )
+
                 # Post codex instruction comment directly (comment-only approach)
                 comment_result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr)
                 success = comment_result == "posted"
@@ -738,6 +801,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     repo=repo_full_name,
                     branch=branch_name,
                 )
+                attempt_recorded = True
 
                 if success:
                     self.logger.info(f"✅ Successfully processed PR {repo_full_name} #{pr_number}")
@@ -746,11 +810,14 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     self.logger.error(f"❌ Failed to process PR {repo_full_name} #{pr_number}")
             except Exception as e:
                 self.logger.error(f"❌ Exception processing PR {repo_full_name} #{pr_number}: {e}")
+                self.logger.debug("Traceback: %s", traceback.format_exc())
                 # Record failure for safety manager
                 self.safety_manager.record_pr_attempt(pr_number, "failure", repo=repo_full_name, branch=branch_name)
+                attempt_recorded = True
             finally:
-                # Always release the processing slot
-                self.safety_manager.release_pr_slot(pr_number, repo=repo_full_name, branch=branch_name)
+                # Always release the processing slot if record_pr_attempt didn't do it
+                if not attempt_recorded:
+                    self.safety_manager.release_pr_slot(pr_number, repo=repo_full_name, branch=branch_name)
 
         self.logger.info(f"🏁 Monitoring cycle complete: {actionable_processed} actionable PRs processed, {skipped_count} skipped")
 

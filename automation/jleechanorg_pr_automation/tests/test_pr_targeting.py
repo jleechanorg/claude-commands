@@ -4,14 +4,8 @@ Test PR targeting functionality for jleechanorg_pr_monitor - Codex Strategy Test
 """
 
 import unittest
-import sys
-from pathlib import Path
 
-# Add automation directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-# Import after path setup
-from jleechanorg_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
 class TestPRTargeting(unittest.TestCase):

@@ -8,19 +8,14 @@ Test Matrix Coverage:
 - Eligible PR Detection and Filtering
 """
 
-import sys
 import os
 import unittest
 import tempfile
 import subprocess
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
 
-# Add automation directory to path
-sys.path.insert(0, str(Path(__file__).parent.parent))
-
-from jleechanorg_pr_monitor import JleechanorgPRMonitor
+from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
 class TestPRFilteringMatrix(unittest.TestCase):
@@ -308,7 +303,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
              patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment, \
              patch.object(self.monitor, '_build_codex_comment_body_simple') as mock_build_body, \
              patch.object(self.monitor, '_record_processed_pr') as mock_record, \
-             patch('automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
+             patch('jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
 
             # Setup: PR not skipped, no existing comment, successful command
             mock_state.return_value = ('sha123', [])
@@ -368,7 +363,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
              patch.object(self.monitor, '_should_skip_pr') as mock_skip, \
              patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment, \
              patch.object(self.monitor, '_build_codex_comment_body_simple') as mock_build_body, \
-             patch('automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
+             patch('jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
 
             # Setup: PR not skipped, no existing comment, but command fails
             mock_state.return_value = ('sha123', [])

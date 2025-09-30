@@ -1,0 +1,10 @@
+requests>=2.25.0
+
+[dev]
+pytest>=7.0.0
+pytest-cov>=4.0.0
+black>=22.0.0
+ruff>=0.1.0
+
+[email]
+keyring>=23.0.0

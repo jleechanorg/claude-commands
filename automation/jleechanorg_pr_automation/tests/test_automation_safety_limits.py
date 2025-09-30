@@ -8,21 +8,16 @@ RED Phase: All tests should FAIL initially
 - Manual approval requirement
 """
 
-import sys
 import os
 import unittest
 import tempfile
 import json
 import shutil
 from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import patch, MagicMock
 
-# Add automation directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
-# Import after path modification
-from automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 class TestAutomationSafetyLimits(unittest.TestCase):

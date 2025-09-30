@@ -15,15 +15,7 @@ from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
 # Import the automation safety manager using proper Python module path
-try:
-    from automation.automation_safety_manager import AutomationSafetyManager
-except ImportError:
-    # Fallback for when running tests directly
-    import sys
-    automation_dir = Path(__file__).parent.parent
-    if str(automation_dir) not in sys.path:
-        sys.path.append(str(automation_dir))
-    from automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
 
 class TestAutomationSafetyManagerInit:
@@ -466,7 +458,7 @@ class TestFileLocking:
 
     def test_permission_error_handling(self, manager):
         """Test handling of file permission errors"""
-        with patch('utils.json_manager.write_json', return_value=False):
+        with patch('jleechanorg_pr_automation.utils.json_manager.write_json', return_value=False):
             with patch.object(manager.logger, 'error') as mock_error:
                 # Should not raise exception
                 manager.record_global_run()
