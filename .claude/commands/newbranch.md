@@ -1,19 +1,22 @@
-# /newbranch or /nb - Create new branch from latest main
+# /newbranch or /nb - Create a new branch from fresh `origin/main`
 
-Creates a fresh branch from the latest main branch code. Aborts if there are uncommitted changes.
+Creates a fresh branch from the latest `origin/main` while carrying forward your current working tree changes. When the command detects language such as "bring in changes" it will also cherry-pick the requested committed changes onto the new branch.
 
 ## Usage
 - `/newbranch` - Creates a new branch with timestamp (dev{timestamp})
 - `/nb` - Alias for /newbranch
-- `/newbranch test1234` - Creates a branch named 'test1234'
-- `/nb feature-xyz` - Creates a branch named 'feature-xyz'
+- `/newbranch test1234` - Creates a branch named `test1234`
+- `/nb feature-xyz` - Creates a branch named `feature-xyz`
+- `/nb bring in changes abc123` - Creates a branch named `bring-in-changes` and cherry-picks commit `abc123` before restoring uncommitted edits
+- `/newbranch polish ui include changes 123abc 456def` - Creates a branch named `polish-ui` and cherry-picks commits `123abc` and `456def`
 
 ## Behavior
-1. Checks for uncommitted changes using `git status`
-2. Aborts if any uncommitted changes are found
-3. Switches to main and pulls latest changes from origin/main
-4. Creates and switches to new branch from latest main
-5. Sets up tracking to origin/<branch_name> (NOT origin/main)
+1. Detects uncommitted changes and stashes them (including untracked files).
+2. Fetches, checks out, and pulls the latest `origin/main`.
+3. Creates the new branch directly from `origin/main`.
+4. Optionally cherry-picks requested commits that exist on the previous branch.
+5. Restores any stashed changes so your working tree matches your previous edits.
+6. Pushes the branch and sets upstream tracking to `origin/<branch_name>`.
 
 ## Examples
 ```
@@ -25,16 +28,23 @@ Creates a fresh branch from the latest main branch code. Aborts if there are unc
 
 /newbranch bugfix-123
 → Creates branch named bugfix-123
+
+/nb bring in changes abc123 def456
+→ Creates branch named bring-in-changes and cherry-picks abc123 + def456
+
+/nb feature tweaks with commits
+→ Creates branch named feature-tweaks and cherry-picks every local commit not on origin/main
 ```
 
 ## Error Cases
-- Uncommitted changes present → Aborts with message
+- Rebase conflicts → Command stops with instructions so you can resolve and continue
 - Branch name already exists → Git will report error
 - Network issues → Fetch may fail
 
 ## Implementation Notes
 - Works in both regular repos and worktrees
-- Always creates from updated local main (after pulling from origin/main)
+- Always fetches and pulls the latest `origin/main` before creating the branch
+- Cherry-picks requested commits from the previous branch when keywords like "bring in changes" are present
 - Automatically sets up remote tracking to origin/<branch_name>
 - ⚠️ **CRITICAL**: Must use Python script (.claude/commands/newbranch.py)
 - ❌ **NEVER** manually run: `git branch --set-upstream-to=origin/main`
