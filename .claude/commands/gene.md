@@ -40,6 +40,21 @@ When this command is invoked with a goal:
 
 **Purpose**: Single-command goal refinement and execution using the enhanced genesis/genesis.py with fast-gen default mode
 
+## ⚠️ Important: Genesis vs Ralph
+
+**Genesis** = WorldArchitect.ai orchestration system (this command)
+- Located at: `/Users/jleechan/projects/worktree_ralph/genesis/genesis.py`
+- **Uses Codex CLI by default** (200K context via OpenRouter)
+- Can override with `--claude` flag to use Claude Code CLI
+- Integrated with WorldArchitect.ai project
+- Fast-gen mode with Cerebras integration
+
+**Ralph** = Standalone ralph-orchestrator fork (different system!)
+- Located at: `/Users/jleechan/projects_other/ralph-orchestrator`
+- Uses Codex CLI by default (200K context)
+- Separate codebase, different architecture
+- See `/ralph` command for Ralph execution
+
 ## Key Differences from /gen
 
 - **Auto-Execution**: Automatically runs `python genesis/genesis.py` after goal setup

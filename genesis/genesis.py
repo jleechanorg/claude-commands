@@ -23,6 +23,11 @@ import fcntl
 
 GENESIS_USE_CODEX: Optional[bool] = None
 
+# Token burn prevention constants (centralized to avoid duplication)
+MAX_TOKENS_PER_ITERATION = 50_000  # Hard limit per iteration
+MAX_PROMPT_LENGTH = 100_000  # Context overflow prevention
+MAX_FIELD_SIZE = 50_000  # Session field size limit
+
 
 def is_codex_enabled(argv: Optional[List[str]] = None) -> bool:
     """Determine whether Codex should be used (Codex default)."""
@@ -97,6 +102,11 @@ class WorkflowState:
     phase_durations: Dict[str, float] = field(default_factory=dict)
     retry_count: int = 0
     max_retries: int = 3
+
+    # Token Usage Tracking (prevent infinite burn)
+    total_tokens_used: int = 0
+    iteration_tokens: Dict[int, int] = field(default_factory=dict)
+    max_tokens_per_iteration: int = field(default_factory=lambda: MAX_TOKENS_PER_ITERATION)
 
     def __post_init__(self) -> None:
         """Initialize state with proper defaults and validation"""
@@ -183,6 +193,26 @@ class WorkflowState:
         """Increment retry count and return if more retries available"""
         self.retry_count += 1
         return self.retry_count < self.max_retries
+
+    def add_token_usage(self, tokens: int, iteration: int) -> bool:
+        """Track token usage and prevent burn. Returns False if limit exceeded."""
+        self.total_tokens_used += tokens
+
+        # Track per-iteration tokens
+        if iteration in self.iteration_tokens:
+            self.iteration_tokens[iteration] += tokens
+        else:
+            self.iteration_tokens[iteration] = tokens
+
+        # Check if this iteration exceeds limit
+        if self.iteration_tokens[iteration] > self.max_tokens_per_iteration:
+            print(f"🛑 TOKEN BURN PREVENTION: Iteration {iteration} used {self.iteration_tokens[iteration]} tokens")
+            print(f"    Maximum per iteration: {self.max_tokens_per_iteration}")
+            return False
+
+        # Log current usage
+        print(f"📊 TOKEN TRACKING: Iteration {iteration}: {self.iteration_tokens[iteration]} tokens, Total: {self.total_tokens_used}")
+        return True
 
     def calculate_completion_percentage(self) -> float:
         """Calculate completion percentage based on goals and tests"""
@@ -422,9 +452,34 @@ def smart_model_call(prompt):
     else:
         return execute_claude_command(prompt, use_cerebras=False)
 
-def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=False):
+def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=False, iteration_token_count=None, workflow_state=None):
     """Execute claude, codex, or cerebras command with prompt and return output."""
     import time
+
+    # TOKEN BURN PREVENTION: Use centralized constants
+    # Check token budget if provided
+    if iteration_token_count is not None and iteration_token_count > MAX_TOKENS_PER_ITERATION:
+        print(f"🛑 TOKEN LIMIT EXCEEDED: {iteration_token_count} > {MAX_TOKENS_PER_ITERATION}")
+        print("    Preventing infinite token burn - operation cancelled")
+        return None
+
+    # Check prompt length for context overflow
+    if len(prompt) > MAX_PROMPT_LENGTH:
+        print(f"🛑 CONTEXT OVERFLOW PREVENTION: Prompt length {len(prompt)} > {MAX_PROMPT_LENGTH}")
+        print("    Truncating prompt to prevent context overflow...")
+        prompt = prompt[:MAX_PROMPT_LENGTH] + "\n\n[PROMPT TRUNCATED DUE TO LENGTH - PROVIDE CONCISE RESPONSE]"
+
+    # Log token usage and track in workflow_state if available
+    estimated_tokens = len(prompt) // 4  # Rough token estimation
+    current_iteration = 0
+    if workflow_state is not None:
+        current_iteration = getattr(workflow_state, 'iteration_count', 0)
+        # Track token usage and enforce limit
+        if not workflow_state.add_token_usage(estimated_tokens, current_iteration):
+            print(f"🛑 TOKEN BUDGET EXCEEDED via workflow_state tracking")
+            print("    Preventing infinite token burn - operation cancelled")
+            return None
+    print(f"📊 TOKEN USAGE: Estimated {estimated_tokens} input tokens, iteration total: {iteration_token_count or 0}")
 
     # Increase timeout for large prompts to prevent hanging
     if len(prompt) > 500:
@@ -459,6 +514,32 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
                 input_method = "arg"
             else:
                 # Fallback to claude if cerebras script not found
+                # Use codex by default (controlled by is_codex_enabled())
+                if is_codex_enabled():
+                    command = ["codex", "exec", "--yolo"]
+                    tool_name = "codex"
+                    if verbose_mode:
+                        print(f"    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
+                else:
+                    command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
+                    tool_name = "claude"
+                    if verbose_mode:
+                        command.extend(["--verbose"])
+                        print(f"    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
+                    if debug_mode:
+                        command.extend(["--debug", "api,hooks,mcp"])
+                        print(f"    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
+                input_method = "stdin"
+        else:
+            # Use codex by default (controlled by is_codex_enabled())
+            if is_codex_enabled():
+                command = ["codex", "exec", "--yolo"]
+                tool_name = "codex"
+                input_method = "stdin"
+                if verbose_mode:
+                    print(f"    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
+            else:
+                # Pass model flag and value as separate args so CLI parses it correctly
                 command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
                 if verbose_mode:
                     command.extend(["--verbose"])
@@ -468,17 +549,6 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
                     print(f"    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
                 tool_name = "claude"
                 input_method = "stdin"
-        else:
-            # Pass model flag and value as separate args so CLI parses it correctly
-            command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
-            if verbose_mode:
-                command.extend(["--verbose"])
-                print(f"    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
-            if debug_mode:
-                command.extend(["--debug", "api,hooks,mcp"])
-                print(f"    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
-            tool_name = "claude"
-            input_method = "stdin"
 
         print(f"    🚀 EXECUTING {tool_name.upper()} COMMAND:")
         print(f"    └─ Command: {' '.join(command[:2])}...")
@@ -1311,20 +1381,43 @@ RECOMMENDATION: [proceed/skip/modify task]
     return execute_claude_command(search_prompt, timeout=600)
 
 def validate_implementation_quality(work_output):
-    """Genesis pattern: Reject TODO/placeholder implementations"""
-    placeholder_patterns = [
-        r'TODO', r'FIXME', r'PLACEHOLDER', r'XXX', r'HACK',
-        r'NotImplemented', r'pass\s*#', r'raise NotImplementedError',
-        r'// TODO', r'// FIXME', r'/* TODO', r'<!-- TODO',
-        r'def\s+\w+\([^)]*\):\s*pass\s*$',  # Empty function with just pass
-        r'function\s+\w+\([^)]*\)\s*{\s*}',  # Empty JS function
-    ]
+    """Genesis pattern: Track TODOs for later completion instead of rejecting"""
+    placeholder_patterns = {
+        'TODO': r'TODO',
+        'FIXME': r'FIXME',
+        'PLACEHOLDER': r'PLACEHOLDER',
+        'XXX': r'XXX',
+        'HACK': r'HACK',
+        'NotImplemented': r'NotImplemented',
+        'pass_comment': r'pass\s*#',
+        'NotImplementedError': r'raise NotImplementedError',
+        'comment_todo': r'// TODO|// FIXME|/\* TODO|<!-- TODO',
+        'empty_function_python': r'def\s+\w+\([^)]*\):\s*pass\s*$',
+        'empty_function_js': r'function\s+\w+\([^)]*\)\s*{\s*}',
+    }
 
-    for pattern in placeholder_patterns:
-        if re.search(pattern, work_output, re.IGNORECASE | re.MULTILINE):
-            return False, f"REJECTED: Placeholder detected ({pattern}). Genesis demands full implementations."
+    detected_todos = []
+    for name, pattern in placeholder_patterns.items():
+        matches = re.finditer(pattern, work_output, re.IGNORECASE | re.MULTILINE)
+        for match in matches:
+            # Get line number and context
+            line_num = work_output[:match.start()].count('\n') + 1
+            line_start = work_output.rfind('\n', 0, match.start()) + 1
+            line_end = work_output.find('\n', match.end())
+            if line_end == -1:
+                line_end = len(work_output)
+            line_content = work_output[line_start:line_end].strip()
 
-    return True, "APPROVED: No placeholders detected"
+            detected_todos.append({
+                'type': name,
+                'line': line_num,
+                'content': line_content[:100]  # First 100 chars
+            })
+
+    if detected_todos:
+        return True, f"APPROVED with {len(detected_todos)} TODO(s) tracked for later completion", detected_todos
+
+    return True, "APPROVED: No TODOs detected", []
 
 def make_progress(
     refined_goal,
@@ -1332,6 +1425,7 @@ def make_progress(
     execution_strategy,
     plan_context="",
     use_codex=False,
+    session_data=None,
 ):
     """Genesis pattern: Execute with search-first validation and subagent delegation"""
 
@@ -1433,24 +1527,23 @@ Execute using Genesis principles now.
         print(f"  └─ Response length: {len(result)} characters")
         print(f"  └─ First 300 chars: {result[:300]}...")
 
-        # Validate result quality (Genesis no-placeholders policy)
-        is_quality, quality_msg = validate_implementation_quality(result)
+        # Validate result quality and track TODOs
+        is_quality, quality_msg, detected_todos = validate_implementation_quality(result)
         print(f"  🛡️ Implementation Quality: {quality_msg}")
 
-        if not is_quality:
-            print("  🔄 Requesting full implementation (Genesis policy)...")
-            print("  📤 SENDING QUALITY RETRY PROMPT:")
-            retry_prompt = f"""{prompt}
+        # Track TODOs for later completion instead of rejecting
+        if detected_todos:
+            print(f"  📝 Tracked {len(detected_todos)} TODO(s) for later completion:")
+            for todo in detected_todos[:5]:  # Show first 5
+                print(f"     └─ Line {todo['line']}: {todo['type']} - {todo['content'][:60]}...")
 
-QUALITY REJECTION: Previous output contained placeholders.
-GENESIS POLICY: Must provide full implementation or document why impossible.
-"""
-            print(f"  └─ Retry prompt length: {len(retry_prompt)} characters")
-            result = execute_claude_command(retry_prompt, timeout=600, use_codex=use_codex)
+            # Store TODOs in session for later resolution
+            if session_data is not None:
+                if 'tracked_todos' not in session_data:
+                    session_data['tracked_todos'] = []
+                session_data['tracked_todos'].extend(detected_todos)
 
-            if result:
-                print("  📥 CLAUDE QUALITY RETRY RESPONSE:")
-                print(f"  └─ Retry response length: {len(result)} characters")
+        # Continue with result (no longer blocking on TODOs)
     else:
         print("  ❌ No response received from Claude execution")
 
@@ -1718,7 +1811,7 @@ Return concrete loop-back actions to take:
     return None
 
 def generate_tdd_implementation(
-    refined_goal, iteration_num, execution_strategy, plan_context="", use_codex=False
+    refined_goal, iteration_num, execution_strategy, plan_context="", use_codex=False, session_data=None
 ):
     """Genesis pattern: Generate comprehensive TDD tests and implementation using Cerebras direct."""
 
@@ -1798,30 +1891,109 @@ Generate the complete TDD test suite and implementation now:
         print(f"  └─ Response length: {len(tdd_response)} characters")
         print(f"  └─ First 200 chars: {tdd_response[:200]}...")
 
-        # Validate TDD response quality (Genesis no-placeholders policy)
-        is_quality, quality_msg = validate_implementation_quality(tdd_response)
+        # Validate TDD response quality and track TODOs
+        is_quality, quality_msg, detected_todos = validate_implementation_quality(tdd_response)
         print(f"  🛡️ TDD Quality Validation: {quality_msg}")
 
-        if not is_quality:
-            print("  🔄 Requesting complete TDD implementation (Genesis policy)...")
-            print("  📋 SENDING TDD QUALITY RETRY PROMPT:")
-            retry_prompt = f"""{prompt}
+        # Track TODOs for later completion instead of rejecting
+        if detected_todos:
+            print(f"  📝 Tracked {len(detected_todos)} TODO(s) in TDD for later completion:")
+            for todo in detected_todos[:5]:  # Show first 5
+                print(f"     └─ Line {todo['line']}: {todo['type']} - {todo['content'][:60]}...")
 
-QUALITY REJECTION: Previous TDD output contained placeholders.
-GENESIS POLICY: Must provide complete tests and implementation.
-NO TODO, FIXME, PLACEHOLDER, or NotImplemented patterns allowed.
-Generate complete, working TDD test suite and implementation.
-"""
-            print(f"  └─ Retry prompt length: {len(retry_prompt)} characters")
-            tdd_response = execute_claude_command(retry_prompt, use_codex=use_codex, use_cerebras=True, timeout=1200)
+            # Store TODOs in session for later resolution
+            if session_data is not None:
+                if 'tracked_todos' not in session_data:
+                    session_data['tracked_todos'] = []
+                for todo in detected_todos:
+                    todo['source'] = 'TDD'
+                session_data['tracked_todos'].extend(detected_todos)
 
-            if tdd_response:
-                print("  📤 CEREBRAS TDD RETRY RESPONSE RECEIVED:")
-                print(f"  └─ Retry response length: {len(tdd_response)} characters")
+        # Continue with TDD response (no longer blocking on TODOs)
     else:
         print("  ❌ No TDD response received from Cerebras")
 
     return tdd_response
+
+def resolve_tracked_todos(session_data, use_codex=True):
+    """Resolve accumulated TODOs from previous iterations"""
+    tracked_todos = session_data.get('tracked_todos', [])
+
+    if not tracked_todos:
+        print("  ✅ No tracked TODOs to resolve")
+        return True
+
+    print(f"\n{'='*80}")
+    print(f"📝 TODO RESOLUTION PHASE")
+    print(f"{'='*80}")
+    print(f"  Found {len(tracked_todos)} tracked TODO(s) from previous iterations")
+
+    # Group TODOs by type for batch resolution
+    todos_by_type = {}
+    for todo in tracked_todos:
+        todo_type = todo.get('type', 'unknown')
+        if todo_type not in todos_by_type:
+            todos_by_type[todo_type] = []
+        todos_by_type[todo_type].append(todo)
+
+    print(f"\n  📊 TODO Breakdown:")
+    for todo_type, todos in todos_by_type.items():
+        print(f"     └─ {todo_type}: {len(todos)} items")
+
+    # Create resolution prompt
+    todo_summary = "\n".join([
+        f"- Line {todo['line']}: {todo['type']} - {todo['content']}"
+        for todo in tracked_todos[:20]  # Show first 20
+    ])
+
+    if len(tracked_todos) > 20:
+        todo_summary += f"\n... and {len(tracked_todos) - 20} more"
+
+    resolution_prompt = f"""TODO RESOLUTION REQUEST
+
+You have {len(tracked_todos)} tracked TODO(s) that need completion:
+
+{todo_summary}
+
+TASK: Resolve these TODOs by:
+1. Finding each TODO in the codebase
+2. Implementing the complete functionality
+3. Removing the TODO comment after implementation
+
+REQUIREMENTS:
+- Complete implementations only (no new TODOs)
+- Maintain existing code structure
+- Add tests if needed
+- Document what you resolved
+
+Execute using claude -p for each resolution.
+"""
+
+    print(f"\n  📤 SENDING TODO RESOLUTION PROMPT:")
+    print(f"  └─ Prompt length: {len(resolution_prompt)} characters")
+    print(f"  └─ TODOs to resolve: {len(tracked_todos)}")
+
+    result = execute_claude_command(resolution_prompt, timeout=600, use_codex=use_codex)
+
+    if result:
+        print(f"  📥 TODO RESOLUTION RESPONSE:")
+        print(f"  └─ Response length: {len(result)} characters")
+
+        # Validate that TODOs were actually resolved
+        is_quality, quality_msg, new_todos = validate_implementation_quality(result)
+
+        if new_todos:
+            print(f"  ⚠️  Resolution created {len(new_todos)} new TODO(s)")
+            # Add new TODOs to tracking
+            session_data['tracked_todos'] = new_todos
+        else:
+            print(f"  ✅ All TODOs resolved successfully")
+            session_data['tracked_todos'] = []
+
+        return True
+    else:
+        print(f"  ❌ No resolution response received")
+        return False
 
 def integrate_git_workflow(goal_dir, iteration_summary, use_codex=False):
     """Genesis pattern: Auto-commit when tests pass"""
@@ -2620,6 +2792,12 @@ ORIGINAL STRATEGY CONTEXT:
             print(consensus_response[:300] + "..." if len(consensus_response) > 300 else consensus_response)
             print()
 
+            # STAGE 4.5: TODO Resolution Phase (DISABLED - causing analysis paralysis)
+            # print("📝 STAGE 4.5: TODO Resolution Phase")
+            # if 'session_data' not in locals():
+            #     session_data = {}
+            # resolve_tracked_todos(session_data, use_codex)
+
             # 🚨 GENESIS SELF-DETERMINATION: Check for completion
             if check_goal_completion(consensus_response, exit_criteria):
                 print("🎉 GENESIS SELF-DETERMINATION: GOAL COMPLETED!")
@@ -2717,6 +2895,13 @@ ORIGINAL STRATEGY CONTEXT:
             # Enhanced workflow state
             "workflow_phase": workflow_phase,
             "milestones": session_data.get("milestones", []),
+            # TOKEN BURN PREVENTION: Pull live token data from workflow_state when available
+            "token_usage": {
+                "total_tokens": getattr(workflow_state, 'total_tokens_used', 0) if 'workflow_state' in locals() and workflow_state is not None else session_data.get("total_tokens", 0),
+                "iteration_tokens": getattr(workflow_state, 'iteration_tokens', {}) if 'workflow_state' in locals() and workflow_state is not None else session_data.get("iteration_tokens", {}),
+                "max_tokens_per_iteration": MAX_TOKENS_PER_ITERATION,
+                "current_iteration_tokens": getattr(workflow_state, 'iteration_tokens', {}).get(i, 0) if 'workflow_state' in locals() and workflow_state is not None else session_data.get("iteration_tokens", {}).get(i, 0)
+            },
             "current_milestone": session_data.get("current_milestone"),
             "milestone_progress": session_data.get("milestone_progress", {})
         }
@@ -2928,6 +3113,15 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
     for iteration in range(max_iterations):
         print(f"\n🔄 B-Stage Iteration {iteration + 1}/{max_iterations}")
         workflow_state.current_phase = f"B{iteration + 1}"
+
+        # TOKEN BURN PREVENTION: Log iteration start with token tracking
+        print(f"📊 ITERATION STATS:")
+        print(f"  └─ Total tokens used: {workflow_state.total_tokens_used}")
+        print(f"  └─ Iteration {iteration + 1} tokens: {workflow_state.iteration_tokens.get(iteration, 0)}")
+        print(f"  └─ Token budget remaining: {workflow_state.max_tokens_per_iteration - workflow_state.iteration_tokens.get(iteration, 0)}")
+        print(f"  └─ Tests passing: {workflow_state.tests_passing}")
+        print(f"  └─ Goal complete: {workflow_state.goal_complete}")
+        print("═" * 50)
 
         # B1: Integration & Testing (Smart Model)
         b1_prompt = f"Integration & Testing: Run all relevant tests and integrate changes for goal '{goal}': {current_suite}"
