@@ -558,11 +558,46 @@ add_mcp_server() {
         if command -v npm >/dev/null 2>&1; then
             grok_path="$(npm root -g)/grok-mcp/build/index.js"
             if [ ! -f "$grok_path" ]; then
-                echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path, attempting global install...${NC}"
-                npm install -g grok-mcp >/dev/null 2>&1 || true
+                echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path${NC}"
+                echo -e "${BLUE}  📦 Installing grok-mcp globally from npm...${NC}"
+                log_with_timestamp "grok-mcp not found, installing globally"
+
+                local install_output
+                install_output=$(npm install -g grok-mcp --registry https://registry.npmjs.org/ 2>&1)
+                local install_exit_code=$?
+
+                if [ $install_exit_code -eq 0 ]; then
+                    echo -e "${GREEN}  ✅ Successfully installed grok-mcp globally${NC}"
+                    log_with_timestamp "grok-mcp installed successfully"
+
+                    # Re-calculate path after installation to get actual location
+                    grok_path="$(npm root -g)/grok-mcp/build/index.js"
+
+                    # Verify installation at actual location
+                    if [ -f "$grok_path" ]; then
+                        echo -e "${GREEN}  ✅ Verified grok-mcp at $grok_path${NC}"
+                    else
+                        echo -e "${RED}  ❌ grok-mcp installation succeeded but file not found at expected path: $grok_path${NC}"
+                        log_error_details "grok-mcp verification" "grok-mcp" "File not found after installation at expected path: $grok_path"
+                        INSTALL_RESULTS["$name"]="VERIFY_FAILED"
+                        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                        return 1
+                    fi
+                else
+                    echo -e "${RED}  ❌ Failed to install grok-mcp globally${NC}"
+                    log_error_details "npm install grok-mcp" "grok-mcp" "$install_output"
+                    echo -e "${RED}  📋 Install error: $install_output${NC}"
+                    INSTALL_RESULTS["$name"]="INSTALL_FAILED"
+                    FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+                    return 1
+                fi
+            else
+                echo -e "${GREEN}  ✅ Found grok-mcp at $grok_path${NC}"
+                log_with_timestamp "grok-mcp found at global installation"
             fi
         else
             grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
+            echo -e "${YELLOW}  ⚠️ npm command not found, using fallback path: $grok_path${NC}"
         fi
 
         # Add XAI_API_KEY environment variable for grok-mcp

@@ -361,6 +361,23 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 🚨 **TERMINAL SESSION PRESERVATION:** ⚠️ MANDATORY - Scripts must NOT exit terminal on errors
 - ❌ NEVER use `exit 1` that terminates user's terminal session
 
+🚨 **VERDACCIO PRIVATE NPM REGISTRY:** Available for internal packages and caching
+- **Purpose**: Private npm package registry and caching proxy running on `http://localhost:4873`
+- **Auto-Start**: LaunchAgent (`~/Library/LaunchAgents/com.verdaccio.plist`) starts Verdaccio at login
+- **Configuration**: `~/.config/verdaccio/config.yaml` for server settings
+- **Storage**: Packages stored in `~/.local/share/verdaccio/storage/`
+- **Registry Config**: `~/.npmrc` configured with `registry=http://localhost:4873`
+- **Authentication**: Configured via `~/.npmrc` with auth token for `//localhost:4873/`
+- **Web UI**: Available at `http://localhost:4873/` for package management
+- **Usage**: Best for internal/private packages or npm caching; public packages use global npm install
+- **Benefits**: Package caching, private package hosting, offline capability
+
+🚨 **MCP SERVER INSTALLATION:** Standard global npm installation pattern
+- **Install**: `npm install -g <mcp-server-package>` (e.g., `npm install -g grok-mcp`)
+- **Path**: Global packages in `$(npm root -g)/<package-name>/build/index.js`
+- **MCP Config**: Point to `node $(npm root -g)/<package>/build/index.js` or use full path
+- **Benefits**: Simple, standard npm workflow, automatic PATH availability, easy updates with `npm update -g`
+
 ## Operations Guide
 
 **Data Defense:** Use `dict.get()`, validate structures, implement code safeguards.
