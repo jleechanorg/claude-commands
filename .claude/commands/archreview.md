@@ -1,3 +1,127 @@
+---
+description: Architecture Review Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Context Gathering & Memory-Enhanced Validation
+
+**Action Steps:**
+1. **Memory MCP Search with Query Optimization**: Enhanced query memory for architectural patterns using optimization engine
+   - **Query Optimization**: Uses universal composition with `/memory search` for improved architectural pattern discovery
+   - **Smart Search Strategy**: Transform compound architecture queries into optimized single-word searches
+   - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better architectural insights
+   - **Result Merging**: Combine multiple optimized searches for comprehensive architecture analysis
+   - Search for: architecture decisions, design patterns, performance insights, solo developer patterns
+   - Extract context from enhanced search results for better architectural analysis
+   - Log findings: "📚 Found X relevant architectural memories"
+2. **PR Content Validation** (if reviewing a PR/branch):
+   - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
+   - Compare claimed capabilities against actual PR contents
+   - **CRITICAL CHECK**: Verify implementation files exist in PR, not just documentation
+   - **STOP IMMEDIATELY**: If documentation claims features that aren't in the PR
+3. **Memory-Enhanced Codebase Analysis**: Examine current state using insights from memory
+4. **Documentation Review**: Check existing architecture docs against memory patterns
+5. **Dependencies Analysis**: Review external dependencies with memory context
+
+### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Cursor + Perplexity GPT-5)
+
+**Action Steps:**
+**Execute in parallel for maximum speed:**
+
+**Track A - Claude Analysis (MVP Pragmatism):**
+1. **Structural Analysis**: Simple organization, clear module boundaries
+2. **Design Patterns**: Avoid over-engineering, use simple patterns that work
+3. **Maintainability**: Code clarity for single developer, minimal documentation
+4. **Technical Debt**: Only flag debt that blocks current features
+5. **MVP Principles**: Ship fast, iterate quickly, avoid premature optimization
+
+**Track B - Gemini Analysis (Performance & Alternatives):**
+6. **Performance Review**: Only critical bottlenecks, not micro-optimizations
+7. **Alternative Approaches**: Simpler patterns and proven technologies
+8. **Industry Standards**: What's actually used in production MVPs
+9. **Risk Assessment**: Focus on user-facing failures, not edge cases
+10. **Innovation Opportunities**: Avoid shiny objects, stick to proven solutions
+
+**Track C - Cursor Analysis (Unconventional Insights):**
+11. **Implementation**: Use `cursor-consultant` agent for Cursor's real-time perspective via the Cursor CLI
+12. **Reality Check**: What will actually break in production vs theoretical concerns
+13. **Unconventional Solutions**: Creative approaches that conventional analysis misses
+14. **Contrarian Assessment**: Challenge established best practices and assumptions
+15. **Practical Innovation**: Real-world optimizations and non-obvious improvements
+16. **Direct Feedback**: Unfiltered assessment of architectural decisions
+
+**Track D - Perplexity GPT-5 Analysis (Cutting-Edge Insights):**
+17. **Implementation**: `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: architecture_query, model: "gpt-5"}])`
+18. **Latest Patterns**: Modern architectural patterns from 2024-2025
+19. **Security Standards**: Most recent security best practices and vulnerabilities
+20. **Framework Evolution**: Latest updates in frameworks and tools
+21. **Performance Optimization**: State-of-the-art optimization techniques
+22. **Future-Proofing**: Architectural decisions that prepare for scaling
+
+### Phase 3: Quad-Perspective Synthesis & MVP-Focused Recommendations
+
+**Action Steps:**
+All four AI perspectives synthesized for MVP shipping priorities:
+1. **MVP ROI**: Time to ship vs feature value for users
+2. **Complexity Assessment**: Can one developer maintain this?
+3. **Ship vs Perfect**: Balance "good enough" vs "done right"
+4. **User Impact**: Does this actually help users or just feel clever?
+5. **Implementation Speed**: Quick wins vs long-term architecture
+6. **Breaking Change Freedom**: Take advantage of MVP flexibility
+7. **Next Feature Readiness**: Will this help or hinder next features?
+
+### Phase 5: Memory MCP Integration (Capture New Learnings)
+
+**Action Steps:**
+Store new architectural insights discovered during review:
+1. **New Decision Capture**: Store key architectural decisions with rationale and trade-offs
+2. **Pattern Documentation**: Record successful and failed design patterns discovered
+3. **Performance Insights**: Capture performance-related decisions and outcomes
+4. **MVP Lessons**: Document new solo developer learnings and pragmatic approaches
+5. **Relation Building**: Connect new learnings to existing memory patterns from Phase 1
+
+### Phase 1: Memory-Enhanced Context & Current State
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 2: Claude-Led Analysis (MVP Pragmatism)
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 3: Gemini-Led Analysis (Reality Check)
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 4: Joint MVP Assessment
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 5: Architectural Learnings Captured
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 10: Action Items
+
+**Action Steps:**
+1. [ ] Ship Blockers: [Must fix before users see this]
+2. [ ] Quick Wins: [Easy improvements while building]
+3. [ ] Post-MVP: [Save for after initial user feedback]
+```
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Architecture Review Command
 
 **Usage**: `/archreview [scope]` or `/arch [scope]`
@@ -33,75 +157,6 @@
 - `/archreview security` - Security architecture assessment
 
 ## Review Process
-
-### Phase 1: Context Gathering & Memory-Enhanced Validation
-1. **Memory MCP Search with Query Optimization**: Enhanced query memory for architectural patterns using optimization engine
-   - **Query Optimization**: Uses universal composition with `/memory search` for improved architectural pattern discovery
-   - **Smart Search Strategy**: Transform compound architecture queries into optimized single-word searches
-   - **Enhanced Pattern Discovery**: Improve search success from ~30% to 70%+ for better architectural insights
-   - **Result Merging**: Combine multiple optimized searches for comprehensive architecture analysis
-   - Search for: architecture decisions, design patterns, performance insights, solo developer patterns
-   - Extract context from enhanced search results for better architectural analysis
-   - Log findings: "📚 Found X relevant architectural memories"
-2. **PR Content Validation** (if reviewing a PR/branch):
-   - Use `gh api repos/owner/repo/pulls/<PR#>/files --jq '.[].filename'` to get actual PR files
-   - Compare claimed capabilities against actual PR contents
-   - **CRITICAL CHECK**: Verify implementation files exist in PR, not just documentation
-   - **STOP IMMEDIATELY**: If documentation claims features that aren't in the PR
-3. **Memory-Enhanced Codebase Analysis**: Examine current state using insights from memory
-4. **Documentation Review**: Check existing architecture docs against memory patterns
-5. **Dependencies Analysis**: Review external dependencies with memory context
-
-### Phase 2: PARALLEL AI ANALYSIS (Claude + Gemini + Cursor + Perplexity GPT-5)
-**Execute in parallel for maximum speed:**
-
-**Track A - Claude Analysis (MVP Pragmatism):**
-- **Structural Analysis**: Simple organization, clear module boundaries
-- **Design Patterns**: Avoid over-engineering, use simple patterns that work
-- **Maintainability**: Code clarity for single developer, minimal documentation
-- **Technical Debt**: Only flag debt that blocks current features
-- **MVP Principles**: Ship fast, iterate quickly, avoid premature optimization
-
-**Track B - Gemini Analysis (Performance & Alternatives):**
-- **Performance Review**: Only critical bottlenecks, not micro-optimizations
-- **Alternative Approaches**: Simpler patterns and proven technologies
-- **Industry Standards**: What's actually used in production MVPs
-- **Risk Assessment**: Focus on user-facing failures, not edge cases
-- **Innovation Opportunities**: Avoid shiny objects, stick to proven solutions
-
-**Track C - Cursor Analysis (Unconventional Insights):**
-- **Implementation**: Use `cursor-consultant` agent for Cursor's real-time perspective via the Cursor CLI
-- **Reality Check**: What will actually break in production vs theoretical concerns
-- **Unconventional Solutions**: Creative approaches that conventional analysis misses
-- **Contrarian Assessment**: Challenge established best practices and assumptions
-- **Practical Innovation**: Real-world optimizations and non-obvious improvements
-- **Direct Feedback**: Unfiltered assessment of architectural decisions
-
-**Track D - Perplexity GPT-5 Analysis (Cutting-Edge Insights):**
-- **Implementation**: `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: architecture_query, model: "gpt-5"}])`
-- **Latest Patterns**: Modern architectural patterns from 2024-2025
-- **Security Standards**: Most recent security best practices and vulnerabilities
-- **Framework Evolution**: Latest updates in frameworks and tools
-- **Performance Optimization**: State-of-the-art optimization techniques
-- **Future-Proofing**: Architectural decisions that prepare for scaling
-
-### Phase 3: Quad-Perspective Synthesis & MVP-Focused Recommendations
-All four AI perspectives synthesized for MVP shipping priorities:
-- **MVP ROI**: Time to ship vs feature value for users
-- **Complexity Assessment**: Can one developer maintain this?
-- **Ship vs Perfect**: Balance "good enough" vs "done right"
-- **User Impact**: Does this actually help users or just feel clever?
-- **Implementation Speed**: Quick wins vs long-term architecture
-- **Breaking Change Freedom**: Take advantage of MVP flexibility
-- **Next Feature Readiness**: Will this help or hinder next features?
-
-### Phase 5: Memory MCP Integration (Capture New Learnings)
-Store new architectural insights discovered during review:
-- **New Decision Capture**: Store key architectural decisions with rationale and trade-offs
-- **Pattern Documentation**: Record successful and failed design patterns discovered
-- **Performance Insights**: Capture performance-related decisions and outcomes
-- **MVP Lessons**: Document new solo developer learnings and pragmatic approaches
-- **Relation Building**: Connect new learnings to existing memory patterns from Phase 1
 
 ## Role Switching Protocol
 
@@ -155,50 +210,60 @@ Store new architectural insights discovered during review:
 
 **Output Format**:
 ```
+
 # MVP Architecture Review Report
 
 ## Executive Summary
+
 [MVP shipping readiness and key blockers]
 
-## Phase 1: Memory-Enhanced Context & Current State
 ### 📚 Architectural Memory Context
+
 [Relevant patterns and decisions from memory search]
+
 ### Current System Analysis
+
 [System understanding enhanced with memory insights]
 
-## Phase 2: Claude-Led Analysis (MVP Pragmatism)
 ### Primary Analysis (Claude)
+
 [Solo maintainability, shipping speed, simplicity]
+
 ### Consultant Insights (Gemini)
+
 [Performance red flags, simpler alternatives]
 
-## Phase 3: Gemini-Led Analysis (Reality Check)
 ### Primary Analysis (Gemini)
+
 [Optimization opportunities, cleaner patterns]
+
 ### Consultant Reality Check (Claude)
+
 [MVP complexity limits, solo developer constraints]
 
-## Phase 4: Joint MVP Assessment
 ### Shipping Readiness
+
 [Can this ship to users this week?]
+
 ### Solo Maintainability
+
 [Can one developer handle this complexity?]
+
 ### MVP Recommendations
+
 [Focus on shipping, iterate later]
 
-### Phase 5: Architectural Learnings Captured
 #### Key Decisions Stored
-[Architectural decisions captured in memory for future reference]
-#### Patterns Identified
-[Design patterns and approaches documented]
-#### Solo Developer Insights
-[MVP-specific learnings for solo development context]
 
-### Action Items
-- [ ] Ship Blockers: [Must fix before users see this]
-- [ ] Quick Wins: [Easy improvements while building]
-- [ ] Post-MVP: [Save for after initial user feedback]
-```
+[Architectural decisions captured in memory for future reference]
+
+#### Patterns Identified
+
+[Design patterns and approaches documented]
+
+#### Solo Developer Insights
+
+[MVP-specific learnings for solo development context]
 
 ## Examples
 

@@ -1,3 +1,22 @@
+---
+description: /conv - Convergence Alias Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /conv - Convergence Alias Command
 
 **Alias for**: `/converge` - Iterative Goal Achievement Command
@@ -7,12 +26,14 @@
 ---
 
 ## Quick Usage
+
 - `/conv <goal>` - Start converging toward a specific goal  
 - `/conv --max-iterations N` - Set custom iteration limit (default: 10)
 - `/conv --goal-integration` - Use /goal command for structured goal definition
 - `/conv` - Resume previous convergence if interrupted
 
 ## Alias Benefits
+
 - **Faster Typing**: `/conv` vs `/converge` (4 vs 9 characters)
 - **Quick Access**: Shorter command for frequent convergence operations
 - **Same Functionality**: Complete feature parity with `/converge`
@@ -20,6 +41,7 @@
 ## Common Usage Patterns
 
 ### Quick Goal Convergence
+
 ```bash
 /conv "fix all failing tests"
 /conv "create user authentication system" 
@@ -27,12 +49,14 @@
 ```
 
 ### With Configuration
+
 ```bash
 /conv "complex implementation" --max-iterations 15
 /conv "simple task" --goal-integration
 ```
 
 ### Resumption
+
 ```bash
 /conv  # Auto-resumes interrupted convergence
 ```

@@ -1,6 +1,26 @@
+---
+description: /fixprc - Fix PR Comments (Autonomous PR Comment Resolution)
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /fixprc - Fix PR Comments (Autonomous PR Comment Resolution)
 
 ## 🎯 Purpose
+
 **Autonomous PR comment fixing system combining genesis + copilot specialized for PR comment resolution**
 
 Similar to `/copilotc` but specifically optimized for PR comment threads, code review feedback, and merge-blocking issues.
@@ -25,8 +45,11 @@ Similar to `/copilotc` but specifically optimized for PR comment threads, code r
 
 **Phase 1: PR Comment Analysis & Goal Setup**
 ```bash
+
 # Execute genesis with PR-specific comment resolution goal (7 iteration cap by default)
+
 # Uses --iterate flag to skip initial Cerebras generation for faster iteration
+
 /gene "analyze and fix all PR comments, review feedback, and merge-blocking issues" 7 --iterate
 ```
 

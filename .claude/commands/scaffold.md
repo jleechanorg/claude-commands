@@ -1,6 +1,38 @@
+---
+description: Repository Scaffolding Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execution Instructions
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 2: Post-Scaffolding Checklist
+
+**Action Steps:**
+After scaffolding is complete, the LLM should guide the user through:
+
+1. **Script Verification**: Test that all copied scripts work correctly
+2. **Permission Setup**: Ensure all scripts have proper executable permissions
+3. **Integration Testing**: Run a few scripts to verify they work with the project
+4. **Documentation**: Update project README or docs to reference the new scripts
+5. **CI/CD Integration**: If applicable, integrate scripts into existing CI pipelines
+6. **Team Communication**: If working in a team, communicate the new tooling setup
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Repository Scaffolding Command
 
 ## Overview
+
 This command scaffolds essential development scripts from the claude-commands repository into any target repository and provides intelligent adaptation instructions to the LLM.
 
 ## Command Logic
@@ -28,8 +60,6 @@ This command scaffolds essential development scripts from the claude-commands re
    - `setup_email.sh` → Copy to `scripts/`
    - `sync_branch.sh` → Copy to `scripts/`
 
-## Execution Instructions
-
 ## Repository Location
 
 The source scripts live in the [`jleechanorg/claude-commands`](https://github.com/jleechanorg/claude-commands) repository.
@@ -39,11 +69,15 @@ Clone that repository locally and set `CLAUDE_COMMANDS_PATH` to the absolute pat
 When this command is run:
 
 ```bash
+
 # 1. Create scripts directory if it doesn't exist
+
 mkdir -p scripts
 
 # 2. Copy all specified scripts from claude-commands repository
+
 # Note: CLAUDE_COMMANDS_PATH must point at your local claude-commands clone
+
 cp "$CLAUDE_COMMANDS_PATH/create_worktree.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/integrate.sh" ./
 cp "$CLAUDE_COMMANDS_PATH/schedule_branch_work.sh" ./
@@ -64,6 +98,7 @@ cp "$CLAUDE_COMMANDS_PATH/scripts/setup_email.sh" ./scripts/
 cp "$CLAUDE_COMMANDS_PATH/scripts/sync_branch.sh" ./scripts/
 
 # 3. Make all scripts executable
+
 chmod +x *.sh scripts/*.sh
 ```
 
@@ -72,6 +107,7 @@ chmod +x *.sh scripts/*.sh
 After copying the scripts, the LLM should analyze the target repository and adapt the scripts according to these guidelines:
 
 ### 1. **Technology Stack Detection**
+
 - Examine `package.json`, `Cargo.toml`, `requirements.txt`, `go.mod`, etc.
 - Identify the primary programming language and framework
 - Detect testing frameworks (Jest, pytest, Go test, etc.)
@@ -80,6 +116,7 @@ After copying the scripts, the LLM should analyze the target repository and adap
 ### 2. **Script Adaptations Required**
 
 #### `run_lint.sh` adaptations:
+
 - **Node.js/TypeScript**: Update to use `npm run lint` or `npx eslint`
 - **Python**: Update to use `flake8`, `black`, `ruff`, or `pylint`
 - **Go**: Update to use `golangci-lint run`
@@ -87,6 +124,7 @@ After copying the scripts, the LLM should analyze the target repository and adap
 - **Java**: Update to use `checkstyle` or `spotbugs`
 
 #### `run_tests_with_coverage.sh` adaptations:
+
 - **Node.js/TypeScript**: Update to use `npm test` with `jest --coverage` or `nyc`
 - **Python**: Update to use `pytest --cov=.` or `coverage run -m pytest`
 - **Go**: Update to use `go test -coverprofile=coverage.out ./...`
@@ -94,6 +132,7 @@ After copying the scripts, the LLM should analyze the target repository and adap
 - **Java**: Update to use Maven/Gradle with JaCoCo
 
 #### `coverage.sh` adaptations:
+
 - Update coverage report generation commands based on detected tools
 - Update coverage report paths and formats
 - Configure coverage thresholds appropriate for the project
@@ -101,15 +140,18 @@ After copying the scripts, the LLM should analyze the target repository and adap
 ### 3. **Repository-Specific Customizations**
 
 #### CI/CD Integration:
+
 - If `.github/workflows/` exists, suggest integrating scripts into GitHub Actions
 - If `.gitlab-ci.yml` exists, suggest GitLab CI integration
 - If other CI systems detected, provide appropriate integration suggestions
 
 #### Git Hooks:
+
 - Suggest setting up pre-commit hooks using `setup-github-runner.sh` as a template
 - Adapt hook scripts to run the repository's specific linting and testing commands
 
 #### Documentation Updates:
+
 - If `README.md` exists, suggest adding a "Development Scripts" section
 - Document how to run each script and what it does
 - Provide examples of common development workflows
@@ -117,11 +159,13 @@ After copying the scripts, the LLM should analyze the target repository and adap
 ### 4. **Configuration File Updates**
 
 #### Package Manager Scripts:
+
 - **Node.js**: Add script shortcuts to `package.json` scripts section
 - **Python**: Suggest adding scripts to `pyproject.toml` or `setup.py`
 - **Rust**: Add script shortcuts to `Cargo.toml`
 
 #### Example `package.json` additions:
+
 ```json
 {
   "scripts": {
@@ -133,29 +177,26 @@ After copying the scripts, the LLM should analyze the target repository and adap
 }
 ```
 
-## Post-Scaffolding Checklist
-
-After scaffolding is complete, the LLM should guide the user through:
-
-1. **Script Verification**: Test that all copied scripts work correctly
-2. **Permission Setup**: Ensure all scripts have proper executable permissions
-3. **Integration Testing**: Run a few scripts to verify they work with the project
-4. **Documentation**: Update project README or docs to reference the new scripts
-5. **CI/CD Integration**: If applicable, integrate scripts into existing CI pipelines
-6. **Team Communication**: If working in a team, communicate the new tooling setup
-
 ## Usage Example
 
 ```bash
+
 # User runs the scaffold command
+
 /scaffold
 
 # The LLM will:
+
 # 1. Copy all specified scripts to the current repository
+
 # 2. Analyze the project structure (package.json, requirements.txt, etc.)
+
 # 3. Provide specific adaptation instructions for the detected stack
+
 # 4. Suggest integration points and next steps
+
 # 5. Update relevant configuration files if requested
+
 ```
 
 ## Benefits

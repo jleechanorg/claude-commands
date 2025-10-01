@@ -1,3 +1,22 @@
+---
+description: List Commands Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # List Commands Command
 
 **Purpose**: Display all available slash commands with descriptions
@@ -34,9 +53,11 @@
 - Provide usage examples
 
 ## Testing Commands (Real-Mode Testing Framework)
+
 - `/teste` - Run end-to-end tests with mock services (fast, free)
 - `/tester` - Run end-to-end tests with real services (costs money)
 - `/testerc` - Run end-to-end tests with real services + data capture
 
 ## Other Commands
+
 - Additional slash commands as defined in other .md files in this directory

@@ -1,18 +1,23 @@
-# /proto_genesis - Interactive Goal Refinement System Setup
+---
+description: /proto_genesis - Interactive Goal Refinement System Setup
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Command Summary**: Sets up goal refinement using `/goal` command, then generates copy-paste command for `proto_genesis.py` execution
+## 🚨 EXECUTION WORKFLOW
 
-**Usage**: `/proto_genesis "goal description"`
+### Phase 1: Execution Instructions
 
-**Purpose**: Two-phase goal refinement workflow:
-1. **Interactive Goal Setup**: Uses `/goal` to create detailed goal specification with user collaboration
-2. **Command Generation**: Provides ready-to-copy `proto_genesis.py` command for execution
-
-## Execution Instructions
-
+**Action Steps:**
 When this command is invoked with a goal:
 
 ### Phase 1: Interactive Goal Refinement
+
+**Action Steps:**
 1. **Execute /goal command**:
    ```bash
    /goal "$GOAL_DESCRIPTION"
@@ -26,7 +31,9 @@ When this command is invoked with a goal:
    - User can review and approve the goal specification
 
 ### Phase 2: Command Generation
-3. **Generate Proto Genesis Execution Command**:
+
+**Action Steps:**
+1. **Generate Proto Genesis Execution Command**:
    - Determine the goal directory path from `/goal` output
    - Ask user for preferred number of iterations (default: 10)
    - Generate ready-to-copy command in this format:
@@ -34,7 +41,7 @@ When this command is invoked with a goal:
    python proto_genesis.py goals/YYYY-MM-DD-HHMM-[slug]/ 10
    ```
 
-4. **Present Copy-Paste Command**:
+2. **Present Copy-Paste Command**:
    ```
    ==========================================
    GOAL REFINED AND READY FOR EXECUTION
@@ -50,19 +57,37 @@ When this command is invoked with a goal:
    ==========================================
    ```
 
-## Workflow Benefits
+### Phase 4: Workflow Benefits
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 5: Manual Execution Control
+
+**Action Steps:**
+1. **Copy-Paste Convenience**: Ready command for terminal execution
+2. **Iteration Control**: User specifies iteration count upfront
+3. **Session Independence**: Can execute `ralph.py` later or multiple times
+4. **Manual Oversight**: User controls when and how execution happens
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /proto_genesis - Interactive Goal Refinement System Setup
+
+**Command Summary**: Sets up goal refinement using `/goal` command, then generates copy-paste command for `proto_genesis.py` execution
+
+**Usage**: `/proto_genesis "goal description"`
+
+**Purpose**: Two-phase goal refinement workflow:
+1. **Interactive Goal Setup**: Uses `/goal` to create detailed goal specification with user collaboration
+2. **Command Generation**: Provides ready-to-copy `proto_genesis.py` command for execution
 
 ### Interactive Goal Refinement
+
 - **Structured Process**: Uses `/goal` command's proven goal processing
 - **Memory Integration**: Leverages goal patterns and historical data
 - **User Collaboration**: Interactive refinement until user satisfaction
 - **Persistent Storage**: Goal stored in organized directory structure
-
-### Manual Execution Control
-- **Copy-Paste Convenience**: Ready command for terminal execution
-- **Iteration Control**: User specifies iteration count upfront
-- **Session Independence**: Can execute `ralph.py` later or multiple times
-- **Manual Oversight**: User controls when and how execution happens
 
 ## Goal Directory Structure
 

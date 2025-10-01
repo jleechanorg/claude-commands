@@ -1,3 +1,37 @@
+---
+description: /gene - Genesis Execution (Auto-Execute)
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execution Instructions
+
+**Action Steps:**
+When this command is invoked with a goal:
+
+```bash
+
+### Phase 2: Execution Options
+
+**Action Steps:**
+1. **Pool Size**: Configurable via `--pool-size N` (default: 5)
+2. **Direct Execution**: All operations use `claude -p` directly
+3. **Search-First**: Validates before building to prevent duplicates
+4. **Quality Control**: No-placeholders policy enforced
+
+### Phase 3: Workflow Benefits
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /gene - Genesis Execution (Auto-Execute)
 
 **Command Summary**: Enhanced `/gen` that automatically executes the genesis.py workflow with fast-gen default mode
@@ -16,24 +50,23 @@
 - **🔍 Validation Protocol**: End-to-end validation prevents false success claims
 - **🔄 Iterate Mode**: Can use --iterate flag to skip initial Cerebras generation (when working with existing goals)
 
-## Execution Instructions
-
-When this command is invoked with a goal:
-
-```bash
 # Parse command arguments
+
 INPUT="$1"
 ITERATIONS="${2:-30}"
 WORKDIR="${3:-/tmp/genesis_$(date +%Y%m%d_%H%M%S)}"
 
 # Set up genesis working directory (default: /tmp with timestamp)
+
 GENESIS_WORKDIR="$WORKDIR"
 CURRENT_GOALS="$PWD/goals"
 
 # Create working directory if it doesn't exist
+
 mkdir -p "$GENESIS_WORKDIR"
 
 # Copy goals to genesis working directory for context (if they exist)
+
 if [[ -d "$CURRENT_GOALS" ]]; then
     echo "📋 Copying goals directory to genesis working directory..."
     cp -r "$CURRENT_GOALS" "$GENESIS_WORKDIR/"
@@ -43,6 +76,7 @@ fi
 # Smart goal detection: goal directory vs. new prompt
 
 # Check if input looks like a goal directory path
+
 if [[ "$INPUT" =~ ^goals/ ]] || [[ -d "$INPUT" ]] || [[ -d "goals/$INPUT" ]]; then
     # Goal directory mode
     if [[ -d "$INPUT" ]]; then
@@ -69,9 +103,11 @@ else
 fi
 
 # Generate unique session name
+
 SESSION_NAME="gene-$(date +%Y%m%d-%H%M%S)"
 
 # Print raw Python orchestration command
+
 echo '🚀 RAW PYTHON ORCHESTRATION COMMAND:'
 echo "======================================="
 echo ""
@@ -130,6 +166,7 @@ echo "  tmux capture-pane -t $SESSION_NAME -p | tail -20"
    - **Alternative Execution**: Direct tmux command also provided as fallback
 
 ### Command Parameters
+
 - `goal_description`: Required - description of what to build
 - `iterations`: Optional - number of iterations (default: 30)
 - `working_directory`: Optional - where Genesis runs (default: /tmp/genesis_YYYYMMDD_HHMMSS)
@@ -137,6 +174,7 @@ echo "  tmux capture-pane -t $SESSION_NAME -p | tail -20"
 ## 🚨 Enhanced Exit Criteria & Self-Determination
 
 ### Genesis Self-Determination Protocol
+
 Genesis now automatically detects completion using rigorous validation:
 
 **Primary Completion Indicators**:
@@ -160,6 +198,7 @@ Genesis automatically completes when consensus assessment contains:
 - **Documentation Complete**: Implementation guides enable independent reproduction
 
 ### Observer-Only Monitoring
+
 - **Monitor Script**: Observes Genesis progress without making completion decisions
 - **No False Completion**: Monitor never declares Genesis "complete" based on superficial signals
 - **Self-Determination**: Only Genesis determines its own completion based on consensus analysis
@@ -173,30 +212,30 @@ Genesis automatically completes when consensus assessment contains:
 ## Enhanced Features (Proto Genesis v2)
 
 ### Fast Generation
+
 - **Default Mode**: Fast generation + execution is now default behavior
 - **Auto-Directory**: Generates `goals/YYYY-MM-DD-HHMM-[slug]/` automatically
 - **Immediate Execution**: No manual copy-paste needed
 - **2000 Token Context**: Enhanced context preservation (up from 200 tokens)
 
-### Execution Options
-- **Pool Size**: Configurable via `--pool-size N` (default: 5)
-- **Direct Execution**: All operations use `claude -p` directly
-- **Search-First**: Validates before building to prevent duplicates
-- **Quality Control**: No-placeholders policy enforced
-
 ## Example Usage
 
 ```bash
+
 # Default: runs in /tmp with timestamp
+
 /gene "build a REST API for user management with authentication"
 
 # Custom iterations
+
 /gene "build calculator app" 15
 
 # Custom working directory
+
 /gene "build web scraper" 20 "/tmp/my_project"
 
 # Run in current directory for benchmarking
+
 /gene "text processing CLI" 30 "$PWD"
 ```
 
@@ -206,6 +245,7 @@ Genesis automatically completes when consensus assessment contains:
 =======================================
 
 # Genesis Agent Orchestration Command
+
 # Copy and execute this Python code to run via orchestration:
 
 python3 -c "
@@ -214,6 +254,7 @@ sys.path.append('/Users/jleechan/projects/worktree_ralph')
 from orchestrate import TaskOrchestrator
 
 # Genesis Agent Configuration
+
 agent_config = {
     'id': 'genesis-gene-20250923-0945',
     'type': 'genesis',
@@ -225,6 +266,7 @@ agent_config = {
 }
 
 # Initialize orchestrator and execute
+
 orchestrator = TaskOrchestrator()
 result = orchestrator.execute_genesis_task(agent_config)
 print(f'Genesis task result: {result}')
@@ -241,18 +283,19 @@ tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects
 ```
 
 ### With Custom Iterations
+
 ```bash
 /gene "code fibonacci function" 3
 ```
 
 ### With Pool Size Configuration
+
 ```bash
 /gene "build microservice architecture" 10 --pool-size 3
 ```
 
-## Workflow Benefits
-
 ### Streamlined Experience
+
 - **One Command**: Complete workflow from idea to implementation
 - **Orchestration Ready**: Generates Python code for deterministic execution
 - **Fast Results**: Leverages /cereb for rapid goal file creation
@@ -261,6 +304,7 @@ tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects
 - **Dual Execution**: Raw Python command + fallback tmux execution
 
 ### Quality Assurance
+
 - **Search-First**: Prevents duplicate implementations
 - **No Placeholders**: Enforces complete implementations
 - **Validation**: Quality checks at each stage
@@ -268,6 +312,7 @@ tmux new-session -d -s 'gene-20250923-0945' bash -c 'cd /Users/jleechan/projects
 - **Session Persistence**: Review complete execution history in tmux
 
 ### Solo Developer Optimized
+
 - **Fast Mode Default**: Optimized for solo developer velocity
 - **GitHub Safety**: Easy rollbacks via git if issues arise
 - **Direct Execution**: No complex delegation patterns

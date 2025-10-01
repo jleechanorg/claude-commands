@@ -1,3 +1,135 @@
+---
+description: /generatetest - Intelligent Test Protocol Generator
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Test Steps
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 1: [Primary Test Objective]
+
+**Action Steps:**
+**Objective**: [What this phase validates]
+1. **Action**: Call `mcp__worldarchitect__[relevant_mcp_tool]`
+  2. `user_id`: `test-[test-name]-user@example.com`
+  3. [additional parameters based on test]
+4. **Expected Results**:
+  5. [Specific outcome 1]
+  6. [Specific outcome 2]
+  7. [Data validation requirements]
+
+### Phase 2: [Secondary Validation]
+
+**Action Steps:**
+**Objective**: [Follow-up validation]
+1. **Action**: [Subsequent MCP tool call]
+2. **Expected Results**:
+  3. [Expected behavior]
+  4. [State persistence validation]
+
+### 🔴 RED PHASE EXECUTION
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 5: Step 1: [Specific Action]
+
+**Action Steps:**
+**Navigate**: http://localhost:3002/[specific-path]
+**Expected**: [What should happen]
+**Evidence**: Screenshot → `docs/[test-name]-step1-[status].png`
+**API Check**: Monitor for [specific API calls]
+**Console Check**: No errors matching: `['TypeError', 'undefined', 'failed to fetch', '401', '500']`
+
+**🔴 VALIDATION CHECKPOINT 1**:
+1. [ ] Screenshot captured and saved
+2. [ ] API calls logged (present/absent as expected)
+3. [ ] Console errors checked and logged
+4. [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
+**🚨 MANDATORY**: If CRITICAL found, STOP and implement fixes before proceeding
+
+### Phase 6: Step 2: [Specific Action]
+
+**Action Steps:**
+**Action**: [Specific user action to perform]
+**Expected**: [What should happen]
+**Evidence**: Screenshot → `docs/[test-name]-step2-[status].png`
+**Data Validation**: Verify "[test_identifier]" appears in UI
+**Backend Logs**: Check Flask logs for [expected activity]
+
+**🔴 VALIDATION CHECKPOINT 2**:
+1. [ ] Action completed successfully
+2. [ ] Test data visible in UI (no hardcoded values)
+3. [ ] Backend logs show expected activity
+4. [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
+**🚨 MANDATORY**: If CRITICAL found, STOP and implement fixes before proceeding
+
+### Phase 7: Step 2.5: Service Integration Validation - **CRITICAL LAYER**
+
+**Action Steps:**
+**Action**: Verify service layers receive and use user data correctly
+**Expected**: AI/content generation services incorporate user's specific data
+**Evidence**: Screenshot of service output (content, emails, AI responses)
+**Service Validation**: Check that generated content references user data, not placeholders
+**Integration Logs**: Monitor service API calls and data payloads
+
+**🔴 VALIDATION CHECKPOINT 2.5**:
+1. [ ] Service output incorporates user test data
+2. [ ] No hardcoded/placeholder content in service responses
+3. [ ] Service APIs receive user context correctly
+4. [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
+**🚨 MANDATORY**: Service integration failures are CRITICAL - STOP and fix immediately
+
+### 🚀 GREEN PHASE IMPLEMENTATION (Update With Fix Code)
+
+**Action Steps:**
+```typescript
+// Implementation code will go here after issues identified
+```
+
+### Phase 9: Step 1: Load Landing Page (User with Campaigns)
+
+**Action Steps:**
+**Expected**: Page should check for existing campaigns and show appropriate UI
+**Evidence**:
+1. Screenshot of page content
+2. Network logs showing API call
+3. Console logs for any errors
+**Priority Assessment**:
+4. IF no API call made → 🚨 CRITICAL - This is core integration issue
+5. IF API call fails → ⚠️ HIGH - Error handling problem
+6. IF slow loading → 📝 MEDIUM - Performance issue
+
+### Phase 10: Step 2: Load Landing Page (User without Campaigns)
+
+**Action Steps:**
+**Expected**: Page should show "Create Your First Campaign"
+**Evidence**:
+1. Screenshot of page content
+2. Confirmation of appropriate messaging
+**Priority Assessment**:
+3. IF same content shown → 🚨 CRITICAL - Not checking user state
+4. IF confusing messaging → 📝 MEDIUM - UX improvement
+
+**🚨 MANDATORY STOP CONDITIONS**:
+5. Landing page doesn't call campaigns API
+6. Same content shown regardless of user state
+7. User cannot proceed to create or access campaigns
+
+**📊 RESULTS EVALUATION**:
+Based on findings, classify each issue and determine immediate actions needed.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /generatetest - Intelligent Test Protocol Generator
 
 **Purpose**: Generate execution-ready test protocols for both MCP and browser testing with automatic detection
@@ -41,6 +173,7 @@ visual, playwright, screenshot, element, button, input, landing page, user inter
 ## Test Generation Protocol
 
 ### 1. Problem Definition
+
 - **What specific issue is being tested?**
 - **What is the user impact if this issue exists?**
 - **What would "working correctly" look like?**
@@ -48,11 +181,13 @@ visual, playwright, screenshot, element, button, input, landing page, user inter
 - **CRITICAL ADDITION**: What user journey layers could fail independently?
 
 ### 2. Success Criteria Definition
+
 - **Primary Goal**: Main problem that must be solved
 - **Secondary Goals**: Nice-to-have improvements
 - **Failure Conditions**: What constitutes a test failure requiring immediate action
 
 ### 3. Priority Matrix Setup
+
 ```
 🚨 CRITICAL: Blocks core user functionality
 ⚠️ HIGH: Significant user experience degradation
@@ -61,12 +196,14 @@ visual, playwright, screenshot, element, button, input, landing page, user inter
 ```
 
 ### 4. Evidence Collection Requirements
+
 - **Screenshots**: Specific pages/states to capture
 - **API Logs**: Which endpoints to monitor
 - **Network Traffic**: Expected vs actual requests
 - **Console Logs**: Error messages to watch for
 
 ## 🚨 MANDATORY STOP CONDITIONS PROTOCOL
+
 **STOP testing immediately and implement fixes if:**
 - Any 🚨 CRITICAL condition found that blocks core user functionality
 - Data loss or corruption risk detected
@@ -81,6 +218,7 @@ visual, playwright, screenshot, element, button, input, landing page, user inter
 **Critical Rule**: Never continue testing with unresolved CRITICAL issues
 
 ## 🚨 PRIORITY-BASED ACTION PROTOCOL
+
 **For each finding, apply immediate action:**
 - 🚨 CRITICAL → STOP testing, implement fix, verify, then resume
 - ⚠️ HIGH → Document thoroughly, add to immediate sprint backlog
@@ -96,6 +234,7 @@ IF finding is ℹ️ LOW → Note briefly, continue testing
 ```
 
 ## 🔄 EXPECTATION VS REALITY PROTOCOL
+
 **When test findings don't match expectations:**
 1. **Assess actual user impact** (not expectation accuracy)
 2. **Re-classify findings** by real-world priority using 🚨/⚠️/📝 system
@@ -107,6 +246,7 @@ IF finding is ℹ️ LOW → Note briefly, continue testing
 **Example**: Landing page not checking campaigns = API integration failure (not "minor UX")
 
 ## 📝 EVIDENCE DOCUMENTATION PROTOCOL
+
 **For each test step, MANDATORY collection:**
 - **Screenshots**: Saved to `docs/[test-name]-[step]-[priority].png`
 - **Network logs**: Specific API calls with status codes and timing
@@ -118,6 +258,7 @@ IF finding is ℹ️ LOW → Note briefly, continue testing
 **Log format**: Include timestamps, request/response details, error traces
 
 ## ✅ TEST COMPLETION VALIDATION PROTOCOL
+
 **Test is NOT complete until:**
 - [ ] All 🚨 CRITICAL issues resolved and verified with evidence
 - [ ] All ⚠️ HIGH issues documented with fix timeline and owner
@@ -128,6 +269,7 @@ IF finding is ℹ️ LOW → Note briefly, continue testing
 **No test can be marked "complete" with unresolved CRITICAL issues**
 
 ## 🔍 CONSOLE ERROR MONITORING PROTOCOL
+
 **Automated error detection for each test step:**
 - **Setup console monitoring**: Capture errors/warnings with timestamps
 - **Define test-specific error patterns**: Authentication, API, navigation, etc.
@@ -157,6 +299,7 @@ const hasCriticalErrors = window.testErrorLog.filter(e =>
 ```
 
 ## 🎯 VISUAL CONTENT VALIDATION PROTOCOL
+
 **End-to-end data flow verification:**
 - **Test Data Tracking**: Use specific, unique test data (e.g., "Zara the Mystic" not generic "Character")
 - **Data Flow Validation**: Input → API → Database → Retrieval → UI Display → **SERVICE INTEGRATION**
@@ -177,6 +320,7 @@ const hasCriticalErrors = window.testErrorLog.filter(e =>
 ```
 
 ## 🔄 MATRIX TESTING PROTOCOL
+
 **Comparative testing between expected vs actual behavior:**
 - **Feature Matrix**: Create comparison table with Expected vs Actual columns
 - **Status Tracking**: 🔴 FAIL / ⚠️ PARTIAL / ✅ PASS for each feature
@@ -192,6 +336,7 @@ const hasCriticalErrors = window.testErrorLog.filter(e =>
 ```
 
 ## 🔐 AUTHENTICATION INTEGRATION PROTOCOL
+
 **Real authentication testing requirements:**
 - **Credential Management**: Use secure credential loading (not hardcoded)
 - **Environment Setup**: Verify both frontend and backend server health
@@ -201,13 +346,18 @@ const hasCriticalErrors = window.testErrorLog.filter(e =>
 
 **Pre-test Health Checks**:
 ```bash
+
 # Backend health check
+
 curl -f http://localhost:5005/ >/dev/null 2>&1 && echo "✅ Backend ready" || echo "❌ Backend unavailable"
+
 # Frontend health check
+
 curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || echo "❌ Frontend unavailable"
 ```
 
 ## 📊 MILESTONE-BASED TEST ORGANIZATION
+
 **Structured test progression:**
 - **Milestone Grouping**: Organize tests by implementation phases
 - **Dependency Management**: Ensure prerequisite milestones pass before advanced testing
@@ -221,46 +371,32 @@ curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || e
 # MCP Integration Test: [TEST_NAME]
 
 ## Test Overview
+
 This test validates [specific MCP functionality] using real WorldArchitect MCP server integration with Firebase and Gemini services.
 
 ## Test Configuration
+
 - **Test Type**: MCP Integration Test
 - **User ID**: `test-[test-name]-user@example.com`
 - **Expected Duration**: [estimated time]
 - **Dependencies**: MCP server running in production mode (`PRODUCTION_MODE=true`)
 
-## Test Steps
-
-### Phase 1: [Primary Test Objective]
-**Objective**: [What this phase validates]
-- **Action**: Call `mcp__worldarchitect__[relevant_mcp_tool]`
-  - `user_id`: `test-[test-name]-user@example.com`
-  - [additional parameters based on test]
-- **Expected Results**:
-  - [Specific outcome 1]
-  - [Specific outcome 2]
-  - [Data validation requirements]
-
-### Phase 2: [Secondary Validation]
-**Objective**: [Follow-up validation]
-- **Action**: [Subsequent MCP tool call]
-- **Expected Results**:
-  - [Expected behavior]
-  - [State persistence validation]
-
 ## Success Criteria
+
 - ✅ [Primary success condition]
 - ✅ All responses contain real AI-generated content (no mocks)
 - ✅ [Data persistence requirement]
 - ✅ No error responses or timeout issues
 
 ## Failure Indicators
+
 - ❌ Mock data detected in any response
 - ❌ [Specific failure condition]
 - ❌ MCP server connection failures
 - ❌ Firebase or Gemini API errors
 
 ## Test Execution Notes
+
 - Run with MCP server in production mode (`PRODUCTION_MODE=true`)
 - Monitor server logs for error messages during execution
 - Verify all timestamps are realistic and progressive
@@ -274,13 +410,16 @@ This test validates [specific MCP functionality] using real WorldArchitect MCP s
 # Test: [TEST_NAME]
 
 ## 🎯 PRIMARY PROBLEM
+
 [What specific user problem are we testing for?]
 
 ## 📋 SUCCESS CRITERIA
+
 - **Primary**: [Main thing that must work]
 - **Secondary**: [Nice-to-have improvements]
 
 ## 🚨 CRITICAL FAILURE CONDITIONS
+
 - [ ] [Condition that requires immediate fix]
 - [ ] [Another critical condition]
 
@@ -305,11 +444,17 @@ This test validates [specific MCP functionality] using real WorldArchitect MCP s
 
 **Health Checks**:
 ```bash
+
 # Backend health check
+
 curl -f http://localhost:5005/ >/dev/null 2>&1 && echo "✅ Backend ready" || echo "❌ Backend unavailable"
+
 # Frontend health check
+
 curl -f http://localhost:3002/ >/dev/null 2>&1 && echo "✅ Frontend ready" || echo "❌ Frontend unavailable"
+
 # Monitor logs: tail -f /tmp/worldarchitect.ai/$(git branch --show-current)/flask-server.log
+
 ```
 
 **Test Data**:
@@ -330,75 +475,30 @@ console.error = function(...args) {
 };
 ```
 
-## 🔴 RED PHASE EXECUTION
-
-### Step 1: [Specific Action]
-**Navigate**: http://localhost:3002/[specific-path]
-**Expected**: [What should happen]
-**Evidence**: Screenshot → `docs/[test-name]-step1-[status].png`
-**API Check**: Monitor for [specific API calls]
-**Console Check**: No errors matching: `['TypeError', 'undefined', 'failed to fetch', '401', '500']`
-
-**🔴 VALIDATION CHECKPOINT 1**:
-- [ ] Screenshot captured and saved
-- [ ] API calls logged (present/absent as expected)
-- [ ] Console errors checked and logged
-- [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
-**🚨 MANDATORY**: If CRITICAL found, STOP and implement fixes before proceeding
-
-### Step 2: [Specific Action]
-**Action**: [Specific user action to perform]
-**Expected**: [What should happen]
-**Evidence**: Screenshot → `docs/[test-name]-step2-[status].png`
-**Data Validation**: Verify "[test_identifier]" appears in UI
-**Backend Logs**: Check Flask logs for [expected activity]
-
-**🔴 VALIDATION CHECKPOINT 2**:
-- [ ] Action completed successfully
-- [ ] Test data visible in UI (no hardcoded values)
-- [ ] Backend logs show expected activity
-- [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
-**🚨 MANDATORY**: If CRITICAL found, STOP and implement fixes before proceeding
-
-### Step 2.5: Service Integration Validation - **CRITICAL LAYER**
-**Action**: Verify service layers receive and use user data correctly
-**Expected**: AI/content generation services incorporate user's specific data
-**Evidence**: Screenshot of service output (content, emails, AI responses)
-**Service Validation**: Check that generated content references user data, not placeholders
-**Integration Logs**: Monitor service API calls and data payloads
-
-**🔴 VALIDATION CHECKPOINT 2.5**:
-- [ ] Service output incorporates user test data
-- [ ] No hardcoded/placeholder content in service responses
-- [ ] Service APIs receive user context correctly
-- [ ] Priority assessment: 🚨 CRITICAL / ⚠️ HIGH / 📝 MEDIUM
-**🚨 MANDATORY**: Service integration failures are CRITICAL - STOP and fix immediately
-
 ## 📊 RESULTS DOCUMENTATION (Fill During Execution)
 
 ### 🚨 CRITICAL Issues Found (Update After Testing)
+
 **Issue 1**: [Description]
 - **Evidence**: [Screenshot/log reference]
 - **Impact**: [How this blocks core functionality]
 - **Action**: [Immediate fix required]
 
 ### ✅ Working Correctly (Update After Testing)
+
 **Functionality**: [What works as expected]
 - **Evidence**: [Screenshot/log reference]
 - **Console**: [Clean or acceptable warnings]
 
 ### 🎯 KEY LEARNINGS (Update After Testing)
+
 **Expected vs Reality**:
 - **Expected**: [Original assumptions]
 - **Reality**: [What was actually found]
 - **Learning**: [Insights for future tests]
 
-## 🚀 GREEN PHASE IMPLEMENTATION (Update With Fix Code)
-```typescript
-// Implementation code will go here after issues identified
-```
-
 ## 🚨 TEST EXECUTION FAILURE PROTOCOL
+
 **If ANY validation checkpoint fails:**
 1. **IMMEDIATELY STOP** the test execution
 2. **REPORT DEVIATION** with exact details
@@ -406,6 +506,7 @@ console.error = function(...args) {
 4. **PRIORITY ASSESSMENT**: Real user impact overrides expectations
 
 ## ✅ COMPLETION CRITERIA
+
 - [ ] All CRITICAL issues resolved with evidence
 - [ ] HIGH issues documented with timeline
 - [ ] Test data appears correctly in final UI
@@ -440,34 +541,6 @@ console.error = function(...args) {
 - [ ] Console: Check for API errors or warnings
 
 **🔄 TEST EXECUTION**:
-
-#### Step 1: Load Landing Page (User with Campaigns)
-**Expected**: Page should check for existing campaigns and show appropriate UI
-**Evidence**:
-- Screenshot of page content
-- Network logs showing API call
-- Console logs for any errors
-**Priority Assessment**:
-- IF no API call made → 🚨 CRITICAL - This is core integration issue
-- IF API call fails → ⚠️ HIGH - Error handling problem
-- IF slow loading → 📝 MEDIUM - Performance issue
-
-#### Step 2: Load Landing Page (User without Campaigns)
-**Expected**: Page should show "Create Your First Campaign"
-**Evidence**:
-- Screenshot of page content
-- Confirmation of appropriate messaging
-**Priority Assessment**:
-- IF same content shown → 🚨 CRITICAL - Not checking user state
-- IF confusing messaging → 📝 MEDIUM - UX improvement
-
-**🚨 MANDATORY STOP CONDITIONS**:
-- Landing page doesn't call campaigns API
-- Same content shown regardless of user state
-- User cannot proceed to create or access campaigns
-
-**📊 RESULTS EVALUATION**:
-Based on findings, classify each issue and determine immediate actions needed.
 
 ## Command Implementation
 

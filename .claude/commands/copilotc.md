@@ -1,6 +1,26 @@
+---
+description: /copilotc - Convergent Copilot (Autonomous GitHub Comment Resolution)
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /copilotc - Convergent Copilot (Autonomous GitHub Comment Resolution)
 
 ## 🎯 Purpose
+
 **Universal composition command combining genesis + copilot for autonomous GitHub comment resolution**
 
 Runs `/gene` (genesis execution) and `/copilot` in an autonomous loop until all serious GitHub comments are resolved.
@@ -25,8 +45,11 @@ Runs `/gene` (genesis execution) and `/copilot` in an autonomous loop until all 
 
 **Phase 1: Goal Definition & Genesis Setup**
 ```bash
+
 # Execute genesis with GitHub comment resolution goal (7 iteration cap by default)
+
 # Uses --iterate flag to skip initial Cerebras generation for faster iteration
+
 /gene "resolve all serious GitHub comments and make PR mergeable" 7 --iterate
 ```
 

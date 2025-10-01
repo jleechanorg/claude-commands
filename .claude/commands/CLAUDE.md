@@ -1,10 +1,18 @@
-# Command System Enumerator
+---
+description: Command System Enumerator
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Command Summary**: Executable command that enumerates available commands by category
-**Usage**: `/commands [filter]` where filter is optional category or command substring  
-**Output**: Categorized command inventory with descriptions and file paths
+## 🚨 EXECUTION WORKFLOW
 
-## Execution Instructions for Claude
+### Phase 1: Execution Instructions for Claude
+
+**Action Steps:**
 When this command is invoked:
 1. Read the repository tree under `.claude/commands/`
 2. Group `*.md` files by category (execution, planning, testing, git, orchestration, quality, ai, research, review)
@@ -13,12 +21,22 @@ When this command is invoked:
 
 **Primary Rules**: Inherits from [../../CLAUDE.md](../../CLAUDE.md) (complete project protocols)
 
+## 📋 REFERENCE DOCUMENTATION
+
+# Command System Enumerator
+
+**Command Summary**: Executable command that enumerates available commands by category
+**Usage**: `/commands [filter]` where filter is optional category or command substring  
+**Output**: Categorized command inventory with descriptions and file paths
+
 ## 🚨 MODULE-SPECIFIC PROTOCOLS
+
 - Do not duplicate systematic protocols from other .md files; link instead
 - Never reimplement existing command functionality; orchestrators must delegate to existing commands (/commentreply, /pushl, /fixpr, etc.)  
 - Never duplicate GitHub API calls already implemented by other commands
 
 ## Directory Contents Analysis
+
 **Core Command Files** (80+ .md files):
 - **Execution**: `execute.md`, `e.md` - Main task execution commands
 - **Planning**: `plan.md`, `arch.md`, `design.md` - Architectural and planning workflows
@@ -57,6 +75,7 @@ When this command is invoked:
 - `tests/` - Command system validation tests (8 test files)
 
 ## Command Architecture
+
 **Two Command Types**:
 1. **Cognitive Commands** (`/think`, `/debug`, `/plan`): Natural language processing and analysis
 2. **Operational Commands** (`/orch`, `/execute`, `/push`): Direct system operations and automation
@@ -67,6 +86,7 @@ When this command is invoked:
 - **Shell Scripts**: System-level automation and workflow orchestration
 
 ## Command Development Guidelines
+
 **For Markdown Commands**:
 - Must be executable instructions, not documentation
 - Include clear parameter specifications and usage examples
@@ -80,29 +100,36 @@ When this command is invoked:
 - Provide logging and debugging capabilities
 
 ## Usage Patterns
+
 ```bash
+
 # Cognitive Commands (natural language processing):
+
 /think [analysis topic]
 /debug [issue description]
 /plan [task description]
 
 # Operational Commands (system operations):
+
 /execute [task to perform]
 /orch [task for orchestration]
 /push [commit and push changes]
 
 # Specialized Workflows:
+
 /cerebras [code generation task]
 /reviewe [enhanced code review]
 /fake3 [fake code detection]
 ```
 
 ## Module Context
+
 **Purpose**: Provides comprehensive command system for Claude Code operations including task execution, orchestration, code quality, and development workflow automation
 **Role**: Command interface layer enabling natural language interaction with development tools, CI/CD systems, and multi-agent orchestration
 **Parent Project**: WorldArchitect.AI - AI-powered tabletop RPG platform
 
 ## Quick Reference
+
 - **Complete Protocols**: See [../../CLAUDE.md](../../CLAUDE.md)
 - **Command Types**: Cognitive (analysis) vs Operational (execution)
 - **Usage**: Commands execute via `/commandname [arguments]` syntax

@@ -1,49 +1,29 @@
-# /orchconverge - Autonomous Convergence via Orchestration
+---
+description: /orchconverge - Autonomous Convergence via Orchestration
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Autonomous convergence using existing `/orch` orchestration system to run /converge continuously until completion, time limits, or max attempts reached, followed by comprehensive review and finalization workflow.**
+## 🚨 EXECUTION WORKFLOW
 
-## Usage
-```bash
-/orchconverge <goal>                           # Start autonomous convergence with default limits
-/orchconverge <goal> --max-attempts 15        # Custom attempt limit (default: 10)
-/orchconverge <goal> --max-hours 6            # Custom time limit (default: 3 hours)
-/orchconverge <goal> --interval 5             # Convergence attempt interval in minutes (default: 5)
-```
+### Phase 1: Core Workflow
 
-## Command Architecture - Integration with Existing /orch System
-
-**`/orchconverge` = Existing Orchestration System + Convergence Agent + Final Review Workflow**
-
-```
-┌─ Orchestration Setup ─┐    ┌─ Convergence Agent ─┐    ┌─ Final Workflow ─┐
-│ • TaskDispatcher      │ → │ • /converge Loop      │ → │ • /pushl          │
-│ • Current Dir Agent   │   │ • Progress Tracking   │   │ • /reviewdeep     │
-│ • A2A Coordination    │   │ • Safety Boundaries   │   │ • /copilot        │
-└───────────────────────┘   └───────────────────────┘   └───────────────────┘
-```
-
-## Core Workflow
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
 
 ### Phase 1: Orchestration Integration Setup
+
+**Action Steps:**
 **Command**: Delegate to existing `/orch` system
 ```bash
-# Implementation delegates to existing orchestration system
-/orch "Autonomous convergence: <goal> with max-attempts=N max-hours=H interval=M in current directory"
-```
-
-1. **Convergence Task Creation**
-   - Format goal as orchestration task description
-   - Include convergence parameters (attempts, hours, interval)
-   - Specify current working directory requirement
-   - Define termination conditions and final workflow
-
-2. **Orchestration System Delegation**
-   - Use existing `TaskDispatcher` for agent creation
-   - Leverage `orchestrate_unified.py` framework
-   - Maintain file-based A2A coordination
-   - Ensure agent runs in Claude's current directory
 
 ### Phase 2: Convergence Agent Execution via Orchestration
+
+**Action Steps:**
 **Command**: Agent created by existing orchestration system
 
 1. **Create Convergence Tmux Session**
@@ -77,6 +57,8 @@
    ```
 
 ### Phase 3: Progress Monitoring and State Management
+
+**Action Steps:**
 **Command**: Continuous monitoring via autonomous system
 
 1. **Real-time Status Tracking**
@@ -100,6 +82,8 @@
    - External blocks: Continue attempts with intelligent retry
 
 ### Phase 4: Final Workflow Execution
+
+**Action Steps:**
 **Command**: Comprehensive finalization workflow
 
 1. **Stop Autonomous Convergence**
@@ -128,11 +112,66 @@
    - Commands used and their effectiveness
    - Final PR status and review results
 
+### Phase 6: Comprehensive Workflow
+
+**Action Steps:**
+1. **End-to-End Automation**: From goal to PR review completion
+2. **Quality Assurance**: Automatic review and issue resolution
+3. **Documentation**: Complete audit trail and reporting
+4. **Integration**: Seamless integration with existing slash command ecosystem
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /orchconverge - Autonomous Convergence via Orchestration
+
+**Autonomous convergence using existing `/orch` orchestration system to run /converge continuously until completion, time limits, or max attempts reached, followed by comprehensive review and finalization workflow.**
+
+## Usage
+
+```bash
+/orchconverge <goal>                           # Start autonomous convergence with default limits
+/orchconverge <goal> --max-attempts 15        # Custom attempt limit (default: 10)
+/orchconverge <goal> --max-hours 6            # Custom time limit (default: 3 hours)
+/orchconverge <goal> --interval 5             # Convergence attempt interval in minutes (default: 5)
+```
+
+## Command Architecture - Integration with Existing /orch System
+
+**`/orchconverge` = Existing Orchestration System + Convergence Agent + Final Review Workflow**
+
+```
+┌─ Orchestration Setup ─┐    ┌─ Convergence Agent ─┐    ┌─ Final Workflow ─┐
+│ • TaskDispatcher      │ → │ • /converge Loop      │ → │ • /pushl          │
+│ • Current Dir Agent   │   │ • Progress Tracking   │   │ • /reviewdeep     │
+│ • A2A Coordination    │   │ • Safety Boundaries   │   │ • /copilot        │
+└───────────────────────┘   └───────────────────────┘   └───────────────────┘
+```
+
+# Implementation delegates to existing orchestration system
+
+/orch "Autonomous convergence: <goal> with max-attempts=N max-hours=H interval=M in current directory"
+```
+
+1. **Convergence Task Creation**
+   - Format goal as orchestration task description
+   - Include convergence parameters (attempts, hours, interval)
+   - Specify current working directory requirement
+   - Define termination conditions and final workflow
+
+2. **Orchestration System Delegation**
+   - Use existing `TaskDispatcher` for agent creation
+   - Leverage `orchestrate_unified.py` framework
+   - Maintain file-based A2A coordination
+   - Ensure agent runs in Claude's current directory
+
 ## Autonomous Integration
 
 ### Convergence Daemon Integration
+
 ```python
+
 # Initialize with orchconverge-specific config
+
 config = ConvergenceConfig(
     max_runtime_hours=user_max_hours,
     max_iterations=user_max_attempts,
@@ -147,12 +186,16 @@ daemon.start(goal=user_goal)
 ```
 
 ### Tmux Integration Architecture
+
 ```python
+
 # Create persistent convergence session
+
 tmux = TmuxIntegration()
 session_name = f"convergence-{branch}-{timestamp}"
 
 # Deploy convergence agent script
+
 agent_script = generate_convergence_agent_script(
     goal=user_goal,
     max_attempts=config.max_iterations,
@@ -161,10 +204,12 @@ agent_script = generate_convergence_agent_script(
 )
 
 # Start agent in tmux session
+
 tmux.create_session(session_name, agent_script)
 ```
 
 ### State Persistence
+
 ```json
 {
   "goal": "user goal statement",
@@ -195,6 +240,7 @@ tmux.create_session(session_name, agent_script)
 ## Command Integration Framework
 
 ### Primary Commands Used
+
 - **`/converge`**: Core convergence execution within tmux agents
 - **`/orch`**: Tmux agent creation and management
 - **`/pushl`**: Git operations and PR creation/updates
@@ -202,6 +248,7 @@ tmux.create_session(session_name, agent_script)
 - **`/copilot`**: Autonomous PR analysis and issue resolution
 
 ### Orchestration Pattern
+
 ```markdown
 /orchconverge "goal" --max-attempts N --max-hours H
 ├─ Phase 1: Autonomous Setup
@@ -225,6 +272,7 @@ tmux.create_session(session_name, agent_script)
 ## Success Criteria Patterns
 
 ### Automatic Success Detection
+
 - **Code Changes**: All files modified and tests passing
 - **PR Status**: Created/updated with passing CI checks  
 - **Review Status**: No critical issues in /reviewdeep analysis
@@ -232,6 +280,7 @@ tmux.create_session(session_name, agent_script)
 - **Integration**: No merge conflicts or blocking dependencies
 
 ### Progress Measurement
+
 - **Quantitative**: Percentage of success criteria met
 - **Qualitative**: Progress toward goal through /converge iterations
 - **Temporal**: Rate of improvement over time
@@ -240,6 +289,7 @@ tmux.create_session(session_name, agent_script)
 ## Configuration Options
 
 ### Default Configuration
+
 ```bash
 Max Attempts: 10
 Max Hours: 3  
@@ -250,35 +300,44 @@ Report Dir: docs/convergence-reports/
 ```
 
 ### Advanced Configuration
+
 ```bash
+
 # Custom limits and intervals
+
 /orchconverge "implement auth system" --max-attempts 20 --max-hours 6 --interval 10
 
 # Resume from existing state
+
 /orchconverge --resume
 
 # Status monitoring
+
 /orchconverge --status --verbose
 
 # Emergency stop
+
 /orchconverge --stop --cleanup
 ```
 
 ## Error Handling & Recovery
 
 ### Tmux Session Management
+
 - **Session Crashes**: Automatic restart with state recovery
 - **Agent Failures**: Retry with exponential backoff
 - **Resource Exhaustion**: Graceful degradation and cleanup
 - **Network Issues**: Intelligent retry with connectivity checks
 
 ### Convergence Failures
+
 - **Blocking Dependencies**: Continue attempts with periodic retry
 - **Invalid Goals**: Clarify and restart with refined goal
 - **Tool Failures**: Switch to alternative command strategies
 - **Context Exhaustion**: Implement context cleanup between attempts
 
 ### Safety Mechanisms
+
 - **Maximum Resource Usage**: Automatic termination if limits exceeded
 - **Infinite Loop Prevention**: Hard limits on attempts and time
 - **State Corruption**: Automatic state recovery from backups
@@ -287,11 +346,15 @@ Report Dir: docs/convergence-reports/
 ## Monitoring and Observability
 
 ### Real-time Status
+
 ```bash
+
 # Current status command
+
 /orchconverge --status
 
 # Sample output:
+
 Goal: "implement complete authentication system"
 Status: RUNNING (attempt 4/10)
 Elapsed: 1h 23m / 3h 00m
@@ -302,6 +365,7 @@ Next Attempt: 2m 37s
 ```
 
 ### Logging Integration
+
 - **Convergence Logs**: All /converge attempts and results
 - **Agent Logs**: Tmux session output and status
 - **System Logs**: Daemon operation and state changes
@@ -310,26 +374,23 @@ Next Attempt: 2m 37s
 ## Benefits Over Standard /converge
 
 ### True Autonomy
+
 - **Persistent Operation**: Continues even if terminal closes
 - **Unattended Execution**: No manual intervention required
 - **Automatic Recovery**: Handles failures and restarts autonomously
 - **Resource Management**: Intelligent resource usage and cleanup
 
 ### Enhanced Reliability
+
 - **Retry Logic**: Intelligent retry with exponential backoff
 - **State Persistence**: Resume from any point after interruption
 - **Failure Isolation**: Agent failures don't affect main system
 - **Safety Boundaries**: Hard limits prevent runaway execution
 
-### Comprehensive Workflow
-- **End-to-End Automation**: From goal to PR review completion
-- **Quality Assurance**: Automatic review and issue resolution
-- **Documentation**: Complete audit trail and reporting
-- **Integration**: Seamless integration with existing slash command ecosystem
-
 ## Example Usage
 
 ### Example 1: Feature Implementation
+
 ```bash
 /orchconverge "implement complete user authentication with OAuth, tests, and documentation" --max-attempts 15 --max-hours 4
 ```
@@ -342,6 +403,7 @@ Next Attempt: 2m 37s
 5. Generates comprehensive report with implementation timeline
 
 ### Example 2: Bug Fix Campaign
+
 ```bash
 /orchconverge "fix all failing tests in the test suite and achieve 100% pass rate" --max-attempts 8 --interval 3
 ```
@@ -354,6 +416,7 @@ Next Attempt: 2m 37s
 5. Creates PR with fixes and runs comprehensive review
 
 ### Example 3: Refactoring Project
+
 ```bash
 /orchconverge "refactor legacy authentication code to use modern patterns while maintaining all functionality" --max-hours 6
 ```
@@ -368,18 +431,21 @@ Next Attempt: 2m 37s
 ## Integration with Existing Systems
 
 ### Autonomous Convergence System
+
 - **Reuses** existing `autonomous_convergence/` package
 - **Extends** ConvergenceDaemon for /converge execution
 - **Integrates** with TmuxIntegration for agent management
 - **Leverages** StateManager for persistence across attempts
 
 ### Slash Command Ecosystem
+
 - **Orchestrates** existing commands rather than reimplementing
 - **Maintains** compatibility with current command interfaces
 - **Enhances** workflow with autonomous operation
 - **Preserves** individual command functionality for manual use
 
 ### GitHub Integration
+
 - **Uses** existing GitHub MCP tools for PR operations
 - **Maintains** review comment posting capabilities
 - **Integrates** with existing PR labeling and description systems
@@ -388,18 +454,21 @@ Next Attempt: 2m 37s
 ## Limitations and Considerations
 
 ### Resource Constraints
+
 - **Context Usage**: Manages context efficiently through state persistence
 - **API Limits**: Respects GitHub and other API rate limits
 - **Compute Resources**: Monitors system resources and degrades gracefully
 - **Time Boundaries**: Hard time limits prevent excessive resource usage
 
 ### Scope Boundaries
+
 - **Complex Goals**: May require goal decomposition for optimal results
 - **External Dependencies**: Cannot bypass external system limitations
 - **Permission Requirements**: Respects existing security and permission models
 - **Manual Intervention**: Some tasks may still require human decision-making
 
 ### Technical Constraints
+
 - **Tmux Availability**: Requires tmux for agent orchestration
 - **Cron Access**: Needs cron permissions for autonomous scheduling
 - **File System**: Requires write access for state persistence
