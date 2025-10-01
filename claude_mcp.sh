@@ -809,14 +809,17 @@ setup_render_mcp_server() {
             echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
             log_with_timestamp "Attempting to add Render MCP server with API key"
 
-            # 🚨 SECURITY FIX: Use add-json with stdin to prevent API key exposure in command line
+            # 🚨 SECURITY FIX: Use secure temp file to avoid API key in process list
             # 🔧 ESCAPING FIX: Properly escape API key for JSON to handle special characters
             escaped_api_key="${RENDER_API_KEY//\\/\\\\}"  # Escape backslashes
             escaped_api_key="${escaped_api_key//\"/\\\"}"    # Escape quotes
-            add_output=$(claude mcp add-json --scope user "render" - 2>&1 <<EOF
-{"type":"http","url":"https://mcp.render.com/mcp","headers":{"Authorization":"Bearer $escaped_api_key"}}
-EOF
-            )
+
+            # Create secure temp file (600 permissions)
+            json_temp=$(mktemp)
+            chmod 600 "$json_temp"
+            echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
+            add_output=$(claude mcp add-json --scope user "render" "$(cat "$json_temp")" 2>&1)
+            rm -f "$json_temp"
             add_exit_code=$?
 
             # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
