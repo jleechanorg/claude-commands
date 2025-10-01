@@ -1,3 +1,8 @@
+---
+description: "/benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph"
+type: llm-orchestration
+execution_mode: immediate
+---
 # /benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph
 
 **Command Summary**: Execute comprehensive TypeScript migration benchmark comparing Genesis and Ralph orchestration systems with automated monitoring, validation, and reporting

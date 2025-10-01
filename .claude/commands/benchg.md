@@ -1,3 +1,8 @@
+---
+description: /benchg - Genesis vs Ralph Orchestrator Benchmark
+type: llm-orchestration
+execution_mode: immediate
+---
 # /benchg - Genesis vs Ralph Orchestrator Benchmark
 
 **Command Summary**: Comprehensive benchmark comparison between Genesis and Ralph orchestration systems with consensus code review and live testing
