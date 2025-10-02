@@ -1,0 +1,445 @@
+# ~/.bashrc: executed by bash(1) for non-login shells.
+# see /usr/share/doc/bash/examples/startup-files (in the package bash-doc)
+# for examples
+
+# PORT DOCUMENTATION
+# Port 8080: Firestore Emulator
+#   - Firebase Firestore emulator for local development and testing
+#   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo_mcp
+#   - Control: cd backend && firebase emulators:start --only firestore --project test-project
+#   - UI: http://127.0.0.1:4000/firestore
+#   - Used by: Conversation MCP auto-creation tools (FIRESTORE_EMULATOR_HOST=localhost:8080)
+#
+# Port 10000: Codex-Plus Proxy Server
+#   - HTTP proxy for Codex CLI that adds slash commands, hooks, and MCP tools
+#   - Usage: OPENAI_BASE_URL=http://localhost:10000 codex
+#   - Project: /Users/<redacted>/projects_other/codex_plus
+#   - Control: ./proxy.sh start/stop/status/restart
+#   - Logs: /tmp/codex_plus/proxy.log
+#
+# Port 11000: Codex-Plus Secondary Proxy (no Cerebras passthrough)
+#   - Dedicated fallback port managed by run_no_cereb.sh
+#   - Usage: OPENAI_BASE_URL=http://localhost:${CODEX_NO_CEREB_PORT:-11000} codex
+export CODEX_NO_CEREB_PORT=11000
+#
+# Ports 3000-3099: AI Universe Frontend Development
+#   - Port 3000: Primary Vite dev server (AI Universe frontend)
+#   - Port 3001: Fallback Vite dev server
+#   - Port 3000: Also Conversation MCP Server (when running with Firestore emulator)
+#   - Project: /Users/<redacted>/project_ai_universe_frontend/ai_universe_frontend
+#   - Control: ./run_local_server.sh [dev|preview|test|status|cleanup]
+#   - Backend Proxy: /api/* -> ai-universe-backend-114133832173.us-central1.run.app/*
+#
+# Port 2000: AI Universe Backend Development (MCP Server)
+#   - FastMCP server with multi-model AI consultation
+#   - GCP Secret Manager integration for API keys
+#   - Project: /Users/<redacted>/project_ai_universe/ai_universe/backend
+#   - Control: ./scripts/run_local_server.sh [--kill-existing] [--port PORT]
+#   - Internal MCP: Port 2999 downward (auto-assigned, searches 2999→2998→2997...)
+#   - Endpoints: /health, /mcp (streaming MCP protocol)
+#
+# Ports 2100-2101: Conversation MCP Server Development
+#   - Port 2100: A2A protocol server (Agent-to-Agent communication)
+#   - Port 2101: FastMCP server for conversation tools
+#   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo
+#   - Control: npm start, npm run dev, or npx tsx src/server/server.ts
+#
+# Ports 2200-2201: Conversation MCP Testing Server
+#   - Port 2200: A2A protocol testing server
+#   - Port 2201: FastMCP testing server for comprehensive method testing
+#   - Same project as above, testing instance on different ports
+#   - Standalone conversation MCP server extracted from AI Universe
+#   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo
+#   - Control: npm run dev (development) or npm start (production)
+#   - Tools: convo.list, convo.get, convo.send, convo.reply
+#   - Endpoints: /health, /a2a, /a2a/stream/:id, /mcp
+#
+# Port 8080: Conversation MCP Server (HTTP Transport)
+#   - HTTP-based conversation MCP server for conversation management
+#   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo_mcp
+#   - Control: npm run dev (development) or npm run start (production)
+#   - Endpoints: /health, /mcp (JSON-RPC 2.0 MCP protocol), /
+#   - Client Library: ConversationMCPClient({ serverUrl: 'http://localhost:8080' })
+#   - Tools: health-check, start-conversation, add-message, get-conversation-history, list-conversations
+#
+# Ports 8081-8089: AI Universe Preview/Staging
+#   - Port 8081: Primary Vite preview server (built AI Universe app)
+#   - Port 8082: Fallback preview server
+#   - Port 9000: Future AI Universe backend services
+
+# Ports 4000-4099: Claude Mistake Detection System
+#   - Port 4001: Grafana dashboard (local setup)
+#   - Port 4002: Metrics collection server
+#   - Project: WorldArchitect.AI / Claude mistake detection
+#   - Control: ./scripts/setup_grafana_hybrid.sh
+#   - Dashboards: http://localhost:4001 (admin/claude_metrics_2025)
+#   - Metrics: ~/tmp/grafana-metrics/ (local) + GCP Cloud Monitoring
+#   - Control: ./run_local_server.sh preview
+#
+# Port 4873: Verdaccio Private NPM Registry
+#   - Private npm package registry and caching proxy
+#   - Running on: http://localhost:4873/
+#   - Auto-Start: LaunchAgent (~/Library/LaunchAgents/com.verdaccio.plist) starts at login
+#   - Configuration: ~/.config/verdaccio/config.yaml
+#   - Storage: ~/.local/share/verdaccio/storage/
+#   - Registry Config: ~/.npmrc (registry=http://localhost:4873)
+#   - Authentication: ~/.npmrc auth token for //localhost:4873/
+#   - Web UI: http://localhost:4873/ (package management interface)
+#   - MCP Servers: Install to ~/.local/share/mcp-servers/ via `npm install <package>`
+#   - Usage: Proxies npmjs.org, caches packages locally, shared across all worktrees
+#   - Logs: ~/.config/verdaccio/verdaccio.log (stdout), verdaccio.error.log (stderr)
+
+# Port 3301: WorldAI Ralph MCP Server
+#   - FastMCP server for the WorldArchitect.AI Ralph implementation (TypeScript)
+#   - Project: /Users/<redacted>/projects_other/worldai_ralph
+#   - Control: npm run dev|build|start (set PORT=3301)
+#   - Endpoints: /health, /api/status
+#
+# SHELL CONFIGURATION
+
+# Git worktree function - defined early to work in all shell types
+wtree() {
+    if [ $# -ge 1 ]; then
+        # Try to use create_worktree.sh scripts first (from project root or scripts/)
+        if [ -f ./create_worktree.sh ]; then
+            source ./create_worktree.sh "$@"
+        elif [ -f ./scripts/create_worktree.sh ]; then
+            source ./scripts/create_worktree.sh "$@"
+        else
+            # Fallback: create git worktree with worktree_ prefix
+            local branch_name="$1"
+            local worktree_dir="worktree_${branch_name}"
+            echo "Creating git worktree: $worktree_dir (fallback)"
+            git worktree add "$worktree_dir" "$branch_name" 2>/dev/null || git worktree add -b "$branch_name" "$worktree_dir"
+        fi
+    else
+        echo "Usage: wtree <worker_name> - creates worktree using create_worktree.sh or fallback"
+        echo "Looks for: ./create_worktree.sh or ./scripts/create_worktree.sh"
+    fi
+}
+
+# tree function override - functions take precedence over commands
+tree() {
+    wtree "$@"
+}
+
+# If not running interactively, don't do anything
+case $- in
+    *i*) ;;
+      *) return;;
+esac
+
+# don't put duplicate lines or lines starting with space in the history.
+# See bash(1) for more options
+HISTCONTROL=ignoreboth
+
+# append to the history file, don't overwrite it
+shopt -s histappend
+
+# for setting history length see HISTSIZE and HISTFILESIZE in bash(1)
+HISTSIZE=1000
+HISTFILESIZE=2000
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+# If set, the pattern "**" used in a pathname expansion context will
+# match all files and zero or more directories and subdirectories.
+#shopt -s globstar
+
+# make less more friendly for non-text input files, see lesspipe(1)
+[ -x /usr/bin/lesspipe ] && eval "$(SHELL=/bin/sh lesspipe)"
+
+# TERMINAL & PROMPT SETUP
+
+# set variable identifying the chroot you work in (used in the prompt below)
+if [ -z "${debian_chroot:-}" ] && [ -r /etc/debian_chroot ]; then
+    debian_chroot=$(cat /etc/debian_chroot)
+fi
+
+# set a fancy prompt (non-color, unless we know we "want" color)
+case "$TERM" in
+    xterm-color|*-256color) color_prompt=yes;;
+esac
+
+# uncomment for a colored prompt, if the terminal has the capability; turned
+# off by default to not distract the user: the focus in a terminal window
+# should be on the output of commands, not on the prompt
+#force_color_prompt=yes
+
+if [ -n "$force_color_prompt" ]; then
+    if [ -x /usr/bin/tput ] && tput setaf 1 >&/dev/null; then
+        # We have color support; assume it's compliant with Ecma-48
+        # (ISO/IEC-6429). (Lack of such support is extremely rare, and such
+        # a case would tend to support setf rather than setaf.)
+        color_prompt=yes
+    else
+        color_prompt=
+    fi
+fi
+
+if [ "$color_prompt" = yes ]; then
+    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
+else
+    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
+fi
+unset color_prompt force_color_prompt
+
+# If this is an xterm set the title to user@host:dir
+case "$TERM" in
+xterm*|rxvt*)
+    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
+    ;;
+*)
+    ;;
+esac
+
+# enable color support of ls and also add handy aliases
+if [ -x /usr/bin/dircolors ]; then
+    test -r ~/.dircolors && eval "$(dircolors -b ~/.dircolors)" || eval "$(dircolors -b)"
+fi
+
+# colored GCC warnings and errors
+#export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
+
+# SYSTEM PATH & TOOL SETUP
+
+# Path configuration for MacOS
+export PATH="$HOME/.cargo/bin:$HOME/.claude/local:$HOME/.local/bin:$HOME/bin:$PATH"
+
+# Homebrew (MacOS)
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# NVM (Node Version Manager)
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# Cargo/Rust
+[ -s "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+
+# Local bin
+[ -s "$HOME/.local/bin/env" ] && . "$HOME/.local/bin/env"
+
+# Pyenv (Python Version Manager)
+export PYENV_ROOT="$HOME/.pyenv"
+command -v pyenv >/dev/null || export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init -)"
+
+# enable programmable completion features (you don't need to enable
+# this, if it's already enabled in /etc/bash.bashrc and /etc/profile
+# sources /etc/bash.bashrc).
+if ! shopt -oq posix; then
+  if [ -f /usr/share/bash-completion/bash_completion ]; then
+    . /usr/share/bash-completion/bash_completion
+  elif [ -f /etc/bash_completion ]; then
+    . /etc/bash_completion
+  fi
+fi
+
+# ENVIRONMENT VARIABLES & API KEYS
+
+# Google Cloud & Firebase Configuration (WorldArchitect.AI)
+
+# Google Cloud SDK Configuration
+if [ -f '/opt/homebrew/share/google-cloud-sdk/path.bash.inc' ]; then
+    source '/opt/homebrew/share/google-cloud-sdk/path.bash.inc'
+fi
+if [ -f '/opt/homebrew/share/google-cloud-sdk/completion.bash.inc' ]; then
+    source '/opt/homebrew/share/google-cloud-sdk/completion.bash.inc'
+fi
+
+# Claude API Configuration
+export CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=1
+export CLAUDE_CODE_MAX_OUTPUT_TOKENS=20000
+
+# Cerebras API configuration (Qwen3-Coder)
+export CEREBRAS_BASE_URL="https://api.cerebras.ai/v1"
+export CEREBRAS_MODEL="gpt-oss-120b"
+
+# OpenAI API configuration
+#export OPENAI_API_KEY="$CEREBRAS_API_KEY"  # Replace with your actual key
+#export OPENAI_API_BASE="$CEREBRAS_BASE_URL"  # Cerebras OpenAI-compatible base URL
+#export OPENAI_MODEL="$CEREBRAS_MODEL"            # Model ID for Qwen3-Coder-480B on Cerebras
+
+# Other API Keys
+
+# Email Configuration
+
+# Test Credentials
+
+# Load Gemini API Key from a secret file if it exists
+if [ -f ~/.gemini_api_key_secret ]; then
+    source ~/.gemini_api_key_secret
+fi
+
+# SSH CONFIGURATION
+
+# Start ssh-agent if not already running and add default keys
+if ! pgrep -u "$USER" ssh-agent > /dev/null; then
+    ssh-agent -s > ~/.ssh/agent_env
+fi
+if [ -f ~/.ssh/agent_env ]; then
+    . ~/.ssh/agent_env > /dev/null
+fi
+
+# Add keys if they are not already added (optional, if you use passphrases and want to add them once per login)
+# Check if specific keys are added, for example id_ed25519
+# if [ "$(ssh-add -l 2>/dev/null | grep -c 'id_ed25519')" -eq 0 ]; then
+#   ssh-add ~/.ssh/id_ed25519
+# fi
+
+# ALIASES
+
+# Codex: auto-route via local proxy when it's running
+codex() {
+  # If Codex-Plus proxy is running, route through it; otherwise default
+  local pid_file="/tmp/codex_plus/proxy.pid"
+  if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file" 2>/dev/null)" 2>/dev/null; then
+    OPENAI_BASE_URL="http://localhost:10000" command codex "$@"
+  else
+    command codex "$@"
+  fi
+}
+
+# Quick launch (fast, no-approval dev mode) using default model
+alias codexd='codex --yolo'
+alias codexdr='codexd -- --resume'
+
+# Basic System Aliases
+alias ls='ls --color=auto'
+#alias dir='dir --color=auto'
+#alias vdir='vdir --color=auto'
+alias grep='grep --color=auto'
+alias fgrep='fgrep --color=auto'
+alias egrep='egrep --color=auto'
+
+# ls aliases
+alias ll='ls -alF'
+alias la='ls -A'
+alias l='ls -CF'
+
+# System Utilities
+alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo error)" "$(history|tail -n1|sed -e '\''s/^\s*[0-9]\+\s*//;s/[;&|]\s*alert$//'\'')"'
+alias h='history | grep'
+alias code="cursor"
+
+# Git Aliases
+alias push="git add . ; git commit -a -m \"a\" ; git push"
+alias commit='git commit -a -m "a" && git push'
+alias status='git status'
+alias add='git add .'
+alias git-header='bash ~/projects/worldarchitect.ai/claude_command_scripts/git-header.sh'
+
+# Claude Aliases
+alias claudedanger='claude --dangerously-skip-permissions --model sonnet'
+alias clauded='claude --dangerously-skip-permissions --model sonnet'
+alias claudedc='claude --dangerously-skip-permissions --model sonnet --continue && echo "
+
+🔍 SKEPTICAL ANALYSIS: Test Results from /tmp/d
+================================================
+
+Analyzing test evidence with critical eye...
+" && cat /tmp/d/TEST_REPORT.md && echo "
+
+⚠️  CRITICAL QUESTIONS TO ASK:
+1. Are all 5 response files actually valid JSON?
+2. Do timestamps make logical sense (chronological order)?
+3. Are conversation IDs consistent across related operations?
+4. Does message content match between add-message and get-history?
+5. Are there any edge cases NOT tested (errors, auth, pagination)?
+6. Was the server actually running during tests or were these cached responses?
+7. Do the file sizes make sense for the expected JSON payloads?
+
+🔬 FILE INTEGRITY CHECK:
+" && ls -lah /tmp/d/responses/ && echo "
+" && wc -c /tmp/d/responses/*.json && echo "
+
+📊 JSON VALIDATION:
+" && for f in /tmp/d/responses/*.json; do echo "Checking $f..." && jq . "$f" > /dev/null 2>&1 && echo "  ✅ Valid JSON" || echo "  ❌ INVALID JSON"; done && echo "
+
+🎯 VERDICT: Review the above evidence critically before accepting test success.
+"'
+alias claudep='source ./claude_start.sh'
+alias claudepw='source ./claude_start.sh --worker'
+alias claudeps='source ./claude_start.sh --supervisor'
+alias claudepd='source ./claude_start.sh --default'
+alias claudepq='source ./claude_start.sh --qwen'
+alias claudepc="./claude_start.sh --cerebras"
+alias cm='claude-monitor --plan max20 --timezone PST'
+alias qwend="qwen --yolo"
+
+# Project Aliases
+alias wa='cd ~/projects/worldarchitect.ai'
+alias deploy='./deploy.sh "$@"'
+alias integrate='./integrate.sh --force'
+
+alias sb='~/projects/worldarchitect.ai/sync_branch.sh'
+
+# FUNCTIONS
+
+# nb function to create new branch without deleting current
+nb() {
+    ./integrate.sh --new-branch "$@"
+}
+
+# Virtual Python Environment Function
+vpython() {
+    PROJECT_ROOT_PATH="$HOME/projects/worldarchitect.ai"
+    VENV_ACTIVATE_SCRIPT="$PROJECT_ROOT_PATH/venv/bin/activate"
+    if [ ! -f "$VENV_ACTIVATE_SCRIPT" ]; then
+        echo "Error: Virtual environment activate script not found at $VENV_ACTIVATE_SCRIPT"
+        echo "Please create the virtual environment first: cd $PROJECT_ROOT_PATH && python3 -m venv venv"
+        return 1
+    fi
+    if [[ "$VIRTUAL_ENV" != "$PROJECT_ROOT_PATH/venv" ]]; then
+        echo "Activating virtual environment: $PROJECT_ROOT_PATH/venv"
+        source "$VENV_ACTIVATE_SCRIPT"
+    else
+        echo "Virtual environment already active."
+    fi
+    echo "Running python $*"
+    python "$@"
+}
+
+# PROJECT-SPECIFIC SETUP
+
+# Auto-navigate to WorldArchitect.AI project
+if [ "$PWD" = "$HOME" ]; then
+    cd ~/projects/worldarchitect.ai 2>/dev/null || true
+fi
+
+# Alias definitions.
+# You may want to put all your additions into a separate file like
+# ~/.bash_aliases, instead of adding them here directly.
+# See /usr/share/doc/bash-doc/examples in the bash-doc package.
+if [ -f ~/.bash_aliases ]; then
+    . ~/.bash_aliases
+fi
+
+# Codex-Plus configuration (API key not used by proxy; rely on Codex auth tokens)
+# export OPENAI_API_KEY=''
+
+
+
+
+# =============================================================================
+# Firebase Configuration - All Projects
+# =============================================================================
+
+# WorldArchitecture.AI Firebase Project
+
+# WorldArchitecture.AI Firebase Project (VITE format)
+
+# AI Universe Firebase Project (VITE format)
+
+export LOCAL_ADMIN_FRONTEND_PORT=9002
+
+# GCP Configuration for AI Universe Allowlist Management
+
+# GPT-OSS Configuration (OpenAI's open-source model via vLLM)
+export GPT_OSS_BASE_URL="http://localhost:8000/v1"  # Local vLLM server
+export GPT_OSS_MODEL="openai/gpt-oss-120b"
+
+# Codex-Plus proxy helper (updated - cleaner version)

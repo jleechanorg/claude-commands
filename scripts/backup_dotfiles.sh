@@ -17,12 +17,12 @@ BACKUP_DIR="./dotfiles_backup" # Relative to the repo root
 mkdir -p "$BACKUP_DIR"
 
 # --- List of dotfiles to back up ---
-# Format: "Source Path in Home Dir" "Destination Filename in BACKUP_DIR"
-declare -A DOTFILES_TO_BACKUP=(
-    ["$HOME/.bashrc"]="bashrc_pc.txt"
-    ["$HOME/.gitconfig"]="gitconfig_pc.txt" # Example
+# Format: "Source Path in Home Dir|Destination Filename in BACKUP_DIR"
+DOTFILES_TO_BACKUP=(
+    "$HOME/.bashrc|bashrc_pc.txt"
+    "$HOME/.gitconfig|gitconfig_pc.txt" # Example
     # Add more files here if needed:
-    # ["$HOME/.vimrc"]="vimrc_cloudworkstation.txt"
+    # "$HOME/.vimrc|vimrc_cloudworkstation.txt"
 )
 # --- End of list ---
 
@@ -38,26 +38,54 @@ filter_sensitive_data() {
         # Remove lines with tokens, keys, passwords
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Tt][Oo][Kk][Ee][Nn][[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Kk][Ee][Yy][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Pp][Aa][Ss][Ss][[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Pp][Aa][Ss][Ss][Ww]?[Oo]?[Rr]?[Dd]?[[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ss][Ee][Cc][Rr][Ee][Tt][[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Aa][Pp][Ii][[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Cc][Rr][Ee][Dd][[:space:]]*=/d
+        # Remove webhook URLs and sensitive URLs
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ww][Ee][Bb][Hh][Oo][Oo][Kk][[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Uu][Rr][Ll][[:space:]]*=.*hooks\.slack\.com/d
+        /^[[:space:]]*(export[[:space:]]+)?SLACK_WEBHOOK_URL[[:space:]]*=/d
         # Remove email/username patterns if they look sensitive
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ee][Mm][Aa][Ii][Ll][[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Uu][Ss][Ee][Rr][[:space:]]*=/d
+        # Remove test credentials
+        /^[[:space:]]*(export[[:space:]]+)?TEST_PASSWORD[[:space:]]*=/d
+        # Remove Firebase UIDs and test credentials
+        /^[[:space:]]*(export[[:space:]]+)?FIREBASE.*UID[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?.*TEST.*UID[[:space:]]*=/d
+        # Remove GCP Project IDs
+        /^[[:space:]]*(export[[:space:]]+)?.*PROJECT_ID[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?GOOGLE_CLOUD_PROJECT[[:space:]]*=/d
+        # Remove Firebase configuration values
+        /^[[:space:]]*(export[[:space:]]+)?.*FIREBASE.*ID[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?.*MEASUREMENT_ID[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?.*MESSAGING_SENDER_ID[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?.*FIREBASE.*DOMAIN[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?.*FIREBASE.*BUCKET[[:space:]]*=/d
+        # Remove secret names
+        /^[[:space:]]*(export[[:space:]]+)?.*SECRET_NAME[[:space:]]*=/d
         # Remove GitHub/Git credential helpers with tokens
         /^\[credential/,/^\[/{ /helper.*token/d; /username.*token/d; }
+        # Remove real names from gitconfig
+        /^[[:space:]]*name[[:space:]]*=/d
         # Remove specific sensitive values (add more patterns as needed)
         /github\.com.*@/d
         /gitlab\.com.*@/d
-    ' "$input_file" > "$output_file"
+    ' "$input_file" | sed -E 's|/Users/[^/]+/|/Users/<redacted>/|g' > "$output_file"
 
     echo "  → Filtered sensitive data from $(basename "$input_file")"
 }
 
 # Copy all specified dotfiles first with sensitive data filtering
-for source_path in "${!DOTFILES_TO_BACKUP[@]}"; do
-    dest_filename="${DOTFILES_TO_BACKUP[$source_path]}"
+for entry in "${DOTFILES_TO_BACKUP[@]}"; do
+    IFS='|' read -r source_path dest_filename <<< "$entry"
+
+    if [ -z "$source_path" ] || [ -z "$dest_filename" ]; then
+        echo "Warning: Invalid DOTFILES_TO_BACKUP entry '$entry'. Skipping."
+        continue
+    fi
+
     dest_path="$BACKUP_DIR/$dest_filename"
 
     if [ -f "$source_path" ]; then
