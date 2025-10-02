@@ -1,3 +1,22 @@
+---
+description: Enhanced Command Aliases
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Enhanced Command Aliases
 
 Quick reference for enhanced command aliases with memory integration.
@@ -14,6 +33,7 @@ Quick reference for enhanced command aliases with memory integration.
 ## Quick Start
 
 ### Most Common Enhanced Commands
+
 ```bash
 /ee [task]          # Enhanced execute with memory
 /plan+ [task]       # Enhanced planning with patterns
@@ -22,6 +42,7 @@ Quick reference for enhanced command aliases with memory integration.
 ```
 
 ### Memory Features
+
 All enhanced commands provide:
 - 🧠 **Pattern Consultation**: Automatic memory query
 - 🚨 **Critical Corrections**: High-confidence fixes applied
@@ -29,14 +50,19 @@ All enhanced commands provide:
 - 💡 **Recommendations**: Learned best practices
 
 ### Example Usage
+
 ```bash
+
 # Enhanced execution with memory guidance
+
 /ee implement user authentication system
 
 # Enhanced testing with learned preferences
+
 /testui+ test login form validation
 
 # Enhanced learning with pattern analysis
+
 /learn+ always use headless=True for CI tests
 ```
 

@@ -1,3 +1,22 @@
+---
+description: Total Failure Protocol
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Total Failure Protocol
 
 **Usage**: `/total_failure` or referenced by other commands
@@ -7,6 +26,7 @@
 ## 🚨 TOTAL FAILURE PROTOCOL
 
 ### ⚡ ZERO TOLERANCE FOR PARTIAL SUCCESS
+
 **ABSOLUTE RULE: NO CELEBRATIONS UNTIL ORIGINAL PROBLEM IS 100% SOLVED**
 - ❌ NO "partial success" acknowledgments
 - ❌ NO "mostly working" statements until SPECIFIC issue is resolved
@@ -15,6 +35,7 @@
 - ❌ NO claiming progress until exact issue is resolved
 
 ### 🎯 BRUTAL SUCCESS CRITERIA
+
 **ONLY SUCCESS:** The exact user request or test specification is completely fulfilled
 - **ANYTHING LESS IS TOTAL FAILURE:** No exceptions, no excuses, no partial credit
 - **BE RUTHLESSLY HONEST:** If original problem isn't solved, the task FAILED
@@ -22,12 +43,14 @@
 - **USER REQUEST MUST BE 100% COMPLETE:** Anything working less than 100% = TOTAL FAILURE
 
 ### 🚨 BINARY OUTCOME ENFORCEMENT
+
 - **100% Working = SUCCESS**
 - **99% Working = TOTAL FAILURE**
 - **No middle ground, no partial credit**
 - **Zero tolerance for "almost there" or "mostly fixed"**
 
 ### 📋 APPLICATION AREAS
+
 This protocol applies to:
 - **All testing operations** (`/testllm`, `/test`, browser automation)
 - **All debugging tasks** (`/debug`, `/debugp`, issue resolution)
@@ -36,12 +59,14 @@ This protocol applies to:
 - **All validation steps** (code review, quality checks, integration tests)
 
 ### 🔧 ENFORCEMENT MECHANISMS
+
 - **Pre-completion checkpoint**: "Is the original problem 100% solved?"
 - **Binary evaluation**: No scoring, no percentages - only PASS/FAIL
 - **Evidence requirement**: Concrete proof of 100% functionality required
 - **Zero exceptions**: No circumstances justify partial success declaration
 
 ### 🚨 FORBIDDEN LANGUAGE PATTERNS
+
 ❌ **NEVER SAY:**
 - "Mostly working"
 - "Almost there"
@@ -56,6 +81,7 @@ This protocol applies to:
 - "TOTAL FAILURE" (when anything less than 100%)
 
 ### 📖 COMMAND INTEGRATION
+
 Commands that enforce Total Failure Protocol:
 - `/testllm` - Testing operations
 - `/debugp` - Debug protocol

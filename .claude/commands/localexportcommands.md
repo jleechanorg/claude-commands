@@ -1,8 +1,28 @@
+---
+description: /localexportcommands - Export Project Claude Configuration Locally
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /localexportcommands - Export Project Claude Configuration Locally
 
 Copies the project's .claude folder structure to your local ~/.claude directory, making commands and configurations available system-wide. **PRESERVES** existing conversation history and other critical data.
 
 ## Usage
+
 ```bash
 /localexportcommands
 ```
@@ -26,6 +46,7 @@ This command copies ONLY standard Claude Code directories to ~/.claude:
 echo "🚀 Starting local export of .claude configuration..."
 
 # Validate source directory
+
 if [ ! -d ".claude" ]; then
     echo "❌ ERROR: .claude directory not found in current project"
     echo "   Make sure you're running this from a project root with .claude/ folder"
@@ -33,8 +54,11 @@ if [ ! -d ".claude" ]; then
 fi
 
 # Define exportable components list (extracted for maintainability)
+
 # This list contains ONLY standard Claude Code directories, not project-specific custom ones
+
 # Based on official Claude Code documentation and standard directory structure
+
 EXPORTABLE_COMPONENTS=(
     "commands"      # Slash commands (.md files) - STANDARD
     "hooks"         # Lifecycle hooks - STANDARD
@@ -43,6 +67,7 @@ EXPORTABLE_COMPONENTS=(
 )
 
 # Create backup of existing ~/.claude components (selective backup strategy)
+
 backup_timestamp="$(date +%Y%m%d_%H%M%S)"
 if [ -d "$HOME/.claude" ]; then
     echo "📦 Creating selective backup of existing ~/.claude configuration..."
@@ -59,10 +84,12 @@ if [ -d "$HOME/.claude" ]; then
 fi
 
 # Create target directory (preserve existing structure)
+
 echo "📁 Ensuring ~/.claude directory exists..."
 mkdir -p "$HOME/.claude"
 
 # Export function for individual components (selective update only)
+
 export_component() {
     local component=$1
     local source_path=".claude/$component"
@@ -109,10 +136,12 @@ export_component() {
 }
 
 # Track export statistics
+
 exported_count=0
 total_components=0
 
 # Use the predefined components list for export
+
 components=("${EXPORTABLE_COMPONENTS[@]}")
 
 echo ""
@@ -127,6 +156,7 @@ for component in "${components[@]}"; do
 done
 
 # Set executable permissions on hook files
+
 if [ -d "$HOME/.claude/hooks" ]; then
     echo ""
     echo "🔧 Setting executable permissions on hooks..."
@@ -136,6 +166,7 @@ if [ -d "$HOME/.claude/hooks" ]; then
 fi
 
 # Set executable permissions on script files
+
 if [ -d "$HOME/.claude/scripts" ]; then
     echo "🔧 Setting executable permissions on scripts..."
     find "$HOME/.claude/scripts" -name "*.sh" -exec chmod +x {} \;
@@ -144,6 +175,7 @@ if [ -d "$HOME/.claude/scripts" ]; then
 fi
 
 # Export summary
+
 echo ""
 echo "📊 Export Summary"
 echo "================================="
@@ -176,6 +208,7 @@ echo ""
 echo "🚀 Commands from this project can now be used in any Claude Code session!"
 
 # Validation checklist
+
 echo ""
 echo "✅ Post-Export Validation Checklist"
 echo "================================="

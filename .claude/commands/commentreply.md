@@ -1,16 +1,28 @@
-# /commentreply Command
+---
+description: /commentreply Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-🎯 **Purpose**: Systematically process ALL PR comments with real technical responses and GitHub threading
+## 🚨 EXECUTION WORKFLOW
 
-## 🚨 MODERN WORKFLOW (3-Step Process)
+### Phase 1: 🚨 MODERN WORKFLOW (3-Step Process)
 
-### Step 1: Load Fetched Comments (MANDATORY)
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 2: Step 1: Load Fetched Comments (MANDATORY)
+
+**Action Steps:**
 ```bash
-# MUST run /commentfetch first in session to populate comment data
-# Load comments from: /tmp/{branch_name}/comments.json
-```
 
-### Step 2: Claude Analysis & Reply Generation (CORE RESPONSIBILITY)
+### Phase 3: Step 2: Claude Analysis & Reply Generation (CORE RESPONSIBILITY)
+
+**Action Steps:**
 **Claude MUST**:
 1. **Read each comment content** from the JSON data
 2. **Analyze technical issues** raised in each comment
@@ -30,8 +42,9 @@
    ```
 6. **Verify changes** with git diff and commit with descriptive messages
 
-### Step 3: Automated Posting (Python Execution)
+### Phase 4: Step 3: Automated Posting (Python Execution)
 
+**Action Steps:**
 **✅ DONE: Architecture Question Resolved** (Commit: ab82741b)
 
 > Question: "Should we have this and the md file and the py file? How do all 3 work together?"
@@ -45,14 +58,65 @@
 
 **Integration Flow**:
 ```bash
+
+### Discovery Phase (MANDATORY)
+
+**Action Steps:**
+```bash
+
+### Implementation Phase (MANDATORY)
+
+**Action Steps:**
+1. **✅ Map ALL instances**: Document each occurrence and required fix
+2. **✅ Fix ALL instances**: Not just obvious ones - systematic coverage required
+3. **❌ FORBIDDEN**: Partial pattern fixes that miss related usage
+
+### Verification Phase (MANDATORY)
+
+**Action Steps:**
+```bash
+
+### Phase 8: 🚀 EXECUTION FLOW
+
+**Action Steps:**
+```mermaid
+graph TD
+    A["/commentfetch loads JSON"] --> B["Claude reads comments"]
+    B --> C["Claude analyzes technical issues"]
+    C --> D["Claude implements fixes"]
+    D --> E["Claude generates responses"]
+    E --> F["Claude writes /tmp/branch/replies.json"]
+    F --> G["Python reads replies.json"]
+    G --> H["Python posts with GitHub API threading"]
+    H --> I["Verify coverage"]
+```
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /commentreply Command
+
+🎯 **Purpose**: Systematically process ALL PR comments with real technical responses and GitHub threading
+
+# MUST run /commentfetch first in session to populate comment data
+
+# Load comments from: /tmp/{branch_name}/comments.json
+
+```
+
 # User runs shell command
+
 ./commentreply [args]
   ↓
+
 # Shell script auto-detects repo context, calls Python
+
 python3 commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
   ↓
+
 # Python reads JSON data that Claude analyzed (per this .md file)
+
 # Posts responses via secure GitHub API with proper threading
+
 ```
 
 **Why Three Files Are Necessary**:
@@ -82,12 +146,15 @@ GitHub provides two methods for posting replies to PR review comments:
 - Loads responses from `/tmp/<branch>/responses.json` internally
 
 ```bash
+
 # Get repo info and pass to Python script
+
 OWNER=$(gh repo view --json owner --jq .owner.login)
 REPO=$(gh repo view --json name --jq .name)
 PR_NUMBER=$(gh pr view --json number --jq .number)
 
 # Python reads comment data and handles secure API posting with threading
+
 python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
 ```
 
@@ -96,6 +163,7 @@ python3 .claude/commands/commentreply.py "$OWNER" "$REPO" "$PR_NUMBER"
 ## 🔧 CLAUDE'S TECHNICAL RESPONSIBILITIES
 
 ### Issue Analysis
+
 For each comment, Claude must:
 - **Extract specific issues**: What exactly is the comment asking for?
 - **Identify file/line context**: Where does this need to be fixed?
@@ -128,26 +196,20 @@ For each comment, Claude must:
 
 **⚠️ MANDATORY**: When fixing patterns/variables mentioned in comments, apply systematic verification to prevent incomplete implementations.
 
-### Discovery Phase (MANDATORY)
-```bash
 # Find ALL instances of flawed pattern BEFORE claiming fix
+
 grep -n "problematic_pattern" target_file.py
 rg "problematic_pattern" . --type py -A 2 -B 2
 ```
 
-### Implementation Phase (MANDATORY)
-- **✅ Map ALL instances**: Document each occurrence and required fix
-- **✅ Fix ALL instances**: Not just obvious ones - systematic coverage required
-- **❌ FORBIDDEN**: Partial pattern fixes that miss related usage
-
-### Verification Phase (MANDATORY)
-```bash
 # Prove ALL instances addressed before declaring complete
+
 git add -A && git diff --cached | grep -E "(\+|\-)" | grep "problematic_pattern"
 git show HEAD | grep -A 3 -B 3 "problematic_pattern"
 ```
 
 ### Examples of Pattern-Based Fixes
+
 - **Variable Usage**: `all_comments` vs `processed_comments` - must fix ALL usage (success criteria AND error reporting)
 - **Function Calls**: Signature changes require ALL call sites updated
 - **Import Changes**: Must verify ALL dependent code updated
@@ -155,6 +217,7 @@ git show HEAD | grep -A 3 -B 3 "problematic_pattern"
 **🚨 LESSON**: Incomplete pattern fixes create false confidence - always verify completeness with evidence
 
 ### Response Generation
+
 **🚨 MANDATORY: [AI responder] TAG REQUIREMENT**
 ALL responses MUST begin with the tag **[AI responder]** to distinguish AI-generated responses from manual human responses.
 
@@ -169,6 +232,7 @@ Create technical responses that:
 ## 📋 COMMENT PROCESSING PROTOCOL
 
 ### Performance Issues (Example: Copilot efficiency comments)
+
 ```
 [AI responder] ✅ **Performance Fix Applied** (Commit: abc1234)
 
@@ -187,6 +251,7 @@ Create technical responses that:
 ```
 
 ### Security Issues (Example: Shell injection vulnerabilities)
+
 ```
 [AI responder] ✅ **Security Issue Fixed** (Commit: def5678)
 
@@ -203,6 +268,7 @@ Create technical responses that:
 ```
 
 ### Code Structure Issues (Example: CodeRabbit suggestions)
+
 ```
 [AI responder] ✅ **Code Structure Improved** (Commit: ghi9012)
 
@@ -225,21 +291,8 @@ Before processing any comments:
 4. **✅ Verification**: Run git diff to confirm changes were made
 5. **✅ Commit Reference**: Include commit hash in all responses
 
-## 🚀 EXECUTION FLOW
-
-```mermaid
-graph TD
-    A["/commentfetch loads JSON"] --> B["Claude reads comments"]
-    B --> C["Claude analyzes technical issues"]
-    C --> D["Claude implements fixes"]
-    D --> E["Claude generates responses"]
-    E --> F["Claude writes /tmp/branch/replies.json"]
-    F --> G["Python reads replies.json"]
-    G --> H["Python posts with GitHub API threading"]
-    H --> I["Verify coverage"]
-```
-
 ### Data Flow Details
+
 1. **Input**: `/tmp/{branch}/comments.json` (from commentfetch)
 2. **Processing**: Claude analyzes and fixes issues in codebase
 3. **Output**: `/tmp/{branch}/replies.json` (structured reply data)

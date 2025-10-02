@@ -67,17 +67,12 @@ run_test "Bug Fix: PR parsing should not match standalone numbers" \
     "print last 30 unresponded here" \
     "print last 30 unresponded here"
 
-# Bug 2: SLASH_COMMAND_EXECUTE bypass protection
-run_test "Bug Fix: SLASH_COMMAND_EXECUTE should require exact start match" \
-    "Some text with SLASH_COMMAND_EXECUTE: in middle" \
-    "Some text with SLASH_COMMAND_EXECUTE: in middle"
-
-# Bug 3: Command prefix removal breaks backward compatibility
+# Bug 2: Command prefix removal breaks backward compatibility
 run_test "Bug Fix: Single commands should preserve prefix for compatibility" \
     '{"prompt": "/fake3"}' \
     "/fake3"
 
-# Bug 4: Code fencing should be properly formatted
+# Bug 3: Code fencing should be properly formatted
 test_code_fencing() {
     local broken_fencing
     broken_fencing=$(grep -c "^!\`" ../../commands/commentfetch.md 2>/dev/null || echo "0")
@@ -92,7 +87,7 @@ test_code_fencing() {
 }
 test_code_fencing
 
-# Bug 5: Shell variables should be properly quoted to prevent word splitting
+# Bug 4: Shell variables should be properly quoted to prevent word splitting
 test_unquoted_variables() {
     local has_unquoted
     if grep -q 'printf.*\$cmd_args[^"]' ../mcp_slash_command_executor.sh 2>/dev/null; then

@@ -1,13 +1,64 @@
+---
+description: /replicate
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### 1. PR Analysis Phase
+
+**Action Steps:**
+1. Parses the PR URL/number to identify the repository and PR
+2. **🚨 MANDATORY PAGINATION PROTOCOL**: Checks total file count first using GitHub MCP tools
+3. Uses GitHub MCP tools to fetch complete file changes with pagination verification
+4. **Verification**: Ensures ALL files are analyzed, not just first 30 from API default
+5. Reads every single delta line (additions and deletions)
+6. Focuses on relevant directories (configurable)
+
+### 2. Comparison Phase
+
+**Action Steps:**
+1. Compares PR changes with current branch implementation
+2. Identifies missing functionality, methods, or improvements
+3. Categorizes changes by importance and relevance
+4. Detects potential conflicts or overlaps
+
+### 3. Smart Merge Phase
+
+**Action Steps:**
+1. Applies missing changes that enhance functionality
+2. Skips irrelevant changes (unrelated cleanup, different approaches)
+3. Maintains current enhancements and improvements
+4. Preserves existing functionality while adding new features
+5. Handles conflicts intelligently
+
+### 4. Validation Phase
+
+**Action Steps:**
+1. Verifies changes don't break existing functionality
+2. Runs available tests to ensure stability
+3. Generates detailed summary of what was replicated
+4. Creates descriptive commit with comprehensive change log
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /replicate
 
 Analyze a GitHub PR and intelligently apply its missing functionality to the current branch.
 
 ## Usage
+
 ```
 /replicate <PR_URL or PR_NUMBER>
 ```
 
 ## Examples
+
 - `/replicate https://github.com/jleechanorg/your-project.com/pull/693`
 - `/replicate PR#693`
 - `/replicate 693`
@@ -20,33 +71,6 @@ The `/replicate` command automates the process of analyzing a pull request and r
 - You're consolidating work from multiple branches
 
 ## How It Works
-
-### 1. PR Analysis Phase
-- Parses the PR URL/number to identify the repository and PR
-- **🚨 MANDATORY PAGINATION PROTOCOL**: Checks total file count first using GitHub MCP tools
-- Uses GitHub MCP tools to fetch complete file changes with pagination verification
-- **Verification**: Ensures ALL files are analyzed, not just first 30 from API default
-- Reads every single delta line (additions and deletions)
-- Focuses on relevant directories (configurable)
-
-### 2. Comparison Phase
-- Compares PR changes with current branch implementation
-- Identifies missing functionality, methods, or improvements
-- Categorizes changes by importance and relevance
-- Detects potential conflicts or overlaps
-
-### 3. Smart Merge Phase
-- Applies missing changes that enhance functionality
-- Skips irrelevant changes (unrelated cleanup, different approaches)
-- Maintains current enhancements and improvements
-- Preserves existing functionality while adding new features
-- Handles conflicts intelligently
-
-### 4. Validation Phase
-- Verifies changes don't break existing functionality
-- Runs available tests to ensure stability
-- Generates detailed summary of what was replicated
-- Creates descriptive commit with comprehensive change log
 
 ## Features
 

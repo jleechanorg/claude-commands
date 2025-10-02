@@ -1,3 +1,22 @@
+---
+description: /headless - Enhanced Planning + Headless Development
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /headless - Enhanced Planning + Headless Development
 
 **Purpose**: Combine `/handoff` planning with `/headless` automation - creates detailed analysis then generates copy-paste command for headless execution
@@ -21,6 +40,7 @@
 #!/bin/bash
 
 # Get the prompt from arguments
+
 PROMPT="$*"
 
 if [ -z "$PROMPT" ]; then
@@ -30,6 +50,7 @@ if [ -z "$PROMPT" ]; then
 fi
 
 # Generate a unique branch name based on timestamp and prompt
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BRANCH_NAME="headless_${TIMESTAMP}"
 WORKTREE_DIR="headless_${TIMESTAMP}"
@@ -40,8 +61,11 @@ echo "Worktree: $WORKTREE_DIR"
 echo "Prompt: $PROMPT"
 
 # Determine the default branch dynamically
+
 DEFAULT_BRANCH=$(git symbolic-ref refs/remotes/origin/HEAD | sed 's@^refs/remotes/origin/@@')
+
 # Create git worktree with new branch from the default branch
+
 git worktree add -b "$BRANCH_NAME" "$WORKTREE_DIR" "$DEFAULT_BRANCH"
 
 if [ $? -ne 0 ]; then
@@ -50,12 +74,14 @@ if [ $? -ne 0 ]; then
 fi
 
 # Change to worktree directory
+
 cd "$WORKTREE_DIR"
 
 echo "📁 Working in: $(pwd)"
 echo "🎯 Running Claude Code headlessly..."
 
 # Run Claude Code in headless mode with stream monitoring
+
 claude -p "$PROMPT" --output-format stream-json --verbose --dangerously-skip-permissions
 
 if [ $? -ne 0 ]; then
@@ -69,6 +95,7 @@ echo "✅ Claude Code execution completed"
 echo "🔄 Creating pull request..."
 
 # Run /pr command to create PR
+
 if [ -f ".claude/commands/pr.md" ] && [ -x "./claude_command_scripts/pr.sh" ]; then
     # Extract and run the PR creation logic
     ./claude_command_scripts/pr.sh
@@ -80,6 +107,7 @@ else
 
     # Create PR using gh
     gh pr create --title "Headless: $(echo "$PROMPT" | cut -c1-50)..." --body "$(cat <<EOF
+
 ## Automated Headless Development
 
 **Prompt**: $PROMPT
@@ -100,6 +128,7 @@ echo "📂 Worktree location: $WORKTREE_DIR"
 echo "🌿 Branch: $BRANCH_NAME"
 
 # Return to original directory
+
 cd ..
 ```
 

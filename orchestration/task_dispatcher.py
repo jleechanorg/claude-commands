@@ -99,7 +99,8 @@ class TaskDispatcher:
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                timeout=30,
             )
             if result.returncode != 0:
                 return set()
@@ -141,7 +142,8 @@ class TaskDispatcher:
                 ["tmux", "capture-pane", "-t", session_name, "-p"],
                 capture_output=True,
                 text=True,
-                check=False
+                check=False,
+                timeout=30,
             )
             if result.returncode != 0:
                 return False
@@ -188,11 +190,14 @@ class TaskDispatcher:
 
         # Check tmux sessions
         try:
+            if shutil.which("tmux") is None:
+                return existing
             result = subprocess.run(
                 ["tmux", "list-sessions", "-F", "#{session_name}"],
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=30,
             )
             if result.returncode == 0:
                 existing.update(result.stdout.strip().split("\n"))
@@ -385,6 +390,7 @@ class TaskDispatcher:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=30,
             )
             current_branch = (
                 branch_result.stdout.strip() if branch_result.returncode == 0 else None
@@ -406,6 +412,7 @@ class TaskDispatcher:
                     check=False,
                     capture_output=True,
                     text=True,
+                    timeout=30,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     data = json.loads(result.stdout)
@@ -428,6 +435,7 @@ class TaskDispatcher:
                 check=False,
                 capture_output=True,
                 text=True,
+                timeout=30,
             )
             if result.returncode == 0 and result.stdout.strip():
                 data = json.loads(result.stdout)
@@ -517,6 +525,7 @@ class TaskDispatcher:
                         check=False,
                         capture_output=True,
                         text=True,
+                        timeout=30,
                     )
                     if result.returncode == 0:
                         pr_data = json.loads(result.stdout)
@@ -823,9 +832,7 @@ Complete the task, then use /pr to create a new pull request."""
 
         try:
             # Find Claude
-            claude_path = subprocess.run(
-                ["which", "claude"], check=False, capture_output=True, text=True
-            ).stdout.strip()
+            claude_path = shutil.which("claude") or ""
             if not claude_path:
                 return False
 
@@ -1032,6 +1039,10 @@ echo "[$(date)] Monitor with: tmux attach -t {agent_name}"
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
+            script_path = Path("/tmp") / f"{agent_name}_run.sh"
+            script_path.write_text(bash_cmd, encoding="utf-8")
+            os.chmod(script_path, 0o700)
+
             # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
 
@@ -1053,13 +1064,12 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     "-c",
                     agent_dir,
                     "bash",
-                    "-c",
-                    bash_cmd,
+                    str(script_path),
                 ]
             )
 
             result = subprocess.run(
-                tmux_cmd, check=False, capture_output=True, text=True
+                tmux_cmd, check=False, capture_output=True, text=True, timeout=30
             )
             if result.returncode != 0:
                 print(f"⚠️ Error creating tmux session: {result.stderr}")

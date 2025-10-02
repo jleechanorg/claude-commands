@@ -1,3 +1,36 @@
+---
+description: /testerc - End2End Tests (Real Mode + Capture)
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Workflow
+
+**Action Steps:**
+1. **Run Capture**: Execute `/testerc` to collect fresh data
+2. **Review Data**: Examine captured responses in `./test_data_capture/`
+3. **Update Mocks**: Use captured data to improve `FakeFirestoreClient` and `FakeGeminiResponse`
+4. **Validate Accuracy**: Run `/teste` to ensure mocks match real behavior
+5. **Commit Updates**: Include updated mock data in version control
+
+### Phase 2: Next Steps After Capture
+
+**Action Steps:**
+1. **Review Captures**: Check `./test_data_capture/` contents
+2. **Generate Mocks**: Create scripts to update mock classes from captured data
+3. **Run Real Tests**: Execute `/tester` to get baseline real service behavior
+4. **Validate Mocks**: Run `/teste` and compare results to `/tester` output to ensure mocks match real behavior
+5. **Document Changes**: Record what service behaviors changed
+6. **Regular Refresh**: Schedule periodic recaptures to keep mocks current
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /testerc - End2End Tests (Real Mode + Capture)
 
 **Purpose**: Run end-to-end tests using real services AND capture data for mock generation
@@ -64,14 +97,6 @@ export REAL_GEMINI_API_KEY=your_test_api_key
 4. **Service Evolution**: Track how external services change over time
 5. **Test Data Refresh**: Update test fixtures with fresh real data
 
-## Workflow
-
-1. **Run Capture**: Execute `/testerc` to collect fresh data
-2. **Review Data**: Examine captured responses in `./test_data_capture/`
-3. **Update Mocks**: Use captured data to improve `FakeFirestoreClient` and `FakeGeminiResponse`
-4. **Validate Accuracy**: Run `/teste` to ensure mocks match real behavior
-5. **Commit Updates**: Include updated mock data in version control
-
 ## Benefits
 
 - 🎯 **Accurate Mocks**: Ensures test doubles match real service behavior
@@ -91,11 +116,3 @@ export REAL_GEMINI_API_KEY=your_test_api_key
 
 - `/teste` - Mock mode validation
 - `/tester` - Real mode without capture
-
-## Next Steps After Capture
-
-1. **Review Captures**: Check `./test_data_capture/` contents
-2. **Generate Mocks**: Create scripts to update mock classes from captured data
-3. **Validate Mocks**: Ensure `/teste` results match `/tester` results
-4. **Document Changes**: Record what service behaviors changed
-5. **Regular Refresh**: Schedule periodic recaptures to keep mocks current

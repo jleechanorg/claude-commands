@@ -1,3 +1,65 @@
+---
+description: Research Command - Academic and Technical Research
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execution Standards
+
+**Action Steps:**
+1. ✅ **Verified Sources**: Use WebFetch to confirm content before citing
+2. ✅ **Access Tracking**: Document which sources were successfully read vs failed
+3. ❌ **Unverified Citations**: Never present search result URLs as evidence without reading
+4. ❌ **Assumption Claims**: Never claim source content based on search descriptions
+
+### Phase 1: Research Planning (`/thinku`)
+
+**Action Steps:**
+**Ultra-depth Thinking Process**:
+1. Analyze the research topic systematically
+2. Define specific research questions and objectives
+3. Identify potential information sources and search strategies
+4. Anticipate knowledge gaps and validation needs
+5. Plan integration approach for multiple information sources
+
+### Phase 2: Multi-source Information Gathering (`/perp`)
+
+**Action Steps:**
+**Comprehensive Search Execution**:
+1. **Claude WebSearch**: Current information and recent developments
+2. **DuckDuckGo**: Privacy-focused alternative perspectives and sources
+3. **Perplexity**: AI-powered synthesis and academic analysis
+4. **Gemini**: Development-focused technical consultation
+5. Cross-validate information across all four engines
+6. Extract and organize findings by source and credibility
+
+### Phase 3: Deep Analysis Integration (`/thinku` + findings)
+
+**Action Steps:**
+**Sequential Thinking Applied to Research Results**:
+1. Synthesize findings from all information sources
+2. Identify patterns, trends, and contradictions
+3. Evaluate source credibility and information recency
+4. Generate insights beyond individual source limitations
+5. Develop evidence-based conclusions and recommendations
+
+### Phase 4: Structured Documentation
+
+**Action Steps:**
+**Research Summary with Methodology Transparency**:
+1. **Research Planning**: Show `/thinku` analysis process
+2. **Information Sources**: Document `/perp` search results by engine
+3. **Analysis Integration**: Present `/thinku` synthesis of findings
+4. **Conclusions**: Evidence-based recommendations with source attribution
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Research Command - Academic and Technical Research
 
 **Purpose**: Systematic research using multiple information sources with academic rigor
@@ -7,6 +69,7 @@
 ## 🔬 RESEARCH PROTOCOL
 
 ### Current Date Awareness (macOS + Ubuntu)
+
 Before any research actions, capture today's date with a portable shell command and use it when checking source freshness or framing search queries:
 
 ```sh
@@ -16,11 +79,13 @@ CURRENT_DATE=$(date "+%Y-%m-%d")
 The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fails (very rare), fall back to `python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"`. Reference `CURRENT_DATE` explicitly when summarizing findings to flag material that may already be stale relative to today.
 
 ### Integrated Command Composition
+
 **Default Execution**: `/research` automatically combines:
 1. **`/thinku`** - Ultra-depth sequential thinking for research planning and analysis
 2. **`/perp`** - Multi-engine search across Claude, DuckDuckGo, Perplexity, and Gemini
 
 ### Research Methodology
+
 1. **Research Planning** (`/thinku`) - Deep analytical thinking to:
    - Define research scope and objectives
    - Identify key questions and hypotheses
@@ -43,6 +108,7 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 4. **Documentation** - Structured research summary with methodology transparency
 
 ### Research Sources
+
 **Primary Sources** (via `/perp`):
 - Official documentation and APIs
 - Academic papers and journals
@@ -64,50 +130,13 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 ## 🚨 Research Integrity Protocol
 
 ### Source Verification Requirements
+
 1. **Search ≠ Sources**: Web search results are potential leads, not verified evidence
 2. **WebFetch Before Cite**: Only cite URLs after successfully reading content via WebFetch
 3. **Transparent Failures**: Clearly report when sources couldn't be accessed
 4. **Evidence-Based Claims**: All assertions must trace to successfully read content
 
-### Execution Standards
-- ✅ **Verified Sources**: Use WebFetch to confirm content before citing
-- ✅ **Access Tracking**: Document which sources were successfully read vs failed
-- ❌ **Unverified Citations**: Never present search result URLs as evidence without reading
-- ❌ **Assumption Claims**: Never claim source content based on search descriptions
-
 ## Research Process
-
-### Phase 1: Research Planning (`/thinku`)
-**Ultra-depth Thinking Process**:
-- Analyze the research topic systematically
-- Define specific research questions and objectives
-- Identify potential information sources and search strategies
-- Anticipate knowledge gaps and validation needs
-- Plan integration approach for multiple information sources
-
-### Phase 2: Multi-source Information Gathering (`/perp`)
-**Comprehensive Search Execution**:
-- **Claude WebSearch**: Current information and recent developments
-- **DuckDuckGo**: Privacy-focused alternative perspectives and sources
-- **Perplexity**: AI-powered synthesis and academic analysis
-- **Gemini**: Development-focused technical consultation
-- Cross-validate information across all four engines
-- Extract and organize findings by source and credibility
-
-### Phase 3: Deep Analysis Integration (`/thinku` + findings)
-**Sequential Thinking Applied to Research Results**:
-- Synthesize findings from all information sources
-- Identify patterns, trends, and contradictions
-- Evaluate source credibility and information recency
-- Generate insights beyond individual source limitations
-- Develop evidence-based conclusions and recommendations
-
-### Phase 4: Structured Documentation
-**Research Summary with Methodology Transparency**:
-- **Research Planning**: Show `/thinku` analysis process
-- **Information Sources**: Document `/perp` search results by engine
-- **Analysis Integration**: Present `/thinku` synthesis of findings
-- **Conclusions**: Evidence-based recommendations with source attribution
 
 ## Example Usage
 
@@ -170,12 +199,14 @@ Processing findings from all sources...
 ## Key Features
 
 ### Command Composition Benefits
+
 - ✅ **Integrated Thinking** - `/thinku` provides ultra-depth analysis throughout research process
 - ✅ **Comprehensive Search** - `/perp` delivers multi-engine information gathering
 - ✅ **Seamless Integration** - Commands work together naturally via Universal Composition
 - ✅ **Methodology Transparency** - Show both thinking process and search results
 
 ### Research Quality Features
+
 - ✅ **Academic Rigor** - Systematic methodology and source validation
 - ✅ **Multi-source Verification** - Cross-reference information across four search engines
 - ✅ **Deep Analysis** - Sequential thinking applied to research findings

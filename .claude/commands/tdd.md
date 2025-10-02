@@ -1,21 +1,28 @@
-# Matrix-Enhanced Test-Driven Development Command
+---
+description: Matrix-Enhanced Test-Driven Development Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Purpose**: Test-driven development workflow with comprehensive matrix testing integration
+## 🚨 EXECUTION WORKFLOW
 
-**Action**: Red → Green → Refactor workflow enhanced with systematic path coverage
+### Phase 1: 🧪 Enhanced TDD Workflow with Matrix Testing
 
-**Usage**: `/tdd` or `/rg`
-
-## 🧪 Enhanced TDD Workflow with Matrix Testing
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
 
 ### Phase 0: Matrix Planning (⚠️ MANDATORY FIRST STEP)
+
+**Action Steps:**
 **BEFORE writing any tests, create comprehensive test matrix:**
 
-#### **Complete Field Matrix Creation**
-```markdown
-## Campaign Creation Test Matrix - All Field Combinations
+### Phase 3: **Matrix 1: Core Field Interactions (Campaign Type × Character × Setting)**
 
-### **Matrix 1: Core Field Interactions (Campaign Type × Character × Setting)**
+**Action Steps:**
 | | **Empty Character** | **Custom Character** | **Special Chars** | **Unicode** | **Long Name** |
 |---|---|---|---|---|---|
 | **Dragon Knight + Empty** | [1,1,1] | [1,2,1] | [1,3,1] | [1,4,1] | [1,5,1] |
@@ -23,33 +30,9 @@
 | **Custom + Empty** | [2,1,1] | [2,2,1] | [2,3,1] | [2,4,1] | [2,5,1] |
 | **Custom + Short** | [2,1,2] | [2,2,2] | [2,3,2] | [2,4,2] | [2,5,2] |
 
-### **Matrix 2: AI Personality Testing (All Checkbox Combinations)**
-| Campaign Type | Default World | Mechanical | Companions | Expected Behavior |
-|---------------|---------------|------------|-------------|-------------------|
-| Dragon Knight | ✅ | ✅ | ✅ | All personalities active |
-| Dragon Knight | ✅ | ✅ | ❌ | Default + Mechanical only |
-| Dragon Knight | ❌ | ❌ | ❌ | No AI personalities |
-| Custom | ✅ | ✅ | ✅ | All personalities with custom |
-| Custom | ❌ | ❌ | ❌ | Minimal custom setup |
-
-### **Matrix 3: State Transition Testing**
-| From State | To State | Expected Behavior |
-|------------|----------|-------------------|
-| Dragon Knight → Custom | Placeholder changes, data preserved |
-| Custom → Dragon Knight | Auto-fills setting, maintains character |
-| Collapsed → Expanded | Shows textarea, preserves state |
-| Expanded → Collapsed | Hides textarea, preserves text |
-
-**Total Matrix Tests**: 86 systematic test cases covering all field interactions
-```
-
-#### **Combinatorial Coverage Analysis**
-1. **Identify Variables**: List all user interaction variables (buttons, inputs, selections)
-2. **Generate Combinations**: Create matrix of all meaningful variable combinations
-3. **Prioritize Paths**: High-risk, high-usage, edge-case prioritization
-4. **Boundary Conditions**: Include edge cases and error conditions
-
 ### Phase 1: RED - Matrix-Driven Failing Tests
+
+**Action Steps:**
 **Implementation**:
 1. **Write Failing Tests for ENTIRE Matrix**: Each matrix cell becomes a test case
 2. **Systematic Test Generation**: Convert each matrix row to specific test
@@ -154,6 +137,8 @@ describe('Campaign Creation - Full Field Matrix', () => {
 ```
 
 ### Phase 2: GREEN - Minimal Implementation for Matrix Coverage
+
+**Action Steps:**
 **Implementation**:
 1. **Matrix-Guided Development**: Use matrix to drive implementation priorities
 2. **Incremental Path Implementation**: Implement one matrix path at a time
@@ -162,6 +147,8 @@ describe('Campaign Creation - Full Field Matrix', () => {
 5. **Systematic Coverage**: Ensure all matrix paths have implementation
 
 ### Phase 3: REFACTOR - Matrix-Validated Improvements
+
+**Action Steps:**
 **Implementation**:
 1. **Matrix-Preserved Refactoring**: Ensure all matrix tests remain passing
 2. **Pattern Recognition**: Use matrix results to identify code patterns
@@ -169,17 +156,68 @@ describe('Campaign Creation - Full Field Matrix', () => {
 4. **Path Optimization**: Optimize code paths identified through matrix testing
 5. **Coverage Validation**: Confirm matrix coverage maintained after refactoring
 
+## 📋 REFERENCE DOCUMENTATION
+
+# Matrix-Enhanced Test-Driven Development Command
+
+**Purpose**: Test-driven development workflow with comprehensive matrix testing integration
+
+**Action**: Red → Green → Refactor workflow enhanced with systematic path coverage
+
+**Usage**: `/tdd` or `/rg`
+
+#### **Complete Field Matrix Creation**
+
+```markdown
+
+## Campaign Creation Test Matrix - All Field Combinations
+
+### **Matrix 2: AI Personality Testing (All Checkbox Combinations)**
+
+| Campaign Type | Default World | Mechanical | Companions | Expected Behavior |
+|---------------|---------------|------------|-------------|-------------------|
+| Dragon Knight | ✅ | ✅ | ✅ | All personalities active |
+| Dragon Knight | ✅ | ✅ | ❌ | Default + Mechanical only |
+| Dragon Knight | ❌ | ❌ | ❌ | No AI personalities |
+| Custom | ✅ | ✅ | ✅ | All personalities with custom |
+| Custom | ❌ | ❌ | ❌ | Minimal custom setup |
+
+### **Matrix 3: State Transition Testing**
+
+| From State | To State | Expected Behavior |
+|------------|----------|-------------------|
+| Dragon Knight → Custom | Placeholder changes, data preserved |
+| Custom → Dragon Knight | Auto-fills setting, maintains character |
+| Collapsed → Expanded | Shows textarea, preserves state |
+| Expanded → Collapsed | Hides textarea, preserves text |
+
+**Total Matrix Tests**: 86 systematic test cases covering all field interactions
+```
+
+#### **Combinatorial Coverage Analysis**
+
+1. **Identify Variables**: List all user interaction variables (buttons, inputs, selections)
+2. **Generate Combinations**: Create matrix of all meaningful variable combinations
+3. **Prioritize Paths**: High-risk, high-usage, edge-case prioritization
+4. **Boundary Conditions**: Include edge cases and error conditions
+
 ## 🔍 Matrix Testing Integration Points
 
 ### **Automated Matrix Generation**
+
 ```bash
+
 # Component analysis for matrix generation
+
 rg "useState|props|interface" --type tsx -A 3 -B 1
 rg "onClick|onChange|onSubmit" --type tsx -A 2
+
 # Generate test matrix from component analysis
+
 ```
 
 ### **Matrix-Driven Test Organization**
+
 ```
 tests/
 ├── matrix_tests/
@@ -191,8 +229,11 @@ tests/
 ```
 
 ### **Matrix Coverage Tracking**
+
 ```markdown
+
 ## Complete Matrix Coverage Report
+
 ✅ **Core Field Matrix**: 50/50 tests
   - Campaign Type × Character × Setting: All combinations covered
   - Dynamic placeholder switching: Verified
@@ -238,16 +279,19 @@ tests/
 ## Advanced Matrix Techniques
 
 ### **Pairwise Testing Integration**
+
 - Generate minimal test sets covering all parameter pairs
 - Reduce matrix size while maintaining comprehensive coverage
 - Focus on high-impact parameter combinations
 
 ### **State Transition Matrices**
+
 - Model component state changes as matrix transitions
 - Test all valid state transitions systematically
 - Identify invalid transitions and error handling
 
 ### **User Journey Matrices**
+
 - Map complete user workflows as matrix sequences
 - Test end-to-end paths through matrix combinations
 - Validate user story completion through matrix verification

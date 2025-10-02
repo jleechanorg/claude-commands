@@ -1,42 +1,25 @@
-# /presentation
+---
+description: /presentation
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Purpose**: Create professional presentations compatible with Google Slides through an interactive outline development process with multi-phase quality assurance.
-
-**Aliases**: `/pres`, `/slide`
-
-## Usage
-
-```
-/presentation [topic]
-/pres "AI Safety in 2025"
-/presentation /think "Climate Change Solutions"
-```
-
-## Protocol
-
-### Current Date Awareness (macOS + Ubuntu)
-Before validating facts or citing data, determine today's date so the presentation highlights recency and calls out outdated sources:
-
-```sh
-CURRENT_DATE=$(date "+%Y-%m-%d")
-```
-
-The POSIX `date` syntax above runs on both macOS and Ubuntu. If `date` is unavailable, use the following Python command instead:
-
-```bash
-python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"
-```
-
-Incorporate `CURRENT_DATE` into research queries and explicitly note when statistics or references are older than today.
-
-This command follows a structured multi-phase approach:
+## 🚨 EXECUTION WORKFLOW
 
 ### Phase 1: Initial Outline Creation
+
+**Action Steps:**
 1. Create a presentation scratchpad: `roadmap/presentation_[timestamp].md`
 2. Generate initial outline based on the topic
 3. Structure with title, sections, and key points
 
 ### Phase 2: Interactive Q&A Refinement
+
+**Action Steps:**
 1. Present the initial outline to the user
 2. Ask clarifying questions about:
    - Target audience
@@ -48,6 +31,8 @@ This command follows a structured multi-phase approach:
 4. Continue until user types "done", "proceed", or "looks good"
 
 ### Phase 3: Quality Review Chain
+
+**Action Steps:**
 Execute thinking commands in sequence:
 1. **First**: Run `/thinku` on the refined outline
    - Analyze structure, flow, and completeness
@@ -63,6 +48,8 @@ Execute thinking commands in sequence:
    - Ensure clarity and impact
 
 ### Phase 4: Presentation Generation
+
+**Action Steps:**
 1. Use python-pptx to create the PPTX file
 2. Convert outline to slides with:
    - Professional formatting
@@ -72,6 +59,8 @@ Execute thinking commands in sequence:
 3. Save as `presentation_[topic]_[timestamp].pptx`
 
 ### Phase 5: Quality Assurance (/secondopinion)
+
+**Action Steps:**
 Comprehensive quality check:
 1. **Devil's Advocate Review**
    - Challenge presentation logic
@@ -90,34 +79,82 @@ Comprehensive quality check:
    - Ensure accuracy and relevance
    - Get additional insights
 
-## Example Workflow
+### Phase 1: Create initial outline
 
-```python
-# Phase 1: Create initial outline
+**Action Steps:**
 outline = create_initial_outline(topic)
 save_to_scratchpad(outline)
 
-# Phase 2: Interactive refinement
+### Phase 2: Interactive refinement
+
+**Action Steps:**
 while not user_satisfied:
     present_outline(outline)
     ask_clarifying_questions()
     outline = refine_based_on_feedback(outline)
 
-# Phase 3: Quality review
+### Phase 3: Quality review
+
+**Action Steps:**
 /thinku analyze presentation outline for completeness and flow
 /reviewdeep evaluate presentation from multiple perspectives
-# Critical review of assumptions and logic
 
-# Phase 4: Generate presentation
+### Phase 4: Generate presentation
+
+**Action Steps:**
 presentation = generate_pptx_from_outline(outline)
 
-# Phase 5: Final quality assurance
+### Phase 5: Final quality assurance
+
+**Action Steps:**
 /secondopinion:
-  - Devil's advocate analysis
-  - Gemini MCP: "Review this presentation for clarity and impact"
-  - Web search key concepts for accuracy
-  - /perp validate core claims
+  1. Devil's advocate analysis
+  2. Gemini MCP: "Review this presentation for clarity and impact"
+  3. Web search key concepts for accuracy
+  4. /perp validate core claims
 ```
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /presentation
+
+**Purpose**: Create professional presentations compatible with Google Slides through an interactive outline development process with multi-phase quality assurance.
+
+**Aliases**: `/pres`, `/slide`
+
+## Usage
+
+```
+/presentation [topic]
+/pres "AI Safety in 2025"
+/presentation /think "Climate Change Solutions"
+```
+
+## Protocol
+
+### Current Date Awareness (macOS + Ubuntu)
+
+Before validating facts or citing data, determine today's date so the presentation highlights recency and calls out outdated sources:
+
+```sh
+CURRENT_DATE=$(date "+%Y-%m-%d")
+```
+
+The POSIX `date` syntax above runs on both macOS and Ubuntu. If `date` is unavailable, use the following Python command instead:
+
+```bash
+python3 -c "from datetime import datetime; print(datetime.now().strftime('%Y-%m-%d'))"
+```
+
+Incorporate `CURRENT_DATE` into research queries and explicitly note when statistics or references are older than today.
+
+This command follows a structured multi-phase approach:
+
+## Example Workflow
+
+```python
+
+# Critical review of assumptions and logic
 
 ## Key Characteristics
 

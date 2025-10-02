@@ -1,43 +1,46 @@
-# Intelligent Regression Testing with Playwright MCP
+---
+description: Intelligent Regression Testing with Playwright MCP
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Purpose**: Perform comprehensive regression testing using `/think` and `/execute`, comparing old Flask site to new React V2 site with full functionality validation
-
-**Action**: Always use `/think` to analyze context, then `/execute` for systematic testing. Adapts plan based on user input after command.
-
-**Usage**:
-- `/testuif` (automatic analysis and testing)
-- `/testuif [specific instructions]` (adapts plan to user requirements)
-
-## Execution Protocol
+## 🚨 EXECUTION WORKFLOW
 
 ### Phase 1: Automatic Thinking & Planning
 
+**Action Steps:**
 **🧠 ALWAYS START WITH `/think`:**
 Execute `/think` to analyze:
-- Current PR context and changed files
-- Git diff analysis against main branch
-- Frontend vs backend changes identification
-- Risk assessment for functionality impacts
-- Test strategy prioritization
+1. Current PR context and changed files
+2. Git diff analysis against main branch
+3. Frontend vs backend changes identification
+4. Risk assessment for functionality impacts
+5. Test strategy prioritization
 
 ### Phase 2: Plan Adaptation
 
+**Action Steps:**
 **🎯 IF USER PROVIDED INSTRUCTIONS:**
 Adapt the plan based on user input after `/testuif`:
-- Parse user requirements and constraints
-- Modify testing scope and priorities accordingly
-- Integrate user-specific test scenarios
-- Adjust comparison strategy as requested
+1. Parse user requirements and constraints
+2. Modify testing scope and priorities accordingly
+3. Integrate user-specific test scenarios
+4. Adjust comparison strategy as requested
 
 **📋 DEFAULT COMPARISON STRATEGY:**
 When no specific instructions given:
-- Test ALL functionality from Flask frontend in React V2
-- Ensure feature parity between old and new sites
-- Validate critical user journeys work identically
-- Document any missing or broken functionality
+5. Test ALL functionality from Flask frontend in React V2
+6. Ensure feature parity between old and new sites
+7. Validate critical user journeys work identically
+8. Document any missing or broken functionality
 
 ### Phase 3: Systematic Execution
 
+**Action Steps:**
 **⚡ ALWAYS USE `/execute`:**
 Use `/execute` with comprehensive testing plan:
 
@@ -58,123 +61,9 @@ Use `/execute` with comprehensive testing plan:
 13. Post comprehensive matrix results to PR documentation
 ```
 
-## 🚨 MANDATORY QUALITY ASSURANCE INTEGRATION
-
-**Quality Assurance Protocol**: See [CLAUDE.md §Mandatory QA Protocol](/CLAUDE.md#-mandatory-quality-assurance-protocol). All browser testing MUST comply.
-
-### 📋 Pre-Testing Requirements (⚠️ MANDATORY)
-- **Matrix Testing**: Apply full matrix methodology per canonical protocol
-- **Evidence Collection**: Screenshot every test matrix cell with path labels
-- **Completion Validation**: All validation gates from QA protocol required
-- **Code Scanning**: Search for hardcoded values and patterns systematically
-- **Adversarial Testing**: Attempt to break claimed fixes and verify related patterns
-```
-
-**🚨 MANDATORY HEADLESS CONFIGURATION:**
-```bash
-# Environment variables for headless enforcement
-export PLAYWRIGHT_HEADLESS=1
-export BROWSER_HEADLESS=true
-
-# Playwright MCP configuration with explicit headless flag
-mcp__playwright-mcp__browser_navigate --headless=true --url="http://localhost:8081"
-mcp__playwright-mcp__browser_take_screenshot --headless=true --filename="baseline.png"
-```
-
-## 🔍 Enhanced Screenshot Validation Protocol (2025)
-
-**INTEGRATION**: Based on latest AI testing research, use advanced validation methods:
-
-### **Method 1: Claude Vision Direct Analysis (Primary)**
-```bash
-# Capture screenshots to filesystem for Claude vision analysis
-TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-VALIDATION_DIR="/tmp/testuif_validation/$TIMESTAMP"
-mkdir -p "$VALIDATION_DIR"
-
-# Flask baseline screenshots
-mcp__playwright-mcp__browser_take_screenshot --name="flask_dashboard" --path="$VALIDATION_DIR/flask_dashboard.png"
-mcp__playwright-mcp__browser_take_screenshot --name="flask_campaign_creation" --path="$VALIDATION_DIR/flask_campaign_creation.png"
-
-# React V2 comparison screenshots
-mcp__playwright-mcp__browser_take_screenshot --name="react_dashboard" --path="$VALIDATION_DIR/react_dashboard.png"
-mcp__playwright-mcp__browser_take_screenshot --name="react_campaign_creation" --path="$VALIDATION_DIR/react_campaign_creation.png"
-
-# Claude analyzes screenshots directly using Read tool
-echo "Screenshots saved to $VALIDATION_DIR for Claude vision analysis"
-```
-
-### **Method 2: Accessibility Tree + Visual Hybrid**
-```bash
-# Get structured accessibility data alongside screenshots
-mcp__playwright-mcp__browser_snapshot > "$VALIDATION_DIR/flask_accessibility.json"
-mcp__playwright-mcp__browser_snapshot > "$VALIDATION_DIR/react_accessibility.json"
-
-# Cross-validate structured data with visual confirmation
-# Claude can read both JSON accessibility data AND screenshot images
-```
-
-### **Method 3: Progressive Baseline Comparison**
-```bash
-# Create baselines if they don't exist
-if [ ! -d "/tmp/testuif_baselines" ]; then
-    mkdir -p /tmp/testuif_baselines
-    echo "Creating baseline screenshots for future comparisons"
-    mcp__playwright-mcp__browser_take_screenshot --path="/tmp/testuif_baselines/flask_baseline.png"
-fi
-
-# Compare current state against established baselines
-# Use Claude vision to analyze differences between baseline and current screenshots
-```
-
-**🚨 FAILURE-EXIT SEMANTICS:**
-```bash
-# Exit codes for parity check failures
-PARITY_CHECK_PASSED=0    # All functionality matches
-PARITY_CHECK_FAILED=1    # Feature parity failures detected
-CRITICAL_ERROR=2         # Browser automation or system errors
-
-# Bail-on-failure implementation
-set -e  # Exit immediately on any command failure
-set -o pipefail  # Fail on any pipe command failure
-
-# Example parity validation with non-zero exit
-validate_feature_parity() {
-    local flask_result="$1"
-    local react_result="$2"
-
-    if [ "$flask_result" != "$react_result" ]; then
-        echo "❌ PARITY FAILURE: Feature mismatch detected"
-        echo "Flask: $flask_result"
-        echo "React: $react_result"
-        exit $PARITY_CHECK_FAILED
-    fi
-
-    echo "✅ PARITY VERIFIED: Feature behavior matches"
-    return 0
-}
-```
-
-**🔄 FULL FUNCTIONALITY COMPARISON TESTING:**
-
-**Flask Frontend (Baseline) - Test ALL of:**
-- Landing page and authentication flows
-- Campaign list, creation, and management
-- Campaign gameplay and story continuation
-- Settings, profile, and user preferences
-- Navigation, routing, and deep linking
-- Asset loading, performance, and errors
-
-**React V2 Frontend (New) - Validate SAME functionality:**
-- Identical user journeys and workflows
-- Feature-complete comparison to Flask
-- Performance and user experience validation
-- Integration with Flask backend APIs
-- Authentication and session management
-- Error handling and edge cases
-
 ### Phase 4: Enhanced PR Documentation with Claude Vision Analysis
 
+**Action Steps:**
 **📸 ENHANCED SCREENSHOT POSTING PROTOCOL:**
 Always post screenshots to PR using structured directory with Claude vision analysis:
 
@@ -217,7 +106,162 @@ docs/pr[NUMBER]/
 
 **🔍 CLAUDE VISION INTEGRATION WORKFLOW:**
 ```bash
+
+## 📋 REFERENCE DOCUMENTATION
+
+# Intelligent Regression Testing with Playwright MCP
+
+**Purpose**: Perform comprehensive regression testing using `/think` and `/execute`, comparing old Flask site to new React V2 site with full functionality validation
+
+**Action**: Always use `/think` to analyze context, then `/execute` for systematic testing. Adapts plan based on user input after command.
+
+**Usage**:
+- `/testuif` (automatic analysis and testing)
+- `/testuif [specific instructions]` (adapts plan to user requirements)
+
+## Execution Protocol
+
+## 🚨 MANDATORY QUALITY ASSURANCE INTEGRATION
+
+**Quality Assurance Protocol**: See [CLAUDE.md §Mandatory QA Protocol](/CLAUDE.md#-mandatory-quality-assurance-protocol). All browser testing MUST comply.
+
+### 📋 Pre-Testing Requirements (⚠️ MANDATORY)
+
+- **Matrix Testing**: Apply full matrix methodology per canonical protocol
+- **Evidence Collection**: Screenshot every test matrix cell with path labels
+- **Completion Validation**: All validation gates from QA protocol required
+- **Code Scanning**: Search for hardcoded values and patterns systematically
+- **Adversarial Testing**: Attempt to break claimed fixes and verify related patterns
+```
+
+**🚨 MANDATORY HEADLESS CONFIGURATION:**
+```bash
+
+# Environment variables for headless enforcement
+
+export PLAYWRIGHT_HEADLESS=1
+export BROWSER_HEADLESS=true
+
+# Playwright MCP configuration with explicit headless flag
+
+mcp__playwright-mcp__browser_navigate --headless=true --url="http://localhost:8081"
+mcp__playwright-mcp__browser_take_screenshot --headless=true --filename="baseline.png"
+```
+
+## 🔍 Enhanced Screenshot Validation Protocol (2025)
+
+**INTEGRATION**: Based on latest AI testing research, use advanced validation methods:
+
+### **Method 1: Claude Vision Direct Analysis (Primary)**
+
+```bash
+
+# Capture screenshots to filesystem for Claude vision analysis
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+VALIDATION_DIR="/tmp/testuif_validation/$TIMESTAMP"
+mkdir -p "$VALIDATION_DIR"
+
+# Flask baseline screenshots
+
+mcp__playwright-mcp__browser_take_screenshot --name="flask_dashboard" --path="$VALIDATION_DIR/flask_dashboard.png"
+mcp__playwright-mcp__browser_take_screenshot --name="flask_campaign_creation" --path="$VALIDATION_DIR/flask_campaign_creation.png"
+
+# React V2 comparison screenshots
+
+mcp__playwright-mcp__browser_take_screenshot --name="react_dashboard" --path="$VALIDATION_DIR/react_dashboard.png"
+mcp__playwright-mcp__browser_take_screenshot --name="react_campaign_creation" --path="$VALIDATION_DIR/react_campaign_creation.png"
+
+# Claude analyzes screenshots directly using Read tool
+
+echo "Screenshots saved to $VALIDATION_DIR for Claude vision analysis"
+```
+
+### **Method 2: Accessibility Tree + Visual Hybrid**
+
+```bash
+
+# Get structured accessibility data alongside screenshots
+
+mcp__playwright-mcp__browser_snapshot > "$VALIDATION_DIR/flask_accessibility.json"
+mcp__playwright-mcp__browser_snapshot > "$VALIDATION_DIR/react_accessibility.json"
+
+# Cross-validate structured data with visual confirmation
+
+# Claude can read both JSON accessibility data AND screenshot images
+
+```
+
+### **Method 3: Progressive Baseline Comparison**
+
+```bash
+
+# Create baselines if they don't exist
+
+if [ ! -d "/tmp/testuif_baselines" ]; then
+    mkdir -p /tmp/testuif_baselines
+    echo "Creating baseline screenshots for future comparisons"
+    mcp__playwright-mcp__browser_take_screenshot --path="/tmp/testuif_baselines/flask_baseline.png"
+fi
+
+# Compare current state against established baselines
+
+# Use Claude vision to analyze differences between baseline and current screenshots
+
+```
+
+**🚨 FAILURE-EXIT SEMANTICS:**
+```bash
+
+# Exit codes for parity check failures
+
+PARITY_CHECK_PASSED=0    # All functionality matches
+PARITY_CHECK_FAILED=1    # Feature parity failures detected
+CRITICAL_ERROR=2         # Browser automation or system errors
+
+# Bail-on-failure implementation
+
+set -e  # Exit immediately on any command failure
+set -o pipefail  # Fail on any pipe command failure
+
+# Example parity validation with non-zero exit
+
+validate_feature_parity() {
+    local flask_result="$1"
+    local react_result="$2"
+
+    if [ "$flask_result" != "$react_result" ]; then
+        echo "❌ PARITY FAILURE: Feature mismatch detected"
+        echo "Flask: $flask_result"
+        echo "React: $react_result"
+        exit $PARITY_CHECK_FAILED
+    fi
+
+    echo "✅ PARITY VERIFIED: Feature behavior matches"
+    return 0
+}
+```
+
+**🔄 FULL FUNCTIONALITY COMPARISON TESTING:**
+
+**Flask Frontend (Baseline) - Test ALL of:**
+- Landing page and authentication flows
+- Campaign list, creation, and management
+- Campaign gameplay and story continuation
+- Settings, profile, and user preferences
+- Navigation, routing, and deep linking
+- Asset loading, performance, and errors
+
+**React V2 Frontend (New) - Validate SAME functionality:**
+- Identical user journeys and workflows
+- Feature-complete comparison to Flask
+- Performance and user experience validation
+- Integration with Flask backend APIs
+- Authentication and session management
+- Error handling and edge cases
+
 # After capturing screenshots, perform Claude vision analysis
+
 for screenshot in "$VALIDATION_DIR"/*.png; do
     echo "Analyzing $(basename $screenshot) with Claude vision..."
     # Claude reads and analyzes each screenshot for:
@@ -228,6 +272,7 @@ for screenshot in "$VALIDATION_DIR"/*.png; do
 done
 
 # Generate structured analysis reports
+
 echo "Screenshots ready for Claude vision analysis at: $VALIDATION_DIR"
 echo "Use Read tool to analyze each screenshot with specific validation prompts"
 ```
@@ -254,6 +299,7 @@ Create structured comment on PR with Claude vision analysis integration:
 ## Example Execution Flows
 
 ### Basic Usage with Enhanced Validation
+
 ```
 User: /testuif
 Claude: /think [analyzes PR context and creates testing strategy with Claude vision integration]
@@ -262,6 +308,7 @@ Claude: [Posts results to docs/pr1118/ with Claude vision analysis, accessibilit
 ```
 
 ### Adapted Usage with Claude Vision Focus
+
 ```
 User: /testuif and make sure you compare old site to the new site and all functionality in the old site fully tested in new site
 Claude: /think [incorporates specific comparison requirements + Claude vision hardcoded value detection]
@@ -270,6 +317,7 @@ Claude: [Detailed functionality mapping with Claude vision analysis of hardcoded
 ```
 
 ### Custom Focus with Visual Regression
+
 ```
 User: /testuif focus on campaign creation workflow and authentication only
 Claude: /think [narrows scope to specified areas + progressive baseline comparison]
@@ -278,10 +326,13 @@ Claude: [Targeted testing report with Claude vision analysis of specific UI comp
 ```
 
 ### Enhanced Validation Prompt Templates
+
 ```markdown
+
 ## Claude Vision Analysis Prompts for /testuif
 
 ### Hardcoded Values Detection
+
 "Read [screenshot] and check for:
 1. Any hardcoded 'Ser Arion' character names
 2. 'Loading campaign details...' placeholder text
@@ -290,6 +341,7 @@ Claude: [Targeted testing report with Claude vision analysis of specific UI comp
 Format as: ✅ PASS / ❌ FAIL with exact locations"
 
 ### Feature Parity Visual Verification
+
 "Compare [flask_screenshot] with [react_screenshot]:
 1. Identical UI layout and positioning
 2. Same data displayed in both versions
@@ -298,6 +350,7 @@ Format as: ✅ PASS / ❌ FAIL with exact locations"
 Report differences with pixel-level precision"
 
 ### Visual Regression Analysis
+
 "Analyze [current_screenshot] vs [baseline_screenshot]:
 1. Layout shifts or element displacement
 2. Color changes or styling differences

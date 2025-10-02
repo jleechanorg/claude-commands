@@ -19,15 +19,28 @@ class TestMultiPlayerComposition(unittest.TestCase):
         self.hook_script = os.path.join(self.repo_root, '.claude/hooks/compose-commands.sh')
         self.assertTrue(os.path.exists(self.hook_script), "Hook script must exist")
         
-    def run_hook(self, input_text):
+    def run_hook(self, input_text=None, args=None, env=None, timeout=10):
         """Run the hook with given input and return output"""
         try:
+            command = [self.hook_script]
+            if args:
+                command.extend(args)
+
+            run_kwargs = {
+                "capture_output": True,
+                "text": True,
+                "timeout": timeout,
+            }
+
+            if input_text is not None:
+                run_kwargs["input"] = input_text
+
+            if env is not None:
+                run_kwargs["env"] = env
+
             result = subprocess.run(
-                [self.hook_script],
-                input=input_text,
-                capture_output=True,
-                text=True,
-                timeout=10
+                command,
+                **run_kwargs,
             )
             return result.stdout
         except subprocess.TimeoutExpired:
@@ -50,7 +63,7 @@ class TestMultiPlayerComposition(unittest.TestCase):
         expected_nested = ["/think", "/execute", "/push", "/copilot", "/review"]
         for cmd in expected_nested:
             self.assertIn(cmd, output)
-        
+
         # Should provide user message
         self.assertIn('📋 Automatically tell the user: "I detected these commands:/pr', output)
     
@@ -172,6 +185,35 @@ class TestMultiPlayerComposition(unittest.TestCase):
         # Should be 3-4: "Detected" section, final combination, and possibly nested sections
         # The fixed deduplication should prevent excessive duplicates (was 5+ before fix)
         self.assertLessEqual(execute_count, 4, "Deduplication should limit /execute to reasonable count")
+
+    def test_cli_arguments_are_used_when_present(self):
+        """Commands provided as CLI args should be processed without stdin"""
+        env = os.environ.copy()
+        env.pop("CLAUDE_COMPOSE_INPUT", None)
+
+        output = self.run_hook(args=["/help", "show", "commands"], env=env)
+
+        self.assertEqual(output.strip(), "/help show commands")
+
+    def test_cli_arguments_override_environment_variable(self):
+        """Explicit CLI arguments should win over environment defaults"""
+        env = os.environ.copy()
+        env["CLAUDE_COMPOSE_INPUT"] = "/debug investigate issue"
+
+        output = self.run_hook(args=["/help", "show", "commands"], env=env)
+
+        self.assertEqual(output.strip(), "/help show commands")
+        self.assertNotIn("/debug", output)
+
+    def test_environment_variable_input_takes_precedence(self):
+        """CLAUDE_COMPOSE_INPUT should be honored even without stdin"""
+        env = os.environ.copy()
+        env["CLAUDE_COMPOSE_INPUT"] = "/debug investigate issue"
+
+        output = self.run_hook(env=env)
+
+        self.assertIn("🔍 Detected slash commands:/debug", output)
+        self.assertIn("Use these approaches in combination:/debug", output)
 
 if __name__ == '__main__':
     # Run tests

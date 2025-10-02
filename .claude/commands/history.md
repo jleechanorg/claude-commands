@@ -1,3 +1,28 @@
+---
+description: /history Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Permission Error Recovery Workflow
+
+**Action Steps:**
+1. **Direct Access Attempt**: Try normal file operations first
+2. **Permission Error Detected**: Immediately switch to Python fallback
+3. **Python File Discovery**: Use `glob.glob(os.path.expanduser('~/.claude/projects/*/*.jsonl'))`
+4. **Python File Reading**: Use Python Read tool or subprocess for JSONL parsing
+5. **Never Give Up**: Always provide results using Python if direct access fails
+
+The `/history` command is designed to be 100% reliable regardless of file permission configurations.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /history Command
 
 **Usage**: `/history [search_query] [--options]`
@@ -28,34 +53,44 @@ This command is designed to be resilient to permission issues by automatically f
 ## Usage Examples
 
 ```bash
+
 # Basic keyword search
+
 /history "git merge conflicts"
 
 # Search with date filter  
+
 /history "database migration" --date "2025-08-01"
 
 # Search specific project
+
 /history "authentication bug" --project "your-project.com"
 
 # Search by command type
+
 /history --type "tool_use" --keyword "pytest"
 
 # Complex search with multiple filters
+
 /history "performance issue" --date "2025-08" --project "worldarchitect" --limit 10
 
 # Search by git branch
+
 /history "feature branch" --branch "dev1754"
 
 # Fuzzy search for typos
+
 /history "databse migratoin" --fuzzy
 
 # Recent conversations only
+
 /history "latest deployment" --recent 7  # last 7 days
 ```
 
 ## Search Capabilities
 
 ### Text Matching Strategies
+
 1. **Exact Match**: Default behavior for precise keyword search
 2. **Case-Insensitive**: Automatic case normalization  
 3. **Tokenized Search**: Finds keywords within sentences
@@ -64,6 +99,7 @@ This command is designed to be resilient to permission issues by automatically f
 ### Filter Options
 
 #### Time-Based Filters
+
 - `--date "YYYY-MM-DD"` - Exact date match
 - `--date "YYYY-MM"` - Month match
 - `--after "YYYY-MM-DD"` - After specific date
@@ -71,17 +107,20 @@ This command is designed to be resilient to permission issues by automatically f
 - `--recent N` - Last N days
 
 #### Project/Context Filters
+
 - `--project "name"` - Filter by project directory path
 - `--cwd "/path"` - Filter by working directory
 - `--branch "branch-name"` - Filter by git branch
 
 #### Message Type Filters  
+
 - `--type "user|assistant|summary|tool_use"` - Filter by message type (including tool executions)
 - `--user-type "external"` - Filter by user type
 - `--has-tools` - Convenience flag equivalent to `--type "tool_use"` or messages with tool activity
 - `--has-errors` - Messages with error indicators
 
 #### Output Control
+
 - `--limit N` - Maximum results (default: 20)
 - `--context N` - Lines of context around matches (default: 2)
 - `--format "json|text|table"` - Output format (default: text)
@@ -90,12 +129,14 @@ This command is designed to be resilient to permission issues by automatically f
 ## Implementation Details
 
 ### Performance Optimization (Based on Research)
+
 1. **Streaming JSONL Processing**: Line-by-line parsing to avoid memory issues
 2. **Pre-filtering Pipeline**: Filter by high-selectivity metadata first (date, project, session)
 3. **Parallel File Processing**: Process multiple conversation files concurrently
 4. **Smart File Discovery**: Efficiently locate candidate files by directory structure
 
 ### Search Algorithm
+
 ```
 1. Parse search query and extract filters
 2. Discover candidate files based on project/date filters
@@ -109,6 +150,7 @@ This command is designed to be resilient to permission issues by automatically f
 ```
 
 ### File Format Understanding
+
 Based on research of `~/.claude/projects` structure:
 
 **Directory Structure**:
@@ -164,16 +206,21 @@ If Claude encounters ANY of the following issues:
 
 **Python Fallback Commands:**
 ```bash
+
 # Directory listing
+
 python3 -c "import os; print('\n'.join(os.listdir(os.path.expanduser('~/.claude/projects'))))"
 
 # File discovery  
+
 python3 -c "import glob, os; print('\n'.join(glob.glob(os.path.expanduser('~/.claude/projects/*/*.jsonl'))))"
 
 # File content reading (single line executable)
+
 python3 -c "import json,sys; [print(json.dumps(json.loads(l)) if l.strip() else '') for l in open(sys.argv[1])]" ~/.claude/projects/-home-user-projects-worldarchitect-ai/uuid.jsonl
 
 # File content reading (with error handling)  
+
 python3 -c "import json,sys; exec('for l in open(sys.argv[1]):\\n  try:\\n    print(json.dumps(json.loads(l)))\\n  except: print(f\"Parse error: {l.strip()}\", file=sys.stderr)')" ~/.claude/projects/-home-user-projects-worldarchitect-ai/uuid.jsonl
 ```
 
@@ -187,6 +234,7 @@ This allows `/execute` to:
 ## Output Format
 
 ### Default Text Format
+
 ```
 === Conversation History Search Results ===
 Query: "git merge conflicts"
@@ -204,6 +252,7 @@ Found: 3 matches in 2 conversations
 ```
 
 ### JSON Format (`--format json`)
+
 ```json
 {
   "query": "git merge conflicts",
@@ -226,6 +275,7 @@ Found: 3 matches in 2 conversations
 ```
 
 ### Table Format (`--format table`)
+
 ```
 Query: git merge conflicts | Matches: 3 | Files: 2
 ┌──────────────────────┬───────────────┬──────────────┬───────────────┬──────────────────────────────────────┐
@@ -245,25 +295,18 @@ Query: git merge conflicts | Matches: 3 | Files: 2
 - **No Matches**: Helpful suggestions for refining search query
 - **File Access Failures**: Immediate switch to Python-based file operations with detailed error recovery
 
-### Permission Error Recovery Workflow
-
-1. **Direct Access Attempt**: Try normal file operations first
-2. **Permission Error Detected**: Immediately switch to Python fallback
-3. **Python File Discovery**: Use `glob.glob(os.path.expanduser('~/.claude/projects/*/*.jsonl'))`
-4. **Python File Reading**: Use Python Read tool or subprocess for JSONL parsing
-5. **Never Give Up**: Always provide results using Python if direct access fails
-
-The `/history` command is designed to be 100% reliable regardless of file permission configurations.
-
 ## Integration Features
 
 ### Secure File Access
+
 The command uses secure direct access to `~/.claude/projects/` directory, avoiding symlink vulnerabilities while maintaining search functionality within the project workspace.
 
 ### Memory MCP Integration
+
 Search patterns and frequently accessed conversations can be cached in Memory MCP for faster repeated searches.
 
 ### Command Composition  
+
 Can be combined with other commands:
 ```bash
 /history "database issue" | /learn    # Learn from historical database solutions
@@ -273,10 +316,12 @@ Can be combined with other commands:
 ## Advanced Features
 
 ### Semantic Search (Future Enhancement)
+
 - Leverage embeddings for conceptual similarity matching
 - Find conversations about similar topics even with different keywords
 
 ### Query Intelligence
+
 - Auto-suggest corrections for common typos
 - Recommend related search terms based on conversation patterns
 - Historical query analysis for better search suggestions
@@ -284,19 +329,25 @@ Can be combined with other commands:
 ## Examples of Complex Searches
 
 ```bash
+
 # Find all tool usage in August 2025
+
 /history --type "tool_use" --date "2025-08" --format table
 
 # Search for authentication-related conversations in specific project
+
 /history "auth login password" --project "worldarchitect" --limit 5
 
 # Find recent error discussions 
+
 /history "error exception failed" --recent 14 --has-tools
 
 # Fuzzy search with context
+
 /history "databse migratoin problm" --fuzzy --context 5
 
 # Find conversations about specific files
+
 /history "main.py" --project "worldarchitect" --format json
 ```
 

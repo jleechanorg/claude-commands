@@ -1,33 +1,32 @@
-# Fake3 Command - Branch-Focused Iterative Fake Code Detection and Fixing
+---
+description: Fake3 Command - Branch-Focused Iterative Fake Code Detection and Fixing
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Purpose**: Automate 3 iterations of fake code detection and fixing for all files modified in the current branch with comprehensive tracking, testing, and learning capture
+## 🚨 EXECUTION WORKFLOW
 
-**Usage**: `/fake3` - Runs 3 iterations of fake detection, fixing, testing, and progress tracking **on all branch-modified files**
+### 🎯 WORKFLOW PHASES
 
-**Scope**: This command analyzes all files modified in the current branch (including dynamically created files), not just original PR changes
-
-**Type**: Pure LLM-orchestrated command (leverages a Large Language Model to coordinate tasks without external dependencies, no Python dependencies)
-
-## 🚨 COMMAND OVERVIEW
-
-The `/fake3` command orchestrates a complete fake code remediation workflow:
-1. **Detect**: Run `/fake` audit to identify fake/demo/placeholder code
-2. **Fix**: Automatically fix identified issues
-3. **Test**: Verify fixes work correctly
-4. **Track**: Update scratchpad with progress
-5. **Iterate**: Repeat 3 times or until clean
-6. **Learn**: Call `/learn` if any fake code was found
-
-## 🎯 WORKFLOW PHASES
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
 
 ### Phase 1: Setup and Initialization
-- Create or update iteration tracking scratchpad
-- Initialize Memory MCP context for fake patterns
-- **Get all branch changes**: `git diff --name-only origin/main...HEAD` and `git ls-files --others --exclude-standard` (for untracked files)
-- Check current branch status and PR context
-- Prepare fix tracking data structure for all branch-modified files
+
+**Action Steps:**
+1. Create or update iteration tracking scratchpad
+2. Initialize Memory MCP context for fake patterns
+3. **Get all branch changes**: `git diff --name-only origin/main...HEAD` and `git ls-files --others --exclude-standard` (for untracked files)
+4. Check current branch status and PR context
+5. Prepare fix tracking data structure for all branch-modified files
 
 ### Phase 2: Iterative Detection and Fixing (3 iterations max)
+
+**Action Steps:**
 For each iteration:
 1. **Run Fake Detection** (`/fake` on all branch files)
    - Execute fake code audit on all branch-modified files (tracked + untracked)
@@ -60,26 +59,54 @@ For each iteration:
    - Otherwise, continue to next iteration
 
 ### Phase 3: Learning and Finalization
-- If any fake code was found across iterations:
+
+**Action Steps:**
+1. If any fake code was found across iterations:
     - Call `/learn` with summary of patterns found
     - Store new fake patterns in Memory MCP
     - Update detection strategies
-- Generate final report with all changes
-- Create comprehensive PR description
+2. Generate final report with all changes
+3. Create comprehensive PR description
+
+## 📋 REFERENCE DOCUMENTATION
+
+# Fake3 Command - Branch-Focused Iterative Fake Code Detection and Fixing
+
+**Purpose**: Automate 3 iterations of fake code detection and fixing for all files modified in the current branch with comprehensive tracking, testing, and learning capture
+
+**Usage**: `/fake3` - Runs 3 iterations of fake detection, fixing, testing, and progress tracking **on all branch-modified files**
+
+**Scope**: This command analyzes all files modified in the current branch (including dynamically created files), not just original PR changes
+
+**Type**: Pure LLM-orchestrated command (leverages a Large Language Model to coordinate tasks without external dependencies, no Python dependencies)
+
+## 🚨 COMMAND OVERVIEW
+
+The `/fake3` command orchestrates a complete fake code remediation workflow:
+1. **Detect**: Run `/fake` audit to identify fake/demo/placeholder code
+2. **Fix**: Automatically fix identified issues
+3. **Test**: Verify fixes work correctly
+4. **Track**: Update scratchpad with progress
+5. **Iterate**: Repeat 3 times or until clean
+6. **Learn**: Call `/learn` if any fake code was found
 
 ## 📋 TRACKING FORMAT
 
 ### Scratchpad Structure
+
 ```markdown
+
 # /fake3 Iteration Tracking - [branch_name]
 
 ## Overall Progress
+
 - Start Time: [timestamp]
 - Total Issues Found: [count]
 - Total Issues Fixed: [count]
 - Test Status: [PASS/FAIL]
 
 ## Iteration 1
+
 **Detection Results:**
 - Critical Issues: [count]
 - Suspicious Patterns: [count]
@@ -98,12 +125,15 @@ For each iteration:
 - [description of unfixed issues]
 
 ## Iteration 2
+
 [Similar structure]
 
 ## Iteration 3
+
 [Similar structure]
 
 ## Final Summary
+
 - Total Iterations: [1-3]
 - Issues Fixed: [percentage]
 - Code Quality Improvement: [metrics]
@@ -113,6 +143,7 @@ For each iteration:
 ## 🛠️ IMPLEMENTATION DETAILS
 
 ### LLM Command Composition
+
 The command works by intelligently composing existing commands and tools:
 - Uses `/fake` for comprehensive fake code detection
 - Uses file editing tools (Edit, MultiEdit) for applying fixes
@@ -122,6 +153,7 @@ The command works by intelligently composing existing commands and tools:
 - Orchestrates the workflow through LLM understanding and decision-making
 
 ### LLM Orchestration Process
+
 The LLM performs the following steps for each iteration:
 1. **Parse and Analyze**: Reads `/fake` output and categorizes issues using natural language understanding
 2. **Plan Fixes**: Determines appropriate fix strategy for each issue based on context
@@ -131,6 +163,7 @@ The LLM performs the following steps for each iteration:
 6. **Learn**: Extracts patterns and insights for future detection improvements
 
 ### Fix Strategies
+
 1. **Placeholder Comments**
    - Search for implementation in similar files
    - Generate minimal working implementation
@@ -152,6 +185,7 @@ The LLM performs the following steps for each iteration:
    - Update any references
 
 ### Safety Measures
+
 - LLM creates backup branch before starting using git commands
 - LLM commits after each successful iteration to preserve progress
 - LLM evaluates test failures and stops if issues are catastrophic
@@ -231,12 +265,14 @@ Ready to create PR with all changes!
 ## 🔧 CONFIGURATION
 
 ### Default Behavior
+
 - Max iterations: 3 (built into the command specification)
 - Fix confidence: LLM judges based on context and patterns
 - Test runner: LLM auto-detects from project structure (e.g., `package.json` for JavaScript, `pytest.ini` for Python, `pom.xml` for Java)
 - Scratchpad location: `roadmap/scratchpad_fake3_${current_branch}.md` (dynamically uses current git branch)
 
 ### LLM Decision Points
+
 The LLM makes intelligent decisions about:
 - When to stop iterations early (if clean)
 - Which fix strategy to apply for each issue

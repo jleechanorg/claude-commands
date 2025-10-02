@@ -261,6 +261,16 @@ class UnifiedOrchestration:
         print("🤖 Unified LLM-Driven Orchestration with File-based A2A")
         print("=" * 60)
 
+        # ENHANCED LOGGING: Track orchestration session
+        start_time = time.time()
+        session_id = int(start_time)
+        print(f"🔍 SESSION TRACKING:")
+        print(f"  └─ Session ID: {session_id}")
+        print(f"  └─ Start Time: {datetime.fromtimestamp(start_time).isoformat()}")
+        print(f"  └─ Task Length: {len(task_description)} characters")
+        print(f"  └─ Current Directory: {os.getcwd()}")
+        print("=" * 60)
+
         # Pre-flight checks
         if not self._check_dependencies():
             print("\n❌ Cannot proceed without required dependencies")
@@ -279,18 +289,50 @@ class UnifiedOrchestration:
                 return
 
         # LLM-driven task analysis and agent creation with constraints
+        print("🧠 TASK ANALYSIS PHASE:")
+        analysis_start = time.time()
         agents = self.task_dispatcher.analyze_task_and_create_agents(task_description)
+        analysis_duration = time.time() - analysis_start
+        print(f"  └─ Analysis Duration: {analysis_duration:.2f}s")
+        print(f"  └─ Agents Planned: {len(agents)}")
+        for i, agent in enumerate(agents):
+            print(f"    {i+1}. {agent['name']} - {agent['capabilities'][:60]}...")
 
-        print(f"\n🚀 Creating {len(agents)} dynamic agents...")
-
+        print(f"\n🚀 AGENT CREATION PHASE:")
+        creation_start = time.time()
         created_agents = []
-        for agent_spec in agents:
+        failed_agents = []
+
+        for i, agent_spec in enumerate(agents):
+            print(f"  📦 Creating Agent {i+1}/{len(agents)}: {agent_spec['name']}")
             if self.task_dispatcher.create_dynamic_agent(agent_spec):
                 created_agents.append(agent_spec)
+                print(f"    ✅ Success: {agent_spec['name']}")
+            else:
+                failed_agents.append(agent_spec)
+                print(f"    ❌ Failed: {agent_spec['name']}")
+
+        creation_duration = time.time() - creation_start
+        print(f"\n📊 AGENT CREATION RESULTS:")
+        print(f"  └─ Creation Duration: {creation_duration:.2f}s")
+        print(f"  └─ Successful: {len(created_agents)}/{len(agents)}")
+        print(f"  └─ Failed: {len(failed_agents)}/{len(agents)}")
+        if failed_agents:
+            print(f"  └─ Failed Agents: {[a['name'] for a in failed_agents]}")
 
                 # Agent coordination handled via file-based A2A protocol
 
         if created_agents:
+            # GOAL VALIDATION LOGGING: Store original goal for completion verification
+            print(f"\n🎯 GOAL VALIDATION SETUP:")
+            print(f"  └─ Original Goal: {task_description[:100]}...")
+            print(f"  └─ Success Criteria Check: Agents must validate against original goal before claiming completion")
+            print(f"  └─ Required Validations:")
+            print(f"     • All goal requirements implemented")
+            print(f"     • Tests passing (if test requirements specified)")
+            print(f"     • No placeholder/TODO code")
+            print(f"     • Performance criteria met (if specified)")
+
             print(f"\n⏳ {len(created_agents)} agents working... Monitor with:")
             for agent in created_agents:
                 print(f"   tmux attach -t {agent['name']}")
@@ -311,24 +353,50 @@ class UnifiedOrchestration:
             print("\n📁 File-based A2A coordination - check orchestration/results/")
 
             # Wait briefly and check for PR creation
+            print(f"\n🔍 MONITORING PHASE:")
+            monitoring_start = time.time()
             self._check_and_display_prs(created_agents)
+            monitoring_duration = time.time() - monitoring_start
+
+            # SESSION COMPLETION SUMMARY
+            total_duration = time.time() - start_time
+            print(f"\n📊 SESSION COMPLETION SUMMARY:")
+            print(f"  └─ Session ID: {session_id}")
+            print(f"  └─ Total Duration: {total_duration:.2f}s")
+            print(f"  └─ Task Analysis: {analysis_duration:.2f}s")
+            print(f"  └─ Agent Creation: {creation_duration:.2f}s")
+            print(f"  └─ Monitoring: {monitoring_duration:.2f}s")
+            print(f"  └─ Successful Agents: {len(created_agents)}")
+            print("=" * 60)
         else:
             print("❌ No agents were created successfully")
 
     def _check_and_display_prs(self, agents, max_wait=30):
         """Check for PRs created by agents and display them."""
         print(f"\n🔍 Checking for PR creation (waiting up to {max_wait}s)...")
+        print(f"  └─ Total Agents: {len(agents)}")
+        print(f"  └─ Agent Names: {[agent['name'] for agent in agents]}")
 
         prs_found = []
         start_time = time.time()
 
         # Give agents some time to create PRs
+        print(f"  └─ Initial Delay: {self.INITIAL_DELAY}s")
         time.sleep(self.INITIAL_DELAY)
 
+        # ENHANCED LOGGING: Track PR search progress
+        search_iteration = 0
+
         while time.time() - start_time < max_wait and len(prs_found) < len(agents):
+            search_iteration += 1
+            elapsed = time.time() - start_time
+            print(f"  🔄 Search Iteration {search_iteration} - Elapsed: {elapsed:.1f}s - PRs Found: {len(prs_found)}/{len(agents)}")
+
             for agent in agents:
                 if agent["name"] in [pr["agent"] for pr in prs_found]:
                     continue  # Already found PR for this agent
+
+                print(f"    🔍 Checking {agent['name']}...")
 
                 # Check agent workspace for PR
                 workspace_path = os.path.join("orchestration", "agent_workspaces", f"agent_workspace_{agent['name']}")

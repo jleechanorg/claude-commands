@@ -3,16 +3,30 @@
 # Multi-Player Intelligent Command Combination System
 # Leverages Claude's natural language processing + nested command parsing for true universality
 
-# Read input from stdin (can be JSON or plain text)
+# Source timeout utilities for safe_read_stdin function
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$script_dir/timeout-utils.sh"
-raw_input=$(safe_read_stdin)
 
-# Note: SLASH_COMMAND_EXECUTE patterns removed - handled by SlashCommand MCP tool directly
-# DEPRECATION NOTICE: SLASH_COMMAND_EXECUTE handling has been removed from this hook.
-# If your workflow depends on SLASH_COMMAND_EXECUTE, please migrate to the SlashCommand MCP tool.
-# For migration instructions, see: https://github.com/your-org/slashcommand-mcp#migration
-# This script will no longer process SLASH_COMMAND_EXECUTE events.
+# Read input from stdin (can be JSON or plain text)
+# Handle both interactive and non-interactive modes without hanging
+# CRITICAL: For claude -p mode, we need to handle the case where stdin may be provided
+# but the parent process context is different
+# FIXED: Use cross-platform safe_read_stdin function instead of timeout + cat,
+#        while honoring CLI-provided fallbacks to avoid TTY hangs
+# Prefer explicit inputs before attempting to read stdin
+if [[ $# -gt 0 ]]; then
+  raw_input="$*"
+elif [[ -n "${CLAUDE_COMPOSE_INPUT:-}" ]]; then
+  raw_input="$CLAUDE_COMPOSE_INPUT"
+else
+  raw_input=""
+fi
+
+# Read stdin with timeout-aware helper if we still have no content
+if [[ -z "$raw_input" ]]; then
+  raw_input=$(safe_read_stdin 5)
+fi
+
 # Optional logging for debugging (enable with COMPOSE_DEBUG=1)
 if [[ -n "${COMPOSE_DEBUG:-}" ]]; then
   # Allow customizing log location; default to a secure temp file when unset
@@ -91,14 +105,13 @@ normalize_whitespace() {
     printf '%s' "$input" | tr '\n' ' ' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/[[:space:]][[:space:]]*/ /g'
 }
 
-# Count total valid commands first to inform filtering decision
-cmd_count_in_input=0
+# Count valid commands first to inform filtering decision
+valid_cmd_count=0
 for cmd in $raw_commands; do
-    # Escape command for safe regex usage (properly escape all regex special chars)
     escaped_cmd=$(printf '%s' "$cmd" | sed 's/[][().^$*+?{}|\\]/\\&/g')
     if echo "$input" | grep -qE "(^|[[:space:]])$escaped_cmd([[:space:]]|[[:punct:]]|$)" && \
        ! echo "$input" | grep -qE "$escaped_cmd/"; then
-        cmd_count_in_input=$((cmd_count_in_input + 1))
+        valid_cmd_count=$((valid_cmd_count + 1))
     fi
 done
 
@@ -120,7 +133,7 @@ for cmd in $raw_commands; do
         if [[ "$is_pasted_content" == "true" ]]; then
             # Accept all commands if there are 2 or fewer (likely intentional)
             # Otherwise, only accept commands at boundaries
-            if [[ $cmd_count_in_input -le $PASTE_COMMAND_THRESHOLD ]]; then
+            if [[ $valid_cmd_count -le $PASTE_COMMAND_THRESHOLD ]]; then
                 if [[ "$seen_commands" != *" $cmd "* ]]; then
                     commands="$commands$cmd "
                     actual_cmd_count=$((actual_cmd_count + 1))
