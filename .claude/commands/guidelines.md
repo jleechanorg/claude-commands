@@ -1,3 +1,52 @@
+---
+description: Guidelines Command - Centralized Mistake Prevention Consultation
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Context Detection and Setup
+
+**Action Steps:**
+1. **Read CLAUDE.md**: Extract current rules, constraints, and protocols
+2. **Detect PR Context**: Use GitHub API and branch name patterns
+3. **Determine Guidelines Path**: Set target path for PR or branch-specific guidelines
+
+### Phase 2: Guidelines Consultation
+
+**Action Steps:**
+1. **Base Guidelines Reading**: Always read `docs/pr-guidelines/base-guidelines.md`
+2. **PR-Specific Guidelines**: Read existing or create template if missing
+3. **Pattern Extraction**: Extract relevant anti-patterns and best practices
+4. **Tool Selection Guidance**: Apply hierarchy (Serena MCP → Read tool → Bash)
+
+### Phase 3: Application Preparation and Memory Persistence
+
+**Action Steps:**
+1. **Context Integration**: Merge base, PR-specific, and memory-based guidance
+2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns (enhanced by memory patterns)
+3. **Quality Standards**: Set expectations for evidence-based development
+4. **Resource Optimization**: Apply efficient tool usage patterns
+5. **Memory Learning**: Capture guidelines consultation and application patterns
+   - **Command**: `mcp__memory-server__add_observations` - Store guidelines effectiveness and application contexts
+   - **Command**: `mcp__memory-server__create_relations` - Link guideline success to specific task types and outcomes
+   - Build persistent knowledge graph for continuous guidelines improvement
+
+### Phase 4: Guidelines-Enhanced Execution
+
+**Action Steps:**
+1. **Planning Phase**: Apply guidelines to inform execution method decisions
+2. **Tool Selection**: Follow guidelines hierarchy for optimal resource usage
+3. **Quality Gates**: Apply guidelines standards for systematic change management
+4. **Pattern Prevention**: Use anti-patterns to avoid documented mistakes
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Guidelines Command - Centralized Mistake Prevention Consultation
 
 **Usage**: `/guidelines` - Consult and manage mistake prevention guidelines system
@@ -54,8 +103,11 @@
 ## Usage Patterns
 
 ### Command Composition Integration
+
 ```bash
+
 # Called by enhanced commands for systematic consultation
+
 /plan [task]         → calls /guidelines → proceeds with planning
 /execute [task]      → calls /guidelines → proceeds with execution
 /review-enhanced     → calls /guidelines → proceeds with review
@@ -63,6 +115,7 @@
 ```
 
 ### Standalone Usage
+
 ```bash
 /guidelines                    # Consult guidelines for current context
 /guidelines --pr 1286         # Consult guidelines for specific PR
@@ -72,32 +125,12 @@
 
 ## Implementation Protocol
 
-### Phase 1: Context Detection and Setup
-1. **Read CLAUDE.md**: Extract current rules, constraints, and protocols
-2. **Detect PR Context**: Use GitHub API and branch name patterns
-3. **Determine Guidelines Path**: Set target path for PR or branch-specific guidelines
-
-### Phase 2: Guidelines Consultation
-1. **Base Guidelines Reading**: Always read `docs/pr-guidelines/base-guidelines.md`
-2. **PR-Specific Guidelines**: Read existing or create template if missing
-3. **Pattern Extraction**: Extract relevant anti-patterns and best practices
-4. **Tool Selection Guidance**: Apply hierarchy (Serena MCP → Read tool → Bash)
-
-### Phase 3: Application Preparation and Memory Persistence
-1. **Context Integration**: Merge base, PR-specific, and memory-based guidance
-2. **Anti-Pattern Awareness**: Prepare mistake prevention patterns (enhanced by memory patterns)
-3. **Quality Standards**: Set expectations for evidence-based development
-4. **Resource Optimization**: Apply efficient tool usage patterns
-5. **Memory Learning**: Capture guidelines consultation and application patterns
-   - **Command**: `mcp__memory-server__add_observations` - Store guidelines effectiveness and application contexts
-   - **Command**: `mcp__memory-server__create_relations` - Link guideline success to specific task types and outcomes
-   - Build persistent knowledge graph for continuous guidelines improvement
-
 ## Guidelines Creation Template
 
 **When PR-specific guidelines don't exist, automatically create**:
 
 ```markdown
+
 # PR #{PR_NUMBER} Guidelines - {PR_TITLE}
 
 **PR**: #{PR_NUMBER} - [Auto-detected PR title]
@@ -105,19 +138,24 @@
 **Purpose**: Specific guidelines for this PR's development and review
 
 ## Scope
+
 - This document contains PR-specific deltas, evidence, and decisions for PR #{PR_NUMBER}.
 - Canonical, reusable protocols are defined in docs/pr-guidelines/base-guidelines.md.
 
 ## 🎯 PR-Specific Principles
+
 [To be populated as patterns are discovered]
 
 ## 🚫 PR-Specific Anti-Patterns
+
 [To be populated based on review findings and mistakes discovered]
 
 ## 📋 Implementation Patterns for This PR
+
 [To be populated with working patterns and successful approaches]
 
 ## 🔧 Specific Implementation Guidelines
+
 [To be populated with actionable guidance for similar future work]
 
 ---
@@ -129,6 +167,7 @@
 
 **Guidelines Consultation Result**:
 ```markdown
+
 ## 📚 Guidelines Consultation Summary
 
 ✅ **CLAUDE.md**: Read and applied - Current rules, constraints, and protocols understood
@@ -139,6 +178,7 @@
 ✅ **Tool Selection**: Hierarchy validated (Serena MCP → Read tool → Bash commands)
 
 ## 🎯 Key Guidance for Current Task
+
 - {Relevant principle 1}
 - {Relevant anti-pattern to avoid}
 - {Tool selection recommendation}
@@ -150,12 +190,14 @@
 ## Error Handling
 
 ### Graceful Degradation Protocol
+
 - **Missing Files**: Create templates automatically, never fail execution
 - **GitHub API Errors**: Fall back to branch name parsing for PR detection
 - **Permission Issues**: Continue with base guidelines if PR-specific access fails
 - **Network Issues**: Use cached guidelines or base patterns as fallback
 
 ### Fallback Hierarchy
+
 1. **Full Guidelines Suite**: CLAUDE.md + Base + PR-specific
 2. **Base Guidelines Only**: CLAUDE.md + Base guidelines (if PR detection fails)
 3. **CLAUDE.md Only**: Core rules and constraints (if all guidelines inaccessible)
@@ -164,10 +206,13 @@
 ## Integration Requirements
 
 ### Command Composition Pattern
+
 **Enhanced commands must call `/guidelines` before proceeding**:
 
 ```markdown
+
 ## Pre-{Command} Guidelines Check
+
 **Systematic Mistake Prevention**: This command automatically consults the mistake prevention guidelines system through `/guidelines` command composition.
 
 **Execution Flow**:
@@ -176,21 +221,17 @@
 3. Proceed with {command-specific} workflow using guidelines context
 ```
 
-### Guidelines-Enhanced Execution
-- **Planning Phase**: Apply guidelines to inform execution method decisions
-- **Tool Selection**: Follow guidelines hierarchy for optimal resource usage
-- **Quality Gates**: Apply guidelines standards for systematic change management
-- **Pattern Prevention**: Use anti-patterns to avoid documented mistakes
-
 ## Quality Assurance
 
 ### Verification Protocol
+
 - **Guidelines Accessibility**: Verify all target guideline files are readable
 - **PR Detection Accuracy**: Confirm correct PR context identification
 - **Template Creation**: Ensure proper template generation when files missing
 - **Integration Success**: Validate that calling commands receive proper guidance
 
 ### Performance Considerations
+
 - **Caching Strategy**: Cache guidelines content within session to avoid re-reading
 - **Efficient Consultation**: Batch file operations where possible
 - **Quick Feedback**: Provide immediate guidance without extended processing
@@ -199,6 +240,7 @@
 ## Advanced Features
 
 ### Enhanced Pattern Learning with Memory MCP
+
 - **Memory MCP Connection**: Full persistent knowledge graph integration
   - **Command**: `mcp__memory-server__create_entities` - Store guideline patterns as structured entities
   - **Command**: `mcp__memory-server__create_relations` - Link patterns to contexts, outcomes, and effectiveness
@@ -210,6 +252,7 @@
 - **Success Correlation**: Track guideline effectiveness and optimization opportunities
 
 ### Automation Capabilities
+
 - **Auto-Update Detection**: Identify when guidelines need pattern additions
 - **Conflict Resolution**: Handle conflicts between base and PR-specific guidance
 - **Version Management**: Track guidelines evolution and maintain historical context

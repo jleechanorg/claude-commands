@@ -1,3 +1,39 @@
+---
+description: Header Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Usage in Workflow
+
+**Action Steps:**
+**Best Practice**: Use `/header` before ending responses to:
+1. See complete git repository context with **one command**
+2. Generate the required header with full PR inference
+3. Create a reminder checkpoint to include it
+4. Ensure consistent formatting with zero effort
+5. Remove all friction in compliance
+
+**Automated Memory Aid**:
+6. The single command `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh` provides complete context
+7. Shows git status + intelligently finds relevant PRs
+8. No need to remember multiple separate commands
+9. Consistent, reliable output every time
+10. Perfect for developing muscle memory
+
+**Integration**:
+11. End every response with the header (one simple command)
+12. Use when switching branches or tasks
+13. Make it a habit: "content first, header last"
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Header Command
 
 **Purpose**: Generate and display the mandatory branch header for CLAUDE.md compliance with full git status and intelligent PR inference
@@ -57,27 +93,6 @@ Examples:
 - `[Local: feature-x | Remote: origin/main | PR: #123 https://github.com/user/repo/pull/123]`
 - `[Local: dev-branch (ahead 2) | Remote: origin/main | PR: (related to #456 https://github.com/user/repo/pull/456)]`
 - `[API: 25/50 requests (50% remaining) | Reset: 08:30:45]`
-
-## Usage in Workflow
-
-**Best Practice**: Use `/header` before ending responses to:
-- See complete git repository context with **one command**
-- Generate the required header with full PR inference
-- Create a reminder checkpoint to include it
-- Ensure consistent formatting with zero effort
-- Remove all friction in compliance
-
-**Automated Memory Aid**:
-- The single command `$(git rev-parse --show-toplevel)/.claude/hooks/git-header.sh` provides complete context
-- Shows git status + intelligently finds relevant PRs
-- No need to remember multiple separate commands
-- Consistent, reliable output every time
-- Perfect for developing muscle memory
-
-**Integration**:
-- End every response with the header (one simple command)
-- Use when switching branches or tasks
-- Make it a habit: "content first, header last"
 
 ## Compliance Note
 
