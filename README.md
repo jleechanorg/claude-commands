@@ -1,12 +1,100 @@
+---
+description: Claude Commands - LLM Capital Efficiency Framework Implementation
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: 🚀 LLM Capital Efficiency Framework in Action
+
+**Action Steps:**
+Transform Claude Code from a productivity tool into development infrastructure that generates measurable velocity improvements. This command system demonstrates the paradigm shift from AI consumption to systematic workflow automation, achieving 5-20x development velocity through proven automation patterns.
+
+### Phase 2: 1. **Parallel Execution via Multiple Terminals**
+
+**Action Steps:**
+Our `/orch` command demonstrates this pillar by deploying multiple autonomous agents in isolated tmux sessions:
+1. **Frontend Agent**: UI/UX implementation in parallel
+2. **Backend Agent**: API development simultaneously
+3. **Testing Agent**: Test automation concurrently
+4. **Opus-Master**: Architecture coordination across all agents
+
+### Phase 3: Before: Manual Step-by-Step Development
+
+**Action Steps:**
+```
+1. Analyze the issue manually
+2. Write code manually
+3. Test manually
+4. Create PR manually
+5. Handle review comments manually
+```
+
+### Phase 4: After: Single Command Workflows (Capital Efficiency in Action)
+
+**Action Steps:**
+```bash
+/pr "fix authentication bug"     # → think → execute → push → copilot → review
+/copilot                        # → analyze PR → fix all issues autonomously
+/execute "add user dashboard"   # → plan → auto-approve → implement
+/orch "implement notifications" # → multi-agent parallel development
+```
+
+### Phase 5: Test Steps
+
+**Action Steps:**
+1. **Navigate**: URL and setup
+2. **Execute**: Detailed interaction steps using Playwright MCP
+3. **Verify**: Expected outcomes with assertions
+4. **Evidence**: Screenshot requirements for validation
+
+### Phase 6: Test Steps
+
+**Action Steps:**
+1. **Navigate**: Load product page, add items to cart
+2. **Execute**: Click checkout, fill payment form, submit order
+3. **Verify**: Order confirmation displayed, email sent
+4. **Evidence**: Screenshots of each step
+
+### Phase 7: Test Steps
+
+**Action Steps:**
+1. **Navigate**: Go to login page
+2. **Execute**: Test OAuth providers (Google, Facebook, Twitter)
+3. **Verify**: Profile data populated correctly
+4. **Evidence**: User dashboard screenshot
+
+### Phase 8: Test Steps
+
+**Action Steps:**
+1. **Navigate**: Load API docs page
+2. **Execute**: Test endpoint examples, copy code snippets
+3. **Verify**: Code examples work, responses match docs
+4. **Evidence**: Network tab screenshots
+```
+
+### Phase 9: 💡 Your First Steps as a Capital Allocator
+
+**Action Steps:**
+1. **Track Your "Touch Rate"**: Notice manual interventions needed - each is an automation opportunity
+2. **Build Your First Slash Command**: Automate one repetitive AI workflow
+3. **Calculate Your Arbitrage Score**: Compare manual time vs AI cost for true capital efficiency
+
+This isn't just command sharing - it's **cognitive capital transformation** through the power of systematic AI orchestration.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Claude Commands - LLM Capital Efficiency Framework Implementation
 
 ⚠️ **PROTOTYPE WIP REPOSITORY** - This is an experimental command system exported from a working development environment. Use as reference but note it hasn't been extensively tested outside of the original workflow. Expect adaptation needed for your specific setup.
 
-## 🚀 LLM Capital Efficiency Framework in Action
-
-Transform Claude Code from a productivity tool into development infrastructure that generates measurable velocity improvements. This command system demonstrates the paradigm shift from AI consumption to systematic workflow automation, achieving 5-20x development velocity through proven automation patterns.
-
 ### 🎯 Framework Metrics (Development Environment Results)
+
 - **900+ PRs generated** in 30-day validation period during active development
 - **42-minute median merge time** with autonomous review pipeline (vs ~2-4 hours manual)
 - **78% test coverage** maintained automatically through command workflows
@@ -16,6 +104,7 @@ Transform Claude Code from a productivity tool into development infrastructure t
 > *Metrics collected during intensive development period using automated tracking. Results vary based on project complexity, team adoption, and workflow integration depth. Individual results may differ.*
 
 ### 💡 Capital Allocator vs Consumer Mindset
+
 | Consumer Approach | **Capital Allocator Approach** |
 |-------------------|--------------------------------|
 | Goal: Minimize AI costs | **Goal: Maximize value arbitrage** |
@@ -30,7 +119,9 @@ Transform Claude Code into an autonomous development powerhouse through simple c
 ## 🚀 CLAUDE CODE SELF-SETUP
 
 ```bash
+
 # Point Claude Code to this repository and let it set up what you need
+
 "I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
@@ -54,55 +145,39 @@ This isn't just a collection of commands - it's a **complete cognitive capital a
 
 ### 🏗️ Three Foundational Pillars Implementation
 
-#### 1. **Parallel Execution via Multiple Terminals**
-Our `/orch` command demonstrates this pillar by deploying multiple autonomous agents in isolated tmux sessions:
-- **Frontend Agent**: UI/UX implementation in parallel
-- **Backend Agent**: API development simultaneously
-- **Testing Agent**: Test automation concurrently
-- **Opus-Master**: Architecture coordination across all agents
-
 #### 2. **State Management via Git Worktrees**
+
 Each command operates in isolated branch environments, enabling conflict-free parallel development:
 - Automatic branch creation and management
 - Individual PR creation per agent/task
 - State isolation preventing cross-agent interference
 
 #### 3. **Automation via Chained Commands**
+
 Command composition creates sophisticated autonomous workflows:
 - `/pr` chains: `/think` → `/execute` → `/push` → `/copilot` → `/review`
 - `/copilot` orchestrates: analyze → fix → test → document → verify
 - `/execute` combines: plan → approve → implement → validate
 
 ### Command Chaining Examples
+
 ```bash
+
 # Multi-command composition in single request (like /fake command)
+
 "/arch /thinku /devilsadvocate /diligent"  # → comprehensive code analysis
 
 # Sequential workflow chains
+
 "/think about auth then /execute the solution"  # → analysis → implementation
 
 # Conditional execution flows
+
 "/test login flow and if fails /fix then /pr"  # → test → fix → create PR
 ```
 
-### Before: Manual Step-by-Step Development
-```
-1. Analyze the issue manually
-2. Write code manually
-3. Test manually
-4. Create PR manually
-5. Handle review comments manually
-```
-
-### After: Single Command Workflows (Capital Efficiency in Action)
-```bash
-/pr "fix authentication bug"     # → think → execute → push → copilot → review
-/copilot                        # → analyze PR → fix all issues autonomously
-/execute "add user dashboard"   # → plan → auto-approve → implement
-/orch "implement notifications" # → multi-agent parallel development
-```
-
 ### 📈 Capital Efficiency KPIs Applied
+
 - **Utilization Rate**: 99% command execution reliability vs 20% with manual processes
 - **Conversion Efficiency**: Autonomous workflows require minimal human intervention
 - **Touch Rate**: Low manual correction needed due to systematic automation
@@ -269,22 +344,28 @@ Each command is a **simple .md file** that Claude Code reads as executable instr
 You can chain multiple commands in one request:
 
 ```bash
+
 # Sequential execution
+
 "/think about authentication then /arch the solution then /execute it"
 
 # Conditional execution
+
 "/test the login flow and if it fails /fix it then /pr the changes"
 
 # Parallel analysis
+
 "/debug the performance issue while /research best practices then /plan implementation"
 
 # Full workflow composition
+
 "/analyze the codebase /design a solution /execute with tests /pr with documentation then /copilot any issues"
 ```
 
 ### Nested Command Layers - The Real Architecture
 
 #### `/copilot` - 6-Layer Universal Composition System
+
 ```
 Layer 1: Universal Composition Bridge
 └── /execute - Intelligent workflow optimization
@@ -338,6 +419,7 @@ Layer 6: Validation & Sync (Phases 5-6 - CONDITIONAL/MANDATORY)
 ```
 
 #### `/execute` - 3-Layer Orchestration System
+
 ```
 Layer 1: Planning & Analysis
 ├── /think - Task decomposition
@@ -358,6 +440,7 @@ Layer 3: Implementation Loop
 ```
 
 #### `/pr` - 4-Layer Development Lifecycle
+
 ```
 Layer 1: Analysis
 ├── /debug - Issue identification
@@ -381,6 +464,7 @@ Layer 4: PR Creation & Management
 ```
 
 #### `/orch` - Multi-Agent Delegation
+
 ```
 Agent Assignment Layer:
 ├── Frontend Agent (/execute frontend tasks)
@@ -404,19 +488,25 @@ Integration Layer:
 **TodoWrite Integration**: All commands break down into trackable steps
 ```bash
 /execute "build dashboard"
+
 # Internally creates: [plan task] → [implement components] → [add tests] → [create PR]
+
 ```
 
 **Memory Enhancement**: Commands learn from previous executions
 ```bash
 /learn "React patterns" then /execute "build React component"
+
 # Second command applies learned patterns automatically
+
 ```
 
 **Git Workflow Integration**: Automatic branch management and PR creation
 ```bash
 /pr "fix authentication"
+
 # Internally: /newbranch → code changes → /pushl → GitHub PR creation
+
 ```
 
 **Error Recovery**: Smart handling of failures and retries
@@ -461,12 +551,14 @@ The testing framework demonstrates **LLM-Native Testing** patterns that work acr
 ### Key Capabilities
 
 #### 1. **Multi-Domain Test Patterns**
+
 - **E-commerce Workflows**: Checkout flows, payment processing, inventory management
 - **Authentication Systems**: OAuth, SSO, multi-factor authentication, session management
 - **Content Management**: CRUD operations, media upload, content moderation
 - **API Testing**: Endpoint validation, response verification, error handling
 
 #### 2. **AI-First Test Development**
+
 - **Intelligent Test Generation**: AI creates comprehensive test scenarios
 - **Dynamic Assertion Creation**: Context-aware validation criteria
 - **Failure Analysis**: Automatic root cause identification
@@ -477,22 +569,20 @@ The testing framework demonstrates **LLM-Native Testing** patterns that work acr
 Each test follows a structured `.md` format designed for LLM execution:
 
 ```markdown
+
 # Test: [Component/Feature Name]
 
 ## Pre-conditions
+
 - Server requirements, test data setup, environment configuration
 
-## Test Steps
-1. **Navigate**: URL and setup
-2. **Execute**: Detailed interaction steps using Playwright MCP
-3. **Verify**: Expected outcomes with assertions
-4. **Evidence**: Screenshot requirements for validation
-
 ## Expected Results
+
 **PASS Criteria**: Specific conditions for test success
 **FAIL Indicators**: What indicates test failure
 
 ## Bug Analysis
+
 **Root Cause**: Analysis of why test fails
 **Fix Location**: Files/components that need changes
 ```
@@ -502,34 +592,21 @@ Each test follows a structured `.md` format designed for LLM execution:
 The framework works across any web application:
 
 ```markdown
+
 # Test: E-commerce Checkout Flow
-## Test Steps
-1. **Navigate**: Load product page, add items to cart
-2. **Execute**: Click checkout, fill payment form, submit order
-3. **Verify**: Order confirmation displayed, email sent
-4. **Evidence**: Screenshots of each step
 
 # Test: Social Media Login
-## Test Steps
-1. **Navigate**: Go to login page
-2. **Execute**: Test OAuth providers (Google, Facebook, Twitter)
-3. **Verify**: Profile data populated correctly
-4. **Evidence**: User dashboard screenshot
 
 # Test: API Documentation Interface
-## Test Steps
-1. **Navigate**: Load API docs page
-2. **Execute**: Test endpoint examples, copy code snippets
-3. **Verify**: Code examples work, responses match docs
-4. **Evidence**: Network tab screenshots
-```
 
 ### Integration with Command Composition
 
 Meta-testing integrates seamlessly with the command system:
 
 ```bash
+
 # Red-Green-Refactor with LLM tests
+
 /tdd "authentication flow"        # Creates failing LLM test
 /testuif test_auth.md             # Execute test with Playwright MCP
 /fix "implement OAuth flow"       # Fix code to make test pass
@@ -580,13 +657,17 @@ Integration Layer:
 ### Usage Examples
 
 ```bash
+
 # Basic task delegation
+
 /orch "implement user dashboard with tests and documentation"
 
 # Complex multi-component feature
+
 /orch "add notification system with real-time updates, email integration, and admin controls"
 
 # System monitoring
+
 /orch monitor agents              # Check agent status
 /orch "What's running?"          # Current task overview
 tmux attach-session -t task-agent-frontend  # Direct agent access
@@ -613,18 +694,19 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 - Advanced collaboration patterns for complex architectural changes
 - Integration with CI/CD pipelines for continuous deployment
 
-
 ## 🎯 What You're Really Getting: A Cognitive Capital Management System
 
-This export contains **174 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
+This export contains **177 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
 
 > **Note**: Command count is automatically updated during export to reflect the actual number of commands, libraries, and utilities included.
 
 ### 🏭 Management System vs Individual Tools
+
 - **Individual Tools** (GitHub Copilot, Cursor): Revolutionary code generation workers
 - **This Framework**: The management system that orchestrates these workers for exponential leverage
 
 ### 💰 Capital Allocation Components
+
 1. **Cognitive Capital Deployment**: Commands as investment instruments for token budget optimization
 2. **Value Arbitrage Engine**: Systematic conversion of AI subscription costs into shippable work
 3. **Multi-Agent Portfolio**: Diversified cognitive workers across development domains
@@ -632,14 +714,18 @@ This export contains **174 commands** that transform Claude Code from a producti
 5. **Learning Compound Interest**: System improves returns through execution memory
 
 ### 📊 From Consumer to Capital Allocator
+
 - **Traditional Approach**: "Did this save me time?" (1.2x productivity)
 - **Capital Efficiency Approach**: "How do I maximize cognitive capital ROI?" (10-100x value creation)
 
 ## 🔧 Claude Code Setup
 
 ### Intelligent Self-Setup (Recommended)
+
 ```bash
+
 # Let Claude Code analyze and set up what you need
+
 "I want to use the commands from https://github.com/jleechanorg/claude-commands - please analyze what's available and set up the ones that would be useful for my project"
 ```
 
@@ -651,14 +737,18 @@ Claude Code will:
 5. **Test** setup and provide usage examples
 
 ### What Gets Set Up
+
 - **Command Definitions**: Workflow orchestration commands (`/execute`, `/pr`, `/copilot`)
 - **Hook Configuration**: Essential automation hooks for git workflow
 - **Project Integration**: Adapted paths and references for your specific project
 - **Usage Guidance**: Personalized examples based on your codebase
 
 ### Start Using Commands
+
 ```bash
+
 # After setup, use powerful workflow commands
+
 /execute "implement user authentication"  # → Full implementation workflow
 /pr "fix performance issues"             # → Analysis → fix → PR creation
 /copilot                                # → Fix PR conflicts and comments
@@ -686,7 +776,6 @@ TESTING=true python $PROJECT_ROOT/test_file.py
 npm test src/components/test_file.js
 ```
 
-
 ## 📚 Command Categories
 
 **Workflow Orchestrators**: `/pr`, `/copilot`, `/execute`, `/orch` - Complete multi-step workflows
@@ -697,14 +786,17 @@ npm test src/components/test_file.js
 ## ⚠️ Important Notes
 
 ### Reference Export
+
 This is a reference export from a working Claude Code project. Commands may need adaptation for your specific environment, but Claude Code excels at helping you customize them.
 
 ### Requirements
+
 - Claude Code CLI
 - Git repository context
 - Project-specific adaptations for paths and commands
 
 ### Support
+
 - Commands include adaptation warnings where project-specific changes needed
 - Install script provides clear guidance for customization
 - README examples show adaptation patterns
@@ -714,18 +806,41 @@ This is a reference export from a working Claude Code project. Commands may need
 Transform your development process from consuming AI tools to deploying cognitive capital for exponential leverage where single commands handle complex multi-phase processes.
 
 ### 🚀 The Arbitrage Opportunity
+
 The productivity gains available right now represent the largest arbitrage opportunity in software development. Most developers are still thinking like consumers, leaving exponential leverage on the table.
 
 **This framework is how you seize that opportunity.**
 
-### 💡 Your First Steps as a Capital Allocator
-1. **Track Your "Touch Rate"**: Notice manual interventions needed - each is an automation opportunity
-2. **Build Your First Slash Command**: Automate one repetitive AI workflow
-3. **Calculate Your Arbitrage Score**: Compare manual time vs AI cost for true capital efficiency
-
-This isn't just command sharing - it's **cognitive capital transformation** through the power of systematic AI orchestration.
-
 ## 📚 Version History
+
+### v1.17.0 (2025-10-02)
+
+**Export Statistics**:
+- **177 Commands**: Complete workflow orchestration system
+- **40 Hooks**: Claude Code automation and workflow hooks
+- **20 Scripts**: Development and automation tools (scripts/ directory)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Scripts Included**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated scripts export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
 
 ### v1.16.0 (2025-09-28)
 

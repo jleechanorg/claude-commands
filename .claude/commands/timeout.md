@@ -1,8 +1,28 @@
+---
+description: /timeout Command - Performance Optimizer
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /timeout Command - Performance Optimizer
 
 Automatically applies timeout mitigation strategies to prevent Claude Code CLI timeouts.
 
 ## Usage
+
 ```
 /timeout              # Standard optimization mode
 /timeout strict       # Maximum performance restrictions
@@ -22,6 +42,7 @@ Prevents response timeouts by enforcing efficient patterns:
 ## Automatic Optimizations
 
 ### 1. Tool Usage (All Modes)
+
 - **MultiEdit**: Enforced for >2 edits, with exact limits per mode:
   - Standard Mode: Max 4 operations
   - Strict Mode: Max 3 operations
@@ -51,12 +72,14 @@ Prevents response timeouts by enforcing efficient patterns:
 - No formatting
 
 ### 3. Thinking Limits
+
 - **Standard**: 5 thoughts max
 - **Strict**: 3 thoughts max
 - **Emergency**: 2 thoughts max
 - No branching/revision thoughts
 
 ### 4. Context Management
+
 - Aggressive pruning after each operation
 - Summarize > quote
 - Reference > content
@@ -78,6 +101,7 @@ Crisis-mode: Actions-only | No-explain | Think-limit 2
 ## Examples
 
 ### Standard Mode
+
 ```
 User: /timeout /execute refactor authentication
 Claude: 🚀 TIMEOUT MODE: STANDARD
@@ -90,6 +114,7 @@ Task: Refactor auth
 ```
 
 ### Strict Mode
+
 ```
 User: /timeout strict fix all import errors
 Claude: ⚡ TIMEOUT MODE: STRICT
@@ -101,6 +126,7 @@ Fix imports:
 ```
 
 ### Emergency Mode
+
 ```
 User: /timeout emergency server is down fix now
 Claude: 🚨 EMERGENCY MODE
@@ -121,16 +147,19 @@ Bash: restart server
 ## What Changes
 
 ### File Operations
+
 - ❌ Read entire files → ✅ Read sections (100 lines)
 - ❌ Sequential reads → ✅ Batched reads
 - ❌ Re-read after edit → ✅ Trust edit success
 
 ### Responses
+
 - ❌ "Let me explain..." → ✅ Direct actions
 - ❌ Code walkthroughs → ✅ File:line refs
 - ❌ Verbose errors → ✅ Key info only
 
 ### Thinking
+
 - ❌ Exploring options → ✅ Direct solutions
 - ❌ 10+ thoughts → ✅ 5 thought limit
 - ❌ Revisions → ✅ Linear progress

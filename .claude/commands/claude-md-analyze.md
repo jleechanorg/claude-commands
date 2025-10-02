@@ -1,3 +1,57 @@
+---
+description: Claude-MD-Analyze Command - Comprehensive Directory Analysis for CLAUDE.md Deployment
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### 📋 WORKFLOW PHASES
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 1: Directory Discovery and Filtering
+
+**Action Steps:**
+**Discovery Process**:
+```bash
+
+### Phase 2: File Count and Type Analysis
+
+**Action Steps:**
+**File Analysis Protocol**:
+```bash
+
+### Phase 3: Git Activity Analysis
+
+**Action Steps:**
+**Developer Interaction Metrics**:
+```bash
+
+### Phase 4: Complexity Assessment
+
+**Action Steps:**
+**Structure Depth Analysis**:
+```bash
+
+### Phase 5: CLAUDE.md Integration Assessment
+
+**Action Steps:**
+**Existing CLAUDE.md Detection**:
+```bash
+
+### Phase 7: 🛠️ IMPLEMENTATION WORKFLOW
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Claude-MD-Analyze Command - Comprehensive Directory Analysis for CLAUDE.md Deployment
 
 **Purpose**: Automated analysis of directories to identify high-value targets for CLAUDE.md deployment using systematic scoring criteria and developer interaction analysis.
@@ -19,6 +73,7 @@ The `/claude-md-analyze` command provides comprehensive directory analysis to id
 ## 🎯 ANALYSIS CRITERIA
 
 ### Core Threshold Requirements
+
 - **Minimum File Count**: ≥5 files (configurable via `--min-files` parameter)
 - **Developer Activity**: Git log analysis for interaction frequency
 - **Directory Complexity**: Structure depth, file type diversity, and development patterns
@@ -56,13 +111,8 @@ The `/claude-md-analyze` command provides comprehensive directory analysis to id
 - 6-7 levels: 12 points
 - 8+ levels: 15 points
 
-## 📋 WORKFLOW PHASES
-
-### Phase 1: Directory Discovery and Filtering
-
-**Discovery Process**:
-```bash
 # Core directory scanning with intelligent filtering
+
 find [target_directory] -type d \
   -not -path "*/.*" \
   -not -path "*/node_modules/*" \
@@ -85,14 +135,12 @@ head -1000  # Prevent excessive output
 - **IDE/Tool Files**: `.vscode/`, `.idea/`, `.vs/`, `.settings/`
 - **Binary/Media**: Directories with >80% binary files
 
-### Phase 2: File Count and Type Analysis
-
-**File Analysis Protocol**:
-```bash
 # Count files by type with development relevance scoring
+
 find [directory] -type f | grep -E '\.(py|js|ts|jsx|tsx|java|cpp|c|h|go|rs|rb|php|cs|sql|yaml|yml|json|xml|md|rst|txt|sh|bat|ps1|dockerfile|makefile)$' | wc -l
 
 # Development file type diversity analysis
+
 find [directory] -type f -name "*.*" | sed 's/.*\.//' | sort | uniq -c | sort -nr
 ```
 
@@ -104,20 +152,20 @@ find [directory] -type f -name "*.*" | sed 's/.*\.//' | sort | uniq -c | sort -n
 - **Scripts**: `.sh`, `.bat`, `.ps1`, `.makefile`, `Dockerfile`
 - **Data**: `.sql`, `.csv`, `.json`, `.xml`
 
-### Phase 3: Git Activity Analysis
-
-**Developer Interaction Metrics**:
-```bash
 # Commit frequency analysis (last 6 months)
+
 git log --since="6 months ago" --oneline [directory] | wc -l
 
 # Author diversity and collaboration patterns  
+
 git log --since="6 months ago" --format="%an" [directory] | sort | uniq -c | sort -nr
 
 # File modification frequency
+
 git log --since="6 months ago" --name-only --oneline [directory] | grep -v "^[a-f0-9]" | sort | uniq -c | sort -nr
 
 # Recent activity recency (last commit)
+
 git log -1 --format="%ar" [directory]
 ```
 
@@ -127,14 +175,12 @@ git log -1 --format="%ar" [directory]
 - **File Modification Patterns**: Consistent updates vs sporadic changes
 - **Recency Factor**: Recent activity weighted higher than historical
 
-### Phase 4: Complexity Assessment
-
-**Structure Depth Analysis**:
-```bash
 # Directory depth calculation
+
 find [directory] -type d | awk -F'/' '{print NF-1}' | sort -nr | head -1
 
 # Subdirectory organization patterns
+
 find [directory] -mindepth 1 -maxdepth 3 -type d | wc -l
 ```
 
@@ -145,14 +191,12 @@ find [directory] -mindepth 1 -maxdepth 3 -type d | wc -l
 - **CI/CD Integration**: `.github/`, `.gitlab-ci.yml`, `Jenkinsfile`, `azure-pipelines.yml`
 - **Package Management**: `package.json`, `requirements.txt`, `Cargo.toml`, `pom.xml`
 
-### Phase 5: CLAUDE.md Integration Assessment
-
-**Existing CLAUDE.md Detection**:
-```bash
 # Check for existing CLAUDE.md files in directory tree
+
 find [directory] -name "CLAUDE.md" -o -name "claude.md" -o -name ".claude*"
 
 # Analyze existing file content for conflicts/compatibility
+
 ```
 
 **Integration Complexity Factors**:
@@ -293,31 +337,34 @@ find [directory] -name "CLAUDE.md" -o -name "claude.md" -o -name ".claude*"
 ## 🚀 PARAMETER OPTIONS
 
 ### Basic Parameters
+
 - `--directory` or `-d`: Target directory to analyze (default: current directory)
 - `--min-files`: Minimum file count threshold (default: 5)
 - `--max-depth`: Maximum directory depth to scan (default: 10)
 - `--output`: Output file path for JSON results (default: stdout)
 
 ### Filtering Options
+
 - `--include-hidden`: Include hidden directories/files (default: false)
 - `--exclude-patterns`: Additional exclusion patterns (comma-separated)
 - `--include-patterns`: Force inclusion patterns despite exclusions
 - `--file-types`: Limit analysis to specific file types
 
 ### Analysis Options
+
 - `--git-months`: Git analysis timeframe in months (default: 6)
 - `--complexity-weights`: Custom scoring weights (format: file:25,activity:30,complexity:30,depth:15)
 - `--quick-scan`: Skip detailed git analysis for faster results
 - `--verbose`: Include detailed analysis steps in output
 
 ### Quality Integration
+
 - `--fake3-check`: Include fake code pattern analysis compatibility
 - `--deployment-simulation`: Simulate CLAUDE.md deployment process
 - `--conflict-detection`: Check for potential integration conflicts
 
-## 🛠️ IMPLEMENTATION WORKFLOW
-
 ### LLM Command Composition
+
 The command works through intelligent orchestration of existing tools:
 
 1. **Directory Traversal**: Uses `find` and `ls` commands for filesystem analysis
@@ -327,6 +374,7 @@ The command works through intelligent orchestration of existing tools:
 5. **Quality Assessment**: Integrates with `/fake3` validation patterns
 
 ### LLM Orchestration Process
+
 1. **Parameter Validation**: Parse and validate input parameters using natural language understanding
 2. **Discovery Phase**: Execute filesystem scanning with intelligent filtering
 3. **Analysis Phase**: Perform multi-factor scoring using systematic criteria
@@ -350,6 +398,7 @@ The command works through intelligent orchestration of existing tools:
 - **Technical Debt**: Code quality and organizational maturity
 
 ### Safety Measures
+
 - **Permission Handling**: Graceful handling of inaccessible directories
 - **Performance Limits**: Configurable scan limits to prevent excessive resource usage
 - **Error Recovery**: Continued analysis despite individual directory failures
@@ -449,6 +498,7 @@ Ready for CLAUDE.md deployment pipeline!
 ## 🔧 CONFIGURATION
 
 ### Default Behavior
+
 - **Scan Depth**: 10 levels maximum (prevents excessive recursion)
 - **File Threshold**: 5 files minimum (configurable)
 - **Git Timeframe**: 6 months activity analysis
@@ -456,6 +506,7 @@ Ready for CLAUDE.md deployment pipeline!
 - **Exclusion Patterns**: Standard development exclusions (node_modules, build, etc.)
 
 ### LLM Decision Points
+
 The LLM makes intelligent decisions about:
 - **Scoring Weight Distribution**: Adaptive based on project characteristics
 - **Exclusion Pattern Application**: Context-aware filtering beyond default patterns
