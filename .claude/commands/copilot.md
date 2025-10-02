@@ -1,6 +1,134 @@
+---
+description: /copilot - Fast PR Processing
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### 🔄 Three-Phase Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### **Phase 1: Analysis & Agent Launch**
+
+**Action Steps:**
+1. **Direct Operations**: Execute `/gstatus`, `/commentfetch` for PR status and comment analysis
+2. **Agent Launch**: Deploy `copilot-fixpr` agent for parallel file operations
+3. **Composed Commands**:
+  4. `/gstatus` - Get comprehensive PR status
+  5. `/commentfetch` - Gather all PR comments
+  6. `/fixpr` - Resolve merge conflicts and CI failures (via agent)
+
+### **Phase 2: Hybrid Integration & Response Generation**
+
+**Action Steps:**
+1. **Agent Collection**: Gather file changes and technical implementations from copilot-fixpr
+2. **Response Generation**: Orchestrator analyzes all comments and generates `responses.json`
+3. **GitHub Operations**: Execute `/commentreply` with validated response format
+4. **Composed Commands**:
+  5. `/commentreply` - Post responses to GitHub comments
+  6. `/commentcheck` - Verify 100% comment coverage
+
+### **Phase 3: Verification & Completion**
+
+**Action Steps:**
+1. **File Justification Protocol**: Validate all changes follow integration-first protocol
+2. **Quality Gates**: Security → Runtime → Tests → Style priority enforcement
+3. **Final Operations**: Evidence collection, push to PR, coverage verification
+4. **Composed Commands**:
+  5. `/pushl` - Push changes with automated labeling
+  6. `/guidelines` - Update PR guidelines documentation
+
+### ... execution phases ...
+
+**Action Steps:**
+COPILOT_END_TIME=$(date +%s)
+COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
+if [ $COPILOT_DURATION -gt 900 ]; then
+    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 15m)"
+fi
+```
+
+### Phase 6: ⚡ Core Workflow
+
+**Action Steps:**
+🚨 **OPTIMIZED HYBRID PATTERN**: /copilot uses direct execution + selective task agents for maximum reliability
+
+1. **DIRECT ORCHESTRATION**: Handle comment analysis, GitHub operations, and coordination directly
+2. **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
+3. **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
+4. **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
+5. **Complete comment coverage** - Process ALL comments without filtering
+6. **Expected time**: **5-15 minutes** with reliable hybrid coordination (realistic for comprehensive analysis)
+
+### Phase 7: 🚀 Core Workflow - Hybrid Orchestrator Pattern
+
+**Action Steps:**
+**IMPLEMENTATION**: Direct orchestration with selective task agent for file operations
+
+**INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
+```bash
+
+### Phase 1: Analysis & Agent Launch
+
+**Action Steps:**
+**🎯 Direct Comment Analysis**:
+Execute comment processing workflow directly for reliable GitHub operations:
+1. Execute /commentfetch to gather all PR comments and issues
+2. **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
+3. **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
+
+**🛡️ ENHANCED SECURITY IMPLEMENTATION**:
+```bash
+
+### Phase 2: Hybrid Integration & Response Generation
+
+**Action Steps:**
+**Direct orchestration with agent result integration**:
+
+**🔄 Structured Data Exchange - Agent Result Collection**:
+```bash
+
+### Phase 3: Verification & Completion (AUTOMATIC)
+
+**Action Steps:**
+**Results verified by agent coordination**:
+
+**🚨 MANDATORY FILE JUSTIFICATION PROTOCOL COMPLIANCE**:
+1. **Every file modification** must follow FILE JUSTIFICATION PROTOCOL before implementation
+2. **Required documentation**: Goal, Modification, Necessity, Integration Proof for each change
+3. **Integration verification**: Proof that adding to existing files was attempted first
+4. **Protocol adherence**: All changes must follow NEW FILE CREATION PROTOCOL hierarchy
+5. **Justification categories**: Classify each change as Essential, Enhancement, or Unnecessary
+
+**Implementation with Protocol Enforcement**:
+6. **Priority Order**: Security → Runtime Errors → Test Failures → Style
+7. **MANDATORY TOOLS**: Edit/MultiEdit for code changes, NOT GitHub review posting
+8. **IMPLEMENTATION REQUIREMENT**: Must modify actual files to resolve issues WITH justification
+9. **VERIFICATION**: Use git diff to confirm file changes made AND protocol compliance
+10. **Protocol validation**: Each file change must be justified before Edit/MultiEdit usage
+11. Resolve merge conflicts and dependency issues (with integration evidence)
+
+**Final Completion Steps with Implementation Evidence**:
+```bash
+
+### Phase 11: ⚡ **HYBRID EXECUTION OPTIMIZATION**
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /copilot - Fast PR Processing
 
 ## 📑 Table of Contents
+
 - [Command Overview & Structure](#-command-overview--structure)
   - [Purpose](#-purpose)
   - [Architecture Pattern: Hybrid Orchestrator](#️-architecture-pattern-hybrid-orchestrator)
@@ -22,52 +150,31 @@
 ## 📋 COMMAND OVERVIEW & STRUCTURE
 
 ### 🎯 Purpose
+
 Ultra-fast PR processing using hybrid orchestration (direct execution + selective task agents) for comprehensive coverage and quality assurance. Targets 2-3 minute completion with 100% reliability.
 
 ### 🏗️ Architecture Pattern: Hybrid Orchestrator
+
 **HYBRID DESIGN**: Direct orchestration + specialized agent for maximum reliability
 - **Direct Orchestrator**: Handles comment analysis, GitHub operations, workflow coordination
 - **copilot-fixpr Agent**: Specialized for file modifications, security fixes, merge conflicts
 - **Proven Strategy**: Uses only verified working components, eliminates broken patterns
 
-### 🔄 Three-Phase Workflow
-
-#### **Phase 1: Analysis & Agent Launch**
-- **Direct Operations**: Execute `/gstatus`, `/commentfetch` for PR status and comment analysis
-- **Agent Launch**: Deploy `copilot-fixpr` agent for parallel file operations
-- **Composed Commands**:
-  - `/gstatus` - Get comprehensive PR status
-  - `/commentfetch` - Gather all PR comments
-  - `/fixpr` - Resolve merge conflicts and CI failures (via agent)
-
-#### **Phase 2: Hybrid Integration & Response Generation**
-- **Agent Collection**: Gather file changes and technical implementations from copilot-fixpr
-- **Response Generation**: Orchestrator analyzes all comments and generates `responses.json`
-- **GitHub Operations**: Execute `/commentreply` with validated response format
-- **Composed Commands**:
-  - `/commentreply` - Post responses to GitHub comments
-  - `/commentcheck` - Verify 100% comment coverage
-
-#### **Phase 3: Verification & Completion**
-- **File Justification Protocol**: Validate all changes follow integration-first protocol
-- **Quality Gates**: Security → Runtime → Tests → Style priority enforcement
-- **Final Operations**: Evidence collection, push to PR, coverage verification
-- **Composed Commands**:
-  - `/pushl` - Push changes with automated labeling
-  - `/guidelines` - Update PR guidelines documentation
-
 ### 🎛️ Key Composed Commands Integration
+
 - **Status Commands**: `/gstatus` (PR status), `/commentcheck` (coverage verification)
 - **GitHub Commands**: `/commentfetch` (comment collection), `/commentreply` (response posting)
 - **Agent Commands**: `/fixpr` (via copilot-fixpr agent for file operations)
 - **Workflow Commands**: `/pushl` (automated push), `/guidelines` (documentation update)
 
 ### 🚨 Critical Boundaries
+
 - **Orchestrator**: Comment processing, GitHub API, workflow coordination
 - **Agent**: File modifications, security fixes, technical implementations
 - **Never Mixed**: Agent NEVER handles comments, Orchestrator NEVER modifies files
 
 ### ⚡ Performance Targets
+
 - **Execution Time**: **Adaptive based on PR complexity**
   - **Simple PRs** (≤3 files, ≤50 lines): 2-5 minutes
   - **Moderate PRs** (≤10 files, ≤500 lines): 5-10 minutes
@@ -77,45 +184,29 @@ Ultra-fast PR processing using hybrid orchestration (direct execution + selectiv
 - **Coverage**: 100% comment response rate + all actionable issues implemented
 
 ## 🚨 Mandatory Comment Coverage Tracking
+
 This command automatically tracks comment coverage and warns about missing responses:
 ```bash
+
 # COVERAGE TRACKING: Monitor comment response completion (silent unless errors)
+
 ```
 
 ## ⏱️ Automatic Timing Protocol
+
 This command silently tracks execution time and only reports if exceeded:
 ```bash
+
 # Silent timing - only output if >3 minutes
+
 COPILOT_START_TIME=$(date +%s)
-# ... execution phases ...
-COPILOT_END_TIME=$(date +%s)
-COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
-if [ $COPILOT_DURATION -gt 900 ]; then
-    echo "⚠️ Performance exceeded: $((COPILOT_DURATION / 60))m $((COPILOT_DURATION % 60))s (target: 15m)"
-fi
-```
 
 ## 🎯 Purpose
+
 Ultra-fast PR processing using hybrid orchestration with comprehensive coverage and quality assurance. Uses hybrid orchestrator with copilot-fixpr agent by default for maximum reliability.
 
-## ⚡ Core Workflow
-
-🚨 **OPTIMIZED HYBRID PATTERN**: /copilot uses direct execution + selective task agents for maximum reliability
-
-- **DIRECT ORCHESTRATION**: Handle comment analysis, GitHub operations, and coordination directly
-- **SELECTIVE TASK AGENTS**: Launch `copilot-fixpr` agent for file modifications in parallel
-- **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
-- **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
-- **Complete comment coverage** - Process ALL comments without filtering
-- **Expected time**: **5-15 minutes** with reliable hybrid coordination (realistic for comprehensive analysis)
-
-## 🚀 Core Workflow - Hybrid Orchestrator Pattern
-
-**IMPLEMENTATION**: Direct orchestration with selective task agent for file operations
-
-**INITIAL STATUS & TIMING SETUP**: Get comprehensive status and initialize timing
-```bash
 # CLEANUP FUNCTION: Define error recovery and cleanup mechanisms
+
 cleanup_temp_files() {
     local branch_name=$(git branch --show-current | tr -cd '[:alnum:]._-')
     local temp_dir="/tmp/$branch_name"
@@ -131,26 +222,20 @@ cleanup_temp_files() {
 }
 
 # ERROR HANDLER: Trap errors for graceful cleanup
+
 trap 'cleanup_temp_files; echo "🚨 ERROR: Copilot workflow interrupted"; exit 1' ERR
 
 # Get comprehensive PR status first
+
 /gstatus
 
 # Initialize timing for performance tracking (silent unless exceeded)
+
 COPILOT_START_TIME=$(date +%s)
 ```
 
-### Phase 1: Analysis & Agent Launch
-
-**🎯 Direct Comment Analysis**:
-Execute comment processing workflow directly for reliable GitHub operations:
-- Execute /commentfetch to gather all PR comments and issues
-- **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
-- **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
-
-**🛡️ ENHANCED SECURITY IMPLEMENTATION**:
-```bash
 # Security function for sanitizing GitHub comment content
+
 sanitize_comment() {
     local input="$1"
     local max_length="${2:-10000}"  # Default 10KB limit
@@ -174,6 +259,7 @@ sanitize_comment() {
 }
 
 # Validate branch name to prevent path injection
+
 validate_branch_name() {
     local branch="$1"
     if [[ "$branch" =~ ^[a-zA-Z0-9._-]+$ ]] && [ ${#branch} -le 100 ]; then
@@ -199,16 +285,20 @@ Launch specialized agent for file modifications with structured coordination:
 
 **🚨 EXPLICIT SYNCHRONIZATION PROTOCOL**: Eliminates race conditions
 ```bash
+
 # Secure branch name and setup paths
+
 BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
 AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
 mkdir -p "/tmp/$BRANCH_NAME"
 
 # Agent execution with status tracking
+
 copilot-fixpr-agent > "$AGENT_STATUS" &
 AGENT_PID=$!
 
 # Detect PR complexity for appropriate timeout
+
 FILES_CHANGED=$(git diff --name-only origin/main | wc -l)
 LINES_CHANGED=$(git diff --stat origin/main | tail -1 | grep -oE '[0-9]+' | head -1 || echo 0)
 
@@ -223,6 +313,7 @@ fi
 echo "📊 PR Complexity: $FILES_CHANGED files, $LINES_CHANGED lines (timeout: $((TIMEOUT/60))m)"
 
 # Orchestrator waits for agent completion with adaptive timeout
+
 START_TIME=$(date +%s)
 while [ ! -f "$AGENT_STATUS" ]; do
     # Check if agent is still running
@@ -241,6 +332,7 @@ while [ ! -f "$AGENT_STATUS" ]; do
 done
 
 # Verify agent completion before proceeding
+
 if [ -f "$AGENT_STATUS" ]; then
     echo "✅ Agent completed successfully, proceeding with response generation"
 else
@@ -251,12 +343,8 @@ fi
 
 **Coordination Protocol**: Explicit synchronization prevents race conditions between orchestrator and agent
 
-### Phase 2: Hybrid Integration & Response Generation
-**Direct orchestration with agent result integration**:
-
-**🔄 Structured Data Exchange - Agent Result Collection**:
-```bash
 # Read structured agent results from status file
+
 BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
 AGENT_STATUS="/tmp/$BRANCH_NAME/agent_status.json"
 
@@ -288,14 +376,17 @@ fi
 echo "📝 Generating binary responses.json (DONE/NOT DONE only) with technical implementations"
 
 # 🚨 MANDATORY: Implement CodeRabbit technical suggestions BEFORE response generation
+
 echo "🔧 Implementing CodeRabbit technical suggestions:"
 
 # 1. IMPLEMENTED: Accurate line counting with --numstat (CodeRabbit suggestion)
+
 echo "  • Adding git diff --numstat for accurate line counting"
 PR_LINES=$(git diff --numstat origin/main | awk '{added+=$1; deleted+=$2} END {print "Added:" added " Deleted:" deleted}')
 echo "    Lines: $PR_LINES"
 
 # 2. IMPLEMENTED: JSON validation with jq -e (CodeRabbit suggestion)
+
 echo "  • Adding jq -e validation for all JSON files"
 for json_file in /tmp/$(git branch --show-current)/*.json; do
     if [ -f "$json_file" ]; then
@@ -309,9 +400,12 @@ for json_file in /tmp/$(git branch --show-current)/*.json; do
 done
 
 # 3. IMPLEMENTED: Fix agent status race condition (CodeRabbit concern)
+
 echo "  • Implementing proper agent status coordination (not immediate file creation)"
 AGENT_STATUS="/tmp/$(git branch --show-current)/agent_status.json"
+
 # Wait for agent completion instead of immediate file creation
+
 while [ ! -f "$AGENT_STATUS" ] || [ "$(jq -r '.status' "$AGENT_STATUS" 2>/dev/null)" != "completed" ]; do
     sleep 1
     echo "    Waiting for agent completion..."
@@ -319,12 +413,15 @@ done
 echo "    ✅ Agent coordination: Proper status synchronization"
 
 # CRITICAL: Generate responses in commentreply.py expected format
+
 # Orchestrator writes: /tmp/$(git branch --show-current)/responses.json
 
 # 🚨 BINARY RESPONSE PROTOCOL: Every comment gets DONE or NOT DONE response only
+
 echo "🔍 BINARY PROTOCOL: Analyzing ALL comments for DONE/NOT DONE responses"
 
 # INPUT SANITIZATION: Secure branch name validation to prevent path injection
+
 BRANCH_NAME=$(git branch --show-current | tr -cd '[:alnum:]._-')
 if [ -z "$BRANCH_NAME" ]; then
     echo "❌ CRITICAL: Invalid or empty branch name"
@@ -333,10 +430,12 @@ if [ -z "$BRANCH_NAME" ]; then
 fi
 
 # SECURE PATH CONSTRUCTION: Use sanitized branch name
+
 COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
 export RESPONSES_FILE="/tmp/$BRANCH_NAME/responses.json"
 
 # API RESPONSE VALIDATION: Verify comment data exists and is valid JSON (using jq -e)
+
 if [ ! -f "$COMMENTS_FILE" ]; then
     echo "❌ CRITICAL: No comment data from commentfetch at $COMMENTS_FILE"
     cleanup_temp_files
@@ -344,6 +443,7 @@ if [ ! -f "$COMMENTS_FILE" ]; then
 fi
 
 # VALIDATION: Verify comments.json is valid JSON before processing (CodeRabbit's jq -e suggestion)
+
 if ! jq -e empty "$COMMENTS_FILE" 2>/dev/null; then
     echo "❌ CRITICAL: Invalid JSON in comments file"
     cleanup_temp_files
@@ -354,10 +454,20 @@ TOTAL_COMMENTS=$(jq '.comments | length' "$COMMENTS_FILE")
 echo "📊 Processing $TOTAL_COMMENTS comments for response generation"
 
 # Generate responses for ALL unresponded comments
+
 # This is ORCHESTRATOR responsibility, not agent responsibility
 
 # 🚨 NEW: MANDATORY FORMAT VALIDATION
+
 echo "🔧 VALIDATING: Response format compatibility with commentreply.py"
+
+# Resolve repository root for downstream tooling
+PROJECT_ROOT=$(git rev-parse --show-toplevel)
+if [ -z "$PROJECT_ROOT" ]; then
+    echo "❌ CRITICAL: Unable to resolve project root"
+    exit 1
+fi
+
 # Use dedicated validation script for better maintainability
 python3 "$PROJECT_ROOT/.claude/commands/validate_response_format.py" || {
     echo "❌ CRITICAL: Invalid response format";
@@ -365,6 +475,7 @@ python3 "$PROJECT_ROOT/.claude/commands/validate_response_format.py" || {
 }
 
 # Verify responses.json exists and is valid before proceeding
+
 if [ ! -f "$RESPONSES_FILE" ]; then
     echo "❌ CRITICAL: responses.json not found at $RESPONSES_FILE"
     echo "Orchestrator must generate responses before posting"
@@ -372,6 +483,7 @@ if [ ! -f "$RESPONSES_FILE" ]; then
 fi
 
 # 🚨 BINARY RESPONSE TEMPLATE: Only DONE or NOT DONE allowed
+
 echo "📋 Building binary response structure (DONE/NOT DONE with implementation evidence)"
 cat > "$RESPONSES_FILE" << 'EOF'
 {
@@ -386,6 +498,7 @@ cat > "$RESPONSES_FILE" << 'EOF'
 EOF
 
 # Validate responses.json with jq -e (CodeRabbit suggestion)
+
 jq -e . "$RESPONSES_FILE" > /dev/null || {
     echo "❌ CRITICAL: Invalid JSON in responses.json"
     exit 1
@@ -407,27 +520,8 @@ echo "✅ Binary comment responses posted successfully (every comment: DONE or N
 ```
 Direct execution of /commentreply with implementation details from agent file changes for guaranteed GitHub posting
 
-### Phase 3: Verification & Completion (AUTOMATIC)
-**Results verified by agent coordination**:
-
-**🚨 MANDATORY FILE JUSTIFICATION PROTOCOL COMPLIANCE**:
-- **Every file modification** must follow FILE JUSTIFICATION PROTOCOL before implementation
-- **Required documentation**: Goal, Modification, Necessity, Integration Proof for each change
-- **Integration verification**: Proof that adding to existing files was attempted first
-- **Protocol adherence**: All changes must follow NEW FILE CREATION PROTOCOL hierarchy
-- **Justification categories**: Classify each change as Essential, Enhancement, or Unnecessary
-
-**Implementation with Protocol Enforcement**:
-- **Priority Order**: Security → Runtime Errors → Test Failures → Style
-- **MANDATORY TOOLS**: Edit/MultiEdit for code changes, NOT GitHub review posting
-- **IMPLEMENTATION REQUIREMENT**: Must modify actual files to resolve issues WITH justification
-- **VERIFICATION**: Use git diff to confirm file changes made AND protocol compliance
-- **Protocol validation**: Each file change must be justified before Edit/MultiEdit usage
-- Resolve merge conflicts and dependency issues (with integration evidence)
-
-**Final Completion Steps with Implementation Evidence**:
-```bash
 # Show evidence of changes with CodeRabbit's --numstat implementation
+
 echo "📊 COPILOT EXECUTION EVIDENCE:"
 echo "🔧 FILES MODIFIED:"
 git diff --name-only | sed 's/^/  - /'
@@ -437,6 +531,7 @@ echo "📈 TRADITIONAL STAT:"
 git diff --stat
 
 # 🚨 MANDATORY: Verify actual technical implementations before push
+
 echo "🔍 IMPLEMENTATION VERIFICATION:"
 echo "  • Line counting: git diff --numstat - IMPLEMENTED ✅"
 echo "  • JSON validation: jq -e validation - IMPLEMENTED ✅"
@@ -445,6 +540,7 @@ echo "  • Binary response protocol: DONE/NOT DONE only - IMPLEMENTED ✅"
 echo "  • Every comment response: binary DONE/NOT DONE with explanation - IMPLEMENTED ✅"
 
 # Push changes to PR with error recovery
+
 /pushl || {
     echo "🚨 PUSH FAILED: PR not updated"
     echo "🔧 RECOVERY: Attempting git status check"
@@ -456,7 +552,9 @@ echo "  • Every comment response: binary DONE/NOT DONE with explanation - IMPL
 
 **Coverage Tracking (MANDATORY GATE):**
 ```bash
+
 # HARD VERIFICATION GATE with RECOVERY - Must pass before proceeding
+
 echo "🔍 MANDATORY: Verifying 100% comment coverage"
 if ! /commentcheck; then
     echo "🚨 CRITICAL: Comment coverage failed - attempting recovery"
@@ -482,13 +580,16 @@ echo "✅ Comment coverage verification passed - proceeding with completion"
 
 **🎯 Adaptive Performance Tracking:**
 ```bash
+
 # Detect PR complexity for realistic timing expectations (if not done earlier)
+
 if [ -z "$FILES_CHANGED" ]; then
     FILES_CHANGED=$(git diff --name-only origin/main | wc -l)
     LINES_CHANGED=$(git diff --stat origin/main | tail -1 | grep -oE '[0-9]+' | head -1 || echo 0)
 fi
 
 # Set complexity-based performance targets
+
 if [ $FILES_CHANGED -le 3 ] && [ $LINES_CHANGED -le 50 ]; then
     COMPLEXITY="simple"
     TARGET_TIME=300  # 5 minutes
@@ -504,6 +605,7 @@ echo "📊 PR Complexity: $COMPLEXITY ($FILES_CHANGED files, $LINES_CHANGED line
 echo "🎯 Target time: $((TARGET_TIME / 60)) minutes"
 
 # Calculate and report timing with complexity-appropriate targets
+
 COPILOT_END_TIME=$(date +%s)
 COPILOT_DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 if [ $COPILOT_DURATION -gt $TARGET_TIME ]; then
@@ -513,6 +615,7 @@ else
 fi
 
 # SUCCESS: Clean up and complete
+
 echo "✅ COPILOT WORKFLOW COMPLETED SUCCESSFULLY"
 cleanup_temp_files
 /guidelines
@@ -521,6 +624,7 @@ cleanup_temp_files
 ## 🚨 Agent Boundaries
 
 ### copilot-fixpr Agent Responsibilities:
+
 - **FIRST PRIORITY**: Execute `/fixpr` command to resolve merge conflicts and CI failures
 - **PRIMARY**: Security vulnerability detection and code implementation
 - **TOOLS**: Edit/MultiEdit for file modifications, Serena MCP for semantic analysis, `/fixpr` command
@@ -545,6 +649,7 @@ cleanup_temp_files
 ## 🎯 **SUCCESS CRITERIA**
 
 ### **HYBRID VERIFICATION REQUIREMENTS** (BOTH REQUIRED):
+
 1. **Implementation Coverage**: All actionable issues have actual file changes from copilot-fixpr agent
 2. **Communication Coverage**: 100% comment response rate with direct orchestrator /commentreply execution
 
@@ -555,6 +660,7 @@ cleanup_temp_files
 - Skipped verification checkpoints
 
 ### **QUALITY GATES**:
+
 - ✅ **File Justification Protocol**: All code changes properly documented and justified
 - ✅ **Security Priority**: Critical vulnerabilities addressed first with actual fixes
 - ✅ **Input Sanitization**: All GitHub comment content validated and sanitized
@@ -564,6 +670,7 @@ cleanup_temp_files
 - ✅ **Adaptive Performance**: Execution completed within complexity-appropriate targets
 
 ### **FAILURE CONDITIONS**:
+
 - ❌ **Coverage Gaps**: <100% comment response rate OR unimplemented actionable issues
 - ❌ **Protocol Violations**: File changes without proper justification documentation
 - ❌ **Performative Fixes**: GitHub responses claiming fixes without actual code changes
@@ -572,21 +679,22 @@ cleanup_temp_files
 - ❌ **Boundary Violations**: Agent handling GitHub responses OR orchestrator making file changes
 - ❌ **Timing Failures**: Execution time exceeding complexity-appropriate targets without alerts
 
-## ⚡ **HYBRID EXECUTION OPTIMIZATION**
-
 ### **Context Management**:
+
 - **Complete Comment Coverage**: Process ALL comments without filtering for 100% coverage
 - **GitHub MCP Primary**: Strategic tool usage for minimal context consumption
 - **Semantic Search**: Use Serena MCP for targeted analysis before file operations
 - **Hybrid Coordination**: Efficient orchestration with selective task delegation
 
 ### **Performance Benefits**:
+
 - **Reliability**: 100% working components eliminate broken agent failures
 - **Specialization**: File operations delegated while maintaining coordination control
 - **Quality Improvement**: Proven comment handling with verified file implementations
 - **Simplified Architecture**: Eliminates complexity of broken parallel agent coordination
 
 ### **Coordination Efficiency**:
+
 - **Selective Delegation**: Only delegate file operations, handle communication directly
 - **Proven Components**: Use only verified working tools and patterns
 - **Result Integration**: Direct access to agent file changes for accurate response generation
@@ -595,6 +703,7 @@ cleanup_temp_files
 ## 🚨 **RESPONSE DATA FORMAT SPECIFICATION**
 
 ### **MANDATORY**: responses.json Format
+
 The orchestrator MUST generate responses.json in this exact format:
 
 ```json
@@ -610,18 +719,21 @@ The orchestrator MUST generate responses.json in this exact format:
 ```
 
 ### **CRITICAL FORMAT REQUIREMENTS**:
+
 - `comment_id` MUST be STRING (not integer)
 - `reply_text` MUST contain substantial technical response
 - `responses` array MUST contain entry for each actionable comment
 - File location: `/tmp/{branch_name}/responses.json`
 
 ### **INTEGRATION CONTRACT**:
+
 - commentreply.py expects `responses` array with `comment_id` and `reply_text`
 - Matching uses `str(response_item.get("comment_id")) == comment_id`
 - Missing or malformed responses cause posting failures
 - Format validation is MANDATORY before attempting to post responses
 
 ### **RESPONSE QUALITY STANDARDS**:
+
 - Each response must address specific technical content from the comment
 - Use `[AI responder] ✅ **Issue Fixed**` or `❌ **Not Done**` prefixes
 - Include commit SHA when fixes are implemented

@@ -1,3 +1,22 @@
+---
+description: Claude Commands Directory
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Claude Commands Directory
 
 ## 🎯 Philosophy: Explicit > Implicit
@@ -12,13 +31,16 @@ This directory contains Claude Code slash commands that follow the **explicit ex
 ## 📋 Command Guidelines
 
 ### ✅ **Preferred Approach: Python + Documentation**
+
 - **Python scripts** (`.py`) for command logic and data processing
 - **Markdown documentation** (`.md`) with explicit command sequences
 - **Direct tool calls** that users can see and customize
 
 Example workflow in `copilot.md`:
 ```bash
+
 # Explicit execution - user sees every command
+
 python3 .claude/commands/copilot.py 780
 ./run_ci_replica.sh
 gh pr view 780 --json statusCheckRollup
@@ -26,11 +48,13 @@ python3 .claude/commands/copilot_resolver.py [files]
 ```
 
 ### ❌ **Avoid: Shell Script Wrappers**
+
 - **No `.sh` wrappers** that hide the actual commands being executed
 - **No abstraction layers** that obscure the workflow
 - **No "magic" scripts** that users can't easily understand or modify
 
 ### 🚨 **NEVER Create copilot.sh Again**
+
 This was tried and **failed** because it:
 - Hid commands behind a wrapper interface
 - Contradicted the explicit execution philosophy
@@ -40,16 +64,19 @@ This was tried and **failed** because it:
 ## 🏗️ **Command Architecture Patterns**
 
 ### **Data Collection Commands**
+
 - **Pattern**: `command.py` with clear argument parsing
 - **Output**: Structured data files in `/tmp/` for LLM analysis
 - **Integration**: Via explicit calls in documentation
 
 ### **Analysis Commands**
+
 - **Pattern**: Standalone Python scripts that process collected data
 - **Focus**: Single responsibility (conflict resolution, formatting, etc.)
 - **Usage**: Direct execution with clear input/output contracts
 
 ### **Workflow Documentation**
+
 - **Pattern**: `command.md` with step-by-step explicit execution
 - **Includes**: Decision trees, troubleshooting, examples
 - **Goal**: User can execute any step manually or automate selectively
@@ -57,31 +84,35 @@ This was tried and **failed** because it:
 ## 📁 **Current Commands**
 
 ### **copilot.py** - Enhanced PR Analysis
+
 - **Purpose**: Data collection, conflict detection, auto-fixing
 - **Usage**: `python3 copilot.py [PR] [flags]`
 - **Flags**: `--auto-fix`, `--merge-conflicts`, `--threaded-reply`
 
 ### **copilot_resolver.py** - Conflict Resolution
+
 - **Purpose**: Automated conflict resolution with safety mechanisms
 - **Usage**: `python3 copilot_resolver.py file1.py file2.py`
 - **Features**: Backup, validation, rollback
 
-
 ## 🔧 **Development Guidelines**
 
 ### **Adding New Commands**
+
 1. **Create Python script** with clear argument parsing
 2. **Write documentation** with explicit usage examples
 3. **Test explicit execution** - no hidden dependencies
 4. **Update this README** with the new command
 
 ### **Modifying Existing Commands**
+
 1. **Maintain explicit interfaces** - no hidden behavior changes
 2. **Update documentation** to reflect new capabilities
 3. **Test both automated and manual execution paths**
 4. **Preserve backward compatibility** where possible
 
 ### **Command Design Principles**
+
 - **Single Responsibility**: Each command does one thing well
 - **Clear Interfaces**: Obvious inputs, outputs, and side effects
 - **Error Handling**: Graceful degradation with helpful error messages
@@ -99,8 +130,10 @@ This was tried and **failed** because it:
 ## 🚨 CRITICAL ANTI-PATTERNS TO AVOID
 
 ### **NEVER Recreate Hook Files**
+
 ❌ **DO NOT** create `copilot_pre_hook.py` or `copilot_post_hook.py`
 ❌ **DO NOT** add copilot hook configuration to `.claude/settings.toml`
+
 ## Modular Copilot Commands
 
 The copilot system follows a **clean architecture** where only /commentfetch uses Python for data collection, and all other commands work directly through .md files:
@@ -131,6 +164,7 @@ The copilot system follows a **clean architecture** where only /commentfetch use
    - Handles add, commit, push workflow
 
 #### Orchestration:
+
 - **`/copilot`** - Intelligent orchestrator that chains the above commands
 - Adapts workflow based on PR needs
 - Ensures 100% comment coverage with DONE/NOT DONE
@@ -162,6 +196,7 @@ pushl handles git operations
 ```
 
 ### Why Hybrid?
+
 - **Modularity**: Each command can stand alone
 - **Composability**: Commands chain together naturally
 - **Transparency**: Clear separation of data vs intelligence
