@@ -1,8 +1,45 @@
+---
+description: /reviewsuper Command - Critical Architecture Reviewer
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Actionable Feedback
+
+**Action Steps:**
+1. Analyze code for architectural issues
+2. Identify problems, flaws, and technical debt
+3. Provide specific, actionable recommendations
+
+### Phase 2: Required Actions
+
+**Action Steps:**
+1. [Specific, actionable requirement]
+2. [Another concrete fix with timeline]
+3. [Testing or documentation requirement]
+
+### Phase 3: Required Actions
+
+**Action Steps:**
+1. Extract EmailProvider interface and inject dependency
+2. Add input sanitization layer before database operations
+3. Refactor payment logic using strategy pattern
+4. Add unit tests for edge cases (currently 0% coverage)
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /reviewsuper Command - Critical Architecture Reviewer
 
 Performs critical architectural reviews of recent PRs with focus on problems, flaws, and technical debt.
 
 ## Usage
+
 ```
 /reviewsuper              # Review latest 10 PRs critically
 /reviewsuper 5            # Review latest 5 PRs
@@ -63,6 +100,7 @@ Provides critical, problem-focused architectural reviews that identify:
 ## Review Tone Guidelines
 
 ### ❌ Avoid (Too Positive)
+
 ```
 "✅ Excellent work!"
 "Great implementation!"
@@ -71,6 +109,7 @@ Rating: 9/10
 ```
 
 ### ✅ Use (Critical Focus)
+
 ```
 ❌ **Major Issue**: Specific problem with impact
 ⚠️ **Design Flaw**: Pattern violation with consequences
@@ -82,6 +121,7 @@ Rating: 9/10
 ## Review Process
 
 ### 1. Problem Detection
+
 - **File Size Analysis**: Flag files >500 lines
 - **Complexity Metrics**: Detect deep nesting (>4 levels)
 - **Method Length**: Flag methods >50 lines
@@ -89,14 +129,14 @@ Rating: 9/10
 - **Pattern Analysis**: Detect anti-patterns and code smells
 
 ### 2. Impact Assessment
+
 - **Performance Impact**: High/Medium/Low
 - **Security Risk**: Critical/High/Medium/Low
 - **Maintenance Burden**: High/Medium/Low
 - **Business Risk**: Critical/High/Medium/Low
 
-### 3. Actionable Feedback
-```
 ## Required Changes
+
 1. Extract UserValidator class from AuthController (SRP violation)
 2. Add input sanitization before database queries (security)
 3. Replace nested loops with hash-based lookup (performance)
@@ -106,29 +146,31 @@ Rating: 9/10
 ## Comment Format
 
 ```
+
 ## 🔍 Critical Architecture Review
+
 **from super reviewer**
 
 ### Major Concerns
+
 ❌ **[Issue Type]**: [Specific problem with file:line reference]
 ⚠️ **[Design Flaw]**: [Pattern violation with impact analysis]
 🔧 **[Technical Debt]**: [Complexity issue with refactor suggestion]
 
 ### Architecture Analysis
+
 [Detailed examination of design decisions and their consequences]
 
 ### Security Assessment
+
 [Specific vulnerabilities and attack vectors identified]
 
 ### Performance Concerns
+
 [Algorithmic complexity and resource usage issues]
 
-### Required Actions
-1. [Specific, actionable requirement]
-2. [Another concrete fix with timeline]
-3. [Testing or documentation requirement]
-
 ### Risk Assessment
+
 - **Performance Impact**: [Level with reasoning]
 - **Security Risk**: [Level with specific threats]
 - **Maintenance Burden**: [Level with complexity metrics]
@@ -139,13 +181,17 @@ Rating: 9/10
 ## Detection Patterns
 
 ### Architecture Red Flags
+
 ```python
+
 # ❌ Tight Coupling
+
 class UserService:
     def __init__(self):
         self.db = MySQLDatabase()  # Hard dependency
 
 # ❌ God Object
+
 class UserManager:  # 500+ lines doing everything
     def create_user(self): pass
     def authenticate(self): pass
@@ -154,23 +200,31 @@ class UserManager:  # 500+ lines doing everything
 ```
 
 ### Performance Red Flags
+
 ```python
+
 # ❌ O(n²) Algorithm
+
 for user in users:
     for other in users:  # Nested iteration
         if user.matches(other):
 
 # ❌ Database in Loop
+
 for item in items:
     db.query(f"SELECT * FROM related WHERE id={item.id}")
 ```
 
 ### Security Red Flags
+
 ```python
+
 # ❌ SQL Injection
+
 query = f"SELECT * FROM users WHERE name='{user_input}'"
 
 # ❌ Missing Validation
+
 def update_user(user_id, data):
     db.update(user_id, data)  # No input validation
 ```
@@ -178,17 +232,20 @@ def update_user(user_id, data):
 ## Integration
 
 ### GitHub API Usage
+
 - `gh pr list --limit N` - Get recent PRs
 - `gh pr view PR# --json files,body` - Get PR details
 - `gh pr comment PR# --body "review"` - Post review
 
 ### File Analysis
+
 - Parse changed files for patterns
 - Calculate complexity metrics
 - Detect architectural violations
 - Identify security risks
 
 ### Comment Posting
+
 - Post as "from super reviewer"
 - Include file:line references
 - Provide specific code examples
@@ -197,6 +254,7 @@ def update_user(user_id, data):
 ## Quality Standards
 
 ### Every Review Must Include:
+
 1. **Specific Problems**: Not generic concerns
 2. **Code Examples**: Actual problematic code snippets
 3. **Impact Analysis**: Why each issue matters
@@ -204,6 +262,7 @@ def update_user(user_id, data):
 5. **Honest Rating**: Realistic score reflecting issues
 
 ### Review Quality Metrics:
+
 - **Problem Detection Rate**: Issues per 100 lines
 - **False Positive Rate**: <10% of flagged issues
 - **Actionability Score**: >80% of suggestions implementable
@@ -220,24 +279,23 @@ def update_user(user_id, data):
 ## Example Output
 
 ```
+
 ## 🔍 Critical Architecture Review
+
 **from super reviewer**
 
 ### Major Concerns
+
 ❌ **Tight Coupling**: AuthService directly instantiates EmailProvider (auth.py:45)
 ⚠️ **Missing Validation**: User input passed directly to database (user.py:123)
 🔧 **Complex Logic**: 8-level nested conditionals in payment processing (payment.py:67-89)
 
 ### Architecture Analysis
+
 The authentication system violates dependency inversion by hard-coding email dependencies. This makes testing difficult and prevents swapping email providers. The payment logic has grown into an unmaintainable nested structure that's error-prone and hard to debug.
 
-### Required Actions
-1. Extract EmailProvider interface and inject dependency
-2. Add input sanitization layer before database operations
-3. Refactor payment logic using strategy pattern
-4. Add unit tests for edge cases (currently 0% coverage)
-
 ### Risk Assessment
+
 - **Performance Impact**: Medium (email blocking auth flow)
 - **Security Risk**: High (SQL injection possible)
 - **Maintenance Burden**: High (complex nested logic)

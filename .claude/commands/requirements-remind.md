@@ -1,3 +1,22 @@
+---
+description: Requirements Gathering Reminder
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Requirements Gathering Reminder
 
 *Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this thoughtful approach!*
@@ -5,6 +24,7 @@
 Quick correction when deviating from requirements gathering rules.
 
 ## Aliases:
+
 - /requirements-remind
 - /remind  
 - /r
@@ -64,18 +84,23 @@ Please continue with the current question or read the next one from the file.
 ## Common Correction Scenarios:
 
 ### Open-ended question asked:
+
 "Let me rephrase as a yes/no question..."
 
 ### Multiple questions asked:
+
 "Let me ask one question at a time..."
 
 ### Implementation started:
+
 "I apologize. Let me continue with requirements gathering..."
 
 ### No default provided:
+
 "Let me add a default for that question..."
 
 ## Auto-trigger Patterns:
+
 - Detect code blocks → remind no implementation
 - Multiple "?" in response → remind one question
 - Response > 100 words → remind to be concise
