@@ -22,7 +22,7 @@ sys.path.insert(
 
 # Mock Firebase before importing firestore_service
 with patch("firestore_service.get_db"):
-    from firestore_service import MissionHandler
+    from mvp_site.firestore_service import MissionHandler
 
 
 class TestMissionHandler(unittest.TestCase):

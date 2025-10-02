@@ -11,7 +11,8 @@ from pydantic import ValidationError
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
-from schemas.entities_pydantic import (
+
+from mvp_site.schemas.entities_pydantic import (
     Character,
     EntityStatus,
     EntityType,

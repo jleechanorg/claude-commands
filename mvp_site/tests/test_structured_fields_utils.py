@@ -14,10 +14,9 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import constants
-import structured_fields_utils
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
+from mvp_site import constants, structured_fields_utils
+from mvp_site.gemini_response import GeminiResponse
+from mvp_site.narrative_response_schema import NarrativeResponse
 
 
 class TestStructuredFieldsUtils(unittest.TestCase):

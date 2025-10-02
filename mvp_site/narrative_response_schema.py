@@ -7,9 +7,9 @@ import json
 import re
 from typing import Any
 
-import logging_util
-from json_utils import unescape_json_string
-from robust_json_parser import parse_llm_json_response
+from mvp_site import logging_util
+from mvp_site.json_utils import unescape_json_string
+from mvp_site.robust_json_parser import parse_llm_json_response
 
 # Planning block extraction from narrative is deprecated - blocks should only come from JSON
 

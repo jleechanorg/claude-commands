@@ -7,7 +7,10 @@ import logging
 import re
 from typing import Any
 
-from narrative_response_schema import NarrativeResponse, parse_structured_response
+from mvp_site.narrative_response_schema import (
+    NarrativeResponse,
+    parse_structured_response,
+)
 
 
 class GeminiResponse:

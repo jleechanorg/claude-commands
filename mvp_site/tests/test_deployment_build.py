@@ -91,7 +91,7 @@ def load_world_content_for_system_instruction():
         # Change to mvp_site directory (simulating Docker build context)
         os.chdir(self.mvp_site_dir)
 
-        # Import should work
+        # Import should work - use direct import since we're in mvp_site directory
         sys.path.insert(0, self.mvp_site_dir)
         try:
             import world_loader
@@ -124,7 +124,7 @@ def load_world_content_for_system_instruction():
         # Change to mvp_site directory (simulating Docker build context)
         os.chdir(self.mvp_site_dir)
 
-        # Import and test
+        # Import and test - use direct import since we're in mvp_site directory
         sys.path.insert(0, self.mvp_site_dir)
         try:
             import world_loader
@@ -136,7 +136,10 @@ def load_world_content_for_system_instruction():
             assert result is not None
             assert len(result) > 0
             # Check for actual world content markers instead of mock format
-            assert any(marker in result for marker in ["World", "WORLD", "Campaign", "CAMPAIGN"])
+            assert any(
+                marker in result
+                for marker in ["World", "WORLD", "Campaign", "CAMPAIGN"]
+            )
 
             # Verify world files exist in the copied location
             assert os.path.exists("world/celestial_wars_alexiel_book.md")
@@ -159,11 +162,11 @@ def load_world_content_for_system_instruction():
         os.chdir(self.test_dir)
 
         # Simulate deploy.sh logic
-        TARGET_DIR = "mvp_site"
+        target_dir = "mvp_site"
 
         # This is the key line from deploy.sh
-        if TARGET_DIR == "mvp_site" and os.path.isdir("world"):
-            shutil.copytree("world", os.path.join(TARGET_DIR, "world"))
+        if target_dir == "mvp_site" and os.path.isdir("world"):
+            shutil.copytree("world", os.path.join(target_dir, "world"))
 
         # Verify the copy worked
         assert os.path.exists("mvp_site/world/celestial_wars_alexiel_book.md")

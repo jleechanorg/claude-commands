@@ -1,6 +1,6 @@
 """Token counting utilities for consistent logging across the application."""
 
-import logging_util
+from mvp_site import logging_util
 
 # Token estimation constant - Gemini uses roughly 1 token per 4 characters
 CHARS_PER_TOKEN = 4

@@ -8,8 +8,8 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import logging_util
-from narrative_response_schema import (
+from mvp_site import logging_util
+from mvp_site.narrative_response_schema import (
     _combine_god_mode_and_narrative,
     parse_structured_response,
 )

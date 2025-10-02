@@ -7,7 +7,7 @@ import unittest
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from game_state import GameState
+from mvp_site.game_state import GameState
 
 
 class TestComprehensiveSyntax(unittest.TestCase):
@@ -89,7 +89,9 @@ class TestComprehensiveSyntax(unittest.TestCase):
             self.fail(f"Syntax error in main.py or its dependencies: {e}")
         except ImportError as e:
             if "No module named" in str(e):
-                self.skipTest(f"Resource not available: Python dependency {e}, skipping syntax test")
+                self.skipTest(
+                    f"Resource not available: Python dependency {e}, skipping syntax test"
+                )
             else:
                 self.fail(f"Import error: {e}")
         except Exception as e:

@@ -13,7 +13,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from robust_json_parser import RobustJSONParser, parse_llm_json_response
+from mvp_site.robust_json_parser import RobustJSONParser, parse_llm_json_response
 
 
 class TestRobustJSONParser(unittest.TestCase):

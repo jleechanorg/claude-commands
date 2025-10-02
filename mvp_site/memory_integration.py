@@ -8,8 +8,7 @@ import time
 from datetime import UTC, datetime
 from typing import Any
 
-import logging_util
-import memory_mcp_real
+from mvp_site import logging_util, memory_mcp_real
 
 logger = logging_util.getLogger(__name__)
 

@@ -13,8 +13,8 @@ sys.path.insert(
 
 import unittest
 
-import logging_util
-from gemini_response import GeminiResponse
+from mvp_site import logging_util
+from mvp_site.gemini_response import GeminiResponse
 
 
 class TestJsonModeStateUpdates(unittest.TestCase):

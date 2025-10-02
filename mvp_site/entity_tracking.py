@@ -35,12 +35,10 @@ entity schemas, providing a stable API while delegating validation to the schema
 from typing import Any
 
 # Import from Pydantic schemas (entities_simple.py was removed)
-from schemas.entities_pydantic import (
+from mvp_site.schemas.entities_pydantic import (
     EntityStatus,
     SceneManifest,
     Visibility,
-)
-from schemas.entities_pydantic import (
     create_from_game_state as schemas_create_from_game_state,
 )
 

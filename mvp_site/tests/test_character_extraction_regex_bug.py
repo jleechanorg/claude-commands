@@ -13,10 +13,21 @@ import unittest
 
 # Add parent directory to path for imports
 sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__ if '__file__' in globals() else 'tests/test_character_extraction_regex_bug.py'))))
+    0,
+    os.path.join(
+        os.path.dirname(
+            os.path.dirname(
+                os.path.abspath(
+                    __file__
+                    if "__file__" in globals()
+                    else "tests/test_character_extraction_regex_bug.py"
+                )
+            )
+        )
+    ),
 )
 
-import gemini_service
+from mvp_site import gemini_service
 
 # Set dummy API key before importing gemini_service
 os.environ["GEMINI_API_KEY"] = "DUMMY_KEY_FOR_TESTING"

@@ -8,7 +8,7 @@ from unittest.mock import patch
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from memory_integration import MemoryIntegration, enhance_slash_command
+from mvp_site.memory_integration import MemoryIntegration, enhance_slash_command
 
 
 class TestMemoryIntegration(unittest.TestCase):

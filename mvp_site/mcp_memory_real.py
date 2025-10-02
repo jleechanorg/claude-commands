@@ -7,7 +7,7 @@ Replace mcp_memory_stub.py imports with this module when ready.
 from collections.abc import Callable
 from typing import Any
 
-import logging_util
+from mvp_site import logging_util
 
 logger = logging_util.getLogger(__name__)
 

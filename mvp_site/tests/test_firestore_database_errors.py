@@ -19,9 +19,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["FIRESTORE_EMULATOR_HOST"] = "localhost:8080"
 os.environ["TESTING"] = "true"
 
-import firestore_service
 import pytest
-from game_state import GameState
+
+from mvp_site import firestore_service
+from mvp_site.game_state import GameState
 
 
 class TestFirestoreDatabaseErrors(unittest.TestCase):

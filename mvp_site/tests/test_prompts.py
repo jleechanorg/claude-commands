@@ -9,12 +9,13 @@ sys.path.insert(
 )
 
 try:
-    import constants
-    import logging_util
     import pytest
 
-    import gemini_service
-    from gemini_service import _load_instruction_file, _loaded_instructions_cache
+    from mvp_site import constants, gemini_service, logging_util
+    from mvp_site.gemini_service import (
+        _load_instruction_file,
+        _loaded_instructions_cache,
+    )
 
     MODULES_AVAILABLE = True
 except ImportError:

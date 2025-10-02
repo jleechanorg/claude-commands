@@ -14,8 +14,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from gemini_response import GeminiResponse
-from narrative_response_schema import NarrativeResponse
+from mvp_site.gemini_response import GeminiResponse
+from mvp_site.narrative_response_schema import NarrativeResponse
 
 
 class TestNarrativeResponseExtraction(unittest.TestCase):

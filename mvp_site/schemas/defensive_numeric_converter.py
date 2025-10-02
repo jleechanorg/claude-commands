@@ -4,7 +4,7 @@ Defensive numeric field converter that handles 'unknown' and invalid values
 
 from typing import Any
 
-import logging_util
+from mvp_site import logging_util
 
 
 class DefensiveNumericConverter:

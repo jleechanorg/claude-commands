@@ -10,9 +10,9 @@ import sys
 import unittest
 from unittest.mock import MagicMock, Mock, patch
 
-import world_logic
-from debug_hybrid_system import convert_json_escape_sequences
-from prompt_utils import _convert_and_format_field
+from mvp_site import world_logic
+from mvp_site.debug_hybrid_system import convert_json_escape_sequences
+from mvp_site.prompt_utils import _convert_and_format_field
 
 # Set test environment before any imports
 os.environ["TESTING"] = "true"

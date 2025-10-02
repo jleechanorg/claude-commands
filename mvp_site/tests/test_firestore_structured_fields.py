@@ -14,8 +14,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import constants
-from firestore_service import add_story_entry
+from mvp_site import constants
+from mvp_site.firestore_service import add_story_entry
 
 
 class TestFirestoreStructuredFields(unittest.TestCase):

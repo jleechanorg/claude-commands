@@ -12,7 +12,7 @@ This module serves as documentation of this architectural limitation.
 
 from typing import Any
 
-import logging_util
+from mvp_site import logging_util
 
 logger = logging_util.getLogger(__name__)
 

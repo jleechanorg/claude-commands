@@ -4,8 +4,12 @@ Debug utilities for handling incomplete JSON responses from Gemini API
 
 import re
 
-import logging_util
-from json_utils import complete_truncated_json, extract_field_value, try_parse_json
+from mvp_site import logging_util
+from mvp_site.json_utils import (
+    complete_truncated_json,
+    extract_field_value,
+    try_parse_json,
+)
 
 
 def fix_incomplete_json(response_text):

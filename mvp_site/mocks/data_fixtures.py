@@ -10,8 +10,9 @@ import datetime
 import os
 import sys
 
+from mvp_site import constants
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import constants
 
 # Sample campaign data
 SAMPLE_CAMPAIGN = {

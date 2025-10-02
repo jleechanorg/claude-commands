@@ -15,14 +15,14 @@ sys.path.insert(
 import json
 import unittest
 
-from entity_tracking import create_from_game_state
-from narrative_response_schema import (
+from mvp_site.entity_tracking import create_from_game_state
+from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     create_structured_prompt_injection,
     parse_structured_response,
     validate_entity_coverage,
 )
-from narrative_sync_validator import NarrativeSyncValidator
+from mvp_site.narrative_sync_validator import NarrativeSyncValidator
 
 
 class TestCompleteCombinedApproach(unittest.TestCase):

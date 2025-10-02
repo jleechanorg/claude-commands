@@ -6,9 +6,8 @@ import json
 import re
 from typing import Any
 
-import constants
-import logging_util
-from json_utils import (
+from mvp_site import constants, logging_util
+from mvp_site.json_utils import (
     complete_truncated_json,
     extract_field_value,
     extract_json_boundaries,

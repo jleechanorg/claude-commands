@@ -10,8 +10,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-import logging_util
-from entity_validator import EntityValidator
+from mvp_site import logging_util
+from mvp_site.entity_validator import EntityValidator
 
 
 class EntityPresenceType(Enum):

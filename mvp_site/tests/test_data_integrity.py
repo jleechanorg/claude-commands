@@ -19,8 +19,8 @@ sys.path.insert(
 # Import the functions we need for testing (avoid Firebase dependencies)
 import collections.abc
 
-from firestore_service import update_state_with_changes
-from game_state import GameState
+from mvp_site.firestore_service import update_state_with_changes
+from mvp_site.game_state import GameState
 
 
 def _validate_npc_data_integrity_test(npc_data: dict) -> list:

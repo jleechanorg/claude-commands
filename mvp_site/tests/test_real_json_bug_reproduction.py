@@ -8,7 +8,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from narrative_response_schema import parse_structured_response
+from mvp_site.narrative_response_schema import parse_structured_response
 
 
 class TestRealJsonBugReproduction(unittest.TestCase):

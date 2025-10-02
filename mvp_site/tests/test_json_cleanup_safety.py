@@ -10,12 +10,12 @@ import unittest
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from debug_hybrid_system import (
+from mvp_site.debug_hybrid_system import (
     clean_json_artifacts,
     contains_json_artifacts,
     process_story_entry_for_display,
 )
-from narrative_response_schema import parse_structured_response
+from mvp_site.narrative_response_schema import parse_structured_response
 
 
 class TestJSONCleanupSafety(unittest.TestCase):

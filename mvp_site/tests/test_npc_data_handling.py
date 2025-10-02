@@ -8,7 +8,7 @@ sys.path.insert(
 
 import unittest
 
-from firestore_service import update_state_with_changes
+from mvp_site.firestore_service import update_state_with_changes
 
 
 class TestNPCDataHandling(unittest.TestCase):

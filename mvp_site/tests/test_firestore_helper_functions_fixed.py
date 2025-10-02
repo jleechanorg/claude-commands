@@ -22,7 +22,7 @@ sys.path.insert(
 
 # Mock Firebase before importing firestore_service
 with patch("firestore_service.get_db"):
-    from firestore_service import _perform_append, _truncate_log_json
+    from mvp_site.firestore_service import _perform_append, _truncate_log_json
 
 
 class TestFirestoreHelperFunctions(unittest.TestCase):

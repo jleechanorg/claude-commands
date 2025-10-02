@@ -5,8 +5,8 @@ Includes full entity manifest in every AI prompt to ensure entity presence.
 
 from typing import Any
 
-import logging_util
-from entity_tracking import SceneManifest, create_from_game_state
+from mvp_site import logging_util
+from mvp_site.entity_tracking import SceneManifest, create_from_game_state
 
 logger = logging_util.getLogger(__name__)
 

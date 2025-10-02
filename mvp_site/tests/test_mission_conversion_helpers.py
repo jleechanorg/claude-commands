@@ -15,8 +15,8 @@ import unittest
 
 # Mock Firebase before importing modules that depend on it
 with patch("firestore_service.get_db"):
-    import logging_util
-    from firestore_service import update_state_with_changes
+    from mvp_site import logging_util
+    from mvp_site.firestore_service import update_state_with_changes
 
 
 class TestMissionConversionHelpers(unittest.TestCase):

@@ -9,8 +9,8 @@ sys.path.insert(
 import unittest
 
 # We import the service to test its internal functions
-import gemini_service
-from game_state import GameState
+from mvp_site import gemini_service
+from mvp_site.game_state import GameState
 
 
 class TestContextTruncation(unittest.TestCase):

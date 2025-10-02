@@ -12,9 +12,10 @@ sys.path.insert(
 )
 
 try:
-    import constants
-    from entity_tracking import create_from_game_state
-    from game_state import GameState
+    from mvp_site import constants
+    from mvp_site.entity_tracking import create_from_game_state
+    from mvp_site.game_state import GameState
+
     MODULES_AVAILABLE = True
 except ImportError:
     constants = None

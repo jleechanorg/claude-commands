@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -52,6 +53,7 @@ class TaskDispatcher:
         self._last_agent_check = 0  # Track when agents were last refreshed
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
+        self._mock_claude_path = None
 
         # A2A Integration with enhanced robustness
         self.a2a_enabled = A2A_AVAILABLE
@@ -834,6 +836,8 @@ Complete the task, then use /pr to create a new pull request."""
             # Find Claude
             claude_path = shutil.which("claude") or ""
             if not claude_path:
+                claude_path = self._ensure_mock_claude_binary()
+            if not claude_path:
                 return False
 
             # Create worktree for agent using new location logic
@@ -1084,6 +1088,42 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
         except Exception as e:
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
+
+    def _ensure_mock_claude_binary(self) -> str:
+        """Provide a lightweight mock Claude binary when running in testing mode."""
+
+        def _is_truthy(value: str | None) -> bool:
+            return (value or "").strip().lower() in {"1", "true", "yes"}
+
+        testing_mode = any(
+            _is_truthy(os.environ.get(env_var))
+            for env_var in ("MOCK_SERVICES_MODE", "TESTING", "FAST_TESTS")
+        )
+
+        if not testing_mode:
+            return ""
+
+        if self._mock_claude_path and os.path.exists(self._mock_claude_path):
+            return self._mock_claude_path
+
+        try:
+            mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
+            mock_dir.mkdir(parents=True, exist_ok=True)
+            mock_path = mock_dir / "mock_claude.sh"
+
+            # Simple shim that echoes the call for logging and exits successfully
+            script_contents = """#!/usr/bin/env bash
+echo "[mock claude] $@"
+exit 0
+"""
+            mock_path.write_text(script_contents, encoding="utf-8")
+            os.chmod(mock_path, 0o755)
+            self._mock_claude_path = str(mock_path)
+            print("⚠️ 'claude' command not found. Using mock binary for testing.")
+            return self._mock_claude_path
+        except Exception as exc:
+            print(f"⚠️ Failed to create mock Claude binary: {exc}")
+            return ""
 
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@ Loads world files and creates combined instruction content for AI system.
 
 import os
 
-import logging_util
-from file_cache import read_file_cached
+from mvp_site import logging_util
+from mvp_site.file_cache import read_file_cached
 
 # World file paths - only used in this module
 # The world directory is now permanently located within mvp_site/world/

@@ -25,7 +25,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 # Import constants at module level
 from main import KEY_USER_INPUT as MAIN_KEY_USER_INPUT
-from world_logic import KEY_USER_INPUT as MCP_KEY_USER_INPUT
+
+from mvp_site.world_logic import KEY_USER_INPUT as MCP_KEY_USER_INPUT
 
 
 class TestInputFieldTranslation(unittest.TestCase):

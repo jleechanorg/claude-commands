@@ -13,7 +13,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from entity_validator import (
+from mvp_site.entity_validator import (
     EntityRetryManager,
     EntityValidator,
     ValidationResult,

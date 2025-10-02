@@ -11,14 +11,17 @@ import unittest
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from file_cache import clear_file_cache, get_cache_stats
+from mvp_site.file_cache import clear_file_cache, get_cache_stats
 
 # Add mvp_site directory to path for imports
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from world_loader import load_banned_names, load_world_content_for_system_instruction
+from mvp_site.world_loader import (
+    load_banned_names,
+    load_world_content_for_system_instruction,
+)
 
 
 class TestWorldLoaderE2E(unittest.TestCase):
@@ -41,7 +44,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")
 
         if not os.path.exists(world_assiah_path):
-            self.skipTest(f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test")
+            self.skipTest(
+                f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test"
+            )
 
         # First load - should be cache miss
         initial_stats = get_cache_stats()
@@ -72,7 +77,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
         banned_names_path = os.path.join(world_dir, "banned_names.md")
 
         if not os.path.exists(banned_names_path):
-            self.skipTest(f"Resource not available: Banned names file not found at {banned_names_path}, skipping banned names test")
+            self.skipTest(
+                f"Resource not available: Banned names file not found at {banned_names_path}, skipping banned names test"
+            )
 
         # First load - should be cache miss
         initial_stats = get_cache_stats()
@@ -103,7 +110,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")
 
         if not os.path.exists(world_assiah_path):
-            self.skipTest(f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test")
+            self.skipTest(
+                f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test"
+            )
 
         # Measure first load (cache miss)
         start_time = time.time()
@@ -129,7 +138,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")
 
         if not os.path.exists(world_assiah_path):
-            self.skipTest(f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test")
+            self.skipTest(
+                f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test"
+            )
 
         # Multiple calls to different functions
         world_content = (
@@ -179,7 +190,9 @@ class TestWorldLoaderE2E(unittest.TestCase):
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")
 
         if not os.path.exists(world_assiah_path):
-            self.skipTest(f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test")
+            self.skipTest(
+                f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test"
+            )
 
         # Load world content multiple times
         content1 = load_world_content_for_system_instruction()
@@ -218,7 +231,9 @@ class TestWorldLoaderCacheIntegration(unittest.TestCase):
         world_assiah_path = os.path.join(world_dir, "world_assiah_compressed.md")
 
         if not os.path.exists(world_assiah_path):
-            self.skipTest(f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test")
+            self.skipTest(
+                f"Resource not available: World file not found at {world_assiah_path}, skipping world loading test"
+            )
 
         # Simulate realistic usage pattern
         operations = []

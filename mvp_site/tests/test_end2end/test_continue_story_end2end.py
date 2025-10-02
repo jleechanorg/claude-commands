@@ -20,9 +20,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 # Add tests directory for fake services
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import main
-from fake_firestore import FakeFirestoreClient
-from fake_gemini import FakeGeminiResponse
+import main  # noqa: E402
+from fake_firestore import FakeFirestoreClient  # noqa: E402
+from fake_gemini import FakeGeminiResponse  # noqa: E402
 
 
 class TestContinueStoryEnd2End(unittest.TestCase):
@@ -48,8 +48,8 @@ class TestContinueStoryEnd2End(unittest.TestCase):
             "Authorization": "Bearer test-id-token",
         }
 
-    @patch("firestore_service.get_db")
-    @patch("gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.firestore_service.get_db")
+    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
     def test_continue_story_success(self, mock_gemini_request, mock_get_db):
         """Test successful story continuation using fake services."""
 
@@ -98,22 +98,22 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # Verify response - with auth stubbed, should get 200
-        self.assertEqual(response.status_code, 200)
+        assert response.status_code == 200
         data = json.loads(response.data)
 
         # Verify story data structure
-        self.assertIn("story", data)
-        self.assertIsInstance(data["story"], list)
-        self.assertTrue(len(data["story"]) > 0)
+        assert "story" in data
+        assert isinstance(data["story"], list)
+        assert len(data["story"]) > 0
 
         # Verify it contains the narrative from our mock
         found_narrative = any(
             "The story continues with new adventures..." in entry.get("text", "")
             for entry in data["story"]
         )
-        self.assertTrue(found_narrative, "Expected narrative not found in response")
+        assert found_narrative, "Expected narrative not found in response"
 
-    @patch("firestore_service.get_db")
+    @patch("mvp_site.firestore_service.get_db")
     def test_continue_story_campaign_not_found(self, mock_get_db):
         """Test continuing story with non-existent campaign."""
 
@@ -129,9 +129,9 @@ class TestContinueStoryEnd2End(unittest.TestCase):
         )
 
         # With auth in place, should get 404 for missing campaign
-        self.assertEqual(response.status_code, 404)
+        assert response.status_code == 404
         data = json.loads(response.data)
-        self.assertIn("error", data)
+        assert "error" in data
 
 
 if __name__ == "__main__":

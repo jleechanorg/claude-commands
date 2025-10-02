@@ -9,8 +9,9 @@ sys.path.insert(
 )
 
 # We ONLY import the document_generator, which has no cloud dependencies.
-import document_generator
 from flask import Flask, jsonify, request, send_file
+
+from mvp_site import document_generator
 
 # --- A self-contained Flask App for testing ONLY ---
 app = Flask(__name__)

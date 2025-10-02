@@ -59,14 +59,15 @@ class TestFieldFormatValidation(unittest.TestCase):
         correct field format that main.py translation layer expects.
         """
         # Skip integration test in CI environment
-        if os.environ.get('TESTING') == 'true':
+        if os.environ.get("TESTING") == "true":
             self.skipTest("Integration test skipped in TESTING environment")
             return
 
         try:
             # Try to import main and world_logic to test field format consistency
             from main import create_app
-            from world_logic import process_action_unified
+
+            from mvp_site.world_logic import process_action_unified
         except (ImportError, ModuleNotFoundError, AttributeError) as e:
             # Skip test if dependencies are not available (CI environment)
             self.skipTest(f"Dependencies not available: {e}")
@@ -122,7 +123,9 @@ class TestFieldFormatValidation(unittest.TestCase):
         )
 
         self.assertEqual(
-            narrative_text_correct, "This works with translation layer", "Correct field format should preserve narrative content"
+            narrative_text_correct,
+            "This works with translation layer",
+            "Correct field format should preserve narrative content",
         )
 
         print("🟢 CORRECTION CONFIRMED: 'text' field format works correctly")

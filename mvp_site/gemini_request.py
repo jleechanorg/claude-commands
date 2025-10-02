@@ -16,14 +16,16 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-import logging_util
+from mvp_site import logging_util
 
 logger = logging_util.getLogger(__name__)
 
 # Configuration constants
 # Increased payload size limit for Gemini 2.5 Flash to handle larger game states
 # Gemini 2.5 Flash supports up to 500MB input, using 10MB for very complex campaigns
-MAX_PAYLOAD_SIZE = 10 * 1024 * 1024  # 10MB limit for API payloads (supports very complex game states)
+MAX_PAYLOAD_SIZE = (
+    10 * 1024 * 1024
+)  # 10MB limit for API payloads (supports very complex game states)
 MAX_STRING_LENGTH = 1000000
 
 

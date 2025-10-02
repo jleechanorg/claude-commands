@@ -9,7 +9,7 @@ import unittest
 # Add the parent directory to the path so we can import from mvp_site
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from entity_utils import filter_unknown_entities, is_unknown_entity
+from mvp_site.entity_utils import filter_unknown_entities, is_unknown_entity
 
 
 class TestEntityUtils(unittest.TestCase):

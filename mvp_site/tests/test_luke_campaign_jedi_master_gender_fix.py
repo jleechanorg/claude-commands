@@ -11,7 +11,8 @@ sys.path.insert(
 )
 
 import pytest
-from schemas.entities_pydantic import NPC, HealthStatus
+
+from mvp_site.schemas.entities_pydantic import NPC, HealthStatus
 
 
 class TestLukeCampaignJediMasterGenderFix(unittest.TestCase):

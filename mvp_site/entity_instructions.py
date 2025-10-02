@@ -7,7 +7,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-import logging_util
+from mvp_site import logging_util
 
 logger = logging_util.getLogger(__name__)
 

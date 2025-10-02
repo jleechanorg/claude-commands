@@ -7,8 +7,9 @@ Tests all campaign functionality using real Firebase authentication
 import os
 from typing import Any
 
-import logging_util
 import requests
+
+from mvp_site import logging_util
 
 
 class AuthenticatedTestSuite:

@@ -8,9 +8,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from unittest.mock import MagicMock, patch
 
-import constants
-import firestore_service
-from narrative_response_schema import parse_structured_response
+from mvp_site import constants, firestore_service
+from mvp_site.narrative_response_schema import parse_structured_response
 
 
 class TestGodModeResponseField(unittest.TestCase):
@@ -219,7 +218,7 @@ class TestGodModeResponseField(unittest.TestCase):
             "debug_info": {},
         }
         with patch("firestore_service.add_story_entry") as mock_add_story_entry:
-            from firestore_service import add_story_entry
+            from mvp_site.firestore_service import add_story_entry
 
             add_story_entry(
                 "user123",

@@ -14,7 +14,8 @@ import unittest
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
 import pytest
-from file_cache import (
+
+from mvp_site.file_cache import (
     clear_file_cache,
     get_cache_stats,
     invalidate_file,

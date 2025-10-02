@@ -16,7 +16,7 @@ os.environ["GEMINI_API_KEY"] = "test-api-key"
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from gemini_request import (
+from mvp_site.gemini_request import (
     MAX_PAYLOAD_SIZE,
     MAX_STRING_LENGTH,
     GeminiRequest,

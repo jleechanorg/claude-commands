@@ -7,7 +7,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import constants
+from mvp_site import constants
 
 
 class TestConstants(unittest.TestCase):

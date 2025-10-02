@@ -8,8 +8,8 @@ and new campaigns with structured debug_info fields.
 import re
 from typing import Any
 
-import logging_util
-from json_utils import unescape_json_string
+from mvp_site import logging_util
+from mvp_site.json_utils import unescape_json_string
 
 # Debug tag patterns - same as in gemini_response.py
 DEBUG_START_PATTERN = re.compile(r"\[DEBUG_START\][\s\S]*?\[DEBUG_END\]")
@@ -78,13 +78,13 @@ def contains_json_artifacts(text: str) -> bool:
 def convert_json_escape_sequences(text: str) -> str:
     """
     Convert JSON escape sequences to their actual characters.
-    
+
     This function properly converts JSON escape sequences like \\n, \\t, \\" to
     their actual character equivalents, preserving content structure.
-    
+
     Args:
         text: Text containing JSON escape sequences
-        
+
     Returns:
         Text with escape sequences converted to actual characters
     """

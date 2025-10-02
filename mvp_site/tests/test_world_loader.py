@@ -12,9 +12,9 @@ import unittest
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import file_cache
 import pytest
-import world_loader
+
+from mvp_site import file_cache, world_loader
 
 
 class TestWorldLoader(unittest.TestCase):
@@ -175,7 +175,7 @@ def load_world_content_for_system_instruction():
 
         # Import and test
         sys.path.insert(0, self.app_dir)
-        import world_loader
+        from mvp_site import world_loader
 
         # Should raise FileNotFoundError
         with pytest.raises(FileNotFoundError) as context:

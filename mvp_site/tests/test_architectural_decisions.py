@@ -80,8 +80,8 @@ class TestArchitecturalDecisions(unittest.TestCase):
         # Check what module is actually imported
         manifest_module = entity_tracking.SceneManifest.__module__
         assert (
-            manifest_module == "schemas.entities_pydantic"
-        ), "entity_tracking should import from schemas.entities_pydantic"
+            manifest_module == "mvp_site.schemas.entities_pydantic"
+        ), "entity_tracking should import from mvp_site.schemas.entities_pydantic"
 
         # Verify validation type is set correctly
         assert entity_tracking.VALIDATION_TYPE == "Pydantic"

@@ -9,8 +9,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-import logging_util
-from entity_utils import filter_unknown_entities
+from mvp_site import logging_util
+from mvp_site.entity_utils import filter_unknown_entities
 
 logger = logging_util.getLogger(__name__)
 

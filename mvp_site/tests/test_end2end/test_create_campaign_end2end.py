@@ -21,9 +21,9 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../.
 # Add tests directory for fake services
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from main import create_app
+from main import create_app  # noqa: E402
 
-from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
+from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse  # noqa: E402
 
 
 class TestCreateCampaignEnd2End(unittest.TestCase):
@@ -49,8 +49,8 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
             "Authorization": "Bearer test-id-token",
         }
 
-    @patch("firestore_service.get_db")
-    @patch("gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.firestore_service.get_db")
+    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
     def test_create_campaign_success(self, mock_gemini_request, mock_get_db):
         """Test successful campaign creation using fake services."""
 
@@ -95,17 +95,15 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
 
         # Verify response
         # With testing mode removed, expect 401 (auth required) or 201 if properly mocked
-        self.assertEqual(response.status_code, 201)  # Auth stubbed, should succeed
+        assert response.status_code == 201  # Auth stubbed, should succeed
         data = json.loads(response.data)
         if response.status_code == 200:
-            self.assertTrue(
-                data.get("success")
-            )  # Only check success for successful responses
-        self.assertIn("campaign_id", data)
+            assert data.get("success")  # Only check success for successful responses
+        assert "campaign_id" in data
 
-    @patch("firestore_service.get_db")
-    @patch("gemini_service._call_gemini_api_with_gemini_request")
-    @patch("mcp_client.MCPClient.call_tool")
+    @patch("mvp_site.firestore_service.get_db")
+    @patch("mvp_site.gemini_service._call_gemini_api_with_gemini_request")
+    @patch("mvp_site.mcp_client.MCPClient.call_tool")
     def test_create_campaign_gemini_error(
         self, mock_mcp_call, mock_gemini_request, mock_get_db
     ):
@@ -144,10 +142,10 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
         )
 
         # Should handle error gracefully
-        self.assertEqual(response.status_code, 400)
+        assert response.status_code == 400
         data = json.loads(response.data)
-        self.assertFalse(data.get("success"))
-        self.assertIn("error", data)
+        assert not data.get("success")
+        assert "error" in data
 
         # Verify MCP client was called with correct data
         mock_mcp_call.assert_called_once_with("create_campaign", unittest.mock.ANY)

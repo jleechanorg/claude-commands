@@ -15,7 +15,7 @@ sys.path.insert(
 )
 
 
-from narrative_response_schema import NarrativeResponse
+from mvp_site.narrative_response_schema import NarrativeResponse
 
 
 class TestPlanningBlockRobustness(unittest.TestCase):

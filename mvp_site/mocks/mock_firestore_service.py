@@ -9,10 +9,11 @@ import os
 import sys
 from typing import Any
 
+from mvp_site import constants
+
 from .data_fixtures import SAMPLE_CAMPAIGN, SAMPLE_GAME_STATE, SAMPLE_STORY_CONTEXT
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import constants
 
 
 class MockFirestoreDocument:

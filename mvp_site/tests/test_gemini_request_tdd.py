@@ -24,8 +24,8 @@ os.environ["TESTING"] = "true"
 # Add the parent directory to the path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-import gemini_service
-from game_state import GameState
+from mvp_site import gemini_service
+from mvp_site.game_state import GameState
 
 
 class TestGeminiRequestTDD(unittest.TestCase):
@@ -257,7 +257,7 @@ class TestGeminiRequestTDD(unittest.TestCase):
         """
         # This import will FAIL until we create the class
         try:
-            from gemini_request import GeminiRequest
+            from mvp_site.gemini_request import GeminiRequest
 
             # Test that the class has the expected methods
             self.assertTrue(hasattr(GeminiRequest, "build_story_continuation"))

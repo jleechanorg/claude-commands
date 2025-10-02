@@ -16,14 +16,17 @@ import unittest
 # Add the parent directory to the Python path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import constants
-import firestore_service
-import game_state
-import gemini_response
-import gemini_service
 import main
-import narrative_response_schema
-import structured_fields_utils
+
+from mvp_site import (
+    constants,
+    firestore_service,
+    game_state,
+    gemini_response,
+    gemini_service,
+    narrative_response_schema,
+    structured_fields_utils,
+)
 
 
 class TestImports(unittest.TestCase):

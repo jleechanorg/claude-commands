@@ -12,7 +12,7 @@ Architecture:
 - Async-compatible design for future async Flask integration
 
 Usage:
-    from mcp_client import MCPClient, http_to_mcp_request, mcp_to_http_response
+    from mvp_site.mcp_client import MCPClient, http_to_mcp_request, mcp_to_http_response
 
     client = MCPClient("http://localhost:8000")
     result = await client.call_tool("create_campaign", {"name": "Test Campaign"})
@@ -31,11 +31,10 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
-import logging_util
 import requests
 from flask import Request, Response
 
-import firestore_service
+from mvp_site import firestore_service, logging_util
 
 # Initialize logging
 logger = logging_util.logging.getLogger(__name__)

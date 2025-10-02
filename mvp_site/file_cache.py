@@ -9,9 +9,10 @@ import os
 import threading
 import time
 
-import logging_util
 from cachetools import TTLCache
-from token_utils import format_token_count
+
+from mvp_site import logging_util
+from mvp_site.token_utils import format_token_count
 
 # Cache configuration constants
 CACHE_MAX_SIZE = 1000  # Maximum number of files to cache

@@ -14,8 +14,7 @@ from unittest.mock import MagicMock, patch
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import firestore_service
-
+from mvp_site import firestore_service
 from tests.fake_firestore import FakeFirestoreClient
 
 
@@ -30,7 +29,7 @@ class TestAuthMockSeparation(unittest.TestCase):
         if "TESTING" in os.environ:
             del os.environ["TESTING"]
 
-        with patch("firestore_service.get_db") as mock_db:
+        with patch("mvp_site.firestore_service.get_db") as mock_db:
             # Mock Firestore to return proper tuple format
             mock_doc_ref = MagicMock()
             mock_doc_ref.id = "test-doc-123"
@@ -65,7 +64,7 @@ class TestAuthMockSeparation(unittest.TestCase):
         # Set auth skip mode for testing without authentication
         os.environ["AUTH_SKIP_MODE"] = "true"
 
-        with patch("firestore_service.get_db") as mock_db:
+        with patch("mvp_site.firestore_service.get_db") as mock_db:
             # Use FakeFirestoreClient for realistic behavior
 
             fake_db = FakeFirestoreClient()

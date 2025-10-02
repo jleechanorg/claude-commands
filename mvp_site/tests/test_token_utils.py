@@ -20,9 +20,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import file_cache
 import pytest
-from token_utils import estimate_tokens, format_token_count, log_with_tokens
+
+from mvp_site import file_cache
+from mvp_site.token_utils import estimate_tokens, format_token_count, log_with_tokens
 
 
 class TestTokenUtils(unittest.TestCase):

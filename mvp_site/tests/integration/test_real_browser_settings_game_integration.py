@@ -29,7 +29,7 @@ parent_dir = os.path.dirname(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 )
 sys.path.insert(0, parent_dir)
-import logging_util
+from mvp_site import logging_util
 
 
 class RealBrowserSettingsGameTest:

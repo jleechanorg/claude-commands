@@ -10,8 +10,9 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import constants
 from mocks import mock_firestore_service
+
+from mvp_site import constants
 
 
 def test_structured_fields_storage():

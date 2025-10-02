@@ -22,7 +22,7 @@ import traceback
 from collections.abc import Callable
 from typing import Any, TypeVar
 
-import logging_util
+from mvp_site import logging_util
 
 # Get a logger instance for this module
 logger = logging_util.getLogger(__name__)

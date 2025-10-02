@@ -9,9 +9,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import logging_util
 import pytest
-from decorators import log_exceptions
+
+from mvp_site import logging_util
+from mvp_site.decorators import log_exceptions
 
 
 class TestLogExceptionsDecorator(unittest.TestCase):
@@ -19,8 +20,8 @@ class TestLogExceptionsDecorator(unittest.TestCase):
 
     def setUp(self):
         """Set up test logging environment."""
-        # Create a test logger
-        self.test_logger = logging_util.getLogger("decorators")
+        # Create a test logger - must match the logger name used in decorators.py
+        self.test_logger = logging_util.getLogger("mvp_site.decorators")
         self.test_logger.setLevel(logging_util.ERROR)
 
         # Create a string stream to capture log output
@@ -69,7 +70,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             return x * 2
 
         # Test that exception is logged and re-raised
-        with pytest.raises(ValueError) as context:
+        with pytest.raises(ValueError, match="Negative values not allowed") as context:
             failing_function(-1)
 
         assert str(context.value) == "Negative values not allowed"
@@ -90,7 +91,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         def function_with_args(a, b, c=None, d="default"):
             raise RuntimeError("Test error")
 
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Test error"):
             function_with_args("arg1", "arg2", c="kwarg1", d="kwarg2")
 
         log_output = self.log_stream.getvalue()
@@ -111,19 +112,19 @@ class TestLogExceptionsDecorator(unittest.TestCase):
             raise Exception("Generic error occurred")
 
         # Test ValueError
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Value error occurred"):
             multi_exception_function("value")
 
         # Test TypeError
-        with pytest.raises(TypeError):
+        with pytest.raises(TypeError, match="Type error occurred"):
             multi_exception_function("type")
 
         # Test RuntimeError
-        with pytest.raises(RuntimeError):
+        with pytest.raises(RuntimeError, match="Runtime error occurred"):
             multi_exception_function("runtime")
 
         # Test generic Exception
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Generic error occurred"):
             multi_exception_function("other")
 
         # Verify all exceptions were logged
@@ -168,7 +169,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         test_list = [1, 2, {"nested": "dict"}]
         test_dict = {"key1": "value1", "key2": [1, 2, 3]}
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Error with complex args"):
             complex_args_function(test_list, test_dict, extra_kwarg="test")
 
         log_output = self.log_stream.getvalue()
@@ -178,22 +179,22 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         assert "Kwargs:" in log_output
         assert "extra_kwarg" in log_output
 
-    @patch("decorators.logger")
-    def test_decorator_uses_module_logger(self, mock_logger):
-        """Test that decorator uses the correct logger instance."""
+    @patch("mvp_site.logging_util.error")
+    def test_decorator_uses_module_logger(self, mock_error):
+        """Test that decorator uses logging_util.error for exception logging."""
 
         @log_exceptions
         def function_that_fails():
             raise Exception("Test exception")
 
-        with pytest.raises(Exception):
+        with pytest.raises(Exception, match="Test exception"):
             function_that_fails()
 
-        # Verify that the module logger's error method was called
-        mock_logger.error.assert_called_once()
+        # Verify that logging_util.error was called
+        mock_error.assert_called_once()
 
-        # Get the logged message
-        logged_message = mock_logger.error.call_args[0][0]
+        # Get the logged message from the call args
+        logged_message = mock_error.call_args[0][0]
         assert "EXCEPTION IN: function_that_fails" in logged_message
         assert "Test exception" in logged_message
 
@@ -208,7 +209,7 @@ class TestLogExceptionsDecorator(unittest.TestCase):
         def outer_function():
             inner_function()
 
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="Inner function error"):
             outer_function()
 
         log_output = self.log_stream.getvalue()

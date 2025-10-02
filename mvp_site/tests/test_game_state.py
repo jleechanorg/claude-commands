@@ -20,9 +20,9 @@ firebase_admin_mock = MagicMock()
 firebase_admin_mock.firestore = MagicMock()
 firebase_admin_mock.auth = MagicMock()
 firebase_admin_mock._apps = {}  # Empty apps list to prevent initialization
-sys.modules['firebase_admin'] = firebase_admin_mock
-sys.modules['firebase_admin.firestore'] = firebase_admin_mock.firestore
-sys.modules['firebase_admin.auth'] = firebase_admin_mock.auth
+sys.modules["firebase_admin"] = firebase_admin_mock
+sys.modules["firebase_admin.firestore"] = firebase_admin_mock.firestore
+sys.modules["firebase_admin.auth"] = firebase_admin_mock.auth
 
 # Use proper fakes library instead of manual MagicMock setup
 # Import fakes library components (will be imported after path setup)
@@ -35,38 +35,42 @@ try:
     pydantic_module.Field = MagicMock()
     pydantic_module.field_validator = MagicMock()
     pydantic_module.model_validator = MagicMock()
-    pydantic_module.ValidationError = Exception  # Use regular Exception for ValidationError
-    sys.modules['pydantic'] = pydantic_module
+    pydantic_module.ValidationError = (
+        Exception  # Use regular Exception for ValidationError
+    )
+    sys.modules["pydantic"] = pydantic_module
 
     # Mock cachetools dependencies
     cachetools_module = MagicMock()
     cachetools_module.TTLCache = MagicMock()
     cachetools_module.cached = MagicMock()
-    sys.modules['cachetools'] = cachetools_module
+    sys.modules["cachetools"] = cachetools_module
 
     # Mock google dependencies
     google_module = MagicMock()
     google_module.genai = MagicMock()
     google_module.genai.Client = MagicMock()
-    sys.modules['google'] = google_module
-    sys.modules['google.genai'] = google_module.genai
+    sys.modules["google"] = google_module
+    sys.modules["google.genai"] = google_module.genai
 
     # Mock other optional dependencies that might not be available
     docx_module = MagicMock()
     docx_module.Document = MagicMock()
-    sys.modules['docx'] = docx_module
+    sys.modules["docx"] = docx_module
 
     # Mock fpdf dependencies
     fpdf_module = MagicMock()
     fpdf_module.FPDF = MagicMock()
     fpdf_module.XPos = MagicMock()
     fpdf_module.YPos = MagicMock()
-    sys.modules['fpdf'] = fpdf_module
+    sys.modules["fpdf"] = fpdf_module
 except Exception:
     pass  # If mocking fails, continue anyway
 
 # Add parent directory to path AFTER mocking firebase_admin (append instead of insert to avoid shadowing google package)
-mvp_site_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+mvp_site_path = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+)
 if mvp_site_path not in sys.path:
     sys.path.append(mvp_site_path)
 
@@ -74,11 +78,11 @@ if mvp_site_path not in sys.path:
 
 import datetime
 
-from firestore_service import _perform_append, update_state_with_changes
-from game_state import GameState
+from mvp_site.firestore_service import _perform_append, update_state_with_changes
+from mvp_site.game_state import GameState
 
 # Import modules with comprehensive mocking in place
-from world_logic import (
+from mvp_site.world_logic import (
     _cleanup_legacy_state,
     format_game_state_updates,
     parse_set_command,

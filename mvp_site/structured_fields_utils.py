@@ -3,7 +3,7 @@ Utility functions for handling structured fields in AI responses.
 Prevents code duplication across main.py and other modules.
 """
 
-import constants
+from mvp_site import constants
 
 
 def extract_structured_fields(gemini_response_obj):

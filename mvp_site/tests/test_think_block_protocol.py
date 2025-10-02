@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import gemini_service which handles prompt processing
 try:
-    import gemini_service
+    from mvp_site import gemini_service
 
     # Create a mock GeminiService class for testing
     class GeminiService:

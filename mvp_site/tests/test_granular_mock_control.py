@@ -57,7 +57,7 @@ class TestMCPEnvironmentControl(unittest.TestCase):
 
     def test_mcp_client_handles_environment_gracefully(self):
         """Test that MCP client handles different environments gracefully."""
-        from mcp_client import create_mcp_client
+        from mvp_site.mcp_client import create_mcp_client
 
         # Test with different environment configurations
         for use_mocks in ["true", "false", None]:

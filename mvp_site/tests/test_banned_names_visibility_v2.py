@@ -13,7 +13,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-import world_loader
+from mvp_site import world_loader
 
 
 class TestBannedNamesVisibilityBehavior(unittest.TestCase):
@@ -61,7 +61,9 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
             ), "Should identify the source of naming restrictions"
 
         except FileNotFoundError:
-            self.skipTest("Resource not available: World files not found, skipping visibility test")
+            self.skipTest(
+                "Resource not available: World files not found, skipping visibility test"
+            )
 
     def test_banned_names_loader_returns_content(self):
         """Test that the banned names loader returns non-empty content."""
@@ -92,7 +94,9 @@ class TestBannedNamesVisibilityBehavior(unittest.TestCase):
             assert len(content) > 1000, "Combined world content should be substantial"
 
         except FileNotFoundError:
-            self.skipTest("Resource not available: World files not found, skipping structure test")
+            self.skipTest(
+                "Resource not available: World files not found, skipping structure test"
+            )
 
 
 if __name__ == "__main__":

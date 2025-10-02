@@ -12,7 +12,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
-from dual_pass_generator import (
+from mvp_site.dual_pass_generator import (
     AdaptiveEntityInjector,
     DualPassGenerator,
     DualPassResult,
@@ -20,7 +20,7 @@ from dual_pass_generator import (
     adaptive_injector,
     dual_pass_generator,
 )
-from entity_validator import ValidationResult, entity_validator
+from mvp_site.entity_validator import ValidationResult, entity_validator
 
 
 class TestDualPassGenerator(unittest.TestCase):

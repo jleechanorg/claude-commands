@@ -114,9 +114,9 @@ class DatabaseService(Protocol):
         ...
 
     def update_campaign(
-        self, user_id: UserId, campaign_id: CampaignId, data: CampaignData
+        self, user_id: UserId, campaign_id: CampaignId, updates: dict[str, Any]
     ) -> bool:
-        """Update a campaign."""
+        """Update a campaign with the provided field changes."""
         ...
 
     def delete_campaign(self, user_id: UserId, campaign_id: CampaignId) -> bool:

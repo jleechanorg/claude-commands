@@ -11,8 +11,14 @@ from pydantic import ValidationError
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 import pytest
-from schemas.defensive_numeric_converter import DefensiveNumericConverter
-from schemas.entities_pydantic import Character, EntityType, HealthStatus, Stats
+
+from mvp_site.schemas.defensive_numeric_converter import DefensiveNumericConverter
+from mvp_site.schemas.entities_pydantic import (
+    Character,
+    EntityType,
+    HealthStatus,
+    Stats,
+)
 
 
 class TestDefensiveNumericConverter(unittest.TestCase):

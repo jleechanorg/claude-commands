@@ -27,32 +27,34 @@ os.environ["TESTING"] = "true"
 os.environ["GEMINI_API_KEY"] = "test-api-key"
 
 # Add parent directory to path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__ if '__file__' in globals() else 'tests/test_architectural_boundary_validation.py'), "..")))
+sys.path.insert(
+    0,
+    os.path.abspath(
+        os.path.join(
+            os.path.dirname(
+                __file__
+                if "__file__" in globals()
+                else "tests/test_architectural_boundary_validation.py"
+            ),
+            "..",
+        )
+    ),
+)
 
 # Module-level imports (moved from inline locations per coding guidelines)
 from main import (
     KEY_ERROR,
-    KEY_SUCCESS,
-    KEY_USER_INPUT,
-)
-from main import (
     KEY_ERROR as MAIN_ERROR,
-)
-from main import (
+    KEY_SUCCESS,
     KEY_SUCCESS as MAIN_SUCCESS,
-)
-from main import (
+    KEY_USER_INPUT,
     KEY_USER_INPUT as FRONTEND_KEY,
 )
-from mcp_api import KEY_ERROR as MCP_ERROR
-from mcp_api import KEY_USER_INPUT
-from world_logic import (
+from mcp_api import KEY_ERROR as MCP_ERROR, KEY_USER_INPUT
+
+from mvp_site.world_logic import (
     KEY_ERROR as WL_ERROR,
-)
-from world_logic import (
     KEY_SUCCESS as WL_SUCCESS,
-)
-from world_logic import (
     KEY_USER_INPUT as MCP_KEY,
 )
 

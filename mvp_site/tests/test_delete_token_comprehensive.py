@@ -18,7 +18,7 @@ sys.path.insert(
 sys.modules["firebase_admin"] = MagicMock()
 sys.modules["firebase_admin.firestore"] = MagicMock()
 
-from firestore_service import update_state_with_changes
+from mvp_site.firestore_service import update_state_with_changes
 
 
 class TestDeleteTokenProcessing(unittest.TestCase):

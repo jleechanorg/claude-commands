@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Safe imports with fallbacks for CI environment
 try:
-    from token_utils import estimate_tokens
+    from mvp_site.token_utils import estimate_tokens
 except ImportError:
 
     def estimate_tokens(text: str) -> int:
@@ -23,7 +23,7 @@ except ImportError:
 
 
 try:
-    import gemini_service
+    from mvp_site import gemini_service
 
     GEMINI_SERVICE_AVAILABLE = True
 except ImportError:

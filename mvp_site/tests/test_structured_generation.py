@@ -14,8 +14,8 @@ sys.path.insert(
 import json
 import unittest
 
-from entity_tracking import create_from_game_state
-from narrative_response_schema import (
+from mvp_site.entity_tracking import create_from_game_state
+from mvp_site.narrative_response_schema import (
     EntityTrackingInstruction,
     NarrativeResponse,
     create_structured_prompt_injection,

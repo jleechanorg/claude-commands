@@ -40,9 +40,10 @@ Dependencies:
 import logging
 import os
 
-import constants
 from docx import Document
 from fpdf import FPDF, XPos, YPos
+
+from mvp_site import constants
 
 
 def get_story_text_from_context(story_log):

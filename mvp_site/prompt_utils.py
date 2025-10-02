@@ -7,8 +7,8 @@ Extracted to avoid import-unsafe dependencies and code duplication.
 
 import random
 
-import logging_util
-from debug_hybrid_system import convert_json_escape_sequences
+from mvp_site import logging_util
+from mvp_site.debug_hybrid_system import convert_json_escape_sequences
 
 # Random content constants (copied from world_logic.py to avoid circular dependencies)
 RANDOM_CHARACTERS = [
@@ -40,11 +40,11 @@ RANDOM_SETTINGS = [
 
 def _convert_and_format_field(field_value: str, field_name: str) -> str:
     """Convert JSON escape sequences and format field for prompt.
-    
+
     Args:
         field_value: Raw field value that may contain JSON escape sequences
         field_name: Name of the field (Character, Setting, Description)
-        
+
     Returns:
         Formatted field string or empty string if field_value is empty
     """
@@ -55,15 +55,17 @@ def _convert_and_format_field(field_value: str, field_name: str) -> str:
     return f"{field_name}: {converted_value}"
 
 
-def _build_campaign_prompt(character: str, setting: str, description: str, old_prompt: str | None) -> str:
+def _build_campaign_prompt(
+    character: str, setting: str, description: str, old_prompt: str | None
+) -> str:
     """Build campaign prompt from components with JSON escape sequence conversion.
-    
+
     Args:
         character: Character description (may contain JSON escape sequences)
-        setting: Setting description (may contain JSON escape sequences) 
+        setting: Setting description (may contain JSON escape sequences)
         description: Campaign description (may contain JSON escape sequences)
         old_prompt: Existing prompt to use if provided
-        
+
     Returns:
         Formatted campaign prompt with escape sequences converted
     """
@@ -100,10 +102,7 @@ def _build_campaign_prompt(character: str, setting: str, description: str, old_p
 
 # Alias for existing callers in world_logic.py
 def _build_campaign_prompt_impl(
-    character: str,
-    setting: str,
-    description: str,
-    old_prompt: str | None
+    character: str, setting: str, description: str, old_prompt: str | None
 ) -> str:
     """Backwards compatibility alias for world_logic.py imports."""
     return _build_campaign_prompt(character, setting, description, old_prompt)

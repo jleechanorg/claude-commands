@@ -34,15 +34,14 @@ import time
 from typing import Any
 from unittest.mock import MagicMock
 
-import constants
 import firebase_admin
-import logging_util
-from custom_types import CampaignId, UserId
-from decorators import log_exceptions
 from firebase_admin import firestore
-from numeric_field_converter import NumericFieldConverter
 
-from game_state import GameState
+from mvp_site import constants, logging_util
+from mvp_site.custom_types import CampaignId, UserId
+from mvp_site.decorators import log_exceptions
+from mvp_site.game_state import GameState
+from mvp_site.numeric_field_converter import NumericFieldConverter
 
 MAX_TEXT_BYTES: int = 1000000
 MAX_LOG_LINES: int = 20

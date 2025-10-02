@@ -16,7 +16,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 try:
-    from narrative_response_schema import parse_structured_response
+    from mvp_site.narrative_response_schema import parse_structured_response
+
     MODULES_AVAILABLE = True
 except ImportError:
     parse_structured_response = None
@@ -69,7 +70,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
         """Clean up test fixtures"""
         # Following zero-tolerance skip pattern ban - provide basic implementation
         # Clean up if temp_dir exists (some tests may not create it)
-        if hasattr(self, 'temp_dir') and os.path.exists(self.temp_dir):
+        if hasattr(self, "temp_dir") and os.path.exists(self.temp_dir):
             shutil.rmtree(self.temp_dir)
 
     def test_state_updates_extracted_from_json_response(self):
@@ -83,7 +84,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
         assert parsed_response is not None
 
         # Verify state updates are present in the parsed response object
-        assert hasattr(parsed_response, 'state_updates')
+        assert hasattr(parsed_response, "state_updates")
         assert parsed_response.state_updates is not None
 
         # Verify specific state update values through the object attributes
@@ -132,7 +133,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         assert "peaceful meadow" in narrative_text
 
         # State updates should be empty or None
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
         assert state_updates in [{}, None]
 
     def test_malformed_state_updates_handling(self):
@@ -146,7 +149,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         assert "You attack the orc." in narrative_text
 
         # Should handle malformed state updates gracefully
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
         assert isinstance(state_updates, (dict, type(None)))
 
     def test_gemini_service_state_update_processing(self):
@@ -158,7 +163,7 @@ class TestStateUpdateIntegration(unittest.TestCase):
 
         # Verify basic processing works
         self.assertIsNotNone(parsed_response)
-        self.assertTrue(hasattr(parsed_response, 'state_updates'))
+        self.assertTrue(hasattr(parsed_response, "state_updates"))
         self.assertTrue(True, "State update processing validated through parser")
 
     def test_state_update_application_simulation(self):
@@ -168,7 +173,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         narrative_text, parsed_response = parse_structured_response(json_response)
 
         # Simulate applying state updates
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
 
         # Verify the updates would be applied correctly
         if "player_character_data" in state_updates:
@@ -207,20 +214,22 @@ class TestStateUpdateIntegration(unittest.TestCase):
         }
 
         # Parse first response
-        first_narrative, first_parsed = parse_structured_response(json.dumps(first_response))
-        first_state_updates = getattr(first_parsed, 'state_updates', {}) if first_parsed else {}
-        assert (
-            first_state_updates["npc_data"]["orc_warrior"]["status"]
-            == "wounded"
+        first_narrative, first_parsed = parse_structured_response(
+            json.dumps(first_response)
         )
+        first_state_updates = (
+            getattr(first_parsed, "state_updates", {}) if first_parsed else {}
+        )
+        assert first_state_updates["npc_data"]["orc_warrior"]["status"] == "wounded"
 
         # Parse second response
-        second_narrative, second_parsed = parse_structured_response(json.dumps(second_response))
-        second_state_updates = getattr(second_parsed, 'state_updates', {}) if second_parsed else {}
-        assert (
-            second_state_updates["npc_data"]["orc_warrior"]["status"]
-            == "dead"
+        second_narrative, second_parsed = parse_structured_response(
+            json.dumps(second_response)
         )
+        second_state_updates = (
+            getattr(second_parsed, "state_updates", {}) if second_parsed else {}
+        )
+        assert second_state_updates["npc_data"]["orc_warrior"]["status"] == "dead"
 
         # Verify states are different (proving progression)
         assert (
@@ -233,7 +242,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         json_response = json.dumps(self.ai_response_with_state_updates)
         narrative_text, parsed_response = parse_structured_response(json_response)
 
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
 
         # Check for all expected top-level fields
         expected_fields = [
@@ -251,7 +262,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         json_response = json.dumps(self.ai_response_with_state_updates)
         narrative_text, parsed_response = parse_structured_response(json_response)
 
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
 
         # Verify data types
         assert isinstance(state_updates, dict)
@@ -276,7 +289,9 @@ class TestStateUpdateIntegration(unittest.TestCase):
         narrative_text, parsed_response = parse_structured_response(json_response)
 
         # Should handle empty updates gracefully
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
         assert isinstance(state_updates, dict)
 
         # Empty sections should still be dictionaries
@@ -307,14 +322,15 @@ class TestStateUpdatePersistence(unittest.TestCase):
         narrative_text, parsed_response = parse_structured_response(json_response)
 
         # Verify state updates are accessible for logging
-        state_updates = getattr(parsed_response, 'state_updates', {}) if parsed_response else {}
+        state_updates = (
+            getattr(parsed_response, "state_updates", {}) if parsed_response else {}
+        )
         assert "player_character_data" in state_updates
         assert "world_data" in state_updates
 
         # Verify specific updates
         assert state_updates["player_character_data"]["spell_slots_level_1"] == "2"
         assert state_updates["world_data"]["magical_energy"] == "increased"
-
 
 
 if __name__ == "__main__":

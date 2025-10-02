@@ -15,7 +15,7 @@ sys.path.insert(
 )
 
 try:
-    from gemini_request import GeminiRequest
+    from mvp_site.gemini_request import GeminiRequest
 
     GEMINI_REQUEST_AVAILABLE = True
 except ImportError:

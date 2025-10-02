@@ -8,7 +8,7 @@ import unittest
 # Add the mvp_site directory to the path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from numeric_field_converter import NumericFieldConverter
+from mvp_site.numeric_field_converter import NumericFieldConverter
 
 
 class TestNumericFieldConverter(unittest.TestCase):

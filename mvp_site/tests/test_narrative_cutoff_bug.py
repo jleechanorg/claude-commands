@@ -20,7 +20,7 @@ import unittest
 # Add the parent directory to path to enable imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from json_utils import extract_field_value
+from mvp_site.json_utils import extract_field_value
 
 
 class TestNarrativeCutoffBug(unittest.TestCase):

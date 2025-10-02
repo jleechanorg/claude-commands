@@ -5,8 +5,7 @@ Defines the GameState class, which represents the complete state of a campaign.
 import datetime
 from typing import Any, Optional
 
-import constants
-import logging_util
+from mvp_site import constants, logging_util
 
 
 class GameState:

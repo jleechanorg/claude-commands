@@ -58,13 +58,9 @@ import traceback
 from functools import wraps
 from typing import Any
 
-import constants
-
 # Firebase imports
 import firebase_admin
-import logging_util
 import world_logic  # For MCP fallback logic
-from custom_types import CampaignId, UserId
 from firebase_admin import auth
 
 # Flask and web imports
@@ -83,12 +79,14 @@ from flask_cors import CORS
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-# MCP client import
-from mcp_client import MCPClient, MCPClientError, handle_mcp_errors
-
 # Firestore service imports
 import firestore_service  # For testing mode conditional logic
-from firestore_service import json_default_serializer
+from mvp_site import constants, logging_util
+from mvp_site.custom_types import CampaignId, UserId
+from mvp_site.firestore_service import json_default_serializer
+
+# MCP client import
+from mvp_site.mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
 # --- CONSTANTS ---
 # API Configuration

@@ -14,7 +14,8 @@ sys.path.insert(
 
 import pytest
 from pydantic import ValidationError
-from schemas.entities_pydantic import (
+
+from mvp_site.schemas.entities_pydantic import (
     NPC,
     EntityType,
     HealthStatus,

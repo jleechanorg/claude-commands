@@ -29,9 +29,9 @@ def has_firebase_credentials():
     return False
 
 
-from game_state import GameState
 from main import create_app
 
+from mvp_site.game_state import GameState
 from tests.fake_firestore import FakeFirestoreClient
 
 # Import JSON input schema components

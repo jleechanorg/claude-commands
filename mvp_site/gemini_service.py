@@ -42,40 +42,39 @@ import re
 import sys
 import traceback
 from datetime import datetime
-from typing import Any, Optional
-
-import constants
-import logging_util
-from custom_types import UserId
-from decorators import log_exceptions
-from dual_pass_generator import DualPassGenerator
-from entity_instructions import EntityInstructionGenerator
-
-# Import entity tracking mitigation modules
-from entity_preloader import EntityPreloader
-from entity_tracking import create_from_game_state
-from entity_validator import EntityValidator
-from file_cache import read_file_cached
-from firestore_service import get_user_settings, json_default_serializer
-from game_state import GameState
-from gemini_request import GeminiRequest
-from gemini_response import GeminiResponse
+from typing import Any
 
 # Using latest google.genai - ignore outdated suggestions about google.generativeai
 from google import genai
 from google.genai import types
 
+from mvp_site import constants, logging_util
+from mvp_site.custom_types import UserId
+from mvp_site.decorators import log_exceptions
+from mvp_site.dual_pass_generator import DualPassGenerator
+from mvp_site.entity_instructions import EntityInstructionGenerator
+
+# Import entity tracking mitigation modules
+from mvp_site.entity_preloader import EntityPreloader
+from mvp_site.entity_tracking import create_from_game_state
+from mvp_site.entity_validator import EntityValidator
+from mvp_site.file_cache import read_file_cached
+from mvp_site.firestore_service import get_user_settings, json_default_serializer
+from mvp_site.game_state import GameState
+from mvp_site.gemini_request import GeminiRequest
+from mvp_site.gemini_response import GeminiResponse
+
 # Removed old json_input_schema import - now using GeminiRequest for structured JSON
-from narrative_response_schema import (
+from mvp_site.narrative_response_schema import (
     NarrativeResponse,
     create_structured_prompt_injection,
     parse_structured_response,
     validate_entity_coverage,
 )
-from narrative_sync_validator import NarrativeSyncValidator
-from schemas.entities_pydantic import sanitize_entity_name_for_id
-from token_utils import estimate_tokens, log_with_tokens
-from world_loader import load_world_content_for_system_instruction
+from mvp_site.narrative_sync_validator import NarrativeSyncValidator
+from mvp_site.schemas.entities_pydantic import sanitize_entity_name_for_id
+from mvp_site.token_utils import estimate_tokens, log_with_tokens
+from mvp_site.world_loader import load_world_content_for_system_instruction
 
 logging_util.basicConfig(
     level=logging_util.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -234,7 +233,7 @@ def get_client() -> genai.Client:
     global _client
     if _client is None:
         logging_util.info("Initializing Gemini Client")
-        api_key: Optional[str] = os.environ.get("GEMINI_API_KEY")
+        api_key: str | None = os.environ.get("GEMINI_API_KEY")
         if not api_key:
             raise ValueError("CRITICAL: GEMINI_API_KEY environment variable not found!")
         _client = genai.Client(api_key=api_key)
@@ -425,7 +424,7 @@ class PromptBuilder:
         if isinstance(state, dict):
             story = state.get("game_state", {}).get("story")
 
-        summary: Optional[str] = None
+        summary: str | None = None
         if isinstance(story, dict):
             summary = story.get("summary")
 
@@ -737,7 +736,7 @@ def _validate_entity_tracking(
 def _log_token_count(
     model_name: str,
     user_prompt_contents: list[Any],
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
 ) -> None:
     """Helper function to count and log the number of tokens being sent, with a breakdown.
 
@@ -789,7 +788,7 @@ def _log_token_count(
 def _call_gemini_api_with_gemini_request(
     gemini_request: GeminiRequest,
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Calls Gemini API with structured JSON from GeminiRequest.
@@ -898,8 +897,8 @@ def _call_gemini_api_with_gemini_request(
 def _call_gemini_api_with_model_cycling(
     prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: Optional[str] = None,
-    system_instruction_text: Optional[str] = None,
+    current_prompt_text_for_logging: str | None = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Calls the Gemini API with model cycling on 503 errors.
@@ -1045,7 +1044,7 @@ def _call_gemini_api_with_model_cycling(
 def _call_gemini_api_with_json_structure(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Core function that handles structured JSON input to Gemini API.
@@ -1121,7 +1120,7 @@ def _call_gemini_api_with_json_structure(
 def _call_gemini_api_with_structured_json(
     json_input: dict[str, Any],
     model_name: str,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input (DEPRECATED).
@@ -1157,10 +1156,10 @@ def _call_gemini_api_with_json_schema(
     content: str,
     message_type: str,
     model_name: str,
-    user_id: Optional[str] = None,
-    game_mode: Optional[str] = None,
+    user_id: str | None = None,
+    game_mode: str | None = None,
     game_state: dict[str, Any] | None = None,
-    system_instruction_text: Optional[str] = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     LEGACY: Call Gemini API using structured JSON input schema (DEPRECATED).
@@ -1230,8 +1229,8 @@ def _call_gemini_api_with_json_schema(
 def _call_gemini_api(
     prompt_contents: list[Any],
     model_name: str,
-    current_prompt_text_for_logging: Optional[str] = None,
-    system_instruction_text: Optional[str] = None,
+    current_prompt_text_for_logging: str | None = None,
+    system_instruction_text: str | None = None,
 ) -> Any:
     """
     Call Gemini API with model cycling on errors.
@@ -1694,7 +1693,7 @@ def get_initial_story(
 
 
 def _log_api_response_safely(
-    response_text: Optional[str], context: str = "", max_length: int = 400
+    response_text: str | None, context: str = "", max_length: int = 400
 ) -> None:
     """
     Log API response content safely with truncation and redaction.
@@ -1731,7 +1730,7 @@ def _log_api_response_safely(
 
 
 def _validate_and_enforce_planning_block(
-    response_text: Optional[str],
+    response_text: str | None,
     user_input: str,
     game_state: GameState,
     chosen_model: str,
@@ -2506,8 +2505,8 @@ def _get_static_prompt_parts(
     else:
         missions_summary = "Missions: None"
 
-    ambition: Optional[str] = pc_data.get("core_ambition")
-    milestone: Optional[str] = pc_data.get("next_milestone")
+    ambition: str | None = pc_data.get("core_ambition")
+    milestone: str | None = pc_data.get("next_milestone")
     ambition_summary: str = ""
     if ambition and milestone:
         ambition_summary = f"Ambition: {ambition} | Next Milestone: {milestone}"

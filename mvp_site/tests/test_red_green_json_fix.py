@@ -16,7 +16,10 @@ sys.path.insert(
 )
 
 # Import the original version for red testing simulation
-from narrative_response_schema import NarrativeResponse, parse_structured_response
+from mvp_site.narrative_response_schema import (
+    NarrativeResponse,
+    parse_structured_response,
+)
 
 
 class TestRedGreenJSONFix(unittest.TestCase):

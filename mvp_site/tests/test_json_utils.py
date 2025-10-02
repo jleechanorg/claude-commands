@@ -12,7 +12,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from json_utils import (
+from mvp_site.json_utils import (
     complete_truncated_json,
     count_unmatched_braces,
     count_unmatched_quotes,

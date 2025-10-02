@@ -146,13 +146,12 @@ except Exception:
     DEPENDENCIES_AVAILABLE = False
 from unittest.mock import MagicMock, patch
 
-from narrative_response_schema import (
+from mvp_site.game_state import GameState
+from mvp_site.gemini_service import continue_story
+from mvp_site.narrative_response_schema import (
     create_generic_json_instruction,
     create_structured_prompt_injection,
 )
-
-from game_state import GameState
-from gemini_service import continue_story
 
 
 class TestAlwaysJSONMode(unittest.TestCase):

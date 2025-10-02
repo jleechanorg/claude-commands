@@ -14,8 +14,12 @@ sys.path.insert(
 )
 
 try:
-    from game_state import GameState
-    from gemini_service import NarrativeResponse, _validate_and_enforce_planning_block
+    from mvp_site.game_state import GameState
+    from mvp_site.gemini_service import (
+        NarrativeResponse,
+        _validate_and_enforce_planning_block,
+    )
+
     MODULES_AVAILABLE = True
 except ImportError:
     GameState = None
@@ -41,7 +45,9 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
     @patch("gemini_service._call_gemini_api", autospec=True)
     @patch("gemini_service._get_text_from_response", autospec=True)
     @patch("gemini_service._parse_gemini_response", autospec=True)
-    def test_character_creation_detection_case_insensitive(self, mock_parse, mock_get_text, mock_call_api, mock_logging):
+    def test_character_creation_detection_case_insensitive(
+        self, mock_parse, mock_get_text, mock_call_api, mock_logging
+    ):
         """Test character creation detection with case insensitivity."""
         # Test various case combinations
         test_cases = [
@@ -54,7 +60,10 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
         # Setup mocks for API calls that might be triggered
         mock_call_api.return_value = "mock_api_response"
         mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+        mock_parse.return_value = (
+            "Generated planning block content",
+            self.structured_response,
+        )
 
         for response_text in test_cases:
             with self.subTest(response_text=response_text):
@@ -371,12 +380,17 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
     @patch("gemini_service._parse_gemini_response")
-    def test_crash_safety_with_malformed_inputs(self, mock_parse, mock_get_text, mock_call_api):
+    def test_crash_safety_with_malformed_inputs(
+        self, mock_parse, mock_get_text, mock_call_api
+    ):
         """Test that the function doesn't crash with malformed inputs."""
         # Setup mocks for any potential API calls
         mock_call_api.return_value = "mock_api_response"
         mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+        mock_parse.return_value = (
+            "Generated planning block content",
+            self.structured_response,
+        )
 
         # Test with None inputs
         try:
@@ -415,12 +429,17 @@ class TestPlanningBlockValidationIntegration(unittest.TestCase):
     @patch("gemini_service._call_gemini_api")
     @patch("gemini_service._get_text_from_response")
     @patch("gemini_service._parse_gemini_response")
-    def test_unicode_handling_in_logging(self, mock_parse, mock_get_text, mock_call_api):
+    def test_unicode_handling_in_logging(
+        self, mock_parse, mock_get_text, mock_call_api
+    ):
         """Test that logging handles unicode characters safely."""
         # Setup mocks for any potential API calls
         mock_call_api.return_value = "mock_api_response"
         mock_get_text.return_value = "Generated planning block content"
-        mock_parse.return_value = ("Generated planning block content", self.structured_response)
+        mock_parse.return_value = (
+            "Generated planning block content",
+            self.structured_response,
+        )
 
         # Test with unicode in response text
         unicode_response = "Story with unicode: 🔍 📊 ✅ ❌ 🚨"

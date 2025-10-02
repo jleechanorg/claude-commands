@@ -9,8 +9,8 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from dual_pass_generator import dual_pass_generator
-from entity_validator import entity_validator
+from mvp_site.dual_pass_generator import dual_pass_generator
+from mvp_site.entity_validator import entity_validator
 
 
 class TestUnknownEntityFixSummary(unittest.TestCase):

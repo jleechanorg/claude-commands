@@ -25,7 +25,6 @@ with FakeServiceManager() as fake_services:
     pass  # Fakes library handles firebase_admin setup
 
 # Import after mocking
-from gemini_response import GeminiResponse
 from main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
@@ -36,7 +35,9 @@ from main import (
     KEY_SUCCESS,
     create_app,
 )
-from world_logic import format_game_state_updates
+
+from mvp_site.gemini_response import GeminiResponse
+from mvp_site.world_logic import format_game_state_updates
 
 
 # Create StateHelper wrapper for test compatibility

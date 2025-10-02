@@ -11,10 +11,10 @@ import unittest
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from dual_pass_generator import DualPassGenerator
-from entity_tracking import create_from_game_state, get_validation_info
-from entity_validator import EntityValidator
-from narrative_sync_validator import NarrativeSyncValidator
+from mvp_site.dual_pass_generator import DualPassGenerator
+from mvp_site.entity_tracking import create_from_game_state, get_validation_info
+from mvp_site.entity_validator import EntityValidator
+from mvp_site.narrative_sync_validator import NarrativeSyncValidator
 
 
 class TestEntityTracking(unittest.TestCase):

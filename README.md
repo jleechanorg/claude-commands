@@ -1,19 +1,21 @@
-# WorldArchitect.AI - AI-Powered Tabletop RPG Platform
+# WorldAI MCP Server
 
-> **🏆 Innovation Highlights**: See our [Innovation Summary](README_SUMMARY.md) showcasing breakthrough advances in AI-first development, including industry-first universal command composition and autonomous multi-agent orchestration.
+AI-powered tabletop RPG platform integration via Model Context Protocol (MCP).
 
-## 🎲 Overview
+## Installation
 
-WorldArchitect.AI is a revolutionary AI-powered platform that serves as your digital Game Master for Dungeons & Dragons 5th Edition experiences. Using advanced language models and sophisticated state management, it delivers dynamic, interactive storytelling that adapts to your choices in real-time - no human DM required.
+### From GitHub Repository
 
-## ✨ Key Benefits
+```bash
+# Install the published package (after this PR merges)
+pip install git+https://github.com/jleechanorg/worldarchitect.ai.git@main
 
-- **Always Available GM**: Play D&D anytime without coordinating schedules
-- **Consistent Rule Enforcement**: AI ensures fair and accurate gameplay
-- **Dynamic Storytelling**: Narratives that adapt to your decisions with perfect state synchronization
-- **Multiple Play Styles**: Choose from different AI personas for varied experiences
-- **Persistent Campaigns**: Your adventures are saved and continue where you left off
-- **Export Your Adventures**: Download your campaigns as PDF, DOCX, or TXT files
+# Install the in-flight branch for testing prior to merge
+pip install git+https://github.com/jleechanorg/worldarchitect.ai.git@worktree_mcp_worldai
+
+# Verify installation
+worldarchitect-mcp --help
+```
 
 ## 🛠️ Technologies
 
@@ -37,7 +39,7 @@ WorldArchitect.AI is a revolutionary AI-powered platform that serves as your dig
 - **Reorganized Assets** - Clean `frontend_v1/` structure with backward compatibility
 
 ### AI & Game Logic
-- **MCP Tool Integration** - 7 specialized tools for campaign management, story generation, and settings
+- **MCP Tool Integration** - 8 specialized tools: `create_campaign`, `get_campaign_state`, `process_action`, `update_campaign`, `export_campaign`, `get_campaigns_list`, `get_user_settings`, `update_user_settings`
 - **Pydantic** structured generation for improved consistency
 - **MBTI personality system** for deep character interactions
 - **Entity tracking** for narrative consistency
@@ -71,8 +73,8 @@ cp .env.example .env
 ./vpython mvp_site/main.py serve
 
 # Alternative: Run MCP server separately for development
-# Terminal 1: Start MCP server
-./vpython mvp_site/world_logic.py --port 8000
+# Terminal 1: Start MCP server (package entry point)
+python -m mvp_site.mcp_api --http-only --port 8000
 
 # Terminal 2: Start API gateway
 MCP_SERVER_URL=http://localhost:8000 ./vpython mvp_site/main.py serve
@@ -212,7 +214,7 @@ WorldArchitect.AI has undergone a complete architectural transformation to imple
 - **Benefits**: 75% code reduction in request handling, improved testability, AI tool integration ready, microservices foundation
 - **Compatibility**: 100% backward compatible - all existing APIs work identically
 
-The MCP server exposes 7 specialized tools for campaign management, story generation, and user settings, enabling future AI assistant integrations while maintaining the same user experience.
+The MCP server exposes the same 8 specialized tools listed above, enabling future AI assistant integrations while maintaining the same user experience.
 
 ## 🎮 Features
 

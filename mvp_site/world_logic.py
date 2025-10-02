@@ -19,23 +19,26 @@ import tempfile
 import uuid
 from typing import Any
 
-# WorldArchitect imports
-import constants
-import document_generator
 import firebase_admin
-import firestore_service
-import gemini_service
-import logging_util
-import structured_fields_utils
-from custom_types import CampaignId, UserId
-from debug_hybrid_system import clean_json_artifacts, process_story_for_display
-from firestore_service import (
+
+# WorldArchitect imports
+from mvp_site import (
+    constants,
+    document_generator,
+    firestore_service,
+    gemini_service,
+    logging_util,
+    structured_fields_utils,
+)
+from mvp_site.custom_types import CampaignId, UserId
+from mvp_site.debug_hybrid_system import clean_json_artifacts, process_story_for_display
+from mvp_site.firestore_service import (
     _truncate_log_json,
     get_user_settings,
     update_state_with_changes,
 )
-from game_state import GameState
-from prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
+from mvp_site.game_state import GameState
+from mvp_site.prompt_utils import _build_campaign_prompt as _build_campaign_prompt_impl
 
 # Initialize Firebase if not already initialized (testing mode removed)
 try:
@@ -895,21 +898,25 @@ async def get_campaigns_list_unified(request_data: dict[str, Any]) -> dict[str, 
         # Validate required fields
         if not user_id:
             return {KEY_ERROR: "User ID is required"}
-            
+
         # Validate limit parameter with proper error handling
         if limit is not None:
             try:
                 limit = int(limit) if limit else None
             except (ValueError, TypeError):
                 return {KEY_ERROR: "Invalid limit parameter - must be a valid integer"}
-                
+
         # Validate sort_by parameter
         valid_sort_fields = ["created_at", "last_played"]
         if sort_by and sort_by not in valid_sort_fields:
-            return {KEY_ERROR: f"Invalid sort_by parameter - must be one of: {', '.join(valid_sort_fields)}"}
+            return {
+                KEY_ERROR: f"Invalid sort_by parameter - must be one of: {', '.join(valid_sort_fields)}"
+            }
 
         # Get campaigns with pagination and sorting
-        campaigns = firestore_service.get_campaigns_for_user(user_id, limit=limit, sort_by=sort_by)
+        campaigns = firestore_service.get_campaigns_for_user(
+            user_id, limit=limit, sort_by=sort_by
+        )
 
         # Clean JSON artifacts from campaign text fields
         if campaigns:

@@ -13,7 +13,7 @@ import tempfile
 # Set testing environment
 os.environ["TESTING"] = "true"
 
-from game_state import GameState
+from mvp_site.game_state import GameState
 
 
 class TestTimePressure(unittest.TestCase):

@@ -12,10 +12,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from entity_instructions import EntityInstructionGenerator
-from entity_preloader import LocationEntityEnforcer
-from entity_tracking import create_from_game_state
-from game_state import GameState
+from mvp_site.entity_instructions import EntityInstructionGenerator
+from mvp_site.entity_preloader import LocationEntityEnforcer
+from mvp_site.entity_tracking import create_from_game_state
+from mvp_site.game_state import GameState
 
 
 class TestEntityTrackingGeneric(unittest.TestCase):

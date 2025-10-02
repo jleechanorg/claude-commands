@@ -11,7 +11,7 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
-from game_state import GameState
+from mvp_site.game_state import GameState
 
 
 class TestTimeConsolidation(unittest.TestCase):
