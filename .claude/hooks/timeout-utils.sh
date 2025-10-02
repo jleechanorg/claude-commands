@@ -86,22 +86,27 @@ portable_timeout() {
 safe_read_stdin() {
     local timeout_duration="${1:-5}"
 
-    # Check if stdin is a terminal (interactive mode)
-    if [ -t 0 ]; then
-        # stdin is a terminal, no input expected
-        echo ""
-        return 0
+    # Validate timeout (integer within portable timeout range)
+    if ! [[ "$timeout_duration" =~ ^[0-9]+$ ]] || [[ "$timeout_duration" -le 0 ]]; then
+        echo "safe_read_stdin: invalid timeout '$timeout_duration'; defaulting to 5" >&2
+        timeout_duration=5
+    elif [[ "$timeout_duration" -gt 3600 ]]; then
+        echo "safe_read_stdin: timeout '$timeout_duration' exceeds maximum of 3600; clamping" >&2
+        timeout_duration=3600
     fi
 
-    # Read stdin content within the timeout using portable_timeout and cat
-    local input_data=""
-    if input_data=$(portable_timeout "$timeout_duration" cat 2>/dev/null); then
-        printf '%s' "$input_data"
-    else
+    # Helper to perform the actual read with timeout-protected cat
+    safe_read_stdin__read_with_cat() {
+        local data
+        data=$(portable_timeout "$timeout_duration" cat 2>/dev/null)
         local status=$?
-        if [ -n "$input_data" ]; then
-            # Even on timeout, return any buffered data that was read
-            printf '%s' "$input_data"
+
+        if [ "$status" -eq 0 ]; then
+            printf '%s' "$data"
+            return 0
+        elif [ -n "$data" ]; then
+            # Partial data on timeout - indicate truncation
+            printf '%s[TIMEOUT_TRUNCATED]' "$data"
         elif [ "$status" -eq 124 ]; then
             # Timed out without receiving input
             printf ''
@@ -109,7 +114,39 @@ safe_read_stdin() {
             # Unknown failure - degrade gracefully
             printf ''
         fi
+    }
+
+    # Check if stdin is a terminal (interactive mode)
+    if [ -t 0 ]; then
+        # Attempt to non-blockingly read any available data from the TTY
+        if command -v python3 >/dev/null 2>&1; then
+            local python_script
+            local python_output
+            local python_status
+            local python_returned_data=false
+            python_script=$'import os\nimport select\nimport sys\nimport time\n\ntry:\n    timeout = float(sys.argv[1])\nexcept (IndexError, ValueError):\n    timeout = 0.0\n\nif timeout <= 0:\n    sys.exit(0)\n\nfd = sys.stdin.buffer.fileno()\nend_time = time.time() + timeout\nchunks = []\nexit_code = 0\n\ntry:\n    while True:\n        remaining = end_time - time.time()\n        if remaining <= 0:\n            break\n\n        try:\n            ready, _, _ = select.select([fd], [], [], remaining)\n        except (OSError, ValueError):\n            exit_code = 1\n            break\n\n        if not ready:\n            break\n\n        try:\n            data = os.read(fd, 4096)\n        except BlockingIOError:\n            continue\n        except (OSError, ValueError):\n            exit_code = 1\n            break\n\n        if not data:\n            break\n\n        chunks.append(data)\n\n        if len(data) < 4096:\n            try:\n                ready_again, _, _ = select.select([fd], [], [], 0)\n            except (OSError, ValueError):\n                exit_code = 1\n                break\n            if not ready_again:\n                break\nexcept Exception:\n    exit_code = 1\nfinally:\n    try:\n        sys.stdout.buffer.write(b"".join(chunks))\n    except BrokenPipeError:\n        pass\n\nsys.exit(exit_code)'
+            python_output=$(python3 -c "$python_script" "$timeout_duration" 2>/dev/null)
+            python_status=$?
+
+            if [ -n "$python_output" ]; then
+                printf '%s' "$python_output"
+                python_returned_data=true
+            fi
+
+            if [ "$python_status" -eq 0 ]; then
+                # Python helper completed successfully; avoid re-reading the TTY
+                printf ''
+                return 0
+            fi
+
+            # Fall back to cat-based reader if Python exited abnormally
+        fi
+
+        safe_read_stdin__read_with_cat
+        return 0
     fi
+
+    safe_read_stdin__read_with_cat
 }
 
 # GitHub CLI operations with portable timeout

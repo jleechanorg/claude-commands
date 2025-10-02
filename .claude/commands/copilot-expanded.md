@@ -1,28 +1,69 @@
-# /copilot-expanded - Complete Self-Contained PR Analysis & Enhancement
+---
+description: /copilot-expanded - Complete Self-Contained PR Analysis & Enhancement
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-## 🚨 Purpose
-Comprehensive PR processing with integrated comment analysis, code fixes, security review, and quality enhancement. A complete workflow that integrates with existing project protocols and tools for seamless PR enhancement.
+## 🚨 EXECUTION WORKFLOW
 
-## ⚡ Core Workflow - Self-Contained Implementation
+### Phase 1: ⚡ Core Workflow - Self-Contained Implementation
 
+**Action Steps:**
 ```bash
 #!/bin/bash
 set -euo pipefail
 
+### PHASE 1: ANALYSIS & ASSESSMENT
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### PHASE 2: IMPLEMENTATION & FIXES
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### PHASE 3: GITHUB INTEGRATION & RESPONSE
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### PHASE 4: DOCUMENTATION & VALIDATION
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+## 📋 REFERENCE DOCUMENTATION
+
+# /copilot-expanded - Complete Self-Contained PR Analysis & Enhancement
+
+## 🚨 Purpose
+
+Comprehensive PR processing with integrated comment analysis, code fixes, security review, and quality enhancement. A complete workflow that integrates with existing project protocols and tools for seamless PR enhancement.
+
 # =============================================================================
+
 # COPILOT-EXPANDED: COMPLETE PR PROCESSING WORKFLOW
+
 # =============================================================================
 
 # Initialize timing and environment
+
 COPILOT_START_TIME=$(date +%s)
 BRANCH_NAME=$(git branch --show-current) || { echo "❌ CRITICAL: Not in git repository"; exit 1; }
 PR_NUMBER=$(gh pr view --json number --jq '.number' 2>/dev/null) || { echo "❌ CRITICAL: No PR found for branch $BRANCH_NAME"; exit 1; }
 
 # Create secure working directory
+
 WORK_DIR=$(mktemp -d) || { echo "❌ CRITICAL: Cannot create work directory"; exit 1; }
 trap 'rm -rf "$WORK_DIR"' EXIT
 
 # Define file paths
+
 COMMENTS_FILE="$WORK_DIR/comments.json"
 RESPONSES_FILE="$WORK_DIR/responses.json"
 ANALYSIS_FILE="$WORK_DIR/analysis.json"
@@ -32,7 +73,9 @@ echo "🚀 Starting Copilot-Expanded processing for PR #$PR_NUMBER on branch $BR
 echo "📁 Working directory: $WORK_DIR"
 
 # =============================================================================
+
 # CORE FUNCTION DEFINITIONS
+
 # =============================================================================
 
 log_operation() {
@@ -59,6 +102,7 @@ generate_technical_response() {
     fi
 
     cat << EOF
+
 ## Response to Comment $comment_id
 
 Thank you for your feedback. I've analyzed your comment and taken the following actions:
@@ -154,36 +198,42 @@ check_github_rate_limit() {
 }
 
 # =============================================================================
-# PHASE 1: ANALYSIS & ASSESSMENT
+
 # =============================================================================
 
 echo "📊 Phase 1: Analysis & Assessment"
 log_operation "Starting Phase 1: Analysis & Assessment"
 
 # Initialize data files with proper structure
+
 echo '{"comments": [], "metadata": {"total": 0, "unresponded_count": 0, "actionable": 0, "fetched_at": "'$(date -Iseconds)'"}}' > "$COMMENTS_FILE"
 echo '{"responses": [], "metadata": {"posted": 0, "failed": 0}}' > "$RESPONSES_FILE"
 echo '{"vulnerabilities": [], "performance": [], "quality": [], "processed_at": "'$(date -Iseconds)'"}' > "$ANALYSIS_FILE"
 
 # Validate initial JSON structure
+
 validate_json_files
 
 # Check GitHub API rate limit
+
 if ! check_github_rate_limit; then
     echo "⚠️ WARNING: Proceeding with limited GitHub API calls"
 fi
 
 # Fetch PR comments and reviews
+
 echo "🔄 Fetching PR comments and reviews"
 log_operation "Fetching PR comments via GitHub CLI"
 
 # Get PR data including comments and reviews
+
 gh pr view "$PR_NUMBER" --json comments,reviews,author,title,body > "$WORK_DIR/pr_data.json" || {
     echo "❌ CRITICAL: Failed to fetch PR data"
     exit 1
 }
 
 # Process comments into standardized format
+
 jq --arg pr_number "$PR_NUMBER" '
 {
     comments: [
@@ -238,19 +288,23 @@ jq --arg pr_number "$PR_NUMBER" '
 }' "$WORK_DIR/pr_data.json" > "$COMMENTS_FILE"
 
 # Validate processed comments
+
 validate_json_files
 
 # Log comment statistics
+
 TOTAL_COMMENTS=$(jq '.metadata.total' "$COMMENTS_FILE")
 ACTIONABLE_COMMENTS=$(jq '.metadata.actionable' "$COMMENTS_FILE")
 echo "📈 Found $TOTAL_COMMENTS total comments, $ACTIONABLE_COMMENTS actionable"
 log_operation "Processed $TOTAL_COMMENTS comments, $ACTIONABLE_COMMENTS actionable"
 
 # Perform security and quality scan
+
 echo "🔍 Performing security and quality scan"
 log_operation "Starting security and quality analysis"
 
 # Analyze changed files for common issues
+
 CHANGED_FILES=$(git diff --name-only origin/main..HEAD)
 SECURITY_ISSUES=()
 PERFORMANCE_ISSUES=()
@@ -280,6 +334,7 @@ if [ -n "$CHANGED_FILES" ]; then
 fi
 
 # Update analysis file
+
 jq --argjson security "$(printf '%s\n' "${SECURITY_ISSUES[@]}" | jq -R . | jq -s .)" \
    --argjson performance "$(printf '%s\n' "${PERFORMANCE_ISSUES[@]}" | jq -R . | jq -s .)" \
    --argjson quality "$(printf '%s\n' "${QUALITY_ISSUES[@]}" | jq -R . | jq -s .)" \
@@ -290,17 +345,19 @@ echo "✅ Phase 1 complete: Analysis and assessment finished"
 log_operation "Phase 1 completed successfully"
 
 # =============================================================================
-# PHASE 2: IMPLEMENTATION & FIXES
+
 # =============================================================================
 
 echo "🔧 Phase 2: Implementation & Fixes"
 log_operation "Starting Phase 2: Implementation & Fixes"
 
 # Create backup directory
+
 BACKUP_DIR="$WORK_DIR/backups"
 mkdir -p "$BACKUP_DIR"
 
 # Apply security fixes
+
 if [ ${#SECURITY_ISSUES[@]} -gt 0 ]; then
     echo "🔐 Addressing $(echo ${#SECURITY_ISSUES[@]}) security issues"
     log_operation "Applying security fixes"
@@ -313,6 +370,7 @@ if [ ${#SECURITY_ISSUES[@]} -gt 0 ]; then
 fi
 
 # Apply performance improvements
+
 if [ ${#PERFORMANCE_ISSUES[@]} -gt 0 ]; then
     echo "⚡ Addressing $(echo ${#PERFORMANCE_ISSUES[@]}) performance issues"
     log_operation "Applying performance improvements"
@@ -325,6 +383,7 @@ if [ ${#PERFORMANCE_ISSUES[@]} -gt 0 ]; then
 fi
 
 # Apply quality improvements
+
 if [ ${#QUALITY_ISSUES[@]} -gt 0 ]; then
     echo "✨ Addressing $(echo ${#QUALITY_ISSUES[@]}) quality issues"
     log_operation "Applying quality improvements"
@@ -337,6 +396,7 @@ if [ ${#QUALITY_ISSUES[@]} -gt 0 ]; then
 fi
 
 # Run tests to verify no regressions
+
 echo "🧪 Running tests to verify no regressions"
 if command -v ./run_tests.sh >/dev/null 2>&1; then
     if ./run_tests.sh > "$WORK_DIR/test_results.log" 2>&1; then
@@ -355,16 +415,18 @@ echo "✅ Phase 2 complete: Implementation and fixes applied"
 log_operation "Phase 2 completed successfully"
 
 # =============================================================================
-# PHASE 3: GITHUB INTEGRATION & RESPONSE
+
 # =============================================================================
 
 echo "💬 Phase 3: GitHub Integration & Response"
 log_operation "Starting Phase 3: GitHub Integration & Response"
 
 # Initialize responses array
+
 echo '{"responses": [], "metadata": {"posted": 0, "failed": 0, "generated_at": "'$(date -Iseconds)'"}}' > "$RESPONSES_FILE"
 
 # Process actionable comments and generate responses
+
 ACTIONABLE_COMMENTS_LIST=$(jq -r '.comments[] | select(.requires_response == true) | @base64' "$COMMENTS_FILE")
 
 if [ -n "$ACTIONABLE_COMMENTS_LIST" ]; then
@@ -433,6 +495,7 @@ else
 fi
 
 # Update PR description with processing summary
+
 echo "📋 Updating PR description with processing summary"
 RESPONSE_RATE=$(calculate_response_rate)
 FILES_CHANGED=$(git diff --name-only | wc -l)
@@ -462,10 +525,12 @@ $CHANGE_SUMMARY
 *Processed by copilot-expanded command*"
 
 # Get current PR body and append summary
+
 CURRENT_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body // ""')
 UPDATED_BODY="$CURRENT_BODY$PROCESSING_SUMMARY"
 
 # Update PR description
+
 if echo "$UPDATED_BODY" | gh pr edit "$PR_NUMBER" --body-file - 2>/dev/null; then
     echo "✅ Updated PR description with processing summary"
     log_operation "Updated PR description"
@@ -475,6 +540,7 @@ else
 fi
 
 # Add processing labels
+
 gh pr edit "$PR_NUMBER" --add-label "copilot-enhanced" --add-label "auto-processed" 2>/dev/null || {
     echo "ℹ️ Note: Could not add labels (may not have permissions)"
 }
@@ -483,19 +549,21 @@ echo "✅ Phase 3 complete: GitHub integration and responses finished"
 log_operation "Phase 3 completed successfully"
 
 # =============================================================================
-# PHASE 4: DOCUMENTATION & VALIDATION
+
 # =============================================================================
 
 echo "📋 Phase 4: Documentation & Validation"
 log_operation "Starting Phase 4: Documentation & Validation"
 
 # Calculate final metrics
+
 COPILOT_END_TIME=$(date +%s)
 DURATION=$((COPILOT_END_TIME - COPILOT_START_TIME))
 POSTED_RESPONSES=$(jq '.metadata.posted' "$RESPONSES_FILE")
 FAILED_RESPONSES=$(jq '.metadata.failed' "$RESPONSES_FILE")
 
 # Generate comprehensive execution report
+
 echo "📊 COPILOT-EXPANDED EXECUTION REPORT"
 echo "=================================="
 echo "⏱️ Execution time: ${DURATION}s"
@@ -512,9 +580,11 @@ echo "📁 Work directory: $WORK_DIR"
 echo "📄 Operations log: $OPERATIONS_LOG"
 
 # Validation gates
+
 echo "🔍 Running validation gates"
 
 # Gate 1: Response coverage check
+
 UNRESPONDED_ACTIONABLE=$(jq '.metadata.unresponded_count // 0' "$COMMENTS_FILE")
 TOTAL_ACTIONABLE=$(jq '.metadata.actionable // 0' "$COMMENTS_FILE")
 if [ "$TOTAL_ACTIONABLE" -gt 0 ]; then
@@ -532,6 +602,7 @@ else
 fi
 
 # Gate 2: PR mergeable status check
+
 MERGEABLE_STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq '.mergeable // "UNKNOWN"')
 case "$MERGEABLE_STATUS" in
     "MERGEABLE")
@@ -549,6 +620,7 @@ case "$MERGEABLE_STATUS" in
 esac
 
 # Gate 3: Check for CI status (if available)
+
 if gh pr checks "$PR_NUMBER" --required-only >/dev/null 2>&1; then
     echo "🔄 Checking CI status"
     if gh pr checks "$PR_NUMBER" --required-only | grep -q "pass\|success"; then
@@ -564,6 +636,7 @@ else
 fi
 
 # Final summary
+
 echo ""
 echo "🎯 COPILOT-EXPANDED PROCESSING COMPLETE"
 echo "======================================"
@@ -578,6 +651,7 @@ echo "🔗 View updated PR: $(gh pr view "$PR_NUMBER" --json url --jq '.url')"
 log_operation "Copilot-expanded processing completed successfully"
 
 # Cleanup note (trap will handle actual cleanup)
+
 echo "🧹 Working files preserved at: $WORK_DIR"
 echo "📄 Full execution log available at: $OPERATIONS_LOG"
 
@@ -585,6 +659,7 @@ echo "✅ Phase 4 complete: Documentation and validation finished"
 echo "🚀 Copilot-Expanded processing complete!"
 
 # End of executable script
+
 ```
 
 ## 🎯 Success Criteria & Quality Gates
