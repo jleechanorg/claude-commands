@@ -1,24 +1,42 @@
-# Command System Enumerator
-
-**Command Summary**: Executable command that enumerates available commands by category
-**Usage**: `/commands [filter]` where filter is optional category or command substring  
-**Output**: Categorized command inventory with descriptions and file paths
-
-## Execution Instructions for Claude
-When this command is invoked:
-1. Read the repository tree under `.claude/commands/`
-2. Group `*.md` files by category (execution, planning, testing, git, orchestration, quality, ai, research, review)
-3. Print a categorized inventory with brief descriptions and file paths
-4. Support optional filtering by category or command name substring
+---
+description: Command system documentation & header requirements
+type: documentation
+execution_mode: none
+---
+## 📘 PURPOSE
+This file is reference documentation only. It does **not** define an executable `/claude` command and should never be treated as a runnable instruction set.
 
 **Primary Rules**: Inherits from [../../CLAUDE.md](../../CLAUDE.md) (complete project protocols)
 
+## 🔖 REQUIRED HEADER FOR SLASH COMMANDS
+Every executable slash command markdown file in this directory **must** begin with the following YAML front matter block (updated with the command's specific metadata):
+
+```markdown
+---
+description: <Short command summary>
+type: <one of execution|planning|testing|git|orchestration|quality|ai|research|review>
+execution_mode: <immediate|deferred|manual>
+---
+```
+
+Commands without this header are considered invalid and should be updated before use.
+
+## 📋 COMMAND SYSTEM OVERVIEW
+
+# Command System Enumerator
+
+**Command System Enumerator Overview**: This section documents the available commands by category for reference purposes only.
+**Usage Example**: `/commands [filter]` (not an executable command in this file; shown for documentation)
+**Output**: Categorized command inventory with descriptions and file paths (for informational use)
+
 ## 🚨 MODULE-SPECIFIC PROTOCOLS
+
 - Do not duplicate systematic protocols from other .md files; link instead
 - Never reimplement existing command functionality; orchestrators must delegate to existing commands (/commentreply, /pushl, /fixpr, etc.)  
 - Never duplicate GitHub API calls already implemented by other commands
 
 ## Directory Contents Analysis
+
 **Core Command Files** (80+ .md files):
 - **Execution**: `execute.md`, `e.md` - Main task execution commands
 - **Planning**: `plan.md`, `arch.md`, `design.md` - Architectural and planning workflows
@@ -57,6 +75,7 @@ When this command is invoked:
 - `tests/` - Command system validation tests (8 test files)
 
 ## Command Architecture
+
 **Two Command Types**:
 1. **Cognitive Commands** (`/think`, `/debug`, `/plan`): Natural language processing and analysis
 2. **Operational Commands** (`/orch`, `/execute`, `/push`): Direct system operations and automation
@@ -67,6 +86,7 @@ When this command is invoked:
 - **Shell Scripts**: System-level automation and workflow orchestration
 
 ## Command Development Guidelines
+
 **For Markdown Commands**:
 - Must be executable instructions, not documentation
 - Include clear parameter specifications and usage examples
@@ -80,29 +100,36 @@ When this command is invoked:
 - Provide logging and debugging capabilities
 
 ## Usage Patterns
+
 ```bash
+
 # Cognitive Commands (natural language processing):
+
 /think [analysis topic]
 /debug [issue description]
 /plan [task description]
 
 # Operational Commands (system operations):
+
 /execute [task to perform]
 /orch [task for orchestration]
 /push [commit and push changes]
 
 # Specialized Workflows:
+
 /cerebras [code generation task]
 /reviewe [enhanced code review]
 /fake3 [fake code detection]
 ```
 
 ## Module Context
+
 **Purpose**: Provides comprehensive command system for Claude Code operations including task execution, orchestration, code quality, and development workflow automation
 **Role**: Command interface layer enabling natural language interaction with development tools, CI/CD systems, and multi-agent orchestration
 **Parent Project**: Your Project - AI-powered tabletop RPG platform
 
 ## Quick Reference
+
 - **Complete Protocols**: See [../../CLAUDE.md](../../CLAUDE.md)
 - **Command Types**: Cognitive (analysis) vs Operational (execution)
 - **Usage**: Commands execute via `/commandname [arguments]` syntax
