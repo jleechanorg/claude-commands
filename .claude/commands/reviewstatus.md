@@ -1,3 +1,22 @@
+---
+description: Review Status Command - Check PR CI and Review Comments
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Review Status Command - Check PR CI and Review Comments
 
 **Purpose**: Check outstanding PRs for CI issues and important review comments
@@ -15,17 +34,21 @@ The `/reviewstatus` command provides a comprehensive overview of:
 ## Output Format
 
 ```
+
 ## Summary of Outstanding PRs
 
 ### Recent PRs (Last 2 Days)
+
 - PR #XXX: [Title] - CI: ✅/❌ - [Key issues]
 - PR #XXX: [Title] - CI: ✅/❌ - [Key issues]
 
 ### Key Issues to Address
+
 - **PR #XXX**: [Critical issue description]
 - **PR #XXX**: [Important feedback]
 
 ### Older Open PRs
+
 - PR #XXX: [Title] - [Age]
 ```
 
@@ -41,6 +64,7 @@ The command uses GitHub MCP tools to:
 ## Example Output
 
 ```
+
 ## Summary of Outstanding PRs
 
 ### Recent PRs (Last 2 Days) - All CI Passing ✅
