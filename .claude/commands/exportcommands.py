@@ -54,7 +54,7 @@ class ClaudeCommandsExporter:
             'converge.md', 'converge.py', 'orchc.md', 'orchc.py',          # orchestration commands to exclude
             'conv.md', 'orchconverge.md',                                   # additional orchestration exclusions
             'copilotc.md', 'fixprc.md',                                     # new autonomous composition commands
-            'pgen.md', 'pgene.md', 'proto_genesis.md'                      # proto genesis commands (project-specific)
+            'gen.md', 'gene.md', 'pgen.md', 'pgene.md', 'proto_genesis.md' # proto genesis commands (project-specific)
         ]
 
         # Counters for summary
@@ -301,7 +301,8 @@ class ClaudeCommandsExporter:
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        script_patterns = [
+        # Scripts from project root
+        root_script_patterns = [
             # Claude Code infrastructure (project-specific)
             'claude_start.sh', 'claude_mcp.sh',
             # Generally useful git/development workflow scripts
@@ -316,7 +317,7 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
-        for script_name in script_patterns:
+        for script_name in root_script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
                 target_path = os.path.join(target_dir, script_name)
@@ -324,6 +325,20 @@ class ClaudeCommandsExporter:
                 self._apply_content_filtering(target_path)
 
                 print(f"   • {script_name}")
+                self.scripts_count += 1
+
+        # MCP installer scripts from scripts/ subdirectory
+        scripts_subdir = os.path.join(self.project_root, 'scripts')
+        mcp_scripts = ['codex_mcp.sh', 'mcp_common.sh']
+
+        for script_name in mcp_scripts:
+            script_path = os.path.join(scripts_subdir, script_name)
+            if os.path.exists(script_path):
+                target_path = os.path.join(target_dir, script_name)
+                shutil.copy2(script_path, target_path)
+                self._apply_content_filtering(target_path)
+
+                print(f"   • scripts/{script_name}")
                 self.scripts_count += 1
 
         print(f"✅ Exported {self.scripts_count} scripts")

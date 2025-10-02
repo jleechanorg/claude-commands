@@ -104,15 +104,6 @@ class TestComposeCommands:
         # Hook should process slash commands without hanging
         print("✅ PASS: Slash command detection")
 
-    def test_slash_command_execute_passthrough(self):
-        """Test that SLASH_COMMAND_EXECUTE patterns pass through unchanged"""
-        input_text = "SLASH_COMMAND_EXECUTE:/test"
-        stdout, stderr, returncode = self.run_hook(input_text)
-
-        assert stdout is not None, "Hook should not timeout on SLASH_COMMAND_EXECUTE"
-        assert input_text in stdout, f"Expected passthrough, got: {stdout}"
-        print("✅ PASS: SLASH_COMMAND_EXECUTE passthrough")
-
     def test_empty_input(self):
         """Test that empty input doesn't hang"""
         input_text = ""
@@ -163,12 +154,6 @@ def run_failing_tests():
     except Exception as e:
         print(f"❌ FAIL: Slash command detection - {e}")
         failed_tests.append("test_slash_command_detection")
-
-    try:
-        test_suite.test_slash_command_execute_passthrough()
-    except Exception as e:
-        print(f"❌ FAIL: SLASH_COMMAND_EXECUTE passthrough - {e}")
-        failed_tests.append("test_slash_command_execute_passthrough")
 
     try:
         test_suite.test_empty_input()

@@ -1,3 +1,22 @@
+---
+description: View Current Requirement
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # View Current Requirement
 
 *Taken from the excellent requirements gathering system by [rizethereum](https://github.com/rizethereum/claude-code-requirements-builder). Thank you for sharing this thoughtful approach!*
@@ -21,6 +40,7 @@ Display detailed information about the active requirement.
    - Indicate current phase and next steps
 
 ## File Structure:
+
 - 00-initial-request.md - Original user request
 - 01-discovery-questions.md - Context discovery questions
 - 02-discovery-answers.md - User's answers
@@ -30,6 +50,7 @@ Display detailed information about the active requirement.
 - 06-requirements-spec.md - Final requirements document
 
 ## Display Format:
+
 ```
 📋 Current Requirement: [name]
 ⏱️  Duration: [time since start]
@@ -69,6 +90,7 @@ Q3: Add new API endpoint to routes/api/v1? [PENDING]
 ```
 
 ## Important:
+
 - This is view-only (doesn't continue gathering)
 - Shows complete history and context
 - Use /requirements-status to continue
