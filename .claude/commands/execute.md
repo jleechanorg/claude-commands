@@ -1,3 +1,48 @@
+---
+description: Execute Command - Plan-Approve-Execute Composition
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Planning (/plan)
+
+**Action Steps:**
+**Executes `/plan` command**: Follows the complete planning protocol documented in [`plan.md`](./plan.md)
+1. **Guidelines Consultation**: `/plan` calls `/guidelines` directly for comprehensive consultation
+2. **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
+3. Creates TodoWrite checklist with specific steps including guidelines validation
+4. Presents execution plan using the [Standard Plan Display Format](./plan.md#📋-standard-plan-display-format)
+5. Shows complexity, execution method, tools, timeline, and parallelization strategy
+6. **Tool Selection**: Follows guidelines hierarchy (Serena MCP → Read tool → Bash commands)
+7. Provides full visibility into the execution approach before auto-approval
+
+### Phase 2: Approval Chain
+
+**Action Steps:**
+**Full Approval Workflow**:
+1. **`/preapprove`**: Prepare approval context, validate plan completeness
+2. **`/autoapprove`**: Trigger automatic approval mechanism (proceeds silently)
+3. **Key difference from `/plan`**: Built-in auto-approval eliminates manual approval requirement
+4. Proceed directly to execution phase with approval satisfied
+
+### Phase 3: Implementation
+
+**Action Steps:**
+**Execution**: Implements the approved plan from Phase 1
+1. Updates TodoWrite status as tasks complete
+2. Uses systematic tool progression and the execution method determined in planning
+3. Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
+4. 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents
+5. Validates and commits when complete
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Execute Command - Plan-Approve-Execute Composition
 
 > **Summary**: `/execute` runs `/plan`, auto-approves the generated plan,
@@ -17,34 +62,6 @@
 2. **`/preapprove`** - Prepare approval context and validation
 3. **`/autoapprove`** - Automatic approval mechanism (proceeds silently with execution)
 4. **Execute** - Proceed with planned implementation
-
-### Phase 1: Planning (/plan)
-
-**Executes `/plan` command**: Follows the complete planning protocol documented in [`plan.md`](./plan.md)
-- **Guidelines Consultation**: `/plan` calls `/guidelines` directly for comprehensive consultation
-- **Comprehensive Context**: CLAUDE.md reading + base guidelines + PR/branch-specific guidelines via direct command composition
-- Creates TodoWrite checklist with specific steps including guidelines validation
-- Presents execution plan using the [Standard Plan Display Format](./plan.md#📋-standard-plan-display-format)
-- Shows complexity, execution method, tools, timeline, and parallelization strategy
-- **Tool Selection**: Follows guidelines hierarchy (Serena MCP → Read tool → Bash commands)
-- Provides full visibility into the execution approach before auto-approval
-
-### Phase 2: Approval Chain
-
-**Full Approval Workflow**:
-- **`/preapprove`**: Prepare approval context, validate plan completeness
-- **`/autoapprove`**: Trigger automatic approval mechanism (proceeds silently)
-- **Key difference from `/plan`**: Built-in auto-approval eliminates manual approval requirement
-- Proceed directly to execution phase with approval satisfied
-
-### Phase 3: Implementation
-
-**Execution**: Implements the approved plan from Phase 1
-- Updates TodoWrite status as tasks complete
-- Uses systematic tool progression and the execution method determined in planning
-- Executes tasks as planned (parallel Task tool agents or sequential based on plan decision)
-- 🚨 **PARALLEL TASK EXECUTION**: Can use multiple Task tool calls in single message for up to 10 concurrent subagents
-- Validates and commits when complete
 
 ## Example Flows
 

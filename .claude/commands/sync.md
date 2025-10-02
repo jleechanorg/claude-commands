@@ -1,16 +1,39 @@
+---
+description: /sync - Synchronize Local Branch with PR
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /sync - Synchronize Local Branch with PR
 
 ## Description
+
 Synchronizes local branch with a GitHub PR by fetching, switching/creating branch, and ensuring local copy matches remote PR state.
 
 ## Usage
+
 - `/sync <pr_number>` - Sync with PR by number
 - `/sync <pr_url>` - Sync with PR by GitHub URL
 
 ## Implementation
 
 ```bash
+
 # Check for required tools
+
 if ! command -v gh >/dev/null 2>&1; then
     echo "❌ Error: GitHub CLI (gh) is required but not installed"
     exit 1
@@ -22,6 +45,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Parse input to extract PR number
+
 if [[ "$1" =~ ^[0-9]+$ ]]; then
     PR_NUMBER="$1"
 elif [[ "$1" =~ github\.com.*pull/([0-9]+) ]]; then
@@ -34,6 +58,7 @@ fi
 echo "🔄 Syncing with PR #$PR_NUMBER..."
 
 # Get PR info using gh CLI
+
 PR_INFO=$(gh pr view "$PR_NUMBER" --json headRefName,baseRefName,headRepository 2>/dev/null)
 if [ $? -ne 0 ]; then
     echo "❌ Failed to fetch PR #$PR_NUMBER info"
@@ -41,6 +66,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Extract branch information
+
 HEAD_BRANCH=$(echo "$PR_INFO" | jq -r '.headRefName')
 BASE_BRANCH=$(echo "$PR_INFO" | jq -r '.baseRefName')
 HEAD_REPO=$(echo "$PR_INFO" | jq -r '.headRepository.owner.login')
@@ -49,6 +75,7 @@ REMOTE_BRANCH="$HEAD_BRANCH"  # Store original remote branch name
 echo "📋 PR #$PR_NUMBER: $HEAD_BRANCH -> $BASE_BRANCH"
 
 # Handle fork PRs using gh pr checkout
+
 if [ "$HEAD_REPO" != "$(gh api repos/:owner/:repo --jq .owner.login)" ]; then
     echo "🔗 Fork detected, using gh pr checkout for proper remote setup..."
     gh pr checkout "$PR_NUMBER"
@@ -94,6 +121,7 @@ else
 fi
 
 # Verify sync status
+
 echo "🔍 Verifying sync status..."
 LOCAL_COMMIT=$(git rev-parse HEAD)
 REMOTE_COMMIT=$(git rev-parse origin/"$REMOTE_BRANCH" 2>/dev/null || echo "unknown")
@@ -107,6 +135,7 @@ else
 fi
 
 # Show current status
+
 echo "📊 Current status:"
 git status --short
 echo "📍 Current branch: $(git rev-parse --abbrev-ref HEAD)"
@@ -114,6 +143,7 @@ echo "✨ Synced with PR #$PR_NUMBER ($REMOTE_BRANCH)"
 ```
 
 ## Success Criteria
+
 - ✅ Branch exists locally and matches remote
 - ✅ All changes from PR are present
 - ✅ Clean working directory
