@@ -51,23 +51,31 @@ echo ""
 # Test 1: Check if DuckDuckGo package exists
 run_test "DuckDuckGo package availability" "check_package_available '@oevortex/ddg_search'"
 
-# Test 2: Check if Perplexity package exists
-run_test "Perplexity package availability" "check_package_available 'server-perplexity-ask'"
+# Test 2: Check if Perplexity MCP package exists
+run_test "Perplexity MCP package availability" "check_package_available '@jschuller/perplexity-mcp'"
 
 # Test 3: Check if DuckDuckGo server is installed
 run_test "DuckDuckGo server installation" "check_server_exists 'ddg-search'"
 
-# Test 4: Check if Perplexity server is installed
-run_test "Perplexity server installation" "check_server_exists 'perplexity-ask'"
+# Test 4: Check if Perplexity MCP server is installed (requires PERPLEXITY_API_KEY)
+if [ -n "${PERPLEXITY_API_KEY:-}" ]; then
+    run_test "Perplexity MCP server installation" "check_server_exists 'perplexity-mcp'"
+else
+    echo -e "${YELLOW}⚠️  Skipping Perplexity MCP server installation check (PERPLEXITY_API_KEY not set)${NC}"
+fi
 
-# Test 5: Token file exists
+# Test 5: Check if Grok server is installed (requires GROK_API_KEY/XAI_API_KEY)
+if [ -n "${GROK_API_KEY:-}" ] || [ -n "${XAI_API_KEY:-}" ]; then
+    run_test "Grok server installation" "check_server_exists 'grok-mcp'"
+else
+    echo -e "${YELLOW}⚠️  Skipping Grok server installation check (GROK_API_KEY or XAI_API_KEY not set)${NC}"
+fi
+
+# Test 6: Token file exists
 run_test "Token file exists" "[ -f '$HOME/.token' ]"
 
-# Test 6: GitHub token in token file
+# Test 7: GitHub token in token file
 run_test "GitHub token configured" "grep -q 'GITHUB_TOKEN' '$HOME/.token'"
-
-# Test 7: Perplexity token in token file
-run_test "Perplexity token configured" "grep -q 'PERPLEXITY_API_KEY' '$HOME/.token'"
 
 # Test 8: Node.js availability
 run_test "Node.js availability" "command -v node"
@@ -89,7 +97,7 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo -e "\n${GREEN}🎉 All tests passed! MCP search servers are properly configured.${NC}"
 
     echo -e "\n${BLUE}📋 Current MCP Server Status:${NC}"
-    claude mcp list | grep -E "(ddg-search|perplexity-ask):" || echo -e "${YELLOW}⚠️ Search servers not found in MCP list${NC}"
+    claude mcp list | grep -E "(perplexity-mcp|ddg-search|grok-mcp):" || echo -e "${YELLOW}⚠️ Search servers not found in MCP list${NC}"
 
     echo -e "\n${BLUE}🔧 Search Server Features:${NC}"
     echo -e "${GREEN}✅ DuckDuckGo (@oevortex/ddg_search):${NC}"
@@ -98,11 +106,16 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "   - Content extraction and metadata retrieval"
     echo "   - Felo AI search capabilities"
 
-    echo -e "\n${GREEN}✅ Perplexity (server-perplexity-ask):${NC}"
-    echo "   - AI-powered search with real-time research"
-    echo "   - Advanced query processing"
-    echo "   - Sonar API integration"
-    echo "   - Premium features with API key authentication"
+    echo -e "\n${GREEN}✅ Perplexity (@jschuller/perplexity-mcp):${NC}"
+    echo "   - Premium deep research with Sonar models"
+    echo "   - Supports recency filters, temperature, and token controls"
+    echo "   - Returns citations and reasoning traces via perplexity_search_web"
+    echo "   - Requires PERPLEXITY_API_KEY (set in ~/.token)"
+
+    echo -e "\n${GREEN}✅ Grok (grok-mcp):${NC}"
+    echo "   - Real-time intelligence and trending insights"
+    echo "   - Complements Claude WebSearch with fast signal"
+    echo "   - Conversational responses for synthesis"
 
     echo -e "\n${BLUE}💡 Usage:${NC}"
     echo "Both servers are now available as MCP tools in Claude Code"
@@ -117,8 +130,12 @@ else
         echo "- DuckDuckGo server missing: Run './claude_mcp.sh' to install"
     fi
 
-    if ! check_server_exists "perplexity-ask"; then
-        echo "- Perplexity server missing: Ensure PERPLEXITY_API_KEY is in ~/.token"
+    if ! check_server_exists "perplexity-mcp"; then
+        echo "- Perplexity server missing: Ensure PERPLEXITY_API_KEY is set and rerun ./claude_mcp.sh"
+    fi
+
+    if ([ -n "${GROK_API_KEY:-}" ] || [ -n "${XAI_API_KEY:-}" ]) && ! check_server_exists "grok-mcp"; then
+        echo "- Grok server missing: Re-run './claude_mcp.sh' after configuring GROK credentials"
     fi
 
     if [ ! -f "$HOME/.token" ]; then

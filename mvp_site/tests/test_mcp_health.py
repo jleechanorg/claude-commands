@@ -118,7 +118,6 @@ class TestMCPServerHealth(unittest.TestCase):
             'filesystem',
             'serena',
             'memory-server',
-            'perplexity-ask',
             'worldarchitect'
         ]
 
@@ -127,6 +126,12 @@ class TestMCPServerHealth(unittest.TestCase):
             'react-mcp': 'REACT_MCP_ENABLED',
             'playwright-mcp': 'PLAYWRIGHT_ENABLED',
             'ios-simulator-mcp': 'IOS_SIMULATOR_ENABLED'
+        }
+
+        # Premium servers that require API keys
+        premium_servers = {
+            'perplexity-mcp': ['PERPLEXITY_API_KEY'],
+            'grok-mcp': ['GROK_API_KEY', 'XAI_API_KEY']
         }
 
         with open(self.mcp_config_path) as f:
@@ -148,6 +153,24 @@ class TestMCPServerHealth(unittest.TestCase):
                     server, mcpServers,
                     f"Optional server {server} not found in MCP config (enabled by {env_var}=true)"
                 )
+
+        # Check premium servers only when the corresponding API key is configured
+        for server, env_vars in premium_servers.items():
+            # Normalize env_vars to list for consistent handling
+            if isinstance(env_vars, str):
+                env_vars = [env_vars]
+
+            configured_envs = [env for env in env_vars if os.environ.get(env)]
+
+            if configured_envs:
+                if server not in mcpServers:
+                    # Allow legacy Perplexity server name for backward compatibility
+                    if server == 'perplexity-mcp' and 'perplexity-ask' in mcpServers:
+                        continue
+                    env_list = ', '.join(configured_envs)
+                    self.fail(
+                        f"Premium server {server} not found in MCP config despite {env_list} being set"
+                    )
 
     def test_claude_mcp_script_success(self):
         """Test that claude_mcp.sh script runs successfully."""

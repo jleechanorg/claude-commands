@@ -452,8 +452,12 @@ check_server_parallel() {
         fi
     } &
 
-    PARALLEL_PIDS["$name"]=$!
+    local bg_pid=$!
+    # Temporarily disable unbound variable check for associative array assignment
+    set +u
+    PARALLEL_PIDS["$name"]=$bg_pid
     PARALLEL_STATUS_FILES["$name"]="$check_file"
+    set -u
 }
 
 # Function to wait for parallel checks and collect results
@@ -477,12 +481,14 @@ collect_parallel_results() {
         wait "$pid" 2>/dev/null || true
 
         # Read result
+        set +u
         if [ -n "$check_file" ] && [ -f "$check_file" ]; then
             PARALLEL_RESULTS["$name"]=$(cat "$check_file")
             rm -f "$check_file"
         else
             PARALLEL_RESULTS["$name"]="TIMEOUT"
         fi
+        set -u
     done
 
     # Clear PID tracking (reinitialize associative array correctly)
@@ -985,19 +991,25 @@ install_batch_parallel() {
             fi
         } &
 
-        PARALLEL_PIDS["$server_name"]=$!
+        local bg_pid=$!
+        # Temporarily disable unbound variable check for associative array assignment
+        set +u
+        PARALLEL_PIDS["$server_name"]=$bg_pid
         PARALLEL_RESULT_FILES["$server_name"]="$result_file"
         PARALLEL_LOG_FILES["$server_name"]="$log_file"
         log_with_timestamp "Started parallel installation of $server_name (PID: ${PARALLEL_PIDS[$server_name]})"
+        set -u
     done
 
     # Wait for all installations to complete
     echo -e "${BLUE}  ⏳ Waiting for $batch_name installations to complete...${NC}"
 
     for server_name in "${!batch_ref[@]}"; do
+        set +u
         local pid="${PARALLEL_PIDS[$server_name]}"
         local result_file="${PARALLEL_RESULT_FILES[$server_name]}"
         local log_file="${PARALLEL_LOG_FILES[$server_name]}"
+        set -u
 
         # Wait for this installation
         if wait "$pid"; then
@@ -1035,8 +1047,10 @@ install_batch_parallel() {
         if [ -n "$log_file" ]; then
             rm -f "$log_file"
         fi
+        set +u
         unset PARALLEL_RESULT_FILES["$server_name"]
         unset PARALLEL_LOG_FILES["$server_name"]
+        set -u
     done
 
     # Clear parallel tracking (reinitialize associative array correctly)
