@@ -1,3 +1,22 @@
+---
+description: Parallel Tasks vs Subagents Reference Guide
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Parallel Tasks vs Subagents Reference Guide
 
 **Purpose**: Central reference for deciding between parallel tasks and subagents to optimize token usage
@@ -17,8 +36,11 @@
 ## Implementation Methods
 
 ### 1. Background Processes (Bash &)
+
 ```bash
+
 # Best for: 2-10 simple commands
+
 (command1) &
 (command2) &
 (command3) &
@@ -28,28 +50,39 @@ wait
 **Cons**: Manual PID management, limited scaling
 
 ### 2. GNU Parallel
+
 ```bash
+
 # Best for: Structured parallel execution
+
 parallel -j 4 ::: "cmd1" "cmd2" "cmd3" "cmd4"
 
 # With input files
+
 parallel -a files.txt process_file {}
 ```
 **Pros**: Advanced job control, progress bars, automatic load balancing
 **Cons**: Requires installation, learning curve
 
 ### 3. xargs Parallel
+
 ```bash
+
 # Best for: Processing file lists
+
 find . -name "*.py" | xargs -P 8 -I {} python lint.py {}
 ```
 **Pros**: Standard Unix tool, efficient for file operations
 **Cons**: Limited error handling, basic job control
 
 ### 4. Batched Tool Calls
+
 ```python
+
 # Best for: Multiple Claude tool calls
+
 # Execute multiple searches/reads in one response
+
 ```
 **Pros**: Most efficient for Claude operations, atomic execution
 **Cons**: Limited to tool capabilities
@@ -68,6 +101,7 @@ find . -name "*.py" | xargs -P 8 -I {} python lint.py {}
 ## Common Scenarios
 
 ### ✅ Perfect for Parallel Tasks
+
 - Search codebase for patterns
 - Run test suites
 - Check multiple PR statuses
@@ -76,6 +110,7 @@ find . -name "*.py" | xargs -P 8 -I {} python lint.py {}
 - Build multiple components
 
 ### ✅ Requires Subagents
+
 - Implement new features
 - Fix complex bugs
 - Create/update PRs
@@ -99,13 +134,17 @@ Feature implementation:
 ## Monitoring Success
 
 ```bash
+
 # Before optimization
+
 ccusage daily --instances
 
 # After switching to parallel
+
 ccusage daily --instances --since 2025-07-29
 
 # Expected: 90%+ reduction in token usage
+
 ```
 
 ## Integration with Commands

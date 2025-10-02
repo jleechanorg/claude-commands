@@ -1,3 +1,22 @@
+---
+description: GitHub Copilot Super Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # GitHub Copilot Super Command
 
 **Purpose**: Run comprehensive Copilot analysis on multiple PRs using orchestration agents
@@ -30,7 +49,9 @@
 
 **Individual Agent Per PR with Custom Workspace Management**:
 ```bash
+
 # Delegates to orchestration system with custom workspace configuration for tmux-pr naming
+
 for PR in $PR_LIST; do
     # Calculate workspace paths consistent with tmux-pr naming convention
     main_repo_path="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -48,7 +69,9 @@ done
 
 **Enhanced Orchestration Integration**:
 ```bash
+
 # Copilotsuper delegates to orchestration with embedded workspace configuration
+
 for PR in $PR_LIST; do
     # Calculate workspace paths following tmux-pr{ID} naming convention
     main_repo_path="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -64,7 +87,9 @@ done
 The orchestration system's `create_dynamic_agent()` function now accepts custom workspace configuration and automatically aligns agent names with workspace directories:
 
 ```python
+
 # Enhanced orchestration agent creation with unified naming
+
 agent_spec = {
     "name": agent_name,                               # Will be updated to match workspace_name
     "focus": f"Run copilot analysis on PR #{pr_number}",
@@ -75,6 +100,7 @@ agent_spec = {
 }
 
 # Result: Agent session name = tmux-pr1234, Workspace directory = tmux-pr1234
+
 ```
 
 **Unified Naming & Workspace Management**:
@@ -111,11 +137,13 @@ agent_spec = {
 ## 📋 Command Specification
 
 ### Input Validation
+
 - **Required**: At least one PR number
 - **Format**: Space-separated integers (e.g., `718 719 720`)
 - **Validation**: Check PR exists and is accessible
 
 ### Process Flow
+
 ```
 User: /copilotsuper 718 719 720
 
@@ -135,6 +163,7 @@ User: /copilotsuper 718 719 720
 ```
 
 ### Output Format
+
 ```
 🤖 COPILOT SUPER ANALYSIS COMPLETE
 
@@ -171,19 +200,25 @@ User: /copilotsuper 718 719 720
 **Batch PR Cleanup**:
 ```bash
 /copilotsuper 715 716 717 718
+
 # Clean up multiple feature PRs before merge
+
 ```
 
 **Release Preparation**:
 ```bash
 /copilotsuper 720 721 722
+
 # Ensure all release PRs are mergeable
+
 ```
 
 **Daily Review Cycle**:
 ```bash
 /copilots $(gh pr list --json number -q '.[].number' | head -5)
+
 # Process 5 most recent PRs using convenient alias
+
 ```
 
 ## ⚡ Performance Considerations

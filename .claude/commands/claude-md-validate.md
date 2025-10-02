@@ -1,3 +1,107 @@
+---
+description: Claude-MD-Validate Command - Comprehensive CLAUDE.md Quality Validation Framework
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: 📊 VALIDATION EXECUTION WORKFLOW
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 1: Environment Setup and Discovery
+
+**Action Steps:**
+```markdown
+1. **Directory Discovery**
+   - Scan for all CLAUDE.md files in directory tree
+   - Map inheritance relationships
+   - Identify validation scope (single directory vs. multi-directory)
+   - Initialize validation tracking structures
+
+2. **Reference Cataloging**
+   - Extract all file references from CLAUDE.md content
+   - Catalog command references and cross-links
+   - Map relative path relationships
+   - Build comprehensive reference database
+
+3. **Baseline Establishment**
+   - Document current validation baseline
+   - Set quality thresholds and targets
+   - Initialize scoring matrices
+   - Prepare validation report templates
+```
+
+### Phase 2: Comprehensive Validation Execution
+
+**Action Steps:**
+```markdown
+1. **File Reference Validation**
+   - Execute file existence checks for all references
+   - Validate command file mappings
+   - Test relative path resolution
+   - Verify script and tool accessibility
+   - Generate reference accuracy report
+
+2. **Template Compliance Verification**
+   - Check structural hierarchy and organization
+   - Validate required section presence
+   - Verify formatting consistency
+   - Assess protocol symbol usage
+   - Generate compliance scorecard
+
+3. **Cross-Directory Consistency Check**
+   - Validate inheritance chain integrity
+   - Test reference path resolution from all contexts
+   - Check content synchronization status
+   - Verify bidirectional reference accuracy
+   - Generate consistency assessment
+
+4. **Content Quality Assessment**
+   - Score accuracy of technical information
+   - Evaluate completeness of coverage
+   - Assess clarity and readability
+   - Measure actionability of guidance
+   - Evaluate maintenance and currency
+   - Generate quality metrics report
+```
+
+### Phase 3: Integration and Deployment Assessment
+
+**Action Steps:**
+```markdown
+1. **Integration Compatibility**
+   - Test compatibility with `/fake3` infrastructure
+   - Verify git workflow hook integration
+   - Assess batch validation capabilities
+   - Check reporting system integration
+
+2. **Deployment Readiness Evaluation**
+   - Calculate overall quality score
+   - Assess go/no-go criteria satisfaction
+   - Generate deployment recommendation
+   - Identify critical blocking issues
+
+3. **Comprehensive Reporting**
+   - Generate JSON validation reports
+   - Create detailed markdown summaries  
+   - Produce executive summary with scores
+   - Provide actionable fix recommendations
+```
+
+### Phase 5: 📚 INTEGRATION WITH PROJECT WORKFLOWS
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Claude-MD-Validate Command - Comprehensive CLAUDE.md Quality Validation Framework
 
 **Purpose**: Automated quality validation framework for CLAUDE.md files with comprehensive file reference validation, template compliance checking, cross-directory consistency verification, and content quality assessment.
@@ -145,85 +249,10 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 - Regular update patterns evident
 ```
 
-## 📊 VALIDATION EXECUTION WORKFLOW
-
-### Phase 1: Environment Setup and Discovery
-```markdown
-1. **Directory Discovery**
-   - Scan for all CLAUDE.md files in directory tree
-   - Map inheritance relationships
-   - Identify validation scope (single directory vs. multi-directory)
-   - Initialize validation tracking structures
-
-2. **Reference Cataloging**  
-   - Extract all file references from CLAUDE.md content
-   - Catalog command references and cross-links
-   - Map relative path relationships
-   - Build comprehensive reference database
-
-3. **Baseline Establishment**
-   - Document current validation baseline
-   - Set quality thresholds and targets
-   - Initialize scoring matrices
-   - Prepare validation report templates
-```
-
-### Phase 2: Comprehensive Validation Execution
-```markdown
-1. **File Reference Validation**
-   - Execute file existence checks for all references
-   - Validate command file mappings
-   - Test relative path resolution
-   - Verify script and tool accessibility
-   - Generate reference accuracy report
-
-2. **Template Compliance Verification**
-   - Check structural hierarchy and organization
-   - Validate required section presence
-   - Verify formatting consistency
-   - Assess protocol symbol usage
-   - Generate compliance scorecard
-
-3. **Cross-Directory Consistency Check**
-   - Validate inheritance chain integrity
-   - Test reference path resolution from all contexts
-   - Check content synchronization status
-   - Verify bidirectional reference accuracy
-   - Generate consistency assessment
-
-4. **Content Quality Assessment**
-   - Score accuracy of technical information
-   - Evaluate completeness of coverage
-   - Assess clarity and readability
-   - Measure actionability of guidance
-   - Evaluate maintenance and currency
-   - Generate quality metrics report
-```
-
-### Phase 3: Integration and Deployment Assessment
-```markdown
-1. **Integration Compatibility**
-   - Test compatibility with `/fake3` infrastructure
-   - Verify git workflow hook integration
-   - Assess batch validation capabilities
-   - Check reporting system integration
-
-2. **Deployment Readiness Evaluation**
-   - Calculate overall quality score
-   - Assess go/no-go criteria satisfaction
-   - Generate deployment recommendation
-   - Identify critical blocking issues
-
-3. **Comprehensive Reporting**
-   - Generate JSON validation reports
-   - Create detailed markdown summaries  
-   - Produce executive summary with scores
-   - Provide actionable fix recommendations
-```
-
 ## 📋 OUTPUT FORMATS AND REPORTING
 
 ### JSON Validation Report Format
+
 ```json
 {
   "validation_timestamp": "2025-01-XX-XXXXX",
@@ -292,7 +321,9 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 ```
 
 ### Markdown Summary Report Template
+
 ```markdown
+
 # CLAUDE.md Validation Report
 
 **Validation Date**: [timestamp]
@@ -310,6 +341,7 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 ## 📊 Detailed Results
 
 ### File Reference Validation
+
 - ✅ **Status**: [PASS/FAIL]
 - 📈 **Accuracy**: [percentage]%
 - 🔍 **Issues Found**: [count]
@@ -317,6 +349,7 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 [Detailed breakdown of broken references with file:line locations]
 
 ### Template Compliance 
+
 - ✅ **Status**: [PASS/FAIL]
 - 📊 **Score**: [percentage]%
 - 📝 **Required Sections**: [present]/[total]
@@ -324,6 +357,7 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 [Detailed compliance assessment]
 
 ### Cross-Directory Consistency
+
 - ✅ **Status**: [PASS/FAIL]  
 - 🔗 **Inheritance Chains**: [valid]/[total]
 - 📍 **Path Accuracy**: [percentage]%
@@ -331,6 +365,7 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 [Detailed consistency assessment]
 
 ### Content Quality Assessment
+
 - ✅ **Overall Score**: [score]/10
 - 🎯 **Accuracy**: [score]/10
 - 📚 **Completeness**: [score]/10
@@ -357,6 +392,7 @@ The `/claude-md-validate` command provides enterprise-grade quality validation f
 ## 🛠️ IMPLEMENTATION DETAILS
 
 ### LLM Orchestration Strategy
+
 The command leverages advanced LLM capabilities for:
 
 1. **Intelligent Reference Parsing**: Uses natural language understanding to identify file references, commands, and cross-links in complex markdown content
@@ -374,7 +410,9 @@ The command leverages advanced LLM capabilities for:
 
 **Git Workflow Integration:**
 ```bash
+
 # Pre-commit hook integration
+
 .git/hooks/pre-commit:
 #!/bin/bash
 /claude-md-validate --scope=. --mode=pre-commit
@@ -386,19 +424,24 @@ fi
 
 **Batch Validation Support:**
 ```bash
+
 # Multi-directory validation
+
 /claude-md-validate --scope=all --output-format=json > validation_report.json
 
 # Directory-specific validation  
+
 /claude-md-validate --scope=mvp_site --mode=detailed
 
 # CI/CD integration
+
 /claude-md-validate --scope=. --mode=ci --output-format=json
 ```
 
 ## 🔧 COMMAND MODES AND OPTIONS
 
 ### Validation Modes
+
 - **`--mode=comprehensive`** (default): Full validation across all frameworks
 - **`--mode=quick`**: Essential validations only (references + critical compliance)
 - **`--mode=references-only`**: File reference validation only
@@ -407,12 +450,14 @@ fi
 - **`--mode=ci`**: Optimized for CI/CD pipeline integration
 
 ### Scope Options
+
 - **`--scope=.`** (default): Current directory only
 - **`--scope=all`**: All directories with CLAUDE.md files
 - **`--scope=<directory>`**: Specific directory path
 - **`--scope=inheritance-chain`**: Follow complete inheritance chain
 
 ### Output Formats
+
 - **`--output-format=summary`** (default): Human-readable summary
 - **`--output-format=json`**: Machine-readable JSON report
 - **`--output-format=markdown`**: Detailed markdown report
@@ -421,17 +466,20 @@ fi
 ## 🎯 SUCCESS CRITERIA AND THRESHOLDS
 
 ### Quality Gates
+
 - **Reference Accuracy**: ≥95% (19/20 references must be valid)
 - **Template Compliance**: ≥90% (essential sections and formatting)
 - **Content Quality**: ≥9.0/10 average across all quality metrics
 - **Cross-Directory Consistency**: 100% inheritance chain integrity
 
 ### Deployment Readiness Levels
+
 - **APPROVED**: All thresholds met, no critical issues
 - **CONDITIONAL**: Minor issues present, deployment allowed with fixes planned
 - **BLOCKED**: Critical issues present, deployment not recommended
 
 ### Pass/Fail Criteria
+
 ```markdown
 PASS Criteria:
 ✅ Reference accuracy ≥95%
@@ -448,20 +496,27 @@ FAIL Criteria:
 ❌ Integration incompatibility detected
 ```
 
-## 📚 INTEGRATION WITH PROJECT WORKFLOWS
-
 ### Pre-Commit Validation
+
 ```bash
+
 # Automatic validation before commits
+
 git add CLAUDE.md
 git commit -m "Update documentation"
+
 # -> Triggers /claude-md-validate --mode=pre-commit
+
 # -> Blocks commit if validation fails
+
 ```
 
 ### CI/CD Pipeline Integration
+
 ```yaml
+
 # .github/workflows/claude-md-validation.yml
+
 name: CLAUDE.md Validation
 on: [push, pull_request]
 jobs:
@@ -479,11 +534,15 @@ jobs:
 ```
 
 ### Batch Quality Assessment
+
 ```bash
+
 # Weekly quality assessment across all directories
+
 /claude-md-validate --scope=all --mode=comprehensive --output-format=markdown > weekly_quality_report.md
 
 # Quality trending analysis
+
 /claude-md-validate --scope=all --mode=metrics --output-format=json >> quality_metrics_history.jsonl
 ```
 
@@ -499,12 +558,14 @@ jobs:
 ## 🔄 CONTINUOUS IMPROVEMENT
 
 ### Learning and Enhancement
+
 - **Pattern Recognition**: Learns common validation issues and improves detection
 - **Quality Metrics Evolution**: Refines quality assessment criteria based on usage patterns
 - **Integration Optimization**: Enhances integration with project workflows over time
 - **Template Standards Evolution**: Adapts to evolving CLAUDE.md template standards
 
 ### Feedback Integration
+
 ```markdown
 The validation framework incorporates feedback through:
 - Issue pattern learning from validation failures

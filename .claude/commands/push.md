@@ -1,3 +1,22 @@
+---
+description: Push Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Push Command
 
 **Purpose**: Full production-ready push workflow with comprehensive quality assurance and deployment automation
@@ -30,6 +49,7 @@ The command orchestrates a complete production-ready push workflow:
 - Auto-suggest appropriate commit messages (with protocol compliance notes)
 
 ### 2. `/review` - Code Quality Gate
+
 - Execute `/review` command for comprehensive code analysis
 - Virtual [AI reviewer] performs systematic quality assessment
 - Identifies bugs, security issues, performance problems, best practice violations
@@ -37,23 +57,27 @@ The command orchestrates a complete production-ready push workflow:
 - **Push blocked if critical issues detected**
 
 ### 3. Git Operations
+
 - Validate commit messages and git state
 - Push to remote only if `/review` passes quality checks
 - Create PR if needed for new branches
 - Verify push success and remote synchronization
 
 ### 4. PR Description Auto-Update
+
 - Analyze commits since PR creation for significant changes
 - Update PR description to reflect current implementation state
 - Preserve existing test results and documentation
 
 ### 5. `/testserver` - Production Environment Setup
+
 - Execute `/testserver start` for current branch
 - Automatic port allocation and conflict resolution
 - Branch-specific logging and process management
 - Production-like environment initialization
 
 ### 6. Production Readiness Verification
+
 - Health check endpoints validation
 - Server startup verification and accessibility testing
 - Log monitoring for critical errors
@@ -62,6 +86,7 @@ The command orchestrates a complete production-ready push workflow:
 ## Workflow Details
 
 ### Full Production Pipeline
+
 ```
 1. Untracked file handling → Prepare complete changeset
 2. /review execution → Quality assessment & issue detection
@@ -73,6 +98,7 @@ The command orchestrates a complete production-ready push workflow:
 ```
 
 ### Review Integration
+
 - **Quality Threshold**: Critical and important issues block push
 - **Suggestion/Nitpick**: Warnings logged but don't block push
 - **Review Comments**: Posted to PR for visibility and tracking
@@ -157,6 +183,7 @@ The command orchestrates a complete production-ready push workflow:
 ## Quality Gate Behavior
 
 ### Review Results → Push Decision
+
 - **🔴 Critical Issues**: Push blocked, must fix before proceeding
 - **🟡 Important Issues**: Push blocked, requires attention
 - **🔵 Suggestions**: Push allowed with warnings logged
@@ -164,11 +191,13 @@ The command orchestrates a complete production-ready push workflow:
 - **✅ Clean Review**: Push proceeds to production setup
 
 ### Production Gate Behavior
+
 - **🔴 Server Failed**: Deployment blocked, investigate logs
 - **🟡 Warnings Detected**: Deployment proceeds with monitoring
 - **✅ All Systems Green**: Production-ready deployment complete
 
 ### Error Handling
+
 - Clear reporting of blocking issues with specific locations
 - Actionable feedback for resolving quality and deployment problems
 - Option to override for emergency pushes (with confirmation)

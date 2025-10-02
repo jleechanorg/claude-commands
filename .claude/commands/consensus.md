@@ -1,3 +1,22 @@
+---
+description: /consensus Command - Multi-Agent Agreement Code Review
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Parallel Agent Execution (2025 Optimization)
+
+**Action Steps:**
+Run all 5 agents simultaneously using Task tool parallel execution with proper context and role definitions:
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /consensus Command - Multi-Agent Agreement Code Review
 
 **Purpose**: Fast consensus-building review for solo MVP projects using 2025 multi-agent protocols. Simple 3-round maximum with early termination when agents agree. Focus on architecture and practical outcomes over enterprise-grade security.
@@ -7,6 +26,7 @@
 **🚀 Solo Unlaunched MVP Context**: Optimized for pre-launch projects with ZERO external users. Only serious external attacker security vulnerabilities matter (SQL injection, RCE, auth bypass). Enterprise security theater is counterproductive. GitHub rollbacks provide safety net.
 
 ## Usage
+
 ```
 /consensus [<scope>]
 /cons [<scope>]          # Alias
@@ -15,6 +35,7 @@
 - **Optional scope**: Specific file(s), folder(s), or PR number to narrow the review focus.
 
 ## Context Acquisition (Always Performed First)
+
 1. **Detect active PR** using `gh pr status` or `git config branch.<name>.merge` to extract the PR number and remote.
 2. **Record latest commit** with `git log -1 --stat`.
 3. **Capture local changes**:
@@ -25,9 +46,6 @@
    - Confirm branch alignment (`git rev-parse HEAD` vs PR head SHA).
 5. **Basic credential filtering**: Remove obvious API keys/passwords from context (unlaunched MVP with zero external users - basic filtering sufficient)
 6. **Assemble review bundle** containing: PR description, latest commit message, diff summaries, and local-only edits.
-
-## Parallel Agent Execution (2025 Optimization)
-Run all 5 agents simultaneously using Task tool parallel execution with proper context and role definitions:
 
 ### Simplified Consensus Rules
 
@@ -89,6 +107,7 @@ Run all 5 agents simultaneously using Task tool parallel execution with proper c
 - **MVP Context**: GitHub rollbacks available, focus on architecture over security paranoia
 
 ## Fast Consensus Loop (3 Rounds Max)
+
 Streamlined workflow optimized for speed and simplicity:
 
 1. **Parallel Agent Consultation** (2-3 minutes)
@@ -161,7 +180,9 @@ Streamlined workflow optimized for speed and simplicity:
 
 **Simplified Test Detection**:
 ```bash
+
 # Safe test command detection with proper validation
+
 if command -v npm >/dev/null 2>&1 && [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
     timeout 300 npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
@@ -196,6 +217,7 @@ The loop stops immediately when a round achieves PASS status or after three roun
 - **❌ COMPILATION_ERROR**: Code doesn't compile/parse after changes
 
 ## Simple Consensus Rules (2025 MVP Optimization)
+
 - **Speed First**: Parallel execution, early termination, 3-round limit
 - **Evidence Based**: All findings require file:line references + confidence scores
 - **Clear Thresholds**: PASS ≥6 confidence, REWORK <5 confidence, mixed signals documented
@@ -205,22 +227,28 @@ The loop stops immediately when a round achieves PASS status or after three roun
 - **GitHub Safety Net**: Easy rollbacks available for any problematic changes
 
 ## Output Format
+
 ```
+
 # Consensus Review Report
 
 ## Summary
+
 - Round count: <1-3>
 - Final status: PASS | REWORK_LIMIT_REACHED
 - Key validated areas
 
 ## Major Findings
+
 | Round | Source Agent | File/Section | Severity | Resolution |
 |-------|--------------|--------------|----------|------------|
 
 ## Implemented Fixes
+
 - <bullet list of code/test updates per round>
 
 ## Round-by-Round Summaries
+
 - Round <n>: <main conversation highlights>
   - code-review: <key takeaways>
   - codex-consultant: <key takeaways>
@@ -228,6 +256,7 @@ The loop stops immediately when a round achieves PASS status or after three roun
   - grok-consultant: <key takeaways>
 
 ## Remaining Follow-Ups
+
 - <nitpicks or deferred improvements>
 ```
 Include references to executed test commands and link to generated guideline docs if applicable.
@@ -237,18 +266,21 @@ Include references to executed test commands and link to generated guideline doc
 Following reviewdeep.md patterns for solo developer optimization:
 
 ### **Practical Focus Areas**
+
 - **Architecture Quality**: SOLID principles, design patterns, scalability
 - **Real Bugs**: Logic errors, null pointers, race conditions, performance issues
 - **Maintainability**: Code clarity, modular design, technical debt
 - **Integration Issues**: API contracts, dependency management, data flow
 
 ### **Filtered Out (Not MVP Critical)**
+
 - **Enterprise Security Theater**: Over-engineered input validation for trusted sources
 - **Complex Compliance**: SOX, HIPAA, PCI-DSS (unless specifically needed)
 - **Theoretical Attack Vectors**: Low-probability scenarios with minimal real-world risk
 - **Over-Architected Patterns**: Complex enterprise patterns for simple MVP needs
 
 ### **Solo Developer Context Detection**
+
 - **Trusted Sources**: GitHub API, npm registry, official documentation
 - **Basic Validation**: Focus on user input, file uploads, dynamic queries
 - **Rollback Strategy**: Leverage git/GitHub for quick recovery vs complex prevention
@@ -342,6 +374,7 @@ Following proven patterns from `/reviewdeep` and `/arch` commands with enhanced 
 Each agent receives role-specific context enhancement following successful patterns from `/reviewdeep` and `/arch`:
 
 #### **`code-review` Agent Context**:
+
 ```markdown
 ARCHITECTURAL CORRECTNESS & MVP MAINTAINABILITY analysis for solo MVP consensus.
 
@@ -353,6 +386,7 @@ ARCHITECTURAL CORRECTNESS & MVP MAINTAINABILITY analysis for solo MVP consensus.
 ```
 
 #### **`codex-consultant` Agent Context**:
+
 ```markdown
 SYSTEM DESIGN & SCALING INTELLIGENCE analysis for solo MVP consensus.
 
@@ -364,6 +398,7 @@ SYSTEM DESIGN & SCALING INTELLIGENCE analysis for solo MVP consensus.
 ```
 
 #### **`gemini-consultant` Agent Context**:
+
 ```markdown
 2025 BEST PRACTICES & OPTIMIZATION PATTERNS analysis for solo MVP consensus.
 
@@ -375,6 +410,7 @@ SYSTEM DESIGN & SCALING INTELLIGENCE analysis for solo MVP consensus.
 ```
 
 #### **`cursor-consultant` Agent Context**:
+
 ```markdown
 PRAGMATIC REALITY CHECK & DEPLOYMENT READINESS analysis for solo MVP consensus.
 
@@ -386,6 +422,7 @@ PRAGMATIC REALITY CHECK & DEPLOYMENT READINESS analysis for solo MVP consensus.
 ```
 
 ### **Dynamic Context Variables**
+
 - `{PR_NUMBER}`: Auto-detected from current branch context
 - `{FILE_LIST}`: From git diff and PR analysis
 - `{TARGET_SCOPE}`: User-specified scope or default PR context
@@ -394,6 +431,7 @@ PRAGMATIC REALITY CHECK & DEPLOYMENT READINESS analysis for solo MVP consensus.
 - `{CONSENSUS_ROUND}`: Current round (1-3) in consensus-building process
 
 ## Post-Run Clean Up
+
 1. Ensure working tree cleanliness (`git status --short`).
 2. If changes were made, restate next steps (commit, push, or request manual review).
 3. Update Memory MCP with consensus patterns and successful issue resolutions.

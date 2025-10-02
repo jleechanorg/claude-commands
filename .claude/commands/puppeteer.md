@@ -1,3 +1,26 @@
+---
+description: /puppeteer Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Manual test execution
+
+**Action Steps:**
+With Puppeteer mode active:
+1. Server runs on http://localhost:6006?test_mode=true&test_user_id=test-user-123
+2. Use MCP functions for navigation, clicking, filling forms
+3. Capture screenshots for validation
+4. Execute JavaScript for complex interactions
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /puppeteer Command
 
 **Purpose**: Set Puppeteer MCP as the preferred browser automation tool for Claude Code CLI sessions
@@ -32,37 +55,38 @@ When `/puppeteer` is active, test commands will automatically:
 ## Usage in session
 
 ```bash
+
 # Set Puppeteer preference
+
 /puppeteer
 
 # Now all browser tests use Puppeteer MCP
+
 /testui  # Uses --puppeteer flag automatically
 ```
-
-## Manual test execution
-
-With Puppeteer mode active:
-1. Server runs on http://localhost:6006?test_mode=true&test_user_id=test-user-123
-2. Use MCP functions for navigation, clicking, filling forms
-3. Capture screenshots for validation
-4. Execute JavaScript for complex interactions
 
 ## Example workflow
 
 ```python
+
 # Navigate to test application
+
 mcp__puppeteer-server__puppeteer_navigate(url="http://localhost:6006?test_mode=true")
 
 # Take screenshot
+
 mcp__puppeteer-server__puppeteer_screenshot(name="initial_state")
 
 # Fill form field
+
 mcp__puppeteer-server__puppeteer_fill(selector="#campaign-title", value="Test Campaign")
 
 # Click button
+
 mcp__puppeteer-server__puppeteer_evaluate(script="document.querySelector('#next-btn').click()")
 
 # Validate result
+
 mcp__puppeteer-server__puppeteer_screenshot(name="after_action")
 ```
 

@@ -1,3 +1,25 @@
+---
+description: Context Checkpoint Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Workflow Integration:
+
+**Action Steps:**
+1. **Before /research**: Checkpoint current state before extensive research
+2. **After /execute**: Checkpoint accomplishments before new tasks
+3. **During /orchestrate**: Strategic breaks between agent task phases
+4. **Before context-heavy operations**: Proactive checkpoint creation
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Context Checkpoint Command
 
 **Usage**: `/checkpoint [--summary] [--optimize]`
@@ -7,18 +29,21 @@
 ## Features
 
 ### Basic Checkpoint
+
 - **Conversation summary** with key points captured
 - **Context usage analysis** and remaining capacity
 - **Task status assessment** with completed/pending items
 - **Strategic continuation recommendations**
 
 ### Summary Mode (`--summary`)
+
 - **Comprehensive conversation recap** 
 - **Key decisions and outcomes documented**
 - **Technical insights and learnings captured**
 - **Action items and next steps identified**
 
 ### Optimization Mode (`--optimize`)
+
 - **Context optimization recommendations**
 - **Tool selection guidance for continuation**
 - **Memory MCP integration suggestions**
@@ -29,6 +54,7 @@
 **Purpose**: Strategic conversation breaks to prevent context exhaustion and maintain efficiency during complex multi-phase tasks.
 
 ### Checkpoint Creation Process:
+
 1. **Analyze current context consumption** and complexity
 2. **Summarize conversation state** with key insights
 3. **Document completed work** and remaining tasks
@@ -36,6 +62,7 @@
 5. **Suggest break vs continue** based on context health
 
 ### Context Health Assessment:
+
 - **Green (0-30% context)**: Continue with current approach
 - **Yellow (31-60% context)**: Consider optimization strategies
 - **Orange (61-80% context)**: Implement efficiency measures
@@ -44,6 +71,7 @@
 ## Output Format
 
 ### Basic Checkpoint:
+
 ```
 📍 CONTEXT CHECKPOINT
 ━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -72,6 +100,7 @@
 ```
 
 ### Summary Mode (`--summary`):
+
 ```
 📍 COMPREHENSIVE SESSION SUMMARY  
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -110,12 +139,14 @@
 ## Strategic Use Cases
 
 ### During Complex Tasks:
+
 - **Large PR Analysis**: Checkpoint before analyzing 50+ file changes
 - **Multi-phase Research**: Break between research and implementation phases
 - **Extended Debugging**: Checkpoint before diving into complex troubleshooting
 - **Architectural Design**: Break between analysis and design phases
 
 ### Context Management:
+
 - **Proactive Optimization**: Before context reaches 50% utilization
 - **Task Transitions**: Between major workflow phases
 - **Knowledge Preservation**: Capture insights before context reset
@@ -124,27 +155,24 @@
 ## Integration with Other Commands
 
 ### Command Composition:
+
 ```bash
 /context | /checkpoint           # Check context then create checkpoint
 /checkpoint --optimize | /plan   # Checkpoint with optimization then plan
 /checkpoint --summary | /learn   # Comprehensive summary then capture learning
 ```
 
-### Workflow Integration:
-- **Before /research**: Checkpoint current state before extensive research
-- **After /execute**: Checkpoint accomplishments before new tasks  
-- **During /orchestrate**: Strategic breaks between agent task phases
-- **Before context-heavy operations**: Proactive checkpoint creation
-
 ## Memory MCP Integration
 
 ### Knowledge Preservation:
+
 - **Key insights** automatically captured in Memory MCP
 - **Technical patterns** documented for future reference
 - **Decision rationales** preserved across conversations
 - **Optimization learnings** stored for pattern recognition
 
 ### Continuation Support:
+
 - **Context reconstruction** guidance for new conversations
 - **Task resumption** recommendations with preserved state
 - **Knowledge continuity** across session boundaries
@@ -153,12 +181,14 @@
 ## Advanced Features
 
 ### Smart Recommendations:
+
 - **Context-aware suggestions** based on remaining capacity
 - **Task complexity analysis** for continuation planning  
 - **Optimization opportunities** specific to current work
 - **Strategic timing** for maximum efficiency
 
 ### Predictive Guidance:
+
 - **Estimated completion time** based on current patterns
 - **Context consumption projection** for remaining tasks
 - **Risk assessment** for complex operations

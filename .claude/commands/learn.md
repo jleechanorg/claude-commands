@@ -1,3 +1,22 @@
+---
+description: /learn Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /learn Command
 
 **Purpose**: The unified learning command that captures and documents learnings with Memory MCP integration for persistent knowledge storage
@@ -145,10 +164,13 @@
 
 **Integration Function Calls**:
 ```
+
 # Check backup script version consistency
+
 memory/check_backup_version.sh || echo "Warning: Backup script version mismatch"
 
 # Search for existing similar learnings (with error handling)
+
 try:
     /memory search "[key terms from learning]"
 except Exception as e:
@@ -156,6 +178,7 @@ except Exception as e:
     fallback_to_local_only_mode()
 
 # Create enhanced entity with high-quality patterns (with error handling)
+
 try:
     mcp__memory-server__create_entities([{
       "name": "{system}_{issue_type}_{timestamp}",  # Canonical naming
@@ -177,6 +200,7 @@ except Exception as e:
     notify_user("Learning saved locally only - Memory MCP unavailable")
 
 # Build relations to related concepts (with error handling)
+
 try:
     mcp__memory-server__create_relations([{
       "from": "[learning-name]",

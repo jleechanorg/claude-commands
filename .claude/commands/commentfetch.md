@@ -1,3 +1,22 @@
+---
+description: /commentfetch Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /commentfetch Command
 
 **Usage**: `/commentfetch <PR_NUMBER>` or `/commentfetch [natural language instruction]`
@@ -15,8 +34,11 @@
 
 **MANDATORY**: Fixed copilot skip detection bug that was ignoring inline review comments:
 ```bash
+
 # 🚨 COMPREHENSIVE COMMENT DETECTION FUNCTION
+
 # CRITICAL FIX: Include ALL comment sources (inline review comments were missing)
+
 get_comprehensive_comment_count() {
     local pr_number=$1
     local owner_repo=$(gh repo view --json owner,name | jq -r '.owner.login + "/" + .name')
@@ -106,17 +128,20 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 🚨 **ZERO TOLERANCE APPROACH**: Process ALL comments without complex filtering:
 
 ### 1. AI Responder Detection (ONLY FILTER)
+
 - **Method**: Check if comment body starts with '[AI responder]'
 - **Logic**: If comment starts with '[AI responder]', mark as our response
 - **Simple Rule**: Everything else requires response - NO EXCEPTIONS
 
 ### 2. No Complex Classification
+
 - No bot detection patterns
 - No keyword analysis
 - No threading analysis
 - No reply-to field processing
 
 ### 3. Output Simplification
+
 - **JSON field**: `"is_ai_responder": true/false` (simple boolean)
 - **Metadata**: `"requires_response_count": X` for verification
 - **Fresh Data**: Always fetches current GitHub state
@@ -127,12 +152,16 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 ### Intelligent Argument Processing
 
 ```bash
+
 # Parse natural language instructions intelligently
+
 ARGS="$*"
 echo "📝 Processing instruction: $ARGS"
 
 # Extract PR number from current branch if not specified
+
 # Fixed: Only match explicit PR patterns (PR123, pr#123, #123) to avoid matching standalone numbers
+
 if ! echo "$ARGS" | grep -qE '([Pp][Rr][#[:space:]]*|#)[0-9]+'; then
     PR_NUMBER=$(gh pr list --head $(git branch --show-current) --json number --jq '.[0].number' 2>/dev/null)
     if [ -z "$PR_NUMBER" ]; then
@@ -152,6 +181,7 @@ else
 fi
 
 # Determine output format and limits
+
 PRINT_INLINE=false
 LIMIT=""
 
@@ -174,6 +204,7 @@ fetch.execute()
 " "$PR_NUMBER"
 
 # If user requested inline display, show the results
+
 if [ "$PRINT_INLINE" = "true" ]; then
     BRANCH_NAME=$(git branch --show-current)
     COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
@@ -201,12 +232,17 @@ fi
 ## Examples
 
 ```bash
+
 # Fetch all fresh comments for PR 820
+
 /commentfetch 820
+
 # Internally runs: cd .claude/commands && python3 -c "import _copilot_modules.commentfetch as cf; ..."
 
 # Saves comments to /tmp/{branch_name}/comments.json
+
 # Downstream commands read from the saved file
+
 ```
 
 ## Integration

@@ -1,8 +1,28 @@
+---
+description: /handoff Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /handoff Command
 
 Creates a structured handoff for another worker with PR, scratchpad, and worker prompt.
 
 ## Usage
+
 ```
 /handoff [task_name] [description]
 ```
@@ -22,6 +42,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
 6. **Creates Clean Branch**: Uses `/newbranch` to ensure clean main-based branch for continued work
 
 ## Example
+
 ```
 /handoff logging_fix "Add file logging configuration to main application"
 ```
@@ -77,6 +98,7 @@ START: Read the handoff scratchpad for complete details
 ## Implementation Details
 
 ### Automatic Roadmap Update Process
+
 After creating the PR, the command automatically invokes `/r` logic with PR workflow:
 
 1. **Record current branch** for restoration
@@ -93,10 +115,12 @@ After creating the PR, the command automatically invokes `/r` logic with PR work
 9. **Switch back**: `git checkout [original-branch]`
 
 ### Task Name Format
+
 - Convert to uppercase: `logging_fix` → `LOGGING_FIX`
 - Prefix with `HANDOFF-`: `HANDOFF-LOGGING_FIX`
 
 ### Error Handling
+
 - If roadmap update fails, continue with handoff but notify user
 - Validate PR number exists before adding to roadmap
 - Ensure clean git state before main branch operations

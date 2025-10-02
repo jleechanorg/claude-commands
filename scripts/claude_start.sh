@@ -317,6 +317,30 @@ EOF
         echo "$current_crontab" | grep -v "agent_monitor.py" | crontab -
     fi
 
+    # 4. jleechanorg PR Automation (every 10 minutes)
+    current_crontab=$(crontab -l 2>/dev/null || echo "")
+    CURRENT_PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    AUTOMATION_MONITOR_BIN="$CURRENT_PROJECT_ROOT/automation/.venv/bin/jleechanorg-pr-monitor"
+    AUTOMATION_LOG_DIR="$HOME/Library/Logs/worldarchitect-automation"
+    AUTOMATION_LOG_FILE="$AUTOMATION_LOG_DIR/jleechanorg_pr_monitor.log"
+
+    if ! echo "$current_crontab" | grep -q "jleechanorg-pr-monitor"; then
+        if [ -x "$AUTOMATION_MONITOR_BIN" ]; then
+            echo -e "${YELLOW}⚠️  jleechanorg PR automation cron job missing - adding it${NC}"
+
+            # Create log directory if missing
+            mkdir -p "$AUTOMATION_LOG_DIR"
+
+            # Add to cron - runs every 10 minutes with quoted paths
+            CRON_CMD="*/10 * * * * \"$AUTOMATION_MONITOR_BIN\" >> \"$AUTOMATION_LOG_FILE\" 2>&1"
+            (echo "$current_crontab"; echo "# Run jleechanorg PR automation every 10 minutes"; echo "$CRON_CMD") | crontab -
+            cron_entries_added=$((cron_entries_added + 1))
+            echo -e "${GREEN}✅ Added jleechanorg PR automation cron job (every 10 minutes)${NC}"
+        else
+            echo -e "${YELLOW}⚠️  jleechanorg-pr-monitor not executable at $AUTOMATION_MONITOR_BIN - skipping${NC}"
+        fi
+    fi
+
     # Display results
     if [ $cron_entries_added -gt 0 ]; then
         echo -e "${GREEN}✅ Added $cron_entries_added cron job(s) with Linux/Ubuntu compatibility${NC}"
@@ -325,7 +349,7 @@ EOF
     fi
 
     echo -e "${BLUE}📋 Current cron configuration:${NC}"
-    crontab -l 2>/dev/null | grep -E "(claude_backup|tmux_cleanup|cleanup_completed_agents)" || echo "  (no matching entries)"
+    crontab -l 2>/dev/null | grep -E "(claude_backup|tmux_cleanup|cleanup_completed_agents|jleechanorg-pr-monitor)" || echo "  (no matching entries)"
 }
 
 # Function to check and start orchestration for non-worker modes

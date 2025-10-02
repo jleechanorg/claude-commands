@@ -28,7 +28,7 @@ from orchestration.cleanup_completed_agents import (
 class TestGetTmuxSessions:
     """Test tmux session discovery functionality."""
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_get_tmux_sessions_success_returns_session_list(self, mock_run):
         """Test successful tmux session listing returns parsed session names."""
         # Arrange
@@ -44,13 +44,14 @@ class TestGetTmuxSessions:
         assert result == ["task-agent-123", "gh-comment-monitor-456", "copilot-analysis"]
         mock_run.assert_called_once_with(
             ["tmux", "list-sessions", "-F", "#{session_name}"],
+            shell=False,
             capture_output=True,
             text=True,
             check=True,
             timeout=30
         )
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_get_tmux_sessions_empty_output_returns_empty_list(self, mock_run):
         """Test empty tmux output returns empty list."""
         # Arrange
@@ -62,7 +63,7 @@ class TestGetTmuxSessions:
         # Assert
         assert result == []
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_get_tmux_sessions_whitespace_only_returns_empty_list(self, mock_run):
         """Test whitespace-only tmux output returns empty list."""
         # Arrange
@@ -74,7 +75,7 @@ class TestGetTmuxSessions:
         # Assert
         assert result == []
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_get_tmux_sessions_command_failure_returns_empty_list(self, mock_run):
         """Test tmux command failure returns empty list."""
         # Arrange
@@ -86,7 +87,7 @@ class TestGetTmuxSessions:
         # Assert
         assert result == []
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_get_tmux_sessions_strips_whitespace_from_names(self, mock_run):
         """Test session names have whitespace stripped."""
         # Arrange
@@ -105,7 +106,7 @@ class TestGetTmuxSessions:
 class TestGetAllMonitoringSessions:
     """Test monitoring session pattern matching functionality."""
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_task_agent_pattern_matches(self, mock_get_sessions):
         """Test task-agent-* pattern is included in monitoring sessions."""
         # Arrange
@@ -116,12 +117,14 @@ class TestGetAllMonitoringSessions:
         # Act
         result = get_all_monitoring_sessions()
 
+        # Debug: Check what we actually got
+
         # Assert
         assert "task-agent-123" in result
         assert "task-agent-456" in result
         assert "regular-session" not in result
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_gh_comment_monitor_pattern_matches(self, mock_get_sessions):
         """Test gh-comment-monitor-* pattern is included in monitoring sessions."""
         # Arrange
@@ -137,7 +140,7 @@ class TestGetAllMonitoringSessions:
         assert "gh-comment-monitor-pr456" in result
         assert "other-session" not in result
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_copilot_pattern_matches(self, mock_get_sessions):
         """Test copilot-* pattern is included in monitoring sessions."""
         # Arrange
@@ -153,7 +156,7 @@ class TestGetAllMonitoringSessions:
         assert "copilot-fixpr-test" in result
         assert "not-copilot-session" not in result
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_agent_pattern_matches(self, mock_get_sessions):
         """Test agent-* pattern is included in monitoring sessions."""
         # Arrange
@@ -169,7 +172,7 @@ class TestGetAllMonitoringSessions:
         assert "agent-worker-123" in result
         assert "not-an-agent" not in result
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_mixed_patterns_all_match(self, mock_get_sessions):
         """Test all monitoring patterns are matched in mixed session list."""
         # Arrange
@@ -197,7 +200,7 @@ class TestGetAllMonitoringSessions:
         assert "another-session" not in result
         assert len(result) == 4
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
     def test_get_all_monitoring_sessions_no_matches_returns_empty_list(self, mock_get_sessions):
         """Test no monitoring pattern matches returns empty list."""
         # Arrange
@@ -256,8 +259,8 @@ class TestGetSessionTimeout:
 class TestCheckSessionTimeout:
     """Test session timeout calculation and validation functionality."""
 
-    @patch('cleanup_completed_agents.time.time')
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.time.time')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_exceeded_timeout_returns_true(self, mock_run, mock_time):
         """Test session exceeding timeout returns timeout=True."""
         # Arrange
@@ -278,8 +281,8 @@ class TestCheckSessionTimeout:
         assert result["elapsed_hours"] == 2.0
         assert result["timeout_seconds"] == 3600
 
-    @patch('cleanup_completed_agents.time.time')
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.time.time')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_within_timeout_returns_false(self, mock_run, mock_time):
         """Test session within timeout returns timeout=False."""
         # Arrange
@@ -299,7 +302,7 @@ class TestCheckSessionTimeout:
         assert result["reason"] == "within_timeout"
         assert result["elapsed_seconds"] == 1800
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_session_not_found_returns_false(self, mock_run):
         """Test non-existent session returns timeout=False with session_not_found."""
         # Arrange
@@ -312,7 +315,7 @@ class TestCheckSessionTimeout:
         assert result["timeout"] is False
         assert result["reason"] == "session_not_found"
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_invalid_format_returns_false(self, mock_run):
         """Test invalid tmux output format returns timeout=False with invalid_timestamp."""
         # Arrange
@@ -325,7 +328,7 @@ class TestCheckSessionTimeout:
         assert result["timeout"] is False
         assert result["reason"] == "invalid_timestamp"
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_subprocess_error_returns_false(self, mock_run):
         """Test subprocess error returns timeout=False with error reason."""
         # Arrange
@@ -338,7 +341,7 @@ class TestCheckSessionTimeout:
         assert result["timeout"] is False
         assert "error" in result["reason"]
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_session_timeout_calls_tmux_with_correct_filter(self, mock_run):
         """Test tmux command uses correct display-message syntax."""
         # Arrange
@@ -360,7 +363,7 @@ class TestCheckSessionTimeout:
 class TestCheckAgentCompletion:
     """Test log file analysis for agent completion."""
 
-    @patch('cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
     def test_check_agent_completion_no_log_file_returns_false(self, mock_exists):
         """Test missing log file returns completed=False with no_log_file reason."""
         # Arrange
@@ -373,8 +376,8 @@ class TestCheckAgentCompletion:
         assert result["completed"] is False
         assert result["reason"] == "no_log_file"
 
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_agent_completion_found_completion_marker_returns_true(self, mock_run, mock_exists):
         """Test completion marker in log returns completed=True."""
         # Arrange
@@ -389,10 +392,10 @@ class TestCheckAgentCompletion:
         assert "found_marker" in result["reason"]
         assert result["log_path"] == "/tmp/orchestration_logs/test-agent.log"
 
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.subprocess.run')
-    @patch('cleanup_completed_agents.os.stat')
-    @patch('cleanup_completed_agents.time.time')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.stat')
+    @patch('orchestration.cleanup_completed_agents.time.time')
     def test_check_agent_completion_idle_threshold_exceeded_returns_true(self, mock_time, mock_stat, mock_run, mock_exists):
         """Test log idle beyond threshold returns completed=True."""
         # Arrange
@@ -408,10 +411,10 @@ class TestCheckAgentCompletion:
         assert result["completed"] is True
         assert "idle_for_40.0_minutes" in result["reason"]
 
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.subprocess.run')
-    @patch('cleanup_completed_agents.os.stat')
-    @patch('cleanup_completed_agents.time.time')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.stat')
+    @patch('orchestration.cleanup_completed_agents.time.time')
     def test_check_agent_completion_within_idle_threshold_returns_false(self, mock_time, mock_stat, mock_run, mock_exists):
         """Test log recent and no markers returns completed=False."""
         # Arrange
@@ -427,8 +430,8 @@ class TestCheckAgentCompletion:
         assert result["completed"] is False
         assert result["reason"] == "still_active"
 
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_agent_completion_multiple_markers_detected(self, mock_run, mock_exists):
         """Test various completion markers are all detected."""
         # Arrange
@@ -450,8 +453,8 @@ class TestCheckAgentCompletion:
             assert result["completed"] is True
             assert marker.lower() in result["reason"].lower()
 
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_check_agent_completion_subprocess_error_returns_false(self, mock_run, mock_exists):
         """Test subprocess error returns completed=False with error reason."""
         # Arrange
@@ -469,7 +472,7 @@ class TestCheckAgentCompletion:
 class TestCleanupAgentSession:
     """Test session termination functionality."""
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_cleanup_agent_session_dry_run_true_does_not_kill_session(self, mock_run):
         """Test dry run mode does not execute tmux kill command."""
         # Act
@@ -479,7 +482,7 @@ class TestCleanupAgentSession:
         assert result is True
         mock_run.assert_not_called()
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_cleanup_agent_session_success_kills_session_and_returns_true(self, mock_run):
         """Test successful session termination returns True."""
         # Arrange
@@ -492,11 +495,12 @@ class TestCleanupAgentSession:
         assert result is True
         mock_run.assert_called_once_with(
             ["tmux", "kill-session", "-t", "test-agent"],
+            shell=False,
             check=True,
             timeout=30
         )
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_cleanup_agent_session_failure_returns_false(self, mock_run):
         """Test failed session termination returns False."""
         # Arrange
@@ -508,7 +512,7 @@ class TestCleanupAgentSession:
         # Assert
         assert result is False
 
-    @patch('cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
     def test_cleanup_agent_session_handles_special_characters_in_name(self, mock_run):
         """Test session names with special characters are handled correctly."""
         # Arrange
@@ -521,6 +525,7 @@ class TestCleanupAgentSession:
         assert result is True
         mock_run.assert_called_once_with(
             ["tmux", "kill-session", "-t", "test-agent-with-dashes_and_underscores"],
+            shell=False,
             check=True,
             timeout=30
         )
@@ -529,10 +534,10 @@ class TestCleanupAgentSession:
 class TestCleanupCompletedAgents:
     """Test main cleanup workflow with various scenarios."""
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
-    @patch('cleanup_completed_agents.check_agent_completion')
-    @patch('cleanup_completed_agents.check_session_timeout')
-    @patch('cleanup_completed_agents.cleanup_agent_session')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.check_agent_completion')
+    @patch('orchestration.cleanup_completed_agents.check_session_timeout')
+    @patch('orchestration.cleanup_completed_agents.cleanup_agent_session')
     def test_cleanup_completed_agents_mixed_session_types_processed_correctly(
         self, mock_cleanup, mock_timeout, mock_completion, mock_get_sessions
     ):
@@ -568,7 +573,7 @@ class TestCleanupCompletedAgents:
         assert result["cleaned_up"] == 2 # Both completed and timeout cleaned
         assert mock_cleanup.call_count == 2
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
     def test_cleanup_completed_agents_no_sessions_returns_zero_counts(self, mock_get_sessions):
         """Test no monitoring sessions returns all zero counts."""
         # Arrange
@@ -584,10 +589,10 @@ class TestCleanupCompletedAgents:
         assert result["active"] == 0
         assert result["cleaned_up"] == 0
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
-    @patch('cleanup_completed_agents.check_agent_completion')
-    @patch('cleanup_completed_agents.check_session_timeout')
-    @patch('cleanup_completed_agents.cleanup_agent_session')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.check_agent_completion')
+    @patch('orchestration.cleanup_completed_agents.check_session_timeout')
+    @patch('orchestration.cleanup_completed_agents.cleanup_agent_session')
     def test_cleanup_completed_agents_dry_run_mode_does_not_cleanup(
         self, mock_cleanup, mock_timeout, mock_completion, mock_get_sessions
     ):
@@ -605,10 +610,10 @@ class TestCleanupCompletedAgents:
         assert result["cleaned_up"] == 0  # Dry run doesn't increment cleanup count
         mock_cleanup.assert_called_once_with("task-agent-123", True)
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
-    @patch('cleanup_completed_agents.check_agent_completion')
-    @patch('cleanup_completed_agents.check_session_timeout')
-    @patch('cleanup_completed_agents.cleanup_agent_session')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.check_agent_completion')
+    @patch('orchestration.cleanup_completed_agents.check_session_timeout')
+    @patch('orchestration.cleanup_completed_agents.cleanup_agent_session')
     def test_cleanup_completed_agents_cleanup_failures_counted_correctly(
         self, mock_cleanup, mock_timeout, mock_completion, mock_get_sessions
     ):
@@ -629,8 +634,8 @@ class TestCleanupCompletedAgents:
         assert result["cleaned_up"] == 1  # Only successful cleanup counted
         assert mock_cleanup.call_count == 2
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
-    @patch('cleanup_completed_agents.check_session_timeout')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.check_session_timeout')
     def test_cleanup_completed_agents_only_task_agents_check_completion_logs(
         self, mock_timeout, mock_get_sessions
     ):
@@ -640,15 +645,15 @@ class TestCleanupCompletedAgents:
         mock_timeout.return_value = {"timeout": False, "reason": "within_timeout"}
 
         # Act
-        with patch('cleanup_completed_agents.check_agent_completion') as mock_completion:
+        with patch('orchestration.cleanup_completed_agents.check_agent_completion') as mock_completion:
             mock_completion.return_value = {"completed": False, "reason": "still_active"}
             result = cleanup_completed_agents(dry_run=True)
 
             # Assert
             mock_completion.assert_called_once_with("task-agent-123")  # Only task-agent checked
 
-    @patch('cleanup_completed_agents.get_all_monitoring_sessions')
-    @patch('cleanup_completed_agents.check_session_timeout')
+    @patch('orchestration.cleanup_completed_agents.get_all_monitoring_sessions')
+    @patch('orchestration.cleanup_completed_agents.check_session_timeout')
     def test_cleanup_completed_agents_all_sessions_check_timeout(
         self, mock_timeout, mock_get_sessions
     ):
@@ -659,7 +664,7 @@ class TestCleanupCompletedAgents:
         mock_timeout.return_value = {"timeout": False, "reason": "within_timeout"}
 
         # Act
-        with patch('cleanup_completed_agents.check_agent_completion') as mock_completion:
+        with patch('orchestration.cleanup_completed_agents.check_agent_completion') as mock_completion:
             mock_completion.return_value = {"completed": False, "reason": "still_active"}
             result = cleanup_completed_agents(dry_run=True)
 
@@ -698,11 +703,11 @@ def mock_constants():
 class TestCleanupIntegration:
     """Integration tests combining multiple functions."""
 
-    @patch('cleanup_completed_agents.get_tmux_sessions')
-    @patch('cleanup_completed_agents.subprocess.run')
-    @patch('cleanup_completed_agents.os.path.exists')
-    @patch('cleanup_completed_agents.os.stat')
-    @patch('cleanup_completed_agents.time.time')
+    @patch('orchestration.cleanup_completed_agents.get_tmux_sessions')
+    @patch('orchestration.cleanup_completed_agents.subprocess.run')
+    @patch('orchestration.cleanup_completed_agents.os.path.exists')
+    @patch('orchestration.cleanup_completed_agents.os.stat')
+    @patch('orchestration.cleanup_completed_agents.time.time')
     def test_full_cleanup_workflow_realistic_scenario(
         self, mock_time, mock_stat, mock_exists, mock_subprocess, mock_get_sessions
     ):

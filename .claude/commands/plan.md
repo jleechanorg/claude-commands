@@ -1,26 +1,24 @@
-# Plan Command - Execute with Approval
+---
+description: Plan Command - Execute with Approval
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**Purpose**: Context-aware planning that requires user approval before implementation. **CONTEXT-AWARE PLANNING** with intelligent tool selection and universal composition.
-
-**Usage**: `/plan` - Present context-aware execution plan with approval workflow
-
-## 🧠 CONTEXT-AWARE PLANNING PROTOCOL
+## 🚨 EXECUTION WORKFLOW
 
 ### Phase 0: Context Assessment (MANDATORY FIRST STEP)
 
+**Action Steps:**
 **🔍 Context Assessment**: Every planning session MUST begin with context assessment:
 ```bash
-# Check remaining context capacity to inform planning approach
-/context
-```
-
-**Context-Informed Planning Strategy**:
-- **High Context (60%+ remaining)**: Comprehensive analysis and detailed planning
-- **Medium Context (30-60% remaining)**: Targeted analysis with efficient tool selection
-- **Low Context (< 30% remaining)**: Lightweight planning with essential tasks only
 
 ### Phase 1: Strategic Analysis
 
+**Action Steps:**
 **Memory Integration**: Automatically consults Memory MCP for relevant patterns, corrections, and user preferences.
 
 **Guidelines Consultation**: Calls `/guidelines` for systematic mistake prevention and protocol compliance.
@@ -33,66 +31,90 @@
 
 ### Phase 2: Execution Plan Presentation
 
+**Action Steps:**
 **📋 CONTEXT-ADAPTIVE PLAN FORMAT**:
 
 **🧠 Context Status**: _____% remaining → **[High/Medium/Low]** complexity planning
 
 **🎯 Universal Composition Strategy**:
-- **Primary Command**: `/plan` (this command)
-- **Composed Commands**: List of commands that will be naturally integrated
-- **Tool Selection**: Context-aware hierarchy (Serena MCP → Read → /cerebras/Claude → Bash)
+1. **Primary Command**: `/plan` (this command)
+2. **Composed Commands**: List of commands that will be naturally integrated
+3. **Tool Selection**: Context-aware hierarchy (Serena MCP → Read → /cerebras/Claude → Bash)
 
 **⚡ Implementation Approach**:
-- **Analysis Tasks**: Minimal context consumption using Serena MCP
-- **Generation Tasks**: /cerebras for >10 delta lines, Claude for ≤10 lines (per CLAUDE.md)
-- **Integration Tasks**: Efficient tool selection based on remaining context
-- **Validation**: Context-appropriate testing depth
+4. **Analysis Tasks**: Minimal context consumption using Serena MCP
+5. **Generation Tasks**: /cerebras for >10 delta lines, Claude for ≤10 lines (per CLAUDE.md)
+6. **Integration Tasks**: Efficient tool selection based on remaining context
+7. **Validation**: Context-appropriate testing depth
 
 **🔀 Execution Method Decision** (Context-Optimized):
-- **Parallel Tasks** (0 additional tokens): For simple, independent operations <30 seconds
-  * Method: Background processes (&), GNU parallel, xargs, or batched tool calls
-  * Best for: File searches, test runs, lint operations, data aggregation
-- **Sequential Tasks**: For complex workflows requiring coordination >5 minutes
-  * Method: Step-by-step with context monitoring
-  * Best for: Feature implementation, architectural changes, complex integrations
-- **Reference**: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full decision criteria
+8. **Parallel Tasks** (0 additional tokens): For simple, independent operations <30 seconds
+  9. Method: Background processes (&), GNU parallel, xargs, or batched tool calls
+  10. Best for: File searches, test runs, lint operations, data aggregation
+11. **Sequential Tasks**: For complex workflows requiring coordination >5 minutes
+  12. Method: Step-by-step with context monitoring
+  13. Best for: Feature implementation, architectural changes, complex integrations
+14. **Reference**: See [parallel-vs-subagents.md](./parallel-vs-subagents.md) for full decision criteria
 
 **🚀 Execution Sequence** (Context-Optimized):
-1. **Quick Discovery**: Use Serena MCP for targeted analysis
-2. **Smart Generation**: /cerebras for large tasks, Claude for integration
-3. **Efficient Validation**: Context-appropriate testing and verification
-4. **Clean Integration**: Minimal overhead for final steps
+15. **Quick Discovery**: Use Serena MCP for targeted analysis
+16. **Smart Generation**: /cerebras for large tasks, Claude for integration
+17. **Efficient Validation**: Context-appropriate testing and verification
+18. **Clean Integration**: Minimal overhead for final steps
 
 **Timeline**: _____ minutes (context-optimized approach)
 
 ### Phase 3: Approval Requirement
 
+**Action Steps:**
 **❌ NEVER proceed without explicit user approval**
 
 User must respond with "APPROVED" or specific modifications before execution begins.
 
 ### Phase 4: Execute Protocol
 
+**Action Steps:**
 **After approval, implements the plan directly with context awareness**:
-- Monitor context usage throughout execution
-- Apply context-saving strategies when needed
-- Use universal composition with other commands naturally
-- Preserve context for testing and validation
+1. Monitor context usage throughout execution
+2. Apply context-saving strategies when needed
+3. Use universal composition with other commands naturally
+4. Preserve context for testing and validation
 
 ### Phase 5: Consensus Validation
 
+**Action Steps:**
 **🎯 Multi-Agent Quality Assurance**
 
 After Phase 4 execution, automatically run `/consensus` command to validate code quality and deployment readiness.
 
 **Implementation**: See [consensus.md](./consensus.md) for complete consensus validation workflow including:
-- 3-round multi-agent validation loop
-- Automated test execution per round
-- Context-aware test selection
-- Early termination triggers
-- Evidence-based decision making
+1. 3-round multi-agent validation loop
+2. Automated test execution per round
+3. Context-aware test selection
+4. Early termination triggers
+5. Evidence-based decision making
 
 **Integration**: Phase 5 executes the full `/consensus` workflow with the implemented changes as input, providing comprehensive quality assurance before completion.
+
+## 📋 REFERENCE DOCUMENTATION
+
+# Plan Command - Execute with Approval
+
+**Purpose**: Context-aware planning that requires user approval before implementation. **CONTEXT-AWARE PLANNING** with intelligent tool selection and universal composition.
+
+**Usage**: `/plan` - Present context-aware execution plan with approval workflow
+
+## 🧠 CONTEXT-AWARE PLANNING PROTOCOL
+
+# Check remaining context capacity to inform planning approach
+
+/context
+```
+
+**Context-Informed Planning Strategy**:
+- **High Context (60%+ remaining)**: Comprehensive analysis and detailed planning
+- **Medium Context (30-60% remaining)**: Targeted analysis with efficient tool selection
+- **Low Context (< 30% remaining)**: Lightweight planning with essential tasks only
 
 ## 🔗 UNIVERSAL COMPOSITION PRINCIPLES
 

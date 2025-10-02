@@ -1,3 +1,63 @@
+---
+description: /commentcheck Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Step 1: Load ALL Individual Comments (ORCHESTRATED)
+
+**Action Steps:**
+🚨 **MANDATORY**: Use `/commentfetch` for comprehensive comment data instead of duplicating API calls:
+
+```bash
+
+### Phase 2: Step 2: Individual Comment Threading Verification (JSON-BASED)
+
+**Action Steps:**
+🚨 **MANDATORY**: Use commentfetch JSON data for threading analysis instead of duplicate API calls:
+
+```bash
+
+### Phase 3: Step 3: Quality Assessment & Fake Comment Detection (JSON-BASED)
+
+**Action Steps:**
+🚨 **CRITICAL**: Use commentfetch data for response quality analysis instead of duplicate API calls:
+
+```bash
+echo "=== QUALITY ASSESSMENT & FAKE COMMENT DETECTION (JSON-BASED) ==="
+
+### Phase 4: Step 4: Final Coverage Report (COMPREHENSIVE)
+
+**Action Steps:**
+🚨 **CRITICAL**: Generate final coverage report using commentfetch comprehensive data:
+
+```bash
+echo "=================================================================="
+echo "🚨 COMPREHENSIVE COMMENT COVERAGE REPORT (COMMENTFETCH-BASED)"
+echo "=================================================================="
+
+### Phase 5: Integration with Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 6: Actions on Failure
+
+**Action Steps:**
+If `/commentcheck` finds issues:
+1. **Report specific problems** - List missing/poor responses
+2. **Suggest fixes** - Indicate what needs improvement
+3. **Prevent completion** - Workflow should not proceed until fixed
+4. **Re-run commentreply** - Address missing/poor responses
+
+## 📋 REFERENCE DOCUMENTATION
+
 # /commentcheck Command
 
 **Usage**: `/commentcheck [PR_NUMBER] [--verify-urls]`
@@ -28,11 +88,13 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 ## 🚨 COPILOT INTEGRATION REQUIREMENTS
 
 ### FAILURE ESCALATION (MANDATORY EXIT CODES):
+
 - **EXIT CODE 1**: Unresponded comments detected - HALT copilot execution immediately
 - **EXIT CODE 2**: GitHub API failures - HALT with diagnostic information
 - **EXIT CODE 0**: Only when 100% coverage verified - ALLOW copilot to continue
 
 ### COPILOT INTEGRATION PROTOCOL:
+
 - **PRE-PUSH GATE**: Must run before any push operations in copilot workflow
 - **HARD STOP ENFORCEMENT**: Non-zero exit codes must halt copilot execution
 - **NO BYPASS ALLOWED**: Cannot be skipped or ignored in copilot automation
@@ -49,11 +111,8 @@ Pure markdown command (no Python executable) that systematically verifies all PR
 
 ## Individual Comment Verification Process (ORCHESTRATED)
 
-### Step 1: Load ALL Individual Comments (ORCHESTRATED)
-🚨 **MANDATORY**: Use `/commentfetch` for comprehensive comment data instead of duplicating API calls:
-
-```bash
 # 1. Get PR number and validate
+
 PR_NUMBER=${1:-$(gh pr view --json number --jq .number)}
 if [ -z "$PR_NUMBER" ]; then
   echo "❌ ERROR: Could not determine PR number. Please specify PR number or run from PR branch."
@@ -66,6 +125,7 @@ echo "🔍 COMPREHENSIVE COMMENT ANALYSIS FOR PR #$PR_NUMBER"
 echo "=================================================================="
 
 # 2. Execute commentfetch Python implementation for comprehensive multi-API comment fetching
+
 cd .claude/commands && python3 -c "
 import _copilot_modules.commentfetch as cf
 import sys
@@ -74,6 +134,7 @@ fetch.execute()
 " "$PR_NUMBER"
 
 # 3. Use structured JSON output from commentfetch
+
 BRANCH_NAME=$(git branch --show-current)
 COMMENTS_FILE="/tmp/$BRANCH_NAME/comments.json"
 
@@ -88,6 +149,7 @@ fi
 echo "✅ DATA SOURCE: Using commentfetch structured output from $COMMENTS_FILE"
 
 # 4. Extract comprehensive comment statistics from commentfetch JSON
+
 TOTAL_COMMENTS=$(jq '.metadata.total' "$COMMENTS_FILE" 2>/dev/null || echo "0")
 UNRESPONDED_COUNT=$(jq '.metadata.unresponded_count' "$COMMENTS_FILE" 2>/dev/null || echo "0")
 INLINE_COUNT=$(jq '.metadata.by_type.inline' "$COMMENTS_FILE" 2>/dev/null || echo "0")
@@ -104,6 +166,7 @@ echo "   Copilot comments: $COPILOT_COUNT"
 echo "   Unresponded comments: $UNRESPONDED_COUNT"
 
 # 5. Validate commentfetch data quality
+
 if [ "$TOTAL_COMMENTS" -eq 0 ]; then
   echo "⚠️ WARNING: No comments detected by commentfetch"
   echo "This may indicate API access issues or an empty PR"
@@ -113,14 +176,12 @@ echo "🎯 COMMENTFETCH ORCHESTRATION: Successfully loaded $TOTAL_COMMENTS comme
 echo "📈 UNRESPONDED ANALYSIS: $UNRESPONDED_COUNT comments require attention"
 ```
 
-### Step 2: Individual Comment Threading Verification (JSON-BASED)
-🚨 **MANDATORY**: Use commentfetch JSON data for threading analysis instead of duplicate API calls:
-
-```bash
 # Enhanced threading verification using commentfetch structured data
+
 echo "=== THREADING VERIFICATION ANALYSIS (JSON-BASED) ==="
 
 # Use commentfetch JSON output instead of making new API calls
+
 ALL_COMMENTS=$(jq '.comments' "$COMMENTS_FILE" 2>/dev/null || echo '[]')
 if [ "$(echo "$ALL_COMMENTS" | jq length)" -eq 0 ]; then
   echo "🚨 CRITICAL: COPILOT EXECUTION HALTED" >&2
@@ -132,10 +193,12 @@ fi
 echo "✅ USING COMMENTFETCH DATA: $(echo "$ALL_COMMENTS" | jq length) comments loaded"
 
 # Step 2A: Analyze threading status for ALL comments (from commentfetch data)
+
 echo "📊 THREADING STATUS ANALYSIS:"
 echo "$ALL_COMMENTS" | jq -r '.[] | "ID: \(.id) | Author: \(.author) | Type: \(.type) | Replied: \(.already_replied)"'
 
 # Step 2B: Count threading success rates (using commentfetch metadata)
+
 TOTAL_COMMENTS=$(echo "$ALL_COMMENTS" | jq length)
 ALREADY_REPLIED=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.already_replied == true)] | length')
 REQUIRES_RESPONSE=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.requires_response == true)] | length')
@@ -152,6 +215,7 @@ if [ "$TOTAL_COMMENTS" -gt 0 ]; then
 fi
 
 # Step 2C: Simple comment classification (AI responder vs needs response)
+
 echo ""
 echo "🔍 SIMPLE CLASSIFICATION (AI responder detection only):"
 AI_RESPONDER_COMMENTS=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | startswith("[AI responder]"))]')
@@ -163,18 +227,14 @@ echo "   AI responder comments: $AI_COUNT"
 echo "   Comments needing response: $NEEDS_RESPONSE_COUNT"
 
 # Step 2D: List comments needing response (simple logic)
+
 echo ""
 echo "❌ COMMENTS NEEDING RESPONSE (simple logic):"
 echo "$NEEDS_RESPONSE_COMMENTS" | jq -r '.[] | "❌ Comment #\(.id) (\(.author)): \(.body[0:80])..."'
 ```
 
-### Step 3: Quality Assessment & Fake Comment Detection (JSON-BASED)
-🚨 **CRITICAL**: Use commentfetch data for response quality analysis instead of duplicate API calls:
-
-```bash
-echo "=== QUALITY ASSESSMENT & FAKE COMMENT DETECTION (JSON-BASED) ==="
-
 # Use simple AI responder detection for quality analysis
+
 AI_RESPONDER_RESPONSES=$(echo "$ALL_COMMENTS" | jq '[.[] | select(.body | startswith("[AI responder]"))]')
 AI_RESPONSE_COUNT=$(echo "$AI_RESPONDER_RESPONSES" | jq length)
 
@@ -182,24 +242,29 @@ echo "📊 SIMPLE RESPONSE ANALYSIS:"
 echo "   AI responder comments found: $AI_RESPONSE_COUNT"
 
 # No complex pattern analysis - just check for basic quality
+
 echo "🔍 BASIC QUALITY CHECK:"
 
 # Only check if AI responder comments exist and have substance
+
 SUBSTANTIAL_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | length > 50)]')
 SUBSTANTIAL_COUNT=$(echo "$SUBSTANTIAL_RESPONSES" | jq length)
 echo "   Substantial AI responses (>50 chars): $SUBSTANTIAL_COUNT"
 
 # Calculate generic acknowledgments from AI responses
+
 GENERIC_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | length <= 50)]')
 GENERIC_COUNT=$(echo "$GENERIC_RESPONSES" | jq length)
 echo "   Generic acknowledgments: $GENERIC_COUNT"
 
 # Pattern 3: Bot-specific templating - use AI_RESPONDER_RESPONSES instead of undefined HUMAN_RESPONSES
+
 CODERABBIT_RESPONSES=$(echo "$AI_RESPONDER_RESPONSES" | jq '[.[] | select(.body | test("Thank you CodeRabbit"))]')
 CODERABBIT_COUNT=$(echo "$CODERABBIT_RESPONSES" | jq length)
 echo "   CodeRabbit-specific templates: $CODERABBIT_COUNT"
 
 # Simple quality assessment - just check for basic response coverage
+
 if [ "$AI_RESPONSE_COUNT" -eq 0 ] && [ "$NEEDS_RESPONSE_COUNT" -gt 0 ]; then
   echo "🚨 CRITICAL: COPILOT EXECUTION HALTED"
   echo "🚨 REASON: No AI responder comments found but comments need responses"
@@ -212,15 +277,8 @@ else
 fi
 ```
 
-### Step 4: Final Coverage Report (COMPREHENSIVE)
-🚨 **CRITICAL**: Generate final coverage report using commentfetch comprehensive data:
-
-```bash
-echo "=================================================================="
-echo "🚨 COMPREHENSIVE COMMENT COVERAGE REPORT (COMMENTFETCH-BASED)"
-echo "=================================================================="
-
 # Use simple direct comment counting
+
 TOTAL_COMMENTS=$(jq '.comments | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
 AI_RESPONDER_COMMENTS=$(jq '[.comments[] | select(.body | startswith("[AI responder]"))] | length' "$COMMENTS_FILE" 2>/dev/null || echo "0")
 NEEDS_RESPONSE_COUNT=$((TOTAL_COMMENTS - AI_RESPONDER_COMMENTS))
@@ -287,6 +345,7 @@ fi
 - **Unprofessional or inadequate replies** (maintain PR review standards)
 
 ### 🎯 SPECIFIC FAIL TRIGGERS (UNRESPONDED COMMENT FOCUS)
+
 - **Unresponded comment count > 0** (explicit count detection and warning)
 - **Zero individual responses** (like PR #864 - complete failure with 11 unresponded)
 - **Partial bot coverage** (some Copilot/CodeRabbit comments without replies)
@@ -294,19 +353,11 @@ fi
 - **Template responses only** (generic acknowledgments without substance)
 - **Ignored technical suggestions** (failing to address specific code feedback)
 
-## Integration with Workflow
-
 ### When to Run
+
 - **After** `/commentreply` completes
 - **Before** final `/pushl` in copilot workflow
 - **Verify** comment coverage is complete
-
-### Actions on Failure
-If `/commentcheck` finds issues:
-1. **Report specific problems** - List missing/poor responses
-2. **Suggest fixes** - Indicate what needs improvement
-3. **Prevent completion** - Workflow should not proceed until fixed
-4. **Re-run commentreply** - Address missing/poor responses
 
 ## Command Flow Integration
 
@@ -344,15 +395,23 @@ If `/commentcheck` finds issues:
 ## Example Usage
 
 ```bash
+
 # After running /commentreply
+
 /commentcheck 1603
 
 # Will orchestrate commentfetch and verify:
+
 # ✅ All comments have responses
+
 # ✅ Responses address specific content
+
 # ✅ Proper DONE/NOT DONE classification
+
 # ✅ Professional and substantial replies
+
 # 📊 Generate detailed coverage report
+
 ```
 
 This command ensures the comment response process maintains high quality and complete coverage for professional PR management, with proper orchestration of commentfetch eliminating code duplication.

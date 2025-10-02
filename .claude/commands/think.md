@@ -1,3 +1,25 @@
+---
+description: Think Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Sequential Thinking
+
+**Action Steps:**
+1. Determine the requested thinking level from arguments (Light/Medium/Deep/Ultra, default to Light if omitted)
+2. Map the level to the totalThoughts budget (Light: 4, Medium: 6, Deep: 8, Ultra: 12)
+3. Run mcp__sequential-thinking__sequentialthinking with the user's prompt and chosen budget, logging phases in TodoWrite
+4. Deliver a synthesized answer that summarizes reasoning, conclusions, and recommended next steps
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Think Command
 
 **Usage**: `/think [level] [problem/question]` or `/think [problem/question]`
@@ -36,6 +58,7 @@ Uses the `mcp__sequential-thinking__sequentialthinking` tool to:
 /think ultra Plan architecture for 10M requests        # Ultra: 12+ thoughts
 
 # Short aliases
+
 /think l Quick bug analysis
 /think m Design pattern selection
 /think d Performance optimization strategy

@@ -1,3 +1,35 @@
+---
+description: Debug Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Debug Checklist
+
+**Action Steps:**
+When `/debug` is active, ensure:
+1. [ ] Exact error messages are captured
+2. [ ] Stack traces include file:line references
+3. [ ] **DOM inspector output** captured for UI issues
+4. [ ] **CSS computed properties** extracted for visual elements
+5. [ ] **Network request logs** captured for asset loading
+6. [ ] **Console errors/warnings** documented
+7. [ ] Reproduction steps are documented
+8. [ ] Hypotheses are explicitly stated
+9. [ ] Evidence supports conclusions
+10. [ ] **Screenshot + technical verification** completed before any ✅ claims
+11. [ ] Fix is validated with tests
+12. [ ] **Anti-bias check**: "What should NOT be working?" tested
+13. [ ] Learning captured (automatic `/learn` trigger when debugging succeeds)
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Debug Command
 
 **Usage**: `/debug [task/problem]`
@@ -18,18 +50,21 @@ As a natural command, `/debug` modifies how protocol commands execute by adding:
 When combined with protocol commands:
 
 ### `/debug /execute`
+
 - Adds detailed logging to implementation
 - Inserts debug statements and checkpoints
 - Creates verbose error handling
 - Implements state validation
 
 ### `/debug /test`
+
 - Runs tests with maximum verbosity
 - Shows detailed failure analysis
 - Includes intermediate assertions
 - Captures full stack traces
 
 ### `/debug /arch`
+
 - Focuses on identifying architectural flaws
 - Traces component interactions
 - Analyzes failure points in design
@@ -50,30 +85,35 @@ When combined with protocol commands:
 ## Examples
 
 ### Basic Debugging
+
 ```
 /debug "API returns 500 error"
 ```
 Applies systematic debugging to identify the error source.
 
 ### Debug with Implementation
+
 ```
 /debug /execute "fix authentication bug"
 ```
 Implements fix with extensive logging and validation.
 
 ### Debug with Testing
+
 ```
 /debug /test "flaky test failures"
 ```
 Runs tests with verbose output to catch intermittent issues.
 
 ### Combined Approach
+
 ```
 /debug /think /execute "memory leak in production"
 ```
 Deep analysis + systematic debugging + instrumented implementation.
 
 ### Debug with Automatic Learning
+
 ```
 /debug "intermittent database connection failures"
 ```
@@ -93,23 +133,6 @@ When the debugging session successfully identifies and resolves the root cause, 
 - **With `/verbose`**: Redundant since `/debug` already includes verbose logging. Using both doesn't change output but signals strong emphasis on detailed analysis
 - **With `/careful`**: Adds extra validation steps
 - **With `/test`**: Creates diagnostic test cases
-
-## Debug Checklist
-
-When `/debug` is active, ensure:
-- [ ] Exact error messages are captured
-- [ ] Stack traces include file:line references
-- [ ] **DOM inspector output** captured for UI issues
-- [ ] **CSS computed properties** extracted for visual elements
-- [ ] **Network request logs** captured for asset loading
-- [ ] **Console errors/warnings** documented
-- [ ] Reproduction steps are documented
-- [ ] Hypotheses are explicitly stated
-- [ ] Evidence supports conclusions
-- [ ] **Screenshot + technical verification** completed before any ✅ claims
-- [ ] Fix is validated with tests
-- [ ] **Anti-bias check**: "What should NOT be working?" tested
-- [ ] Learning captured (automatic `/learn` trigger when debugging succeeds)
 
 ## Automatic Learning Integration
 

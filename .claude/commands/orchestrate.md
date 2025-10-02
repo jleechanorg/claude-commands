@@ -1,3 +1,22 @@
+---
+description: Orchestrate Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Orchestrate Command
 
 **Purpose**: Multi-agent orchestration system for complex development tasks
@@ -125,7 +144,6 @@
 - **Connect to testing**: `tmux attach -t testing-agent`
 - **Monitor all**: `tmux list-sessions | grep -E '(frontend|backend|testing|opus)'`
 
-
 ## Important Notes
 
 - **Working Directory**: The orchestration system creates agent workspaces as subdirectories. Always ensure you're in the main project directory when running orchestration commands, not inside an agent workspace
@@ -151,6 +169,7 @@ Agent tasks require TIME - wait for completion before ANY declaration:
 **CRITICAL**: Agents must detect whether to UPDATE existing PRs or CREATE new ones:
 
 ### 🔍 PR Update Pattern Detection
+
 The orchestration system recognizes these patterns as PR UPDATE requests:
 - **Explicit PR references**: "fix PR #123", "update pull request #456", "adjust PR #789"
 - **Contextual PR references**: "adjust the PR", "fix the pull request", "update that PR"
@@ -158,12 +177,14 @@ The orchestration system recognizes these patterns as PR UPDATE requests:
 - **Continuation phrases**: "continue with PR", "add to the PR", "the PR needs", "PR should also"
 
 ### 🆕 PR Create Patterns (Default)
+
 These patterns trigger NEW PR creation:
 - **No PR mentioned**: "implement feature X", "fix bug Y", "create Z"
 - **Explicit new work**: "create new PR for", "start fresh PR", "new pull request"
 - **Independent tasks**: Tasks that don't reference existing work
 
 ### 📢 User Feedback
+
 Orchestration will clearly indicate the detected mode:
 ```
 🔍 Detected PR context: #950 - Agent will UPDATE existing PR
@@ -177,6 +198,7 @@ OR
 ```
 
 ### ⚠️ Edge Cases
+
 - **Merged/Closed PRs**: Agent will warn and ask for confirmation
 - **Multiple PR mentions**: Agent will ask which PR to update
 - **Ambiguous "the PR"**: System will show recent PRs and ask for selection
@@ -189,6 +211,7 @@ OR
 The orchestration system implements intelligent agent reuse to optimize resource utilization while maintaining task isolation.
 
 ### **Agent Reuse Strategy**:
+
 1. **Check for Idle Agents**: Before creating new agents, check for idle existing agents
 2. **Reuse When Available**: Reuse idle agents for new tasks (50-80% efficiency gains)
 3. **Create When Needed**: Create new agents only when no idle agents available
@@ -196,6 +219,7 @@ The orchestration system implements intelligent agent reuse to optimize resource
 5. **Resource Optimization**: Strategic reuse without compromising task quality
 
 ### **Individual Agent Per Task Architecture**:
+
 - ✅ **Parallel Execution**: All tasks processed simultaneously (one agent per task)
 - ✅ **Resource Efficiency**: Idle agents reused before creating new ones (50-80% token savings)
 - ✅ **Complete Isolation**: Each agent has dedicated workspace and task focus
@@ -206,21 +230,31 @@ The orchestration system implements intelligent agent reuse to optimize resource
 - ✅ **Real-time Visibility**: Monitor all individual agents' progress
 
 ### **Agent Lifecycle Management**:
+
 ```bash
+
 # CORRECT: Agent reuse optimization workflow
+
 for TASK in $TASK_LIST; do
     /orchestrate "$TASK with agent reuse preference"
 done
 
 # Each task execution with reuse:
+
 # 1. Check for idle agents first
+
 # 2. Reuse existing idle agent if available
+
 # 3. Create new agent only if no idle agents
+
 # 4. Execute task in complete isolation
+
 # 5. Mark agent as idle after completion (available for reuse)
+
 ```
 
 ### **Performance Benefits**:
+
 - **Token Savings**: 50-80% reduction in agent creation overhead
 - **Resource Efficiency**: Better utilization of active agents
 - **Faster Execution**: Reduced agent startup time through reuse
@@ -228,6 +262,7 @@ done
 - **Scalability**: Handle more concurrent tasks with same resources
 
 ### **Safety Guarantees**:
+
 - ❌ **No Task Contamination**: Each task gets clean agent state
 - ❌ **No Shared Context**: Agents don't share previous task context
 - ✅ **Fresh Workspace**: Each task gets isolated worktree regardless of reuse

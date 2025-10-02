@@ -1,3 +1,25 @@
+---
+description: Roadmap Command
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: 2. **Integrated Workflow Execution**
+
+**Action Steps:**
+For each task, execute in sequence:
+1. **`/think light`** - Quick analysis to understand task scope
+2. **`/plan`** - Create detailed execution plan with optimal strategy
+3. **`/handoff`** - Generate handoff branches and coordinate parallel work
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Roadmap Command
 
 **Purpose**: Update roadmap files with enhanced multi-task parallel processing and integrated agent workflow
@@ -70,23 +92,20 @@
 **When multiple tasks are provided**, the command automatically:
 
 ### 1. **Task Parsing & Analysis**
+
 - Parse comma-separated tasks or multiple arguments
 - Identify task complexity and dependencies
 - Group related tasks for efficient processing
 
-### 2. **Integrated Workflow Execution**
-For each task, execute in sequence:
-- **`/think light`** - Quick analysis to understand task scope
-- **`/plan`** - Create detailed execution plan with optimal strategy
-- **`/handoff`** - Generate handoff branches and coordinate parallel work
-
 ### 3. **Parallel Task Coordination**
+
 - Spawn dedicated tasks for each work item using `/orchestrate`
 - Create isolated worktrees for conflict-free parallel work
 - Each task works on its own feature branch
 - Tasks execute autonomously with progress tracking
 
 ### 4. **Progress Tracking**
+
 - Update `roadmap/roadmap.md` with parallel task status:
   ```
   ## Active Parallel Tasks (Auto-Generated)
@@ -101,11 +120,13 @@ For each task, execute in sequence:
   - ⚪ Pending
 
 ### 5. **Branch Management**
+
 - Each task gets its own feature branch: `feature/task-[id]-[name]`
 - Handoff branches for documentation: `handoff-[task-name]`
 - Clean separation prevents merge conflicts
 
 ### 6. **Automatic PR Creation**
+
 - Each completed task creates its own PR
 - PRs reference the parent roadmap task
 - Cross-references between related PRs

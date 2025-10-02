@@ -1,3 +1,22 @@
+---
+description: Perp Command - Comprehensive Multi-Search
+type: llm-orchestration
+execution_mode: immediate
+---
+## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
+**When this command is invoked, YOU (Claude) must execute these steps immediately:**
+**This is NOT documentation - these are COMMANDS to execute right now.**
+**Use TodoWrite to track progress through multi-phase workflows.**
+
+## 🚨 EXECUTION WORKFLOW
+
+### Phase 1: Execute Documented Workflow
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps sequentially.
+
+## 📋 REFERENCE DOCUMENTATION
+
 # Perp Command - Comprehensive Multi-Search
 
 **Purpose**: Combine multiple search engines for comprehensive results
@@ -7,6 +26,7 @@
 ## 🔍 MULTI-ENGINE SEARCH PROTOCOL
 
 ### Current Date Awareness (macOS + Ubuntu)
+
 Always establish today's date before running any searches so results can be evaluated for freshness:
 
 ```sh
@@ -32,6 +52,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 ### Search Engine Details
 
 #### 1. Claude WebSearch
+
 **Capabilities**:
 - Up-to-date web information
 - Search result blocks with summaries
@@ -39,6 +60,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - US-based search results
 
 #### 2. Perplexity MCP
+
 **Capabilities**:
 - AI-powered conversational search
 - Real-time information synthesis
@@ -46,6 +68,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Academic and research focus
 
 #### 3. Gemini MCP
+
 **Capabilities**:
 - AI development consultation and code assistance
 - Technical problem-solving perspective
@@ -53,6 +76,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Development-focused insights
 
 #### 4. Grok MCP
+
 **Capabilities**:
 - Real-time intelligence sourced from X (Twitter) data streams
 - Broad general-knowledge assistant for timely events and trends
