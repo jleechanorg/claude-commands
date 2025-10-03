@@ -37,14 +37,20 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
 
         Manual override allows up to 2x the normal limit (100 runs) but no more.
         """
-        # Set up scenario: we're at the 50 run limit
-        self.manager._global_runs_cache = 50
+        # Set up scenario: we're at the 2x limit + 1 (101 runs)
+        # We need to write to the file since get_global_runs() reads from file
+        today = datetime.now().date().isoformat()
+        data = {
+            "total_runs": 101,
+            "start_date": datetime.now().isoformat(),
+            "current_date": today
+        }
+        self.manager._write_json_file(self.manager.global_runs_file, data)
 
         # Manual approval should NOT allow unlimited runs
         self.manager.grant_manual_approval("test@example.com")
 
         # This should be FALSE after 2x the limit (100 runs)
-        self.manager._global_runs_cache = 101
         result = self.manager.can_start_global_run()
 
         # FIXED: This should now be FALSE (blocked) at 101 runs
@@ -91,14 +97,18 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
 
         The system now blocks excessive runs even with manual override.
         """
-        # Simulate the exact scenario from the bug report
-        self.manager._global_runs_cache = 0
-
         # Grant approval (simulating what happened Sept 27)
         self.manager.grant_manual_approval("jleechan@anthropic.com")
 
         # Simulate running 346 times (what actually happened)
-        self.manager._global_runs_cache = 346
+        # We need to write to the file since get_global_runs() reads from file
+        today = datetime.now().date().isoformat()
+        data = {
+            "total_runs": 346,
+            "start_date": datetime.now().isoformat(),
+            "current_date": today
+        }
+        self.manager._write_json_file(self.manager.global_runs_file, data)
 
         # This should now be FALSE (blocked) with fixed logic
         result = self.manager.can_start_global_run()

@@ -8,6 +8,7 @@ The PR automation system has built-in safety mechanisms to prevent excessive API
 
 | Limit Type | Value | Purpose |
 |------------|-------|---------|
+| **Daily Run Limit** | 50 runs per day | Prevents excessive API usage, resets at midnight |
 | **Max Batch Size** | 5 PRs per run | Prevents overwhelming the system |
 | **Max Fix Attempts** | 3 attempts per PR | Prevents infinite retry loops |
 | **Run Frequency** | Every 10 minutes | Reasonable processing interval |
@@ -16,12 +17,13 @@ The PR automation system has built-in safety mechanisms to prevent excessive API
 
 ### **Daily Run Calculations**
 
-**When automation is enabled**, the system runs every 10 minutes:
-- **Runs per hour**: 6 runs
-- **Runs per day**: 144 runs (6 × 24 hours)
-- **PRs processed per day**: Maximum 720 PRs (144 runs × 5 PRs max per run)
+**When automation is enabled**, the system runs every 30 minutes with a **50 runs per day limit**:
+- **Maximum runs per day**: 50 runs (resets at midnight)
+- **PRs processed per day**: Maximum 250 PRs (50 runs × 5 PRs max per run)
+- **Actual scheduling**: Every 30 minutes (48 possible slots), but limited to 50 successful runs
 
-⚠️ **However, practical limits are much lower due to:**
+⚠️ **Practical limits are lower due to:**
+- Daily 50-run limit (automatic reset at midnight)
 - 4-hour cooldown between successful processing
 - 3-attempt limit before email notification and cooldown
 - Only processes PRs updated in last 24 hours
@@ -30,10 +32,12 @@ The PR automation system has built-in safety mechanisms to prevent excessive API
 ### **Realistic Daily Processing**
 
 With safety mechanisms in effect:
+- **Daily run limit**: 50 runs maximum (resets at midnight)
 - **Active PRs per day**: Typically 5-15 PRs
-- **Actual processing attempts**: ~10-30 per day
-- **Successful completions**: ~5-10 PRs per day
+- **Actual processing attempts**: Up to 50 runs per day
+- **Successful completions**: ~10-25 PRs per day (depending on batch sizes)
 - **Failed PRs**: Stopped after 3 attempts, require manual intervention
+- **Auto-reset**: Counter resets to 0 at midnight daily
 
 ## 🔧 **Configuration Details**
 

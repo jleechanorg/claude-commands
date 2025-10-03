@@ -4,7 +4,7 @@ Automation Safety Manager - GREEN Phase Implementation
 
 Minimal implementation to pass the RED phase tests with:
 - PR attempt limits (max 5 per PR)
-- Global run limits (max 50 total)
+- Global run limits (max 50 per day with automatic midnight reset)
 - Manual approval system
 - Thread-safe operations
 - Email notifications
@@ -24,6 +24,9 @@ from datetime import datetime, timedelta
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from typing import Dict, Optional, Union
+
+
+REAL_DATETIME = datetime
 
 # Optional keyring import for email functionality
 _keyring_spec = importlib.util.find_spec("keyring")
@@ -88,9 +91,11 @@ class AutomationSafetyManager:
             self._write_json_file(self.pr_attempts_file, {})
 
         if not os.path.exists(self.global_runs_file):
+            today = datetime.now().date().isoformat()
             self._write_json_file(self.global_runs_file, {
                 "total_runs": 0,
-                "start_date": datetime.now().isoformat()
+                "start_date": datetime.now().isoformat(),
+                "current_date": today
             })
 
         if not os.path.exists(self.approval_file):
@@ -121,7 +126,6 @@ class AutomationSafetyManager:
             default_config = {
                 "global_limit": self.global_limit,
                 "pr_limit": self.pr_limit,
-                "daily_limit": 100
             }
             self._write_json_file(self.config_file, default_config)
 
@@ -144,11 +148,6 @@ class AutomationSafetyManager:
         with self.lock:
             # Sync PR attempts - keys already normalized
             self._write_json_file(self.pr_attempts_file, self._pr_attempts_cache)
-
-            # Sync global runs
-            global_data = self._read_json_file(self.global_runs_file)
-            global_data["total_runs"] = self._global_runs_cache
-            self._write_json_file(self.global_runs_file, global_data)
 
             # Sync inflight cache to prevent concurrent processing
             self._write_json_file(self.inflight_file, self._pr_inflight_cache)
@@ -217,6 +216,77 @@ class AutomationSafetyManager:
                 self.logger.error(f"Failed to write safety data file {file_path}")
         except Exception as e:
             self.logger.error(f"Exception writing safety data file {file_path}: {e}")
+
+    def _normalize_global_run_payload(
+        self,
+        payload: Optional[dict],
+        *,
+        now: Optional[datetime] = None,
+    ) -> tuple[dict, int, bool]:
+        """Normalize persisted global run data and determine if it is stale."""
+
+        current_time = now or datetime.now()
+        today = current_time.date().isoformat()
+
+        if isinstance(payload, dict):
+            data = dict(payload)
+        else:
+            data = {}
+
+        # Ensure start_date is always present and well-formed
+        start_date = data.get("start_date")
+        if isinstance(start_date, str):
+            try:
+                REAL_DATETIME.fromisoformat(start_date)
+            except ValueError:
+                data["start_date"] = current_time.isoformat()
+        else:
+            data["start_date"] = current_time.isoformat()
+
+        stored_date = data.get("current_date")
+        normalized_date: Optional[str] = None
+        if isinstance(stored_date, str):
+            try:
+                normalized_date = REAL_DATETIME.fromisoformat(stored_date).date().isoformat()
+            except ValueError:
+                normalized_date = None
+
+        if normalized_date is None:
+            try:
+                normalized_date = REAL_DATETIME.fromisoformat(data["start_date"]).date().isoformat()
+            except ValueError:
+                normalized_date = None
+
+        is_stale = normalized_date != today
+
+        if is_stale:
+            normalized_date = today
+            data["total_runs"] = 0
+
+        data["current_date"] = normalized_date or today
+
+        raw_total = data.get("total_runs", 0)
+        try:
+            total_runs = int(raw_total)
+        except (TypeError, ValueError):
+            total_runs = 0
+
+        if total_runs < 0:
+            total_runs = 0
+
+        data["total_runs"] = total_runs
+
+        last_run = data.get("last_run")
+        if last_run is not None:
+            if not isinstance(last_run, str):
+                data.pop("last_run", None)
+            else:
+                try:
+                    REAL_DATETIME.fromisoformat(last_run)
+                except ValueError:
+                    data.pop("last_run", None)
+
+        return data, total_runs, is_stale
 
     def can_process_pr(self, pr_number: Union[int, str], repo: str = None, branch: str = None) -> bool:
         """Check if PR can be processed (under attempt limit)"""
@@ -330,8 +400,8 @@ class AutomationSafetyManager:
     def can_start_global_run(self) -> bool:
         """Check if a global run can be started"""
         with self.lock:
-            # Use cache for testing, file for production
-            runs = self._global_runs_cache if hasattr(self, '_global_runs_cache') else self.get_global_runs()
+            # Always refresh from file to detect external resets
+            runs = self.get_global_runs()
 
             if runs < self.global_limit:
                 return True
@@ -345,29 +415,58 @@ class AutomationSafetyManager:
             return False
 
     def get_global_runs(self) -> int:
-        """Get total number of global runs"""
+        """Get total number of global runs (resets daily)"""
         with self.lock:
-            # Reload from disk to ensure consistency across multiple managers
-            data = self._read_json_file(self.global_runs_file)
-            self._global_runs_cache = data.get("total_runs", 0)
-            return self._global_runs_cache
+            normalized_total = 0
+
+            def _refresh(payload: Optional[dict]):
+                nonlocal normalized_total
+                normalized, total, _ = self._normalize_global_run_payload(payload)
+                normalized_total = normalized["total_runs"]
+                return normalized
+
+            if not json_manager.update_json(self.global_runs_file, _refresh):
+                self.logger.warning(
+                    "Falling back to manual refresh for global run counter"
+                )
+                payload = self._read_json_file(self.global_runs_file)
+                normalized, total, _ = self._normalize_global_run_payload(payload)
+                normalized_total = total
+                self._write_json_file(self.global_runs_file, normalized)
+
+            self._global_runs_cache = normalized_total
+            return normalized_total
 
     def record_global_run(self):
         """Record a global automation run atomically"""
         with self.lock:
-            try:
-                # Update in-memory cache
-                self._global_runs_cache += 1
+            new_total = 0
+            current_time = datetime.now()
 
-                # Sync to file for persistence (atomic operation)
-                data = self._read_json_file(self.global_runs_file)
-                data["total_runs"] = self._global_runs_cache
-                data["last_run"] = datetime.now().isoformat()
-                self._write_json_file(self.global_runs_file, data)
-            except Exception:
-                # Rollback cache if file write failed
-                self._global_runs_cache -= 1
-                raise
+            def _increment(payload: Optional[dict]):
+                nonlocal new_total
+                normalized, total, _ = self._normalize_global_run_payload(payload, now=current_time)
+                total += 1
+                normalized["total_runs"] = total
+                normalized["current_date"] = current_time.date().isoformat()
+                normalized["last_run"] = current_time.isoformat()
+                new_total = total
+                return normalized
+
+            if not json_manager.update_json(self.global_runs_file, _increment):
+                self.logger.warning(
+                    "Falling back to manual increment for global run counter"
+                )
+                payload = self._read_json_file(self.global_runs_file)
+                normalized, total, _ = self._normalize_global_run_payload(payload, now=current_time)
+                total += 1
+                normalized["total_runs"] = total
+                normalized["current_date"] = current_time.date().isoformat()
+                normalized["last_run"] = current_time.isoformat()
+                new_total = total
+                self._write_json_file(self.global_runs_file, normalized)
+
+            self._global_runs_cache = new_total
 
     def requires_manual_approval(self) -> bool:
         """Check if manual approval is required"""
@@ -387,7 +486,7 @@ class AutomationSafetyManager:
                 return False
 
             try:
-                approval_date = datetime.fromisoformat(approval_date_str)
+                approval_date = REAL_DATETIME.fromisoformat(approval_date_str)
             except (TypeError, ValueError):
                 return False
             approval_hours = get_automation_limits()['approval_hours']

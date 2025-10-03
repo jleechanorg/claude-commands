@@ -139,6 +139,11 @@ jobs:
               echo "Installing $req_file (with 300s timeout)"
               timeout 300 pip install -r "$req_file" || echo "Warning: Failed to install $req_file"
             done
+            # Install automation package if testing automation
+            if [ "${{ matrix.test-group }}" = "automation" ] && [ -f "automation/pyproject.toml" ]; then
+              echo "Installing automation package in editable mode"
+              timeout 300 pip install -e automation/
+            fi
             ;;
         esac
 
@@ -160,7 +165,7 @@ jobs:
         export ENABLE_BUILD_TESTS=0
         export ENABLE_NETWORK_TESTS=0
         export GITHUB_ACTIONS=true
-        export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site"
+        export PYTHONPATH="${PYTHONPATH}:${PWD}:${PWD}/mvp_site:${PWD}/automation"
 
         echo "🎯 Running tests for directory group: ${{ matrix.test-group }}"
         echo "📂 Test directories: ${{ matrix.test-dirs }}"

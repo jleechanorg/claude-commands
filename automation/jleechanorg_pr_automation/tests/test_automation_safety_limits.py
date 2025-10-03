@@ -264,6 +264,128 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertEqual(manager.pr_limit, 5)
         self.assertEqual(manager.global_limit, 50)
 
+    # Matrix 8: Daily Reset Functionality (50 runs per day)
+    def test_daily_reset_first_run_of_day(self):
+        """RED: First run of the day should be allowed with counter at 0"""
+        result = self.automation_manager.can_start_global_run()
+        self.assertTrue(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+
+    def test_daily_reset_49th_run_same_day(self):
+        """RED: 49th run on same day should be allowed"""
+        # Record 48 runs on same day
+        for _ in range(48):
+            self.automation_manager.record_global_run()
+
+        result = self.automation_manager.can_start_global_run()
+        self.assertTrue(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 48)
+
+    def test_daily_reset_50th_run_same_day(self):
+        """RED: 50th run on same day should be allowed (at limit)"""
+        # Record 49 runs on same day
+        for _ in range(49):
+            self.automation_manager.record_global_run()
+
+        result = self.automation_manager.can_start_global_run()
+        self.assertTrue(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 49)
+
+    def test_daily_reset_51st_run_same_day_blocked(self):
+        """RED: 51st run on same day should be blocked"""
+        # Record 50 runs on same day (hit daily limit)
+        for _ in range(50):
+            self.automation_manager.record_global_run()
+
+        result = self.automation_manager.can_start_global_run()
+        self.assertFalse(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 50)
+
+    def test_daily_reset_missing_current_date_resets_counter(self):
+        """Legacy counters without current_date should reset after upgrade"""
+        legacy_data = {
+            "total_runs": 50,
+            "start_date": datetime(2025, 9, 30, 12, 0, 0).isoformat()
+        }
+        with open(self.global_runs_file, 'w') as f:
+            json.dump(legacy_data, f)
+
+        if hasattr(self, '_automation_manager'):
+            del self._automation_manager
+
+        # First run after upgrade should reset the stale counter
+        self.assertTrue(self.automation_manager.can_start_global_run())
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+
+    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    def test_daily_reset_new_day_resets_counter(self, mock_datetime):
+        """RED: Counter should reset to 0 when a new day starts"""
+        # Day 1: Record 50 runs
+        day1 = datetime(2025, 10, 1, 10, 0, 0)
+        mock_datetime.now.return_value = day1
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        for _ in range(50):
+            self.automation_manager.record_global_run()
+
+        # Should be at limit on Day 1
+        self.assertEqual(self.automation_manager.get_global_runs(), 50)
+        self.assertFalse(self.automation_manager.can_start_global_run())
+
+        # Day 2: Counter should reset
+        day2 = datetime(2025, 10, 2, 10, 0, 0)
+        mock_datetime.now.return_value = day2
+
+        # Should allow runs again with reset counter
+        result = self.automation_manager.can_start_global_run()
+        self.assertTrue(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+
+    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    def test_daily_reset_multiple_days(self, mock_datetime):
+        """RED: Counter should reset each day for multiple days"""
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        # Day 1: 50 runs
+        day1 = datetime(2025, 10, 1, 10, 0, 0)
+        mock_datetime.now.return_value = day1
+        for _ in range(50):
+            self.automation_manager.record_global_run()
+        self.assertEqual(self.automation_manager.get_global_runs(), 50)
+
+        # Day 2: Reset to 0, then 30 runs
+        day2 = datetime(2025, 10, 2, 10, 0, 0)
+        mock_datetime.now.return_value = day2
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+        for _ in range(30):
+            self.automation_manager.record_global_run()
+        self.assertEqual(self.automation_manager.get_global_runs(), 30)
+
+        # Day 3: Reset to 0 again
+        day3 = datetime(2025, 10, 3, 10, 0, 0)
+        mock_datetime.now.return_value = day3
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+
+    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    def test_daily_reset_midnight_transition(self, mock_datetime):
+        """RED: Counter should reset at midnight transition"""
+        mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
+
+        # 23:59:59 on Day 1 - at limit
+        before_midnight = datetime(2025, 10, 1, 23, 59, 59)
+        mock_datetime.now.return_value = before_midnight
+        for _ in range(50):
+            self.automation_manager.record_global_run()
+        self.assertFalse(self.automation_manager.can_start_global_run())
+
+        # 00:00:01 on Day 2 - should reset
+        after_midnight = datetime(2025, 10, 2, 0, 0, 1)
+        mock_datetime.now.return_value = after_midnight
+
+        result = self.automation_manager.can_start_global_run()
+        self.assertTrue(result)
+        self.assertEqual(self.automation_manager.get_global_runs(), 0)
+
     @property
     def automation_manager(self):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
@@ -273,7 +395,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         return self._automation_manager
 
 
-# Matrix 8: Integration with Existing Automation
+# Matrix 9: Integration with Existing Automation
 class TestAutomationIntegration(unittest.TestCase):
     """Integration tests with existing simple_pr_batch.sh script"""
 
