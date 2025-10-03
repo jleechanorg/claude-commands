@@ -11,6 +11,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 from typing import Any
@@ -837,14 +838,16 @@ Complete the task, then use /pr to create a new pull request."""
                 return False
 
             # Create worktree for agent using new location logic
+            safe_agent_name = self._sanitize_agent_name(agent_name)
             try:
-                branch_name = f"{agent_name}-work"
+                branch_name = f"{safe_agent_name}-work"
                 agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
 
                 # Update agent_name if workspace_name was specified for consistency
                 workspace_config = agent_spec.get("workspace_config", {})
                 if workspace_config.get("workspace_name"):
                     agent_name = workspace_config["workspace_name"]
+                    safe_agent_name = self._sanitize_agent_name(agent_name)
 
                 print(f"🏗️ Created worktree at: {agent_dir}")
 
@@ -861,7 +864,7 @@ Complete the task, then use /pr to create a new pull request."""
                 return False
 
             # Create result collection file
-            result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
+            result_file = os.path.join(self.result_dir, f"{safe_agent_name}_results.json")
 
             # Enhanced prompt with completion enforcement
             # Determine if we're in PR update mode
@@ -982,19 +985,19 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_name}.txt")
+            prompt_file = os.path.join("/tmp", f"agent_prompt_{safe_agent_name}.txt")
             with open(prompt_file, "w") as f:
                 f.write(full_prompt)
 
             # Create log directory
             log_dir = "/tmp/orchestration_logs"
             os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"{agent_name}.log")
+            log_file = os.path.join(log_dir, f"{safe_agent_name}.log")
 
             # Determine if this is a restart or first run
             continue_flag = ""
             conversation_file = (
-                f"{os.path.expanduser('~')}/.claude/conversations/{agent_name}.json"
+                f"{os.path.expanduser('~')}/.claude/conversations/{safe_agent_name}.json"
             )
             if (
                 os.path.exists(conversation_file)
@@ -1035,13 +1038,11 @@ fi
 # Keep session alive for 1 hour for monitoring and debugging
 echo "[$(date)] Agent execution completed. Session remains active for monitoring."
 echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file}"
-echo "[$(date)] Monitor with: tmux attach -t {agent_name}"
+echo "[$(date)] Monitor with: tmux attach -t {safe_agent_name} (agent: {agent_name})"
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_name}_run.sh"
-            script_path.write_text(bash_cmd, encoding="utf-8")
-            os.chmod(script_path, 0o700)
+            script_path = self._write_agent_script(bash_cmd, safe_agent_name)
 
             # Use agent-specific tmux config for 1-hour sessions
             tmux_config = get_tmux_config_path()
@@ -1060,7 +1061,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     "new-session",
                     "-d",
                     "-s",
-                    agent_name,
+                    safe_agent_name,
                     "-c",
                     agent_dir,
                     "bash",
@@ -1084,6 +1085,43 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
         except Exception as e:
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
+
+    @staticmethod
+    def _sanitize_agent_name(agent_name: str) -> str:
+        """Return a filesystem- and tmux-safe agent identifier."""
+        if not agent_name:
+            return "agent"
+        # Replace any path separators or unsafe characters with underscores
+        sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", agent_name)
+        sanitized = sanitized.strip("._-") or "agent"
+        return sanitized[:100]
+
+    @staticmethod
+    def _write_agent_script(bash_cmd: str, safe_agent_name: str) -> Path:
+        """Persist the agent script securely and return its path."""
+        temp_file = tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            prefix=f"{safe_agent_name}_",
+            suffix="_run.sh",
+            dir="/tmp",
+            delete=False,
+        )
+        try:
+            temp_file.write(bash_cmd)
+            temp_file.flush()
+        finally:
+            temp_file.close()
+
+        script_path = Path(temp_file.name)
+        os.chmod(script_path, 0o700)
+
+        original_contents = script_path.read_text(encoding="utf-8")
+        with script_path.open("w", encoding="utf-8") as handle:
+            handle.write("trap 'rm -f \"$0\"' EXIT\n")
+            handle.write(original_contents)
+
+        return script_path
 
 
 if __name__ == "__main__":

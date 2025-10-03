@@ -149,12 +149,7 @@ if [ "$DISABLE_AUTO_CONTEXT" = false ] && [ "$LIGHT_MODE" != true ] && [ -z "$CO
     # Create branch-safe temporary file for auto-extracted context
     BRANCH_NAME="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
     [ -z "$BRANCH_NAME" ] && BRANCH_NAME="main"
-    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_ctxXXXXXX" 2>/dev/null)"
-    # Add .txt extension manually for better file identification
-    if [ -n "$AUTO_CONTEXT_FILE" ]; then
-        mv "$AUTO_CONTEXT_FILE" "${AUTO_CONTEXT_FILE}.txt"
-        AUTO_CONTEXT_FILE="${AUTO_CONTEXT_FILE}.txt"
-    fi
+    AUTO_CONTEXT_FILE="$(mktemp "/tmp/cerebras_ctxXXXXXX.txt" 2>/dev/null)"
 
     # Validate temporary file creation (graceful degradation on failure)
     if [ -z "$AUTO_CONTEXT_FILE" ]; then
@@ -383,12 +378,7 @@ fi
 # Create temporary file for large JSON to avoid bash variable size limits
 CURRENT_BRANCH_FOR_TEMP="$(git branch --show-current 2>/dev/null | sed 's/[^a-zA-Z0-9_-]/_/g')"
 [ -z "$CURRENT_BRANCH_FOR_TEMP" ] && CURRENT_BRANCH_FOR_TEMP="main"
-JSON_TEMP_FILE="$(mktemp "/tmp/cerebras_request_${CURRENT_BRANCH_FOR_TEMP}XXXXXX" 2>/dev/null)"
-# Add .json extension manually for better file identification
-if [ -n "$JSON_TEMP_FILE" ]; then
-    mv "$JSON_TEMP_FILE" "${JSON_TEMP_FILE}.json"
-    JSON_TEMP_FILE="${JSON_TEMP_FILE}.json"
-fi
+JSON_TEMP_FILE="$(mktemp "/tmp/cerebras_request_${CURRENT_BRANCH_FOR_TEMP}XXXXXX.json" 2>/dev/null)"
 if [ -z "$JSON_TEMP_FILE" ]; then
     echo "Error: Could not create temporary file for request" >&2
     exit 4
@@ -397,13 +387,8 @@ fi
 # Build request body using temporary files to handle large prompts and system prompts
 if [ -n "$SYSTEM_PROMPT" ]; then
     # For large system prompts, use separate temp files to avoid bash variable size limits
-    SYSTEM_TEMP_FILE="$(mktemp "/tmp/cerebras_system_${CURRENT_BRANCH_FOR_TEMP}XXXXXX")"
-    USER_TEMP_FILE="$(mktemp "/tmp/cerebras_user_${CURRENT_BRANCH_FOR_TEMP}XXXXXX")"
-    # Add .txt extensions manually for better file identification
-    mv "$SYSTEM_TEMP_FILE" "${SYSTEM_TEMP_FILE}.txt"
-    mv "$USER_TEMP_FILE" "${USER_TEMP_FILE}.txt"
-    SYSTEM_TEMP_FILE="${SYSTEM_TEMP_FILE}.txt"
-    USER_TEMP_FILE="${USER_TEMP_FILE}.txt"
+    SYSTEM_TEMP_FILE="$(mktemp "/tmp/cerebras_system_${CURRENT_BRANCH_FOR_TEMP}XXXXXX.txt")"
+    USER_TEMP_FILE="$(mktemp "/tmp/cerebras_user_${CURRENT_BRANCH_FOR_TEMP}XXXXXX.txt")"
 
     echo "$SYSTEM_PROMPT" > "$SYSTEM_TEMP_FILE"
     echo "$USER_PROMPT" > "$USER_TEMP_FILE"
