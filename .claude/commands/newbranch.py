@@ -140,8 +140,11 @@ def parse_branch_request(argv):
     if not argv:
         return None, [], False
 
-    raw_input = " ".join(argv).strip()
-    lowered = raw_input.lower()
+    argv_joined = " ".join(argv).strip()
+    if not argv_joined:
+        return None, [], False
+
+    lowered = argv_joined.lower()
 
     triggers = [
         "bring in changes",
@@ -155,14 +158,14 @@ def parse_branch_request(argv):
 
     commit_tokens = []
     include_commits = False
-    branch_source = raw_input
+    branch_source = argv_joined
 
     for trigger in triggers:
         idx = lowered.find(trigger)
         if idx != -1:
             include_commits = True
-            before = raw_input[:idx].strip()
-            after = raw_input[idx + len(trigger) :].strip()
+            before = argv_joined[:idx].strip()
+            after = argv_joined[idx + len(trigger) :].strip()
             branch_source = before if before else trigger
             if after:
                 cleaned_after = after.replace(" and ", " ")
@@ -208,44 +211,93 @@ def resolve_requested_commits(commit_tokens, local_commits):
         return [commit for commit, _ in reversed(local_commits)]
 
     resolved = []
-    lowered_map = {
-        commit_hash: subject.lower()
-        for commit_hash, subject in local_commits
+    lowered_subject_map = {
+        commit_hash: subject.lower() for commit_hash, subject in local_commits
     }
+    commit_ids_lower = [
+        (commit_hash, commit_hash.lower()) for commit_hash, _ in local_commits
+    ]
+    rev_parse_cache = {}
 
     for token in commit_tokens:
         cleaned = token.strip()
-        if cleaned.lower() in {"and", ""}:
+        lowered_token = cleaned.lower()
+        if lowered_token in {"and", ""}:
             continue
 
-        stdout, _, returncode = run_command(
-            ["git", "rev-parse", cleaned],
-            check=False,
-        )
-        if returncode == 0:
-            commit_hash = stdout.strip()
-            if commit_hash not in lowered_map:
-                print(
-                    f"⚠️  Commit {token} is not among the local commits compared to origin/main; skipping."
-                )
-                continue
-            resolved.append(commit_hash)
-            continue
+        # First try to match against local commits without invoking git.
+        hex_like = bool(re.fullmatch(r"[0-9a-fA-F]{6,40}", cleaned))
+        prefix_matches = []
+        if hex_like:
+            lowered_prefix = lowered_token
+            prefix_matches = [
+                commit_hash
+                for commit_hash, lowered_commit in commit_ids_lower
+                if lowered_commit.startswith(lowered_prefix)
+            ]
 
-        matches = [
-            commit
-            for commit, subject in local_commits
-            if cleaned.lower() in commit.lower() or cleaned.lower() in subject.lower()
+        subject_matches = [
+            commit_hash
+            for commit_hash, lowered_subject in lowered_subject_map.items()
+            if lowered_token in lowered_subject
         ]
 
-        if len(matches) == 1:
-            resolved.append(matches[0])
-        elif len(matches) > 1:
-            print(
-                f"⚠️  Ambiguous reference '{token}' matched multiple commits. Skipping."
-            )
+        candidate = None
+        ambiguous = False
+
+        if prefix_matches:
+            if len(prefix_matches) == 1:
+                candidate = prefix_matches[0]
+            else:
+                ambiguous = True
+                print(
+                    f"⚠️  Ambiguous reference '{token}' matched multiple commits. Skipping."
+                )
+        elif subject_matches:
+            unique_subject_matches = []
+            for commit_hash in subject_matches:
+                if commit_hash not in unique_subject_matches:
+                    unique_subject_matches.append(commit_hash)
+            if len(unique_subject_matches) == 1:
+                candidate = unique_subject_matches[0]
+            else:
+                ambiguous = True
+                print(
+                    f"⚠️  Ambiguous reference '{token}' matched multiple commits. Skipping."
+                )
+
+        if ambiguous:
+            continue
+
+        if candidate:
+            resolved.append(candidate)
+            continue
+
+        if lowered_token in rev_parse_cache:
+            commit_hash = rev_parse_cache[lowered_token]
         else:
+            stdout, _, returncode = run_command(
+                ["git", "rev-parse", cleaned],
+                check=False,
+            )
+            if returncode != 0:
+                rev_parse_cache[lowered_token] = None
+                commit_hash = None
+            else:
+                commit_hash = stdout.strip()
+                rev_parse_cache[lowered_token] = commit_hash
+
+        if not commit_hash:
             print(f"⚠️  Could not resolve commit reference '{token}'. Skipping.")
+            continue
+
+        if commit_hash not in lowered_subject_map:
+            print(
+                f"⚠️  Commit {token} is not among the local commits compared to origin/main; skipping."
+            )
+            continue
+
+        resolved.append(commit_hash)
 
     if not resolved:
         print("ℹ️  No committed changes selected to carry forward.")

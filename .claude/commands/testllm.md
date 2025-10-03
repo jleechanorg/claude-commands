@@ -213,7 +213,7 @@ Execute test specifications directly as an LLM without generating intermediate s
 
 ### Default Behavior (No Arguments Provided)
 
-- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
+- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [DIRECTORY TESTING PROTOCOL](#directory-testing-protocol---mandatory-for-all-directory-based-tests).
 - **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
 
