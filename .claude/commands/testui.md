@@ -47,15 +47,11 @@ This command is **exactly the same** as `/testuif` but runs in **mock mode**:
 
 **Mock Mode Configuration**:
 ```bash
-
 # Environment variables for mock mode
-
 export USE_MOCK_FIREBASE=true
 export USE_MOCK_GEMINI=true
 export API_COST_MODE=free
-
 # Same execution as testuif but with mocks
-
 ./run_ui_tests.sh mock --playwright --enhanced-validation
 ```
 

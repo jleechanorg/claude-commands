@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
-"""
-/newbranch or /nb - Create a new branch from a fresh origin/main snapshot
+"""Create a new branch from a fresh ``origin/main`` snapshot.
 
-By default this command carries forward any uncommitted work while building the
-new branch directly from the latest `origin/main`. If the natural language input
-indicates that specific committed changes should be brought along (for example,
-"bring in changes 123abc"), the script will cherry-pick those commits after the
-branch is created.
+This command powers the ``/newbranch`` (or ``/nb``) workflow. By default it
+brings forward any uncommitted work while creating the branch from the latest
+``origin/main``. If the natural language input specifies committed changes to
+include (for example, "bring in changes 123abc"), the script cherry-picks those
+commits after the branch is created.
 """
 
 import subprocess
