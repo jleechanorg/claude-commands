@@ -59,19 +59,19 @@ execution_mode: immediate
 **Integration Flow**:
 ```bash
 
-### Discovery Phase (MANDATORY)
+### Phase 5: Discovery Phase (MANDATORY)
 
 **Action Steps:**
 ```bash
 
-### Implementation Phase (MANDATORY)
+### Phase 6: Implementation Phase (MANDATORY)
 
 **Action Steps:**
 1. **✅ Map ALL instances**: Document each occurrence and required fix
 2. **✅ Fix ALL instances**: Not just obvious ones - systematic coverage required
 3. **❌ FORBIDDEN**: Partial pattern fixes that miss related usage
 
-### Verification Phase (MANDATORY)
+### Phase 7: Verification Phase (MANDATORY)
 
 **Action Steps:**
 ```bash

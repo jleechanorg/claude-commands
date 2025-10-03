@@ -7,6 +7,12 @@ new branch directly from the latest `origin/main`. If the natural language input
 indicates that specific committed changes should be brought along (for example,
 "bring in changes 123abc"), the script will cherry-pick those commits after the
 branch is created.
+
+Flags:
+    --include-local-commits  Always cherry-pick commits that are ahead of
+                             origin/main onto the new branch.
+    --no-local-commits       Skip cherry-picking local commits. When omitted the
+                             script will prompt if local commits are detected.
 """
 
 import subprocess
@@ -138,9 +144,23 @@ def sanitize_branch_name(name: str) -> str:
 
 def parse_branch_request(argv):
     if not argv:
-        return None, [], False
+        return None, [], False, False, False
 
-    raw_input = " ".join(argv).strip()
+    include_commits_flag = False
+    forced_include = False
+    forced_exclude = False
+
+    remaining_args = []
+    for arg in argv:
+        if arg == "--include-local-commits":
+            include_commits_flag = True
+            forced_include = True
+        elif arg == "--no-local-commits":
+            forced_exclude = True
+        else:
+            remaining_args.append(arg)
+
+    raw_input = " ".join(remaining_args).strip()
     lowered = raw_input.lower()
 
     triggers = [
@@ -154,7 +174,7 @@ def parse_branch_request(argv):
     ]
 
     commit_tokens = []
-    include_commits = False
+    include_commits = include_commits_flag
     branch_source = raw_input
 
     for trigger in triggers:
@@ -173,7 +193,13 @@ def parse_branch_request(argv):
                 ]
             break
 
-    return branch_source if branch_source else None, commit_tokens, include_commits
+    return (
+        branch_source if branch_source else None,
+        commit_tokens,
+        include_commits,
+        forced_include,
+        forced_exclude,
+    )
 
 
 def get_local_commits(relative_to="origin/main"):
@@ -280,8 +306,43 @@ def cherry_pick_commits(commits):
     return True
 
 
+def prompt_to_include_commits(local_commits, forced_exclude):
+    if not local_commits or forced_exclude:
+        return False
+
+    warning = (
+        "⚠️  Detected local commits ahead of origin/main. Without cherry-picking, "
+        "those commits will be omitted from the new branch."
+    )
+    print(warning)
+
+    if not sys.stdin.isatty():
+        print(
+            "❌ ERROR: Non-interactive session detected. Re-run with "
+            "--include-local-commits to bring them forward or "
+            "--no-local-commits to proceed without them."
+        )
+        return None
+
+    response = input("Include local commits in the new branch? [y/N]: ").strip().lower()
+    if response in {"y", "yes"}:
+        return True
+
+    print(
+        "ℹ️  Proceeding without cherry-picking local commits. Use "
+        "--no-local-commits to skip this prompt in the future."
+    )
+    return False
+
+
 def main():
-    branch_source, commit_tokens, include_commits = parse_branch_request(sys.argv[1:])
+    (
+        branch_source,
+        commit_tokens,
+        include_commits,
+        forced_include,
+        forced_exclude,
+    ) = parse_branch_request(sys.argv[1:])
 
     if branch_source:
         branch_name = sanitize_branch_name(branch_source)
@@ -300,11 +361,25 @@ def main():
 
     print(f"📍 Starting from branch: {current_branch}")
 
-    local_commits = []
-    if include_commits:
-        local_commits = get_local_commits()
-        if not local_commits:
-            print("ℹ️  No local commits found relative to origin/main.")
+    if not fetch_origin_main():
+        return 1
+
+    local_commits = get_local_commits()
+
+    if include_commits and forced_include:
+        print("📋 Including local commits as requested with --include-local-commits.")
+
+    if include_commits and not local_commits:
+        print("ℹ️  No local commits found relative to origin/main.")
+
+    if local_commits and not include_commits:
+        if forced_exclude:
+            print("🚫 Skipping local commits as requested with --no-local-commits.")
+        else:
+            decision = prompt_to_include_commits(local_commits, forced_exclude=False)
+            if decision is None:
+                return 1
+            include_commits = decision or include_commits
 
     stashed = False
     if check_uncommitted_changes():
@@ -312,12 +387,6 @@ def main():
         if not success:
             print("❌ ERROR: Failed to stash changes")
             return 1
-
-    if not fetch_origin_main():
-        if stashed:
-            print("🔁 Restoring stashed changes after fetch failure...")
-            pop_stash()
-        return 1
 
     if not checkout_main():
         if stashed:

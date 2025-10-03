@@ -173,6 +173,10 @@ if [ "$TEST_MODE" = true ]; then
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
+if ! declare -p DEFAULT_MCP_ENV_FLAGS >/dev/null 2>&1; then
+    declare -a DEFAULT_MCP_ENV_FLAGS=()
+fi
+
 if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
