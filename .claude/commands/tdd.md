@@ -10,130 +10,44 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: 🧪 Enhanced TDD Workflow with Matrix Testing
+### Phase 0: Plan Matrix Coverage (⚠️ RUN FIRST)
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps.
+1. Open TodoWrite and create a checklist titled `TDD Matrix Plan`.
+2. Identify the primary dimensions that influence behavior (e.g., user role, feature flag, input format).
+3. Populate the checklist with every matrix cell you will cover (one TodoWrite item per combination).
+4. Save the matrix definition to `tests/matrix_plan.md` for reference alongside the suite.
 
-### Phase 0: Matrix Planning (⚠️ MANDATORY FIRST STEP)
-
-**Action Steps:**
-**BEFORE writing any tests, create comprehensive test matrix:**
-
-### Phase 3: **Matrix 1: Core Field Interactions (Campaign Type × Character × Setting)**
-
-**Action Steps:**
-| | **Empty Character** | **Custom Character** | **Special Chars** | **Unicode** | **Long Name** |
-|---|---|---|---|---|---|
-| **Dragon Knight + Empty** | [1,1,1] | [1,2,1] | [1,3,1] | [1,4,1] | [1,5,1] |
-| **Dragon Knight + Short** | [1,1,2] | [1,2,2] | [1,3,2] | [1,4,2] | [1,5,2] |
-| **Custom + Empty** | [2,1,1] | [2,2,1] | [2,3,1] | [2,4,1] | [2,5,1] |
-| **Custom + Short** | [2,1,2] | [2,2,2] | [2,3,2] | [2,4,2] | [2,5,2] |
-
-### Phase 1: RED - Matrix-Driven Failing Tests
+### Phase 1: RED - Author Matrix-Driven Failing Tests
 
 **Action Steps:**
 **Implementation**:
-1. **Write Failing Tests for ENTIRE Matrix**: Each matrix cell becomes a test case
-2. **Systematic Test Generation**: Convert each matrix row to specific test
-3. **Path Coverage Verification**: Ensure every user path has corresponding test
-4. **Edge Case Integration**: Include boundary conditions from matrix analysis
-5. **Confirm ALL Tests Fail**: Verify comprehensive test failure before implementation
+1. Generate a parametrized test module (e.g., `tests/test_matrix_workflow.py`) that iterates every TodoWrite matrix entry.
+2. For each matrix cell, assert preconditions, trigger the behavior under test, and validate the expected outcome.
+3. Ensure boundary values and failure modes from the matrix are explicitly represented.
+4. Run the suite (`pytest tests/test_matrix_workflow.py`) and confirm every test fails to prove the matrix is complete.
 
-**Matrix Test Structure**:
-```javascript
-// Complete Matrix-Driven Test Structure
-describe('Campaign Creation - Full Field Matrix', () => {
-  // Matrix 1: Core Field Interactions (50 test combinations)
-  test.each([
-    // Dragon Knight combinations
-    ['dragon-knight', '', '', 'Knight of Assiah', 'pre-filled setting'],
-    ['dragon-knight', 'Custom Name', '', 'Knight of Assiah', 'pre-filled setting'],
-    ['dragon-knight', '!@#$%', '', 'Knight of Assiah', 'pre-filled setting'],
-    ['dragon-knight', '龍騎士', '', 'Knight of Assiah', 'pre-filled setting'],
-    ['dragon-knight', 'Very Long Character Name That Tests UI Boundaries', '', 'Knight of Assiah', 'pre-filled setting'],
+**Matrix Test Structure (language-agnostic example using pytest):**
+```python
+import pytest
 
-    // Custom Campaign combinations
-    ['custom', '', '', 'Your character name', 'empty setting'],
-    ['custom', 'Custom Name', '', 'Your character name', 'empty setting'],
-    ['custom', '!@#$%', '', 'Your character name', 'empty setting'],
-    ['custom', '龍騎士', 'Custom setting', 'Your character name', 'custom setting'],
-    ['custom', 'Long Name', 'Very long custom setting text...', 'Your character name', 'custom setting'],
-  ])('Matrix [%s,%s,%s] → expects %s placeholder and %s',
-    (campaignType, character, setting, expectedPlaceholder, expectedSetting) => {
-    // RED: Test fails initially
-    render(<CampaignCreation />);
+from myapp.domain import process_order
 
-    // Select campaign type
-    fireEvent.click(screen.getByText(campaignType === 'dragon-knight' ? 'Dragon Knight' : 'Custom'));
+MATRIX = [
+    pytest.param("admin", "csv", True, 200, id="admin-csv-happy-path"),
+    pytest.param("admin", "json", False, 200, id="admin-json-disabled-feature"),
+    pytest.param("staff", "csv", True, 403, id="staff-forbidden"),
+    pytest.param("guest", "json", True, 422, id="guest-invalid-input"),
+]
 
-    // Verify dynamic placeholder
-    const characterInput = screen.getByLabelText(/character/i);
-    expect(characterInput).toHaveAttribute('placeholder', expectedPlaceholder);
 
-    // Test character input
-    fireEvent.change(characterInput, { target: { value: character } });
-    expect(characterInput.value).toBe(character);
+@pytest.mark.parametrize("role, input_format, feature_enabled, expected_status", MATRIX)
+def test_matrix_paths(role, input_format, feature_enabled, expected_status, settings, factory):
+    """RED: Each matrix cell should currently fail until implementation catches up."""
+    payload = factory.build_payload(format=input_format, feature_flag=feature_enabled)
+    response = process_order(role=role, payload=payload, settings=settings)
 
-    // Verify setting behavior
-    const settingInput = screen.getByLabelText(/setting/i);
-    if (expectedSetting === 'pre-filled setting') {
-      expect(settingInput.value).toContain('World of Assiah');
-    } else {
-      expect(settingInput.value).toBe('');
-    }
-  });
-
-  // Matrix 2: AI Personality Combinations (16 test combinations)
-  test.each([
-    ['dragon-knight', true, true, true, 'all personalities enabled'],
-    ['dragon-knight', true, true, false, 'default + mechanical only'],
-    ['dragon-knight', false, false, false, 'no AI personalities'],
-    ['custom', true, true, true, 'all personalities with custom'],
-    ['custom', false, false, false, 'minimal custom setup'],
-  ])('AI Matrix [%s] with [%s,%s,%s] → %s',
-    (campaignType, defaultWorld, mechanical, companions, expectedBehavior) => {
-    // RED: Test AI personality matrix combinations
-    render(<CampaignCreation />);
-
-    // Navigate to AI step
-    fireEvent.click(screen.getByText('Next'));
-
-    // Set AI personality checkboxes
-    const defaultCheckbox = screen.getByLabelText(/default world/i);
-    const mechanicalCheckbox = screen.getByLabelText(/mechanical/i);
-    const companionsCheckbox = screen.getByLabelText(/companions/i);
-
-    fireEvent.click(defaultCheckbox);
-    fireEvent.click(mechanicalCheckbox);
-    fireEvent.click(companionsCheckbox);
-
-    // Verify checkbox states match matrix cell
-    expect(defaultCheckbox.checked).toBe(defaultWorld);
-    expect(mechanicalCheckbox.checked).toBe(mechanical);
-    expect(companionsCheckbox.checked).toBe(companions);
-  });
-
-  // Matrix 3: State Transition Testing (8 test combinations)
-  test.each([
-    ['dragon-knight', 'custom', 'Knight of Assiah', 'Your character name'],
-    ['custom', 'dragon-knight', 'Your character name', 'Knight of Assiah'],
-  ])('State Transition [%s → %s] changes placeholder [%s → %s]',
-    (fromType, toType, fromPlaceholder, toPlaceholder) => {
-    // RED: Test dynamic placeholder switching
-    render(<CampaignCreation />);
-
-    // Start with fromType
-    fireEvent.click(screen.getByText(fromType === 'dragon-knight' ? 'Dragon Knight' : 'Custom'));
-    let characterInput = screen.getByLabelText(/character/i);
-    expect(characterInput).toHaveAttribute('placeholder', fromPlaceholder);
-
-    // Switch to toType
-    fireEvent.click(screen.getByText(toType === 'dragon-knight' ? 'Dragon Knight' : 'Custom'));
-    characterInput = screen.getByLabelText(/character/i);
-    expect(characterInput).toHaveAttribute('placeholder', toPlaceholder);
-  });
-});
+    assert response.status_code == expected_status
 ```
 
 ### Phase 2: GREEN - Minimal Implementation for Matrix Coverage
@@ -166,32 +80,27 @@ describe('Campaign Creation - Full Field Matrix', () => {
 
 **Usage**: `/tdd` or `/rg`
 
-#### **Complete Field Matrix Creation**
+#### **Matrix Design Template**
 
 ```markdown
+## Example Matrix Definition
 
-## Campaign Creation Test Matrix - All Field Combinations
+| Scenario ID | User Role | Input Format | Feature Flag | Expected Status | Notes |
+|-------------|-----------|--------------|--------------|-----------------|-------|
+| M-001       | admin     | csv          | enabled      | 200             | Happy path |
+| M-002       | admin     | json         | disabled     | 200             | Feature toggle off |
+| M-003       | staff     | csv          | enabled      | 403             | Authorization enforced |
+| M-004       | guest     | json         | enabled      | 422             | Validation error |
 
-### **Matrix 2: AI Personality Testing (All Checkbox Combinations)**
+### State Transition Coverage
 
-| Campaign Type | Default World | Mechanical | Companions | Expected Behavior |
-|---------------|---------------|------------|-------------|-------------------|
-| Dragon Knight | ✅ | ✅ | ✅ | All personalities active |
-| Dragon Knight | ✅ | ✅ | ❌ | Default + Mechanical only |
-| Dragon Knight | ❌ | ❌ | ❌ | No AI personalities |
-| Custom | ✅ | ✅ | ✅ | All personalities with custom |
-| Custom | ❌ | ❌ | ❌ | Minimal custom setup |
+| Transition ID | From State      | To State        | Expected Outcome |
+|---------------|-----------------|-----------------|------------------|
+| T-001         | draft           | submitted       | Status changes, timestamp set |
+| T-002         | submitted       | approved        | Approver recorded |
+| T-003         | approved        | archived        | Archival metadata persisted |
 
-### **Matrix 3: State Transition Testing**
-
-| From State | To State | Expected Behavior |
-|------------|----------|-------------------|
-| Dragon Knight → Custom | Placeholder changes, data preserved |
-| Custom → Dragon Knight | Auto-fills setting, maintains character |
-| Collapsed → Expanded | Shows textarea, preserves state |
-| Expanded → Collapsed | Hides textarea, preserves text |
-
-**Total Matrix Tests**: 86 systematic test cases covering all field interactions
+**Matrix Checklist**: Track each Scenario ID in TodoWrite and ensure the associated test is written, fails (RED), passes (GREEN), and remains passing after refactors.
 ```
 
 #### **Combinatorial Coverage Analysis**

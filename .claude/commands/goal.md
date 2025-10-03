@@ -13,7 +13,13 @@ execution_mode: immediate
 ### Phase 1: Execute Documented Workflow
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Parse command arguments to detect `--template`, `--validate`, `--current`, `--clear`, or `--history` switches.
+2. If `--validate`: load the active goal files, evaluate each success criterion, and report pass/fail evidence.
+3. If `--current`: output the active goal summary, criteria, and progress percentages.
+4. If `--clear`: archive the current goal state and remove active tracking files.
+5. If `--history`: list prior goal completions from `goals/` with status metrics.
+6. Otherwise define a new goal: run the Goal Definition Protocol, persist files under `goals/<timestamp>-<slug>/`, and store metadata via Memory MCP.
+7. Summarize actions taken and next steps before returning control.
 
 ## 📋 REFERENCE DOCUMENTATION
 

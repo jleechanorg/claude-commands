@@ -13,7 +13,7 @@ execution_mode: immediate
 ### Phase 1: Workflow
 
 **Action Steps:**
-1. **Run Capture**: Execute `/testerc` to collect fresh data
+1. **Run Capture**: Execute `./claude_command_scripts/testerc.sh` (or `/tester` with `TEST_MODE=capture`) to collect fresh data
 2. **Review Data**: Examine captured responses in `./test_data_capture/`
 3. **Update Mocks**: Use captured data to improve `FakeFirestoreClient` and `FakeGeminiResponse`
 4. **Validate Accuracy**: Run `/teste` to ensure mocks match real behavior

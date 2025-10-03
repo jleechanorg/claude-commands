@@ -29,12 +29,12 @@ Based on the command arguments, resolve to appropriate test specification:
 Execute the resolved test specification using `/testllm` with appropriate mode:
 
 **Single-Agent Mode** (default):
-```
+```bash
 /testllm [resolved_test_spec] [additional_args]
 ```
 
 **Dual-Agent Mode** (when `verified` keyword present):
-```
+```bash
 /testllm verified [resolved_test_spec] [additional_args]
 ```
 
@@ -110,7 +110,7 @@ Execute MCP (Model Context Protocol) test specifications using the comprehensive
 
 /testmcp test_create_continue_mcp.md
 /testmcp verified test_create_continue_mcp.md
-```
+```bash
 
 ## Core Principles
 

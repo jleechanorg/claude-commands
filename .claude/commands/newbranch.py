@@ -12,6 +12,7 @@ branch is created.
 import subprocess
 import sys
 import time
+import uuid
 import re
 
 
@@ -130,10 +131,13 @@ def pull_origin_main():
 
 def sanitize_branch_name(name: str) -> str:
     cleaned = re.sub(r"[^0-9A-Za-z._-]+", "-", name.strip())
-    cleaned = cleaned.strip("-._")
-    if not cleaned:
-        cleaned = f"dev{int(time.time())}"
-    return cleaned.lower()
+    cleaned = cleaned.strip("-._") or "dev"
+
+    # Append timestamp (to the second) plus a short random suffix so multiple
+    # invocations within the same second still produce unique branch names.
+    timestamp = time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+    random_suffix = uuid.uuid4().hex[:6]
+    return f"{cleaned.lower()}-{timestamp}-{random_suffix}"
 
 
 def parse_branch_request(argv):
@@ -274,7 +278,13 @@ def cherry_pick_commits(commits):
                 print(stdout)
             if stderr:
                 print(stderr)
-            print("👉 Resolve the cherry-pick conflict, then run `git cherry-pick --continue`.")
+            combined_output = (stdout + "\n" + stderr).lower()
+            if "conflict" in combined_output or "merge conflict" in combined_output:
+                print("👉 Merge conflict detected. Resolve it, then run `git cherry-pick --continue`.")
+            elif "empty" in combined_output or "previous cherry-pick is now empty" in combined_output or "commit is empty" in combined_output:
+                print("👉 Cherry-pick resulted in an empty commit. Skip it with `git cherry-pick --skip`.")
+            else:
+                print("👉 Cherry-pick failed for an unknown reason. Review the output above and resolve manually.")
             return False
     print("✅ Requested commits cherry-picked successfully.")
     return True
@@ -358,7 +368,9 @@ def main():
                 return 1
 
     if stashed:
-        pop_stash()
+        if not pop_stash():
+            print("❌ ERROR: Unable to restore stashed changes; aborting before push.")
+            return 1
 
     print(f"🔗 Pushing and setting upstream tracking to origin/{branch_name}...")
     stdout, stderr, returncode = run_command(

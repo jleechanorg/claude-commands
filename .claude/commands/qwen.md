@@ -2,7 +2,7 @@
 description: Legacy alias for Cerebras code generation (redirects to /cerebras)
 type: llm-orchestration
 execution_mode: immediate
-allowed-tools: Bash(qwen:*), Read, Edit
+allowed-tools: Bash(qwen:*), Read, Edit, TodoWrite
 ---
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**

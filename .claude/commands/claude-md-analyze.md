@@ -20,32 +20,118 @@ execution_mode: immediate
 **Action Steps:**
 **Discovery Process**:
 ```bash
+set -euo pipefail
+TARGET_DIR="${ARGUMENTS:-.}"
+TARGET_DIR="$(realpath "$TARGET_DIR")"
+echo "📂 Target directory: $TARGET_DIR"
+
+# Capture candidate sub-directories while filtering out generated content.
+find "$TARGET_DIR" -type d \
+  -not -path "*/.*" \
+  -not -path "*/node_modules/*" \
+  -not -path "*/venv/*" \
+  -not -path "*/build/*" \
+  -not -path "*/dist/*" \
+  -not -path "*/__pycache__/*" \
+  -not -path "*/target/*" \
+  -not -path "*/cache/*" \
+  -not -path "*/temp/*" \
+  -not -path "*/tmp/*" | head -1000 > /tmp/claude_md_dirs.txt
+
+echo "✅ Discovery complete — candidate directories stored in /tmp/claude_md_dirs.txt"
+```
 
 ### Phase 2: File Count and Type Analysis
 
 **Action Steps:**
 **File Analysis Protocol**:
 ```bash
+set -euo pipefail
+TARGET_DIR="${ARGUMENTS:-.}"
+TARGET_DIR="$(realpath "$TARGET_DIR")"
+
+echo "📊 Counting relevant files under $TARGET_DIR"
+find "$TARGET_DIR" -type f | wc -l > /tmp/claude_md_file_total.txt
+
+find "$TARGET_DIR" -type f -name "*.*" \
+  | sed 's/.*\.//' | tr '[:upper:]' '[:lower:]' \
+  | sort | uniq -c | sort -nr > /tmp/claude_md_file_types.txt
+
+echo "✅ File counts captured in /tmp/claude_md_file_total.txt and file types in /tmp/claude_md_file_types.txt"
+```
 
 ### Phase 3: Git Activity Analysis
 
 **Action Steps:**
 **Developer Interaction Metrics**:
 ```bash
+set -euo pipefail
+TARGET_DIR="${ARGUMENTS:-.}"
+TARGET_DIR="$(realpath "$TARGET_DIR")"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+
+echo "📈 Gathering git activity for $TARGET_DIR"
+git -C "$REPO_ROOT" log --since="6 months ago" --oneline -- "$TARGET_DIR" | wc -l \
+  > /tmp/claude_md_commit_count.txt
+
+git -C "$REPO_ROOT" log --since="6 months ago" --format="%an" -- "$TARGET_DIR" \
+  | sort | uniq -c | sort -nr > /tmp/claude_md_author_activity.txt
+
+git -C "$REPO_ROOT" log --since="6 months ago" --name-only --oneline -- "$TARGET_DIR" \
+  | grep -v "^[a-f0-9]" | sort | uniq -c | sort -nr \
+  > /tmp/claude_md_file_activity.txt
+
+git -C "$REPO_ROOT" log -1 --format="%ar" -- "$TARGET_DIR" \
+  > /tmp/claude_md_last_commit.txt
+
+echo "✅ Git metrics written to /tmp/claude_md_* files"
+```
 
 ### Phase 4: Complexity Assessment
 
 **Action Steps:**
 **Structure Depth Analysis**:
 ```bash
+set -euo pipefail
+TARGET_DIR="${ARGUMENTS:-.}"
+TARGET_DIR="$(realpath "$TARGET_DIR")"
+
+find "$TARGET_DIR" -type d | awk -F'/' '{print NF-1}' | sort -nr | head -1 \
+  > /tmp/claude_md_max_depth.txt
+
+find "$TARGET_DIR" -mindepth 1 -maxdepth 3 -type d | wc -l \
+  > /tmp/claude_md_mid_depth_count.txt
+
+printf "Tests present: %s\n" "$(find "$TARGET_DIR" -type d -name 'test*' -o -name '*tests*' | head -1)" \
+  > /tmp/claude_md_structure_flags.txt
+printf "Docs present: %s\n" "$(find "$TARGET_DIR" -maxdepth 2 -name 'docs' -o -name 'README.md' | head -1)" \
+  >> /tmp/claude_md_structure_flags.txt
+printf "CI present: %s\n" "$(find "$TARGET_DIR" -maxdepth 2 -name '.github' -o -name 'Jenkinsfile' | head -1)" \
+  >> /tmp/claude_md_structure_flags.txt
+
+echo "✅ Complexity metrics stored in /tmp/claude_md_max_depth.txt, /tmp/claude_md_mid_depth_count.txt, and /tmp/claude_md_structure_flags.txt"
+```
 
 ### Phase 5: CLAUDE.md Integration Assessment
 
 **Action Steps:**
 **Existing CLAUDE.md Detection**:
 ```bash
+set -euo pipefail
+TARGET_DIR="${ARGUMENTS:-.}"
+TARGET_DIR="$(realpath "$TARGET_DIR")"
 
-### Phase 7: 🛠️ IMPLEMENTATION WORKFLOW
+find "$TARGET_DIR" -iname 'claude.md' -o -iname '.claude*' > /tmp/claude_md_existing_files.txt
+
+if [[ -s /tmp/claude_md_existing_files.txt ]]; then
+  echo "⚠️ Existing CLAUDE.md artifacts detected:" >> /tmp/claude_md_existing_files.txt
+  cat /tmp/claude_md_existing_files.txt
+else
+  echo "✅ No CLAUDE.md files detected in target scope" | tee /tmp/claude_md_existing_files.txt
+fi
+```
+
+### Phase 6: 🛠️ IMPLEMENTATION WORKFLOW
 
 **Action Steps:**
 1. Review the reference documentation below and execute the detailed steps.

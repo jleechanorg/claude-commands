@@ -13,7 +13,10 @@ execution_mode: immediate
 ### Phase 1: Execute Documented Workflow
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Run `/presentation $ARGUMENTS` to launch the full presentation workflow.
+2. Follow `/presentation` Phases 1-5 to gather context, synthesize slides, and generate assets.
+3. Export the deliverables (slides/notes) to the target path specified in the `/presentation` workflow.
+4. Provide a concise summary of generated artifacts and any follow-up tasks.
 
 ## 📋 REFERENCE DOCUMENTATION
 

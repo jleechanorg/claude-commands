@@ -5,7 +5,21 @@ import unittest
 from pathlib import Path
 
 
-REPO_ROOT = Path(__file__).resolve().parents[3]
+# NOTE: The tests may run from different working directories, so we resolve the
+# repository root dynamically instead of assuming a fixed directory depth.
+
+
+def find_repo_root(start_path: Path) -> Path:
+    """Search upwards from start_path to find the repository root."""
+
+    current = start_path.resolve()
+    for parent in [current] + list(current.parents):
+        if (parent / ".git").is_dir():
+            return parent
+    raise FileNotFoundError("Could not find repository root (missing .git directory)")
+
+
+REPO_ROOT = find_repo_root(Path(__file__))
 SCRIPT_PATH = REPO_ROOT / "claude_command_scripts" / "commands" / "pushlite.sh"
 
 assert SCRIPT_PATH.exists(), f"pushlite script not found at {SCRIPT_PATH}"

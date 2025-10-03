@@ -16,7 +16,9 @@ title: Red–Code–Green Debug Command (Alias)
 ### Phase 1: Execute Documented Workflow
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Invoke `/redgreen $ARGUMENTS` to launch the full Red→Green workflow.
+2. Follow `/redgreen` phases to reproduce the failure, implement fixes, and verify green state.
+3. Document diff results and final status per `/redgreen` verification requirements.
 
 ## 📋 REFERENCE DOCUMENTATION
 

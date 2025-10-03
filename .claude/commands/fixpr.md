@@ -61,7 +61,13 @@ Only proceed once authentication succeeds.
 5. ❌ **NEVER trust cached or stale GitHub data**
 
 ```bash
-status=$(gh pr view "$PR" --json mergeStateStatus,statusCheckRollup)
+PR_NUMBER=${1:-$(gh pr view --json number --jq .number)}
+if [ -z "$PR_NUMBER" ]; then
+  echo "❌ ERROR: Could not determine PR number"
+  exit 1
+fi
+
+status=$(gh pr view "$PR_NUMBER" --json mergeStateStatus,statusCheckRollup)
 merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
 
 ### Phase 6: Step 3: Analyze Issues with Intelligence & Pattern Detection

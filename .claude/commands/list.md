@@ -13,7 +13,10 @@ execution_mode: immediate
 ### Phase 1: Execute Documented Workflow
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Enumerate commands by scanning `.claude/commands/*.md` (respecting aliases and descriptions).
+2. Produce a markdown table listing command name, aliases, and a one-line description.
+3. Highlight commands tagged `execution_mode: immediate` with an ✅ indicator.
+4. Output the table along with counts of commands, aliases, and categories.
 
 ## 📋 REFERENCE DOCUMENTATION
 

@@ -72,7 +72,7 @@ execution_mode: immediate
 
 ### Basic Checkpoint:
 
-```
+```text
 📍 CONTEXT CHECKPOINT
 ━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -97,7 +97,7 @@ execution_mode: immediate
 ✅ Batch remaining optimization tasks
 
 🎯 Optimal Break Point: After next major task completion
-```
+```text
 
 ### Summary Mode (`--summary`):
 

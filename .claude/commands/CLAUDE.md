@@ -14,7 +14,7 @@ Every executable slash command markdown file in this directory **must** begin wi
 ```markdown
 ---
 description: <Short command summary>
-type: <one of execution|planning|testing|git|orchestration|quality|ai|research|review>
+type: <one of execution|planning|testing|git|orchestration|llm-orchestration|quality|ai|research|review|documentation>
 execution_mode: <immediate|deferred|manual>
 ---
 ```

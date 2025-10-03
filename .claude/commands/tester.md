@@ -13,7 +13,11 @@ execution_mode: immediate
 ### Phase 1: Execute Documented Workflow
 
 **Action Steps:**
-1. Review the reference documentation below and execute the detailed steps sequentially.
+1. Review the reference documentation below.
+2. Ensure required environment variables (REAL_FIREBASE_PROJECT, REAL_GEMINI_API_KEY, etc.) are exported.
+3. Execute `./claude_command_scripts/tester.sh --mode=real` from the repository root.
+4. Confirm any prompts (cost warnings) and monitor the run to completion, capturing exit code and summary output.
+5. Report the pass/fail status, notable failures, and follow-up actions before finishing.
 
 ## 📋 REFERENCE DOCUMENTATION
 

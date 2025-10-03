@@ -15,10 +15,10 @@ execution_mode: immediate
 **Action Steps:**
 **[Critical] Reproduction Steps:** Describe the exact, minimal steps required to reliably trigger the bug.
 1. **Example Format:**
-  2. Login as admin user
-  3. Navigate to `/dashboard`
-  4. Click the "Export" button
-  5. Observe the error message displayed
+    1. Login as admin user
+    2. Navigate to `/dashboard`
+    3. Click the "Export" button
+    4. Observe the error message displayed
 
 **[Critical] Technical State Extraction:**
 6. **DOM Inspector Output:** Extract CSS computed properties for visual elements
@@ -35,10 +35,10 @@ execution_mode: immediate
 **[Low] Last Known Working State:** [e.g., "Commit hash `a1b2c3d`," "Worked before the 2.4.1 deployment"]
 
 **⚠️ Relevant Code Snippets (REDACTED):**
-```language
+```text
 // ⚠️ REDACT sensitive data (API keys, passwords, PII, database connection strings, internal URLs, user IDs, session tokens, and other sensitive identifiers) from code. Use [REDACTED] as a placeholder.
 [Paste code here]
-```
+```text
 
 **⚠️ Error Message / Stack Trace (REDACTED):**
 ```
@@ -70,7 +70,7 @@ execution_mode: immediate
 
 **Step 1: Component Mapping (5 minutes)**
 Using Serena MCP for semantic code analysis:
-```
+```bash
 mcp__serena__find_symbol --name_path "[component_name]" --relative_path "[file_path]"
 mcp__serena__get_symbols_overview --relative_path "[directory]"
 ```
@@ -80,7 +80,7 @@ mcp__serena__get_symbols_overview --relative_path "[directory]"
 
 **Step 2: Side-by-Side Code Analysis (10-15 minutes)**
 Using systematic comparison methodology:
-```
+```bash
 mcp__serena__find_symbol --name_path "[function1]" --include_body true
 mcp__serena__find_symbol --name_path "[function2]" --include_body true
 ```
@@ -131,7 +131,7 @@ Systematic comparison results:
 40. **Result Merging**: Combine multiple optimized searches for comprehensive debug analysis
 
 **Enhanced Integration**: Capture walkthrough patterns for future reuse:
-```
+```bash
 mcp__memory-server__create_entities([{
   "name": "debug_walkthrough_[system]_[timestamp]",
   "entityType": "debug_walkthrough_pattern",
@@ -428,7 +428,7 @@ Automatically captures debugging insights using Memory MCP:
 
 Use `/memory` command for all debugging pattern discovery and learning:
 
-```
+```bash
 
 # Enhanced debugging session search with universal composition
 
@@ -452,7 +452,7 @@ Use `/memory` command for all debugging pattern discovery and learning:
   "Lessons Learned: {transferable knowledge for similar issues}",
   "Research Integration: {how /research informed the process}"
 ]
-```
+```bash
 
 **Error Handling Strategy**:
 - **Universal Composition Benefits**: `/memory` command handles all optimization and fallback automatically
@@ -470,14 +470,14 @@ Use `/memory` command for all debugging pattern discovery and learning:
 
 ### Basic Protocol Usage
 
-```
+```bash
 /debug-protocol "Authentication API returns 500 for admin users"
 /debugp "Authentication API returns 500 for admin users"  # alias
-```
+```bash
 
 ### With Implementation
 
-```
+```bash
 /debug-protocol /execute "Fix memory leak in background task processing"
 /debugp /execute "Fix memory leak in background task processing"  # alias
 ```

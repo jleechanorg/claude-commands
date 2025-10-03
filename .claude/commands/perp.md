@@ -128,7 +128,8 @@ This command provides comprehensive multi-engine search by intelligently using w
 
 **Multi-Search Execution**:
 1. Parse user query from `/perp` command
-2. Execute all four searches in parallel:
+2. Determine available MCP tools (`/tools list` or local registry) and skip any engines that are not installed.
+3. Execute all available searches in parallel:
    - `WebSearch(query=user_query)`
    - `mcp__perplexity-ask__perplexity_ask(messages=[{role: "user", content: user_query}])`
    - Gemini MCP with fallback:
@@ -143,8 +144,8 @@ This command provides comprehensive multi-engine search by intelligently using w
          - "What is shown in this image?" → Use `image_understanding`
          - "Execute this code and show the output" → Use `function_calling`
          - "Call the calculator function to add 42 and 17" → Use `function_calling`
-3. Wait for all results (handle any individual engine failures gracefully)
-4. Synthesize and combine findings from successful engines
+4. Wait for all results (handle any individual engine failures gracefully)
+5. Synthesize and combine findings from successful engines
 
 **Result Processing**:
 - Compare information accuracy across sources

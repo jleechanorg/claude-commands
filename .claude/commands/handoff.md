@@ -39,7 +39,7 @@ Creates a structured handoff for another worker with PR, scratchpad, and worker 
 3. **Creates PR**: With detailed description and ready-to-implement status
 4. **Auto-Updates Roadmap**: Automatically uses `/r` command logic to add entry to `roadmap/roadmap.md`
 5. **Generates Worker Prompt**: Copy-paste prompt for next worker
-6. **Creates Clean Branch**: Uses `/newbranch` to ensure clean main-based branch for continued work
+6. **Confirms Branch Availability**: Verifies `/newbranch handoff-[task_name]` succeeded and surfaces checkout instructions
 
 ## Example
 
@@ -109,10 +109,11 @@ After creating the PR, the command automatically invokes `/r` logic with PR work
    ```
    - **HANDOFF-[TASK_NAME]** 🟢 [description] - PR #[number] READY FOR HANDOFF
    ```
-6. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
-7. **Push branch**: `git push origin HEAD:roadmap-handoff-[task_name]`
-8. **Create roadmap PR**: `gh pr create --title "docs(roadmap): Add handoff task [task_name]" --body "Roadmap update for handoff task"`
-9. **Switch back**: `git checkout [original-branch]`
+6. **Stage changes**: `git add roadmap/roadmap.md`
+7. **Commit changes**: `git commit -m "docs(roadmap): Add handoff task [task_name]"`
+8. **Push branch**: `git push origin HEAD:roadmap-handoff-[task_name]`
+9. **Create roadmap PR**: `gh pr create --title "docs(roadmap): Add handoff task [task_name]" --body "Roadmap update for handoff task"`
+10. **Switch back**: `git checkout [original-branch]`
 
 ### Task Name Format
 

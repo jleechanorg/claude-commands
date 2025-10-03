@@ -72,7 +72,7 @@ This command is designed to be resilient to permission issues by automatically f
 
 # Complex search with multiple filters
 
-/history "performance issue" --date "2025-08" --project "worldarchitect" --limit 10
+/history "performance issue" --date "2025-08" --project "your-project.com" --limit 10
 
 # Search by git branch
 
@@ -156,7 +156,7 @@ Based on research of `~/.claude/projects` structure:
 **Directory Structure**:
 ```
 ~/.claude/projects/
-├── -home-$USER-projects-worldarchitect-ai/
+├── -home-$USER-projects-your-project-com/
 │   ├── uuid1.jsonl
 │   ├── uuid2.jsonl
 │   └── ...
@@ -164,7 +164,7 @@ Based on research of `~/.claude/projects` structure:
     └── ...
 ```
 
-Note on naming: project directories are sanitized absolute paths where `/` is replaced with `-` (e.g., `/home/$USER/projects/your-project.com` → `-home-$USER-projects-worldarchitect-ai`). On Windows, backslashes `\` are normalized similarly.
+Note on naming: project directories are sanitized absolute paths where `/` is replaced with `-` (e.g., `/home/$USER/projects/your-project.com` → `-home-$USER-projects-your-project-com`). On Windows, backslashes `\` are normalized similarly.
 
 **JSONL Format** (per conversation file):
 ```jsonl
@@ -217,11 +217,11 @@ python3 -c "import glob, os; print('\n'.join(glob.glob(os.path.expanduser('~/.cl
 
 # File content reading (single line executable)
 
-python3 -c "import json,sys; [print(json.dumps(json.loads(l)) if l.strip() else '') for l in open(sys.argv[1])]" ~/.claude/projects/-home-user-projects-worldarchitect-ai/uuid.jsonl
+python3 -c "import json,sys; [print(json.dumps(json.loads(l)) if l.strip() else '') for l in open(sys.argv[1])]" ~/.claude/projects/-home-user-projects-your-project-com/uuid.jsonl
 
 # File content reading (with error handling)  
 
-python3 -c "import json,sys; exec('for l in open(sys.argv[1]):\\n  try:\\n    print(json.dumps(json.loads(l)))\\n  except: print(f\"Parse error: {l.strip()}\", file=sys.stderr)')" ~/.claude/projects/-home-user-projects-worldarchitect-ai/uuid.jsonl
+python3 -c "import json,sys; exec('for l in open(sys.argv[1]):\\n  try:\\n    print(json.dumps(json.loads(l)))\\n  except: print(f\"Parse error: {l.strip()}\", file=sys.stderr)')" ~/.claude/projects/-home-user-projects-your-project-com/uuid.jsonl
 ```
 
 This allows `/execute` to:
@@ -281,8 +281,8 @@ Query: git merge conflicts | Matches: 3 | Files: 2
 ┌──────────────────────┬───────────────┬──────────────┬───────────────┬──────────────────────────────────────┐
 │ conversation_id      │ project       │ date         │ branch        │ message_snippet                      │
 ├──────────────────────┼───────────────┼──────────────┼───────────────┼──────────────────────────────────────┤
-│ 7859c820-...-55e6    │ worldarchitect│ 2025-08-01   │ dev1754132318 │ I need help resolving git merge ...  │
-│ a1b2c3d4-...-7890    │ worldarchitect│ 2025-07-28   │ main          │ The git merge created conflicts ...  │
+│ 7859c820-...-55e6    │ your-project.com│ 2025-08-01   │ dev1754132318 │ I need help resolving git merge ...  │
+│ a1b2c3d4-...-7890    │ your-project.com│ 2025-07-28   │ main          │ The git merge created conflicts ...  │
 └──────────────────────┴───────────────┴──────────────┴───────────────┴──────────────────────────────────────┘
 ```
 
@@ -336,7 +336,7 @@ Can be combined with other commands:
 
 # Search for authentication-related conversations in specific project
 
-/history "auth login password" --project "worldarchitect" --limit 5
+/history "auth login password" --project "your-project.com" --limit 5
 
 # Find recent error discussions 
 
@@ -348,7 +348,7 @@ Can be combined with other commands:
 
 # Find conversations about specific files
 
-/history "main.py" --project "worldarchitect" --format json
+/history "main.py" --project "your-project.com" --format json
 ```
 
 This command provides comprehensive conversation history search capabilities while leveraging `/execute` for intelligent performance optimization as requested.

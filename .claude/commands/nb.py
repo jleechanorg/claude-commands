@@ -358,7 +358,9 @@ def main():
                 return 1
 
     if stashed:
-        pop_stash()
+        if not pop_stash():
+            print("❌ ERROR: Unable to restore stashed changes; aborting before push.")
+            return 1
 
     print(f"🔗 Pushing and setting upstream tracking to origin/{branch_name}...")
     stdout, stderr, returncode = run_command(

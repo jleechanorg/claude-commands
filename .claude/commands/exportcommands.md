@@ -10,11 +10,11 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### Phase 1: Multi-Command Workflows Made Simple
+### Phase 0: Multi-Command Workflows Made Simple
 
 **Action Steps:**
 **Before**: Manual step-by-step development
-```
+```bash
 1. Analyze the issue manually
 2. Write code manually
 3. Test manually
@@ -29,7 +29,7 @@ execution_mode: immediate
 /execute "add user dashboard"   # → plan → implement → test → document
 ```
 
-### Phase 2: `/pr` - Complete PR Workflow Orchestrator
+### Phase 1: `/pr` - Complete PR Workflow Orchestrator
 
 **Action Steps:**
 **What It Does**: End-to-end PR creation from analysis to submission, handling the entire development lifecycle.
@@ -70,7 +70,7 @@ Analyze login flow → Identify timeout problem → Implement fix →
 Run tests → Create branch → Commit changes → Push → Create PR
 ```
 
-### Phase 1: Preparation & Validation
+### Phase 2: Preparation & Validation
 
 **Action Steps:**
 **Repository Access Verification**:
@@ -86,25 +86,25 @@ Run tests → Create branch → Commit changes → Push → Create PR
 8. Transform project-specific paths to generic placeholders
 9. Set up warning header templates for exported files
 
-### Phase 2: Repository Cleanup & Content Export
+### Phase 3: Repository Cleanup & Content Export
 
 **Action Steps:**
 **🚨 MANDATORY CLEANUP PHASE**: Remove obsolete files that no longer exist in source repository
 ```bash
 
-### Phase 5: Step 1: Analyze Current Command System State
+### Phase 4: Step 1: Analyze Current Command System State
 
 **Action Steps:**
 First, let me analyze the current state of the command system to provide intelligent README generation:
 
 ```python
 
-### Phase 6: Step 2: Execute Python Implementation
+### Phase 5: Step 2: Execute Python Implementation
 
 **Action Steps:**
 ```python
 
-### Phase 7: Step 3: LLM-Enhanced README Generation (PRESERVED CAPABILITY)
+### Phase 6: Step 3: LLM-Enhanced README Generation (PRESERVED CAPABILITY)
 
 **Action Steps:**
 While the Python implementation generates a comprehensive README, this LLM can provide additional intelligent analysis:
@@ -112,7 +112,7 @@ While the Python implementation generates a comprehensive README, this LLM can p
 **Command Pattern Analysis**: Analyze which commands are compositional powerhouses
 ```python
 
-### Phase 8: EXECUTION
+### Phase 7: EXECUTION
 
 **Action Steps:**
 **🚀 PRIMARY EXECUTION PATH**: Use the Python implementation for reliable export
@@ -471,18 +471,25 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🚨 EXPORT PROTOCOL
 
+# 🚨 SAFETY: Perform destructive cleanup only inside the fresh clone.
 # Clone fresh repository from main
 
 export REPO_DIR="/tmp/claude_commands_repo_fresh"
 gh repo clone jleechanorg/claude-commands "$REPO_DIR"
 cd "$REPO_DIR" && git checkout main
 
+# Verify we are operating inside the temporary clone before deleting anything
+if [[ "$(pwd)" != "$REPO_DIR" ]]; then
+    echo "❌ ERROR: Not in temporary export repository ($REPO_DIR). Aborting."
+    exit 1
+fi
+
 # Create export branch from clean main
 
 export NEW_BRANCH="export-fresh-$(date +%Y%m%d-%H%M%S)"
 git checkout -b "$NEW_BRANCH"
 
-# CRITICAL: Clear existing directories for fresh export
+# CRITICAL: Clear existing directories for fresh export (safe within the clone)
 
 rm -rf commands/* orchestration/* scripts/* || true
 echo "Cleared existing export directories for fresh sync"

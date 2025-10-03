@@ -90,12 +90,8 @@ else
         if git checkout "$HEAD_BRANCH" 2>/dev/null; then
             echo "🔄 Switched to existing branch: $HEAD_BRANCH"
         else
-            echo "⚠️ Branch $HEAD_BRANCH exists but is checked out in another worktree"
-            echo "🔄 Staying on current branch and syncing with remote content"
-            CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-            echo "📍 Using current branch: $CURRENT_BRANCH"
-            # Update HEAD_BRANCH to current for tracking setup
-            HEAD_BRANCH="$CURRENT_BRANCH"
+            echo "❌ Branch $HEAD_BRANCH is checked out in another worktree. Please free it or run this command from that worktree."
+            exit 1
         fi
     else
         # Check if we need to switch from current branch to match remote name

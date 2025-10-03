@@ -44,7 +44,12 @@ execution_mode: immediate
 
 3. **Run HTTP Test with Real APIs**
    ```bash
-   TESTING=false vpython testing_http/test_name.py
+   TARGET_SCRIPT="${ARGUMENTS:-testing_http/real_suite.py}"
+   if [ ! -f "$TARGET_SCRIPT" ]; then
+       echo "❌ Provide a valid HTTP test script path from testing_http/."
+       exit 1
+   fi
+   TESTING=false vpython "$TARGET_SCRIPT"
    ```
    - ✅ Report actual HTTP responses/errors
    - ❌ NEVER pretend requests succeeded

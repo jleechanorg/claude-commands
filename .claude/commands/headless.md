@@ -106,7 +106,7 @@ else
     git push -u origin "$BRANCH_NAME"
 
     # Create PR using gh
-    gh pr create --title "Headless: $(echo "$PROMPT" | cut -c1-50)..." --body "$(cat <<EOF
+    gh pr create --title "Headless: $(echo "$PROMPT" | cut -c1-50)..." --body "$(cat <<'EOF'
 
 ## Automated Headless Development
 

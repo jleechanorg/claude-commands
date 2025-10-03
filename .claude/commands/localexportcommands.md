@@ -99,12 +99,10 @@ export_component() {
         echo "📋 Updating $component..."
 
         # Path safety check - prevent dangerous operations
-        case "$target_path" in
-            "$HOME/.claude"|"$HOME/.claude/"|"")
-                echo "❌ ERROR: Refusing dangerous target path: $target_path"
-                return 1
-                ;;
-        esac
+        if [[ -z "$target_path" ]] || [[ "$target_path" == "$HOME/.claude" ]] || [[ "$target_path" == "$HOME/.claude/" ]]; then
+            echo "❌ ERROR: Refusing dangerous target path: $target_path"
+            return 1
+        fi
 
         # Safer, metadata-preserving update with rsync or cp -a fallback
         if command -v rsync >/dev/null 2>&1; then
