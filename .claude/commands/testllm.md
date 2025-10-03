@@ -13,7 +13,7 @@ execution_mode: immediate
 ### Phase 1: Mandatory First Step
 
 **Action Steps:**
-1. **Read the Entire Suite First**: Before planning, checklist creation, or any execution, explicitly read every test specification in the `testing_llm/` directory to internalize scope, dependencies, and evidence requirements.
+1. **Read the Entire Suite First**: Before planning, checklist creation, or any execution, explicitly read every test specification in the `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory to internalize scope, dependencies, and evidence requirements.
 
 ### Phase 2: Report Integrity Checklist (MANDATORY)
 
@@ -87,15 +87,15 @@ Before submitting final report, verify:
 4. Ensure real authentication is configured (no test mode)
 5. Validate Playwright MCP availability for browser automation
 6. Confirm network connectivity for real API calls
-7. Determine the current repository name (`git rev-parse --show-toplevel | xargs basename`) and active branch (`git rev-parse --abbrev-ref HEAD`) to construct result paths under `/tmp/<repo_name>/<branch_name>/`
+7. Determine the current repository name (`git rev-parse --show-toplevel | xargs basename`) and active branch (`git rev-parse --abbrev-ref HEAD`) to construct result paths under `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}`
 
 ### Phase 9: Step 2.5: Result Output Directory Standard
 
 **Action Steps:**
-1. Create (if necessary) the directory `/tmp/<repo_name>/<branch_name>/`
+1. Create (if necessary) the directory `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}`
 2. Store **all** test outputs, logs, screenshots, and evidence artifacts inside this directory or its subdirectories
 3. After execution, enumerate every created file and subdirectory so the user receives a complete inventory
-4. Explicitly communicate the absolute path to the `/tmp/<repo_name>/<branch_name>/` directory and its contents in the final summary
+4. Explicitly communicate the absolute path to the `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` directory and its contents in the final summary
 
 ### Phase 10: Step 3: Test Execution
 
@@ -147,7 +147,7 @@ Before submitting final report, verify:
    ├── Verify ALL TodoWrite items marked completed with evidence
    ├── Cross-check findings against original specification
    ├── Validate that failure conditions were tested (not just success)
-   ├── 🚨 MANDATORY: Run `ls -la /tmp/<repo_name>/<branch_name>/` to verify all claimed evidence files
+   ├── 🚨 MANDATORY: Run `ls -la ${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` to verify all claimed evidence files
    ├── 🚨 MANDATORY: Compare claimed evidence files against actual directory listing
    ├── 🚨 MANDATORY: Remove any phantom file references from report
    ├── Generate evidence-backed report with ONLY verified file references
@@ -213,9 +213,10 @@ Execute test specifications directly as an LLM without generating intermediate s
 
 ### Default Behavior (No Arguments Provided)
 
-- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
-- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
+- **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
+- **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
+- **Configurable Directory**: Set `CLAUDE_TESTLLM_DIR` to override the default `${CLAUDE_TESTLLM_DIR:-testing_llm/}` path for directory-wide executions.
 
 ## Core Principles
 
@@ -232,7 +233,7 @@ Execute test specifications directly as an LLM without generating intermediate s
 
 Before generating ANY test report, you MUST:
 
-1. **Run File System Check**: Execute `ls -laR /tmp/<repo>/<branch>/`
+1. **Run File System Check**: Execute `ls -laR ${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}`
 2. **Compare Claims vs Reality**: Cross-reference every file mentioned in report against actual directory listing
 3. **Remove Phantom Files**: Delete ANY file references that don't appear in the `ls` output
 4. **Zero Tolerance**: If you claim a file exists, it MUST be verified by command output
@@ -284,9 +285,9 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 
 ## 🚨 DIRECTORY TESTING PROTOCOL - MANDATORY FOR ALL DIRECTORY-BASED TESTS
 
-### When User Requests "testing_llm/ test cases" or Similar Directory-Based Testing:
+### When User Requests "${CLAUDE_TESTLLM_DIR:-testing_llm/} test cases" or Similar Directory-Based Testing:
 
-**Default Invocation Note**: Running `/testllm` with no additional arguments automatically triggers this full protocol for the `testing_llm/` directory.
+**Default Invocation Note**: Running `/testllm` with no additional arguments automatically triggers this full protocol for the `${CLAUDE_TESTLLM_DIR:-testing_llm/}` directory.
 
 **🚨 CRITICAL RULE: NEVER TEST JUST ONE FILE WHEN DIRECTORY REQUESTED**
 
@@ -330,7 +331,7 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 
 - ✅ USE Playwright MCP as primary browser automation
 - ✅ ALWAYS use headless mode for automation
-- ✅ CAPTURE screenshots to the `/tmp/<repo_name>/<branch_name>/` results directory with descriptive names
+- ✅ CAPTURE screenshots to the `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` results directory with descriptive names
 - ✅ MONITOR console errors and network requests
 
 ### API Integration
@@ -342,14 +343,14 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 
 ### Evidence Collection
 
-- ✅ SAVE all screenshots and artifacts to `/tmp/<repo_name>/<branch_name>/` (never inline)
-- ✅ REFERENCE screenshots by filename in results and include the absolute path within `/tmp/<repo_name>/<branch_name>/`
+- ✅ SAVE all screenshots and artifacts to `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` (never inline)
+- ✅ REFERENCE screenshots by filename in results and include the absolute path within `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}`
 - ✅ DOCUMENT exact error messages and console output
 - ✅ PROVIDE specific line numbers and code references
-- ✅ ALWAYS inform the user of the `/tmp/<repo_name>/<branch_name>/` directory location and list every file created within it
+- ✅ ALWAYS inform the user of the `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` directory location and list every file created within it
 - 🚨 **MANDATORY FILE VERIFICATION**: Before mentioning ANY evidence file in reports, VERIFY it exists using `ls -la`
 - 🚨 **NO PHANTOM FILES**: NEVER claim evidence files exist without explicit verification command output
-- 🚨 **VERIFY BEFORE REPORTING**: After test completion, run `ls -la /tmp/<repo_name>/<branch_name>/` and ONLY list files that actually appear in output
+- 🚨 **VERIFY BEFORE REPORTING**: After test completion, run `ls -la ${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` and ONLY list files that actually appear in output
 
 ## Error Handling
 
@@ -363,11 +364,11 @@ When `verified` keyword is used, `/testllm` employs a dual-agent architecture to
 
 - All test steps executed without mock mode
 - Real API calls made and documented
-- Screenshots saved under `/tmp/<repo_name>/<branch_name>/` with proper naming
+- Screenshots saved under `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` with proper naming
 - Console errors captured and analyzed
 - Findings classified by priority (CRITICAL/HIGH/MEDIUM)
 - Actionable recommendations provided
-- Final report clearly states the `/tmp/<repo_name>/<branch_name>/` directory path and inventories all artifacts within it
+- Final report clearly states the `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}` directory path and inventories all artifacts within it
 
 ### 🚨 EXIT STATUS VALIDATION (MANDATORY)
 
@@ -429,7 +430,7 @@ Task(
 ### Evidence Package Handoff (Dual-Agent Only)
 
 1. **TestExecutor Creates**: Structured JSON evidence package + artifact files
-2. **File System Storage**: Evidence saved to `/tmp/<repo_name>/<branch_name>/test_evidence_TIMESTAMP/`
+2. **File System Storage**: Evidence saved to `${CLAUDE_TESTLLM_RESULTS_DIR:-/tmp/<repo_name>/<branch_name>/}test_evidence_TIMESTAMP/`
 3. **Validator Receives**: Original test spec + evidence package only
 4. **Independent Assessment**: Validator evaluates without execution context
 5. **Cross-Validation**: Final report combines both agent perspectives

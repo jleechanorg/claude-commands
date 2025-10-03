@@ -43,6 +43,7 @@ class TestGitHeaderStatusline:
     @pytest.fixture()
     def temp_git_repo(self):
         """Create temporary git repository for testing"""
+        original_cwd = os.getcwd()
         temp_dir = tempfile.mkdtemp()
         os.chdir(temp_dir)
 
@@ -56,11 +57,12 @@ class TestGitHeaderStatusline:
             f.write("# Test Repo\n")
         subprocess.run(["git", "add", "README.md"], check=True)
         subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
+        subprocess.run(["git", "branch", "-m", "main"], check=True)
 
         yield temp_dir
 
         # Cleanup
-        os.chdir("/")
+        os.chdir(original_cwd)
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.fixture()
@@ -126,20 +128,19 @@ class TestGitHeaderStatusline:
 
     def test_red_ahead_commits_status(self, temp_git_repo, git_header_script):
         """RED: Test ahead commits show (ahead N)"""
-        # Set up remote tracking
-        subprocess.run(
-            ["git", "remote", "add", "origin", "https://github.com/test/test.git"],
-            check=True,
-        )
-        subprocess.run(["git", "branch", "--set-upstream-to=origin/main"], check=True)
+        # Set up remote tracking with actual upstream branch
+        with tempfile.TemporaryDirectory() as remote_dir:
+            subprocess.run(["git", "init", "--bare", remote_dir], check=True)
+            subprocess.run(["git", "remote", "add", "origin", remote_dir], check=True)
+            subprocess.run(["git", "push", "-u", "origin", "main"], check=True)
 
-        # Create local commits ahead of remote (simulate)
-        with open("local_commit.txt", "w") as f:
-            f.write("local change")
-        subprocess.run(["git", "add", "local_commit.txt"], check=True)
-        subprocess.run(["git", "commit", "-m", "Local commit"], check=True)
+            # Create local commits ahead of remote (simulate)
+            with open("local_commit.txt", "w") as f:
+                f.write("local change")
+            subprocess.run(["git", "add", "local_commit.txt"], check=True)
+            subprocess.run(["git", "commit", "-m", "Local commit"], check=True)
 
-        stdout, stderr, returncode = self.run_git_header(git_header_script)
+            stdout, stderr, returncode = self.run_git_header(git_header_script)
 
         # Should show ahead status
         assert "ahead" in stdout.lower()
