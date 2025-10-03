@@ -71,7 +71,10 @@ class ImportValidator(ast.NodeVisitor):
             # Test script modules that need sys.path manipulation
             'test_dependency_analyzer',
             # Testing framework integration utilities (optional for test stability)
-            'testing_framework.integration_utils'
+            'testing_framework.integration_utils',
+            # Optional A2A test dependencies (conditional imports for tests)
+            'a2a',
+            'httpx'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
