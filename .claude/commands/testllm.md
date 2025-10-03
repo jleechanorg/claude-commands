@@ -118,7 +118,7 @@ Before submitting final report, verify:
 ### Phase 12: Execution Flow with Validation Gates
 
 **Action Steps:**
-```
+```text
 1. Systematic Requirement Analysis (MANDATORY GATE)
    ├── Read test specification twice completely
    ├── Extract ALL requirements to TodoWrite checklist
@@ -165,7 +165,7 @@ Before submitting final report, verify:
 ### Phase 14: Execution Flow Selection Logic
 
 **Action Steps:**
-```
+```python
 if not command_args:
     execute_directory_suite("testing_llm", mode="single_agent")
 elif command_args == ["verified"]:
@@ -192,20 +192,16 @@ Execute test specifications directly as an LLM without generating intermediate s
 ## Usage Patterns
 
 ```bash
-
 # Default Directory Suite (No Arguments)
-
 /testllm
 /testllm verified
 
 # Single-Agent Testing (Traditional)
-
 /testllm path/to/test_file.md
 /testllm path/to/test_file.md with custom user input
 /testllm "natural language test description"
 
 # Dual-Agent Verification (Enhanced Reliability)
-
 /testllm verified path/to/test_file.md
 /testllm verified path/to/test_file.md with custom input
 /testllm verified "natural language test description"
@@ -216,6 +212,7 @@ Execute test specifications directly as an LLM without generating intermediate s
 - **Automatic Directory Coverage**: When invoked without a specific test file or natural language specification, `/testllm` automatically executes the full `testing_llm/` directory test suite using the [🚨 DIRECTORY TESTING PROTOCOL](#-directory-testing-protocol---mandatory-for-all-directory-based-tests).
 - **Verified Mode Support**: `/testllm verified` with no additional arguments runs the same `testing_llm/` directory workflow, but with the dual-agent verification architecture for independent validation.
 - **Extensible Overrides**: Providing any explicit file path, directory, or natural language description overrides the default and targets the requested scope.
+  - **Environment Variable Override**: Set `CLAUDE_TESTLLM_DIR` to override the default `testing_llm/` directory. When defined, all directory-based executions target the path specified in `CLAUDE_TESTLLM_DIR` instead of the default.
 
 ## Core Principles
 

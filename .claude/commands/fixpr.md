@@ -63,6 +63,7 @@ Only proceed once authentication succeeds.
 ```bash
 status=$(gh pr view "$PR" --json mergeStateStatus,statusCheckRollup)
 merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
+```
 
 ### Phase 6: Step 3: Analyze Issues with Intelligence & Pattern Detection
 
@@ -79,6 +80,7 @@ merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
 
 **FIRESTORE MOCKING PATTERN DETECTION** (High Priority):
 ```bash
+```
 
 ### Phase 7: Step 4: Detect CI Environment Discrepancies
 
@@ -98,6 +100,7 @@ merge_state=$(echo "$status" | jq -r '.mergeStateStatus // "UNKNOWN"')
 
 **When Discrepancy Detected, Trigger `/redgreen` Workflow**:
 ```bash
+```
 
 ### Phase 8: Step 5: Apply Fixes Intelligently
 

@@ -209,7 +209,7 @@ Store new architectural insights discovered during review:
 7. **Entity Types**: `architecture_decision`, `design_pattern`, `performance_insight`, `mvp_tradeoff`, `solo_dev_pattern`
 
 **Output Format**:
-```
+```text
 
 # MVP Architecture Review Report
 

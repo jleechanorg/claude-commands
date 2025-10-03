@@ -29,12 +29,12 @@ Based on the command arguments, resolve to appropriate test specification:
 Execute the resolved test specification using `/testllm` with appropriate mode:
 
 **Single-Agent Mode** (default):
-```
+```bash
 /testllm [resolved_test_spec] [additional_args]
 ```
 
 **Dual-Agent Mode** (when `verified` keyword present):
-```
+```bash
 /testllm verified [resolved_test_spec] [additional_args]
 ```
 
@@ -124,8 +124,8 @@ Execute MCP (Model Context Protocol) test specifications using the comprehensive
 This command delegates to `/testllm` for intelligent test orchestration of MCP test specifications in the `test_mcp/` directory (override with `$MCP_TEST_DIR`, default: `test_mcp/`).
 
 **Execution Flow**:
-```
-/testmcp [args] → /testllm [testing_mcp/test_spec] [args]
+```bash
+/testmcp [args] → /testllm [${MCP_TEST_DIR:-testing_mcp}/test_spec] [args]
 ```
 
 ## Test Specifications Available
