@@ -4,6 +4,7 @@ I am an engineering leader with 16+ years of experience who scaled Snap's notifi
 AI Engineering Prototypes (2025, Personal R&D)
 The future of development will be an act of high-level direction, with autonomous AI agents handling over 90% of the coding, testing, and review. I've built a prototype that proves this is possible.
 Created an open-source natural language framework using Claude Code for a team of autonomous AI agents (3-5 coders, 4 reviewers) to collaborate on complex projects.
+Maintain an AI venture studio workflow that merged 345 pull requests in 30 days (~11.5/day) across 42 repositories and two GitHub organizations, all coordinated through a personal multi-agent orchestration system.【F:docs/skills/conversation-chronicle.md†L1-L122】【F:docs/skills/conversation-chronicle.md†L123-L175】
 Generated over 900 pull requests in one month with a median merge time of 42 minutes and ~70% unit test coverage.
 Built a GenAI role-playing game that solved for long-term narrative drift, maintaining a coherent story for over 100 turns.
 Professional Experience (2008 - present)
