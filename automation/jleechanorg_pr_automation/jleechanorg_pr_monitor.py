@@ -12,8 +12,8 @@ import sys
 import json
 import subprocess
 import logging
-import traceback
 import re
+import traceback
 from collections import Counter
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -31,8 +31,19 @@ from .codex_config import (
 class JleechanorgPRMonitor:
     """Cross-organization PR monitoring with Codex automation comments"""
 
+    @staticmethod
+    def _redact_email(email: Optional[str]) -> Optional[str]:
+        """Redact email for logging while preserving domain for debugging"""
+        if not email or '@' not in email:
+            return email
+        user, domain = email.rsplit('@', 1)
+        if len(user) <= 2:
+            return f"***@{domain}"
+        return f"{user[:2]}***@{domain}"
+
     CODEX_COMMIT_MARKER_PREFIX = SHARED_MARKER_PREFIX
     CODEX_COMMIT_MARKER_SUFFIX = SHARED_MARKER_SUFFIX
+    CODEX_COMMIT_MESSAGE_MARKER = "[codex-automation-commit]"
     CODEX_BOT_IDENTIFIER = "codex"
     # GitHub short SHAs display with a minimum of 7 characters, while full SHAs are 40 characters.
     CODEX_COMMIT_SHA_LENGTH_RANGE: Tuple[int, int] = (7, 40)
@@ -50,6 +61,67 @@ class JleechanorgPRMonitor:
             re.IGNORECASE,
         ),
     ]
+
+    _HEAD_COMMIT_DETAILS_QUERY = """
+        query($owner: String!, $name: String!, $prNumber: Int!) {
+          repository(owner: $owner, name: $name) {
+            pullRequest(number: $prNumber) {
+              headRefOid
+              commits(last: 1) {
+                nodes {
+                  commit {
+                    oid
+                    messageHeadline
+                    message
+                    author {
+                      email
+                      name
+                      user { login }
+                    }
+                    committer {
+                      email
+                      name
+                      user { login }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        """
+
+    _codex_actor_keywords = [
+        "codex",
+        "coderabbitai",
+        "coderabbit",
+        "copilot",
+        "cursor",
+    ]
+    _codex_actor_patterns = [
+        re.compile(rf"\b{keyword}\b", re.IGNORECASE)
+        for keyword in _codex_actor_keywords
+    ]
+    _codex_commit_message_pattern_str = (
+        r"\[(?:" + "|".join(_codex_actor_keywords) + r")-automation-commit\]"
+    )
+    _codex_commit_message_pattern = re.compile(
+        _codex_commit_message_pattern_str,
+        re.IGNORECASE,
+    )
+
+    @staticmethod
+    def _extract_actor_fields(
+        actor: Optional[Dict],
+    ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+        if not isinstance(actor, dict):
+            return (None, None, None)
+
+        user_info = actor.get("user")
+        login = user_info.get("login") if isinstance(user_info, dict) else None
+        email = actor.get("email")
+        name = actor.get("name")
+        return (login, email, name)
 
     def __init__(self):
         self.logger = setup_logging(__name__)
@@ -460,12 +532,24 @@ class JleechanorgPRMonitor:
         repo_full = self._normalize_repository_name(repository)
         self.logger.info(f"💬 Requesting Codex support for {repo_full} PR #{pr_number}")
 
-        # Get current PR state including commit SHA
-        head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
-
         # Extract repo name and branch from PR data
         repo_name = repo_full.split('/')[-1]
         branch_name = pr_data.get('headRefName', 'unknown')
+
+        # Get current PR state including commit SHA
+        head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
+        head_commit_details = None
+        if head_sha:
+            head_commit_details = self._get_head_commit_details(repo_full, pr_number, head_sha)
+            if head_commit_details and self._is_head_commit_from_codex(head_commit_details):
+                self.logger.debug(
+                    "🆔 Head commit %s for %s#%s already attributed to Codex",
+                    head_sha[:8],
+                    repo_full,
+                    pr_number,
+                )
+                self._record_processed_pr(repo_name, branch_name, pr_number, head_sha)
+                return "skipped"
 
         if not head_sha:
             self.logger.warning(
@@ -492,7 +576,12 @@ class JleechanorgPRMonitor:
                 return "skipped"
 
         # Build comment body that tells Codex to fix PR comments and failing tests
-        comment_body = self._build_codex_comment_body_simple(repo_full, pr_number, pr_data, head_sha, comments)
+        comment_body = self._build_codex_comment_body_simple(
+            repo_full,
+            pr_number,
+            pr_data,
+            head_sha,
+        )
 
         # Post the comment
         try:
@@ -560,7 +649,13 @@ class JleechanorgPRMonitor:
             self.logger.warning(f"⚠️ Could not check test status for PR #{pr_number}: {e}")
             return False  # Assume tests are failing if we can't check
 
-    def _build_codex_comment_body_simple(self, repository: str, pr_number: int, pr_data: Dict, head_sha: str, comments: List[Dict]) -> str:
+    def _build_codex_comment_body_simple(
+        self,
+        repository: str,
+        pr_number: int,
+        pr_data: Dict,
+        head_sha: str,
+    ) -> str:
         """Build comment body that tells all AI assistants to fix PR comments, tests, and merge conflicts"""
 
         comment_body = f"""{self.assistant_mentions} [AI automation] Please make the following changes to this PR
@@ -586,6 +681,10 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 2. **Fix failing tests** - Review test failures and implement fixes
 3. **Resolve merge conflicts** - Handle any conflicts with the base branch
 4. **Ensure code quality** - Follow project standards and best practices
+
+**Automation Markers:**
+- Leave the hidden comment marker `<!-- codex-automation-commit:... -->` in this thread so we only re-ping you after new commits.
+- Include `{self.CODEX_COMMIT_MESSAGE_MARKER}` in the commit message of your next push so we can confirm Codex authored it (even if the author/committer metadata already shows Codex).
 """
 
         if head_sha:
@@ -645,6 +744,130 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         return None, []
 
+    def _get_head_commit_details(
+        self,
+        repo_full_name: str,
+        pr_number: int,
+        expected_sha: Optional[str] = None,
+    ) -> Optional[Dict[str, Optional[str]]]:
+        """Fetch metadata for the PR head commit using the GitHub GraphQL API."""
+
+        if "/" not in repo_full_name:
+            self.logger.debug(
+                "⚠️ Cannot fetch commit details for %s - invalid repo format",
+                repo_full_name,
+            )
+            return None
+
+        owner, name = repo_full_name.split("/", 1)
+
+        # Validate GitHub naming constraints (alphanumeric, hyphens, periods, underscores, max 100 chars)
+        import re
+        github_name_pattern = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$')
+        if not github_name_pattern.match(owner) or not github_name_pattern.match(name):
+            self.logger.warning(
+                "⚠️ Invalid GitHub identifiers: owner='%s', name='%s'",
+                owner,
+                name,
+            )
+            return None
+
+        # Validate PR number is positive integer
+        if not isinstance(pr_number, int) or pr_number <= 0:
+            self.logger.warning("⚠️ Invalid PR number: %s", pr_number)
+            return None
+
+        cmd = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={self._HEAD_COMMIT_DETAILS_QUERY}",
+            "-f",
+            f"owner={owner}",
+            "-f",
+            f"name={name}",
+            "-F",
+            f"prNumber={pr_number}",
+        ]
+
+        try:
+            result = AutomationUtils.execute_subprocess_with_timeout(cmd, timeout=30)
+        except subprocess.CalledProcessError as exc:
+            self.logger.debug(
+                "⚠️ Failed to fetch head commit details for %s#%s: %s",
+                repo_full_name,
+                pr_number,
+                exc.stderr or exc,
+            )
+            return None
+        except Exception as exc:
+            self.logger.debug(
+                "⚠️ Error executing head commit lookup for %s#%s: %s",
+                repo_full_name,
+                pr_number,
+                exc,
+            )
+            return None
+
+        try:
+            data = json.loads(result.stdout or "{}")
+        except json.JSONDecodeError as exc:
+            self.logger.debug(
+                "⚠️ Failed to decode commit details for %s#%s: %s",
+                repo_full_name,
+                pr_number,
+                exc,
+            )
+            return None
+
+        pr_data = (
+            data.get("data", {})
+            .get("repository", {})
+            .get("pullRequest", {})
+        )
+        commits_data = pr_data.get("commits") or {}
+        commit_nodes = commits_data.get("nodes") if isinstance(commits_data, dict) else None
+        if not commit_nodes or not isinstance(commit_nodes, list):
+            return None
+
+        commit_info = commit_nodes[-1].get("commit") if commit_nodes else None
+        if not commit_info:
+            return None
+
+        commit_sha = commit_info.get("oid")
+        if expected_sha and commit_sha and commit_sha != expected_sha:
+            # If GitHub served stale data, ignore it to avoid mismatched metadata.
+            return None
+
+        author_info = commit_info.get("author") or {}
+        committer_info = commit_info.get("committer") or {}
+
+        author_login, author_email, author_name = self._extract_actor_fields(author_info)
+        committer_login, committer_email, committer_name = self._extract_actor_fields(committer_info)
+
+        # Log commit detection with redacted emails for privacy
+        self.logger.debug(
+            "📧 Commit %s: author=%s (%s), committer=%s (%s)",
+            commit_sha[:8] if commit_sha else "unknown",
+            author_login or "unknown",
+            self._redact_email(author_email) if author_email else "no-email",
+            committer_login or "unknown",
+            self._redact_email(committer_email) if committer_email else "no-email",
+        )
+
+        return {
+            "sha": commit_sha,
+            "author_login": author_login,
+            "author_email": author_email,
+            "author_name": author_name,
+            "committer_login": committer_login,
+            "committer_email": committer_email,
+            "committer_name": committer_name,
+            "message_headline": commit_info.get("messageHeadline"),
+            "message": commit_info.get("message"),
+        }
+
     def _extract_commit_marker(self, comment_body: str) -> Optional[str]:
         """Extract commit marker from Codex automation comment"""
         if not comment_body:
@@ -671,6 +894,40 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             marker_sha = self._extract_commit_marker(body)
             if marker_sha and marker_sha == head_sha:
                 return True
+
+        return False
+
+    def _is_head_commit_from_codex(
+        self, commit_details: Optional[Dict[str, Optional[str]]]
+    ) -> bool:
+        """Determine if the head commit was authored or marked by Codex."""
+
+        if not commit_details:
+            return False
+
+        actor_fields = [
+            commit_details.get("author_login"),
+            commit_details.get("author_email"),
+            commit_details.get("author_name"),
+            commit_details.get("committer_login"),
+            commit_details.get("committer_email"),
+            commit_details.get("committer_name"),
+        ]
+
+        for field in actor_fields:
+            if field and isinstance(field, str):
+                if any(pattern.search(field) for pattern in self._codex_actor_patterns):
+                    return True
+
+        message_values = [
+            commit_details.get("message_headline"),
+            commit_details.get("message"),
+        ]
+
+        for message in message_values:
+            if message and isinstance(message, str):
+                if self._codex_commit_message_pattern.search(message):
+                    return True
 
         return False
 

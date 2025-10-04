@@ -380,6 +380,36 @@ class TestPRFilteringMatrix(unittest.TestCase):
             result = self.monitor.post_codex_instruction_simple('org/repo', 123, pr_data)
             self.assertEqual(result, 'failed')
 
+    def test_comment_posting_skips_when_head_commit_from_codex(self):
+        """GREEN: post_codex_instruction_simple should skip when head commit is Codex-attributed"""
+        with patch.object(self.monitor, '_get_pr_comment_state') as mock_state, \
+             patch.object(self.monitor, '_get_head_commit_details') as mock_head_details, \
+             patch.object(self.monitor, '_is_head_commit_from_codex') as mock_is_codex, \
+             patch.object(self.monitor, '_should_skip_pr') as mock_should_skip, \
+             patch.object(self.monitor, '_has_codex_comment_for_commit') as mock_has_comment, \
+             patch.object(self.monitor, '_record_processed_pr') as mock_record_processed, \
+             patch.object(self.monitor, '_build_codex_comment_body_simple') as mock_build_body, \
+             patch('jleechanorg_pr_automation.automation_utils.AutomationUtils.execute_subprocess_with_timeout') as mock_subprocess:
+
+            mock_state.return_value = ('sha123', [])
+            mock_head_details.return_value = {'sha': 'sha123'}
+            mock_is_codex.return_value = True
+
+            pr_data = {
+                'repositoryFullName': 'org/repo',
+                'headRefName': 'feature',
+            }
+
+            result = self.monitor.post_codex_instruction_simple('org/repo', 456, pr_data)
+
+            self.assertEqual(result, 'skipped')
+            mock_is_codex.assert_called_once_with({'sha': 'sha123'})
+            mock_should_skip.assert_not_called()
+            mock_has_comment.assert_not_called()
+            mock_build_body.assert_not_called()
+            mock_subprocess.assert_not_called()
+            mock_record_processed.assert_called_once_with('repo', 'feature', 456, 'sha123')
+
     def test_process_pr_comment_only_returns_true_for_posted(self):
         """GREEN: _process_pr_comment should only return True when comment actually posted"""
         with patch.object(self.monitor, 'post_codex_instruction_simple') as mock_post:
@@ -407,7 +437,7 @@ class TestPRFilteringMatrix(unittest.TestCase):
         }
 
         comment_body = self.monitor._build_codex_comment_body_simple(
-            'test/repo', 123, pr_data, 'abc12345', []
+            'test/repo', 123, pr_data, 'abc12345'
         )
 
         # Verify all 4 AI assistant mentions are present
@@ -422,6 +452,18 @@ class TestPRFilteringMatrix(unittest.TestCase):
         self.assertIn('@coderabbitai', first_line, "@coderabbitai should be in first line")
         self.assertIn('@copilot', first_line, "@copilot should be in first line")
         self.assertIn('@cursor', first_line, "@cursor should be in first line")
+
+        # Verify automation marker instructions are documented
+        self.assertIn(
+            self.monitor.CODEX_COMMIT_MESSAGE_MARKER,
+            comment_body,
+            "Comment should instruct Codex to include the commit message marker",
+        )
+        self.assertIn(
+            "<!-- codex-automation-commit:",
+            comment_body,
+            "Comment should remind Codex about the hidden commit marker",
+        )
 
 
 if __name__ == '__main__':

@@ -84,7 +84,6 @@ class TestPRTargeting(unittest.TestCase):
             42,
             pr_data,
             "abcdef1234567890",
-            [],
         )
 
         self.assertIn("**Summary (Execution Flow):**", comment_body)
