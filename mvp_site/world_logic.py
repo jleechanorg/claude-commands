@@ -262,58 +262,33 @@ def _handle_debug_mode_command(
         hasattr(current_game_state, "debug_mode") and current_game_state.debug_mode
     )
 
-    try:
-        # Simple command handling - ASK_STATE
-        if user_input_stripped == "GOD_ASK_STATE":
-            if debug_mode_enabled:
-                return {KEY_SUCCESS: True, "game_state": current_game_state.to_dict()}
-            return {KEY_SUCCESS: True, KEY_RESPONSE: "Debug mode is not enabled"}
+    debug_disabled_response = {
+        KEY_SUCCESS: True,
+        KEY_RESPONSE: "Debug mode is not enabled",
+    }
 
-        # Simple SET command handling
+    try:
+        # GOD_ASK_STATE
+        if user_input_stripped == "GOD_ASK_STATE":
+            if not debug_mode_enabled:
+                return debug_disabled_response
+            return _handle_ask_state_command(
+                user_input, current_game_state, user_id, campaign_id
+            )
+
+        # GOD_MODE_SET
         if user_input_stripped.startswith("GOD_MODE_SET:"):
             if not debug_mode_enabled:
-                return {KEY_SUCCESS: True, KEY_RESPONSE: "Debug mode is not enabled"}
+                return debug_disabled_response
+            return _handle_set_command(
+                user_input, current_game_state, user_id, campaign_id
+            )
 
-            # Extract field and value
-            command_parts = user_input_stripped[13:].strip().split("=", 1)
-            if len(command_parts) == 2:
-                field_path = command_parts[0].strip()
-                value = command_parts[1].strip()
-
-                # Simple field setting
-                state_dict = current_game_state.to_dict()
-                if "." not in field_path:
-                    state_dict[field_path] = value
-                    firestore_service.update_campaign_game_state(
-                        user_id, campaign_id, state_dict
-                    )
-                    return {
-                        KEY_SUCCESS: True,
-                        KEY_RESPONSE: f"Set {field_path} = {value}",
-                    }
-                return {KEY_ERROR: "Nested field paths not yet supported"}
-            return {KEY_ERROR: "SET command format: GOD_MODE_SET:field=value"}
-
-        # UPDATE_STATE command handling
+        # GOD_MODE_UPDATE_STATE
         if user_input_stripped.startswith("GOD_MODE_UPDATE_STATE:"):
             if not debug_mode_enabled:
-                return {KEY_SUCCESS: True, KEY_RESPONSE: "Debug mode is not enabled"}
-
-            try:
-                json_str = user_input_stripped[22:].strip()
-                updates = json.loads(json_str)
-
-                state_dict = current_game_state.to_dict()
-                state_dict.update(updates)
-                firestore_service.update_campaign_game_state(
-                    user_id, campaign_id, state_dict
-                )
-                return {
-                    KEY_SUCCESS: True,
-                    KEY_RESPONSE: f"Updated state with {len(updates)} changes",
-                }
-            except json.JSONDecodeError:
-                return {KEY_ERROR: "Invalid JSON in UPDATE_STATE command"}
+                return debug_disabled_response
+            return _handle_update_state_command(user_input, user_id, campaign_id)
 
     except Exception as e:
         logging_util.error(f"Debug command failed: {e}")
@@ -1234,7 +1209,11 @@ def _handle_ask_state_command(
     )
 
     response_text = f"```json\\n{game_state_json}\\n```"
-    return {KEY_SUCCESS: True, KEY_RESPONSE: response_text}
+    return {
+        KEY_SUCCESS: True,
+        KEY_RESPONSE: response_text,
+        "game_state": game_state_dict,
+    }
 
 
 def _handle_set_command(

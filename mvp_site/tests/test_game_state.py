@@ -4,10 +4,12 @@ Tests the GameState class and related functions.
 Comprehensive mocking implemented to handle CI environments that lack Firebase dependencies.
 """
 
+import datetime
 import os
 import sys
 import unittest
-from unittest.mock import MagicMock
+from importlib import import_module
+from unittest.mock import MagicMock, patch
 
 # Set test environment before any imports
 os.environ["TESTING"] = "true"
@@ -76,17 +78,20 @@ if mvp_site_path not in sys.path:
 
 # Import proper fakes library
 
-import datetime
+firestore_service_module = import_module("mvp_site.firestore_service")
+_perform_append = firestore_service_module._perform_append
+update_state_with_changes = firestore_service_module.update_state_with_changes
 
-from mvp_site.firestore_service import _perform_append, update_state_with_changes
-from mvp_site.game_state import GameState
+game_state_module = import_module("mvp_site.game_state")
+GameState = game_state_module.GameState
 
-# Import modules with comprehensive mocking in place
-from mvp_site.world_logic import (
-    _cleanup_legacy_state,
-    format_game_state_updates,
-    parse_set_command,
-)
+world_logic_module = import_module("mvp_site.world_logic")
+KEY_RESPONSE = world_logic_module.KEY_RESPONSE
+KEY_SUCCESS = world_logic_module.KEY_SUCCESS
+_cleanup_legacy_state = world_logic_module._cleanup_legacy_state
+_handle_debug_mode_command = world_logic_module._handle_debug_mode_command
+format_game_state_updates = world_logic_module.format_game_state_updates
+parse_set_command = world_logic_module.parse_set_command
 
 
 class TestGameState(unittest.TestCase):
@@ -1307,6 +1312,66 @@ class TestMainStateFunctions(unittest.TestCase):
             "Frostholm",
         ]
         assert result["metadata"]["session"]["participants"] == ["player1", "player2"]
+
+    def test_debug_mode_command_applies_multiline_god_mode_set(self):
+        """Ensure GOD_MODE_SET blocks with nested paths are applied through the debug handler."""
+
+        game_state = GameState()
+        game_state.player_character_data = {
+            "stats": {
+                "hp": 3,
+            }
+        }
+        game_state.world_data = {}
+
+        user_input = (
+            "GOD_MODE_SET:\n"
+            "player_character_data.stats.hp = 18\n"
+            'world_data.current_location.name = "Oakvale"\n'
+        )
+
+        with patch(
+            "mvp_site.world_logic.firestore_service.update_campaign_game_state"
+        ) as mock_update_state:
+            response = _handle_debug_mode_command(
+                user_input,
+                game_state,
+                "user-123",
+                "campaign-456",
+            )
+
+        assert response[KEY_SUCCESS] is True
+        assert "player_character_data.stats.hp" in response[KEY_RESPONSE]
+
+        mock_update_state.assert_called_once()
+        _, _, updated_state = mock_update_state.call_args[0]
+        assert (
+            updated_state["player_character_data"]["stats"]["hp"]
+            == 18
+        ), "HP should be updated via GOD_MODE_SET"
+        assert (
+            updated_state["world_data"]["current_location"]["name"]
+            == "Oakvale"
+        ), "Nested world data should be merged"
+
+    def test_debug_mode_command_returns_structured_state_for_ask(self):
+        """GOD_ASK_STATE should return the raw game_state alongside the formatted response."""
+
+        game_state = GameState()
+        game_state.player_character_data = {"name": "Debugger"}
+
+        with patch("mvp_site.world_logic.firestore_service.add_story_entry"):
+            response = _handle_debug_mode_command(
+                "GOD_ASK_STATE",
+                game_state,
+                "user-ask",
+                "campaign-ask",
+            )
+
+        assert response[KEY_SUCCESS] is True
+        assert "game_state" in response
+        assert response["game_state"]["player_character_data"]["name"] == "Debugger"
+        assert KEY_RESPONSE in response
 
 
 if __name__ == "__main__":
