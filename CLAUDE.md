@@ -158,6 +158,12 @@ Genesis Coder, Prime Mover,
 - **Cognitive** (/think, /arch, /debug): Universal Composition (natural semantic understanding)
 - **Operational** (/headless, /handoff, /orchestrate): Protocol Enforcement (mandatory workflow execution)
 
+## PyPI Publishing Reference
+
+- For `jleechanorg-pr-automation` releases, set your PyPI token as the environment variable `PYPI_TOKEN` (export it in your shell profile or configure it in CI secrets). **Never commit or share the actual token value in documentation or code.**
+- If an upload attempt returns `403 Invalid or non-existent authentication information`, verify the token’s validity/permissions before retrying.
+- Local private index served by `pypi-server` on `http://localhost:4875/` (auth: `automation` / `automationpw`, packages stored under `~/.local/share/pypiserver/packages`). Add repo to `~/.pypirc` and install with `pip install --index-url http://automation:automationpw@localhost:4875/simple <package>`.
+
 🚨 **NO FALSE ✅:** Only use ✅ for 100% complete/working. Use ❌ ⚠️ 🔄 for partial.
 
 🚨 **INTEGRATION VERIFICATION PROTOCOL**: ⚠️ MANDATORY - Prevent "Manual Testing Presented as Production Integration" Meta Fails

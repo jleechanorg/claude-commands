@@ -1,16 +1,15 @@
 Metadata-Version: 2.4
 Name: jleechanorg-pr-automation
-Version: 0.1.0
+Version: 0.1.1
 Summary: GitHub PR automation system with safety limits and actionable counting
 Author-email: jleechan <jlee@jleechan.org>
-License: MIT
+License-Expression: MIT
 Project-URL: Homepage, https://github.com/jleechanorg/worldarchitect.ai
 Project-URL: Repository, https://github.com/jleechanorg/worldarchitect.ai
 Project-URL: Issues, https://github.com/jleechanorg/worldarchitect.ai/issues
 Keywords: github,automation,pr,pull-request,monitoring
 Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Developers
-Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.9
 Classifier: Programming Language :: Python :: 3.10
@@ -205,6 +204,12 @@ ruff check .
 MIT License - see LICENSE file for details.
 
 ## Changelog
+
+### 0.1.1 (2025-10-06)
+
+- Fix daily reset of global automation limit so automation never stalls overnight
+- Track latest reset timestamp in safety data for observability
+- Expand safety manager tests to cover daily rollover behaviour
 
 ### 0.1.0 (2025-09-28)
 

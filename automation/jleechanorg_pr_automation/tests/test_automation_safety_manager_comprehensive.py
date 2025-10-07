@@ -16,6 +16,7 @@ from unittest.mock import Mock, patch, MagicMock
 
 # Import the automation safety manager using proper Python module path
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
+from jleechanorg_pr_automation.utils import json_manager
 
 
 class TestAutomationSafetyManagerInit:
@@ -149,6 +150,49 @@ class TestGlobalLimits:
 
         manager._clear_global_runs()
         assert manager.get_global_runs() == 0
+
+    def test_global_runs_auto_resets_daily(self, manager):
+        """Daily reset should clear the counter and allow automation without manual approval."""
+        manager._clear_global_runs()
+
+        # Simulate crossing the daily limit
+        for _ in range(manager.global_limit):
+            manager.record_global_run()
+
+        assert manager.requires_manual_approval() is True
+
+        now = datetime.now()
+        stale_payload = {
+            "total_runs": manager.global_limit,
+            "start_date": (now - timedelta(days=4)).isoformat(),
+            "current_date": (now - timedelta(days=1)).date().isoformat(),
+            "last_run": (now - timedelta(hours=2)).isoformat(),
+            "last_reset": (now - timedelta(days=2)).isoformat(),
+        }
+        json_manager.write_json(manager.global_runs_file, stale_payload)
+
+        refreshed_runs = manager.get_global_runs()
+        expected_today = datetime.now().date().isoformat()
+        assert refreshed_runs == 0
+        assert manager.requires_manual_approval() is False
+
+        normalized = manager._read_json_file(manager.global_runs_file)
+        assert normalized["current_date"] == expected_today
+        assert normalized["total_runs"] == 0
+
+        # Ensure the reset timestamp is updated and sane
+        last_reset = normalized.get("last_reset")
+        assert last_reset is not None
+        parsed_reset = datetime.fromisoformat(last_reset)
+        assert (
+            parsed_reset is not None
+        ), "last_reset should be a valid ISO datetime"
+
+        # Record another run and verify counters/log fields move forward
+        manager.record_global_run()
+        normalized = manager._read_json_file(manager.global_runs_file)
+        assert normalized["total_runs"] == 1
+        assert datetime.fromisoformat(normalized["last_run"])
 
 
 class TestPRLimits:

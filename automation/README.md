@@ -175,6 +175,12 @@ MIT License - see LICENSE file for details.
 
 ## Changelog
 
+### 0.1.1 (2025-10-06)
+
+- Fix daily reset of global automation limit so automation never stalls overnight
+- Track latest reset timestamp in safety data for observability
+- Expand safety manager tests to cover daily rollover behaviour
+
 ### 0.1.0 (2025-09-28)
 
 - Initial release

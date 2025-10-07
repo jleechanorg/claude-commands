@@ -28,6 +28,9 @@ from typing import Dict, Optional, Union
 
 REAL_DATETIME = datetime
 
+# Number of characters in the ISO 8601 date prefix ("YYYY-MM-DD").
+ISO_DATE_PREFIX_LENGTH = len("YYYY-MM-DD")
+
 # Optional keyring import for email functionality
 _keyring_spec = importlib.util.find_spec("keyring")
 if _keyring_spec:
@@ -91,11 +94,14 @@ class AutomationSafetyManager:
             self._write_json_file(self.pr_attempts_file, {})
 
         if not os.path.exists(self.global_runs_file):
-            today = datetime.now().date().isoformat()
+            now = datetime.now()
+            today = now.date().isoformat()
             self._write_json_file(self.global_runs_file, {
                 "total_runs": 0,
-                "start_date": datetime.now().isoformat(),
-                "current_date": today
+                "start_date": now.isoformat(),
+                "current_date": today,
+                "last_run": None,
+                "last_reset": now.isoformat(),
             })
 
         if not os.path.exists(self.approval_file):
@@ -249,7 +255,15 @@ class AutomationSafetyManager:
             try:
                 normalized_date = REAL_DATETIME.fromisoformat(stored_date).date().isoformat()
             except ValueError:
-                normalized_date = None
+                # Support legacy data that stored raw dates without full ISO format
+                if len(stored_date) >= ISO_DATE_PREFIX_LENGTH:
+                    candidate = stored_date[:ISO_DATE_PREFIX_LENGTH]
+                    try:
+                        normalized_date = REAL_DATETIME.fromisoformat(candidate).date().isoformat()
+                    except ValueError:
+                        normalized_date = None
+                else:
+                    normalized_date = None
 
         if normalized_date is None:
             try:
@@ -262,6 +276,7 @@ class AutomationSafetyManager:
         if is_stale:
             normalized_date = today
             data["total_runs"] = 0
+            data["last_reset"] = current_time.isoformat()
 
         data["current_date"] = normalized_date or today
 
@@ -285,6 +300,19 @@ class AutomationSafetyManager:
                     REAL_DATETIME.fromisoformat(last_run)
                 except ValueError:
                     data.pop("last_run", None)
+
+        last_reset = data.get("last_reset")
+        if last_reset is not None:
+            if not isinstance(last_reset, str):
+                data.pop("last_reset", None)
+            else:
+                try:
+                    REAL_DATETIME.fromisoformat(last_reset)
+                except ValueError:
+                    data.pop("last_reset", None)
+
+        if "last_reset" not in data:
+            data["last_reset"] = data["start_date"]
 
         return data, total_runs, is_stale
 
@@ -631,6 +659,9 @@ This is an automated notification from the WorldArchitect.AI automation system.
             data = self._read_json_file(self.global_runs_file)
             data["total_runs"] = 0
             data["last_run"] = None
+            now = datetime.now()
+            data["current_date"] = now.date().isoformat()
+            data["last_reset"] = now.isoformat()
             self._write_json_file(self.global_runs_file, data)
 
     def _clear_pr_attempts(self):
