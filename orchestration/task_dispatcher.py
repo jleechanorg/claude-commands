@@ -8,6 +8,7 @@ import glob
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -24,6 +25,46 @@ from constants import (
 )
 
 A2A_AVAILABLE = True
+
+CLI_PROFILES = {
+    "claude": {
+        "binary": "claude",
+        "display_name": "Claude",
+        "generated_with": "🤖 Generated with [Claude Code](https://claude.ai/code)",
+        "co_author": "Claude <noreply@anthropic.com>",
+        "supports_continue": True,
+        "conversation_dir": "~/.claude/conversations",
+        "continue_flag": "--continue",
+        "restart_env": "CLAUDE_RESTART",
+        "command_template": (
+            "{binary} --model sonnet -p @{prompt_file} "
+            "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
+        ),
+        "stdin_template": "/dev/null",
+        "quote_prompt": False,
+        "detection_keywords": ["claude", "anthropic"],
+    },
+    "codex": {
+        "binary": "codex",
+        "display_name": "Codex",
+        "generated_with": "🤖 Generated with [Codex CLI](https://openai.com/)",
+        "co_author": "Codex <noreply@openai.com>",
+        "supports_continue": False,
+        "conversation_dir": None,
+        "continue_flag": "",
+        "restart_env": "CODEX_RESTART",
+        "command_template": "{binary} exec --yolo",
+        "stdin_template": "{prompt_file}",
+        "quote_prompt": True,
+        "detection_keywords": ["codex exec", "codex cli", "use codex"],
+    },
+}
+
+# Shared sanitization helper
+def _sanitize_agent_token(name: str) -> str:
+    """Return a filesystem-safe token for agent-derived file paths."""
+    sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+    return sanitized or "agent"
 
 # Constraint system removed - using simple safety rules only
 
@@ -338,6 +379,39 @@ class TaskDispatcher:
 
         return workspace_config if workspace_config else None
 
+    def _detect_agent_cli(self, task_description: str) -> str:
+        """Determine which CLI should be used for the agent."""
+
+        # Explicit override via flag (--agent-cli codex) or (--agent-cli=codex)
+        cli_flag = re.search(
+            r"--agent-cli(?:=|\s+)(\w+)", task_description, re.IGNORECASE
+        )
+        if cli_flag:
+            requested_cli = cli_flag.group(1).lower()
+            if requested_cli in CLI_PROFILES:
+                return requested_cli
+
+        task_lower = task_description.lower()
+
+        # Keyword-driven detection sourced from CLI profiles
+        for cli_name, profile in CLI_PROFILES.items():
+            keywords = profile.get("detection_keywords", [])
+            if any(keyword in task_lower for keyword in keywords):
+                return cli_name
+
+        # Auto-select an available CLI if only one is installed
+        available_clis = []
+        for cli_name, profile in CLI_PROFILES.items():
+            cli_binary = profile.get("binary")
+            if cli_binary and shutil.which(cli_binary):
+                available_clis.append(cli_name)
+
+        if len(available_clis) == 1:
+            return available_clis[0]
+
+        # Default to Claude when multiple (or zero) CLIs are available
+        return "claude"
+
     def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
         """Detect if task is about updating an existing PR.
         Returns: (pr_number, mode) where mode is 'update' or 'create'
@@ -381,6 +455,20 @@ class TaskDispatcher:
                 return None, "update"  # Signal update mode but need clarification
 
         return None, "create"
+
+    def _resolve_cli_binary(self, cli_name: str) -> str | None:
+        """Locate the CLI binary for the requested agent type."""
+
+        profile = CLI_PROFILES.get(cli_name, {})
+        cli_binary = profile.get("binary")
+        if not cli_binary:
+            return None
+
+        cli_path = shutil.which(cli_binary) or ""
+        if not cli_path and cli_name == "claude":
+            cli_path = self._ensure_mock_claude_binary() or ""
+
+        return cli_path or None
 
     def _find_recent_pr(self) -> str | None:
         """Try to find a recent PR from current branch or user."""
@@ -503,6 +591,10 @@ class TaskDispatcher:
         workspace_config = self._extract_workspace_config(task_description)
         if workspace_config:
             print(f"🏗️ Extracted workspace config: {workspace_config}")
+
+        agent_cli = self._detect_agent_cli(task_description)
+        if agent_cli != "claude":
+            print(f"🤖 Selected {agent_cli.capitalize()} CLI based on task request")
 
         # Detect PR context
         pr_number, mode = self._detect_pr_context(task_description)
@@ -645,6 +737,7 @@ Complete the task, then use /pr to create a new pull request."""
             "focus": task_description,
             "capabilities": capabilities,
             "prompt": prompt,
+            "cli": agent_cli,
         }
 
         # Add PR context if updating existing PR
@@ -833,12 +926,53 @@ Complete the task, then use /pr to create a new pull request."""
         print(f"📁 File-based A2A protocol available for {agent_name}")
 
         try:
-            # Find Claude
-            claude_path = shutil.which("claude") or ""
-            if not claude_path:
-                claude_path = self._ensure_mock_claude_binary()
-            if not claude_path:
+            agent_cli = (agent_spec.get("cli") or "claude").lower()
+            if agent_cli not in CLI_PROFILES:
+                print(f"❌ Unsupported agent CLI requested: {agent_cli}")
                 return False
+
+            cli_profile = CLI_PROFILES[agent_cli]
+            cli_path = self._resolve_cli_binary(agent_cli)
+
+            if not cli_path:
+                print(
+                    f"⚠️ Requested CLI '{cli_profile['binary']}' not available for {agent_name}"
+                )
+
+                fallback_cli = None
+                fallback_path = None
+                for candidate_cli in CLI_PROFILES:
+                    if candidate_cli == agent_cli:
+                        continue
+                    candidate_path = self._resolve_cli_binary(candidate_cli)
+                    if candidate_path:
+                        fallback_cli = candidate_cli
+                        fallback_path = candidate_path
+                        break
+
+                if fallback_cli and fallback_path:
+                    print(
+                        f"   ➡️ Falling back to {CLI_PROFILES[fallback_cli]['display_name']} CLI"
+                    )
+                    agent_cli = fallback_cli
+                    cli_profile = CLI_PROFILES[agent_cli]
+                    cli_path = fallback_path
+                    agent_spec["cli"] = agent_cli
+                else:
+                    print(
+                        f"❌ Required CLI '{cli_profile['binary']}' not found for agent {agent_name}"
+                    )
+                    if agent_cli == "claude":
+                        print(
+                            "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                        )
+                    elif agent_cli == "codex":
+                        print(
+                            "   Install Codex CLI and ensure the 'codex' command is available on your PATH"
+                        )
+                    return False
+
+            print(f"🛠️ Using {cli_profile['display_name']} CLI for {agent_name}")
 
             # Create worktree for agent using new location logic
             try:
@@ -864,13 +998,21 @@ Complete the task, then use /pr to create a new pull request."""
                 print(f"❌ Failed to create worktree: {e}")
                 return False
 
+            agent_token = _sanitize_agent_token(agent_name)
+
             # Create result collection file
-            result_file = os.path.join(self.result_dir, f"{agent_name}_results.json")
+            result_file = os.path.join(self.result_dir, f"{agent_token}_results.json")
 
             # Enhanced prompt with completion enforcement
             # Determine if we're in PR update mode
             pr_context = agent_spec.get("pr_context", {})
             is_update_mode = pr_context and pr_context.get("mode") == "update"
+
+            attribution_line = cli_profile["generated_with"]
+            co_author_line = cli_profile["co_author"]
+            attribution_block = (
+                f"   {attribution_line}\n\n   Co-Authored-By: {co_author_line}"
+            )
 
             if is_update_mode:
                 completion_instructions = f"""
@@ -885,9 +1027,7 @@ Complete the task, then use /pr to create a new pull request."""
    Agent: {agent_name}
    Task: {agent_focus}
 
-   🤖 Generated with [Claude Code](https://claude.ai/code)
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
+{attribution_block}"
 
    git push
 
@@ -916,9 +1056,7 @@ Complete the task, then use /pr to create a new pull request."""
    Agent: {agent_name}
    Task: {agent_focus}
 
-   🤖 Generated with [Claude Code](https://claude.ai/code)
-
-   Co-Authored-By: Claude <noreply@anthropic.com>"
+{attribution_block}"
 
 3. Push your branch:
    git push -u origin {branch_name}
@@ -986,64 +1124,136 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_name}.txt")
+            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
             with open(prompt_file, "w") as f:
                 f.write(full_prompt)
 
             # Create log directory
             log_dir = "/tmp/orchestration_logs"
             os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"{agent_name}.log")
+            log_file = os.path.join(log_dir, f"{agent_token}.log")
 
-            # Determine if this is a restart or first run
+            log_file_quoted = shlex.quote(log_file)
+            result_file_quoted = shlex.quote(result_file)
+            prompt_file_quoted = shlex.quote(prompt_file)
+
+            # Determine if this is a restart or first run for the selected CLI
             continue_flag = ""
-            conversation_file = (
-                f"{os.path.expanduser('~')}/.claude/conversations/{agent_name}.json"
-            )
-            if (
-                os.path.exists(conversation_file)
-                or os.environ.get("CLAUDE_RESTART", "false") == "true"
-            ):
-                continue_flag = "--continue"
-                print(f"🔄 {agent_name}: Continuing existing conversation")
+            if cli_profile.get("supports_continue"):
+                conversation_file = None
+                conversation_dir = cli_profile.get("conversation_dir")
+                if conversation_dir:
+                    conversation_path = os.path.join(
+                        os.path.expanduser(conversation_dir), f"{agent_name}.json"
+                    )
+                    conversation_file = conversation_path
+                restart_env = cli_profile.get("restart_env")
+                restart_requested = bool(
+                    restart_env
+                    and os.environ.get(restart_env, "false").strip().lower() == "true"
+                )
+                if (
+                    conversation_file
+                    and os.path.exists(conversation_file)
+                ) or restart_requested:
+                    continue_flag = cli_profile.get("continue_flag", "")
+                    print(
+                        f"🔄 {agent_name}: Continuing existing {cli_profile['display_name']} session"
+                    )
+                else:
+                    print(
+                        f"🆕 {agent_name}: Starting new {cli_profile['display_name']} session"
+                    )
             else:
-                print(f"🆕 {agent_name}: Starting new conversation")
+                print(
+                    f"🆕 {agent_name}: Starting {cli_profile['display_name']} session"
+                )
 
-            claude_cmd = f"{claude_path} --model sonnet -p @{prompt_file} --output-format stream-json --verbose {continue_flag} --dangerously-skip-permissions"
+            continue_segment = f" {continue_flag}" if continue_flag else ""
+            prompt_value_raw = prompt_file
+            prompt_value_quoted = shlex.quote(prompt_file)
+            prompt_value = (
+                prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
+            )
+            binary_value = shlex.quote(cli_path)
+            try:
+                cli_command = cli_profile["command_template"].format(
+                    binary=binary_value,
+                    binary_path=cli_path,
+                    prompt_file=prompt_value,
+                    prompt_file_path=prompt_value_raw,
+                    prompt_file_quoted=prompt_value_quoted,
+                    continue_flag=continue_segment,
+                ).strip()
+            except KeyError as exc:
+                missing = exc.args[0]
+                raise ValueError(
+                    f"CLI command template for {agent_cli} missing placeholder {{{{{missing}}}}}"
+                ) from exc
+
+            stdin_template = cli_profile.get("stdin_template", "/dev/null")
+            if stdin_template == "{prompt_file}":
+                stdin_target = prompt_file
+            else:
+                stdin_target = stdin_template
+
+            stdin_redirect = ""
+            if stdin_target:
+                stdin_redirect = f" < {shlex.quote(stdin_target)}"
+
+            stdin_log_target = stdin_target or "/dev/null"
+            stdin_log_target_quoted = shlex.quote(stdin_log_target)
+            command_execution_line = cli_command + stdin_redirect
+            prompt_env_export = (
+                f"export ORCHESTRATION_PROMPT_FILE={prompt_file_quoted}"
+            )
+
+            agent_name_quoted = shlex.quote(agent_name)
+            cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
+            agent_dir_quoted = shlex.quote(agent_dir)
+            log_file_display = shlex.quote(log_file)
+            monitor_hint = shlex.quote(agent_name)
+            agent_name_json = json.dumps(agent_name)
+            agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
             # Enhanced bash command with error handling and logging
             bash_cmd = f'''
 # Signal handler to log interruptions
-trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file}; exit 130' SIGINT
-trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file}; exit 143' SIGTERM
+trap 'echo "[$(date)] Agent interrupted with signal SIGINT" | tee -a {log_file_quoted}; exit 130' SIGINT
+trap 'echo "[$(date)] Agent terminated with signal SIGTERM" | tee -a {log_file_quoted}; exit 143' SIGTERM
 
-echo "[$(date)] Starting agent {agent_name}" | tee -a {log_file}
-echo "[$(date)] Working directory: {agent_dir}" | tee -a {log_file}
-echo "[$(date)] Executing: {claude_cmd}" | tee -a {log_file}
-echo "[$(date)] SAFETY: stdin redirected to /dev/null to prevent keyboard interference" | tee -a {log_file}
+echo "[$(date)] Starting agent {agent_name_quoted}" | tee -a {log_file_quoted}
+echo "[$(date)] Working directory: {agent_dir_quoted}" | tee -a {log_file_quoted}
+echo "[$(date)] Executing CLI command:" | tee -a {log_file_quoted}
+cat <<'__ORCH_CLI_COMMAND__' | tee -a {log_file_quoted}
+{cli_command}
+__ORCH_CLI_COMMAND__
+echo "[$(date)] SAFETY: stdin redirected to {stdin_log_target_quoted}" | tee -a {log_file_quoted}
 
-# Run claude with stdin redirected to prevent accidental input
-{claude_cmd} < /dev/null 2>&1 | tee -a {log_file}
-CLAUDE_EXIT=$?
+{prompt_env_export}
 
-echo "[$(date)] Claude exit code: $CLAUDE_EXIT" | tee -a {log_file}
+# Run CLI with configured stdin handling
+{command_execution_line} 2>&1 | tee -a {log_file_quoted}
+CLI_EXIT=$?
 
-if [ $CLAUDE_EXIT -eq 0 ]; then
-    echo "[$(date)] Agent completed successfully" | tee -a {log_file}
-    echo '{{"agent": "{agent_name}", "status": "completed", "exit_code": 0}}' > {result_file}
+echo "[$(date)] {cli_display_name_quoted} exit code: $CLI_EXIT" | tee -a {log_file_quoted}
+
+if [ $CLI_EXIT -eq 0 ]; then
+    echo "[$(date)] Agent completed successfully" | tee -a {log_file_quoted}
+    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0}}" > {result_file_quoted}
 else
-    echo "[$(date)] Agent failed with exit code $CLAUDE_EXIT" | tee -a {log_file}
-    echo '{{"agent": "{agent_name}", "status": "failed", "exit_code": '$CLAUDE_EXIT'}}' > {result_file}
+    echo "[$(date)] Agent failed with exit code $CLI_EXIT" | tee -a {log_file_quoted}
+    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
 fi
 
 # Keep session alive for 1 hour for monitoring and debugging
-echo "[$(date)] Agent execution completed. Session remains active for monitoring."
-echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file}"
-echo "[$(date)] Monitor with: tmux attach -t {agent_name}"
+echo "[$(date)] Agent execution completed. Session remains active for monitoring." | tee -a {log_file_quoted}
+echo "[$(date)] Session will auto-close in 1 hour. Check log at: {log_file_display}" | tee -a {log_file_quoted}
+echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_quoted}
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_name}_run.sh"
+            script_path = Path("/tmp") / f"{agent_token}_run.sh"
             script_path.write_text(bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
