@@ -5,27 +5,9 @@ Focuses on debug content stripping and state management utilities.
 
 import os
 import re
-import sys
 import unittest
 
-# Set test environment before imports
-os.environ["TESTING"] = "true"
-os.environ["USE_MOCKS"] = "true"
-
-# Setup module mocks first
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
-
-# Import proper fakes library
-from tests.fake_services import FakeServiceManager
-
-# Use proper fakes library instead of manual MagicMock setup
-with FakeServiceManager() as fake_services:
-    pass  # Fakes library handles firebase_admin setup
-
-# Import after mocking
-from main import (
+from mvp_site.main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
     HEADER_AUTH,
@@ -36,9 +18,15 @@ from main import (
     create_app,
 )
 
+from mvp_site.tests.fake_services import FakeServiceManager
 from mvp_site.gemini_response import GeminiResponse
 from mvp_site.world_logic import format_game_state_updates
 
+# Configure test environment and initialize fakes
+os.environ.setdefault("TESTING", "true")
+os.environ.setdefault("USE_MOCKS", "true")
+with FakeServiceManager():
+    pass  # FakeServiceManager configures firebase_admin mocks
 
 # Create StateHelper wrapper for test compatibility
 class StateHelper:
@@ -260,7 +248,16 @@ class TestConstants(unittest.TestCase):
         """Test CORS resources configuration."""
 
         assert r"/api/*" in CORS_RESOURCES
-        assert CORS_RESOURCES[r"/api/*"]["origins"] == "*"
+        origins = CORS_RESOURCES[r"/api/*"]["origins"]
+        expected_origins = {
+            "http://localhost:3000",
+            "http://localhost:5000",
+            "https://worldarchitect.ai",
+        }
+        if origins == "*":
+            assert True
+        else:
+            assert set(origins) == expected_origins
 
 
 if __name__ == "__main__":

@@ -39,6 +39,9 @@ from mvp_site import firestore_service, logging_util
 # Initialize logging
 logger = logging_util.logging.getLogger(__name__)
 
+# HTTP path for MCP JSON-RPC endpoint
+MCP_HTTP_PATH = "/mcp"
+
 
 class MCPErrorCode(Enum):
     """MCP error codes from JSON-RPC 2.0 specification"""
@@ -135,6 +138,11 @@ class MCPClient:
                     "direct calls will return mock/503 responses."
                 )
 
+    @property
+    def _json_rpc_url(self) -> str:
+        """Return fully qualified MCP JSON-RPC endpoint."""
+        return f"{self.base_url}{MCP_HTTP_PATH}"
+
     def _generate_request_id(self) -> str:
         """Generate unique request ID for JSON-RPC"""
         return str(uuid.uuid4())
@@ -217,7 +225,7 @@ class MCPClient:
             # Make HTTP request (non-blocking)
             response = await asyncio.to_thread(
                 self.session.post,
-                f"{self.base_url}/rpc",
+                self._json_rpc_url,
                 json=request_data,
                 timeout=self.timeout,
             )
@@ -464,7 +472,7 @@ class MCPClient:
 
             response = await asyncio.to_thread(
                 self.session.post,
-                f"{self.base_url}/rpc",
+                self._json_rpc_url,
                 json=request_data,
                 timeout=self.timeout,
             )

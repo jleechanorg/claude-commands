@@ -10,6 +10,8 @@ from typing import Any
 
 import requests
 
+MCP_HTTP_PATH = "/mcp"
+
 
 class MCPTestClient:
     """Test client for WorldArchitect.AI MCP server."""
@@ -63,7 +65,9 @@ class MCPTestClient:
         if params is not None:
             payload["params"] = params
 
-        response = self.session.post(f"{self.base_url}/rpc", json=payload)
+        response = self.session.post(
+            f"{self.base_url.rstrip('/')}{MCP_HTTP_PATH}", json=payload
+        )
         response.raise_for_status()
         return response.json()
 

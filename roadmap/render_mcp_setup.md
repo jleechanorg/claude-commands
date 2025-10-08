@@ -38,7 +38,7 @@ Your existing Flask service can be modified to also start the MCP server:
 
 - **Flask App**: `https://your-service.onrender.com/`
 - **MCP Health**: `https://your-service.onrender.com:7000/health`
-- **MCP JSON-RPC**: `https://your-service.onrender.com:7000/rpc`
+- **MCP JSON-RPC**: `https://your-service.onrender.com:7000/mcp`
 
 ### Option 2: Separate Service
 Deploy MCP server as a dedicated Render service.
@@ -112,7 +112,7 @@ curl https://your-service.onrender.com:7000/health
 
 ### 2. MCP Tools List
 ```bash
-curl -X POST https://your-service.onrender.com:7000/rpc \
+curl -X POST https://your-service.onrender.com:7000/mcp \
   -H "Content-Type: application/json" \
   -d '{"jsonrpc": "2.0", "method": "tools/list", "id": 1}'
 ```
@@ -121,11 +121,11 @@ curl -X POST https://your-service.onrender.com:7000/rpc \
 ```bash
 # Single service
 claude mcp add-json --scope user "worldarchitect-render" \
-  '{"type": "http", "url": "https://your-service.onrender.com:7000/rpc"}'
+  '{"type": "http", "url": "https://your-service.onrender.com:7000/mcp"}'
 
 # Separate service
 claude mcp add-json --scope user "worldarchitect-mcp" \
-  '{"type": "http", "url": "https://worldarchitect-mcp.onrender.com/rpc"}'
+  '{"type": "http", "url": "https://worldarchitect-mcp.onrender.com/mcp"}'
 ```
 
 ## Troubleshooting

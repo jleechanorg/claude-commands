@@ -26,13 +26,14 @@ Dependencies:
 - Logging utilities for comprehensive debugging
 """
 
+# ruff: noqa: PLR0911, PLR0912, UP038
+
 import collections.abc
 import datetime
 import json
 import os
 import time
 from typing import Any
-from unittest.mock import MagicMock
 
 import firebase_admin
 from firebase_admin import firestore
@@ -49,13 +50,144 @@ DELETE_TOKEN: str = (
     "__DELETE__"  # Token used to mark fields for deletion in state updates
 )
 
+UTC = datetime.UTC
 
-def _env_truthy(name: str) -> bool:
-    """
-    Returns True if the environment variable `name` is set to
-    a truthy value (case-insensitive): "true", "1", "yes", "y", or "on".
-    """
-    return os.environ.get(name, "").strip().lower() in {"true", "1", "yes", "y", "on"}
+
+class FirestoreWriteError(RuntimeError):
+    """Raised when Firestore write operations return unexpected responses."""
+
+
+# Note: Tests patch the fully-qualified module path (`mvp_site.firestore_service`).
+
+# ruff: noqa: PLR0915
+
+
+class _InMemoryFirestoreDocument:
+    """Simple in-memory document used when MOCK_SERVICES_MODE is enabled."""
+
+    def __init__(self, doc_id: str, parent_path: str = "") -> None:
+        self.id = doc_id
+        self._data: dict[str, Any] = {}
+        self._parent_path = parent_path
+        self._collections: dict[str, _InMemoryFirestoreCollection] = {}
+
+    def set(self, data: dict[str, Any]) -> None:
+        self._data = data
+
+    def update(self, updates: dict[str, Any]) -> None:
+        for key, value in updates.items():
+            if "." in key:
+                parts = key.split(".")
+                current = self._data
+                for part in parts[:-1]:
+                    current = current.setdefault(part, {})  # type: ignore[assignment]
+                current[parts[-1]] = value
+            else:
+                self._data[key] = value
+
+    def get(self) -> "_InMemoryFirestoreDocument":
+        return self
+
+    @property
+    def exists(self) -> bool:  # type: ignore[override]
+        return bool(self._data)
+
+    def to_dict(self) -> dict[str, Any]:
+        return self._data
+
+    def collection(self, name: str) -> "_InMemoryFirestoreCollection":
+        path = f"{self._parent_path}/{self.id}" if self._parent_path else self.id
+        return self._collections.setdefault(
+            name, _InMemoryFirestoreCollection(name, parent_path=path)
+        )
+
+
+class _InMemoryFirestoreCollection:
+    """Simple in-memory collection used when MOCK_SERVICES_MODE is enabled."""
+
+    def __init__(self, name: str, parent_path: str = "") -> None:
+        self.name = name
+        self._parent_path = parent_path
+        self._docs: dict[str, _InMemoryFirestoreDocument] = {}
+        self._doc_counter = 0
+
+    def document(self, doc_id: str | None = None) -> _InMemoryFirestoreDocument:
+        if doc_id is None:
+            self._doc_counter += 1
+            doc_id = f"generated-id-{self._doc_counter}"
+
+        if doc_id not in self._docs:
+            path = (
+                f"{self._parent_path}/{self.name}" if self._parent_path else self.name
+            )
+            self._docs[doc_id] = _InMemoryFirestoreDocument(doc_id, parent_path=path)
+
+        return self._docs[doc_id]
+
+    def stream(self) -> list[_InMemoryFirestoreDocument]:
+        return list(self._docs.values())
+
+    def add(
+        self, data: dict[str, Any]
+    ) -> tuple[datetime.datetime, _InMemoryFirestoreDocument]:
+        doc = self.document()
+        doc.set(data)
+        fake_timestamp = datetime.datetime.now(UTC)
+        return fake_timestamp, doc
+
+    def order_by(self, *_args: Any, **_kwargs: Any) -> "_InMemoryFirestoreCollection":
+        return self
+
+
+class _InMemoryFirestoreClient:
+    def __init__(self) -> None:
+        self._collections: dict[str, _InMemoryFirestoreCollection] = {}
+
+    def collection(self, path: str) -> _InMemoryFirestoreCollection:
+        return self._collections.setdefault(
+            path, _InMemoryFirestoreCollection(path, parent_path="")
+        )
+
+    def document(self, path: str) -> _InMemoryFirestoreDocument:
+        parts = path.split("/")
+        if len(parts) == 2:
+            collection_name, doc_id = parts
+            return self.collection(collection_name).document(doc_id)
+        if len(parts) == 4:
+            parent_collection, parent_id, sub_collection, doc_id = parts
+            parent_doc = self.collection(parent_collection).document(parent_id)
+            return parent_doc.collection(sub_collection).document(doc_id)
+        doc_id = parts[-1] if parts else "unknown"
+        return _InMemoryFirestoreDocument(doc_id)
+
+
+def _mock_firestore_client() -> _InMemoryFirestoreClient:
+    """Return an in-memory Firestore replacement for tests."""
+
+    return _InMemoryFirestoreClient()
+
+
+def _mock_firestore_client():
+    """Return a MagicMock Firestore client when mocks are explicitly requested."""
+
+    from unittest.mock import MagicMock
+
+    mock_doc_snapshot = MagicMock()
+    mock_doc_snapshot.exists = False
+    mock_doc_snapshot.to_dict.return_value = None
+    mock_doc_snapshot.get.return_value = mock_doc_snapshot
+
+    mock_doc_ref = MagicMock()
+    mock_doc_ref.get.return_value = mock_doc_snapshot
+    mock_doc_ref.collection.return_value.document.return_value = mock_doc_ref
+
+    mock_collection = MagicMock()
+    mock_collection.document.return_value = mock_doc_ref
+    mock_collection.stream.return_value = []
+
+    mock_client = MagicMock()
+    mock_client.collection.return_value = mock_collection
+    return mock_client
 
 
 def _truncate_log_json(
@@ -438,55 +570,18 @@ def json_default_serializer(o: Any) -> str | None | dict[str, Any]:
 
 
 def get_db() -> firestore.Client:
-    """Return a Firestore client.
+    """Return an initialized Firestore client or fail fast.
 
-    Handles Firebase initialization robustly across different environments:
-    - Production: Ensures Firebase is initialized before returning client
-    - Testing: Uses mocks when Firebase initialization is skipped
-    - CI: Gracefully handles missing initialization with appropriate fallbacks
-
-    In test environments, this function should be mocked using unittest.mock.patch
-    or similar mocking frameworks to provide test doubles.
+    Tests should patch this helper rather than relying on in-module mocks so that
+    production code paths always exercise the real Firestore SDK.
     """
-    # Firebase is always initialized (testing mode removed)
-    logging_util.info("🔧 DEBUG: Firebase init check - always enabled")
 
-    # Mock mode removed - tests use proper mocking instead
-    # Keeping mock client code for compatibility with tests that may patch this function
-    if False:  # This code is unreachable but kept for reference
-        logging_util.warning("🚨 Firebase initialization skipped - using mock client")
-        # Uses MagicMock imported at module level
+    if os.getenv("MOCK_SERVICES_MODE", "").lower() == "true":
+        logging_util.info(
+            "MOCK_SERVICES_MODE enabled - using in-memory Firestore client"
+        )
+        return _InMemoryFirestoreClient()
 
-        # Create JSON-serializable mock responses
-        mock_doc_dict = {
-            "title": "Mock Campaign",
-            "description": "Mock campaign description",
-            "created_at": "2024-01-01T00:00:00Z",
-            "updated_at": "2024-01-01T00:00:00Z",
-        }
-
-        # Mock document snapshot
-        mock_doc_snapshot = MagicMock()
-        mock_doc_snapshot.exists = False  # Simulate non-existent campaign
-        mock_doc_snapshot.to_dict.return_value = None
-        mock_doc_snapshot.get.return_value = mock_doc_snapshot
-
-        # Mock document reference
-        mock_doc_ref = MagicMock()
-        mock_doc_ref.get.return_value = mock_doc_snapshot
-        mock_doc_ref.collection.return_value.document.return_value = mock_doc_ref
-
-        # Mock collection reference
-        mock_collection = MagicMock()
-        mock_collection.document.return_value = mock_doc_ref
-        mock_collection.stream.return_value = []  # Empty campaign list
-
-        # Mock client
-        mock_client = MagicMock()
-        mock_client.collection.return_value = mock_collection
-        return mock_client
-
-    # Check if Firebase is already initialized
     try:
         firebase_admin.get_app()
     except ValueError:
@@ -495,96 +590,16 @@ def get_db() -> firestore.Client:
             firebase_admin.initialize_app()
         except Exception as init_error:
             logging_util.error(f"Failed to initialize Firebase: {init_error}")
-            # If we're in a testing context but skip check failed, provide mock
-            testing_env = _env_truthy("TESTING")
-            ci_env = _env_truthy("CI")
-            production_mode = _env_truthy("PRODUCTION_MODE")
-            logging_util.warning(
-                f"🚨 Firebase init failed! TESTING={testing_env}, CI={ci_env}, PRODUCTION_MODE={production_mode}"
-            )
-
-            # PRODUCTION MODE: Never use mocks - fail fast instead
-            if production_mode:
-                raise ValueError(
-                    f"PRODUCTION MODE: Firebase initialization failed: {init_error}"
-                )
-
-            if testing_env or ci_env:
-                logging_util.warning(
-                    "🚨 Using mock client due to initialization failure in test/CI environment"
-                )
-                # Uses MagicMock imported at module level
-
-                # Create JSON-serializable mock responses for initialization failure
-                mock_doc_snapshot = MagicMock()
-                mock_doc_snapshot.exists = False
-                mock_doc_snapshot.to_dict.return_value = None
-                mock_doc_snapshot.get.return_value = mock_doc_snapshot
-
-                mock_doc_ref = MagicMock()
-                mock_doc_ref.get.return_value = mock_doc_snapshot
-                mock_doc_ref.collection.return_value.document.return_value = (
-                    mock_doc_ref
-                )
-
-                mock_collection = MagicMock()
-                mock_collection.document.return_value = mock_doc_ref
-                mock_collection.stream.return_value = []
-
-                mock_client = MagicMock()
-                mock_client.collection.return_value = mock_collection
-                return mock_client
-            # In production, this is a critical error
             raise ValueError(
-                f"Firebase app initialization failed: {init_error}. "
-                "Ensure proper Firebase configuration is available."
+                "Firebase initialization failed. Ensure proper configuration is available."
             ) from init_error
 
-    # Firebase is initialized - return the client
     try:
         return firestore.client()
     except Exception as client_error:
         logging_util.error(f"Failed to create Firestore client: {client_error}")
-        # Final fallback for test environments
-        testing_env = _env_truthy("TESTING")
-        ci_env = _env_truthy("CI")
-        production_mode = _env_truthy("PRODUCTION_MODE")
-        logging_util.warning(
-            f"🚨 Firestore client creation failed! TESTING={testing_env}, CI={ci_env}, PRODUCTION_MODE={production_mode}"
-        )
-
-        # PRODUCTION MODE: Never use mocks - fail fast instead
-        if production_mode:
-            raise ValueError(
-                f"PRODUCTION MODE: Firestore client creation failed: {client_error}"
-            )
-
-        if testing_env or ci_env:
-            logging_util.warning(
-                "🚨 Using mock client due to client creation failure in test/CI environment"
-            )
-            # Uses MagicMock imported at module level
-
-            # Create JSON-serializable mock responses for client creation failure
-            mock_doc_snapshot = MagicMock()
-            mock_doc_snapshot.exists = False
-            mock_doc_snapshot.to_dict.return_value = None
-            mock_doc_snapshot.get.return_value = mock_doc_snapshot
-
-            mock_doc_ref = MagicMock()
-            mock_doc_ref.get.return_value = mock_doc_snapshot
-            mock_doc_ref.collection.return_value.document.return_value = mock_doc_ref
-
-            mock_collection = MagicMock()
-            mock_collection.document.return_value = mock_doc_ref
-            mock_collection.stream.return_value = []
-
-            mock_client = MagicMock()
-            mock_client.collection.return_value = mock_collection
-            return mock_client
         raise ValueError(
-            f"Failed to create Firestore client: {client_error}. "
-            "Check Firebase configuration and network connectivity."
+            "Firestore client creation failed. Check Firebase configuration and network connectivity."
         ) from client_error
 
 
@@ -708,40 +723,40 @@ def get_campaign_by_id(
     def _norm_ts(ts):
         # Handle None/missing timestamps first
         if ts is None:
-            return datetime.datetime.fromtimestamp(0, datetime.UTC)
+            return datetime.datetime.fromtimestamp(0, UTC)
 
         # Handle datetime objects - ensure timezone consistency
         if hasattr(ts, "isoformat"):
             # If datetime is timezone-naive, make it UTC
             if ts.tzinfo is None:
-                return ts.replace(tzinfo=datetime.UTC)
+                return ts.replace(tzinfo=UTC)
             return ts
 
         # Handle string timestamps
         if isinstance(ts, str):
             if not ts.strip():  # Empty string
-                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+                return datetime.datetime.fromtimestamp(0, UTC)
             # Best-effort parse; fallback to epoch for invalid strings
             try:
                 parsed = datetime.datetime.fromisoformat(ts.replace("Z", "+00:00"))
                 # Ensure timezone consistency - make UTC if naive
                 if parsed.tzinfo is None:
-                    return parsed.replace(tzinfo=datetime.UTC)
+                    return parsed.replace(tzinfo=UTC)
                 return parsed
             except Exception:
                 # Invalid string - return epoch for stable sorting
-                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+                return datetime.datetime.fromtimestamp(0, UTC)
 
         # Handle integer/float timestamps (epoch seconds)
         if isinstance(ts, (int, float)):
             try:
-                return datetime.datetime.fromtimestamp(ts, datetime.UTC)
+                return datetime.datetime.fromtimestamp(ts, UTC)
             except (ValueError, OverflowError):
                 # Invalid timestamp value - return epoch
-                return datetime.datetime.fromtimestamp(0, datetime.UTC)
+                return datetime.datetime.fromtimestamp(0, UTC)
 
         # Fallback to epoch for any other unknown types (list, dict, etc.)
-        return datetime.datetime.fromtimestamp(0, datetime.UTC)
+        return datetime.datetime.fromtimestamp(0, UTC)
 
     all_story_entries.sort(
         key=lambda x: (_norm_ts(x.get("timestamp")), x.get("part", 1))
@@ -889,7 +904,7 @@ def _write_story_entry_to_firestore(
     text: str,
     mode: str | None = None,
     structured_fields: dict[str, Any] | None = None,
-) -> str:
+) -> str:  # noqa: PLR0915
     """Internal implementation to write story entry data directly to Firestore
 
     Writes story entries using the standard collection.add() method without transactions.
@@ -940,7 +955,7 @@ def _write_story_entry_to_firestore(
         )
 
     # Simple and reliable write with document ID capture
-    timestamp: datetime.datetime = datetime.datetime.now(datetime.UTC)
+    timestamp: datetime.datetime = datetime.datetime.now(UTC)
     document_id: str | None = None
 
     for i, chunk in enumerate(chunks):
@@ -952,11 +967,22 @@ def _write_story_entry_to_firestore(
         try:
             # Create the story entry and capture document ID
             add_result = story_ref.collection("story").add(entry_data)
-            # Handle both real Firestore (returns tuple) and mock (returns doc directly)
-            doc_ref = add_result[1] if isinstance(add_result, tuple) else add_result
+            # Handle both real Firestore (tuple) and mock (direct reference)
+            doc_ref = None
+            if isinstance(add_result, tuple):
+                for candidate in add_result:
+                    if hasattr(candidate, "id"):
+                        doc_ref = candidate
+                        break
+                if doc_ref is None and len(add_result) >= 2:
+                    doc_ref = add_result[1]
+                elif doc_ref is None and len(add_result) >= 1:
+                    doc_ref = add_result[0]
+            else:
+                doc_ref = add_result
 
             if i == 0:  # Store the first chunk's document ID for verification
-                if doc_ref and hasattr(doc_ref, "id"):
+                if doc_ref is not None and hasattr(doc_ref, "id"):
                     document_id = doc_ref.id
                     logging_util.debug(
                         f"✍️ WRITE: Created document {document_id} with actor='{actor}'"
@@ -969,19 +995,10 @@ def _write_story_entry_to_firestore(
                         f"mock_mode={mock_mode}, doc_ref={doc_ref}, "
                         f"add_result={add_result}, type={type(add_result)}"
                     )
-
-                    if mock_mode:
-                        # Generate mock ID for tests
-                        document_id = f"mock-doc-{user_id}-{campaign_id}-{hash(actor + text) % 10000}"
-                        logging_util.debug(
-                            f"✍️ WRITE: Mock document {document_id} with actor='{actor}'"
-                        )
-                    else:
-                        # Production failure - this is a real error
-                        raise Exception(
-                            f"Firestore add() failed to return valid document reference. "
-                            f"add_result={add_result}, type={type(add_result)}"
-                        )
+                    raise FirestoreWriteError(
+                        "Firestore add() failed to return a document reference with an id. "
+                        f"add_result={add_result}, type={type(add_result)}"
+                    )
         except Exception:
             raise  # Re-raise the exception to maintain original behavior
 
@@ -1117,8 +1134,8 @@ def create_campaign(
     campaign_data: dict[str, Any] = {
         "title": title,
         "initial_prompt": initial_prompt,
-        "created_at": datetime.datetime.now(datetime.UTC),
-        "last_played": datetime.datetime.now(datetime.UTC),
+        "created_at": datetime.datetime.now(UTC),
+        "last_played": datetime.datetime.now(UTC),
         "selected_prompts": selected_prompts or [],
         "use_default_world": use_default_world,
     }
@@ -1228,7 +1245,7 @@ def update_campaign_title(
         .collection("campaigns")
         .document(campaign_id)
     )
-    campaign_ref.update({"title": new_title})
+    campaign_ref.set({"title": new_title}, merge=True)
     return True
 
 
@@ -1304,7 +1321,7 @@ def update_user_settings(user_id: UserId, settings: dict[str, Any]) -> bool:
             timestamp = firestore.SERVER_TIMESTAMP
         except Exception:
             # Fallback for CI environments where SERVER_TIMESTAMP might fail
-            timestamp = datetime.datetime.now(datetime.UTC)
+            timestamp = datetime.datetime.now(UTC)
 
         if user_doc.exists:
             # Use nested field update to avoid clobbering sibling settings

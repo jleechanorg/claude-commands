@@ -604,7 +604,7 @@ def run_server():
                 self.end_headers()
 
         def do_POST(self):  # noqa: N802
-            if self.path == "/rpc":
+            if self.path == "/mcp":
                 try:
                     # Parse JSON-RPC request
                     content_length = int(self.headers.get("Content-Length", 0))
@@ -648,6 +648,14 @@ def run_server():
                     self.send_header("Content-type", "application/json")
                     self.end_headers()
                     self.wfile.write(response_json.encode("utf-8"))
+            elif self.path == "/rpc":
+                # Previous endpoint - return explicit error to prompt clients to update
+                self.send_response(410)
+                self.send_header("Content-type", "application/json")
+                self.end_headers()
+                self.wfile.write(
+                    b'{"error": "Endpoint moved. Use /mcp for MCP JSON-RPC requests."}'
+                )
             else:
                 self.send_response(404)
                 self.end_headers()
@@ -734,7 +742,7 @@ def run_server():
 
     httpd = HTTPServer((args.host, args.port), MCPHandler)
     logging_util.info(f"MCP JSON-RPC server running on http://{args.host}:{args.port}")
-    logging_util.info("Endpoints: /health (GET), /rpc (POST)")
+    logging_util.info("Endpoints: /health (GET), /mcp (POST)")
 
     try:
         httpd.serve_forever()

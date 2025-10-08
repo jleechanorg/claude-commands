@@ -3,7 +3,7 @@
     "worldarchitect-http": {
       "transport": {
         "type": "http",
-        "url": "http://localhost:7000/rpc"
+      "url": "http://localhost:7000/mcp"
       }
     }
   }

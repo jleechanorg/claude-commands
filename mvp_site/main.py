@@ -60,7 +60,6 @@ from typing import Any
 
 # Firebase imports
 import firebase_admin
-import world_logic  # For MCP fallback logic
 from firebase_admin import auth
 
 # Flask and web imports
@@ -80,8 +79,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Firestore service imports
-import firestore_service  # For testing mode conditional logic
-from mvp_site import constants, logging_util
+from mvp_site import world_logic  # For MCP fallback logic
+from mvp_site import constants, firestore_service, logging_util
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 

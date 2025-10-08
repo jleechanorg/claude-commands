@@ -11,6 +11,8 @@ Architecture:
 - Support for both user_id extraction (Flask auth) and explicit parameters (MCP)
 """
 
+# ruff: noqa: PLR0911, PLR0912, PLR0915, UP038
+
 import collections
 import datetime
 import json
@@ -813,8 +815,8 @@ async def export_campaign_unified(request_data: dict[str, Any]) -> dict[str, Any
                 label = "Game Master"
             else:
                 label = "God Mode" if mode == "god" else "Player"
-            story_parts.append(f"{label}:\\n{text}")
-        story_text = "\\n\\n".join(story_parts)
+            story_parts.append(f"{label}:\n{text}")
+        story_text = "\n\n".join(story_parts)
 
         # Generate export file
         try:
@@ -1121,8 +1123,8 @@ def format_game_state_updates(updates: dict[str, Any], for_html: bool = False) -
         items_html = "".join([f"<li><code>{line}</code></li>" for line in log_lines])
         return f"{header}<ul>{items_html}</ul>"
     # Create a plain text list for server logs
-    items_text = "\\n".join([f"  - {line}" for line in log_lines])
-    return f"{header}\\n{items_text}"
+    items_text = "\n".join([f"  - {line}" for line in log_lines])
+    return f"{header}\n{items_text}"
 
 
 def parse_set_command(payload_str: str) -> dict[str, Any]:
@@ -1208,7 +1210,7 @@ def _handle_ask_state_command(
         user_id, campaign_id, constants.ACTOR_USER, user_input, constants.MODE_CHARACTER
     )
 
-    response_text = f"```json\\n{game_state_json}\\n```"
+    response_text = f"```json\n{game_state_json}\n```"
     return {
         KEY_SUCCESS: True,
         KEY_RESPONSE: response_text,
@@ -1242,7 +1244,7 @@ def _handle_set_command(
 
     payload_str = user_input_stripped[len(god_mode_set_command) :]
     logging_util.info(f"--- GOD_MODE_SET received for campaign {campaign_id} ---")
-    logging_util.info(f"GOD_MODE_SET raw payload:\\n---\\n{payload_str}\\n---")
+    logging_util.info(f"GOD_MODE_SET raw payload:\n---\n{payload_str}\n---")
 
     proposed_changes = parse_set_command(payload_str)
     # Enhanced logging with proper truncation
@@ -1275,7 +1277,7 @@ def _handle_set_command(
     # Log the formatted changes for both server and chat
     log_message_for_log = format_game_state_updates(proposed_changes, for_html=False)
     logging_util.info(
-        f"GOD_MODE_SET changes applied for campaign {campaign_id}:\\n{log_message_for_log}"
+        f"GOD_MODE_SET changes applied for campaign {campaign_id}:\n{log_message_for_log}"
     )
 
     log_message_for_chat = format_game_state_updates(proposed_changes, for_html=True)
@@ -1342,7 +1344,7 @@ def _handle_update_state_command(
         log_message = format_game_state_updates(state_changes, for_html=False)
         return {
             KEY_SUCCESS: True,
-            KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\\n{log_message}",
+            KEY_RESPONSE: f"[System Message: The following state changes were applied via GOD MODE]\n{log_message}",
         }
 
     except json.JSONDecodeError:

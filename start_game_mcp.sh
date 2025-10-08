@@ -105,7 +105,7 @@ game_mcp_status() {
             echo -e "${BLUE}📋 PID: $PID${NC}"
         fi
         echo -e "${BLUE}📋 Health check: curl http://$MCP_HOST:$MCP_PORT/health${NC}"
-        echo -e "${BLUE}📋 JSON-RPC endpoint: http://$MCP_HOST:$MCP_PORT/rpc${NC}"
+        echo -e "${BLUE}📋 MCP endpoint: http://$MCP_HOST:$MCP_PORT/mcp${NC}"
     else
         echo -e "${RED}❌ Game MCP server is not running${NC}"
     fi
@@ -127,7 +127,7 @@ case "${1:-start}" in
                     echo -e "${GREEN}✅ Game MCP server started successfully${NC}"
                     echo -e "${BLUE}📋 Server info:${NC}"
                     echo -e "   • Health check: http://$MCP_HOST:$MCP_PORT/health"
-                    echo -e "   • JSON-RPC endpoint: http://$MCP_HOST:$MCP_PORT/rpc"
+                    echo -e "   • MCP endpoint: http://$MCP_HOST:$MCP_PORT/mcp"
                     echo -e "   • Log file: $LOG_FILE"
                     echo -e "   • PID file: $PID_FILE"
                     echo -e "   • Available tools: create_campaign, get_campaign_state, process_action, etc."

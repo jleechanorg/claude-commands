@@ -4,26 +4,16 @@ Only mocks external services (Gemini API and Firestore DB) at the lowest level.
 Tests the full flow from API endpoint through all service layers.
 """
 
+from __future__ import annotations
+
 import json
 import os
-import sys
 import unittest
 import unittest.mock
 from unittest.mock import patch
 
-# Set TESTING environment variable
-os.environ["TESTING"] = "true"
-os.environ["GEMINI_API_KEY"] = "test-api-key"
-
-# Add the parent directory to the path to import main
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
-
-# Add tests directory for fake services
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-
-from main import create_app  # noqa: E402
-
-from tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse  # noqa: E402
+from mvp_site import main
+from mvp_site.tests.fake_firestore import FakeFirestoreClient, FakeGeminiResponse
 
 
 class TestCreateCampaignEnd2End(unittest.TestCase):
@@ -31,14 +21,18 @@ class TestCreateCampaignEnd2End(unittest.TestCase):
 
     def setUp(self):
         """Set up test client."""
-        self.app = create_app()
+        os.environ["TESTING"] = "true"
+        os.environ.setdefault("GEMINI_API_KEY", "test-api-key")
+
+        self.app = main.create_app()
         self.app.config["TESTING"] = True
         self.client = self.app.test_client()
 
         # Use a stable test UID and stub Firebase verification
         self.test_user_id = "test-user-123"
         self._auth_patcher = patch(
-            "main.auth.verify_id_token", return_value={"uid": self.test_user_id}
+            "mvp_site.main.auth.verify_id_token",
+            return_value={"uid": self.test_user_id},
         )
         self._auth_patcher.start()
         self.addCleanup(self._auth_patcher.stop)

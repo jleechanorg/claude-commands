@@ -45,7 +45,7 @@ if arguments is not None:
     params["arguments"] = arguments
 request_data = self._make_jsonrpc_request("tools/call", params)
 response = self.session.post(
-    f"{self.base_url}/rpc",
+    f"{self.base_url}/mcp",
     json=request_data,
     timeout=self.timeout
 )
@@ -155,7 +155,7 @@ class MCPClient:
             params["arguments"] = arguments
         
         request_data = self._make_jsonrpc_request("tools/call", params)
-        response = self.session.post(f"{self.base_url}/rpc", json=request_data)
+        response = self.session.post(f"{self.base_url}/mcp", json=request_data)
         
         # Handle response using protocol helpers
         if not (200 <= response.status_code < 300):

@@ -1,18 +1,8 @@
 #!/usr/bin/env python3
-"""
-Unit tests for structured_fields_utils.py
-Tests the extraction function with various GeminiResponse objects.
-"""
+"""Unit tests for `structured_fields_utils.extract_structured_fields`."""
 
-import os
-import sys
 import unittest
 from unittest.mock import Mock
-
-# Add the parent directory to the path so we can import from the mvp_site package
-sys.path.insert(
-    0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-)
 
 from mvp_site import constants, structured_fields_utils
 from mvp_site.gemini_response import GeminiResponse
@@ -112,7 +102,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         assert result[constants.FIELD_SESSION_HEADER] == ""
         assert result[constants.FIELD_PLANNING_BLOCK] == ""
         assert result[constants.FIELD_DICE_ROLLS] == []
-        assert result[constants.FIELD_RESOURCES] == ""
+        assert result[constants.FIELD_RESOURCES] == {}
         assert result[constants.FIELD_DEBUG_INFO] == {}
 
     def test_extract_structured_fields_with_missing_attributes(self):
@@ -133,7 +123,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         assert result[constants.FIELD_SESSION_HEADER] == "Available header"
         assert result[constants.FIELD_PLANNING_BLOCK] == "Available planning"
         assert result[constants.FIELD_DICE_ROLLS] == []  # Default empty list
-        assert result[constants.FIELD_RESOURCES] == ""  # Default empty string
+        assert result[constants.FIELD_RESOURCES] == {}  # Default empty dict
         assert result[constants.FIELD_DEBUG_INFO] == {}  # Default empty dict
 
     def test_extract_structured_fields_with_no_structured_response(self):
@@ -168,7 +158,7 @@ class TestStructuredFieldsUtils(unittest.TestCase):
         assert result[constants.FIELD_SESSION_HEADER] == ""
         assert result[constants.FIELD_PLANNING_BLOCK] == ""
         assert result[constants.FIELD_DICE_ROLLS] == []
-        assert result[constants.FIELD_RESOURCES] == ""
+        assert result[constants.FIELD_RESOURCES] == {}
         assert result[constants.FIELD_DEBUG_INFO] == {}
 
     def test_extract_structured_fields_constants_mapping(self):
@@ -282,37 +272,3 @@ Next Objective: Investigate the glowing altar"""
         assert result[constants.FIELD_PLANNING_BLOCK] == long_planning_block
         assert "Ancient Temple - Main Chamber" in result[constants.FIELD_SESSION_HEADER]
         assert "different approach" in result[constants.FIELD_PLANNING_BLOCK]
-
-
-def run_tests():
-    """Run all tests and display results."""
-    print("Running Structured Fields Utils Tests")
-    print("=" * 50)
-
-    # Create a test suite
-    suite = unittest.TestLoader().loadTestsFromTestCase(TestStructuredFieldsUtils)
-
-    # Run tests with verbose output
-    runner = unittest.TextTestRunner(verbosity=2)
-    result = runner.run(suite)
-
-    # Print summary
-    if result.wasSuccessful():
-        print(f"\n✅ All {result.testsRun} tests passed!")
-    else:
-        print(
-            f"\n❌ {len(result.failures)} failures, {len(result.errors)} errors out of {result.testsRun} tests"
-        )
-        for test, error in result.failures:
-            print(f"FAILED: {test}")
-            print(f"  {error}")
-        for test, error in result.errors:
-            print(f"ERROR: {test}")
-            print(f"  {error}")
-
-    return result.wasSuccessful()
-
-
-if __name__ == "__main__":
-    success = run_tests()
-    sys.exit(0 if success else 1)
