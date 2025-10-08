@@ -734,9 +734,9 @@ add_mcp_server() {
             local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -1181,7 +1181,7 @@ install_react_mcp() {
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH"
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1430,7 +1430,7 @@ install_ios_simulator_mcp() {
     ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
 
     # Add server using node to run the compiled entrypoint
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
@@ -1529,7 +1529,9 @@ ${MCP_CLI_BIN} mcp remove "memory-server" -s "${MCP_SCOPE}" >/dev/null 2>&1 || t
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "MEMORY_FILE_PATH=$MEMORY_PATH"
+memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+memory_env_flags+=(--env "MEMORY_FILE_PATH=$MEMORY_PATH")
+capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${memory_env_flags[@]}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory"
 
 if [ $add_exit_code -eq 0 ]; then
     echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
@@ -1543,19 +1545,19 @@ else
 
     # Create wrapper script that sets the environment variable
     WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
-    local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+    debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
     cat > "$WRAPPER_SCRIPT" <<EOF
 #!/bin/bash
 export MEMORY_FILE_PATH="\$HOME/.cache/mcp-memory/memory.json"
 export ${debug_env_var}=false
 export MCP_VERBOSE_TOOLS=false
 export MCP_AUTO_DISCOVER=false
-exec npx @modelcontextprotocol/server-memory "\$@"
+exec "$NPX_PATH" @modelcontextprotocol/server-memory "\$@"
 EOF
     chmod +x "$WRAPPER_SCRIPT"
 
     # Add server using the wrapper script
-    capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "memory-server" "$WRAPPER_SCRIPT" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT"
 
     if [ $fallback_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
@@ -1596,7 +1598,9 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
     # Add Perplexity server with API key - using @chatmcp/server-perplexity-ask (working alternative)
     # Note: Replaced problematic 'server-perplexity-ask' package with working distribution
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "perplexity-ask" "npx" "@chatmcp/server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY"
+    perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+    perplex_env_flags+=(--env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY")
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${perplex_env_flags[@]}" "perplexity-ask" "$NPX_PATH" "@chatmcp/server-perplexity-ask"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
@@ -1634,7 +1638,7 @@ else
 
     # Add filesystem server with proper directory configuration
     echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
@@ -1682,7 +1686,9 @@ else
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
         log_with_timestamp "Attempting to add WorldArchitect MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+        world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+        world_env_flags+=(--env "PYTHONPATH=$REPO_ROOT")
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${world_env_flags[@]}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
