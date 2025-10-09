@@ -37,11 +37,11 @@ CLI_PROFILES = {
         "continue_flag": "--continue",
         "restart_env": "CLAUDE_RESTART",
         "command_template": (
-            "{binary} --model sonnet -p @{prompt_file} "
+            "{binary} --model sonnet -p @{prompt_env_reference} "
             "--output-format stream-json --verbose{continue_flag} --dangerously-skip-permissions"
         ),
         "stdin_template": "/dev/null",
-        "quote_prompt": False,
+        "prompt_env_reference": '"${ORCHESTRATION_PROMPT_FILE}"',
         "detection_keywords": ["claude", "anthropic"],
     },
     "codex": {
@@ -54,8 +54,7 @@ CLI_PROFILES = {
         "continue_flag": "",
         "restart_env": "CODEX_RESTART",
         "command_template": "{binary} exec --yolo",
-        "stdin_template": "{prompt_file}",
-        "quote_prompt": True,
+        "stdin_template": '"$ORCHESTRATION_PROMPT_FILE"',
         "detection_keywords": ["codex exec", "codex cli", "use codex"],
     },
 }
@@ -92,8 +91,10 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
-        self.result_dir = "/tmp/orchestration_results"
-        os.makedirs(self.result_dir, exist_ok=True)
+        self.result_dir = os.path.join(
+            tempfile.gettempdir(), "orchestration_results"
+        )
+        os.makedirs(self.result_dir, mode=0o700, exist_ok=True)
         self._mock_claude_path = None
 
         # A2A Integration with enhanced robustness
@@ -1124,13 +1125,14 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
-            with open(prompt_file, "w") as f:
+            tmp_dir = tempfile.gettempdir()
+            prompt_file = os.path.join(tmp_dir, f"agent_prompt_{agent_token}.txt")
+            with open(prompt_file, "w", encoding="utf-8") as f:
                 f.write(full_prompt)
 
             # Create log directory
-            log_dir = "/tmp/orchestration_logs"
-            os.makedirs(log_dir, exist_ok=True)
+            log_dir = os.path.join(tmp_dir, "orchestration_logs")
+            os.makedirs(log_dir, mode=0o700, exist_ok=True)
             log_file = os.path.join(log_dir, f"{agent_token}.log")
 
             log_file_quoted = shlex.quote(log_file)
@@ -1170,19 +1172,19 @@ Agent Configuration:
                 )
 
             continue_segment = f" {continue_flag}" if continue_flag else ""
-            prompt_value_raw = prompt_file
-            prompt_value_quoted = shlex.quote(prompt_file)
-            prompt_value = (
-                prompt_value_quoted if cli_profile.get("quote_prompt") else prompt_value_raw
-            )
+            prompt_file_quoted = shlex.quote(prompt_file)
             binary_value = shlex.quote(cli_path)
+            prompt_env_reference = cli_profile.get(
+                "prompt_env_reference", '"${ORCHESTRATION_PROMPT_FILE}"'
+            )
             try:
                 cli_command = cli_profile["command_template"].format(
                     binary=binary_value,
                     binary_path=cli_path,
-                    prompt_file=prompt_value,
-                    prompt_file_path=prompt_value_raw,
-                    prompt_file_quoted=prompt_value_quoted,
+                    prompt_file=prompt_file,
+                    prompt_file_path=prompt_file,
+                    prompt_file_quoted=prompt_file_quoted,
+                    prompt_env_reference=prompt_env_reference,
                     continue_flag=continue_segment,
                 ).strip()
             except KeyError as exc:
@@ -1192,16 +1194,18 @@ Agent Configuration:
                 ) from exc
 
             stdin_template = cli_profile.get("stdin_template", "/dev/null")
-            if stdin_template == "{prompt_file}":
-                stdin_target = prompt_file
-            else:
-                stdin_target = stdin_template
-
             stdin_redirect = ""
-            if stdin_target:
-                stdin_redirect = f" < {shlex.quote(stdin_target)}"
+            stdin_log_target = "/dev/null"
+            if stdin_template == "{prompt_file}":
+                stdin_redirect = f" < {prompt_file_quoted}"
+                stdin_log_target = prompt_file
+            elif stdin_template == '"$ORCHESTRATION_PROMPT_FILE"':
+                stdin_redirect = " < \"$ORCHESTRATION_PROMPT_FILE\""
+                stdin_log_target = prompt_file
+            elif stdin_template and stdin_template != "/dev/null":
+                stdin_redirect = f" < {shlex.quote(stdin_template)}"
+                stdin_log_target = stdin_template
 
-            stdin_log_target = stdin_target or "/dev/null"
             stdin_log_target_quoted = shlex.quote(stdin_log_target)
             command_execution_line = cli_command + stdin_redirect
             prompt_env_export = (
@@ -1212,7 +1216,7 @@ Agent Configuration:
             cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
             agent_dir_quoted = shlex.quote(agent_dir)
             log_file_display = shlex.quote(log_file)
-            monitor_hint = shlex.quote(agent_name)
+            monitor_hint = shlex.quote(agent_token)
             agent_name_json = json.dumps(agent_name)
             agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
@@ -1253,7 +1257,7 @@ echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_token}_run.sh"
+            script_path = Path(tmp_dir) / f"{agent_token}_run.sh"
             script_path.write_text(bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
@@ -1274,7 +1278,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     "new-session",
                     "-d",
                     "-s",
-                    agent_name,
+                    agent_token,
                     "-c",
                     agent_dir,
                     "bash",
@@ -1327,11 +1331,11 @@ echo "[mock claude] $@"
 exit 0
 """
             mock_path.write_text(script_contents, encoding="utf-8")
-            os.chmod(mock_path, 0o755)
+            os.chmod(mock_path, 0o700)
             self._mock_claude_path = str(mock_path)
             print("⚠️ 'claude' command not found. Using mock binary for testing.")
             return self._mock_claude_path
-        except Exception as exc:
+        except (OSError, IOError) as exc:
             print(f"⚠️ Failed to create mock Claude binary: {exc}")
             return ""
 

@@ -303,7 +303,7 @@ class ClaudeCommandsExporter:
 
         script_patterns = [
             # Claude Code infrastructure (project-specific)
-            'claude_start.sh', 'claude_mcp.sh',
+            'claude_start.sh', 'claude_mcp.sh', 'codex_mcp.sh', 'mcp_common.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
             # Code analysis and metrics

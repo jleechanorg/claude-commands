@@ -134,17 +134,9 @@ class UnifiedOrchestration:
         missing = []
         for name, command in base_dependencies.items():
             try:
-                result = subprocess.run(
-                    ["which", command],
-                    shell=False,
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                if result.returncode != 0:
+                if shutil.which(command) is None:
                     missing.append(name)
-            except Exception:
+            except OSError:
                 missing.append(name)
 
         llm_cli_available = any(

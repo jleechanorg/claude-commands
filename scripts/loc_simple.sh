@@ -45,6 +45,7 @@ count_files() {
 
     local -a test_selector=(
         \( -path "*/tests/*"
+        -o -path "*/__tests__/*"
         -o -path "*/test/*"
         -o -path "*/testing/*"
         -o -name "test_*.${ext}"
@@ -124,11 +125,42 @@ count_functional_area() {
     fi
 }
 
-# Major functional areas
-count_functional_area "./$PROJECT_ROOT/" "Core Application"
+# Determine a sensible default for the core application directory
+resolve_core_application_pattern() {
+    local user_value="${PROJECT_ROOT:-}"
+
+    if [[ -n "$user_value" ]]; then
+        # Normalize to a relative glob anchored at repo root
+        if [[ "$user_value" != ./* && "$user_value" != /* ]]; then
+            user_value="./${user_value}"
+        fi
+        printf '%s/\n' "${user_value%/}"
+        return
+    fi
+
+    local -a candidates=(src app apps backend services orchestration)
+    for candidate in "${candidates[@]}"; do
+        if [[ -d "$candidate" ]]; then
+            printf './%s/\n' "${candidate%/}"
+            return
+        fi
+    done
+
+    printf ''
+}
+
+core_application_pattern="$(resolve_core_application_pattern)"
+if [[ -n "$core_application_pattern" ]]; then
+    count_functional_area "$core_application_pattern" "Core Application"
+else
+    echo "  Core Application:   (set PROJECT_ROOT to target directory)"
+fi
+
 count_functional_area "./scripts/" "Automation Scripts"
 count_functional_area "./.claude/" "AI Assistant"
-count_functional_area "./orchestration/" "Task Management"
+if [[ "${core_application_pattern}" != "./orchestration/" ]]; then
+    count_functional_area "./orchestration/" "Task Management"
+fi
 count_functional_area "./prototype*/" "Prototypes"
 count_functional_area "./testing_*/" "Test Infrastructure"
 

@@ -16,7 +16,6 @@ execution_mode: immediate
 1. Analyze code for architectural issues
 2. Identify problems, flaws, and technical debt
 3. Provide specific, actionable recommendations
-```
 
 ### Phase 2: Required Actions
 
@@ -41,7 +40,7 @@ Performs critical architectural reviews of recent PRs with focus on problems, fl
 
 ## Usage
 
-```
+```bash
 /reviewsuper              # Review latest 10 PRs critically
 /reviewsuper 5            # Review latest 5 PRs
 /reviewsuper --arch       # Architecture-only focus

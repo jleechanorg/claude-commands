@@ -6,5 +6,5 @@ MCP_LAUNCHER_PATH="$0"
 MCP_PRODUCT_NAME="Claude"
 MCP_CLI_BIN="claude"
 
-source "$SCRIPT_DIR/scripts/mcp_common.sh" "$@"
+source "$SCRIPT_DIR/mcp_common.sh" "$@"
 exit $?

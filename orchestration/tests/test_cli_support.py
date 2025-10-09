@@ -1,5 +1,7 @@
 """Tests for multi-CLI support in the task dispatcher."""
 
+import shutil
+import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -48,12 +50,15 @@ class TestAgentCliSelection(unittest.TestCase):
             "cli": "codex",
         }
 
+        agent_temp_dir = tempfile.mkdtemp(prefix="task-agent-codex-test-")
+        self.addCleanup(lambda: shutil.rmtree(agent_temp_dir, ignore_errors=True))
+
         with patch.object(self.dispatcher, "_cleanup_stale_prompt_files"), \
             patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()), \
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-codex-test", MagicMock(returncode=0, stderr="")),
+                return_value=(agent_temp_dir, MagicMock(returncode=0, stderr="")),
             ), \
             patch("os.makedirs"), \
             patch("os.chmod"), \
@@ -76,13 +81,11 @@ class TestAgentCliSelection(unittest.TestCase):
             result = self.dispatcher.create_dynamic_agent(agent_spec)
 
         self.assertTrue(result)
+        self.assertEqual(agent_spec["cli"], "codex")
         self.assertGreater(len(mock_write_text.call_args_list), 0)
         script_contents = mock_write_text.call_args_list[0][0][0]
         self.assertIn("codex exec --yolo", script_contents)
-        self.assertIn(
-            "< /tmp/agent_prompt_task-agent-codex-test.txt",
-            script_contents,
-        )
+        self.assertIn('< "$ORCHESTRATION_PROMPT_FILE"', script_contents)
         self.assertIn("Codex exit code", script_contents)
 
     def test_create_dynamic_agent_falls_back_when_requested_cli_missing(self):
@@ -97,12 +100,15 @@ class TestAgentCliSelection(unittest.TestCase):
             "cli": "claude",
         }
 
+        agent_temp_dir = tempfile.mkdtemp(prefix="task-agent-fallback-test-")
+        self.addCleanup(lambda: shutil.rmtree(agent_temp_dir, ignore_errors=True))
+
         with patch.object(self.dispatcher, "_cleanup_stale_prompt_files"), \
             patch.object(self.dispatcher, "_get_active_tmux_agents", return_value=set()), \
             patch.object(
                 self.dispatcher,
                 "_create_worktree_at_location",
-                return_value=("/tmp/task-agent-fallback-test", MagicMock(returncode=0, stderr="")),
+                return_value=(agent_temp_dir, MagicMock(returncode=0, stderr="")),
             ), \
             patch("os.makedirs"), \
             patch("os.chmod"), \
@@ -111,7 +117,11 @@ class TestAgentCliSelection(unittest.TestCase):
             patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text, \
             patch("subprocess.run") as mock_run, \
             patch("orchestration.task_dispatcher.shutil.which") as mock_which, \
-            patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None):
+            patch.object(
+                self.dispatcher,
+                "_ensure_mock_claude_binary",
+                return_value="",
+            ):
 
             def which_side_effect(command):
                 mapping = {
@@ -128,6 +138,7 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(agent_spec["cli"], "codex")
+        self.assertGreater(len(mock_write_text.call_args_list), 0)
         script_contents = mock_write_text.call_args_list[0][0][0]
         self.assertIn("codex exec --yolo", script_contents)
 

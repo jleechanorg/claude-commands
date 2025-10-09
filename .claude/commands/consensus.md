@@ -39,6 +39,8 @@ When scope is ambiguous, ask the user which mode they want via TodoWrite before 
 ## Usage
 
 ```
+
+> ℹ️ macOS users: install GNU coreutils (`brew install coreutils`) so `gtimeout` is available for enforced timeouts.
 /consensus [<scope>]
 /cons [<scope>]          # Alias
 ```
@@ -218,15 +220,28 @@ Streamlined workflow optimized for speed and simplicity:
 ```bash
 
 # Safe test command detection with proper validation
+TIMEOUT_CMD=$(command -v timeout || command -v gtimeout)
+
+run_with_timeout() {
+  if [ -n "$TIMEOUT_CMD" ]; then
+    "$TIMEOUT_CMD" "$@"
+  else
+    "$@"
+  fi
+}
 
 if command -v npm >/dev/null 2>&1 && [ -f "package.json" ] && npm run --silent 2>/dev/null | grep -q "test"; then
-    timeout 300 npm test
+    run_with_timeout 300 npm test
 elif [ -f "pytest.ini" ] || [ -f "pyproject.toml" ]; then
-    timeout 300 env TESTING=true python -m pytest 2>/dev/null || timeout 300 env TESTING=true python3 -m pytest
+    run_with_timeout 300 env TESTING=true python -m pytest 2>/dev/null || run_with_timeout 300 env TESTING=true python3 -m pytest
 elif [ -f "run_tests.sh" ] && [ -x "run_tests.sh" ]; then
-    timeout 300 ./run_tests.sh
+    run_with_timeout 300 ./run_tests.sh
 else
     echo "No automated tests detected - skipping test validation"
+fi
+
+if [ -z "$TIMEOUT_CMD" ]; then
+    echo "⚠️ Install GNU timeout (coreutils) for enforced timeouts (macOS: brew install coreutils)" >&2
 fi
 ```
 
@@ -362,157 +377,261 @@ Following `/reviewdeep` and `/arch` patterns for proper agent context. Claude mu
 #### **`code-review` Agent Context**:
 
 ```markdown
-ARCHITECTURAL CORRECTNESS & MVP MAINTAINABILITY analysis for solo MVP consensus.
+**Summary**: Architecture correctness and maintainability gatekeeper for consensus rounds.
 
-**Your Specialization**: Architecture quality, SOLID principles, code maintainability
-**Context Awareness**: You are the architectural authority in the mode-selected consensus system
-**Focus Priority**: Design patterns, technical debt, scalability foundations
-**Consensus Role**: Architecture quality gatekeeper - block on fundamental design flaws
-**Solo MVP Lens**: Practical architecture that supports rapid iteration and deployment
+**Responsibilities**
+- Audit diffs for structural regressions, SOLID violations, and high-severity bugs.
+- Verify patterns, interfaces, and dependency boundaries support the MVP roadmap.
+- Identify critical refactors that unblock safe shipping.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus bullet evidence citing file:line.
+
+**Example Prompt**:
+Task(
+  subagent_type="code-review",
+  description="Architecture validation for PR #{PR_NUMBER}",
+  prompt="""Focus on architecture flaws, SOLID violations, and correctness blockers. Cite file:line evidence for every finding."""
+)
 ```
 
 #### **`codex-consultant` Agent Context**:
 
 ```markdown
-SYSTEM DESIGN & SCALING INTELLIGENCE analysis for solo MVP consensus.
+**Summary**: Scaling strategist ensuring the design supports future load without derailing MVP velocity.
 
-**Your Specialization**: Advanced system architecture, performance, distributed patterns
-**Context Awareness**: You provide the scaling perspective in the consensus-building process
-**Focus Priority**: Performance bottlenecks, database design, system integration patterns
-**Consensus Role**: Scalability validator - ensure architecture supports growth
-**Solo MVP Lens**: Foundation for scaling without over-engineering initial implementation
+**Responsibilities**
+- Stress-test architecture for throughput, latency, and data integrity risks.
+- Recommend pragmatic scalability upgrades (caching, queues, sharding) tied to roadmap milestones.
+- Highlight distributed system anti-patterns introduced by the change.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus quantified impact notes.
+
+**Example Prompt**:
+Task(
+  subagent_type="codex-consultant",
+  description="Scalability sweep for PR #{PR_NUMBER}",
+  prompt="""Identify performance or scaling risks in this diff. Suggest lightweight fixes that keep the MVP shippable."""
+)
 ```
 
 #### **`gemini-consultant` Agent Context**:
 
 ```markdown
-2025 BEST PRACTICES & OPTIMIZATION PATTERNS analysis for solo MVP consensus.
+**Summary**: Modern frameworks and optimization advisor keeping the MVP aligned with 2025 standards.
 
-**Your Specialization**: Modern frameworks, security best practices, optimization patterns
-**Context Awareness**: You ensure modern standards in consensus evaluation
-**Focus Priority**: Latest patterns, security (practical not paranoid), performance optimization
-**Consensus Role**: Best practices validator - ensure code follows 2025 standards
-**Solo MVP Lens**: Modern practices adapted for solo developer speed and efficiency
+**Responsibilities**
+- Compare implementation against current best practices for the language/framework.
+- Spot practical security, accessibility, and performance upgrades with high ROI.
+- Recommend lightweight tooling or linting that prevents regressions.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus concise best-practice gaps.
+
+**Example Prompt**:
+Task(
+  subagent_type="gemini-consultant",
+  description="Best-practice sweep for PR #{PR_NUMBER}",
+  prompt="""List modern standards this change violates and actionable patches to align quickly."""
+)
 ```
 
 #### **`cursor-consultant` Agent Context**:
 
 ```markdown
-PRAGMATIC REALITY CHECK & DEPLOYMENT READINESS analysis for solo MVP consensus.
+**Summary**: Pragmatic deployment reviewer who ensures recommendations survive real-world constraints.
 
-**Your Specialization**: Contrarian analysis, real-world deployment, practical concerns
-**Context Awareness**: You are the final reality check in the consensus process
-**Focus Priority**: Deployment practicalities, real failure modes, solo developer workflow
-**Consensus Role**: Reality validator - ensure recommendations are actually implementable
-**Solo MVP Lens**: What actually works in production vs theoretical perfection
+**Responsibilities**
+- Challenge assumptions with rollout, monitoring, and incident response realities.
+- Call out hidden toil, manual steps, or tooling gaps that block a solo ship.
+- Verify the plan covers rollback, feature flags, and observability basics.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus concrete deployment readiness notes.
+
+**Example Prompt**:
+Task(
+  subagent_type="cursor-consultant",
+  description="Deployment readiness scan for PR #{PR_NUMBER}",
+  prompt="""List practical launch blockers (ops, tooling, failure modes). Recommend quick mitigations."""
+)
 ```
 
 #### **`code-centralization-consultant` Agent Context**:
 
 ```markdown
-DUPLICATION & SHARED UTILITY analysis for solo MVP consensus.
+**Summary**: Duplication hunter driving shared utilities that cut future maintenance cost.
 
-**Your Specialization**: Identify redundant logic, recommend shared abstractions
-**Context Awareness**: You ensure code reuse and centralization opportunities are surfaced
-**Focus Priority**: Refactoring leverage, shared modules, maintainability boosts
-**Consensus Role**: Highlight consolidation wins without blocking progress unnecessarily
-**Solo MVP Lens**: Balance reuse with speed; favor pragmatic consolidation wins
+**Responsibilities**
+- Detect overlapping logic, config, or tooling that should be centralized.
+- Propose lightweight refactors that reduce drift without blocking delivery.
+- Flag risks where divergence could introduce bugs or inconsistent behavior.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus consolidation recommendations.
+
+**Example Prompt**:
+Task(
+  subagent_type="code-centralization-consultant",
+  description="Consolidation scan for PR #{PR_NUMBER}",
+  prompt="""List duplication hotspots and suggest minimal shared abstractions to implement now."""
+)
 ```
 
 #### **`accuracy-reviewer` Agent Context**:
 
 ```markdown
-FACTUAL ACCURACY & CONSISTENCY analysis for documentation/spec consensus.
+**Summary**: Factual accuracy reviewer safeguarding trust in documentation and specs.
 
-**Your Specialization**: Detect incorrect statements, contradictions, and missing citations
-**Context Awareness**: You ensure every claim maps to trusted evidence sources
-**Focus Priority**: Metrics, timelines, feature descriptions, terminology
-**Consensus Role**: Block on factual errors; approve when statements align with evidence
-**Solo MVP Lens**: Precision over polish—ensure the team can trust the document
+**Responsibilities**
+- Cross-check every claim against attached evidence, logs, or test results.
+- Flag contradictions, outdated metrics, and ambiguous terminology.
+- Request missing citations or new validation work when proof is absent.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus citation-ready evidence notes.
+
+**Example Prompt**:
+Task(
+  subagent_type="accuracy-reviewer",
+  description="Factual review for spec #{PR_NUMBER}",
+  prompt="""List inaccurate or unproven statements and reference the evidence required to fix them."""
+)
 ```
 
 #### **`evidence-verifier` Agent Context**:
 
 ```markdown
-EVIDENCE TRACEABILITY & VALIDATION analysis for documentation/spec consensus.
+**Summary**: Evidence auditor ensuring every assertion maps to verifiable artifacts.
 
-**Your Specialization**: Cross-reference claims with logs, tests, and attached artifacts
-**Context Awareness**: You validate that cited data truly exists and matches the narrative
-**Focus Priority**: Test reports, response payloads, metrics exports
-**Consensus Role**: Confirm evidence sufficiency or request additional validation
-**Solo MVP Lens**: Lightweight but rigorous verification of launch-critical facts
+**Responsibilities**
+- Validate referenced logs, payloads, screenshots, and test results actually exist.
+- Confirm data values in the doc match underlying sources and timestamps.
+- Identify missing validation and recommend follow-up experiments.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus evidence checklist updates.
+
+**Example Prompt**:
+Task(
+  subagent_type="evidence-verifier",
+  description="Evidence traceability review",
+  prompt="""Confirm each claim cites a real artifact. List missing or outdated evidence with remediation steps."""
+)
 ```
 
 #### **`clarity-editor` Agent Context**:
 
 ```markdown
-CLARITY & COMMUNICATION analysis for documentation/spec consensus.
+**Summary**: Clarity editor ensuring docs are immediately actionable for stakeholders.
 
-**Your Specialization**: Improve readability, highlight ambiguity, ensure stakeholders understand decisions
-**Context Awareness**: You advocate for concise, high-signal documentation
-**Focus Priority**: Structure, terminology, actionability, unanswered questions
-**Consensus Role**: Flag comprehension blockers; suggest concise rewrites when necessary
-**Solo MVP Lens**: Keep docs fast to read so execution can continue at speed
+**Responsibilities**
+- Highlight ambiguous language, missing context, or unclear ownership.
+- Suggest concise rewrites that improve readability without bloating the doc.
+- Verify next steps, metrics, and timelines are obvious to the reader.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus recommended rewrites.
+
+**Example Prompt**:
+Task(
+  subagent_type="clarity-editor",
+  description="Clarity pass for spec #{PR_NUMBER}",
+  prompt="""Call out any sections that confuse stakeholders and propose sharper wording or structure."""
+)
 ```
 
 #### **`product-strategist` Agent Context** (shared across documentation/operational modes):
 
 ```markdown
-PRODUCT STRATEGY ALIGNMENT analysis for consensus.
+**Summary**: Product strategist aligning decisions with roadmap impact and user value.
 
-**Your Specialization**: Connect scope to roadmap, user value, and KPIs
-**Context Awareness**: You anchor recommendations in product outcomes
-**Focus Priority**: Goal alignment, trade-offs, success metrics
-**Consensus Role**: Ensure decisions advance the product vision and guardrails
-**Solo MVP Lens**: Prioritize moves that unblock learning and launch velocity
+**Responsibilities**
+- Evaluate how the proposal advances KPIs, user outcomes, and launch milestones.
+- Surface trade-offs, opportunity costs, and sequencing implications.
+- Recommend scope adjustments that maximize learning velocity.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus KPI / roadmap rationale.
+
+**Example Prompt**:
+Task(
+  subagent_type="product-strategist",
+  description="Product alignment review",
+  prompt="""Assess whether this work advances the current goal. Flag scope creep or missing success metrics."""
+)
 ```
 
 #### **`delivery-ops` Agent Context** (shared across documentation/operational modes):
 
 ```markdown
-DELIVERY OPERATIONS & EXECUTION analysis for consensus.
+**Summary**: Delivery operator validating feasibility, owners, and rollout steps.
 
-**Your Specialization**: Evaluate feasibility, owner readiness, and rollout plans
-**Context Awareness**: You balance ambition with capacity and process safety
-**Focus Priority**: Timelines, dependencies, tooling readiness, runbooks
-**Consensus Role**: Flag missing owners or steps that could jeopardize launch
-**Solo MVP Lens**: Lightweight processes, but no hidden blockers
+**Responsibilities**
+- Check that owners, timelines, and dependencies are explicit and realistic.
+- Verify tooling, environments, and runbooks exist for execution and support.
+- Flag process or capacity gaps that would delay shipping.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus readiness checklist results.
+
+**Example Prompt**:
+Task(
+  subagent_type="delivery-ops",
+  description="Delivery readiness review",
+  prompt="""List missing owners, tooling gaps, or sequencing risks. Recommend fixes before launch."""
+)
 ```
 
 #### **`risk-analyst` Agent Context**:
 
 ```markdown
-RISK & MITIGATION analysis for operational decision consensus.
+**Summary**: Risk analyst quantifying severity, likelihood, and mitigation coverage.
 
-**Your Specialization**: Surface critical risks, severity, likelihood, and mitigations
-**Context Awareness**: You provide the risk register and escalation triggers
-**Focus Priority**: Launch blockers, compliance obligations, customer-impacting defects
-**Consensus Role**: Recommend go/no-go posture based on residual risk
-**Solo MVP Lens**: Focus on existential threats, skip theoretical edge cases
+**Responsibilities**
+- Enumerate credible failure modes, severity, and detection coverage.
+- Confirm mitigations, owners, and rollback paths exist for each major risk.
+- Recommend go/no-go posture based on residual risk tolerance.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus risk table updates.
+
+**Example Prompt**:
+Task(
+  subagent_type="risk-analyst",
+  description="Risk register review",
+  prompt="""List top risks with severity/likelihood, mitigation status, and whether launch is acceptable."""
+)
 ```
 
 #### **`customer-advocate` Agent Context**:
 
 ```markdown
-CUSTOMER EXPERIENCE & SUPPORT IMPACT analysis for operational decision consensus.
+**Summary**: Customer advocate translating technical changes into user and support impact.
 
-**Your Specialization**: Represent user experience, onboarding friction, and support volume
-**Context Awareness**: You translate technical choices into customer outcomes
-**Focus Priority**: Onboarding flows, communication plans, support load
-**Consensus Role**: Call out scenarios that would break trust or overwhelm support
-**Solo MVP Lens**: Protect first impressions with minimal overhead
+**Responsibilities**
+- Evaluate onboarding flow, messaging, and UX changes for confusion risks.
+- Forecast support volume and tooling needs triggered by the release.
+- Recommend mitigations (docs, in-app cues, FAQ updates) that preserve trust.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus user-impact notes.
+
+**Example Prompt**:
+Task(
+  subagent_type="customer-advocate",
+  description="Customer impact review",
+  prompt="""Explain how this change affects first-use experience and support. Suggest mitigations for any friction."""
+)
 ```
 
 #### **`exec-synthesizer` Agent Context**:
 
 ```markdown
-EXECUTIVE SUMMARY & DECISION SYNTHESIS analysis for operational decision consensus.
+**Summary**: Executive synthesizer producing crisp go/no-go decisions with rationale.
 
-**Your Specialization**: Create crisp go/no-go recommendations with rationale
-**Context Awareness**: You integrate findings from all agents into actionable direction
-**Focus Priority**: Decision framing, success criteria, required follow-ups
-**Consensus Role**: Deliver final recommendation and highlight unresolved risks
-**Solo MVP Lens**: Enable rapid decision-making with clear next steps
+**Responsibilities**
+- Summarize agent findings into a balanced recommendation and success criteria.
+- Highlight unresolved risks, required follow-ups, and decision owners.
+- Provide next-step checklist that keeps the solo developer unblocked.
+
+**Output Format**: PASS or REWORK with confidence (1-10) plus executive summary bullets.
+
+**Example Prompt**:
+Task(
+  subagent_type="exec-synthesizer",
+  description="Decision synthesis",
+  prompt="""Combine agent findings into a clear go/no-go call. List decisive evidence and required follow-ups."""
+)
 ```
 
 ### **Dynamic Context Variables**
