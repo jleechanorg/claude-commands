@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -euo pipefail
+IFS=$'\n\t'
+
 # Simple Lines of Code Counter - Accurate Production vs Test breakdown
 # Excludes: venv/, roadmap/ (planning docs), and other non-production directories
 
@@ -9,18 +12,61 @@ echo "=========================================="
 # Function to count lines with proper exclusions
 count_files() {
     local ext="$1"
-    local test_filter="$2"
+    local mode="$2"
+    local scope_pattern="${3:-}"
 
-    if [[ "$test_filter" == "test" ]]; then
-        find . -name "*.$ext" \( -path "*/test*" -o -name "*test*.$ext" \) \
-            | grep -v node_modules | grep -v .git | grep -v venv | grep -v __pycache__ | grep -v tmp/ \
-            | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0
-    else
-        find . -name "*.$ext" ! -path "*/test*" ! -name "*test*.$ext" \
-            | grep -v node_modules | grep -v .git | grep -v venv | grep -v __pycache__ | grep -v tmp/ \
-            | grep -v roadmap/ \
-            | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0
+    local -a find_args=(
+        find .
+        -type f
+        -name "*.${ext}"
+        ! -path "*/node_modules/*"
+        ! -path "*/.git/*"
+        ! -path "*/venv/*"
+        ! -path "*/__pycache__/*"
+        ! -path "./tmp/*"
+        ! -path "./roadmap/*"
+    )
+
+    if [[ -n "$scope_pattern" ]]; then
+        local scope_glob="$scope_pattern"
+
+        if [[ "$scope_glob" != ./* && "$scope_glob" != /* ]]; then
+            scope_glob="./${scope_glob#./}"
+        fi
+
+        if [[ "$scope_glob" != *\** ]]; then
+            scope_glob="${scope_glob%/}/*"
+        elif [[ "$scope_glob" == */ ]]; then
+            scope_glob="${scope_glob}*"
+        fi
+
+        find_args+=( -path "$scope_glob" )
     fi
+
+    local -a test_selector=(
+        \( -path "*/tests/*"
+        -o -path "*/test/*"
+        -o -path "*/testing/*"
+        -o -name "test_*.${ext}"
+        -o -name "*_test.${ext}"
+        -o -name "*_tests.${ext}"
+        \)
+    )
+
+    local count
+    if [[ "$mode" == "test" ]]; then
+        count=$(
+            "${find_args[@]}" "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
+                | awk '!/ total$/ {sum += $1} END {print sum+0}'
+        )
+    else
+        count=$(
+            "${find_args[@]}" ! "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
+                | awk '!/ total$/ {sum += $1} END {print sum+0}'
+        )
+    fi
+
+    echo "${count:-0}"
 }
 
 # Overall language totals
@@ -55,7 +101,7 @@ echo "  TOTAL CODEBASE:  $total_all lines"
 
 if [[ $total_all -gt 0 ]]; then
     test_percentage=$(awk -v test="$total_test" -v all="$total_all" 'BEGIN {if (all > 0) printf "%.1f", test * 100 / all; else print "0"}')
-    echo "  Test Coverage:   ${test_percentage}%"
+    echo "  Test LOC share:  ${test_percentage}%"
 fi
 
 echo ""
@@ -67,17 +113,9 @@ count_functional_area() {
     local pattern="$1"
     local name="$2"
 
-    py_count=$(find . -name "*.py" -path "*$pattern*" ! -path "*/test*" ! -name "*test*.py" \
-        | grep -v node_modules | grep -v .git | grep -v venv | grep -v roadmap/ \
-        | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0)
-
-    js_count=$(find . -name "*.js" -path "*$pattern*" ! -path "*/test*" ! -name "*test*.js" \
-        | grep -v node_modules | grep -v .git | grep -v venv \
-        | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0)
-
-    html_count=$(find . -name "*.html" -path "*$pattern*" ! -path "*/test*" ! -name "*test*.html" \
-        | grep -v node_modules | grep -v .git | grep -v venv \
-        | xargs wc -l 2>/dev/null | tail -1 | awk '{print $1}' || echo 0)
+    py_count=$(count_files "py" "prod" "$pattern")
+    js_count=$(count_files "js" "prod" "$pattern")
+    html_count=$(count_files "html" "prod" "$pattern")
 
     total=$((py_count + js_count + html_count))
 
@@ -87,12 +125,12 @@ count_functional_area() {
 }
 
 # Major functional areas
-count_functional_area "mvp_site" "Core Application"
-count_functional_area "scripts" "Automation Scripts"
-count_functional_area ".claude" "AI Assistant"
-count_functional_area "orchestration" "Task Management"
-count_functional_area "prototype" "Prototypes"
-count_functional_area "testing_" "Test Infrastructure"
+count_functional_area "./$PROJECT_ROOT/" "Core Application"
+count_functional_area "./scripts/" "Automation Scripts"
+count_functional_area "./.claude/" "AI Assistant"
+count_functional_area "./orchestration/" "Task Management"
+count_functional_area "./prototype*/" "Prototypes"
+count_functional_area "./testing_*/" "Test Infrastructure"
 
 echo ""
 echo "ℹ️  Exclusions:"

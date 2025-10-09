@@ -2,9 +2,8 @@
 description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
 type: llm-orchestration
 execution_mode: immediate
-scripts:
-  ps: scripts/powershell/check-prerequisites.ps1 -Json
-  sh: scripts/bash/check-prerequisites.sh --json
+scripts: {ps: scripts/powershell/check-prerequisites.ps1 -Json, sh: scripts/bash/check-prerequisites.sh
+    --json}
 ---
 ## ⚡ EXECUTION INSTRUCTIONS FOR CLAUDE
 **When this command is invoked, YOU (Claude) must execute these steps immediately:**
