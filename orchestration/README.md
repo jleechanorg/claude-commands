@@ -64,8 +64,9 @@ sudo apt-get install tmux
 
 # No external dependencies required - pure file-based coordination
 
-# Install Claude CLI
-# (see main README for Claude Code setup)
+# Install an LLM CLI (at least one of the following)
+# - Claude Code CLI (`claude`) – see main README for setup
+# - Codex CLI (`codex`) – ensure the `codex` binary is on your PATH
 
 # Ensure git and gh CLI are available
 which git gh  # Should show both commands
@@ -77,7 +78,7 @@ which git gh  # Should show both commands
 # Start the orchestration system (starts agent monitor)
 ./orchestration/start_system.sh start
 
-# Create agents via Claude Code CLI (recommended)
+# Create agents via your preferred CLI (Claude Code or Codex)
 /orch "Find and fix all inline imports"
 
 # Direct orchestration command (for testing)
