@@ -7,7 +7,6 @@ to prove we're using real SDK, not simulation.
 """
 
 import asyncio
-import importlib.util
 import logging
 import sys
 import unittest
@@ -15,18 +14,17 @@ from typing import Any
 
 import pytest
 
-# Skip this entire test module if a2a is not available
-# This approach works with both pytest and unittest
+# Skip this entire test module if dependencies are missing
+pytest.importorskip("httpx")
+pytest.importorskip("a2a")
+
 if __name__ == "__main__":
     # When run directly, just exit gracefully
     print("A2A integration tests require a2a module not available in CI")
     sys.exit(0)
 
-# Check A2A availability using importlib to avoid crashing on missing dependencies
-A2A_AVAILABLE = (
-    importlib.util.find_spec("httpx") is not None
-    and importlib.util.find_spec("a2a") is not None
-)
+import httpx
+from a2a import A2AClient
 
 
 class RealA2AClientTester(unittest.TestCase):
@@ -34,12 +32,9 @@ class RealA2AClientTester(unittest.TestCase):
 
     def setUp(self):
         """Set up test environment"""
-        if not A2A_AVAILABLE:
-            self.skipTest("A2A dependencies not available")
-
         server_url = "http://localhost:8000"
         self.server_url = server_url
-        self.rpc_url = f"{server_url}/rpc"
+        self.rpc_url = f"{server_url}/mcp"
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
 
         # Create real A2A client from SDK

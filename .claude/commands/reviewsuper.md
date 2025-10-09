@@ -40,7 +40,7 @@ Performs critical architectural reviews of recent PRs with focus on problems, fl
 
 ## Usage
 
-```
+```bash
 /reviewsuper              # Review latest 10 PRs critically
 /reviewsuper 5            # Review latest 5 PRs
 /reviewsuper --arch       # Architecture-only focus

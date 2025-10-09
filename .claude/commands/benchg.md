@@ -1,6 +1,6 @@
 ---
 description: /benchg - Genesis vs Ralph Orchestrator Benchmark
-type: llm-orchestration
+type: orchestration
 execution_mode: immediate
 ---
 # /benchg - Genesis vs Ralph Orchestrator Benchmark
