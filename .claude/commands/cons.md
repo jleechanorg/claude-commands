@@ -23,4 +23,6 @@ execution_mode: immediate
 
 **Usage**: `/cons [<scope>]`
 
-Refer to [`consensus.md`](./consensus.md) for full details.
+**Modes**: Code Review (default), Documentation & Spec, Operational Decision. `/cons` inherits the mode selection rules in [`consensus.md`](./consensus.md).
+
+Refer to [`consensus.md`](./consensus.md) for full details and mode-specific agent setups.
