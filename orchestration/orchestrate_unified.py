@@ -7,6 +7,7 @@ Pure file-based A2A protocol without Redis dependencies
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -128,10 +129,10 @@ class UnifiedOrchestration:
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
-        dependencies = {"tmux": "tmux", "git": "git", "gh": "gh", "claude": "claude"}
+        base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
 
         missing = []
-        for name, command in dependencies.items():
+        for name, command in base_dependencies.items():
             try:
                 result = subprocess.run(
                     ["which", command],
@@ -143,14 +144,20 @@ class UnifiedOrchestration:
                 )
                 if result.returncode != 0:
                     missing.append(name)
-            except:
+            except Exception:
                 missing.append(name)
+
+        llm_cli_available = any(
+            shutil.which(cli_name) for cli_name in ("claude", "codex")
+        )
+        if not llm_cli_available:
+            missing.append("claude/codex CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude" in missing:
+            if "claude/codex CLI" in missing:
                 print(
-                    "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -198,7 +205,7 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now() - timedelta(hours=1)
 
             for pr in prs:
                 if (
