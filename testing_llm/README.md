@@ -2,6 +2,8 @@
 
 **Purpose**: LLM-native test-driven development for UI components using Playwright MCP
 
+> **Execution Command:** `/testllm` - LLM-Driven Test Execution Command. All specifications in this directory are executable workflows for the `/testllm` agent protocol.
+
 ## Overview
 
 This directory contains `.md` test files that provide structured instructions for LLMs to execute UI tests using Playwright MCP. Unlike traditional unit tests, these tests are designed to be read and executed by AI agents, enabling natural language test descriptions with precise execution steps.

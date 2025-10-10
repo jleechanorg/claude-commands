@@ -1,5 +1,8 @@
 # Test: Adversarial Input Generation and System Resilience
 
+> **Execution Command:** `/testllm` - LLM-Driven Test Execution Command  
+> **Protocol Notice:** This is an executable test that must be run via the `/testllm` workflow with full agent orchestration.
+
 ## Test ID
 llm-meta-adversarial-testing
 

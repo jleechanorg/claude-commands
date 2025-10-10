@@ -1,5 +1,8 @@
 # Test: Visual Content Validation - End-to-End Data Flow
 
+> **Execution Command:** `/testllm` - LLM-Driven Test Execution Command  
+> **Protocol Notice:** This is an executable test that must be run via the `/testllm` workflow with full agent orchestration.
+
 ## Test ID
 test-visual-content-validation-e2e
 

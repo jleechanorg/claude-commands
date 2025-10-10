@@ -1,5 +1,8 @@
 # Test: Campaign Creation End-to-End Matrix Flow
 
+> **Execution Command:** `/testllm` - LLM-Driven Test Execution Command  
+> **Protocol Notice:** This is an executable test that must be run via the `/testllm` workflow with full agent orchestration.
+
 ## Test ID
 test-campaign-creation-matrix-e2e
 

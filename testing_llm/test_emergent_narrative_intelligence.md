@@ -1,5 +1,8 @@
 # Test: Emergent Narrative Intelligence and Multi-Agent Storytelling
 
+> **Execution Command:** `/testllm` - LLM-Driven Test Execution Command  
+> **Protocol Notice:** This is an executable test that must be run via the `/testllm` workflow with full agent orchestration.
+
 ## Test ID
 emergent-narrative-multi-agent-storytelling
 
