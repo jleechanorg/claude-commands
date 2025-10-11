@@ -60,11 +60,18 @@ CLI_PROFILES = {
     },
 }
 
+DEFAULT_SANITIZED_TOKEN = "agent"
+PROMPT_FILE_PREFIX = "agent_prompt_"
+PROMPT_FILE_SUFFIX = ".txt"
+RUN_SCRIPT_SUFFIX = "_run.sh"
+ORCHESTRATION_TEMP_DIR = Path(tempfile.gettempdir())
+MOCK_CLAUDE_DIR_NAME = "worldarchitect_ai"
+
 # Shared sanitization helper
 def _sanitize_agent_token(name: str) -> str:
     """Return a filesystem-safe token for agent-derived file paths."""
     sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
-    return sanitized or "agent"
+    return sanitized or DEFAULT_SANITIZED_TOKEN
 
 # Constraint system removed - using simple safety rules only
 
@@ -92,7 +99,7 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
-        self.result_dir = "/tmp/orchestration_results"
+        self.result_dir = str(ORCHESTRATION_TEMP_DIR / "orchestration_results")
         os.makedirs(self.result_dir, exist_ok=True)
         self._mock_claude_path = None
 
@@ -265,11 +272,22 @@ class TaskDispatcher:
     def _cleanup_stale_prompt_files(self, agent_name: str):
         """Clean up stale prompt files to prevent task reuse from previous runs."""
         try:
-            # Clean up specific agent prompt file only - exact match to avoid deleting other agents' files
-            agent_prompt_file = f"/tmp/agent_prompt_{agent_name}.txt"
-            if os.path.exists(agent_prompt_file):
-                os.remove(agent_prompt_file)
-                print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
+            agent_token = _sanitize_agent_token(agent_name)
+            prompt_dir = ORCHESTRATION_TEMP_DIR
+
+            patterns = [
+                f"{PROMPT_FILE_PREFIX}{agent_token}_*{PROMPT_FILE_SUFFIX}",
+                # Legacy deterministic naming without random suffix
+                f"{PROMPT_FILE_PREFIX}{agent_token}{PROMPT_FILE_SUFFIX}",
+            ]
+
+            for pattern in patterns:
+                for prompt_path in prompt_dir.glob(pattern):
+                    try:
+                        prompt_path.unlink()
+                        print(f"🧹 Cleaned up stale prompt file: {prompt_path}")
+                    except FileNotFoundError:
+                        continue
         except Exception as e:
             # Don't fail agent creation if cleanup fails
             print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
@@ -1124,16 +1142,23 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
-            with open(prompt_file, "w") as f:
-                f.write(full_prompt)
+            prompt_fd, prompt_path_str = tempfile.mkstemp(
+                prefix=f"{PROMPT_FILE_PREFIX}{agent_token}_",
+                suffix=PROMPT_FILE_SUFFIX,
+                dir=str(ORCHESTRATION_TEMP_DIR),
+            )
+            os.close(prompt_fd)
+            prompt_path = Path(prompt_path_str)
+            with open(prompt_path, "w", encoding="utf-8") as prompt_handle:
+                prompt_handle.write(full_prompt)
+            prompt_file = str(prompt_path)
 
             # Create log directory
-            log_dir = "/tmp/orchestration_logs"
-            os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"{agent_token}.log")
+            log_dir = ORCHESTRATION_TEMP_DIR / "orchestration_logs"
+            log_dir.mkdir(parents=True, exist_ok=True)
+            log_file = log_dir / f"{agent_token}.log"
 
-            log_file_quoted = shlex.quote(log_file)
+            log_file_quoted = shlex.quote(str(log_file))
             result_file_quoted = shlex.quote(result_file)
             prompt_file_quoted = shlex.quote(prompt_file)
 
@@ -1211,7 +1236,7 @@ Agent Configuration:
             agent_name_quoted = shlex.quote(agent_name)
             cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
             agent_dir_quoted = shlex.quote(agent_dir)
-            log_file_display = shlex.quote(log_file)
+            log_file_display = shlex.quote(str(log_file))
             monitor_hint = shlex.quote(agent_name)
             agent_name_json = json.dumps(agent_name)
             agent_name_json_shell = agent_name_json.replace('"', '\\"')
@@ -1253,8 +1278,14 @@ echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_token}_run.sh"
-            script_path.write_text(bash_cmd, encoding="utf-8")
+            script_fd, script_path_str = tempfile.mkstemp(
+                prefix=f"{agent_token}_",
+                suffix=RUN_SCRIPT_SUFFIX,
+                dir=str(ORCHESTRATION_TEMP_DIR),
+            )
+            os.close(script_fd)
+            script_path = Path(script_path_str)
+            Path.write_text(script_path, bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
             # Use agent-specific tmux config for 1-hour sessions
@@ -1317,7 +1348,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             return self._mock_claude_path
 
         try:
-            mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
+            mock_dir = ORCHESTRATION_TEMP_DIR / MOCK_CLAUDE_DIR_NAME
             mock_dir.mkdir(parents=True, exist_ok=True)
             mock_path = mock_dir / "mock_claude.sh"
 

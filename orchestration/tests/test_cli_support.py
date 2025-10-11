@@ -79,9 +79,9 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertGreater(len(mock_write_text.call_args_list), 0)
         script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
         self.assertIn("codex exec --yolo", script_contents)
-        self.assertIn(
-            "< /tmp/agent_prompt_task-agent-codex-test.txt",
+        self.assertRegex(
             script_contents,
+            r"< /tmp/agent_prompt_task-agent-codex-test_[^\s]+\.txt",
         )
         self.assertIn("Codex exit code", script_contents)
 

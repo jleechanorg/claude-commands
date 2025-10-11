@@ -140,7 +140,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 [Real-time trends, X-sourced context, and conversational synthesis]
 
 🎯 Synthesized Answer:
-[Combined insights from all four sources with attribution]
+[Combined insights from all five sources with attribution]
 ```
 
 ## Protocol Implementation

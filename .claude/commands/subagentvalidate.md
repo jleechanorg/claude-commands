@@ -48,7 +48,7 @@ execution_mode: immediate
      - Relevant code diffs, file paths, or test outputs (copy/paste snippets, not just references).
      - Explicit questions: "Do the provided results substantiate the claim?", "What contradicts the claim?", "What follow-up actions are required?"
 3. Example structure:
-   ```
+   ```python
    Task(
      subagent_type="codex-consultant",
      description="Validate architecture claim for auth refactor",
@@ -90,7 +90,7 @@ execution_mode: immediate
 **Purpose**: Rapidly confirm whether the latest automated test results or coding-agent claims are trustworthy using two independent consultant subagents.
 
 **Usage**:
-```
+```bash
 /subagentvalidate [optional context]
 ```
 - Optional argument can specify the claim or test suite to focus on.

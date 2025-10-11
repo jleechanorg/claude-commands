@@ -9,6 +9,27 @@ IFS=$'\n\t'
 echo "📊 Lines of Code Count (Production Focus)"
 echo "=========================================="
 
+# Normalize any provided scope glob into a predictable ./relative/* pattern
+normalize_scope_glob() {
+    local scope_glob="$1"
+
+    if [[ -z "$scope_glob" ]]; then
+        return 1
+    fi
+
+    if [[ "$scope_glob" != ./* && "$scope_glob" != /* ]]; then
+        scope_glob="./${scope_glob#./}"
+    fi
+
+    if [[ "$scope_glob" == */ ]]; then
+        scope_glob="${scope_glob}*"
+    elif [[ "$scope_glob" != *\** ]]; then
+        scope_glob="${scope_glob%/}/*"
+    fi
+
+    printf '%s' "$scope_glob"
+}
+
 # Function to count lines with proper exclusions
 count_files() {
     local ext="$1"
@@ -28,19 +49,10 @@ count_files() {
     )
 
     if [[ -n "$scope_pattern" ]]; then
-        local scope_glob="$scope_pattern"
-
-        if [[ "$scope_glob" != ./* && "$scope_glob" != /* ]]; then
-            scope_glob="./${scope_glob#./}"
+        local normalized_glob
+        if normalized_glob=$(normalize_scope_glob "$scope_pattern"); then
+            find_args+=( -path "$normalized_glob" )
         fi
-
-        if [[ "$scope_glob" != *\** ]]; then
-            scope_glob="${scope_glob%/}/*"
-        elif [[ "$scope_glob" == */ ]]; then
-            scope_glob="${scope_glob}*"
-        fi
-
-        find_args+=( -path "$scope_glob" )
     fi
 
     local -a test_selector=(

@@ -22,7 +22,7 @@ execution_mode: immediate
 **Alias for**: `/subagentvalidate`
 
 **Usage**:
-```
+```bash
 /suba [optional context]
 ```
 
