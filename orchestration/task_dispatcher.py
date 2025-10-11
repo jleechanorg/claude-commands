@@ -66,6 +66,14 @@ def _sanitize_agent_token(name: str) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
     return sanitized or "agent"
 
+# Managed temporary directories for orchestration artifacts
+PROMPTS_DIR = Path(tempfile.gettempdir()) / "orchestration_prompts"
+SCRIPTS_DIR = Path(tempfile.gettempdir()) / "orchestration_scripts"
+LOGS_DIR = Path(tempfile.gettempdir()) / "orchestration_logs"
+PROMPTS_DIR.mkdir(parents=True, exist_ok=True)
+SCRIPTS_DIR.mkdir(parents=True, exist_ok=True)
+LOGS_DIR.mkdir(parents=True, exist_ok=True)
+
 # Constraint system removed - using simple safety rules only
 
 # Production safety limits - only counts actively working agents (not idle)
@@ -265,11 +273,11 @@ class TaskDispatcher:
     def _cleanup_stale_prompt_files(self, agent_name: str):
         """Clean up stale prompt files to prevent task reuse from previous runs."""
         try:
-            # Clean up specific agent prompt file only - exact match to avoid deleting other agents' files
-            agent_prompt_file = f"/tmp/agent_prompt_{agent_name}.txt"
-            if os.path.exists(agent_prompt_file):
-                os.remove(agent_prompt_file)
-                print(f"🧹 Cleaned up stale prompt file: {agent_prompt_file}")
+            agent_token = _sanitize_agent_token(agent_name)
+            prompt_path = PROMPTS_DIR / f"agent_prompt_{agent_token}.txt"
+            if prompt_path.exists():
+                prompt_path.unlink()
+                print(f"🧹 Cleaned up stale prompt file: {prompt_path}")
         except Exception as e:
             # Don't fail agent creation if cleanup fails
             print(f"⚠️ Warning: Could not clean up stale prompt files: {e}")
@@ -925,6 +933,7 @@ Complete the task, then use /pr to create a new pull request."""
         # File-based A2A protocol is always available
         print(f"📁 File-based A2A protocol available for {agent_name}")
 
+        agent_token = _sanitize_agent_token(agent_name)
         try:
             agent_cli = (agent_spec.get("cli") or "claude").lower()
             if agent_cli not in CLI_PROFILES:
@@ -976,13 +985,14 @@ Complete the task, then use /pr to create a new pull request."""
 
             # Create worktree for agent using new location logic
             try:
-                branch_name = f"{agent_name}-work"
+                branch_name = f"{agent_token}-work"
                 agent_dir, git_result = self._create_worktree_at_location(agent_spec, branch_name)
 
                 # Update agent_name if workspace_name was specified for consistency
                 workspace_config = agent_spec.get("workspace_config", {})
                 if workspace_config.get("workspace_name"):
                     agent_name = workspace_config["workspace_name"]
+                    agent_token = _sanitize_agent_token(agent_name)
 
                 print(f"🏗️ Created worktree at: {agent_dir}")
 
@@ -997,8 +1007,6 @@ Complete the task, then use /pr to create a new pull request."""
             except Exception as e:
                 print(f"❌ Failed to create worktree: {e}")
                 return False
-
-            agent_token = _sanitize_agent_token(agent_name)
 
             # Create result collection file
             result_file = os.path.join(self.result_dir, f"{agent_token}_results.json")
@@ -1124,14 +1132,23 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
-            with open(prompt_file, "w") as f:
-                f.write(full_prompt)
+            prompt_path = PROMPTS_DIR / f"agent_prompt_{agent_token}.txt"
+            if prompt_path.exists():
+                prompt_path.unlink()
+            flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+            flags |= getattr(os, "O_NOFOLLOW", 0)
+            try:
+                fd = os.open(prompt_path, flags, 0o600)
+            except FileExistsError:
+                prompt_path.unlink()
+                fd = os.open(prompt_path, flags, 0o600)
+            with os.fdopen(fd, "w", encoding="utf-8") as prompt_handle:
+                prompt_handle.write(full_prompt)
+            prompt_file = str(prompt_path)
 
             # Create log directory
-            log_dir = "/tmp/orchestration_logs"
-            os.makedirs(log_dir, exist_ok=True)
-            log_file = os.path.join(log_dir, f"{agent_token}.log")
+            log_dir = LOGS_DIR
+            log_file = str(log_dir / f"{agent_token}.log")
 
             log_file_quoted = shlex.quote(log_file)
             result_file_quoted = shlex.quote(result_file)
@@ -1209,10 +1226,12 @@ Agent Configuration:
             )
 
             agent_name_quoted = shlex.quote(agent_name)
+            session_name = agent_token
+            session_name_quoted = shlex.quote(session_name)
             cli_display_name_quoted = shlex.quote(cli_profile["display_name"])
             agent_dir_quoted = shlex.quote(agent_dir)
             log_file_display = shlex.quote(log_file)
-            monitor_hint = shlex.quote(agent_name)
+            monitor_hint = session_name_quoted
             agent_name_json = json.dumps(agent_name)
             agent_name_json_shell = agent_name_json.replace('"', '\\"')
 
@@ -1253,7 +1272,7 @@ echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_token}_run.sh"
+            script_path = SCRIPTS_DIR / f"{agent_token}_run.sh"
             script_path.write_text(bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
@@ -1274,7 +1293,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
                     "new-session",
                     "-d",
                     "-s",
-                    agent_name,
+                    session_name,
                     "-c",
                     agent_dir,
                     "bash",
@@ -1327,11 +1346,11 @@ echo "[mock claude] $@"
 exit 0
 """
             mock_path.write_text(script_contents, encoding="utf-8")
-            os.chmod(mock_path, 0o755)
+            os.chmod(mock_path, 0o700)
             self._mock_claude_path = str(mock_path)
             print("⚠️ 'claude' command not found. Using mock binary for testing.")
             return self._mock_claude_path
-        except Exception as exc:
+        except OSError as exc:
             print(f"⚠️ Failed to create mock Claude binary: {exc}")
             return ""
 

@@ -45,7 +45,7 @@ Use `CURRENT_DATE` when crafting queries (e.g., adding `2025` or "as of $CURRENT
 
 This command provides comprehensive multi-engine search by intelligently using whatever search tools are available:
 1. **Claude Default Search** (WebSearch) - Claude's built-in web search
-2. **Perplexity MCP** (`perplexity-mcp`) - Premium deep-research web search via `perplexity_search_web`
+2. **Perplexity MCP** (`perplexity-search`) - Premium deep-research web search via `search`
 3. **DuckDuckGo MCP** (`ddg-search`) - Free privacy-focused search
 4. **Gemini MCP** - AI development consultation and code assistance
 5. **Grok MCP** - Real-time intelligence and trending analysis from X.ai (always include when available)
@@ -60,7 +60,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 - Domain filtering (include/exclude)
 - US-based search results
 
-#### 2. Perplexity MCP (`perplexity-mcp` → `perplexity_search_web`)
+#### 2. Perplexity MCP (`perplexity-search` → `search`)
 
 **Capabilities**:
 - Premium AI-powered deep research with citations and reasoning traces
@@ -121,7 +121,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 **Query**: `/perp figure out how to talk to anthropic api with python`
 
 **Expected Flow**:
-```
+```text
 🔍 Searching across multiple engines for: "figure out how to talk to anthropic api with python"
 
 📊 Claude WebSearch Results:
@@ -149,7 +149,7 @@ This command provides comprehensive multi-engine search by intelligently using w
 1. Parse user query from `/perp` command
 2. Execute all available searches in parallel:
     - `WebSearch(query=user_query)`
-    - If `perplexity-mcp` is present in `claude mcp list`, call `mcp__perplexity-mcp__perplexity_search_web(query=user_query, recency="month", return_citations=true, stream=false)`
+    - If `perplexity-search` is present in `claude mcp list`, call `mcp__perplexity-search__search(query=user_query, recency="month", return_citations=true, stream=false)`
     - If `ddg-search` is present in `claude mcp list`, call `mcp__ddg-search__search(query=user_query)`
    - Gemini MCP with fallback:
      - Try `mcp__gemini-cli-mcp__gemini_chat_pro(message=user_query)`

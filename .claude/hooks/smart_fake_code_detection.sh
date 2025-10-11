@@ -80,6 +80,17 @@ for path in "${TARGET_FILES[@]}"; do
     fi
 done
 
+# De-duplicate after normalization to avoid redundant audits
+declare -A __smart_fake_seen=()
+declare -a __smart_fake_deduped=()
+for f in "${RELATIVE_FILES[@]}"; do
+  if [[ -z "${__smart_fake_seen[$f]:-}" ]]; then
+    __smart_fake_seen[$f]=1
+    __smart_fake_deduped+=("$f")
+  fi
+done
+RELATIVE_FILES=("${__smart_fake_deduped[@]}")
+
 printf '%s - Triggered /fake audit for %d file(s):\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#RELATIVE_FILES[@]}" >>"$LOG_FILE"
 for file in "${RELATIVE_FILES[@]}"; do
     printf '  - %s\n' "$file" >>"$LOG_FILE"

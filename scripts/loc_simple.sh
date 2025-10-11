@@ -25,6 +25,11 @@ count_files() {
         ! -path "*/__pycache__/*"
         ! -path "./tmp/*"
         ! -path "./roadmap/*"
+        ! -path "./analysis/*"
+        ! -path "./automation/*"
+        ! -path "./claude-bot-commands/*"
+        ! -path "./coding_prompts/*"
+        ! -path "./prototype/*"
     )
 
     if [[ -n "$scope_pattern" ]]; then
@@ -53,16 +58,17 @@ count_files() {
         \)
     )
 
+    local awk_expr='!/ total$/ {sum += $1} END {print sum+0}'
     local count
     if [[ "$mode" == "test" ]]; then
         count=$(
             "${find_args[@]}" "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
-                | awk '!/ total$/ {sum += $1} END {print sum+0}'
+                | awk "$awk_expr"
         )
     else
         count=$(
             "${find_args[@]}" ! "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
-                | awk '!/ total$/ {sum += $1} END {print sum+0}'
+                | awk "$awk_expr"
         )
     fi
 
@@ -113,11 +119,12 @@ count_functional_area() {
     local pattern="$1"
     local name="$2"
 
+    local py_count js_count html_count
     py_count=$(count_files "py" "prod" "$pattern")
     js_count=$(count_files "js" "prod" "$pattern")
     html_count=$(count_files "html" "prod" "$pattern")
 
-    total=$((py_count + js_count + html_count))
+    local total=$((py_count + js_count + html_count))
 
     if [[ $total -gt 0 ]]; then
         printf "  %-20s: %6d lines (py:%5d js:%4d html:%4d)\n" "$name" "$total" "$py_count" "$js_count" "$html_count"
@@ -129,7 +136,7 @@ count_functional_area "./mvp_site/" "Core Application"
 count_functional_area "./scripts/" "Automation Scripts"
 count_functional_area "./.claude/" "AI Assistant"
 count_functional_area "./orchestration/" "Task Management"
-count_functional_area "./prototype*/" "Prototypes"
+count_functional_area "./prototype*/" "Prototypes (excluded from prod totals)"
 count_functional_area "./testing_*/" "Test Infrastructure"
 
 echo ""

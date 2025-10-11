@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
-from orchestration.task_dispatcher import TaskDispatcher
+from orchestration.task_dispatcher import PROMPTS_DIR, TaskDispatcher
 
 
 class TestAgentCliSelection(unittest.TestCase):
@@ -77,12 +77,10 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertGreater(len(mock_write_text.call_args_list), 0)
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        script_contents = mock_write_text.call_args_list[0][0][0]
         self.assertIn("codex exec --yolo", script_contents)
-        self.assertIn(
-            "< /tmp/agent_prompt_task-agent-codex-test.txt",
-            script_contents,
-        )
+        expected_prompt_path = PROMPTS_DIR / "agent_prompt_task-agent-codex-test.txt"
+        self.assertIn(f"< {expected_prompt_path}", script_contents)
         self.assertIn("Codex exit code", script_contents)
 
     def test_create_dynamic_agent_falls_back_when_requested_cli_missing(self):
@@ -128,8 +126,10 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        script_contents = mock_write_text.call_args_list[0][0][0]
         self.assertIn("codex exec --yolo", script_contents)
+        expected_prompt_path = PROMPTS_DIR / "agent_prompt_task-agent-fallback-test.txt"
+        self.assertIn(f"< {expected_prompt_path}", script_contents)
 
 
 if __name__ == "__main__":

@@ -145,7 +145,7 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 **Query**: `/research microservices authentication patterns`
 
 **Expected Execution Flow**:
-```
+```text
 🧠 Research Planning (/thinku):
 Analyzing research scope for microservices authentication patterns...
 - Defining key research questions: scalability, security, implementation complexity

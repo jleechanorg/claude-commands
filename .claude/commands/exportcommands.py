@@ -393,10 +393,11 @@ class ClaudeCommandsExporter:
 
             # Apply transformations - Enhanced for portability
             if not skip_mvp_transform:
-                content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
+                # Replace project-specific source directory with portable placeholder
+                content = re.sub(r'(?<![\w/])mvp_site/', r'$PROJECT_ROOT/', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
-            content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
+            content = re.sub(r'TESTING=true\s+vpython', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
 
             # New portable patterns
@@ -416,16 +417,18 @@ class ClaudeCommandsExporter:
             if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
                 # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
                 if 'PROJECT_ROOT=' in content:
-
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
-                    content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
+                    content = re.sub(
+                        r'(PROJECT_ROOT=[^\n]*\n)',
+                        r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n',
+                        content
+                    )
                 else:
                     # Insert after shebang and initial comments (flexible for any shebang)
-                    content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                    content = re.sub(
+                        r'(#![^\n]*\n(?:#[^\n]*\n)*)',
+                        r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n',
+                        content
+                    )
             content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
