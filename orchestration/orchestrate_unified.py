@@ -7,11 +7,12 @@ Pure file-based A2A protocol without Redis dependencies
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
-from task_dispatcher import TaskDispatcher
+from datetime import datetime, timedelta, timezone
+from task_dispatcher import PROMPTS_DIR, TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
 
@@ -36,7 +37,7 @@ class UnifiedOrchestration:
         """Clean up stale prompt files and tmux sessions to prevent task reuse."""
         try:
             # Clean up all stale agent prompt files
-            stale_prompt_files = glob.glob("/tmp/agent_prompt_*.txt")
+            stale_prompt_files = glob.glob(str(PROMPTS_DIR / "agent_prompt_*.txt"))
             cleaned_count = 0
             for prompt_file in stale_prompt_files:
                 try:
@@ -128,29 +129,24 @@ class UnifiedOrchestration:
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
-        dependencies = {"tmux": "tmux", "git": "git", "gh": "gh", "claude": "claude"}
+        base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
 
         missing = []
-        for name, command in dependencies.items():
-            try:
-                result = subprocess.run(
-                    ["which", command],
-                    shell=False,
-                    check=False,
-                    capture_output=True,
-                    text=True,
-                    timeout=30
-                )
-                if result.returncode != 0:
-                    missing.append(name)
-            except:
+        for name, command in base_dependencies.items():
+            if shutil.which(command) is None:
                 missing.append(name)
+
+        llm_cli_available = any(
+            shutil.which(cli_name) for cli_name in ("claude", "codex")
+        )
+        if not llm_cli_available:
+            missing.append("claude/codex CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude" in missing:
+            if "claude/codex CLI" in missing:
                 print(
-                    "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -198,9 +194,20 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
+                # Filter by cutoff_time: only consider PRs created within last hour
+                try:
+                    pr_created_at = datetime.fromisoformat(
+                        pr["createdAt"].replace('Z', '+00:00')
+                    ).astimezone(timezone.utc)
+                    if pr_created_at < cutoff_time:
+                        continue  # Skip PRs older than cutoff_time
+                except (KeyError, ValueError, TypeError):
+                    # Skip PRs with missing or malformed dates
+                    continue
+
                 if (
                     "task-agent-" in pr["title"]
                     and "settings" in task_description.lower()

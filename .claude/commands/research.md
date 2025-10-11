@@ -33,11 +33,12 @@ execution_mode: immediate
 **Action Steps:**
 **Comprehensive Search Execution**:
 1. **Claude WebSearch**: Current information and recent developments
-2. **DuckDuckGo**: Privacy-focused alternative perspectives and sources
-3. **Perplexity**: AI-powered synthesis and academic analysis
-4. **Gemini**: Development-focused technical consultation
-5. Cross-validate information across all four engines
-6. Extract and organize findings by source and credibility
+2. **Perplexity**: Deep research with citations, recency controls, and reasoning traces
+3. **DuckDuckGo**: Privacy-focused alternative perspectives and sources
+4. **Grok**: Real-time intelligence and fast-moving trend awareness
+5. **Gemini**: Development-focused technical consultation
+6. Cross-validate information across all engines
+7. Extract and organize findings by source and credibility
 
 ### Phase 3: Deep Analysis Integration (`/thinku` + findings)
 
@@ -82,7 +83,7 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 
 **Default Execution**: `/research` automatically combines:
 1. **`/thinku`** - Ultra-depth sequential thinking for research planning and analysis
-2. **`/perp`** - Multi-engine search across Claude, DuckDuckGo, Perplexity, and Gemini
+2. **`/perp`** - Multi-engine search across Claude WebSearch, Perplexity, DuckDuckGo, Grok, and Gemini
 
 ### Research Methodology
 
@@ -94,8 +95,9 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 
 2. **Information Gathering** (`/perp`) - Comprehensive multi-source search:
    - Claude WebSearch for current information
+   - Perplexity for deep research with citations and recency filters
    - DuckDuckGo for privacy-focused results
-   - Perplexity for AI-powered synthesis
+   - Grok for real-time intelligence and contrarian insight
    - Gemini for development consultation
    - Cross-reference and validate findings
 
@@ -143,7 +145,7 @@ The POSIX `date` invocation above works on both macOS and Ubuntu. If it ever fai
 **Query**: `/research microservices authentication patterns`
 
 **Expected Execution Flow**:
-```
+```text
 🧠 Research Planning (/thinku):
 Analyzing research scope for microservices authentication patterns...
 - Defining key research questions: scalability, security, implementation complexity
@@ -151,16 +153,19 @@ Analyzing research scope for microservices authentication patterns...
 - Identifying validation criteria: performance, security standards, adoption rates
 
 🔍 Multi-source Information Gathering (/perp):
-Searching across Claude, DuckDuckGo, Perplexity, and Gemini for: "microservices authentication patterns"
+Searching across Claude, Perplexity, DuckDuckGo, Grok, and Gemini for: "microservices authentication patterns"
 
 📊 Claude WebSearch Results:
 [Latest industry trends and documentation]
 
+🧠 Perplexity Deep Research:
+[Cited comparisons with recency filters]
+
 🔍 DuckDuckGo Results:
 [Privacy-focused technical resources and alternatives]
 
-🧠 Perplexity Analysis:
-[AI-synthesized current best practices and comparisons]
+🧠 Grok Intelligence:
+[Real-time synthesis, trend analysis, and contrarian insights]
 
 💎 Gemini Consultation:
 [Development-focused technical guidance and code perspectives]
@@ -179,13 +184,15 @@ Processing findings from all sources...
 📊 Multi-source Findings:
 1. JWT Token-based Authentication
    - Claude: [Latest industry standards]
+   - Perplexity: [Cited deep research synthesis]
    - DuckDuckGo: [Community practices and tools]
-   - Perplexity: [AI synthesis of best practices]
+   - Grok: [Real-time synthesis of best practices]
 
 2. Service-to-Service Authentication
    - Claude: [Industry standards and recent updates]
+   - Perplexity: [Cited comparisons with recency filters]
    - DuckDuckGo: [Alternative implementations and community tools]
-   - Perplexity: [Comparative analysis of authentication methods]
+   - Grok: [Comparative analysis of authentication methods]
    - Gemini: [Technical implementation guidance and code examples]
    - Pattern analysis from /thinku integration
 
@@ -208,7 +215,7 @@ Processing findings from all sources...
 ### Research Quality Features
 
 - ✅ **Academic Rigor** - Systematic methodology and source validation
-- ✅ **Multi-source Verification** - Cross-reference information across four search engines
+- ✅ **Multi-source Verification** - Cross-reference information across five search engines
 - ✅ **Deep Analysis** - Sequential thinking applied to research findings
 - ✅ **Structured Output** - Clear, organized research summaries with methodology
 - ✅ **Source Attribution** - Proper citations for all claims with engine-specific results
