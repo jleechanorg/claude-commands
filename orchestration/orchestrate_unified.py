@@ -7,11 +7,19 @@ Pure file-based A2A protocol without Redis dependencies
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
-from task_dispatcher import TaskDispatcher
+from datetime import datetime, timedelta, timezone
+from typing import Optional
+
+from task_dispatcher import (
+    ORCHESTRATION_TEMP_DIR,
+    PROMPT_FILE_PREFIX,
+    PROMPT_FILE_SUFFIX,
+    TaskDispatcher,
+)
 
 # Constraint system removed - using simple safety boundaries only
 
@@ -36,14 +44,14 @@ class UnifiedOrchestration:
         """Clean up stale prompt files and tmux sessions to prevent task reuse."""
         try:
             # Clean up all stale agent prompt files
-            stale_prompt_files = glob.glob("/tmp/agent_prompt_*.txt")
+            prompt_dir = ORCHESTRATION_TEMP_DIR
+            prompt_pattern = f"{PROMPT_FILE_PREFIX}*{PROMPT_FILE_SUFFIX}"
             cleaned_count = 0
-            for prompt_file in stale_prompt_files:
+            for prompt_path in prompt_dir.glob(prompt_pattern):
                 try:
-                    # Check if file is older than 5 minutes to avoid cleaning active tasks
-                    file_age = time.time() - os.path.getmtime(prompt_file)
+                    file_age = time.time() - prompt_path.stat().st_mtime
                     if file_age > self.STALE_PROMPT_FILE_AGE_SECONDS:
-                        os.remove(prompt_file)
+                        prompt_path.unlink(missing_ok=True)
                         cleaned_count += 1
                 except OSError:
                     pass  # File might have been removed by another process
@@ -128,10 +136,10 @@ class UnifiedOrchestration:
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
-        dependencies = {"tmux": "tmux", "git": "git", "gh": "gh", "claude": "claude"}
+        base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
 
         missing = []
-        for name, command in dependencies.items():
+        for name, command in base_dependencies.items():
             try:
                 result = subprocess.run(
                     ["which", command],
@@ -143,14 +151,20 @@ class UnifiedOrchestration:
                 )
                 if result.returncode != 0:
                     missing.append(name)
-            except:
+            except Exception:
                 missing.append(name)
+
+        llm_cli_available = any(
+            shutil.which(cli_name) for cli_name in ("claude", "codex")
+        )
+        if not llm_cli_available:
+            missing.append("claude/codex CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude" in missing:
+            if "claude/codex CLI" in missing:
                 print(
-                    "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -172,6 +186,26 @@ class UnifiedOrchestration:
         ]
         task_lower = task_description.lower()
         return any(keyword in task_lower for keyword in continuation_keywords)
+
+    @staticmethod
+    def _parse_github_timestamp(value: Optional[str]) -> Optional[datetime]:
+        """Parse ISO-8601 timestamps from GitHub into timezone-aware UTC datetimes."""
+        if not value:
+            return None
+
+        normalized = value
+        if value.endswith("Z"):
+            normalized = f"{value[:-1]}+00:00"
+
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            return None
+
+        if parsed.tzinfo is None:
+            return parsed.replace(tzinfo=timezone.utc)
+
+        return parsed.astimezone(timezone.utc)
 
     def _find_recent_agent_work(self, task_description: str) -> dict:
         """Find recent agent work that matches the task context."""
@@ -198,9 +232,14 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
+                # Filter by cutoff_time: only consider PRs created within last hour
+                pr_created_at = self._parse_github_timestamp(pr.get("createdAt"))
+                if pr_created_at is None or pr_created_at < cutoff_time:
+                    continue
+
                 if (
                     "task-agent-" in pr["title"]
                     and "settings" in task_description.lower()
