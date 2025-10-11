@@ -38,6 +38,21 @@ if [ -z "$TARGET_DIR" ]; then
         python3 - <<'PY'
 import pathlib
 
+EXCLUDED_NAMES = {"genesis"}
+
+def should_include(path: pathlib.Path) -> bool:
+    """Determine whether the given path should be included in the menu.
+
+    Args:
+        path: Relative path to a candidate app directory.
+
+    Returns:
+        True when none of the path components match an excluded directory name,
+        otherwise False.
+    """
+
+    return not any(part in EXCLUDED_NAMES for part in path.parts)
+
 root = pathlib.Path(".").resolve()
 apps = set()
 
@@ -45,10 +60,14 @@ for dockerfile in root.glob("Dockerfile"):
     apps.add(".")
 
 for dockerfile in root.glob("*/Dockerfile"):
-    apps.add(str(dockerfile.parent.relative_to(root)))
+    relative = dockerfile.parent.relative_to(root)
+    if should_include(relative):
+        apps.add(str(relative))
 
 for dockerfile in root.glob("*/*/Dockerfile"):
-    apps.add(str(dockerfile.parent.relative_to(root)))
+    relative = dockerfile.parent.relative_to(root)
+    if should_include(relative):
+        apps.add(str(relative))
 
 for app in sorted(apps):
     print(app)
@@ -84,13 +103,7 @@ if [ ! -f "$TARGET_DIR/Dockerfile" ]; then
     exit 1
 fi
 
-TARGET_REALPATH=$(python3 - <<'PY'
-import os
-import sys
-
-print(os.path.realpath(sys.argv[1]))
-PY
-"$TARGET_DIR")
+TARGET_REALPATH=$(python3 -c "import os, sys; print(os.path.realpath(sys.argv[1]))" "$TARGET_DIR")
 BASE_SERVICE_NAME=$(basename "$TARGET_REALPATH" | tr '_' '-')-app
 SERVICE_NAME="$BASE_SERVICE_NAME-$ENVIRONMENT"
 PROJECT_ID=$(deploy_common::get_project_id)
