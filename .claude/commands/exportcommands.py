@@ -389,14 +389,16 @@ class ClaudeCommandsExporter:
 
             # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
             filename = os.path.basename(file_path)
+            # loc_simple.sh relies on literal mvp_site paths for relative pattern counting; keep them intact.
             skip_mvp_transform = filename == 'loc_simple.sh'
 
             # Apply transformations - Enhanced for portability
             if not skip_mvp_transform:
-                content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
+                content = re.sub(r'(?<![\w/])(?:\./)?mvp_site/', '$PROJECT_ROOT/', content)
+                content = re.sub(r'(?<![\w/])(?:\./)?mvp_site\b', '$PROJECT_ROOT', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
-            content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
+            content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
             content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
 
             # New portable patterns

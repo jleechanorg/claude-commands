@@ -80,8 +80,24 @@ for path in "${TARGET_FILES[@]}"; do
     fi
 done
 
-printf '%s - Triggered /fake audit for %d file(s):\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#RELATIVE_FILES[@]}" >>"$LOG_FILE"
+# Sanitize file paths to prevent prompt injection via special characters
+sanitize_for_prompt() {
+    local path="$1"
+    path=${path//$'\n'/ }
+    path=${path//$'\r'/ }
+    path=${path//\\/\\\\}
+    path=${path//\`/\\`}
+    path=${path//\$/\$}
+    echo "$path"
+}
+
+SANITIZED_FILES=()
 for file in "${RELATIVE_FILES[@]}"; do
+    SANITIZED_FILES+=("$(sanitize_for_prompt "$file")")
+done
+
+printf '%s - Triggered /fake audit for %d file(s):\n' "$(date '+%Y-%m-%d %H:%M:%S')" "${#RELATIVE_FILES[@]}" >>"$LOG_FILE"
+for file in "${SANITIZED_FILES[@]}"; do
     printf '  - %s\n' "$file" >>"$LOG_FILE"
 done
 
@@ -91,8 +107,8 @@ if ! command -v claude >/dev/null 2>&1; then
 fi
 
 FILE_LIST=""
-if [[ ${#RELATIVE_FILES[@]} -gt 0 ]]; then
-    FILE_LIST="$(printf ' - %s\n' "${RELATIVE_FILES[@]}")"
+if [[ ${#SANITIZED_FILES[@]} -gt 0 ]]; then
+    FILE_LIST="$(printf ' - %s\n' "${SANITIZED_FILES[@]}")"
 fi
 
 PROMPT=$(cat <<EOF

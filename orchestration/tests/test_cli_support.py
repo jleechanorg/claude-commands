@@ -12,6 +12,14 @@ class TestAgentCliSelection(unittest.TestCase):
     def setUp(self):
         self.dispatcher = TaskDispatcher()
 
+    def _get_script_contents(self, mock_write_text, call_index: int = 0) -> str:
+        """Return the generated agent script contents from mocked Path.write_text."""
+        args, _kwargs = mock_write_text.call_args_list[call_index]
+        if not args:
+            raise AssertionError("write_text was called without script content arguments")
+        return args[-1]
+
+
     def test_detects_codex_cli_keyword(self):
         """Ensure codex keyword detection selects the Codex CLI."""
         task = "Please run codex exec --yolo against the new hooks"
@@ -77,7 +85,7 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertGreater(len(mock_write_text.call_args_list), 0)
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        script_contents = self._get_script_contents(mock_write_text)
         self.assertIn("codex exec --yolo", script_contents)
         self.assertIn(
             "< /tmp/agent_prompt_task-agent-codex-test.txt",
@@ -128,7 +136,7 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        script_contents = self._get_script_contents(mock_write_text)
         self.assertIn("codex exec --yolo", script_contents)
 
 

@@ -34,10 +34,10 @@ count_files() {
             scope_glob="./${scope_glob#./}"
         fi
 
-        if [[ "$scope_glob" != *\** ]]; then
-            scope_glob="${scope_glob%/}/*"
-        elif [[ "$scope_glob" == */ ]]; then
+        if [[ "$scope_glob" == */ ]]; then
             scope_glob="${scope_glob}*"
+        elif [[ "$scope_glob" != *\** ]]; then
+            scope_glob="${scope_glob%/}/*"
         fi
 
         find_args+=( -path "$scope_glob" )

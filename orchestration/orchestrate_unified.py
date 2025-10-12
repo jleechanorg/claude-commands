@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
@@ -144,7 +144,7 @@ class UnifiedOrchestration:
                 )
                 if result.returncode != 0:
                     missing.append(name)
-            except Exception:
+            except (subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
                 missing.append(name)
 
         llm_cli_available = any(
@@ -205,16 +205,22 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            cutoff_time = datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
                 # Filter by cutoff_time: only consider PRs created within last hour
                 try:
-                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    created_at_str = pr["createdAt"]
+                    if created_at_str.endswith('Z'):
+                        created_at_str = created_at_str[:-1] + '+00:00'
+                    pr_created_at = datetime.fromisoformat(created_at_str)
+                    if pr_created_at.tzinfo is None:
+                        pr_created_at = pr_created_at.replace(tzinfo=timezone.utc)
                     if pr_created_at < cutoff_time:
                         continue  # Skip PRs older than cutoff_time
                 except (KeyError, ValueError):
                     # Skip PRs with missing or malformed dates
+                    print(f"\u26a0️ Skipping PR with invalid createdAt: {pr.get('number', 'unknown')}")
                     continue
 
                 if (

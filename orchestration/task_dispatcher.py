@@ -1188,7 +1188,7 @@ Agent Configuration:
             except KeyError as exc:
                 missing = exc.args[0]
                 raise ValueError(
-                    f"CLI command template for {agent_cli} missing placeholder {{{{{missing}}}}}"
+                    f"CLI command template for {agent_cli} missing placeholder '{{{missing}}}'"
                 ) from exc
 
             stdin_template = cli_profile.get("stdin_template", "/dev/null")
