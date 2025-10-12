@@ -7,10 +7,11 @@ Pure file-based A2A protocol without Redis dependencies
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
@@ -128,10 +129,10 @@ class UnifiedOrchestration:
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
-        dependencies = {"tmux": "tmux", "git": "git", "gh": "gh", "claude": "claude"}
+        base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
 
         missing = []
-        for name, command in dependencies.items():
+        for name, command in base_dependencies.items():
             try:
                 result = subprocess.run(
                     ["which", command],
@@ -143,14 +144,20 @@ class UnifiedOrchestration:
                 )
                 if result.returncode != 0:
                     missing.append(name)
-            except:
+            except (subprocess.SubprocessError, OSError, subprocess.TimeoutExpired):
                 missing.append(name)
+
+        llm_cli_available = any(
+            shutil.which(cli_name) for cli_name in ("claude", "codex")
+        )
+        if not llm_cli_available:
+            missing.append("claude/codex CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude" in missing:
+            if "claude/codex CLI" in missing:
                 print(
-                    "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -198,9 +205,24 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
+                # Filter by cutoff_time: only consider PRs created within last hour
+                try:
+                    created_at_str = pr["createdAt"]
+                    if created_at_str.endswith('Z'):
+                        created_at_str = created_at_str[:-1] + '+00:00'
+                    pr_created_at = datetime.fromisoformat(created_at_str)
+                    if pr_created_at.tzinfo is None:
+                        pr_created_at = pr_created_at.replace(tzinfo=timezone.utc)
+                    if pr_created_at < cutoff_time:
+                        continue  # Skip PRs older than cutoff_time
+                except (KeyError, ValueError):
+                    # Skip PRs with missing or malformed dates
+                    print(f"\u26a0️ Skipping PR with invalid createdAt: {pr.get('number', 'unknown')}")
+                    continue
+
                 if (
                     "task-agent-" in pr["title"]
                     and "settings" in task_description.lower()
