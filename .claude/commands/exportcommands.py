@@ -302,7 +302,7 @@ class ClaudeCommandsExporter:
         os.makedirs(target_dir, exist_ok=True)
 
         script_patterns = [
-            # Claude Code infrastructure (project-specific)
+            # Claude Code infrastructure (generally useful for Claude Code users)
             'claude_start.sh', 'claude_mcp.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
@@ -316,6 +316,9 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
+        # MCP helper scripts (required by claude_mcp.sh) - must be from scripts/ subdirectory
+        mcp_helper_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
+
         for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
@@ -325,6 +328,22 @@ class ClaudeCommandsExporter:
 
                 print(f"   • {script_name}")
                 self.scripts_count += 1
+
+        # Export MCP helper scripts from scripts/ subdirectory
+        scripts_subdir = os.path.join(self.project_root, 'scripts')
+        for script_name in mcp_helper_scripts:
+            script_path = os.path.join(scripts_subdir, script_name)
+            if os.path.exists(script_path):
+                target_path = os.path.join(target_dir, script_name)
+                shutil.copy2(script_path, target_path)
+                self._apply_content_filtering(target_path)
+
+                print(f"   • scripts/{script_name}")
+                self.scripts_count += 1
+            else:
+                print(
+                    f"   ⚠️  Warning: Required MCP helper script not found: scripts/{script_name}"
+                )
 
         print(f"✅ Exported {self.scripts_count} scripts")
 
@@ -387,35 +406,49 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
+            # Skip transformations for files that should preserve patterns
+            filename = os.path.basename(file_path)
+            # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
+            # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
+            # Compare by filename because the staging copy lives in a different directory than the source file.
+            skip_all_transforms = filename == Path(__file__).name
+            skip_mvp_transform = filename == 'loc_simple.sh'
+
             # Apply transformations - Enhanced for portability
-            content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-            content = re.sub(r'\bjleechan\b', '$USER', content)
-            content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
-            content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+            # Skip all transformations for exportcommands.py to preserve regex patterns
+            if skip_all_transforms:
+                # Don't apply any transformations to exportcommands.py
+                pass
+            else:
+                if not skip_mvp_transform:
+                    content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
+                content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
+                content = re.sub(r'\bjleechan\b', '$USER', content)
+                content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
+                content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
 
-            # New portable patterns
-            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
-            content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
-            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
-            # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
-            content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+                # New portable patterns
+                content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
+                content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
+                content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
+                content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
+                content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+                # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
+                content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
 
-            # SOURCE_DIR variable patterns - improved matching
-            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
-            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+                # SOURCE_DIR variable patterns - improved matching
+                content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+                content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
 
-            # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
-            if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
-                # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
-                if 'PROJECT_ROOT=' in content:
-                    content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-                else:
-                    # Insert after shebang and initial comments (flexible for any shebang)
-                    content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
+                # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
+                if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
+                    # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
+                    if 'PROJECT_ROOT=' in content:
+                        content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                    else:
+                        # Insert after shebang and initial comments (flexible for any shebang)
+                        content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)

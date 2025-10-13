@@ -406,11 +406,21 @@ class TaskDispatcher:
             if cli_binary and shutil.which(cli_binary):
                 available_clis.append(cli_name)
 
+        if len(available_clis) == 0:
+            raise RuntimeError(
+                "No agent CLI is available. Please install at least one supported CLI "
+                "(e.g., 'claude' or 'codex') and ensure it is in your PATH."
+            )
+
         if len(available_clis) == 1:
             return available_clis[0]
 
-        # Default to Claude when multiple (or zero) CLIs are available
-        return "claude"
+        # Default to Claude when multiple CLIs are available
+        # Fallback logic: Prioritize Claude CLI as the most tested and supported option.
+        # If Claude is not available, use the first available CLI from the list.
+        if "claude" in available_clis:
+            return "claude"
+        return available_clis[0]
 
     def _detect_pr_context(self, task_description: str) -> tuple[str | None, str]:
         """Detect if task is about updating an existing PR.
@@ -1188,7 +1198,7 @@ Agent Configuration:
             except KeyError as exc:
                 missing = exc.args[0]
                 raise ValueError(
-                    f"CLI command template for {agent_cli} missing placeholder {{{{{missing}}}}}"
+                    f"CLI command template for {agent_cli} missing placeholder '{missing}'"
                 ) from exc
 
             stdin_template = cli_profile.get("stdin_template", "/dev/null")

@@ -16,7 +16,6 @@ execution_mode: immediate
 1. Analyze code for architectural issues
 2. Identify problems, flaws, and technical debt
 3. Provide specific, actionable recommendations
-```
 
 ### Phase 2: Required Actions
 

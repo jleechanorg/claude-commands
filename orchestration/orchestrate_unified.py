@@ -11,7 +11,7 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
@@ -205,9 +205,20 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
+                # Filter by cutoff_time: only consider PRs created within last hour
+                try:
+                    # Use fromisoformat which handles ISO 8601 format properly
+                    # Replace 'Z' with '+00:00' for proper ISO 8601 timezone handling
+                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    if pr_created_at < cutoff_time:
+                        continue  # Skip PRs older than cutoff_time
+                except (KeyError, ValueError):
+                    # Skip PRs with missing or malformed dates
+                    continue
+
                 if (
                     "task-agent-" in pr["title"]
                     and "settings" in task_description.lower()
