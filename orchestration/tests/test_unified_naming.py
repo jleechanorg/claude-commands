@@ -77,12 +77,12 @@ class TestUnifiedNaming(unittest.TestCase):
         }
 
         # Mock the git worktree creation to avoid actual filesystem operations
-        with patch('subprocess.run') as mock_run:
+        with patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
             mock_run.return_value = MagicMock(returncode=0)
             with patch('os.makedirs'):
                 with patch('os.path.exists', return_value=True):
                     # Mock shutil.which to ensure claude is found in CI
-                    with patch('shutil.which', return_value='/usr/bin/claude'):
+                    with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'):
                         result = self.dispatcher.create_dynamic_agent(agent_spec)
 
         # Agent name should be updated to match workspace name
@@ -176,16 +176,20 @@ class TestWorkspaceConfiguration(unittest.TestCase):
         # RED: This should fail initially
         task = "Run copilot on PR #555 --workspace-name tmux-pr555 --workspace-root /external/.worktrees"
 
-        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        # Mock shutil.which to ensure CLI is available in CI
+        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
+            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
 
-        self.assertEqual(len(agent_specs), 1)
-        agent_spec = agent_specs[0]
+            self.assertEqual(len(agent_specs), 1)
+            agent_spec = agent_specs[0]
 
-        # Should have workspace config
-        self.assertIn("workspace_config", agent_spec)
-        workspace_config = agent_spec["workspace_config"]
-        self.assertEqual(workspace_config["workspace_name"], "tmux-pr555")
-        self.assertEqual(workspace_config["workspace_root"], "/external/.worktrees")
+            # Should have workspace config
+            self.assertIn("workspace_config", agent_spec)
+            workspace_config = agent_spec["workspace_config"]
+            self.assertEqual(workspace_config["workspace_name"], "tmux-pr555")
+            self.assertEqual(workspace_config["workspace_root"], "/external/.worktrees")
 
 
 if __name__ == '__main__':
