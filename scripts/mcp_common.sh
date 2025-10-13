@@ -1006,6 +1006,7 @@ declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
     ["grok-mcp"]="grok-mcp"
+    ["chrome-devtools"]="chrome-devtools-mcp"
 )
 
 # Function to install server batch in parallel
