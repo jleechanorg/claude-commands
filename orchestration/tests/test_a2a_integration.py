@@ -11,7 +11,7 @@ import importlib.util
 import logging
 import sys
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -27,6 +27,15 @@ A2A_AVAILABLE = (
     importlib.util.find_spec("httpx") is not None
     and importlib.util.find_spec("a2a") is not None
 )
+
+# Conditional imports - only import if dependencies are available
+if A2A_AVAILABLE:
+    import httpx
+    from a2a import A2AClient
+else:
+    # Provide stub types for type checking when dependencies are not available
+    httpx = cast(Any, None)
+    A2AClient = cast(Any, None)
 
 
 class RealA2AClientTester(unittest.TestCase):
@@ -111,15 +120,6 @@ class RealA2AClientTester(unittest.TestCase):
         print("🎯 Testing Real A2A Task Execution...")
 
         try:
-            # Create real A2A message using SDK types
-            Message(
-                message_id="test_message_001",
-                role=Role.user,
-                parts=[TextPart(text="orchestrate a simple workflow")],
-                task_id=None,
-                context_id="test_context_001",
-            )
-
             # Test real A2A communication
             # Note: Full SDK client integration would require authentication setup
             # For now, we'll test the JSON-RPC endpoint directly to validate real integration

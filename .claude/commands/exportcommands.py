@@ -15,6 +15,8 @@ import json
 import requests
 from pathlib import Path
 
+MVP_TRANSFORM_EXCLUDES = {"scripts/loc_simple.sh"}
+
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
 MAX_DIRECTORY_PREVIEW_SIZE = 10
@@ -301,9 +303,8 @@ class ClaudeCommandsExporter:
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        # Scripts from project root
-        root_script_patterns = [
-            # Claude Code infrastructure (project-specific)
+        script_patterns = [
+            # Claude Code infrastructure (generally useful for Claude Code users)
             'claude_start.sh', 'claude_mcp.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
@@ -317,7 +318,7 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
-        for script_name in root_script_patterns:
+        for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
                 target_path = os.path.join(target_dir, script_name)
@@ -325,20 +326,6 @@ class ClaudeCommandsExporter:
                 self._apply_content_filtering(target_path)
 
                 print(f"   • {script_name}")
-                self.scripts_count += 1
-
-        # MCP installer scripts from scripts/ subdirectory
-        scripts_subdir = os.path.join(self.project_root, 'scripts')
-        mcp_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
-
-        for script_name in mcp_scripts:
-            script_path = os.path.join(scripts_subdir, script_name)
-            if os.path.exists(script_path):
-                target_path = os.path.join(target_dir, script_name)
-                shutil.copy2(script_path, target_path)
-                self._apply_content_filtering(target_path)
-
-                print(f"   • scripts/{script_name}")
                 self.scripts_count += 1
 
         print(f"✅ Exported {self.scripts_count} scripts")
@@ -402,8 +389,14 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
+            # Skip mvp_site transformation for configured files (use relative paths intentionally)
+            relative_path = os.path.relpath(file_path, self.project_root)
+            normalized_relative_path = relative_path.replace(os.sep, "/")
+            skip_mvp_transform = normalized_relative_path in MVP_TRANSFORM_EXCLUDES
+
             # Apply transformations - Enhanced for portability
-            content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
+            if not skip_mvp_transform:
+                content = re.sub(r'mvp_site/', r'$PROJECT_ROOT/', content)
             content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
             content = re.sub(r'\bjleechan\b', '$USER', content)
             content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
