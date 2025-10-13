@@ -9,6 +9,35 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
+if [[ -z "${MCP_LAUNCHER_PATH:-}" ]]; then
+    if [[ ${#BASH_SOURCE[@]} -gt 0 ]]; then
+        MCP_LAUNCHER_PATH="${BASH_SOURCE[${#BASH_SOURCE[@]}-1]}"
+    else
+        MCP_LAUNCHER_PATH="$0"
+    fi
+fi
+
+mcp_common__ensure_bash4() {
+    local script_path="$1"
+    shift
+
+    if [[ -n "${MCP_SKIP_BASH_REEXEC:-}" ]]; then
+        return 0
+    fi
+
+    if [[ -z "${BASH_VERSINFO:-}" ]] || [ "${BASH_VERSINFO[0]:-0}" -lt 4 ]; then
+        for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash; do
+            if command -v "$candidate" >/dev/null 2>&1; then
+                MCP_BASH_REEXEC_DONE=1 exec "$candidate" "$script_path" "$@"
+            fi
+        done
+    fi
+}
+
+if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
+    mcp_common__ensure_bash4 "$MCP_LAUNCHER_PATH" "$@"
+fi
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
@@ -21,7 +50,22 @@ MCP_STATS_LOCK_FILE=${MCP_STATS_LOCK_FILE:-"/tmp/${MCP_CLI_BIN}_mcp_stats.lock"}
 MCP_LOG_FILE_PREFIX=${MCP_LOG_FILE_PREFIX:-"/tmp/${MCP_CLI_BIN}_mcp"}
 MCP_BACKUP_PREFIX=${MCP_BACKUP_PREFIX:-${MCP_CLI_BIN}}
 MCP_REQUIRE_CLI=${MCP_REQUIRE_CLI:-false}
-MCP_PRODUCT_NAME_UPPER=${MCP_PRODUCT_NAME^^}
+# Portable uppercase conversion (macOS ships Bash 3.2 without ^^)
+MCP_PRODUCT_NAME_UPPER=$(printf '%s' "$MCP_PRODUCT_NAME" | tr '[:lower:]' '[:upper:]')
+if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+    MCP_SCOPE_ARGS=()
+else
+    MCP_SCOPE_ARGS=(--scope "$MCP_SCOPE")
+fi
+
+for mcp_common_arg in "$@"; do
+    if [[ "$mcp_common_arg" == "--test" ]]; then
+        TEST_MODE=true
+        break
+    fi
+done
+unset mcp_common_arg
+
 GITHUB_TOKEN_LOADED=${GITHUB_TOKEN_LOADED:-false}
 RENDER_API_KEY=${RENDER_API_KEY:-}
 PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
@@ -170,11 +214,11 @@ echo "📝 Logging to: $LOG_FILE"
 if [ "$TEST_MODE" = true ]; then
     echo "🧪 Test mode: Exiting early with success"
     safe_exit 0
+    return 0 2>/dev/null || exit 0
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
-# Declare array if not already set (prevents unbound variable error with set -u)
-if [ "${#DEFAULT_MCP_ENV_FLAGS[@]:-0}" -eq 0 ]; then
+if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
         --env "MCP_VERBOSE_TOOLS=false"
@@ -441,7 +485,6 @@ display_step() {
 
 # Function to check MCP server in parallel
 check_server_parallel() {
-    set +u  # Disable unbound variable check for this function (associative array compatibility)
     local name="$1"
     local check_file
     check_file=$(mktemp)
@@ -454,9 +497,12 @@ check_server_parallel() {
         fi
     } &
 
-    PARALLEL_PIDS[$name]=$!
-    PARALLEL_STATUS_FILES[$name]="$check_file"
-    set -u  # Re-enable unbound variable check
+    local bg_pid=$!
+    # Temporarily disable unbound variable check for associative array assignment
+    set +u
+    PARALLEL_PIDS["$name"]=$bg_pid
+    PARALLEL_STATUS_FILES["$name"]="$check_file"
+    set -u
 }
 
 # Function to wait for parallel checks and collect results
@@ -464,8 +510,8 @@ collect_parallel_results() {
     local timeout_seconds=10
 
     for name in "${!PARALLEL_PIDS[@]}"; do
-        local pid=${PARALLEL_PIDS[$name]}
-        local check_file="${PARALLEL_STATUS_FILES[$name]}"
+        local pid=${PARALLEL_PIDS["$name"]}
+        local check_file="${PARALLEL_STATUS_FILES["$name"]}"
 
         # Each process gets individual timeout calculation
         local process_start_time=$(date +%s)
@@ -480,12 +526,14 @@ collect_parallel_results() {
         wait "$pid" 2>/dev/null || true
 
         # Read result
+        set +u
         if [ -n "$check_file" ] && [ -f "$check_file" ]; then
-            PARALLEL_RESULTS[$name]=$(cat "$check_file")
+            PARALLEL_RESULTS["$name"]=$(cat "$check_file")
             rm -f "$check_file"
         else
-            PARALLEL_RESULTS[$name]="TIMEOUT"
+            PARALLEL_RESULTS["$name"]="TIMEOUT"
         fi
+        set -u
     done
 
     # Clear PID tracking (reinitialize associative array correctly)
@@ -686,9 +734,9 @@ add_mcp_server() {
             local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add --scope "${MCP_SCOPE}" "${grok_env_flags[@]}" "${cli_args[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add --scope "${MCP_SCOPE}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "${cli_args[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -831,7 +879,7 @@ if EXISTING_SERVERS=$(${MCP_CLI_BIN} mcp list 2>&1); then
         # Display results
         echo -e "${BLUE}📋 Server health status:${NC}"
         for server_name in "${SERVER_NAMES[@]}"; do
-            status="${PARALLEL_RESULTS[$server_name]:-"UNKNOWN"}"
+            status="${PARALLEL_RESULTS["$server_name"]:-"UNKNOWN"}"
             case "$status" in
                 "CONNECTED")
                     echo -e "  ${GREEN}✓${NC} $server_name"
@@ -901,7 +949,7 @@ setup_render_mcp_server() {
             echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
             local json_payload
             json_payload=$(<"$json_temp")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json --scope "${MCP_SCOPE}" "render" "$json_payload"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" "$json_payload"
             rm -f "$json_temp"
 
             # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
@@ -958,11 +1006,11 @@ declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
     ["grok-mcp"]="grok-mcp"
+    ["chrome-devtools"]="chrome-devtools-mcp"
 )
 
 # Function to install server batch in parallel
 install_batch_parallel() {
-    set +u  # Disable unbound variable check for associative array compatibility
     local -n batch_ref=$1
     local batch_name="$2"
 
@@ -989,19 +1037,25 @@ install_batch_parallel() {
             fi
         } &
 
-        PARALLEL_PIDS[$server_name]=$!
-        PARALLEL_RESULT_FILES[$server_name]="$result_file"
-        PARALLEL_LOG_FILES[$server_name]="$log_file"
+        local bg_pid=$!
+        # Temporarily disable unbound variable check for associative array assignment
+        set +u
+        PARALLEL_PIDS["$server_name"]=$bg_pid
+        PARALLEL_RESULT_FILES["$server_name"]="$result_file"
+        PARALLEL_LOG_FILES["$server_name"]="$log_file"
         log_with_timestamp "Started parallel installation of $server_name (PID: ${PARALLEL_PIDS[$server_name]})"
+        set -u
     done
 
     # Wait for all installations to complete
     echo -e "${BLUE}  ⏳ Waiting for $batch_name installations to complete...${NC}"
 
     for server_name in "${!batch_ref[@]}"; do
+        set +u
         local pid="${PARALLEL_PIDS[$server_name]}"
         local result_file="${PARALLEL_RESULT_FILES[$server_name]}"
         local log_file="${PARALLEL_LOG_FILES[$server_name]}"
+        set -u
 
         # Wait for this installation
         if wait "$pid"; then
@@ -1039,8 +1093,10 @@ install_batch_parallel() {
         if [ -n "$log_file" ]; then
             rm -f "$log_file"
         fi
-        unset PARALLEL_RESULT_FILES[$server_name]
-        unset PARALLEL_LOG_FILES[$server_name]
+        set +u
+        unset PARALLEL_RESULT_FILES["$server_name"]
+        unset PARALLEL_LOG_FILES["$server_name"]
+        set -u
     done
 
     # Clear parallel tracking (reinitialize associative array correctly)
@@ -1052,7 +1108,6 @@ install_batch_parallel() {
     declare -A PARALLEL_LOG_FILES
 
     echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
-    set -u  # Re-enable unbound variable check
 }
 
 # Function to install Playwright MCP server with environment guard
@@ -1127,7 +1182,7 @@ install_react_mcp() {
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH"
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1376,7 +1431,7 @@ install_ios_simulator_mcp() {
     ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
 
     # Add server using node to run the compiled entrypoint
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
@@ -1429,7 +1484,7 @@ install_github_mcp() {
         cat > "$temp_config" <<EOF
 {"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
 EOF
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json --scope "${MCP_SCOPE}" "github-server" - < "$temp_config"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "github-server" - < "$temp_config"
         rm -f "$temp_config"
 
         if [ $add_exit_code -eq 0 ]; then
@@ -1475,7 +1530,9 @@ ${MCP_CLI_BIN} mcp remove "memory-server" -s "${MCP_SCOPE}" >/dev/null 2>&1 || t
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "MEMORY_FILE_PATH=$MEMORY_PATH"
+memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+memory_env_flags+=(--env "MEMORY_FILE_PATH=$MEMORY_PATH")
+capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${memory_env_flags[@]}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory"
 
 if [ $add_exit_code -eq 0 ]; then
     echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
@@ -1489,19 +1546,19 @@ else
 
     # Create wrapper script that sets the environment variable
     WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
-    local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+    debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
     cat > "$WRAPPER_SCRIPT" <<EOF
 #!/bin/bash
 export MEMORY_FILE_PATH="\$HOME/.cache/mcp-memory/memory.json"
 export ${debug_env_var}=false
 export MCP_VERBOSE_TOOLS=false
 export MCP_AUTO_DISCOVER=false
-exec npx @modelcontextprotocol/server-memory "\$@"
+exec "$NPX_PATH" @modelcontextprotocol/server-memory "\$@"
 EOF
     chmod +x "$WRAPPER_SCRIPT"
 
     # Add server using the wrapper script
-    capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "memory-server" "$WRAPPER_SCRIPT" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT"
 
     if [ $fallback_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
@@ -1542,7 +1599,9 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
     # Add Perplexity server with API key - using @chatmcp/server-perplexity-ask (working alternative)
     # Note: Replaced problematic 'server-perplexity-ask' package with working distribution
     echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "perplexity-ask" "npx" "@chatmcp/server-perplexity-ask" "${DEFAULT_MCP_ENV_FLAGS[@]}" --env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY"
+    perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+    perplex_env_flags+=(--env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY")
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${perplex_env_flags[@]}" "perplexity-ask" "$NPX_PATH" "@chatmcp/server-perplexity-ask"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
@@ -1580,7 +1639,7 @@ else
 
     # Add filesystem server with proper directory configuration
     echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
@@ -1628,7 +1687,9 @@ else
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
         log_with_timestamp "Attempting to add WorldArchitect MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --scope "${MCP_SCOPE}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "${DEFAULT_MCP_ENV_FLAGS[@]}"
+        world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+        world_env_flags+=(--env "PYTHONPATH=$REPO_ROOT")
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${world_env_flags[@]}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
@@ -1693,7 +1754,7 @@ else
     local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
     local serena_payload
     serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json --scope "$MCP_SCOPE" "serena" "$serena_payload"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"

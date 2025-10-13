@@ -13,8 +13,8 @@ NC='\033[0m' # No Color
 
 # Global variables for token status
 GITHUB_TOKEN_LOADED=false
-PERPLEXITY_TOKEN_LOADED=false
 GEMINI_TOKEN_LOADED=false
+PERPLEXITY_TOKEN_LOADED=false
 TOKEN_FILE_EXISTS=false
 
 # Function to log token loading events
@@ -39,15 +39,6 @@ log_token_event() {
 validate_github_token() {
     local token="$1"
     if [[ "$token" =~ ^ghp_[A-Za-z0-9]{36}$ ]] || [[ "$token" =~ ^github_pat_[A-Za-z0-9_]{50,}$ ]]; then
-        return 0
-    else
-        return 1
-    fi
-}
-
-validate_perplexity_token() {
-    local token="$1"
-    if [[ "$token" =~ ^pplx-[A-Za-z0-9]{40,}$ ]]; then
         return 0
     else
         return 1
@@ -82,12 +73,12 @@ load_tokens() {
             log_token_event "Token file not found at $HOME_TOKEN_FILE" "ERROR"
             echo -e "${YELLOW}📋 To create token file:${NC}"
             echo -e "${YELLOW}   1. Generate GitHub token at: https://github.com/settings/tokens${NC}"
-            echo -e "${YELLOW}   2. Generate Perplexity token at: https://www.perplexity.ai/settings/api${NC}"
-            echo -e "${YELLOW}   3. Generate Gemini API key at: https://console.cloud.google.com/apis/credentials${NC}"
+            echo -e "${YELLOW}   2. Generate Gemini API key at: https://console.cloud.google.com/apis/credentials${NC}"
+            echo -e "${YELLOW}   3. Generate Perplexity API key at: https://www.perplexity.ai/settings/api${NC}"
             echo -e "${YELLOW}   4. Create ~/.token file with:${NC}"
             echo -e "${YELLOW}      export GITHUB_TOKEN=\"ghp_your_github_token_here\"${NC}"
-            echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_token_here\"${NC}"
             echo -e "${YELLOW}      export GEMINI_API_KEY=\"AI_your_gemini_api_key_here\"${NC}"
+            echo -e "${YELLOW}      export PERPLEXITY_API_KEY=\"pplx_your_perplexity_api_key_here\"${NC}"
             echo -e "${YELLOW}   5. chmod 600 ~/.token${NC}"
             echo -e "${YELLOW}   Alternative: Add GEMINI_API_KEY to ~/.bashrc or ~/.gemini_api_key_secret${NC}"
         fi
@@ -130,27 +121,8 @@ load_tokens() {
             fi
         fi
 
-        # Verify and export Perplexity token
-        if [ -n "$PERPLEXITY_API_KEY" ]; then
-            if validate_perplexity_token "$PERPLEXITY_API_KEY"; then
-                export PERPLEXITY_API_KEY="$PERPLEXITY_API_KEY"
-                PERPLEXITY_TOKEN_LOADED=true
-                if [ "$quiet_mode" != "quiet" ]; then
-                    log_token_event "Perplexity API key loaded and validated" "INFO"
-                fi
-            else
-                if [ "$quiet_mode" != "quiet" ]; then
-                    log_token_event "Perplexity API key format may be invalid" "WARN"
-                fi
-            fi
-        else
-            if [ "$quiet_mode" != "quiet" ]; then
-                log_token_event "PERPLEXITY_API_KEY not found in token file" "WARN"
-            fi
-        fi
-
         # Verify and export Gemini API key (may come from bashrc or token file)
-        if [ -n "${GEMINI_API_KEY:-}" ]; then
+        if [ -n "$GEMINI_API_KEY" ]; then
             if validate_gemini_token "$GEMINI_API_KEY"; then
                 export GEMINI_API_KEY="$GEMINI_API_KEY"
                 GEMINI_TOKEN_LOADED=true
@@ -166,6 +138,30 @@ load_tokens() {
             if [ "$quiet_mode" != "quiet" ]; then
                 log_token_event "GEMINI_API_KEY not found in environment or token file" "WARN"
                 log_token_event "Check ~/.bashrc or ~/.gemini_api_key_secret file" "INFO"
+            fi
+        fi
+
+        # Verify and export Perplexity API key
+        if [ -n "$PERPLEXITY_API_KEY" ]; then
+            # More lenient validation - Perplexity keys start with pplx- and contain various characters
+            if [[ "$PERPLEXITY_API_KEY" =~ ^pplx[-_].{30,}$ ]]; then
+                export PERPLEXITY_API_KEY="$PERPLEXITY_API_KEY"
+                PERPLEXITY_TOKEN_LOADED=true
+                if [ "$quiet_mode" != "quiet" ]; then
+                    log_token_event "Perplexity API key loaded and validated" "INFO"
+                fi
+            else
+                # Export anyway but with warning - key format may have changed
+                export PERPLEXITY_API_KEY="$PERPLEXITY_API_KEY"
+                PERPLEXITY_TOKEN_LOADED=true
+                if [ "$quiet_mode" != "quiet" ]; then
+                    log_token_event "Perplexity API key loaded (format validation lenient)" "WARN"
+                fi
+            fi
+        else
+            if [ "$quiet_mode" != "quiet" ]; then
+                log_token_event "PERPLEXITY_API_KEY not found in environment or token file" "WARN"
+                log_token_event "Add export PERPLEXITY_API_KEY=\"pplx_your_key\" to ~/.token" "INFO"
             fi
         fi
 
@@ -195,16 +191,16 @@ check_token_status() {
         echo -e "${RED}❌ GitHub token: Not loaded or invalid${NC}"
     fi
 
-    if [ "$PERPLEXITY_TOKEN_LOADED" = true ]; then
-        echo -e "${GREEN}✅ Perplexity token: Loaded and valid${NC}"
-    else
-        echo -e "${YELLOW}⚠️ Perplexity token: Not loaded${NC}"
-    fi
-
     if [ "$GEMINI_TOKEN_LOADED" = true ]; then
         echo -e "${GREEN}✅ Gemini API key: Loaded and valid${NC}"
     else
         echo -e "${RED}❌ Gemini API key: Not loaded${NC}"
+    fi
+
+    if [ "$PERPLEXITY_TOKEN_LOADED" = true ]; then
+        echo -e "${GREEN}✅ Perplexity API key: Loaded${NC}"
+    else
+        echo -e "${RED}❌ Perplexity API key: Not loaded${NC}"
     fi
 }
 
@@ -253,14 +249,15 @@ create_token_template() {
 # Required scopes: repo, read:org, read:user
 export GITHUB_TOKEN="ghp_your_github_token_here"
 
-# Perplexity API Key (optional)
-# Generate at: https://www.perplexity.ai/settings/api
-export PERPLEXITY_API_KEY="pplx_your_perplexity_token_here"
-
 # Gemini API Key
 # Generate at: https://console.cloud.google.com/apis/credentials
 # Alternative: Get from ~/.bashrc or ~/.gemini_api_key_secret
 export GEMINI_API_KEY="AI_your_gemini_api_key_here"
+
+# Perplexity API Key
+# Generate at: https://www.perplexity.ai/settings/api
+# Optional: Set default model with export PERPLEXITY_MODEL="sonar-large-online"
+export PERPLEXITY_API_KEY="pplx_your_perplexity_api_key_here"
 EOF
 
     chmod 600 "$token_file"
