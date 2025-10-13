@@ -1,6 +1,6 @@
 ---
 description: "/benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph"
-type: llm-orchestration
+type: orchestration
 execution_mode: immediate
 ---
 # /benchg-ts - TypeScript Migration Benchmark: Genesis vs Ralph

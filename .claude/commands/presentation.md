@@ -74,10 +74,10 @@ Comprehensive quality check:
    - Verify key facts and figures
    - Check current information
    - Validate claims
-4. **Perplexity Quality Check**
-   - Run `/perp` on key concepts
+4. **Multi-Engine Validation**
+   - Run `/perp` on key concepts using WebSearch, Perplexity, DuckDuckGo, Grok, and Gemini
    - Ensure accuracy and relevance
-   - Get additional insights
+   - Surface additional insights or contradictions
 
 ### Phase 1: Create initial outline
 
@@ -111,7 +111,7 @@ presentation = generate_pptx_from_outline(outline)
   1. Devil's advocate analysis
   2. Gemini MCP: "Review this presentation for clarity and impact"
   3. Web search key concepts for accuracy
-  4. /perp validate core claims
+  4. /perp validate core claims across Claude WebSearch, Perplexity, DuckDuckGo, Grok, and Gemini
 ```
 
 ## 📋 REFERENCE DOCUMENTATION

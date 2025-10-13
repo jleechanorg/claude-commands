@@ -11,7 +11,7 @@ import importlib.util
 import logging
 import sys
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -28,6 +28,15 @@ A2A_AVAILABLE = (
     and importlib.util.find_spec("a2a") is not None
 )
 
+# Conditional imports - only import if dependencies are available
+if A2A_AVAILABLE:
+    import httpx
+    from a2a import A2AClient
+else:
+    # Provide stub types for type checking when dependencies are not available
+    httpx = cast(Any, None)
+    A2AClient = cast(Any, None)
+
 
 class RealA2AClientTester(unittest.TestCase):
     """Test real A2A integration using authentic SDK client"""
@@ -39,7 +48,7 @@ class RealA2AClientTester(unittest.TestCase):
 
         server_url = "http://localhost:8000"
         self.server_url = server_url
-        self.rpc_url = f"{server_url}/rpc"
+        self.rpc_url = f"{server_url}/mcp"
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
 
         # Create real A2A client from SDK

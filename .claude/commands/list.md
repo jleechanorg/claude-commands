@@ -27,7 +27,7 @@ execution_mode: immediate
 
 **Available Commands**:
 - `/pr [task]` - End-to-end implementation from idea to working PR
-- `/perp <query>` - Multi-engine search across Claude, DuckDuckGo, and Perplexity
+- `/perp <query>` - Multi-engine search across Claude WebSearch, Perplexity, DuckDuckGo, Gemini, and Grok
 - `/handoff [task] [description]` - Create structured task handoff with PR and worker prompt
 - `/execute` or `/e` - Execute tasks with TodoWrite circuit breaker
 - `/think [mode]` - Enable sequential thinking for complex analysis
