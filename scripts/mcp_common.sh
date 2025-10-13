@@ -983,6 +983,51 @@ setup_render_mcp_server() {
     fi
 }
 
+setup_second_opinion_mcp_server() {
+    local server_name="second-opinion-tool"
+    display_step "Setting up Second Opinion MCP Server..."
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+
+    echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+
+    if server_already_exists "$server_name"; then
+        echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
+        log_with_timestamp "Server ${server_name} already exists, skipping"
+        INSTALL_RESULTS["$server_name"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        return 0
+    fi
+
+    ${MCP_CLI_BIN} mcp remove "$server_name" >/dev/null 2>&1 || true
+
+    echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
+    echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
+
+    local json_payload
+    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+
+    local add_output=""
+    local add_exit_code=0
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
+        echo -e "${BLUE}  📋 Server info:${NC}"
+        echo -e "     • API URL: https://ai-universe-backend-final.onrender.com/mcp"
+        echo -e "     • Use cases: peer review, counter-arguments, solution validation"
+        log_with_timestamp "Successfully added Second Opinion MCP server"
+        INSTALL_RESULTS["$server_name"]="SUCCESS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        echo -e "${RED}  ❌ Failed to add Second Opinion MCP server${NC}"
+        log_error_details "${MCP_CLI_BIN} mcp add-json" "$server_name" "$add_output"
+        echo -e "${RED}  📋 Add error: $add_output${NC}"
+        INSTALL_RESULTS["$server_name"]="ADD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+    fi
+}
+
 # Check environment requirements
 echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
 check_github_requirements
@@ -1717,6 +1762,9 @@ fi
 
 # Setup Render MCP Server
 setup_render_mcp_server
+
+# Setup Second Opinion MCP Server
+setup_second_opinion_mcp_server
 
 display_step "Setting up Serena MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
