@@ -5,13 +5,10 @@ Verifies that the system creates general task agents instead of hardcoded test a
 """
 
 import os
-import sys
 import unittest
+from unittest.mock import MagicMock, patch
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from task_dispatcher import TaskDispatcher
+from orchestration.task_dispatcher import TaskDispatcher
 
 
 class TestTaskDispatcherFix(unittest.TestCase):
@@ -25,7 +22,11 @@ class TestTaskDispatcherFix(unittest.TestCase):
         """Test that server start request creates general task agent, not test agent."""
         # RED: This would have failed before the fix
         task = "Start a test server on port 8082"
-        agents = self.dispatcher.analyze_task_and_create_agents(task)
+        # Mock shutil.which to ensure CLI is available in CI
+        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
+            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agents = self.dispatcher.analyze_task_and_create_agents(task)
 
         # Should create exactly one agent
         assert len(agents) == 1
@@ -46,7 +47,11 @@ class TestTaskDispatcherFix(unittest.TestCase):
     def test_testserver_command_creates_general_agent(self):
         """Test that /testserver command creates general agent."""
         task = "tell the agent to start the test server on 8082 instead"
-        agents = self.dispatcher.analyze_task_and_create_agents(task)
+        # Mock shutil.which to ensure CLI is available in CI
+        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
+            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agents = self.dispatcher.analyze_task_and_create_agents(task)
 
         # Should not create test coverage agents
         assert len(agents) == 1
@@ -58,7 +63,11 @@ class TestTaskDispatcherFix(unittest.TestCase):
     def test_copilot_task_creates_general_agent(self):
         """Test that copilot tasks create general agents."""
         task = "run /copilot on PR 825"
-        agents = self.dispatcher.analyze_task_and_create_agents(task)
+        # Mock shutil.which to ensure CLI is available in CI
+        with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
+            patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+            mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+            agents = self.dispatcher.analyze_task_and_create_agents(task)
 
         # Should create general task agent
         assert len(agents) == 1
@@ -81,22 +90,26 @@ class TestTaskDispatcherFix(unittest.TestCase):
 
         for task in test_tasks:
             with self.subTest(task=task):
-                agents = self.dispatcher.analyze_task_and_create_agents(task)
+                # Mock shutil.which to ensure CLI is available in CI
+                with patch('orchestration.task_dispatcher.shutil.which', return_value='/usr/bin/claude'), \
+                    patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
+                    mock_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+                    agents = self.dispatcher.analyze_task_and_create_agents(task)
 
-                # All tasks should create single general agent
-                assert len(agents) == 1
-                agent = agents[0]
+                    # All tasks should create single general agent
+                    assert len(agents) == 1
+                    agent = agents[0]
 
-                # Should always be task-agent, never specialized types
-                assert "task-agent" in agent["name"]
-                assert "test-analyzer" not in agent["name"]
-                assert "test-writer" not in agent["name"]
-                assert "security-scanner" not in agent["name"]
-                assert "frontend-developer" not in agent["name"]
-                assert "backend-developer" not in agent["name"]
+                    # Should always be task-agent, never specialized types
+                    assert "task-agent" in agent["name"]
+                    assert "test-analyzer" not in agent["name"]
+                    assert "test-writer" not in agent["name"]
+                    assert "security-scanner" not in agent["name"]
+                    assert "frontend-developer" not in agent["name"]
+                    assert "backend-developer" not in agent["name"]
 
-                # Focus should be the exact task
-                assert agent["focus"] == task
+                    # Focus should be the exact task
+                    assert agent["focus"] == task
 
 
 if __name__ == "__main__":
