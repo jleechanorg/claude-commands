@@ -79,8 +79,12 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Firestore service imports
-from mvp_site import world_logic  # For MCP fallback logic
-from mvp_site import constants, firestore_service, logging_util
+from mvp_site import (
+    constants,
+    firestore_service,
+    logging_util,
+    world_logic,  # For MCP fallback logic
+)
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -247,14 +251,22 @@ def create_app() -> Flask:
         response.headers["Strict-Transport-Security"] = (
             "max-age=31536000; includeSubDomains"
         )
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com; "
-            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; "
-            "font-src 'self' https://cdn.jsdelivr.net data:; "
-            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com; "
-            "img-src 'self' data: https:;"
-        )
+        # Each directive omits the trailing semicolon so we can join them once,
+        # ensuring consistent "directive; " spacing without duplicated suffixes.
+        csp_directives = [
+            "default-src 'self'",
+            "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com",
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
+            "font-src 'self' https://cdn.jsdelivr.net data:",
+            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com",
+            "img-src 'self' data: https://cdn.jsdelivr.net https://*.googleapis.com https://*.gstatic.com https://images.unsplash.com",
+            "frame-src https://worldarchitecture-ai.firebaseapp.com",
+            "object-src 'none'",
+            "base-uri 'self'",
+            "form-action 'self'",
+            "frame-ancestors 'none'",
+        ]
+        response.headers["Content-Security-Policy"] = "; ".join(csp_directives) + "; "
         return response
 
     # Defer MCP client initialization until first use to avoid race condition
