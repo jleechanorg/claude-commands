@@ -331,7 +331,7 @@ Based on software engineering research showing:
 **Research-Enhanced Debugging** (`/debug-protocol /research`):
 Automatically integrates research methodology for complex debugging scenarios:
 1. **Research Planning**: Systematic approach to information gathering about the issue
-2. **Multi-source Investigation**: Search across Claude, DuckDuckGo, Perplexity, and Gemini for similar issues
+2. **Multi-source Investigation**: Search across Claude WebSearch, Perplexity, DuckDuckGo, Grok, and Gemini for similar issues
 3. **Pattern Recognition**: Identify debugging patterns from multiple information sources
 4. **Evidence Synthesis**: Combine research findings with local debugging evidence
 
