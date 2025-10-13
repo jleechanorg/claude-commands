@@ -66,6 +66,12 @@ def _sanitize_agent_token(name: str) -> str:
     sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
     return sanitized or "agent"
 
+
+def _is_truthy(value: str | None) -> bool:
+    """Return True when a string value represents an enabled flag."""
+
+    return (value or "").strip().lower() in {"1", "true", "yes", "on"}
+
 # Constraint system removed - using simple safety rules only
 
 # Production safety limits - only counts actively working agents (not idle)
@@ -1214,7 +1220,7 @@ Agent Configuration:
             log_file_display = shlex.quote(log_file)
             monitor_hint = shlex.quote(agent_name)
             agent_name_json = json.dumps(agent_name)
-            agent_name_json_shell = agent_name_json.replace('"', '\\"')
+            agent_name_json_safe = shlex.quote(agent_name_json)
 
             # Enhanced bash command with error handling and logging
             bash_cmd = f'''
@@ -1240,10 +1246,10 @@ echo "[$(date)] {cli_display_name_quoted} exit code: $CLI_EXIT" | tee -a {log_fi
 
 if [ $CLI_EXIT -eq 0 ]; then
     echo "[$(date)] Agent completed successfully" | tee -a {log_file_quoted}
-    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"completed\", \"exit_code\": 0}}" > {result_file_quoted}
+    printf '{{"agent": %s, "status": "completed", "exit_code": 0}}\n' {agent_name_json_safe} > {result_file_quoted}
 else
     echo "[$(date)] Agent failed with exit code $CLI_EXIT" | tee -a {log_file_quoted}
-    echo "{{\"agent\": {agent_name_json_shell}, \"status\": \"failed\", \"exit_code\": $CLI_EXIT}}" > {result_file_quoted}
+    printf '{{"agent": %s, "status": "failed", "exit_code": %s}}\n' {agent_name_json_safe} "$CLI_EXIT" > {result_file_quoted}
 fi
 
 # Keep session alive for 1 hour for monitoring and debugging
@@ -1254,7 +1260,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
             script_path = Path("/tmp") / f"{agent_token}_run.sh"
-            script_path.write_text(bash_cmd, encoding="utf-8")
+            Path.write_text(script_path, bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
             # Use agent-specific tmux config for 1-hour sessions
@@ -1301,9 +1307,6 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 
     def _ensure_mock_claude_binary(self) -> str:
         """Provide a lightweight mock Claude binary when running in testing mode."""
-
-        def _is_truthy(value: str | None) -> bool:
-            return (value or "").strip().lower() in {"1", "true", "yes"}
 
         testing_mode = any(
             _is_truthy(os.environ.get(env_var))

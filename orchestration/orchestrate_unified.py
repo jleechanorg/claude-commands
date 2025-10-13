@@ -11,10 +11,28 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
+
+
+def _load_recent_pr_window(default: int = 60) -> int:
+    """Load the recent PR window from the environment with validation."""
+
+    raw_value = os.environ.get("RECENT_AGENT_PR_WINDOW_MINUTES")
+    if raw_value is None:
+        return default
+
+    try:
+        parsed = int(raw_value)
+    except ValueError:
+        return default
+
+    return max(1, parsed)
+
+
+RECENT_AGENT_PR_WINDOW_MINUTES = _load_recent_pr_window()
 
 
 class UnifiedOrchestration:
@@ -204,13 +222,19 @@ class UnifiedOrchestration:
             )
             prs = json.loads(result.stdout)
 
-            # Look for recent agent PRs (created in last hour)
-            cutoff_time = datetime.now() - timedelta(hours=1)
+            # Look for recent agent PRs within configurable window
+            cutoff_time = datetime.now(timezone.utc) - timedelta(
+                minutes=RECENT_AGENT_PR_WINDOW_MINUTES
+            )
 
             for pr in prs:
                 # Filter by cutoff_time: only consider PRs created within last hour
                 try:
-                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    pr_created_at = datetime.fromisoformat(
+                        pr["createdAt"].replace('Z', '+00:00')
+                    )
+                    if pr_created_at.tzinfo is None:
+                        pr_created_at = pr_created_at.replace(tzinfo=timezone.utc)
                     if pr_created_at < cutoff_time:
                         continue  # Skip PRs older than cutoff_time
                 except (KeyError, ValueError):

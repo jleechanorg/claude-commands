@@ -63,7 +63,9 @@ BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "unknown")
 LOG_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/claude"
 mkdir -p "$LOG_DIR"
 chmod 700 "$LOG_DIR" 2>/dev/null || true
-LOG_FILE="$LOG_DIR/smart_fake_code_detection_${BRANCH_NAME}.log"
+SAFE_BRANCH_NAME=$(printf '%s' "$BRANCH_NAME" | tr '[:space:]/' '__')
+SAFE_BRANCH_NAME=$(printf '%s' "$SAFE_BRANCH_NAME" | tr -c 'A-Za-z0-9._-' '_')
+LOG_FILE="$LOG_DIR/smart_fake_code_detection_${SAFE_BRANCH_NAME}.log"
 
 declare -a RELATIVE_FILES=()
 for path in "${TARGET_FILES[@]}"; do

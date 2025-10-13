@@ -25,10 +25,19 @@ count_files() {
         ! -path "*/__pycache__/*"
         ! -path "./tmp/*"
         ! -path "./roadmap/*"
+        ! -path "./analysis/*"
+        ! -path "./automation/*"
+        ! -path "./claude-bot-commands/*"
+        ! -path "./coding_prompts/*"
+        ! -path "./prototype/*"
     )
 
     if [[ -n "$scope_pattern" ]]; then
         local scope_glob="$scope_pattern"
+
+        if [[ "$scope_glob" == /* ]]; then
+            scope_glob="./${scope_glob#/}"
+        fi
 
         if [[ "$scope_glob" != ./* && "$scope_glob" != /* ]]; then
             scope_glob="./${scope_glob#./}"
@@ -47,9 +56,12 @@ count_files() {
         \( -path "*/tests/*"
         -o -path "*/test/*"
         -o -path "*/testing/*"
+        -o -path "*/__tests__/*"
         -o -name "test_*.${ext}"
         -o -name "*_test.${ext}"
         -o -name "*_tests.${ext}"
+        -o -name "*.test.${ext}"
+        -o -name "*.spec.${ext}"
         \)
     )
 
@@ -117,7 +129,7 @@ count_functional_area() {
     js_count=$(count_files "js" "prod" "$pattern")
     html_count=$(count_files "html" "prod" "$pattern")
 
-    total=$((py_count + js_count + html_count))
+    total=$(( ${py_count:-0} + ${js_count:-0} + ${html_count:-0} ))
 
     if [[ $total -gt 0 ]]; then
         printf "  %-20s: %6d lines (py:%5d js:%4d html:%4d)\n" "$name" "$total" "$py_count" "$js_count" "$html_count"

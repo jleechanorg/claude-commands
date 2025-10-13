@@ -48,7 +48,7 @@ class RealA2AClientTester(unittest.TestCase):
 
         server_url = "http://localhost:8000"
         self.server_url = server_url
-        self.rpc_url = f"{server_url}/mcp"
+        self.rpc_url = f"{server_url}/rpc"
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
 
         # Create real A2A client from SDK
@@ -120,15 +120,6 @@ class RealA2AClientTester(unittest.TestCase):
         print("🎯 Testing Real A2A Task Execution...")
 
         try:
-            # Create real A2A message using SDK types
-            Message(
-                message_id="test_message_001",
-                role=Role.user,
-                parts=[TextPart(text="orchestrate a simple workflow")],
-                task_id=None,
-                context_id="test_context_001",
-            )
-
             # Test real A2A communication
             # Note: Full SDK client integration would require authentication setup
             # For now, we'll test the JSON-RPC endpoint directly to validate real integration
