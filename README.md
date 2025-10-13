@@ -801,6 +801,12 @@ This is a reference export from a working Claude Code project. Commands may need
 - Install script provides clear guidance for customization
 - README examples show adaptation patterns
 
+### Hook Documentation
+
+- Operational hook guidance now lives in [`.claude/hooks/README.md`](.claude/hooks/README.md)
+- The legacy `hooks/CLAUDE.md` file has been removed to avoid conflicting instructions
+- Update any personal notes or bookmarks that referenced the old location
+
 ## 🎉 The Result: Cognitive Capital Arbitrage
 
 Transform your development process from consuming AI tools to deploying cognitive capital for exponential leverage where single commands handle complex multi-phase processes.
