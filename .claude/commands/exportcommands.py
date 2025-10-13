@@ -15,6 +15,10 @@ import json
 import requests
 from pathlib import Path
 
+# Transformation exclusions
+EXCLUDED_ALL_TRANSFORMS = {'exportcommands.py'}
+EXCLUDED_MVP_TRANSFORM = {'loc_simple.sh'}
+
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
 MAX_DIRECTORY_PREVIEW_SIZE = 10
@@ -389,10 +393,9 @@ class ClaudeCommandsExporter:
 
             # Skip transformations for files that should preserve patterns
             filename = os.path.basename(file_path)
-            # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
-            # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
-            skip_all_transforms = filename == 'exportcommands.py'
-            skip_mvp_transform = filename == 'loc_simple.sh'
+            # Determine transformation exclusions from configuration sets
+            skip_all_transforms = filename in EXCLUDED_ALL_TRANSFORMS
+            skip_mvp_transform = filename in EXCLUDED_MVP_TRANSFORM
 
             # Apply transformations - Enhanced for portability
             # Skip all transformations for exportcommands.py to preserve regex patterns

@@ -77,10 +77,11 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertGreater(len(mock_write_text.call_args_list), 0)
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        first_call = mock_write_text.call_args_list[0]
+        script_contents = first_call.args[0] if first_call.args else ''
         self.assertIn("codex exec --yolo", script_contents)
         self.assertIn(
-            "< /tmp/agent_prompt_task-agent-codex-test.txt",
+            "< /tmp/agent_prompt_task_agent_codex_test.txt",
             script_contents,
         )
         self.assertIn("Codex exit code", script_contents)
@@ -111,7 +112,7 @@ class TestAgentCliSelection(unittest.TestCase):
             patch("orchestration.task_dispatcher.Path.write_text") as mock_write_text, \
             patch("subprocess.run") as mock_run, \
             patch("orchestration.task_dispatcher.shutil.which") as mock_which, \
-            patch.object(self.dispatcher, "_ensure_mock_claude_binary", return_value=None):
+            patch.object(self.dispatcher, "_ensure_mock_cli_binary", return_value=None):
 
             def which_side_effect(command):
                 mapping = {
@@ -128,7 +129,8 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
+        first_call = mock_write_text.call_args_list[0]
+        script_contents = first_call.args[0] if first_call.args else ''
         self.assertIn("codex exec --yolo", script_contents)
 
 

@@ -43,6 +43,8 @@ CLI_PROFILES = {
         "stdin_template": "/dev/null",
         "quote_prompt": False,
         "detection_keywords": ["claude", "anthropic"],
+        "mock_script_name": "mock_claude.sh",
+        "mock_echo_prefix": "[mock claude]",
     },
     "codex": {
         "binary": "codex",
@@ -57,13 +59,15 @@ CLI_PROFILES = {
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
         "detection_keywords": ["codex exec", "codex cli", "use codex"],
+        "mock_script_name": "mock_codex.sh",
+        "mock_echo_prefix": "[mock codex]",
     },
 }
 
 # Shared sanitization helper
 def _sanitize_agent_token(name: str) -> str:
     """Return a filesystem-safe token for agent-derived file paths."""
-    sanitized = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
+    sanitized = re.sub(r"[^A-Za-z0-9_]", "_", name)
     return sanitized or "agent"
 
 # Constraint system removed - using simple safety rules only
@@ -94,7 +98,7 @@ class TaskDispatcher:
         self._last_agent_check = 0  # Track when agents were last refreshed
         self.result_dir = "/tmp/orchestration_results"
         os.makedirs(self.result_dir, exist_ok=True)
-        self._mock_claude_path = None
+        self._mock_cli_paths: dict[str, str] = {}
 
         # A2A Integration with enhanced robustness
         self.a2a_enabled = A2A_AVAILABLE
@@ -465,8 +469,8 @@ class TaskDispatcher:
             return None
 
         cli_path = shutil.which(cli_binary) or ""
-        if not cli_path and cli_name == "claude":
-            cli_path = self._ensure_mock_claude_binary() or ""
+        if not cli_path:
+            cli_path = self._ensure_mock_cli_binary(cli_name, profile) or ""
 
         return cli_path or None
 
@@ -1299,8 +1303,8 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             print(f"❌ Failed to create {agent_name}: {e}")
             return False
 
-    def _ensure_mock_claude_binary(self) -> str:
-        """Provide a lightweight mock Claude binary when running in testing mode."""
+    def _ensure_mock_cli_binary(self, cli_name: str, profile: dict[str, Any]) -> str:
+        """Provide lightweight mock CLI binaries when running in testing mode."""
 
         def _is_truthy(value: str | None) -> bool:
             return (value or "").strip().lower() in {"1", "true", "yes"}
@@ -1313,26 +1317,30 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
         if not testing_mode:
             return ""
 
-        if self._mock_claude_path and os.path.exists(self._mock_claude_path):
-            return self._mock_claude_path
+        existing = self._mock_cli_paths.get(cli_name)
+        if existing and os.path.exists(existing):
+            return existing
 
         try:
             mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
             mock_dir.mkdir(parents=True, exist_ok=True)
-            mock_path = mock_dir / "mock_claude.sh"
+            script_name = profile.get("mock_script_name") or f"mock_{cli_name}.sh"
+            mock_path = mock_dir / script_name
 
-            # Simple shim that echoes the call for logging and exits successfully
-            script_contents = """#!/usr/bin/env bash
-echo "[mock claude] $@"
+            echo_prefix = profile.get("mock_echo_prefix") or f"[mock {cli_name}]"
+            script_contents = f"""#!/usr/bin/env bash
+echo "{echo_prefix} $@"
 exit 0
 """
             mock_path.write_text(script_contents, encoding="utf-8")
             os.chmod(mock_path, 0o755)
-            self._mock_claude_path = str(mock_path)
-            print("⚠️ 'claude' command not found. Using mock binary for testing.")
-            return self._mock_claude_path
+            resolved_path = str(mock_path)
+            self._mock_cli_paths[cli_name] = resolved_path
+            binary_name = profile.get("binary", cli_name)
+            print(f"⚠️ '{binary_name}' command not found. Using mock binary for testing.")
+            return resolved_path
         except Exception as exc:
-            print(f"⚠️ Failed to create mock Claude binary: {exc}")
+            print(f"⚠️ Failed to create mock {cli_name} binary: {exc}")
             return ""
 
 

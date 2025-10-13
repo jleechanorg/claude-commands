@@ -11,10 +11,50 @@ import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
+
+
+def _parse_iso8601(timestamp: str) -> Optional[datetime]:
+    """Parse ISO 8601 timestamps with graceful fallbacks."""
+    if not timestamp:
+        return None
+
+    candidates = (timestamp,)
+    if timestamp.endswith('Z'):
+        candidates = (timestamp[:-1] + '+00:00',) + candidates
+
+    for candidate in candidates:
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError:
+            continue
+
+    iso_formats = (
+        '%Y-%m-%dT%H:%M:%S.%f%z',
+        '%Y-%m-%dT%H:%M:%S%z',
+        '%Y-%m-%d %H:%M:%S%z',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
+        '%Y-%m-%d %H:%M:%S',
+    )
+
+    for fmt in iso_formats:
+        try:
+            parsed = datetime.strptime(timestamp, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError:
+            continue
+
+    return None
 
 
 class UnifiedOrchestration:
@@ -205,15 +245,18 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            cutoff_time = datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
                 # Filter by cutoff_time: only consider PRs created within last hour
                 try:
-                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    parsed_timestamp = _parse_iso8601(pr.get("createdAt"))
+                    if not parsed_timestamp:
+                        continue
+                    pr_created_at = parsed_timestamp.astimezone(timezone.utc)
                     if pr_created_at < cutoff_time:
                         continue  # Skip PRs older than cutoff_time
-                except (KeyError, ValueError):
+                except (KeyError, TypeError):
                     # Skip PRs with missing or malformed dates
                     continue
 
