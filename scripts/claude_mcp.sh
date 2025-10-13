@@ -1,34 +1,43 @@
 #!/usr/bin/env bash
 
-TEST_MODE=false
-if [ "$1" == "--test" ]; then
-    TEST_MODE=true
-fi
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MCP_LAUNCHER_PATH="$0"
 
 MCP_PRODUCT_NAME="Claude"
 MCP_CLI_BIN="claude"
-MCP_SCOPE="user"
-MCP_STATS_LOCK_FILE="/tmp/claude_mcp_stats.lock"
-MCP_LOG_FILE_PREFIX="/tmp/claude_mcp"
-MCP_BACKUP_PREFIX="claude"
-MCP_REQUIRE_CLI=false
 
-# Required placeholder for downstream automation.
-export GITHUB_TOKEN="${GITHUB_TOKEN:-your_token_here}"
 
-DEFAULT_MCP_ENV_FLAGS=(
-    --env "MCP_CLAUDE_DEBUG=false"
-    --env "MCP_VERBOSE_TOOLS=false"
-    --env "MCP_AUTO_DISCOVER=false"
-)
+# Preserve --test flag handling so CI invocations remain side-effect free
+TEST_MODE=false
+FORWARDED_ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --test)
+            TEST_MODE=true
+            ;;
+        *)
+            FORWARDED_ARGS+=("$arg")
+            ;;
+    esac
+done
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ "$TEST_MODE" == true ]]; then
+    export TEST_MODE=true
+else
+    unset TEST_MODE 2>/dev/null || true
+fi
 
+# Reset positional parameters for downstream scripts
+if (( ${#FORWARDED_ARGS[@]} )); then
+    set -- "${FORWARDED_ARGS[@]}"
+else
+    set --
+fi
 # Location-aware sourcing: works from both root and scripts/ directory
 if [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then
-    source "$SCRIPT_DIR/mcp_common.sh"
+    source "$SCRIPT_DIR/mcp_common.sh" "$@"
 elif [[ -f "$SCRIPT_DIR/scripts/mcp_common.sh" ]]; then
-    source "$SCRIPT_DIR/scripts/mcp_common.sh"
+    source "$SCRIPT_DIR/scripts/mcp_common.sh" "$@"
 else
     echo "❌ Error: Cannot find mcp_common.sh" >&2
     exit 1

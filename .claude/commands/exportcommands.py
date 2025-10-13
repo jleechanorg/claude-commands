@@ -15,6 +15,10 @@ import json
 import requests
 from pathlib import Path
 
+# Transformation exclusions
+EXCLUDED_ALL_TRANSFORMS = {'exportcommands.py'}
+EXCLUDED_MVP_TRANSFORM = {'loc_simple.sh'}
+
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
 MAX_DIRECTORY_PREVIEW_SIZE = 10
@@ -301,9 +305,8 @@ class ClaudeCommandsExporter:
         # Ensure target directory exists
         os.makedirs(target_dir, exist_ok=True)
 
-        # Scripts from project root
-        root_script_patterns = [
-            # Claude Code infrastructure (project-specific)
+        script_patterns = [
+            # Claude Code infrastructure (generally useful for Claude Code users)
             'claude_start.sh', 'claude_mcp.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
@@ -317,7 +320,7 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
-        for script_name in root_script_patterns:
+        for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
                 target_path = os.path.join(target_dir, script_name)
@@ -325,20 +328,6 @@ class ClaudeCommandsExporter:
                 self._apply_content_filtering(target_path)
 
                 print(f"   • {script_name}")
-                self.scripts_count += 1
-
-        # MCP installer scripts from scripts/ subdirectory
-        scripts_subdir = os.path.join(self.project_root, 'scripts')
-        mcp_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
-
-        for script_name in mcp_scripts:
-            script_path = os.path.join(scripts_subdir, script_name)
-            if os.path.exists(script_path):
-                target_path = os.path.join(target_dir, script_name)
-                shutil.copy2(script_path, target_path)
-                self._apply_content_filtering(target_path)
-
-                print(f"   • scripts/{script_name}")
                 self.scripts_count += 1
 
         print(f"✅ Exported {self.scripts_count} scripts")
@@ -402,41 +391,47 @@ class ClaudeCommandsExporter:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
 
+            # Skip transformations for files that should preserve patterns
+            filename = os.path.basename(file_path)
+            # Determine transformation exclusions from configuration sets
+            skip_all_transforms = filename in EXCLUDED_ALL_TRANSFORMS
+            skip_mvp_transform = filename in EXCLUDED_MVP_TRANSFORM
+
             # Apply transformations - Enhanced for portability
-            content = re.sub(r'$PROJECT_ROOT/', '$PROJECT_ROOT/', content)
-            content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
-            content = re.sub(r'\bjleechan\b', '$USER', content)
-            content = re.sub(r'TESTING=true python', 'TESTING=true python', content)
-            content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
+            # Skip all transformations for exportcommands.py to preserve regex patterns
+            if skip_all_transforms:
+                # Don't apply any transformations to exportcommands.py
+                pass
+            else:
+                if not skip_mvp_transform:
+                    content = re.sub(r'mvp_site/', '$PROJECT_ROOT/', content)
+                content = re.sub(r'worldarchitect\.ai', 'your-project.com', content)
+                content = re.sub(r'\bjleechan\b', '$USER', content)
+                content = re.sub(r'TESTING=true vpython', 'TESTING=true python', content)
+                content = re.sub(r'WorldArchitect\.AI', 'Your Project', content)
 
-            # New portable patterns
-            content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
-            content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
-            content = re.sub(r'/tmp/$PROJECT_NAME', '/tmp/$PROJECT_NAME', content)
-            content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
-            # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
-            content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+                # New portable patterns
+                content = re.sub(r'~/worldarchitect\.ai', '$(git rev-parse --show-toplevel)', content)
+                content = re.sub(r'~/your-project\.com', '$(git rev-parse --show-toplevel)', content)
+                content = re.sub(r'jleechantest@gmail\.com', '<your-email@gmail.com>', content)
+                content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
+                content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
+                # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
+                content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
 
-            # SOURCE_DIR variable patterns - improved matching
-            content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
-            content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
+                # SOURCE_DIR variable patterns - improved matching
+                content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
+                content = re.sub(r'\bcd\s+["\']?(?:\./)?mvp_site["\']?', 'cd "$SOURCE_DIR"', content)
 
-            # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
-            if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
-                # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
-                if 'PROJECT_ROOT=' in content:
-
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
-                    content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-
-# Source directory for project files
-SOURCE_DIR="$PROJECT_ROOT"
-                else:
-                    # Insert after shebang and initial comments (flexible for any shebang)
-                    content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-            content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
+                # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
+                if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
+                    # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
+                    if 'PROJECT_ROOT=' in content:
+                        content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                    else:
+                        # Insert after shebang and initial comments (flexible for any shebang)
+                        content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.write(content)
@@ -1062,10 +1057,10 @@ This is a filtered reference export from a working Claude Code project. Commands
 - 📚 Documentation: Complete README with installation guide and adaptation examples
 
 🔄 CONTENT TRANSFORMATIONS:
-- $PROJECT_ROOT/ → $PROJECT_ROOT/ (generic project paths)
-- your-project.com → your-project.com (generic domain)
-- $USER → $USER (generic username)
-- TESTING=true python → TESTING=true python (generic test commands)
+- mvp_site/ → $PROJECT_ROOT/ (generic project paths)
+- worldarchitect.ai → your-project.com (generic domain)
+- jleechan → $USER (generic username)
+- TESTING=true vpython → TESTING=true python (generic test commands)
 
 Starting MANUAL INSTALLATION: Copy commands to .claude/commands/ and hooks to .claude/hooks/
 
@@ -1114,10 +1109,10 @@ cp -n scripts/* ./scripts/
 ```
 
 ## 🔄 Content Filtering Applied
-- **Generic Paths**: $PROJECT_ROOT/ → \\$PROJECT_ROOT/
-- **Generic Domain**: your-project.com → your-project.com
-- **Generic User**: $USER → \\$USER
-- **Generic Commands**: TESTING=true python → TESTING=true python
+- **Generic Paths**: mvp_site/ → \\$PROJECT_ROOT/
+- **Generic Domain**: worldarchitect.ai → your-project.com
+- **Generic User**: jleechan → \\$USER
+- **Generic Commands**: TESTING=true vpython → TESTING=true python
 
 ## ⚠️ Reference Export
 This is a filtered reference export. Commands may need adaptation for specific environments, but Claude Code excels at helping customize them for any workflow.

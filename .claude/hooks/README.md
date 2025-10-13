@@ -26,6 +26,23 @@ The `.claude/hooks/` directory contains hooks that are auto-recognized by Claude
 - "I'll wait for results"
 - Other speculation patterns
 
+### 🤖 Smart Fake Code Detection Hook (`smart_fake_code_detection.sh`)
+**Purpose**: Run the `/fake` command automatically after any Write tool output to audit for placeholders or simulated results.
+
+**How it works**:
+- Captures the Write tool payload to collect every touched file
+- Launches `claude -p --dangerously-skip-permissions --model sonnet` headlessly
+- Pipes a `/fake` command with context about the modified files
+- Streams the analysis back into the transcript and logs it under `~/.local/state/claude/`
+
+**Configuration**:
+- `SMART_FAKE_TIMEOUT` (seconds, e.g. `60s`): override the default 120-second `/fake` audit timeout when the claude CLI supports longer or shorter checks.
+
+**Detects**:
+- Placeholder or fake implementations introduced during edits
+- Simulated REST/API responses or fabricated data
+- Suspicious speculation inside new or updated files
+
 ### 🚫 Anti-Root Files Hook (`check_root_files.sh`)
 **Purpose**: Prevent file pollution in project root directory
 

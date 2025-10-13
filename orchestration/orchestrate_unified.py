@@ -7,13 +7,54 @@ Pure file-based A2A protocol without Redis dependencies
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from typing import Optional
 from task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
+
+
+def _parse_iso8601(timestamp: str) -> Optional[datetime]:
+    """Parse ISO 8601 timestamps with graceful fallbacks."""
+    if not timestamp:
+        return None
+
+    candidates = (timestamp,)
+    if timestamp.endswith('Z'):
+        candidates = (timestamp[:-1] + '+00:00',) + candidates
+
+    for candidate in candidates:
+        try:
+            parsed = datetime.fromisoformat(candidate)
+            if parsed.tzinfo is None:
+                return parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError:
+            continue
+
+    iso_formats = (
+        '%Y-%m-%dT%H:%M:%S.%f%z',
+        '%Y-%m-%dT%H:%M:%S%z',
+        '%Y-%m-%d %H:%M:%S%z',
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',
+        '%Y-%m-%d %H:%M:%S',
+    )
+
+    for fmt in iso_formats:
+        try:
+            parsed = datetime.strptime(timestamp, fmt)
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=timezone.utc)
+            return parsed
+        except ValueError:
+            continue
+
+    return None
 
 
 class UnifiedOrchestration:
@@ -128,10 +169,10 @@ class UnifiedOrchestration:
 
     def _check_dependencies(self):
         """Check system dependencies and report status."""
-        dependencies = {"tmux": "tmux", "git": "git", "gh": "gh", "claude": "claude"}
+        base_dependencies = {"tmux": "tmux", "git": "git", "gh": "gh"}
 
         missing = []
-        for name, command in dependencies.items():
+        for name, command in base_dependencies.items():
             try:
                 result = subprocess.run(
                     ["which", command],
@@ -143,14 +184,20 @@ class UnifiedOrchestration:
                 )
                 if result.returncode != 0:
                     missing.append(name)
-            except:
+            except Exception:
                 missing.append(name)
+
+        llm_cli_available = any(
+            shutil.which(cli_name) for cli_name in ("claude", "codex")
+        )
+        if not llm_cli_available:
+            missing.append("claude/codex CLI")
 
         if missing:
             print(f"⚠️  Missing dependencies: {', '.join(missing)}")
-            if "claude" in missing:
+            if "claude/codex CLI" in missing:
                 print(
-                    "   Install Claude Code CLI: https://docs.anthropic.com/en/docs/claude-code"
+                    "   Install Claude Code CLI (claude) or Codex CLI (codex) and ensure at least one is on your PATH"
                 )
             if "gh" in missing:
                 print("   Install GitHub CLI: https://cli.github.com/")
@@ -198,9 +245,21 @@ class UnifiedOrchestration:
             prs = json.loads(result.stdout)
 
             # Look for recent agent PRs (created in last hour)
-            datetime.now() - timedelta(hours=1)
+            cutoff_time = datetime.now(timezone.utc) - timedelta(hours=1)
 
             for pr in prs:
+                # Filter by cutoff_time: only consider PRs created within last hour
+                try:
+                    parsed_timestamp = _parse_iso8601(pr.get("createdAt"))
+                    if not parsed_timestamp:
+                        continue
+                    pr_created_at = parsed_timestamp.astimezone(timezone.utc)
+                    if pr_created_at < cutoff_time:
+                        continue  # Skip PRs older than cutoff_time
+                except (KeyError, TypeError):
+                    # Skip PRs with missing or malformed dates
+                    continue
+
                 if (
                     "task-agent-" in pr["title"]
                     and "settings" in task_description.lower()

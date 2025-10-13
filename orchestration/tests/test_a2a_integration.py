@@ -11,7 +11,7 @@ import importlib.util
 import logging
 import sys
 import unittest
-from typing import Any
+from typing import Any, cast
 
 import pytest
 
@@ -27,6 +27,15 @@ A2A_AVAILABLE = (
     importlib.util.find_spec("httpx") is not None
     and importlib.util.find_spec("a2a") is not None
 )
+
+# Conditional imports - only import if dependencies are available
+if A2A_AVAILABLE:
+    import httpx
+    from a2a import A2AClient
+else:
+    # Provide stub types for type checking when dependencies are not available
+    httpx = cast(Any, None)
+    A2AClient = cast(Any, None)
 
 
 class RealA2AClientTester(unittest.TestCase):
