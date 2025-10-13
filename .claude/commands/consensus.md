@@ -1,3 +1,4 @@
+---
 description: /consensus Command - Multi-Agent Consensus Review
 type: llm-orchestration
 execution_mode: immediate

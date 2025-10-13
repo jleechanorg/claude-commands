@@ -65,13 +65,13 @@ This command provides comprehensive multi-engine search by intelligently using w
 **Capabilities**:
 - Premium AI-powered deep research with citations and reasoning traces
 - Fine-grained controls (recency filtering, model selection, temperature, token limits)
-- Supports Sonar model family including `sonar-large-online` for real-time analysis
+- Supports the Sonar model family (set `PERPLEXITY_MODEL`, default `llama-3.1-sonar-large-128k-online`; alias `sonar-large-online` also works via MCP wrappers)
 - Best suited when you need authoritative synthesis and source transparency
 
 **Usage Notes**:
-- Always include `recency` when the query benefits from freshness (default `month`)
-- Default model comes from `PERPLEXITY_MODEL` env (fallback `sonar-large-online`)
-- Provide `return_citations=true` unless the user explicitly requests otherwise
+- Always include `recency` when the query benefits from freshness (accepted values: `hour`, `day`, `week`, `month`, `year`; default `month`)
+- Default model comes from `PERPLEXITY_MODEL` env (fallback `llama-3.1-sonar-large-128k-online`, alias `sonar-large-online` remains supported)
+- Citations are returned automatically by Perplexity—no extra `return_citations` flag required
 - Include `stream=false` for deterministic batch responses
 
 #### 3. DuckDuckGo MCP

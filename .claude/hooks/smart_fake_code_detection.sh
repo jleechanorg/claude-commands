@@ -106,7 +106,7 @@ EOF
 
 # SMART_FAKE_TIMEOUT: Optional environment variable to set the timeout for the /fake audit (default: 120s).
 CLAUDE_TIMEOUT="${SMART_FAKE_TIMEOUT:-120s}"
-CLAUDE_CMD=(claude -p --dangerously-skip-permissions --model sonnet)
+CLAUDE_CMD=(claude -p --dangerously-skip-permissions --model claude-sonnet-4)
 
 echo "🤖 smart_fake_code_detection: Running /fake audit via claude -p for ${#RELATIVE_FILES[@]} file(s)." >&2
 

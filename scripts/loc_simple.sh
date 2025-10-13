@@ -47,9 +47,12 @@ count_files() {
         \( -path "*/tests/*"
         -o -path "*/test/*"
         -o -path "*/testing/*"
+        -o -path "*/spec/*"
         -o -name "test_*.${ext}"
         -o -name "*_test.${ext}"
         -o -name "*_tests.${ext}"
+        -o -name "*.test.${ext}"
+        -o -name "*.spec.${ext}"
         \)
     )
 

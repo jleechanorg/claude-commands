@@ -60,6 +60,21 @@ CLI_PROFILES = {
     },
 }
 
+SUBAGENT_TYPE_DEFAULTS = {
+    "code-review": "claude",
+    "codex-consultant": "codex",
+    "gemini-consultant": "claude",
+    "cursor-consultant": "claude",
+    "code-centralization-consultant": "claude",
+    "accuracy-reviewer": "claude",
+    "evidence-verifier": "claude",
+    "product-strategist": "claude",
+    "delivery-ops": "claude",
+    "risk-analyst": "claude",
+    "customer-advocate": "claude",
+    "exec-synthesizer": "claude",
+}
+
 # Shared sanitization helper
 def _sanitize_agent_token(name: str) -> str:
     """Return a filesystem-safe token for agent-derived file paths."""
@@ -896,8 +911,18 @@ Complete the task, then use /pr to create a new pull request."""
         agent_focus = agent_spec.get("focus", "general task completion")
         agent_prompt = agent_spec.get("prompt", "Complete the assigned task")
         agent_type = agent_spec.get("type", "general")
+        subagent_type = agent_spec.get("subagent_type")
         capabilities = agent_spec.get("capabilities", [])
         workspace_config = agent_spec.get("workspace_config", {})
+
+        # Map consensus subagent types to their default CLI when not provided explicitly.
+        if subagent_type and not agent_spec.get("cli"):
+            default_cli = SUBAGENT_TYPE_DEFAULTS.get(subagent_type)
+            if default_cli:
+                agent_spec["cli"] = default_cli
+                print(
+                    f"🧭 Defaulting subagent '{subagent_type}' to {default_cli} CLI"
+                )
 
         # Handle workspace name alignment - if workspace config specifies a name, use it
         if workspace_config and workspace_config.get("workspace_name"):
@@ -1254,7 +1279,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
             script_path = Path("/tmp") / f"{agent_token}_run.sh"
-            script_path.write_text(bash_cmd, encoding="utf-8")
+            Path.write_text(script_path, bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
             # Use agent-specific tmux config for 1-hour sessions
@@ -1317,7 +1342,8 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
             return self._mock_claude_path
 
         try:
-            mock_dir = Path(tempfile.gettempdir()) / "worldarchitect_ai"
+            mock_agent_dir_name = os.environ.get("MOCK_AGENT_DIR", "mock_agents")
+            mock_dir = Path(tempfile.gettempdir()) / mock_agent_dir_name
             mock_dir.mkdir(parents=True, exist_ok=True)
             mock_path = mock_dir / "mock_claude.sh"
 
@@ -1326,7 +1352,7 @@ sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 echo "[mock claude] $@"
 exit 0
 """
-            mock_path.write_text(script_contents, encoding="utf-8")
+            Path.write_text(mock_path, script_contents, encoding="utf-8")
             os.chmod(mock_path, 0o755)
             self._mock_claude_path = str(mock_path)
             print("⚠️ 'claude' command not found. Using mock binary for testing.")

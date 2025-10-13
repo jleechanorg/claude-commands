@@ -57,6 +57,19 @@ class ClaudeCommandsExporter:
             'gen.md', 'gene.md', 'pgen.md', 'pgene.md', 'proto_genesis.md' # proto genesis commands (project-specific)
         ]
 
+        # Centralized skip configuration for content transformations. The keys are
+        # repository-relative paths so that moves/renames remain explicit.
+        self.TRANSFORM_SKIP_RULES = {
+            '.claude/commands/exportcommands.py': {
+                'skip_all_transforms': True,
+                'reason': 'Preserve regex patterns used by the exporter itself.',
+            },
+            'scripts/loc_simple.sh': {
+                'skip_mvp_transform': True,
+                'reason': 'Maintain intentional relative paths inside the LOC utility.',
+            },
+        }
+
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
@@ -388,11 +401,10 @@ class ClaudeCommandsExporter:
                 content = f.read()
 
             # Skip transformations for files that should preserve patterns
-            filename = os.path.basename(file_path)
-            # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
-            # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
-            skip_all_transforms = filename == 'exportcommands.py'
-            skip_mvp_transform = filename == 'loc_simple.sh'
+            rel_path = os.path.relpath(file_path, self.project_root)
+            skip_config = self.TRANSFORM_SKIP_RULES.get(rel_path, {})
+            skip_all_transforms = skip_config.get('skip_all_transforms', False)
+            skip_mvp_transform = skip_config.get('skip_mvp_transform', False)
 
             # Apply transformations - Enhanced for portability
             # Skip all transformations for exportcommands.py to preserve regex patterns
@@ -414,7 +426,11 @@ class ClaudeCommandsExporter:
                 content = re.sub(r'/tmp/worldarchitectai', '/tmp/$PROJECT_NAME', content)
                 content = re.sub(r'/tmp/worldarchitect\.ai', '/tmp/$PROJECT_NAME', content)
                 # Handle GitHub URLs in echo statements with proper quote termination (consolidated pattern)
-                content = re.sub(r'https://github\.com/jleechanorg/[^/\s"]+(?:\.git)?(?=\${NC}\")', '$(git config --get remote.origin.url)', content)
+                content = re.sub(
+                    r'https://github\.com/jleechanorg/[^\s"\'"'`<>]+',
+                    '$(git config --get remote.origin.url)',
+                    content,
+                )
 
                 # SOURCE_DIR variable patterns - improved matching
                 content = re.sub(r'\bfind\s+["\']?(?:\./)?mvp_site["\']?', 'find "$SOURCE_DIR"', content)
@@ -422,12 +438,22 @@ class ClaudeCommandsExporter:
 
                 # Add SOURCE_DIR initialization to scripts that reference mvp_site but don't define it
                 if 'SOURCE_DIR' in content and not re.search(r'^\s*SOURCE_DIR=', content, re.MULTILINE) and 'mvp_site' in content:
-                    # Insert SOURCE_DIR definition after PROJECT_ROOT or early in script
-                    if 'PROJECT_ROOT=' in content:
-                        content = re.sub(r'(PROJECT_ROOT=[^\n]*\n)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
-                    else:
-                        # Insert after shebang and initial comments (flexible for any shebang)
-                        content = re.sub(r'(#![^\n]*\n(?:#[^\n]*\n)*)', r'\1\n# Source directory for project files\nSOURCE_DIR="$PROJECT_ROOT"\n', content)
+                    source_dir_block = (
+                        '# Source directory for project files\n'
+                        'SOURCE_DIR="${PROJECT_ROOT:-$(git rev-parse --show-toplevel)}"\n'
+                    )
+                    inserted = False
+                    if content.startswith('#!'):
+                        pattern = r'(^#![^\n]*\n(?:#[^\n]*\n)*)'
+
+                        def _insert_block(match):
+                            return f"{match.group(1)}{source_dir_block}\n"
+
+                        content, count = re.subn(pattern, _insert_block, content, count=1)
+                        inserted = count > 0
+
+                    if not inserted:
+                        content = f"{source_dir_block}\n{content}"
                 content = re.sub(r'if\s+\[\s*!\s*-d\s*["\']mvp_site["\']\s*\]', 'if [ ! -d "$SOURCE_DIR" ]', content)
 
             with open(file_path, 'w', encoding='utf-8') as f:
