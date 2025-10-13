@@ -48,9 +48,11 @@ fi
 
 TIMESTAMP=$(date "+%Y-%m-%d %H:%M:%S")
 
-# Construct full message with simplified worktree:branch format
+# Construct full message with repo/branch, remote and optional PR info
 FULL_MESSAGE="[$REPO:$BRANCH]
 $MESSAGE
+🔗 Repo: $REMOTE
+🧷 PR: ${PR_INFO:-N/A}
 ⏰ $TIMESTAMP"
 
 # Send notification to Slack

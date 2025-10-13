@@ -113,9 +113,6 @@ class TestCollisionBugFix(unittest.TestCase):
             agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
             agent_spec = agent_specs[0]
 
-            original_name = agent_spec["name"]
-            workspace_name = agent_spec["workspace_config"]["workspace_name"]
-
             # When create_dynamic_agent runs, it should align the names
             with patch('orchestration.task_dispatcher.subprocess.run') as mock_run:
                 mock_run.return_value = MagicMock(returncode=0)

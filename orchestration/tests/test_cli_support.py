@@ -77,7 +77,7 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertGreater(len(mock_write_text.call_args_list), 0)
-        script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is the content
+        script_contents = mock_write_text.call_args_list[0].args[0]  # First positional arg is the content
         self.assertIn("codex exec --yolo", script_contents)
         self.assertIn(
             "< /tmp/agent_prompt_task-agent-codex-test.txt",
@@ -128,7 +128,7 @@ class TestAgentCliSelection(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertEqual(agent_spec["cli"], "codex")
-        script_contents = mock_write_text.call_args_list[0][0][0]  # First positional arg is the content
+        script_contents = mock_write_text.call_args_list[0].args[0]  # First positional arg is the content
         self.assertIn("codex exec --yolo", script_contents)
 
 

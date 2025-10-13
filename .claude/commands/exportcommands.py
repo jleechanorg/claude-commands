@@ -358,27 +358,35 @@ class ClaudeCommandsExporter:
         # Get scripts referenced in settings.json
         settings_scripts = self._get_scripts_from_settings()
 
+        exported = set()
+
         for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
+                if script_name in exported:
+                    continue
                 target_path = os.path.join(target_dir, script_name)
                 shutil.copy2(script_path, target_path)
                 self._apply_content_filtering(target_path)
 
                 print(f"   • {script_name}")
                 self.scripts_count += 1
+                exported.add(script_name)
 
         # Export MCP helper scripts from scripts/ subdirectory
         scripts_subdir = os.path.join(self.project_root, 'scripts')
         for script_name in mcp_helper_scripts:
             script_path = os.path.join(scripts_subdir, script_name)
             if os.path.exists(script_path):
+                if script_name in exported:
+                    continue
                 target_path = os.path.join(target_dir, script_name)
                 shutil.copy2(script_path, target_path)
                 self._apply_content_filtering(target_path)
 
                 print(f"   • scripts/{script_name}")
                 self.scripts_count += 1
+                exported.add(script_name)
             else:
                 print(
                     f"   ⚠️  Warning: Required MCP helper script not found: scripts/{script_name}"
@@ -387,7 +395,7 @@ class ClaudeCommandsExporter:
         # Export scripts referenced in settings.json from scripts/ subdirectory
         for script_name in settings_scripts:
             # Skip if already exported (MCP helpers or root-level patterns)
-            if script_name in mcp_helper_scripts:
+            if script_name in mcp_helper_scripts or script_name in exported:
                 continue
 
             script_path = os.path.join(scripts_subdir, script_name)
@@ -398,6 +406,7 @@ class ClaudeCommandsExporter:
 
                 print(f"   • settings: scripts/{script_name}")
                 self.scripts_count += 1
+                exported.add(script_name)
             else:
                 print(
                     f"   ⚠️  Warning: Script referenced in settings.json not found: scripts/{script_name}"
@@ -419,8 +428,8 @@ class ClaudeCommandsExporter:
         os.makedirs(target_dir, exist_ok=True)
 
         scripts_count = 0
-        for file_path in Path(source_dir).glob('*.py'):
-            if file_path.is_file():
+        for file_path in Path(source_dir).iterdir():
+            if file_path.is_file() and file_path.suffix in ('.py', '.sh'):
                 shutil.copy2(file_path, target_dir)
                 self._apply_content_filtering(os.path.join(target_dir, file_path.name))
                 scripts_count += 1
@@ -508,7 +517,7 @@ class ClaudeCommandsExporter:
             # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
             # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
             # Compare by filename because the staging copy lives in a different directory than the source file.
-            skip_all_transforms = filename == Path(__file__).name
+            skip_all_transforms = filename == 'exportcommands.py'
             skip_mvp_transform = filename == 'loc_simple.sh'
 
             # Apply transformations - Enhanced for portability

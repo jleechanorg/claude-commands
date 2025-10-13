@@ -6,7 +6,6 @@
       "Bash(python:*)",
       "Bash(python3:*)",
       "Bash(vpython:*)",
-      "Bash(TESTING=true python:*)",
       "Bash(TESTING=true python3:*)",
       "Bash(TESTING=true python:*)",
       "Bash(./run_tests.sh)",

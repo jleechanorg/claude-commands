@@ -211,8 +211,12 @@ class UnifiedOrchestration:
                 # Filter by cutoff_time: only consider PRs created within last hour
                 try:
                     # Use fromisoformat which handles ISO 8601 format properly
-                    # Replace 'Z' with '+00:00' for proper ISO 8601 timezone handling
-                    pr_created_at = datetime.fromisoformat(pr["createdAt"].replace('Z', '+00:00'))
+                    created_at = pr.get("createdAt")
+                    if not created_at:
+                        raise ValueError("Missing createdAt timestamp")
+                    if created_at.endswith('Z'):
+                        created_at = created_at[:-1] + '+00:00'
+                    pr_created_at = datetime.fromisoformat(created_at)
                     if pr_created_at < cutoff_time:
                         continue  # Skip PRs older than cutoff_time
                 except (KeyError, ValueError):
