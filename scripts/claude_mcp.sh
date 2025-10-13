@@ -1,10 +1,13 @@
 #!/usr/bin/env bash
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MCP_LAUNCHER_PATH="$0"
+# Path to this launcher (used by mcp_common.sh for telemetry and logging)
+MCP_LAUNCHER_PATH="${BASH_SOURCE[0]}"
 
 MCP_PRODUCT_NAME="Claude"
 MCP_CLI_BIN="claude"
+# Export if downstream scripts rely on these in subshells
+# export MCP_PRODUCT_NAME MCP_CLI_BIN MCP_LAUNCHER_PATH
 
 # Location-aware sourcing: works from both root and scripts/ directory
 if [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then

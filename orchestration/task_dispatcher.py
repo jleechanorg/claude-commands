@@ -92,7 +92,8 @@ class TaskDispatcher:
         # LLM-driven enhancements - lazy loading to avoid subprocess overhead
         self._active_agents = None  # Will be loaded lazily when needed
         self._last_agent_check = 0  # Track when agents were last refreshed
-        self.result_dir = "/tmp/orchestration_results"
+        temp_dir = tempfile.gettempdir()
+        self.result_dir = os.path.join(temp_dir, "orchestration_results")
         os.makedirs(self.result_dir, exist_ok=True)
         self._mock_claude_path = None
 
@@ -1124,12 +1125,13 @@ Agent Configuration:
 """
 
             # Write prompt to file to avoid shell quoting issues
-            prompt_file = os.path.join("/tmp", f"agent_prompt_{agent_token}.txt")
+            temp_dir = tempfile.gettempdir()
+            prompt_file = os.path.join(temp_dir, f"agent_prompt_{agent_token}.txt")
             with open(prompt_file, "w") as f:
                 f.write(full_prompt)
 
             # Create log directory
-            log_dir = "/tmp/orchestration_logs"
+            log_dir = os.path.join(temp_dir, "orchestration_logs")
             os.makedirs(log_dir, exist_ok=True)
             log_file = os.path.join(log_dir, f"{agent_token}.log")
 
@@ -1253,8 +1255,8 @@ echo "[$(date)] Monitor with: tmux attach -t {monitor_hint}" | tee -a {log_file_
 sleep {AGENT_SESSION_TIMEOUT_SECONDS}
 '''
 
-            script_path = Path("/tmp") / f"{agent_token}_run.sh"
-            script_path.write_text(bash_cmd, encoding="utf-8")
+            script_path = Path(temp_dir) / f"{agent_token}_run.sh"
+            Path.write_text(script_path, bash_cmd, encoding="utf-8")
             os.chmod(script_path, 0o700)
 
             # Use agent-specific tmux config for 1-hour sessions

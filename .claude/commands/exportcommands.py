@@ -57,6 +57,10 @@ class ClaudeCommandsExporter:
             'gen.md', 'gene.md', 'pgen.md', 'pgene.md', 'proto_genesis.md' # proto genesis commands (project-specific)
         ]
 
+        # Transformation skip controls
+        self.TRANSFORM_SKIP_ALL = {"exportcommands.py"}
+        self.TRANSFORM_SKIP_MVP = {"loc_simple.sh"}
+
         # Counters for summary
         self.commands_count = 0
         self.hooks_count = 0
@@ -238,7 +242,7 @@ class ClaudeCommandsExporter:
     def _copy_directory_with_filtering(self, src_dir, dst_dir):
         """Copy directory recursively with file filtering and content transformation"""
         for root, dirs, files in os.walk(src_dir):
-            # Skip nested .claude directories and test directories that might contain sensitive data
+            # Skip nested .claude directories to avoid recursion during export
             dirs[:] = [d for d in dirs if d != '.claude']
 
             # Create relative path structure
@@ -317,14 +321,19 @@ class ClaudeCommandsExporter:
         ]
 
         for script_name in script_patterns:
-            script_path = os.path.join(self.project_root, script_name)
-            if os.path.exists(script_path):
-                target_path = os.path.join(target_dir, script_name)
-                shutil.copy2(script_path, target_path)
-                self._apply_content_filtering(target_path)
+            candidate_paths = [
+                os.path.join(self.project_root, 'scripts', script_name),
+                os.path.join(self.project_root, script_name),
+            ]
+            for script_path in candidate_paths:
+                if os.path.exists(script_path):
+                    target_path = os.path.join(target_dir, script_name)
+                    shutil.copy2(script_path, target_path)
+                    self._apply_content_filtering(target_path)
 
-                print(f"   • {script_name}")
-                self.scripts_count += 1
+                    print(f"   • {script_name}")
+                    self.scripts_count += 1
+                    break
 
         print(f"✅ Exported {self.scripts_count} scripts")
 
@@ -389,10 +398,8 @@ class ClaudeCommandsExporter:
 
             # Skip transformations for files that should preserve patterns
             filename = os.path.basename(file_path)
-            # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
-            # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
-            skip_all_transforms = filename == 'exportcommands.py'
-            skip_mvp_transform = filename == 'loc_simple.sh'
+            skip_all_transforms = filename in self.TRANSFORM_SKIP_ALL
+            skip_mvp_transform = filename in self.TRANSFORM_SKIP_MVP
 
             # Apply transformations - Enhanced for portability
             # Skip all transformations for exportcommands.py to preserve regex patterns
@@ -1006,7 +1013,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
 
-        excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
+        excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks']
         found_excluded = []
 
         for dir_name in excluded_dirs:

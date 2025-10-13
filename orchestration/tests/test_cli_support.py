@@ -1,5 +1,7 @@
 """Tests for multi-CLI support in the task dispatcher."""
 
+import os
+import tempfile
 import unittest
 from unittest.mock import MagicMock, mock_open, patch
 
@@ -79,10 +81,10 @@ class TestAgentCliSelection(unittest.TestCase):
         self.assertGreater(len(mock_write_text.call_args_list), 0)
         script_contents = mock_write_text.call_args_list[0][0][1]  # Index 1 for script content, not 0 (Path)
         self.assertIn("codex exec --yolo", script_contents)
-        self.assertIn(
-            "< /tmp/agent_prompt_task-agent-codex-test.txt",
-            script_contents,
+        expected_prompt_path = os.path.join(
+            tempfile.gettempdir(), "agent_prompt_task-agent-codex-test.txt"
         )
+        self.assertIn(f"< {expected_prompt_path}", script_contents)
         self.assertIn("Codex exit code", script_contents)
 
     def test_create_dynamic_agent_falls_back_when_requested_cli_missing(self):

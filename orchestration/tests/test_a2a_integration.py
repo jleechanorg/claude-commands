@@ -48,7 +48,7 @@ class RealA2AClientTester(unittest.TestCase):
 
         server_url = "http://localhost:8000"
         self.server_url = server_url
-        self.rpc_url = f"{server_url}/mcp"
+        self.rpc_url = f"{server_url}/rpc"
         self.agent_card_url = f"{server_url}/.well-known/agent.json"
 
         # Create real A2A client from SDK

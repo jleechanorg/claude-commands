@@ -26,10 +26,7 @@ if [[ "$TOOL_NAME" != "Write" ]]; then
     exit 0
 fi
 
-TARGET_FILES=()
-while IFS= read -r path; do
-    TARGET_FILES+=("$path")
-done < <(
+mapfile -d '' -t TARGET_FILES < <(
     printf '%s' "$INPUT" | jq -r '
         [
             .tool_input.file_path?,
@@ -44,8 +41,9 @@ done < <(
             (.tool_output.files? // [])[]?.path?
         ]
         | map(select(. != null and . != ""))
-        | unique[]
-        | gsub("^\\./"; "")
+        | unique
+        | map(gsub("^\\./"; ""))
+        | .[] + "\u0000"
     ' 2>/dev/null || true
 )
 
@@ -85,8 +83,9 @@ for file in "${RELATIVE_FILES[@]}"; do
     printf '  - %s\n' "$file" >>"$LOG_FILE"
 done
 
-if ! command -v claude >/dev/null 2>&1; then
-    echo "⚠️ smart_fake_code_detection: claude CLI not found; skipping /fake audit." | tee -a "$LOG_FILE" >&2
+CLAUDE_BIN="${CLAUDE_BIN:-claude}"
+if ! command -v "$CLAUDE_BIN" >/dev/null 2>&1; then
+    echo "⚠️ smart_fake_code_detection: $CLAUDE_BIN CLI not found; skipping /fake audit." | tee -a "$LOG_FILE" >&2
     exit 0
 fi
 
@@ -106,7 +105,8 @@ EOF
 
 # SMART_FAKE_TIMEOUT: Optional environment variable to set the timeout for the /fake audit (default: 120s).
 CLAUDE_TIMEOUT="${SMART_FAKE_TIMEOUT:-120s}"
-CLAUDE_CMD=(claude -p --dangerously-skip-permissions --model sonnet)
+CLAUDE_MODEL="${SMART_FAKE_MODEL:-sonnet}"
+CLAUDE_CMD=("$CLAUDE_BIN" -p --dangerously-skip-permissions --model "$CLAUDE_MODEL")
 
 echo "🤖 smart_fake_code_detection: Running /fake audit via claude -p for ${#RELATIVE_FILES[@]} file(s)." >&2
 
