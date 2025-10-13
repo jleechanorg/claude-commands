@@ -119,6 +119,12 @@ class ClaudeCommandsExporter:
         # Export scripts
         self._export_scripts(staging_dir)
 
+        # Export .claude/scripts directory
+        self._export_claude_scripts(staging_dir)
+
+        # Export settings.json
+        self._export_settings(staging_dir)
+
         # Export orchestration (with exclusions)
         self._export_orchestration(staging_dir)
 
@@ -292,6 +298,36 @@ class ClaudeCommandsExporter:
 
         print(f"✅ Exported {self.agents_count} agents")
 
+    def _get_scripts_from_settings(self):
+        """Parse settings.json to find all referenced scripts"""
+        settings_file = os.path.join(self.project_root, '.claude', 'settings.json')
+        scripts_from_settings = set()
+
+        if not os.path.exists(settings_file):
+            return scripts_from_settings
+
+        try:
+            with open(settings_file, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            # Find all script references in settings.json
+            # Match patterns like: scripts/filename.sh or scripts/filename.py
+            import_pattern = r'scripts/([a-zA-Z0-9_\-]+\.(sh|py))'
+            matches = re.findall(import_pattern, content)
+
+            for match in matches:
+                script_name = match[0]  # filename.sh or filename.py
+                scripts_from_settings.add(script_name)
+
+            print(f"   📋 Found {len(scripts_from_settings)} scripts referenced in settings.json")
+            for script in sorted(scripts_from_settings):
+                print(f"      • {script}")
+
+        except Exception as e:
+            print(f"   ⚠️  Warning: Could not parse settings.json for script references: {e}")
+
+        return scripts_from_settings
+
     def _export_scripts(self, staging_dir):
         """Export reusable scripts (both Claude Code specific and generally useful development tools)"""
         print("🚀 Exporting scripts...")
@@ -319,6 +355,9 @@ class ClaudeCommandsExporter:
         # MCP helper scripts (required by claude_mcp.sh) - must be from scripts/ subdirectory
         mcp_helper_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
 
+        # Get scripts referenced in settings.json
+        settings_scripts = self._get_scripts_from_settings()
+
         for script_name in script_patterns:
             script_path = os.path.join(self.project_root, script_name)
             if os.path.exists(script_path):
@@ -340,8 +379,70 @@ class ClaudeCommandsExporter:
 
                 print(f"   • scripts/{script_name}")
                 self.scripts_count += 1
+            else:
+                print(
+                    f"   ⚠️  Warning: Required MCP helper script not found: scripts/{script_name}"
+                )
+
+        # Export scripts referenced in settings.json from scripts/ subdirectory
+        for script_name in settings_scripts:
+            # Skip if already exported (MCP helpers or root-level patterns)
+            if script_name in mcp_helper_scripts:
+                continue
+
+            script_path = os.path.join(scripts_subdir, script_name)
+            if os.path.exists(script_path):
+                target_path = os.path.join(target_dir, script_name)
+                shutil.copy2(script_path, target_path)
+                self._apply_content_filtering(target_path)
+
+                print(f"   • settings: scripts/{script_name}")
+                self.scripts_count += 1
+            else:
+                print(
+                    f"   ⚠️  Warning: Script referenced in settings.json not found: scripts/{script_name}"
+                )
 
         print(f"✅ Exported {self.scripts_count} scripts")
+
+    def _export_claude_scripts(self, staging_dir):
+        """Export .claude/scripts directory (learning/memory management scripts)"""
+        print("📜 Exporting .claude/scripts directory...")
+
+        source_dir = os.path.join(self.project_root, '.claude', 'scripts')
+        if not os.path.exists(source_dir):
+            print("⚠️  Warning: .claude/scripts directory not found")
+            return
+
+        # Create claude_scripts subdirectory in staging (will map to .claude/scripts in repo)
+        target_dir = os.path.join(staging_dir, 'claude_scripts')
+        os.makedirs(target_dir, exist_ok=True)
+
+        scripts_count = 0
+        for file_path in Path(source_dir).glob('*.py'):
+            if file_path.is_file():
+                shutil.copy2(file_path, target_dir)
+                self._apply_content_filtering(os.path.join(target_dir, file_path.name))
+                scripts_count += 1
+                print(f"   📜 {file_path.name}")
+
+        print(f"✅ Exported {scripts_count} .claude/scripts files")
+
+    def _export_settings(self, staging_dir):
+        """Export settings.json file"""
+        print("⚙️  Exporting settings.json...")
+
+        settings_file = os.path.join(self.project_root, '.claude', 'settings.json')
+        if not os.path.exists(settings_file):
+            print("⚠️  Warning: settings.json not found")
+            return
+
+        # Create settings_file in staging (will map to .claude/settings.json in repo)
+        target_file = os.path.join(staging_dir, 'settings_json')
+        shutil.copy2(settings_file, target_file)
+        self._apply_content_filtering(target_file)
+
+        print("✅ Exported settings.json")
 
     def _export_orchestration(self, staging_dir):
         """Export orchestration system with directory exclusions"""
@@ -406,7 +507,8 @@ class ClaudeCommandsExporter:
             filename = os.path.basename(file_path)
             # Skip mvp_site transformation for loc_simple.sh (uses relative paths intentionally)
             # Skip ALL transformations for exportcommands.py (contains regex patterns that should not be transformed)
-            skip_all_transforms = filename == 'exportcommands.py'
+            # Compare by filename because the staging copy lives in a different directory than the source file.
+            skip_all_transforms = filename == Path(__file__).name
             skip_mvp_transform = filename == 'loc_simple.sh'
 
             # Apply transformations - Enhanced for portability
@@ -942,13 +1044,15 @@ This is a filtered reference export from a working Claude Code project. Commands
             'commands': os.path.join(claude_dir, 'commands'),
             'hooks': os.path.join(claude_dir, 'hooks'),
             'agents': os.path.join(claude_dir, 'agents'),
+            'claude_scripts': os.path.join(claude_dir, 'scripts'),  # .claude/scripts directory
+            'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
             'orchestration': 'orchestration',  # Goes to repo root
             'scripts': None                    # Goes to repo root within scripts/
         }
 
-        # Create the .claude/ subdirectories
+        # Create the .claude/ subdirectories (but not for files like settings.json)
         for local_name, target_path in dirs_mapping.items():
-            if target_path and target_path.startswith(claude_dir):
+            if target_path and target_path.startswith(claude_dir) and not target_path.endswith('.json'):
                 os.makedirs(target_path, exist_ok=True)
 
         # Copy content with proper directory mapping

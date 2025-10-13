@@ -416,6 +416,8 @@ class TaskDispatcher:
             return available_clis[0]
 
         # Default to Claude when multiple CLIs are available
+        # Fallback logic: Prioritize Claude CLI as the most tested and supported option.
+        # If Claude is not available, use the first available CLI from the list.
         if "claude" in available_clis:
             return "claude"
         return available_clis[0]
