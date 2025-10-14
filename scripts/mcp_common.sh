@@ -734,6 +734,36 @@ add_mcp_server() {
             local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
+
+        local grok_default_model=""
+        if [ -n "${GROK_DEFAULT_MODEL:-}" ]; then
+            grok_default_model="$GROK_DEFAULT_MODEL"
+        elif [ -n "${XAI_DEFAULT_CHAT_MODEL:-}" ]; then
+            grok_default_model="$XAI_DEFAULT_CHAT_MODEL"
+        fi
+
+        if [ -n "$grok_default_model" ]; then
+            grok_env_flags+=(--env "GROK_DEFAULT_MODEL=$grok_default_model")
+        fi
+
+        local grok_model_value="${GROK_MODEL:-$grok_default_model}"
+        if [ -n "$grok_model_value" ]; then
+            grok_env_flags+=(--env "GROK_MODEL=$grok_model_value")
+        fi
+
+        if [ -n "${XAI_DEFAULT_CHAT_MODEL:-}" ]; then
+            grok_env_flags+=(--env "XAI_DEFAULT_CHAT_MODEL=$XAI_DEFAULT_CHAT_MODEL")
+        elif [ -n "$grok_default_model" ]; then
+            grok_env_flags+=(--env "XAI_DEFAULT_CHAT_MODEL=$grok_default_model")
+        fi
+
+        if [ -n "${XAI_MODEL:-}" ]; then
+            grok_env_flags+=(--env "XAI_MODEL=$XAI_MODEL")
+        elif [ -n "${XAI_DEFAULT_CHAT_MODEL:-}" ]; then
+            grok_env_flags+=(--env "XAI_MODEL=$XAI_DEFAULT_CHAT_MODEL")
+        elif [ -n "$grok_default_model" ]; then
+            grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
+        fi
         add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
         add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
