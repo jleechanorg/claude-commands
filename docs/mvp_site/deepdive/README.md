@@ -1,5 +1,66 @@
 # WorldArchitect.AI MVP Site Deep Dive
 
+> **Last updated:** 2025-10-16
+
+This documentation set maps the current Python/Flask MVP codebase so it can be
+reimplemented in a modern TypeScript stack with functional parity. Start here
+for a top-level understanding, then follow the linked deep-dive guides for
+detailed module inventories and API responsibilities.
+
+## System Overview
+
+The MVP application is a Flask API gateway that authenticates users with
+Firebase, proxies gameplay requests to a Model Context Protocol (MCP) server,
+and serves the legacy front-end bundles. Game logic and content generation live
+in `world_logic.py` (MCP server shim) and Gemini integrations. The system is
+tightly coupled to Google Firestore for campaign persistence and to Gemini for
+AI narrative generation. 【F:mvp_site/main.py†L3-L520】【F:mvp_site/world_logic.py†L1-L420】
+
+Primary runtime flow:
+
+1. **HTTP ingress (`main.py`)** – Flask routes authenticate with Firebase,
+   assemble request payloads, and invoke MCP tools via `MCPClient`. Static
+   assets are served from `frontend_v1` with fallbacks for historical paths.
+2. **MCP client (`mcp_client.py`)** – Translates HTTP payloads to MCP tool
+   calls. In local mode it bypasses HTTP and calls `world_logic` functions
+   directly; otherwise it issues JSON-RPC HTTP calls to an MCP server.
+3. **World logic (`world_logic.py`)** – Implements gameplay workflows such as
+   campaign creation, state updates, structured response formatting, and
+   setting management. It orchestrates Gemini prompts, Firestore storage, and
+   debugging utilities.
+4. **AI integrations** – `gemini_service.py` builds prompts, selects models,
+   validates structured responses, and emits timeline entries. Memory and
+   instruction helpers coordinate the narrative context across passes.
+5. **Persistence** – `firestore_service.py` encapsulates Firestore access with
+   mock-friendly abstractions and mission/story helpers. Game state and user
+   settings flow through `GameState` models, numeric converters, and entity
+   validators.
+6. **Front-end** – Legacy `frontend_v1` static assets and modern `frontend_v2`
+   Vite/React TypeScript code consume the same JSON API. Front-end tests ensure
+   parity between versions.
+
+## How to Use These Notes
+
+The remaining documents provide file-by-file breakdowns, including public APIs,
+responsibilities, and keep/remove recommendations.
+
+- [`backend_core.md`](backend_core.md) – Flask entrypoints, MCP plumbing, world
+  logic, and document generation.
+- [`ai_and_persistence.md`](ai_and_persistence.md) – Gemini services,
+  Firestore access, memory integrations, schemas, and entity tooling.
+- [`utilities.md`](utilities.md) – Cross-cutting helpers (JSON parsing,
+  logging, tokens, debugging, prompts, numeric converters).
+- [`frontends_and_assets.md`](frontends_and_assets.md) – Legacy and modern
+  front-end bundles, static assets, templates, and exported docs.
+- [`testing.md`](testing.md) – Custom testing framework, mock providers,
+  regression suites, and UI/end-to-end coverage.
+- [`operations_and_docs.md`](operations_and_docs.md) – Supporting docs,
+  scripts, configuration files, and project metadata inside `mvp_site/`.
+
+Each guide lists every file within its scope, summarizes public-facing
+functions/classes, and flags obsolete artifacts. Together they describe the
+system interfaces needed to rebuild the application in TypeScript (e.g., API
+routes, request/response formats, data models, and long-running processes).
 > Last updated: 2025-10-08
 
 This deep dive documents every asset in `mvp_site/` so a new engineer can rebuild the product (for example in TypeScript) without
