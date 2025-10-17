@@ -1,0 +1,25 @@
+{
+  "name": "worldarchitect-ai-suite",
+  "version": "0.1.0",
+  "description": "Opinionated automation, governance, and quality guardrails for WorldArchitect.AI projects.",
+  "author": {
+    "name": "WorldArchitect.AI maintainers"
+  },
+  "homepage": "https://worldarchitect.ai",
+  "repository": "https://github.com/jleechanorg/worldarchitect.ai.git",
+  "license": "MIT",
+  "keywords": [
+    "worldarchitect",
+    "automation",
+    "hooks",
+    "quality",
+    "governance"
+  ],
+  "commands": [
+    "../.claude/commands/"
+  ],
+  "agents": [
+    "../.claude/agents/"
+  ],
+  "hooks": "../.claude/hooks/hooks.plugin.json"
+}

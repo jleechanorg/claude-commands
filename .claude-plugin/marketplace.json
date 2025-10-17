@@ -1,0 +1,20 @@
+{
+  "name": "worldarchitect-suite",
+  "owner": {
+    "name": "WorldArchitect.AI maintainers"
+  },
+  "plugins": [
+    {
+      "name": "worldarchitect-ai-suite",
+      "description": "Opinionated automation, governance, and quality guardrails for WorldArchitect.AI projects.",
+      "version": "0.1.0",
+      "source": "./.claude-plugin/",
+      "keywords": [
+        "worldarchitect",
+        "automation",
+        "hooks",
+        "quality"
+      ]
+    }
+  ]
+}

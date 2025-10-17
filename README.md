@@ -80,6 +80,31 @@ python -m mvp_site.mcp_api --http-only --port 8000
 MCP_SERVER_URL=http://localhost:8000 ./vpython mvp_site/main.py serve
 ```
 
+## 🤖 Claude Code Plugin Distribution
+
+WorldArchitect.AI's `.claude/` automation suite is now packaged as an official Claude Code plugin so teams can install the same slash commands, subagents, and hooks with a single `/plugin` workflow. The repository doubles as a marketplace host via `.claude-plugin/marketplace.json`, letting you develop locally or share the plugin from any git URL.
+
+### Install locally during development
+
+1. Trust the repository folder in Claude Code.
+2. Add the local marketplace from the project root:
+   ```
+   /plugin marketplace add ./
+   ```
+3. Install the plugin bundle:
+   ```
+   /plugin install worldarchitect-ai-suite@worldarchitect-suite
+   ```
+4. Restart Claude Code so the commands, agents, and hooks load.
+
+### What the plugin enables
+
+- Reuses all existing `.claude/commands/` slash commands and `.claude/agents/` subagents in one installable bundle.
+- Registers the governance hooks via `hooks.plugin.json`, which automatically locate the correct scripts using `${CLAUDE_PLUGIN_ROOT}` when the plugin is enabled.
+- Ships marketplace metadata so your team can host this repository or mirror it for distribution without additional packaging steps.
+
+See `.claude-plugin/README` and `.claude/hooks/hooks.plugin.json` for component details, or run `claude --debug` to inspect plugin loading if you need to troubleshoot.
+
 ## 🔐 Credentials & Configuration
 
 WorldArchitect.AI requires several credentials and configuration files. Here's exactly where each one should be placed:
