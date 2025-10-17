@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
-"""
-Genesis Null Safety Test Suite
-Tests all Genesis functions for proper handling of goal_dir=None scenarios
-"""
+"""Genesis null safety regression tests."""
 
+import contextlib
+import io
 import os
-import sys
 import tempfile
 import unittest
-import importlib
 from unittest.mock import MagicMock, patch, mock_open
 from pathlib import Path
 
-# Add genesis directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
-
-# Import genesis module
-import genesis
+from genesis import genesis
+from genesis.common_cli import GenesisUsageError
 
 
 class TestGenesisNullSafety(unittest.TestCase):
@@ -240,6 +234,86 @@ class TestGenesisEdgeCases(unittest.TestCase):
                 except (OSError, ValueError):
                     # These exceptions are acceptable for invalid paths
                     pass
+
+
+class TestGenesisModelPreference(unittest.TestCase):
+    """Unit tests for Genesis model selection helpers."""
+
+    def setUp(self):
+        genesis.GENESIS_USE_CODEX = None
+        self.addCleanup(lambda: setattr(genesis, "GENESIS_USE_CODEX", None))
+
+    def test_is_codex_enabled_defaults_to_true(self):
+        """Without explicit flags Genesis should default to Codex."""
+
+        result = genesis.is_codex_enabled(["genesis.py"])
+
+        self.assertTrue(result)
+        self.assertTrue(genesis.GENESIS_USE_CODEX)
+
+    def test_is_codex_enabled_prefers_claude_flag(self):
+        """The --claude flag should flip the cached preference."""
+
+        result = genesis.is_codex_enabled(["genesis.py", "--claude"])
+
+        self.assertFalse(result)
+        self.assertFalse(genesis.GENESIS_USE_CODEX)
+
+        # Subsequent invocations should reuse the cached preference even if argv changes.
+        self.assertFalse(genesis.is_codex_enabled(["genesis.py", "--codex"]))
+
+    def test_is_codex_enabled_rejects_conflicting_flags(self):
+        """Conflicting flags should raise a usage error to match CLI validation."""
+
+        with self.assertRaisesRegex(GenesisUsageError, "Cannot specify both --codex and --claude"):
+            genesis.is_codex_enabled(["genesis.py", "--codex", "--claude"])
+
+
+class TestWorkflowStateTokenTracking(unittest.TestCase):
+    """Focused coverage for WorkflowState token accounting."""
+
+    def test_add_token_usage_enforces_iteration_limit(self):
+        """Exceeding the per-iteration token budget should return False."""
+
+        state = genesis.WorkflowState(max_tokens_per_iteration=100)
+
+        allowed = state.add_token_usage(60, iteration=3)
+        self.assertTrue(allowed)
+        self.assertEqual(state.total_tokens_used, 60)
+        self.assertEqual(state.iteration_tokens[3], 60)
+
+        with contextlib.redirect_stdout(io.StringIO()) as stdout:
+            blocked = state.add_token_usage(50, iteration=3)
+        self.assertFalse(blocked)
+        self.assertEqual(state.total_tokens_used, 110)
+        self.assertEqual(state.iteration_tokens[3], 110)
+        self.assertIn("TOKEN BURN PREVENTION", stdout.getvalue())
+
+
+class TestSecureFileHandler(unittest.TestCase):
+    """Regression tests for secure file IO helpers."""
+
+    def test_write_and_read_with_lock_round_trip(self):
+        """Writing and reading with locks should preserve content."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = os.path.join(tmpdir, "session", "state.json")
+            payload = "example contents"
+
+            genesis.SecureFileHandler.write_with_lock(filepath, payload)
+            contents = genesis.SecureFileHandler.read_with_lock(filepath)
+
+            self.assertEqual(contents, payload)
+
+    def test_read_with_lock_missing_file(self):
+        """Missing files should safely return an empty string."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = os.path.join(tmpdir, "missing.txt")
+
+            contents = genesis.SecureFileHandler.read_with_lock(filepath)
+
+            self.assertEqual(contents, "")
 
 
 if __name__ == '__main__':

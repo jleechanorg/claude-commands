@@ -15,10 +15,18 @@ import threading
 import time
 from pathlib import Path
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
-from dataclasses import field
 import fcntl
+
+from .common_cli import (
+    GenesisArguments,
+    GenesisHelpRequested,
+    GenesisUsageError,
+    extract_model_preference,
+    parse_genesis_cli,
+    print_usage as print_cli_usage,
+)
 
 
 GENESIS_USE_CODEX: Optional[bool] = None
@@ -37,18 +45,11 @@ def is_codex_enabled(argv: Optional[List[str]] = None) -> bool:
         return GENESIS_USE_CODEX
 
     args = list(sys.argv) if argv is None else list(argv)
+    if "--claude" in args and "--codex" in args:
+        raise GenesisUsageError("Cannot specify both --codex and --claude")
 
-    use_codex = True
-
-    if "--claude" in args:
-        while "--claude" in args:
-            args.remove("--claude")
-        use_codex = False
-    elif "--codex" in args:
-        while "--codex" in args:
-            args.remove("--codex")
-        use_codex = True
-
+    preference = extract_model_preference(args)
+    use_codex = True if preference is None else preference
     GENESIS_USE_CODEX = use_codex
     return use_codex
 
@@ -2265,33 +2266,21 @@ def main():
     print(f"📍 Working Directory: {os.getcwd()}", flush=True)
     print(f"🧠 Arguments: {sys.argv}", flush=True)
 
-    # Parse arguments
-    if len(sys.argv) < 2:
-        print("Usage: python genesis/genesis.py <goal_directory> [max_iterations]")
-        print("   or: python genesis/genesis.py --refine \"<goal>\" [max_iterations] [--interactive] [--iterate]")
-        print("")
-        print("Examples:")
-        print("  python genesis/genesis.py goals/2025-01-22-1530-rest-api/ 10")
-        print("  python genesis/genesis.py --refine \"build a REST API\" 5")
-        print("  python genesis/genesis.py --refine \"build a REST API\" 5 --interactive  # requires approval")
-        print("  python genesis/genesis.py --refine \"build a REST API\" 5 --iterate     # skip initial generation")
-        print("")
-        print("Flags:")
-        print("  --interactive: Require manual approval for refinements")
-        print("  --iterate:     Skip initial Cerebras generation phase, start with iterative refinement")
-        print("  --codex:       Use Codex instead of Claude for generation")
-        print("")
-        print("Optional flags:")
-        print("  --claude          Use Claude instead of Codex")
-        print("  --codex           Explicitly use Codex (default)")
-        print("  --pool-size <n>   Override subagent pool size")
-        print("")
-        print("Note: Refinement is auto-approved by default. Use --interactive for manual approval.")
+    # Parse arguments using the shared CLI utilities
+    try:
+        cli_args: GenesisArguments = parse_genesis_cli(sys.argv)
+    except GenesisHelpRequested:
+        print_cli_usage()
+        sys.exit(0)
+    except GenesisUsageError as exc:
+        print_cli_usage(str(exc))
         sys.exit(1)
+
+    GENESIS_USE_CODEX = cli_args.use_codex
 
     # Check model selection flags - Codex by default
     original_args = list(sys.argv)
-    use_codex = is_codex_enabled()
+    use_codex = cli_args.use_codex
 
     if use_codex:
         if "--codex" in original_args:
@@ -2302,43 +2291,23 @@ def main():
         print("🔧 Using claude (override: --claude)", flush=True)
 
     # Check for --iterate flag to skip initial cerebras generation
-    skip_initial_generation = "--iterate" in sys.argv
+    skip_initial_generation = cli_args.skip_initial_generation
     if skip_initial_generation:
-        sys.argv.remove("--iterate")
         print("🔄 Using --iterate flag: Skipping initial Cerebras generation phase", flush=True)
     else:
         print("🚀 Standard mode: Will perform initial Cerebras generation", flush=True)
 
-    # Check for pool size
-    pool_size = 5  # default
-    if "--pool-size" in sys.argv:
-        pool_idx = sys.argv.index("--pool-size")
-        if pool_idx + 1 < len(sys.argv):
-            try:
-                original_arg = sys.argv[pool_idx + 1]  # Store original string
-                pool_size = int(original_arg)
-                sys.argv.remove("--pool-size")
-                sys.argv.remove(original_arg)  # Remove original string, not converted int
-                print(f"🤖 Setting subagent pool size to: {pool_size}")
-                set_subagent_pool_size(pool_size)
-            except ValueError:
-                print("Error: --pool-size requires a number")
-                sys.exit(1)
-        else:
-            print("Error: --pool-size requires a number")
-            sys.exit(1)
-
-
+    # Apply configured pool size (idempotent)
+    pool_size = cli_args.pool_size
+    set_subagent_pool_size(pool_size)
+    if any(arg.startswith("--pool-size") for arg in original_args):
+        print(f"🤖 Setting subagent pool size to: {pool_size}")
 
     # Handle --refine mode (interactive goal refinement)
-    if sys.argv[1] == "--refine":
+    if cli_args.mode == "refine":
         print("🔄 REFINE MODE DETECTED", flush=True)
-        if len(sys.argv) < 3:
-            print("Error: --refine requires a goal description")
-            sys.exit(1)
-
-        original_goal = sys.argv[2]
-        max_iterations = int(sys.argv[3]) if len(sys.argv) > 3 else 20
+        original_goal = cli_args.refine_goal or ""
+        max_iterations = cli_args.max_iterations
         print(f"📝 Goal: {original_goal[:100]}...", flush=True)
         print(f"🔢 Max Iterations: {max_iterations}", flush=True)
 
@@ -2377,7 +2346,7 @@ def main():
                 approval = "y"
 
                 # Optional: Only ask for approval if --interactive flag is provided
-                if "--interactive" in sys.argv and is_tty:
+                if cli_args.interactive and is_tty:
                     try:
                         approval = (
                             input("Do you approve this refinement? (y/n): ").lower().strip()
@@ -2424,8 +2393,8 @@ def main():
 
     else:
         # Standard mode: use goal directory
-        goal_dir = sys.argv[1]
-        max_iterations = int(sys.argv[2]) if len(sys.argv) > 2 else 20
+        goal_dir = cli_args.goal_directory
+        max_iterations = cli_args.max_iterations
 
         print(f"📁 ENTERING GOAL DIRECTORY MODE", flush=True)
         print(f"📂 Goal Directory: {goal_dir}", flush=True)
