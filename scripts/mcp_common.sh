@@ -1712,13 +1712,30 @@ else
     # Remove existing filesystem server to reconfigure with proper directory access
     ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
 
-    # Add filesystem server with proper directory configuration
-    echo -e "${BLUE}  🔗 Adding filesystem server with $HOME/projects access...${NC}"
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "$HOME/projects"
+    # Determine filesystem server directories based on configuration
+    FS_SERVER_DIRS=("$HOME/projects")
+    wide_fs_enabled=false
+    if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
+        FS_SERVER_DIRS+=("/tmp" "$HOME")
+        wide_fs_enabled=true
+    fi
+
+    allowed_dirs_display=$(printf "%s, " "${FS_SERVER_DIRS[@]}")
+    allowed_dirs_display=${allowed_dirs_display%, }
+
+    if [[ "$wide_fs_enabled" == true ]]; then
+        echo -e "${YELLOW}  ⚠️ Granting filesystem server access to ${allowed_dirs_display} (ALLOW_WIDE_FS=true)...${NC}"
+        log_with_timestamp "ALLOW_WIDE_FS=true: Granting filesystem access to: ${allowed_dirs_display}"
+    else
+        echo -e "${BLUE}  🔗 Adding filesystem server with ${allowed_dirs_display} access...${NC}"
+        log_with_timestamp "Granting filesystem access to: ${allowed_dirs_display}"
+    fi
+
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
 
     if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured filesystem server with project directory access${NC}"
-        log_with_timestamp "Successfully added filesystem server with $HOME/projects access"
+        echo -e "${GREEN}  ✅ Successfully configured filesystem server with access to ${allowed_dirs_display}${NC}"
+        log_with_timestamp "Successfully added filesystem server with access to: ${allowed_dirs_display}"
         INSTALL_RESULTS["filesystem"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
