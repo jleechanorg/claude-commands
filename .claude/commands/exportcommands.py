@@ -1053,7 +1053,7 @@ This is a filtered reference export from a working Claude Code project. Commands
         # Create the .claude/ subdirectories (but not for files like settings.json)
         for local_name, target_path in dirs_mapping.items():
             # Create directory only if target_path is a directory (no file extension)
-            if target_path and target_path.startswith(claude_dir) and not Path(target_path).suffix:
+            if target_path and target_path.startswith(claude_dir) and not os.path.splitext(target_path)[1]:
                 os.makedirs(target_path, exist_ok=True)
 
         # Copy content with proper directory mapping

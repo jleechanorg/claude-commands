@@ -33,27 +33,40 @@ normalize_scope_glob() {
     echo "$glob"
 }
 
+# Portable lowercasing helper (Bash 3 compatible)
+to_lower() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 # Identify whether a file path should be considered test code
 is_test_file() {
     local path="$1"
     local ext="$2"
 
-    local path_lc="${path,,}"
-    if [[ "$path_lc" == *"/tests/"* \
-        || "$path_lc" == *"/test/"* \
-        || "$path_lc" == *"/testing/"* \
-        || "$path_lc" == *"/__tests__/"* \
-        || "$path_lc" == *"/__test__/"* \
-        || "$path_lc" == *"/spec/"* \
-        || "$path_lc" == *"/specs/"* \
-        || "$path_lc" == *"/integration_tests/"* \
-        || "$path_lc" == *"/integration-test/"* \
-        || "$path_lc" == *"/qa/"* ]]; then
-        return 0
-    fi
+    local path_lc
+    path_lc="$(to_lower "$path")"
+
+    local test_path_patterns=(
+        "/tests/"
+        "/test/"
+        "/testing/"
+        "/__tests__/"
+        "/__test__/"
+        "/spec/"
+        "/specs/"
+        "/integration_tests/"
+        "/integration-test/"
+        "/qa/"
+    )
+    for pattern in "${test_path_patterns[@]}"; do
+        if [[ "$path_lc" == *"$pattern"* ]]; then
+            return 0
+        fi
+    done
 
     local filename="${path##*/}"
-    local filename_lc="${filename,,}"
+    local filename_lc
+    filename_lc="$(to_lower "$filename")"
 
     if [[ "$filename_lc" == test_* ]]; then
         return 0
@@ -212,7 +225,7 @@ declare -a FILE_MODES=()
 
 while IFS= read -r -d '' file; do
     ext="${file##*.}"
-    ext="${ext,,}"
+    ext="$(to_lower "$ext")"
 
     if [[ -z ${LANGUAGE_LABELS["$ext"]+x} ]]; then
         continue
@@ -331,11 +344,8 @@ count_functional_area() {
         fi
 
         local path="${FILE_PATHS[$idx]}"
-        if [[ -n "$scope_glob" ]]; then
-            case "$path" in
-                $scope_glob) ;;
-                *) continue ;;
-            esac
+        if [[ -n "$scope_glob" ]] && ! [[ "$path" == $scope_glob ]]; then
+            continue
         fi
 
         local lines=${FILE_LINES[$idx]}

@@ -32,7 +32,7 @@ This command:
 
 ## Authentication
 
-Requires authentication token from `node scripts/auth-cli.mjs login`
+Set an `XAI_API_KEY` (or fallback `GROK_API_KEY`) environment variable before running the command to authenticate with the multi-model service. Tokens are provisioned through the AI Universe portal—contact your workspace administrator if you need access.
 
 ## Rate Limits
 
