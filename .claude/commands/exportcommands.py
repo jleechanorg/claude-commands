@@ -46,7 +46,7 @@ class ClaudeCommandsExporter:
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
         # Export configuration - all directories will be exported automatically
-        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'scripts', 'orchestration']
+        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'scripts', 'skills', 'orchestration']
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -62,6 +62,7 @@ class ClaudeCommandsExporter:
         self.hooks_count = 0
         self.agents_count = 0
         self.scripts_count = 0
+        self.skills_count = 0
 
         # Versioning is now handled by LLM in exportcommands.md
         # These are kept for backward compatibility but not actively used
@@ -95,7 +96,7 @@ class ClaudeCommandsExporter:
         print("\n📂 Phase 1: Creating Local Export...")
         print("-" * 40)
 
-        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, orchestration)")
+        print("🔍 Using comprehensive directory export (commands, hooks, agents, scripts, skills, orchestration)")
 
         # Create staging directory
         staging_dir = os.path.join(self.export_dir, "staging")
@@ -121,6 +122,9 @@ class ClaudeCommandsExporter:
 
         # Export .claude/scripts directory
         self._export_claude_scripts(staging_dir)
+
+        # Export .claude/skills directory
+        self._export_skills(staging_dir)
 
         # Export settings.json
         self._export_settings(staging_dir)
@@ -428,6 +432,31 @@ class ClaudeCommandsExporter:
 
         print(f"✅ Exported {scripts_count} .claude/scripts files")
 
+    def _export_skills(self, staging_dir):
+        """Export .claude/skills directory for reference skills"""
+        print("🧠 Exporting .claude/skills directory...")
+
+        source_dir = os.path.join(self.project_root, '.claude', 'skills')
+        if not os.path.exists(source_dir):
+            print("⚠️  Warning: .claude/skills directory not found")
+            return
+
+        target_dir = os.path.join(staging_dir, 'skills')
+        os.makedirs(target_dir, exist_ok=True)
+
+        # Reuse directory copy helper for filtering and transformations
+        self._copy_directory_with_filtering(source_dir, target_dir)
+
+        allowed_extensions = ('.sh', '.py', '.md', '.json', '.toml', '.txt')
+        for root, dirs, files in os.walk(target_dir):
+            for file in files:
+                if file.endswith(allowed_extensions):
+                    self.skills_count += 1
+                    rel_path = os.path.relpath(os.path.join(root, file), target_dir)
+                    print(f"   🧠 {rel_path}")
+
+        print(f"✅ Exported {self.skills_count} skills")
+
     def _export_settings(self, staging_dir):
         """Export settings.json file"""
         print("⚙️  Exporting settings.json...")
@@ -691,6 +720,7 @@ class ClaudeCommandsExporter:
 - **{self.commands_count} Commands**: Complete workflow orchestration system
 - **{self.hooks_count} Hooks**: Claude Code automation and workflow hooks
 - **{self.scripts_count} Scripts**: Development and automation tools (scripts/ directory)
+- **{self.skills_count} Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
 - **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
@@ -779,13 +809,14 @@ class ClaudeCommandsExporter:
             r'\*\*(\d+) Hooks\*\*': f'**{self.hooks_count} Hooks**',
             r'\*\*(\d+) Scripts\*\*': f'**{self.scripts_count} Scripts**',
             r'\*\*(\d+) Agents\*\*': f'**{self.agents_count} Agents**',
+            r'\*\*(\d+) Skills\*\*': f'**{self.skills_count} Skills**',
         }
 
         # Apply all replacements
         for pattern, replacement in replacements.items():
             content = re.sub(pattern, replacement, content)
 
-        print(f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents")
+        print(f"   📊 Dynamic counts: {self.commands_count} commands, {self.hooks_count} hooks, {self.scripts_count} scripts, {self.agents_count} agents, {self.skills_count} skills")
         return content
 
     def _generate_readme(self):
@@ -825,6 +856,7 @@ class ClaudeCommandsExporter:
 - **{self.commands_count} commands** workflow orchestration commands
 - **{self.hooks_count} hooks** Claude Code automation hooks
 - **{self.scripts_count} scripts** reusable automation scripts (scripts/)
+- **{self.skills_count} skills** shared knowledge references (.claude/skills/)
 
 ## MANUAL INSTALLATION
 
@@ -835,6 +867,7 @@ Copy the exported commands and hooks to your project's `.claude/` directory:
 - Hooks → `.claude/hooks/`
 - Agents → `.claude/agents/`
 - Scripts → `scripts/` in your project root
+- Skills → `.claude/skills/`
 
 ## 📊 **Export Contents**
 
@@ -842,6 +875,7 @@ This comprehensive export includes:
 - **📋 {self.commands_count} Command Definitions** - Complete workflow orchestration system (.claude/commands/)
 - **📎 {self.hooks_count} Claude Code Hooks** - Essential workflow automation (.claude/hooks/)
 - **🤖 {self.agents_count} Agent Definitions** - Specialized task agents for autonomous workflows (.claude/agents/)
+- **🧠 {self.skills_count} Skills** - Knowledge base exports (.claude/skills/)
 - **🔧 {self.scripts_count} Scripts** - Development environment management (scripts/)
 - **🤖 Orchestration System** - Core multi-agent task delegation (project-specific parts excluded)
 - **📚 Complete Documentation** - Setup guide with adaptation examples
@@ -1045,6 +1079,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             'hooks': os.path.join(claude_dir, 'hooks'),
             'agents': os.path.join(claude_dir, 'agents'),
             'claude_scripts': os.path.join(claude_dir, 'scripts'),  # .claude/scripts directory
+            'skills': os.path.join(claude_dir, 'skills'),           # .claude/skills directory
             'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
             'orchestration': 'orchestration',  # Goes to repo root
             'scripts': None                    # Goes to repo root within scripts/
@@ -1052,7 +1087,8 @@ This is a filtered reference export from a working Claude Code project. Commands
 
         # Create the .claude/ subdirectories (but not for files like settings.json)
         for local_name, target_path in dirs_mapping.items():
-            if target_path and target_path.startswith(claude_dir) and not target_path.endswith('.json'):
+            # Create directory only if target_path is a directory (no file extension)
+            if target_path and target_path.startswith(claude_dir) and not Path(target_path).suffix:
                 os.makedirs(target_path, exist_ok=True)
 
         # Copy content with proper directory mapping
@@ -1169,6 +1205,7 @@ This is a filtered reference export from a working Claude Code project. Commands
 - 📋 Commands: {self.commands_count} command definitions with content filtering
 - 📎 Hooks: {self.hooks_count} Claude Code hooks with nested structure
 - 🚀 Scripts: {self.scripts_count} reusable automation scripts (scripts/ directory)
+- 🧠 Skills: {self.skills_count} shared knowledge references (.claude/skills/)
 - 🤖 Orchestration: Multi-agent task delegation system (core components only)
 - 📚 Documentation: Complete README with installation guide and adaptation examples
 
@@ -1209,6 +1246,7 @@ This export **excludes** the following project-specific directories:
 - **📋 {self.commands_count} Commands**: Complete workflow orchestration system
 - **📎 {self.hooks_count} Hooks**: Essential Claude Code workflow automation
 - **🚀 {self.scripts_count} Scripts**: Development environment management (scripts/ directory)
+- **🧠 {self.skills_count} Skills**: Reference knowledge exports (.claude/skills/)
 - **🤖 Orchestration System**: Core multi-agent task delegation (WIP prototype)
 - **📚 Complete Documentation**: Setup guide with adaptation examples
 
