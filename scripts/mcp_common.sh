@@ -751,18 +751,13 @@ add_mcp_server() {
             grok_env_flags+=(--env "GROK_MODEL=$grok_model_value")
         fi
 
-        if [ -n "${XAI_DEFAULT_CHAT_MODEL:-}" ]; then
-            grok_env_flags+=(--env "XAI_DEFAULT_CHAT_MODEL=$XAI_DEFAULT_CHAT_MODEL")
-        elif [ -n "$grok_default_model" ]; then
+        if [ -n "$grok_default_model" ]; then
             grok_env_flags+=(--env "XAI_DEFAULT_CHAT_MODEL=$grok_default_model")
         fi
 
-        if [ -n "${XAI_MODEL:-}" ]; then
-            grok_env_flags+=(--env "XAI_MODEL=$XAI_MODEL")
-        elif [ -n "${XAI_DEFAULT_CHAT_MODEL:-}" ]; then
-            grok_env_flags+=(--env "XAI_MODEL=$XAI_DEFAULT_CHAT_MODEL")
-        elif [ -n "$grok_default_model" ]; then
-            grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
+        local xai_model_value="${XAI_MODEL:-$grok_model_value}"
+        if [ -n "$xai_model_value" ]; then
+            grok_env_flags+=(--env "XAI_MODEL=$xai_model_value")
         fi
         add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
