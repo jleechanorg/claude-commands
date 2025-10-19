@@ -33,12 +33,18 @@ normalize_scope_glob() {
     echo "$glob"
 }
 
+# Lowercase helper compatible with Bash 3
+to_lowercase() {
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
 # Identify whether a file path should be considered test code
 is_test_file() {
     local path="$1"
     local ext="$2"
 
-    local path_lc="${path,,}"
+    local path_lc
+    path_lc=$(to_lowercase "$path")
     if [[ "$path_lc" == *"/tests/"* \
         || "$path_lc" == *"/test/"* \
         || "$path_lc" == *"/testing/"* \
@@ -53,7 +59,8 @@ is_test_file() {
     fi
 
     local filename="${path##*/}"
-    local filename_lc="${filename,,}"
+    local filename_lc
+    filename_lc=$(to_lowercase "$filename")
 
     if [[ "$filename_lc" == test_* ]]; then
         return 0
@@ -209,16 +216,41 @@ declare -a FILE_PATHS=()
 declare -a FILE_EXTS=()
 declare -a FILE_LINES=()
 declare -a FILE_MODES=()
+declare -a CANDIDATE_FILES=()
 
 while IFS= read -r -d '' file; do
+    CANDIDATE_FILES+=("$file")
+done < <("${FIND_CMD[@]}")
+
+declare -A LINE_COUNTS=()
+if (( ${#CANDIDATE_FILES[@]} > 0 )); then
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+
+        line="${line#${line%%[![:space:]]*}}"
+        [[ -z "$line" ]] && continue
+
+        count_value=${line%% *}
+        path_value=${line#"$count_value"}
+        path_value="${path_value#${path_value%%[![:space:]]*}}"
+
+        if [[ "$path_value" == "total" || -z "$path_value" ]]; then
+            continue
+        fi
+
+        LINE_COUNTS["$path_value"]="$count_value"
+    done < <(printf '%s\0' "${CANDIDATE_FILES[@]}" | xargs -0 -n 200 wc -l 2>/dev/null || true)
+fi
+
+for file in "${CANDIDATE_FILES[@]}"; do
     ext="${file##*.}"
-    ext="${ext,,}"
+    ext=$(to_lowercase "$ext")
 
     if [[ -z ${LANGUAGE_LABELS["$ext"]+x} ]]; then
         continue
     fi
 
-    lines=$(wc -l < "$file" 2>/dev/null || echo 0)
+    lines="${LINE_COUNTS["$file"]:-0}"
     lines=${lines//[[:space:]]/}
     if [[ -z "$lines" ]]; then
         lines=0
@@ -241,7 +273,7 @@ while IFS= read -r -d '' file; do
     FILE_EXTS+=("$ext")
     FILE_LINES+=("$lines")
     FILE_MODES+=("$mode")
-done < <("${FIND_CMD[@]}")
+done
 
 for ext in "${ORDERED_EXTS[@]}"; do
     prod_value=${PROD_COUNTS["$ext"]:-0}

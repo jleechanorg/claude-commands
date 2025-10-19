@@ -1086,9 +1086,9 @@ This is a filtered reference export from a working Claude Code project. Commands
         }
 
         # Create the .claude/ subdirectories (but not for files like settings.json)
+        file_targets = {'settings_json'}
         for local_name, target_path in dirs_mapping.items():
-            # Create directory only if target_path is a directory (no file extension)
-            if target_path and target_path.startswith(claude_dir) and not Path(target_path).suffix:
+            if target_path and target_path.startswith(claude_dir) and local_name not in file_targets:
                 os.makedirs(target_path, exist_ok=True)
 
         # Copy content with proper directory mapping

@@ -1,6 +1,5 @@
 ---
 description: Get multi-model second opinion (alias for /second_opinion)
-aliases: [secondopinion]
 type: ai
 execution_mode: immediate
 ---

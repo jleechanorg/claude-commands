@@ -12,7 +12,7 @@ This document lists the dependencies required for the `/secondo` command to func
 
 The authentication system (`scripts/auth-cli.mjs`) requires Node.js packages.
 
-**✅ Included in PR**: A root `package.json` with express dependency is now included.
+**ℹ️ Note**: Ensure your project root contains a `package.json` with the `express` dependency.
 
 ```bash
 # Install all dependencies (from project root)
