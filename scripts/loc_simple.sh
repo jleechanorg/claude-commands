@@ -1,7 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 set -euo pipefail
 IFS=$'\n\t'
+
+if [[ -z ${BASH_VERSINFO:-} || ${BASH_VERSINFO[0]} -lt 4 ]]; then
+    echo "loc_simple.sh requires Bash >= 4" >&2
+    exit 1
+fi
 
 # Simple Lines of Code Counter - Accurate Production vs Test breakdown
 # Excludes: venv/, roadmap/ (planning docs), and other non-production directories
@@ -205,12 +210,31 @@ FIND_CMD+=(
     -print0
 )
 
+declare -a MATCHED_FILES=()
+while IFS= read -r -d '' file; do
+    MATCHED_FILES+=("$file")
+done < <("${FIND_CMD[@]}")
+
+declare -A FILE_LINE_MAP=()
+if (( ${#MATCHED_FILES[@]} )); then
+    while IFS= read -r line; do
+        line=${line%$'\n'}
+        if [[ $line =~ ^[[:space:]]*([0-9]+)[[:space:]]+(.+)$ ]]; then
+            count=${BASH_REMATCH[1]}
+            path=${BASH_REMATCH[2]}
+            if [[ $path != "total" ]]; then
+                FILE_LINE_MAP["$path"]=$count
+            fi
+        fi
+    done < <(wc -l -- "${MATCHED_FILES[@]}" 2>/dev/null)
+fi
+
 declare -a FILE_PATHS=()
 declare -a FILE_EXTS=()
 declare -a FILE_LINES=()
 declare -a FILE_MODES=()
 
-while IFS= read -r -d '' file; do
+for file in "${MATCHED_FILES[@]}"; do
     ext="${file##*.}"
     ext="${ext,,}"
 
@@ -218,11 +242,7 @@ while IFS= read -r -d '' file; do
         continue
     fi
 
-    lines=$(wc -l < "$file" 2>/dev/null || echo 0)
-    lines=${lines//[[:space:]]/}
-    if [[ -z "$lines" ]]; then
-        lines=0
-    fi
+    lines=${FILE_LINE_MAP["$file"]:-0}
 
     mode="prod"
     if is_test_file "$file" "$ext"; then
@@ -241,7 +261,7 @@ while IFS= read -r -d '' file; do
     FILE_EXTS+=("$ext")
     FILE_LINES+=("$lines")
     FILE_MODES+=("$mode")
-done < <("${FIND_CMD[@]}")
+done
 
 for ext in "${ORDERED_EXTS[@]}"; do
     prod_value=${PROD_COUNTS["$ext"]:-0}

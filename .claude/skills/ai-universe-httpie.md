@@ -208,16 +208,18 @@ echo "$RESPONSE" | jq -r '.result.content[0].text' | jq '{
 
 ```bash
 # Get current rate limit status
-echo '{
-  "jsonrpc": "2.0",
-  "method": "tools/call",
-  "params": {
-    "name": "rate-limit.status",
-    "arguments": {
-      "userId": "'$(node scripts/auth-cli.mjs status | grep UID | awk "{print \$2}")'"
+uid=$(node scripts/auth-cli.mjs status | awk '/UID/ {print $2}')
+
+jq -n --arg uid "$uid" '{
+  jsonrpc: "2.0",
+  method: "tools/call",
+  params: {
+    name: "rate-limit.status",
+    arguments: {
+      userId: $uid
     }
   },
-  "id": 1
+  id: 1
 }' | http POST "$MCP_URL" \
   Authorization:"Bearer $TOKEN"
 ```
