@@ -1,0 +1,20 @@
+{
+  "name": "worldarchitect-ai-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Node.js dependencies for WorldArchitect.AI automation scripts",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "scripts": {
+    "auth": "node scripts/auth-cli.mjs",
+    "secondo": "bash scripts/secondo-cli.sh"
+  },
+  "keywords": ["cli", "authentication", "ai-universe"],
+  "author": "WorldArchitect.AI",
+  "license": "MIT"
+}
