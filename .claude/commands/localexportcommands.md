@@ -34,12 +34,17 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Commands** (.claude/commands/) → ~/.claude/commands/ - Slash commands
 - **Hooks** (.claude/hooks/) → ~/.claude/hooks/ - Lifecycle hooks
 - **Agents** (.claude/agents/) → ~/.claude/agents/ - Subagents
-- **Scripts** (.claude/scripts/) → ~/.claude/scripts/ - Utility scripts (secondo auth-cli.mjs, etc.)
+- **Scripts** (.claude/scripts/) → ~/.claude/scripts/ - Utility scripts (MCP scripts, secondo auth-cli.mjs, etc.)
 - **Skills** (.claude/skills/) → ~/.claude/skills/ - Skill documentation and guides
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
 
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
+
+**✅ INCLUDES**:
+- MCP server scripts (claude_mcp.sh, codex_mcp.sh, mcp_common.sh, etc.)
+- Secondo authentication CLI (auth-cli.mjs)
+- Node.js dependencies (package.json, package-lock.json)
 
 ## Implementation
 
@@ -56,20 +61,32 @@ if [ ! -d ".claude" ]; then
     exit 1
 fi
 
-# Define exportable components list (extracted for maintainability)
+# Source shared export component configuration from Python
+# This ensures both /localexportcommands and /exportcommands export the same directories
 
-# This list contains ONLY standard Claude Code directories, not project-specific custom ones
-
-# Based on official Claude Code documentation and standard directory structure
-
-EXPORTABLE_COMPONENTS=(
-    "commands"      # Slash commands (.md files) - STANDARD
-    "hooks"         # Lifecycle hooks - STANDARD
-    "agents"        # Subagents/specialized AI assistants - STANDARD
-    "scripts"       # Utility scripts (secondo auth-cli.mjs, etc.) - STANDARD
-    "skills"        # Skill documentation and guides - STANDARD
-    "settings.json" # Configuration file - STANDARD
-)
+if [ -f ".claude/commands/export_config.py" ]; then
+    # Read exportable components from Python config
+    mapfile -t EXPORTABLE_COMPONENTS < <(python3 -c "
+import sys
+sys.path.insert(0, '.claude/commands')
+from export_config import get_exportable_components
+for component in get_exportable_components():
+    print(component)
+")
+    echo "✅ Using shared Python export configuration"
+else
+    echo "⚠️  Warning: Shared export config not found, using fallback list"
+    # Fallback list if shared config unavailable
+    # This list contains ONLY standard Claude Code directories, not project-specific custom ones
+    EXPORTABLE_COMPONENTS=(
+        "commands"      # Slash commands (.md files) - STANDARD
+        "hooks"         # Lifecycle hooks - STANDARD
+        "agents"        # Subagents/specialized AI assistants - STANDARD
+        "scripts"       # Utility scripts (MCP scripts, secondo auth-cli.mjs, etc.) - STANDARD
+        "skills"        # Skill documentation and guides - STANDARD
+        "settings.json" # Configuration file - STANDARD
+    )
+fi
 
 # Create backup of existing ~/.claude components (selective backup strategy)
 

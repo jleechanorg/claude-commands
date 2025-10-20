@@ -14,6 +14,7 @@ import re
 import json
 import requests
 from pathlib import Path
+from export_config import get_exportable_components
 
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
@@ -45,8 +46,16 @@ class ClaudeCommandsExporter:
         self.export_branch = f"export-{time.strftime('%Y%m%d-%H%M%S')}"
         self.github_token = os.environ.get('GITHUB_TOKEN')
 
-        # Export configuration - all directories will be exported automatically
-        self.EXPORT_SUBDIRS = ['commands', 'hooks', 'agents', 'scripts', 'skills', 'orchestration']
+        # Export configuration - uses shared config from .claude/commands/export_config.py
+        # This ensures both /localexportcommands and /exportcommands export the same directories
+        # Shared config defines: commands, hooks, agents, scripts, skills, settings.json
+        # Note: 'orchestration' is added here specifically for GitHub export
+        base_components = get_exportable_components()
+        # Remove 'settings.json' from subdirs list (it's a file, not a directory)
+        self.EXPORT_SUBDIRS = [c for c in base_components if c != 'settings.json']
+        # Add orchestration for GitHub export
+        if 'orchestration' not in self.EXPORT_SUBDIRS:
+            self.EXPORT_SUBDIRS.append('orchestration')
 
         # Commands to skip during export (project-specific and user-specified exclusions)
         self.COMMANDS_SKIP_LIST = [
@@ -431,27 +440,90 @@ class ClaudeCommandsExporter:
         print(f"✅ Exported {self.scripts_count} scripts")
 
     def _export_claude_scripts(self, staging_dir):
-        """Export .claude/scripts directory (learning/memory management scripts)"""
+        """Export .claude/scripts directory and aggregate MCP launchers."""
         print("📜 Exporting .claude/scripts directory...")
 
-        source_dir = os.path.join(self.project_root, '.claude', 'scripts')
-        if not os.path.exists(source_dir):
-            print("⚠️  Warning: .claude/scripts directory not found")
-            return
-
-        # Create claude_scripts subdirectory in staging (will map to .claude/scripts in repo)
-        target_dir = os.path.join(staging_dir, 'claude_scripts')
-        os.makedirs(target_dir, exist_ok=True)
+        source_dir = Path(self.project_root) / '.claude' / 'scripts'
+        target_dir = Path(staging_dir) / 'claude_scripts'
+        target_dir.mkdir(parents=True, exist_ok=True)
 
         scripts_count = 0
-        for file_path in Path(source_dir).glob('*.py'):
-            if file_path.is_file():
-                shutil.copy2(file_path, target_dir)
-                self._apply_content_filtering(os.path.join(target_dir, file_path.name))
-                scripts_count += 1
-                print(f"   📜 {file_path.name}")
+        copied_names = set()
 
-        print(f"✅ Exported {scripts_count} .claude/scripts files")
+        def copy_script(path: Path):
+            nonlocal scripts_count
+            if not path.exists() or not path.is_file():
+                return
+
+            destination = target_dir / path.name
+            shutil.copy2(path, destination)
+            self._apply_content_filtering(str(destination))
+
+            if destination.suffix == '.sh':
+                try:
+                    os.chmod(destination, 0o755)
+                except OSError:
+                    pass
+
+            copied_names.add(path.name)
+            scripts_count += 1
+            print(f"   📜 {path.name}")
+
+        # Export native Claude scripts (.claude/scripts)
+        if source_dir.exists():
+            for pattern in ('*.py', '*.sh'):
+                for file_path in source_dir.glob(pattern):
+                    if file_path.name in copied_names:
+                        continue
+                    copy_script(file_path)
+        else:
+            print("⚠️  Warning: .claude/scripts directory not found; attempting legacy MCP locations")
+
+        # Backfill MCP launchers/utilities that remain outside .claude/scripts
+        legacy_candidates = {
+            'claude_mcp.sh': [
+                Path(self.project_root) / 'claude_mcp.sh',
+                Path(self.project_root) / 'scripts' / 'claude_mcp.sh',
+            ],
+            'codex_mcp.sh': [
+                Path(self.project_root) / 'codex_mcp.sh',
+                Path(self.project_root) / 'scripts' / 'codex_mcp.sh',
+            ],
+            'mcp_common.sh': [
+                Path(self.project_root) / 'scripts' / 'mcp_common.sh',
+                Path(self.project_root) / 'mcp_common.sh',
+            ],
+            'mcp_dual_background.sh': [
+                Path(self.project_root) / 'scripts' / 'mcp_dual_background.sh',
+                Path(self.project_root) / 'mcp_dual_background.sh',
+            ],
+            'start_mcp_production.sh': [
+                Path(self.project_root) / 'scripts' / 'start_mcp_production.sh',
+                Path(self.project_root) / 'start_mcp_production.sh',
+            ],
+            'start_mcp_server.sh': [
+                Path(self.project_root) / 'scripts' / 'start_mcp_server.sh',
+                Path(self.project_root) / 'start_mcp_server.sh',
+            ],
+            'mcp_stdio_wrapper.py': [
+                Path(self.project_root) / 'scripts' / 'mcp_stdio_wrapper.py',
+                Path(self.project_root) / 'mcp_stdio_wrapper.py',
+            ],
+        }
+
+        for script_name, candidates in legacy_candidates.items():
+            if script_name in copied_names:
+                continue
+            for legacy_path in candidates:
+                if legacy_path.exists():
+                    copy_script(legacy_path)
+                    break
+
+        if scripts_count == 0:
+            print("⚠️  Warning: No scripts were exported from available locations")
+            return
+
+        print(f"✅ Exported {scripts_count} .claude/scripts files (including MCP launchers)")
 
     def _export_skills(self, staging_dir):
         """Export .claude/skills directory for reference skills"""
