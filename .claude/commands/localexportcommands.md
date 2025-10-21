@@ -29,14 +29,17 @@ Copies the project's .claude folder structure to your local ~/.claude directory,
 
 ## What Gets Exported
 
-This command copies ONLY standard Claude Code directories to ~/.claude:
+This command copies standard Claude Code directories to ~/.claude:
 
 - **Commands** (.claude/commands/) → ~/.claude/commands/ - Slash commands
 - **Hooks** (.claude/hooks/) → ~/.claude/hooks/ - Lifecycle hooks
 - **Agents** (.claude/agents/) → ~/.claude/agents/ - Subagents
+- **Scripts** (.claude/scripts/) → ~/.claude/scripts/ - Utility scripts (secondo auth-cli.mjs, etc.)
+- **Skills** (.claude/skills/) → ~/.claude/skills/ - Skill documentation and guides
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
+- **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
 
-**🚨 EXCLUDED**: Project-specific directories (schemas, templates, scripts, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
+**🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 ## Implementation
 
@@ -63,6 +66,8 @@ EXPORTABLE_COMPONENTS=(
     "commands"      # Slash commands (.md files) - STANDARD
     "hooks"         # Lifecycle hooks - STANDARD
     "agents"        # Subagents/specialized AI assistants - STANDARD
+    "scripts"       # Utility scripts (secondo auth-cli.mjs, etc.) - STANDARD
+    "skills"        # Skill documentation and guides - STANDARD
     "settings.json" # Configuration file - STANDARD
 )
 
@@ -155,6 +160,26 @@ for component in "${components[@]}"; do
     fi
 done
 
+# Export Node.js dependencies for secondo command
+
+echo ""
+echo "📦 Exporting Node.js dependencies (for secondo command)..."
+echo "================================="
+
+if [ -f "package.json" ]; then
+    cp "package.json" "$HOME/.claude/package.json"
+    echo "   ✅ Exported package.json"
+else
+    echo "   ⚠️  package.json not found, skipping"
+fi
+
+if [ -f "package-lock.json" ]; then
+    cp "package-lock.json" "$HOME/.claude/package-lock.json"
+    echo "   ✅ Exported package-lock.json"
+else
+    echo "   ⚠️  package-lock.json not found, skipping"
+fi
+
 # Set executable permissions on hook files
 
 if [ -d "$HOME/.claude/hooks" ]; then
@@ -196,6 +221,11 @@ if [ -d "$HOME/.claude/hooks" ]; then
     echo "🎣 Hooks available: $available_hook_count"
 fi
 
+if [ -d "$HOME/.claude/skills" ]; then
+    skill_count=$(find "$HOME/.claude/skills" -name "*.md" -print0 | grep -zc .)
+    echo "🧠 Skills available: $skill_count"
+fi
+
 echo ""
 echo "🎯 System-Wide Access Enabled!"
 echo "================================="
@@ -216,6 +246,9 @@ echo "1. Commands directory: $([ -d "$HOME/.claude/commands" ] && echo "✅ Pres
 echo "2. Settings file: $([ -f "$HOME/.claude/settings.json" ] && echo "✅ Present" || echo "❌ Missing")"
 echo "3. Hooks directory: $([ -d "$HOME/.claude/hooks" ] && echo "✅ Present" || echo "❌ Missing")"
 echo "4. Agents directory: $([ -d "$HOME/.claude/agents" ] && echo "✅ Present" || echo "❌ Missing")"
+echo "5. Scripts directory: $([ -d "$HOME/.claude/scripts" ] && echo "✅ Present" || echo "❌ Missing")"
+echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present" || echo "❌ Missing")"
+echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
 
 echo ""
 echo "🎉 Local export completed successfully!"
