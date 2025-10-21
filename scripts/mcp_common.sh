@@ -1716,7 +1716,10 @@ else
     FS_SERVER_DIRS=("$HOME/projects")
     wide_fs_enabled=false
     if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
-        FS_SERVER_DIRS+=("/tmp" "$HOME")
+        TMP_MCP_DIR="/tmp/mcp_server"
+        HOME_MCP_DIR="$HOME/mcp_server_files"
+        mkdir -p "$TMP_MCP_DIR" "$HOME_MCP_DIR"
+        FS_SERVER_DIRS+=("$TMP_MCP_DIR" "$HOME_MCP_DIR")
         wide_fs_enabled=true
     fi
 

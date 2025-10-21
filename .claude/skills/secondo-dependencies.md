@@ -79,8 +79,8 @@ export FIREBASE_PROJECT_ID="your-project-id"
 ### Check Node.js Dependencies
 
 ```bash
-# Verify express module can be required
-node -e "require('express')" && echo "✅ express installed" || echo "❌ express missing"
+# Verify express module can be imported (ESM)
+node -e "import('express')" && echo "✅ express installed" || echo "❌ express missing"
 
 # Test auth-cli.mjs loads without errors
 node scripts/auth-cli.mjs

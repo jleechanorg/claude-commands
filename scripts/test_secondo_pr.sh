@@ -3,8 +3,6 @@
 # Test Script for PR #1884 - /secondo Command
 # Tests authentication and secondo-cli.sh functionality
 
-set -e
-
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
