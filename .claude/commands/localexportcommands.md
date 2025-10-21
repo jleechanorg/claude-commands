@@ -157,6 +157,37 @@ export_component() {
     fi
 }
 
+# Consolidate MCP scripts from root scripts/ to .claude/scripts/ before export
+
+echo ""
+echo "📦 Consolidating MCP scripts from root scripts/ to .claude/scripts/..."
+echo "================================="
+
+mkdir -p ".claude/scripts"
+
+# Copy MCP-related scripts from root to .claude/scripts/
+mcp_scripts=(
+    "mcp_common.sh"
+    "mcp_dual_background.sh"
+    "mcp_stdio_wrapper.py"
+    "start_mcp_production.sh"
+    "start_mcp_server.sh"
+)
+
+mcp_copied=0
+for script in "${mcp_scripts[@]}"; do
+    if [ -f "scripts/$script" ]; then
+        cp "scripts/$script" ".claude/scripts/$script"
+        chmod +x ".claude/scripts/$script"
+        echo "   ✅ Copied $script"
+        mcp_copied=$((mcp_copied + 1))
+    else
+        echo "   ⚠️  $script not found in scripts/, skipping"
+    fi
+done
+
+echo "   📊 Copied $mcp_copied MCP scripts to .claude/scripts/"
+
 # Track export statistics
 
 exported_count=0
