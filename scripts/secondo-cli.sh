@@ -63,7 +63,7 @@ check_auth() {
   if ! check_dependencies; then
     return 1
   fi
-  if ! node scripts/auth-cli.mjs status >/dev/null 2>&1; then
+  if ! node scripts/auth-cli.mjs token >/dev/null 2>&1; then
     error "Not authenticated"
     echo ""
     echo "Please authenticate first:"
@@ -170,6 +170,7 @@ EOF
     echo "$request_json" | http POST "$MCP_URL" \
       Accept:'application/json, text/event-stream' \
       Authorization:"Bearer $token" \
+      Content-Type:application/json \
       --timeout="$TIMEOUT" \
       --print=b 2>&1
   elif command -v curl >/dev/null 2>&1; then

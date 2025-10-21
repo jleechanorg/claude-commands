@@ -1034,12 +1034,49 @@ setup_second_opinion_mcp_server() {
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
-    local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+    local token
+    if ! token=$(node scripts/auth-cli.mjs token 2>/dev/null); then
+        echo -e "${RED}  ❌ Failed to obtain authentication token for Second Opinion server${NC}"
+        log_with_timestamp "Failed to retrieve auth token for ${server_name}"
+        INSTALL_RESULTS["$server_name"]="AUTH_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+
+    local json_payload_file
+    json_payload_file=$(mktemp)
+    chmod 600 "$json_payload_file"
+
+    if ! jq -n --arg token "$token" '{type:"http", url:"https://ai-universe-backend-final.onrender.com/mcp", headers:{Authorization:("Bearer " + $token)}}' >"$json_payload_file"; then
+        echo -e "${RED}  ❌ Failed to build MCP server configuration payload${NC}"
+        log_with_timestamp "Failed to build JSON payload for ${server_name}"
+        rm -f "$json_payload_file"
+        INSTALL_RESULTS["$server_name"]="PAYLOAD_FAILED"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        return 1
+    fi
+
+    local redacted_json_payload
+    redacted_json_payload=$(JSON_PAYLOAD_FILE="$json_payload_file" TOKEN="$token" python3 - <<'PY'
+import os, sys
+
+path = os.environ['JSON_PAYLOAD_FILE']
+token = os.environ['TOKEN']
+with open(path, 'r', encoding='utf-8') as handle:
+    data = handle.read().replace(token, '***REDACTED***')
+sys.stdout.write(data)
+PY
+)
+
+    log_with_timestamp "Second Opinion MCP server payload: ${redacted_json_payload}"
 
     local add_output=""
     local add_exit_code=0
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" @"$json_payload_file"
+
+    rm -f "$json_payload_file"
+
+    local add_output_redacted=${add_output//${token}/***REDACTED***}
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
@@ -1051,8 +1088,8 @@ setup_second_opinion_mcp_server() {
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
         echo -e "${RED}  ❌ Failed to add Second Opinion MCP server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add-json" "$server_name" "$add_output"
-        echo -e "${RED}  📋 Add error: $add_output${NC}"
+        log_error_details "${MCP_CLI_BIN} mcp add-json" "$server_name" "$add_output_redacted"
+        echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
         INSTALL_RESULTS["$server_name"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi

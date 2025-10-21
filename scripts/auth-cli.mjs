@@ -22,7 +22,9 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 
 // Constants
-const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (1 month)
+const TOKEN_EXPIRATION_MS = 60 * 60 * 1000; // 60 minutes (1 hour)
+const TOKEN_REFRESH_THRESHOLD_MS = 5 * 60 * 1000; // Refresh when <5 minutes remain
+const SECURE_TOKEN_ENDPOINT = 'https://securetoken.googleapis.com/v1/token';
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 
 // Configuration
@@ -100,7 +102,65 @@ function openBrowser(url) {
   return child;
 }
 
-async function readTokenData({ allowExpired = false, returnNullIfMissing = false } = {}) {
+async function saveTokenData(tokenData) {
+  await ensureTokenDir();
+
+  await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
+  try {
+    const { chmod } = await import('fs/promises');
+    await chmod(CONFIG.tokenPath, 0o600);
+  } catch (err) {
+    // Ignore chmod errors on Windows
+  }
+}
+
+async function refreshAuthToken(tokenData) {
+  if (!tokenData.refreshToken) {
+    throw new Error('Refresh token missing. Please login again.');
+  }
+
+  const apiKey = CONFIG.firebaseConfig.apiKey;
+  if (!apiKey) {
+    throw new Error('FIREBASE_API_KEY is not configured.');
+  }
+
+  const params = new URLSearchParams({
+    grant_type: 'refresh_token',
+    refresh_token: tokenData.refreshToken
+  });
+
+  const response = await fetch(`${SECURE_TOKEN_ENDPOINT}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Failed to refresh token: HTTP ${response.status} ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+
+  if (!data.id_token || !data.refresh_token || !data.expires_in) {
+    throw new Error('Invalid refresh token response from Firebase.');
+  }
+
+  const expiresAt = new Date(Date.now() + Number(data.expires_in) * 1000).toISOString();
+  const updatedTokenData = {
+    ...tokenData,
+    idToken: data.id_token,
+    refreshToken: data.refresh_token,
+    expiresAt,
+    refreshedAt: new Date().toISOString()
+  };
+
+  await saveTokenData(updatedTokenData);
+
+  return updatedTokenData;
+}
+
+async function readTokenData({ allowExpired = false, returnNullIfMissing = false, refreshIfNeeded = false } = {}) {
   await ensureTokenDir();
 
   if (!existsSync(CONFIG.tokenPath)) {
@@ -124,13 +184,25 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     throw new Error(`Corrupted token file: ${err.message}. Please login again.`);
   }
 
-  const expiresAt = new Date(tokenData.expiresAt);
+  let expiresAt = new Date(tokenData.expiresAt);
   if (Number.isNaN(expiresAt.getTime())) {
     throw new Error('Token has an invalid expiration timestamp. Please login again.');
   }
 
-  const now = new Date();
-  const expired = now > expiresAt;
+  let now = new Date();
+  let expired = now > expiresAt;
+
+  if (refreshIfNeeded && (expired || (expiresAt.getTime() - now.getTime()) <= TOKEN_REFRESH_THRESHOLD_MS)) {
+    try {
+      tokenData = await refreshAuthToken(tokenData);
+      expiresAt = new Date(tokenData.expiresAt);
+      now = new Date();
+      expired = now > expiresAt;
+    } catch (refreshError) {
+      expired = true;
+      throw new Error(`Token refresh failed: ${refreshError.message}`);
+    }
+  }
 
   if (expired && !allowExpired) {
     throw new Error('Token expired. Run: node scripts/auth-cli.mjs login');
@@ -184,6 +256,11 @@ function getAuthHtml(callbackUrl) {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
         const idToken = await user.getIdToken();
+        const { refreshToken, expirationTime } = user.stsTokenManager || {};
+
+        if (!refreshToken) {
+          throw new Error('Missing refresh token from Firebase response.');
+        }
 
         // Send token back to CLI server
         const response = await fetch('${callbackUrl}', {
@@ -191,6 +268,8 @@ function getAuthHtml(callbackUrl) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             idToken,
+            refreshToken,
+            expirationTime,
             user: {
               uid: user.uid,
               email: user.email,
@@ -237,10 +316,15 @@ async function login() {
   // Handle token callback
   app.post(CONFIG.callbackPath, async (req, res) => {
     try {
-      const { idToken, user } = req.body;
+      const { idToken, refreshToken, expirationTime, user } = req.body;
 
       if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
         res.status(400).json({ error: 'Missing or invalid token' });
+        return;
+      }
+
+      if (!refreshToken || typeof refreshToken !== 'string' || !refreshToken.trim()) {
+        res.status(400).json({ error: 'Missing refresh token' });
         return;
       }
 
@@ -251,21 +335,19 @@ async function login() {
 
       // Save token to file
       await ensureTokenDir();
+      const expirationTimestamp = expirationTime ? Number(expirationTime) : null;
+      const computedExpiration = Number.isFinite(expirationTimestamp)
+        ? expirationTimestamp
+        : Date.now() + TOKEN_EXPIRATION_MS;
       const tokenData = {
         idToken,
+        refreshToken,
         user,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        expiresAt: new Date(computedExpiration).toISOString()
       };
 
-      await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
-      // Ensure token file has restricted permissions (best-effort on Windows)
-      try {
-        const { chmod } = await import('fs/promises');
-        await chmod(CONFIG.tokenPath, 0o600);
-      } catch (err) {
-        // Ignore chmod errors on Windows
-      }
+      await saveTokenData(tokenData);
 
       res.json({ success: true });
       tokenReceived = true;
@@ -352,11 +434,15 @@ async function logout() {
  */
 async function status() {
   try {
-    const { tokenData, expiresAt, expired } = await readTokenData({ allowExpired: true, returnNullIfMissing: true });
+    const { tokenData, expiresAt, expired } = await readTokenData({
+      allowExpired: true,
+      returnNullIfMissing: true,
+      refreshIfNeeded: true
+    });
 
     if (!tokenData) {
       console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
-      return;
+      process.exit(1);
     }
 
     console.log('📊 Authentication Status:');
@@ -366,8 +452,14 @@ async function status() {
     console.log(`   Expires: ${expiresAt.toLocaleString()}`);
     console.log(`   Status: ${expired ? '❌ EXPIRED' : '✅ VALID'}\n`);
 
+    if (tokenData.refreshedAt) {
+      console.log(`   Last Refresh: ${new Date(tokenData.refreshedAt).toLocaleString()}`);
+      console.log('');
+    }
+
     if (expired) {
       console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
+      process.exit(1);
     }
   } catch (error) {
     console.error('❌ Error reading status:', error.message);
@@ -380,7 +472,7 @@ async function status() {
  */
 async function getToken() {
   try {
-    const { tokenData } = await readTokenData();
+    const { tokenData } = await readTokenData({ refreshIfNeeded: true });
 
     // Output just the token (for piping to other commands)
     console.log(tokenData.idToken);
@@ -395,7 +487,7 @@ async function getToken() {
  */
 async function testMcp() {
   try {
-    const { tokenData } = await readTokenData();
+    const { tokenData } = await readTokenData({ refreshIfNeeded: true });
     console.log('🧪 Testing authenticated MCP connection...\n');
 
     const response = await fetch(CONFIG.productionMcpUrl, {
