@@ -288,5 +288,129 @@
     "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/git-header.sh\" ] && \"$ROOT/.claude/hooks/git-header.sh\" --status-only && exit 0; fi; if [ -x \"$HOME/.claude/hooks/git-header.sh\" ]; then \"$HOME/.claude/hooks/git-header.sh\" --status-only; elif git rev-parse --is-inside-work-tree >/dev/null 2>&1; then echo \"📁 $(basename \"$(pwd)\") | 🌿 $(git branch --show-current 2>/dev/null || echo 'detached')\"; else echo \"📁 $(basename \"$(pwd)\") | 🏠 home\"; fi'",
     "padding": 0
   },
-  "mcpServers": {}
+  "mcpServers": {
+    "chrome-superpower": {
+      "command": "node",
+      "args": [
+        "${HOME}/.claude/plugins/cache/superpowers-chrome/mcp/dist/index.js"
+      ]
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ]
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
+    },
+    "gemini-cli-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@yusukedev/gemini-cli-mcp"
+      ]
+    },
+    "ddg-search": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@oevortex/ddg_search"
+      ]
+    },
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp"
+      ]
+    },
+    "playwright-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp"
+      ],
+      "env": {
+        "PLAYWRIGHT_HEADLESS": "true"
+      }
+    },
+    "memory-server": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "${HOME}/projects"
+      ]
+    },
+    "grok-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "grok-mcp"
+      ],
+      "env": {
+        "XAI_API_KEY": "${XAI_API_KEY}"
+      }
+    },
+    "perplexity-ask": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@chatmcp/server-perplexity-ask"
+      ],
+      "env": {
+        "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
+      }
+    },
+    "render": {
+      "type": "http",
+      "url": "https://mcp.render.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${RENDER_API_KEY}"
+      }
+    },
+    "serena": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/oraios/serena",
+        "serena",
+        "start-mcp-server"
+      ],
+      "env": {
+        "MCP_VERBOSE_TOOLS": "false",
+        "MCP_AUTO_DISCOVER": "false"
+      }
+    },
+    "ios-simulator-mcp": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "ios-simulator-mcp"
+      ]
+    },
+    "worldarchitect": {
+      "command": "python3",
+      "args": [
+        "${HOME}/projects/worktree_worker2/$PROJECT_ROOT/mcp_api.py",
+        "--stdio"
+      ],
+      "env": {
+        "PYTHONPATH": "${HOME}/projects/worktree_worker2"
+      }
+    }
+  }
 }
