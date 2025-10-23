@@ -50,9 +50,9 @@ MCP_INSTALL_DUAL_SCOPE=${MCP_INSTALL_DUAL_SCOPE:-true}  # Install to both local 
 MCP_STATS_LOCK_FILE=${MCP_STATS_LOCK_FILE:-"/tmp/${MCP_CLI_BIN}_mcp_stats.lock"}
 MCP_LOG_FILE_PREFIX=${MCP_LOG_FILE_PREFIX:-"/tmp/${MCP_CLI_BIN}_mcp"}
 MCP_BACKUP_PREFIX=${MCP_BACKUP_PREFIX:-${MCP_CLI_BIN}}
+MCP_REQUIRE_CLI=${MCP_REQUIRE_CLI:-false}
 AI_UNIVERSE_MCP_URL_DEFAULT="https://ai-universe-backend-final.onrender.com/mcp"
 AI_UNIVERSE_MCP_URL=${AI_UNIVERSE_MCP_URL:-$AI_UNIVERSE_MCP_URL_DEFAULT}
-MCP_REQUIRE_CLI=${MCP_REQUIRE_CLI:-false}
 # Portable uppercase conversion (macOS ships Bash 3.2 without ^^)
 MCP_PRODUCT_NAME_UPPER=$(printf '%s' "$MCP_PRODUCT_NAME" | tr '[:lower:]' '[:upper:]')
 if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
