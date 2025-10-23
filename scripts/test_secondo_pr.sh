@@ -1,9 +1,9 @@
 #!/bin/bash
 
-# Test Script for PR #1884 - /secondo Command
+# Test Script for PR #86 - /secondo Command
 # Tests authentication and secondo-cli.sh functionality
 
-set -e
+set -Eeuo pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -12,10 +12,15 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-echo -e "${BLUE}🧪 Testing PR #1884: /secondo Command${NC}\n"
+echo -e "${BLUE}🧪 Testing PR #86: /secondo Command${NC}\n"
 
 # Test credentials from ~/.bashrc (test-credentials skill)
-source ~/.bashrc 2>/dev/null || true
+ENV_FILE="${CLAUDE_MCP_ENV_FILE:-$HOME/.config/claude-mcp/env}"
+if [ -f "$ENV_FILE" ]; then
+    echo -e "${BLUE}ℹ️  Loading credentials from $ENV_FILE${NC}"
+    # shellcheck disable=SC1090
+    source "$ENV_FILE" >/dev/null 2>&1 || true
+fi
 
 echo -e "${BLUE}📋 Test Plan:${NC}"
 echo "1. Dependency checks"
@@ -63,6 +68,8 @@ else
     echo -e "${RED}❌ Not installed${NC}"
     exit 1
 fi
+
+EXPRESS_MISSING=""
 
 echo -n "Checking express npm package... "
 if node -e "require('express')" 2>/dev/null; then
@@ -143,10 +150,24 @@ fi
 echo -e "\n${YELLOW}Security Validation:${NC}"
 
 echo -n "Checking for hardcoded secrets... "
-if grep -iE "(password|secret|key).*=.*['\"][^'\"]{20,}" scripts/auth-cli.mjs | grep -v "apiKey: process.env"; then
-    echo -e "${RED}❌ Potential hardcoded secrets found${NC}"
+if command -v trufflehog >/dev/null 2>&1; then
+    if trufflehog filesystem --no-entropy --json scripts/auth-cli.mjs | grep -q '"reason"'; then
+        echo -e "${RED}❌ Potential hardcoded secrets found by truffleHog${NC}"
+    else
+        echo -e "${GREEN}✅ No hardcoded secrets found by truffleHog${NC}"
+    fi
+elif command -v git-secrets >/dev/null 2>&1; then
+    if git-secrets --scan scripts/auth-cli.mjs 2>&1 | grep -q "Secret"; then
+        echo -e "${RED}❌ Potential hardcoded secrets found by git-secrets${NC}"
+    else
+        echo -e "${GREEN}✅ No hardcoded secrets found by git-secrets${NC}"
+    fi
 else
-    echo -e "${GREEN}✅ No hardcoded secrets${NC}"
+    if grep -iE "(password|secret|key)[[:space:]]*=[[:space:]]*['\"][^'\"]{8,}" scripts/auth-cli.mjs | grep -viE "process\\.env|require\(|import " >/dev/null 2>&1; then
+        echo -e "${YELLOW}⚠️  Potential hardcoded secrets found (fallback grep). Consider installing truffleHog or git-secrets for better detection.${NC}"
+    else
+        echo -e "${GREEN}✅ No hardcoded secrets found (fallback grep)${NC}"
+    fi
 fi
 
 echo -n "Checking localhost binding... "
@@ -325,7 +346,7 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo -e "${BLUE}📊 Test Summary${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
 
-if [ -z "$EXPRESS_MISSING" ]; then
+if [ -z "${EXPRESS_MISSING:-}" ]; then
     echo -e "${GREEN}✅ All dependencies installed${NC}"
 else
     echo -e "${YELLOW}⚠️  Express package missing - run: npm install express${NC}"
@@ -348,4 +369,4 @@ echo "3. Verify package.json declares express (^4.19.2) and scripts (auth/second
 echo "4. Consider adding setup script for Firebase config"
 echo "5. Add CI/CD tests for PR validation"
 
-echo -e "\n${GREEN}🎉 PR #1884 Structure Validation Complete!${NC}\n"
+echo -e "\n${GREEN}🎉 PR #86 Structure Validation Complete!${NC}\n"

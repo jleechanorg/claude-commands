@@ -70,15 +70,19 @@ fi
 # Source shared export component configuration from Python
 # This ensures both /localexportcommands and /exportcommands export the same directories
 
-if [ -f ".claude/commands/export_config.py" ]; then
-    # Read exportable components from Python config
-    mapfile -t EXPORTABLE_COMPONENTS < <(python3 -c "
+if [ -f ".claude/commands/export_config.py" ] && command -v python3 >/dev/null 2>&1; then
+    # Read exportable components from Python config (portable to Bash 3.2)
+    EXPORTABLE_COMPONENTS=()
+    while IFS= read -r component; do
+        [ -n "$component" ] && EXPORTABLE_COMPONENTS+=("$component")
+    done < <(python3 - <<'PY'
 import sys
 sys.path.insert(0, '.claude/commands')
 from export_config import get_exportable_components
 for component in get_exportable_components():
     print(component)
-")
+PY
+)
     echo "✅ Using shared Python export configuration"
 else
     echo "⚠️  Warning: Shared export config not found, using fallback list"
@@ -262,7 +266,7 @@ if [ -d "$HOME/.claude/hooks" ]; then
     echo ""
     echo "🔧 Setting executable permissions on hooks..."
     find "$HOME/.claude/hooks" -name "*.sh" -exec chmod +x {} \;
-    hook_count=$(find "$HOME/.claude/hooks" -name "*.sh" -print0 | grep -zc .)
+    hook_count=$(find "$HOME/.claude/hooks" -name "*.sh" -print | wc -l)
     echo "   ✅ Made $hook_count hook files executable"
 fi
 
@@ -271,7 +275,7 @@ fi
 if [ -d "$HOME/.claude/scripts" ]; then
     echo "🔧 Setting executable permissions on scripts..."
     find "$HOME/.claude/scripts" -name "*.sh" -exec chmod +x {} \;
-    script_count=$(find "$HOME/.claude/scripts" -name "*.sh" -print0 | grep -zc .)
+    script_count=$(find "$HOME/.claude/scripts" -name "*.sh" -print | wc -l)
     echo "   ✅ Made $script_count script files executable"
 fi
 
@@ -283,22 +287,22 @@ echo "================================="
 echo "✅ Components exported: $exported_count/$total_components"
 
 if [ -d "$HOME/.claude/commands" ]; then
-    command_count=$(find "$HOME/.claude/commands" -name "*.md" -print0 | grep -zc .)
+    command_count=$(find "$HOME/.claude/commands" -name "*.md" -print | wc -l)
     echo "📋 Commands available: $command_count"
 fi
 
 if [ -d "$HOME/.claude/agents" ]; then
-    agent_count=$(find "$HOME/.claude/agents" -name "*.md" -print0 | grep -zc .)
+    agent_count=$(find "$HOME/.claude/agents" -name "*.md" -print | wc -l)
     echo "🤖 Agents available: $agent_count"
 fi
 
 if [ -d "$HOME/.claude/hooks" ]; then
-    available_hook_count=$(find "$HOME/.claude/hooks" -name "*.sh" -print0 | grep -zc .)
+    available_hook_count=$(find "$HOME/.claude/hooks" -name "*.sh" -print | wc -l)
     echo "🎣 Hooks available: $available_hook_count"
 fi
 
 if [ -d "$HOME/.claude/skills" ]; then
-    skill_count=$(find "$HOME/.claude/skills" -name "*.md" -print0 | grep -zc .)
+    skill_count=$(find "$HOME/.claude/skills" -name "*.md" -print | wc -l)
     echo "🧠 Skills available: $skill_count"
 fi
 

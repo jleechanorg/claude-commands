@@ -166,9 +166,9 @@ function getAuthHtml(callbackUrl) {
   <div id="status"></div>
 
   <script type="module">
-    // Firebase SDK v12.4.0 pinned for reproducibility. Review periodically for security updates.
-    import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-app.js';
-    import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/12.4.0/firebase-auth.js';
+    // Firebase SDK version set to 'latest' to ensure security patches are applied automatically.
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/latest/firebase-app.js';
+    import { getAuth, signInWithPopup, GoogleAuthProvider } from 'https://www.gstatic.com/firebasejs/latest/firebase-auth.js';
 
     const firebaseConfig = ${JSON.stringify(CONFIG.firebaseConfig)};
     const app = initializeApp(firebaseConfig);

@@ -2,7 +2,7 @@
 
 # Second Opinion CLI - Get multi-model AI feedback
 # Usage: ./scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
-# Explicit error handling is used (no `set -e`) to preserve interactive shells.
+# Error handling uses explicit checks instead of `set -e` to avoid unexpected exits when sourced.
 
 # Configuration
 MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"
@@ -150,7 +150,8 @@ send_mcp_request() {
   local token="$1"
   local question="$2"
 
-  local request_json=$(cat <<EOF
+  local request_json
+  request_json=$(cat <<EOF
 {
   "jsonrpc": "2.0",
   "method": "tools/call",
@@ -170,6 +171,7 @@ EOF
     echo "$request_json" | http POST "$MCP_URL" \
       Accept:'application/json, text/event-stream' \
       Authorization:"Bearer $token" \
+      Content-Type:application/json \
       --timeout="$TIMEOUT" \
       --print=b 2>&1
   elif command -v curl >/dev/null 2>&1; then
@@ -255,7 +257,8 @@ display_response() {
   echo ""
 
   # Display secondary opinions
-  local secondary_count=$(echo "$parsed" | jq '.secondaryOpinions | length')
+  local secondary_count
+  secondary_count=$(echo "$parsed" | jq -r '.secondaryOpinions // [] | length')
 
   if [ "$secondary_count" -gt 0 ]; then
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

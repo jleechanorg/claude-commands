@@ -813,7 +813,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-10-22)
+### v1.20.0 (2025-10-22)
 
 **Export Statistics**:
 - **182 Commands**: Complete workflow orchestration system

@@ -2,7 +2,7 @@
 # WorldArchitect MCP Server Startup Script
 # Starts the MCP server with configurable transport options
 
-set -e
+set -Eeuo pipefail
 
 # Default configuration
 PORT=8081
@@ -37,6 +37,7 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --port)
             PORT="$2"
+            [[ "$PORT" =~ ^[0-9]+$ ]] || { echo -e "${RED}❌ Invalid port: $PORT${NC}" >&2; exit 1; }
             shift 2
             ;;
         --http-only)
@@ -65,12 +66,21 @@ done
 
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Try resolving the MCP server from common locations
+if [[ -f "$PROJECT_ROOT/mcp_api.py" ]]; then
+    MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
+elif [[ -f "$SCRIPT_DIR/mcp_api.py" ]]; then
+    MCP_SERVER_PATH="$SCRIPT_DIR/mcp_api.py"
+else
+    MCP_SERVER_PATH=""
+fi
 
 # Validate MCP server exists
-if [ ! -f "$MCP_SERVER_PATH" ]; then
-    echo -e "${RED}❌ Error: MCP server not found at $MCP_SERVER_PATH${NC}" >&2
+if [[ -z "$MCP_SERVER_PATH" || ! -f "$MCP_SERVER_PATH" ]]; then
+    echo -e "${RED}❌ Error: MCP server not found${NC}" >&2
+    echo "Looked under: $PROJECT_ROOT/mcp_api.py and $SCRIPT_DIR/mcp_api.py" >&2
     exit 1
 fi
 

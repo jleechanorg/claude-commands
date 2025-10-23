@@ -14,6 +14,7 @@ import re
 import json
 import requests
 from pathlib import Path
+from typing import Set
 from export_config import get_exportable_components
 
 # Constants for file limits
@@ -450,10 +451,9 @@ class ClaudeCommandsExporter:
         scripts_count = 0
         copied_names = set()
 
-        def copy_script(path: Path):
-            nonlocal scripts_count
+        def copy_script(path: Path, registry: Set[str]) -> int:
             if not path.exists() or not path.is_file():
-                return
+                return 0
 
             destination = target_dir / path.name
             shutil.copy2(path, destination)
@@ -465,9 +465,9 @@ class ClaudeCommandsExporter:
                 except OSError:
                     pass
 
-            copied_names.add(path.name)
-            scripts_count += 1
+            registry.add(path.name)
             print(f"   📜 {path.name}")
+            return 1
 
         # Export native Claude scripts (.claude/scripts)
         if source_dir.exists():
@@ -475,7 +475,7 @@ class ClaudeCommandsExporter:
                 for file_path in source_dir.glob(pattern):
                     if file_path.name in copied_names:
                         continue
-                    copy_script(file_path)
+                    scripts_count += copy_script(file_path, copied_names)
         else:
             print("⚠️  Warning: .claude/scripts directory not found; attempting legacy MCP locations")
 
@@ -516,7 +516,7 @@ class ClaudeCommandsExporter:
                 continue
             for legacy_path in candidates:
                 if legacy_path.exists():
-                    copy_script(legacy_path)
+                    scripts_count += copy_script(legacy_path, copied_names)
                     break
 
         if scripts_count == 0:

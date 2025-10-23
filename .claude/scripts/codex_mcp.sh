@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MCP_LAUNCHER_PATH="$0"
@@ -20,34 +21,16 @@ done
 # runs in a non-interactive shell (e.g. via `bash -lc`).
 load_interactive_env_var() {
     local var_name="$1"
-    # Validate variable name to avoid unexpected command execution
-    if [[ ! "$var_name" =~ ^[A-Z_][A-Z0-9_]*$ ]]; then
-        echo "Error: Invalid variable name '$var_name'" >&2
-        return 1
-    fi
-    local current_value="${!var_name-}"
-
-    if [[ -n "$current_value" ]]; then
-        return 0
-    fi
-
-    if [[ ! -f "$HOME/.bashrc" ]]; then
-        return 0
-    fi
-
-    local loaded_value=""
-    loaded_value="$(
-        bash --noprofile --norc -c '
-            if [[ -f "$1" ]]; then
-                source "$1" >/dev/null 2>&1
-            fi
-            printenv "$2"
-        ' bash "$HOME/.bashrc" "$var_name" 2>/dev/null || true
-    )"
-
-    if [[ -n "$loaded_value" ]]; then
-        export "$var_name=$loaded_value"
-    fi
+    [[ "$var_name" =~ ^[A-Z_][A-Z0-9_]*$ ]] || { echo "Error: Invalid variable '$var_name'" >&2; return 1; }
+    [[ -n "${!var_name-}" ]] && return 0
+    local env_file="${CLAUDE_MCP_ENV_FILE:-$HOME/.config/claude-mcp/env}"
+    [[ -f "$env_file" ]] || return 0
+    local line
+    line="$(grep -E "^\s*${var_name}=.*" "$env_file" | tail -n1 || true)"
+    [[ -z "$line" ]] && return 0
+    local value="${line#*=}"
+    value="${value%\"}"; value="${value#\"}"
+    export "$var_name=$value"
 }
 
 API_KEYS_TO_LOAD=(
@@ -72,5 +55,15 @@ if [[ -z "${XAI_DEFAULT_CHAT_MODEL:-}" ]]; then
     export XAI_DEFAULT_CHAT_MODEL="$GROK_DEFAULT_MODEL"
 fi
 
-source "$SCRIPT_DIR/scripts/mcp_common.sh" "${args[@]}"
+if [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then
+  source "$SCRIPT_DIR/mcp_common.sh" "${args[@]}"
+elif [[ -f "$SCRIPT_DIR/../mcp_common.sh" ]]; then
+  source "$SCRIPT_DIR/../mcp_common.sh" "${args[@]}"
+elif [[ -f "$SCRIPT_DIR/../scripts/mcp_common.sh" ]]; then
+  source "$SCRIPT_DIR/../scripts/mcp_common.sh" "${args[@]}"
+else
+  echo "❌ Error: Cannot find mcp_common.sh relative to $SCRIPT_DIR" >&2
+  exit 1
+fi
+
 exit $?

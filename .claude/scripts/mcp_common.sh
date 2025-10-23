@@ -46,7 +46,9 @@ TEST_MODE=${TEST_MODE:-false}
 MCP_PRODUCT_NAME=${MCP_PRODUCT_NAME:-"Claude"}
 MCP_CLI_BIN=${MCP_CLI_BIN:-"claude"}
 MCP_SCOPE=${MCP_SCOPE:-local}
-MCP_INSTALL_DUAL_SCOPE=${MCP_INSTALL_DUAL_SCOPE:-true}  # Install to both local and user scopes
+# Dual-scope installs each server into both local and user scopes by default so commands work across shells.
+# Export MCP_INSTALL_DUAL_SCOPE=false to limit installation to the active scope only.
+MCP_INSTALL_DUAL_SCOPE=${MCP_INSTALL_DUAL_SCOPE:-true}
 MCP_STATS_LOCK_FILE=${MCP_STATS_LOCK_FILE:-"/tmp/${MCP_CLI_BIN}_mcp_stats.lock"}
 MCP_LOG_FILE_PREFIX=${MCP_LOG_FILE_PREFIX:-"/tmp/${MCP_CLI_BIN}_mcp"}
 MCP_BACKUP_PREFIX=${MCP_BACKUP_PREFIX:-${MCP_CLI_BIN}}
@@ -77,6 +79,8 @@ IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
 XAI_API_KEY=${XAI_API_KEY:-}
 TMPDIR=${TMPDIR:-/tmp}
+SECOND_OPINION_ENABLED=${SECOND_OPINION_ENABLED:-false}
+SECOND_OPINION_URL=${SECOND_OPINION_URL:-https://ai-universe-backend-final.onrender.com/mcp}
 
 # Treat automation placeholders as unset to avoid accidental authentication attempts.
 if [[ "${GITHUB_TOKEN:-}" == "your_token_here" ]]; then
@@ -219,6 +223,10 @@ if [ "$TEST_MODE" = true ]; then
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
+if [[ -z "${DEFAULT_MCP_ENV_FLAGS+x}" ]]; then
+    declare -a DEFAULT_MCP_ENV_FLAGS=()
+fi
+
 if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
@@ -659,10 +667,13 @@ add_mcp_server() {
         log_with_timestamp "Using npx direct execution for $package"
     fi
 
-    # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    # Remove existing server across scopes to avoid stale registrations
+    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ]; then
+        for scope in local user; do
+            ${MCP_CLI_BIN} mcp remove --scope "$scope" "$name" >/dev/null 2>&1 || true
+        done
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
     fi
 
     # Add server with error checking
@@ -768,9 +779,9 @@ add_mcp_server() {
         elif [ -n "$grok_default_model" ]; then
             grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=("${MCP_CLI_BIN}" "mcp" "add" "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=("${MCP_CLI_BIN}" "mcp" "add" "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -788,9 +799,9 @@ add_mcp_server() {
 
             # Build user scope command (same as local but with --scope user)
             if [ "$name" = "grok-mcp" ]; then
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+                local user_add_cmd=("${MCP_CLI_BIN}" "mcp" "add" "--scope" "user" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
             else
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+                local user_add_cmd=("${MCP_CLI_BIN}" "mcp" "add" "--scope" "user" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
             fi
 
             capture_command_output user_add_output user_add_exit_code "${user_add_cmd[@]}"
@@ -1004,10 +1015,8 @@ setup_render_mcp_server() {
             # Create secure temp file (600 permissions)
             json_temp=$(mktemp)
             chmod 600 "$json_temp"
-            echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
-            local json_payload
-            json_payload=$(<"$json_temp")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" "$json_payload"
+            printf '{"type":"http","url":"https://mcp.render.com/mcp","headers":{"Authorization":"Bearer %s"}}' "$escaped_api_key" > "$json_temp"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" - < "$json_temp"
             rm -f "$json_temp"
 
             # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
@@ -1043,11 +1052,18 @@ setup_render_mcp_server() {
 
 setup_second_opinion_mcp_server() {
     local server_name="second-opinion-tool"
+    if [[ "${SECOND_OPINION_ENABLED}" != "true" ]]; then
+        echo -e "${YELLOW}  ⚠️ Second Opinion MCP server disabled (set SECOND_OPINION_ENABLED=true to enable)${NC}"
+        INSTALL_RESULTS["$server_name"]="DISABLED"
+        return 0
+    fi
+
+    local second_opinion_url="$SECOND_OPINION_URL"
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
     echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
-    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: ${second_opinion_url})"
 
     if server_already_exists "$server_name"; then
         echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
@@ -1063,7 +1079,7 @@ setup_second_opinion_mcp_server() {
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
     local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+    json_payload=$(printf '{"type":"http","url":"%s"}' "$second_opinion_url")
 
     local add_output=""
     local add_exit_code=0
@@ -1530,10 +1546,12 @@ install_ios_simulator_mcp() {
     # Add server to ${MCP_PRODUCT_NAME} MCP configuration
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration...${NC}"
 
-    # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ]; then
+        for scope in local user; do
+            ${MCP_CLI_BIN} mcp remove --scope "$scope" "$name" >/dev/null 2>&1 || true
+        done
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
     fi
 
     # Add server using node to run the compiled entrypoint
@@ -1844,39 +1862,39 @@ setup_render_mcp_server
 # Setup Second Opinion MCP Server
 setup_second_opinion_mcp_server
 
-display_step "Setting up Serena MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
-log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
+setup_serena_mcp_server() {
+    display_step "Setting up Serena MCP Server..."
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
+    log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
 
-# Pre-flight check: Ensure uvx is available
-echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
-if ! command -v uvx >/dev/null 2>&1; then
-    echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
-    echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
-    log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
-    INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
-    FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    TOTAL_SERVERS=$((TOTAL_SERVERS - 1))  # Correct count since we're not installing
-else
+    echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
+    if ! command -v uvx >/dev/null 2>&1; then
+        echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
+        echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
+        log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
+        INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
+        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        TOTAL_SERVERS=$((TOTAL_SERVERS - 1))
+        return 0
+    fi
+
     echo -e "${GREEN}  ✅ uvx found: $(uvx --version 2>/dev/null || echo "available")${NC}"
     log_with_timestamp "uvx dependency check passed"
 
-    # Check if server already exists
     if server_already_exists "serena"; then
-    echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
-    log_with_timestamp "Server serena already exists, skipping"
-    INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Remove existing serena server to reconfigure
+        echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
+        log_with_timestamp "Server serena already exists, skipping"
+        INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        return 0
+    fi
+
     ${MCP_CLI_BIN} mcp remove "serena" >/dev/null 2>&1 || true
 
-    # Add Serena MCP server using uvx with git repository
     echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
     log_with_timestamp "Attempting to add Serena MCP server via uvx"
 
-    # Use add-json for uvx configuration
     local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
     local serena_payload
     serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
@@ -1898,8 +1916,9 @@ else
         INSTALL_RESULTS["serena"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi
-    fi
-fi
+}
+
+setup_serena_mcp_server
 
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"
