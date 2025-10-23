@@ -5,7 +5,8 @@
 # Explicit error handling is used (no `set -e`) to preserve interactive shells.
 
 # Configuration
-MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"
+MCP_URL_DEFAULT="https://ai-universe-backend-final.onrender.com/mcp"
+MCP_URL="${AI_UNIVERSE_MCP_URL:-$MCP_URL_DEFAULT}"
 TIMEOUT=180
 
 # Colors
@@ -96,9 +97,8 @@ construct_question() {
 
   case "$feedback_type" in
     design)
-      cat <<EOF
-Design Review Request: $context
-
+      printf 'Design Review Request: %s\n\n' "$context"
+      cat <<'EOF'
 Analyze the architectural decisions:
 - Is the design pattern appropriate?
 - Are there better alternatives?
@@ -107,9 +107,8 @@ Analyze the architectural decisions:
 EOF
       ;;
     code-review)
-      cat <<EOF
-Code Review Request: $context
-
+      printf 'Code Review Request: %s\n\n' "$context"
+      cat <<'EOF'
 Review this code for:
 - Security vulnerabilities
 - Performance issues
@@ -119,9 +118,8 @@ Review this code for:
 EOF
       ;;
     bugs)
-      cat <<EOF
-Bug Investigation: $context
-
+      printf 'Bug Investigation: %s\n\n' "$context"
+      cat <<'EOF'
 Analyze potential bugs:
 - Race conditions or timing issues
 - Error handling gaps
@@ -131,9 +129,8 @@ Analyze potential bugs:
 EOF
       ;;
     all|*)
-      cat <<EOF
-Comprehensive Review: $context
-
+      printf 'Comprehensive Review: %s\n\n' "$context"
+      cat <<'EOF'
 Provide multi-model feedback on:
 1. Design & Architecture
 2. Code Quality & Security

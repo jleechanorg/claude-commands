@@ -72,5 +72,12 @@ if [[ -z "${XAI_DEFAULT_CHAT_MODEL:-}" ]]; then
     export XAI_DEFAULT_CHAT_MODEL="$GROK_DEFAULT_MODEL"
 fi
 
-source "$SCRIPT_DIR/scripts/mcp_common.sh" "${args[@]}"
+if [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then
+    source "$SCRIPT_DIR/mcp_common.sh" "${args[@]}"
+elif [[ -f "$SCRIPT_DIR/scripts/mcp_common.sh" ]]; then
+    source "$SCRIPT_DIR/scripts/mcp_common.sh" "${args[@]}"
+else
+    echo "❌ Error: Cannot find mcp_common.sh" >&2
+    exit 1
+fi
 exit $?

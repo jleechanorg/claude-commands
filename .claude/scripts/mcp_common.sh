@@ -51,6 +51,8 @@ MCP_STATS_LOCK_FILE=${MCP_STATS_LOCK_FILE:-"/tmp/${MCP_CLI_BIN}_mcp_stats.lock"}
 MCP_LOG_FILE_PREFIX=${MCP_LOG_FILE_PREFIX:-"/tmp/${MCP_CLI_BIN}_mcp"}
 MCP_BACKUP_PREFIX=${MCP_BACKUP_PREFIX:-${MCP_CLI_BIN}}
 MCP_REQUIRE_CLI=${MCP_REQUIRE_CLI:-false}
+AI_UNIVERSE_MCP_URL_DEFAULT="https://ai-universe-backend-final.onrender.com/mcp"
+AI_UNIVERSE_MCP_URL=${AI_UNIVERSE_MCP_URL:-$AI_UNIVERSE_MCP_URL_DEFAULT}
 # Portable uppercase conversion (macOS ships Bash 3.2 without ^^)
 MCP_PRODUCT_NAME_UPPER=$(printf '%s' "$MCP_PRODUCT_NAME" | tr '[:lower:]' '[:upper:]')
 if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
@@ -219,7 +221,7 @@ if [ "$TEST_MODE" = true ]; then
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
-if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
+if [ -z "${DEFAULT_MCP_ENV_FLAGS+x}" ] || [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
         --env "MCP_VERBOSE_TOOLS=false"
@@ -1047,7 +1049,7 @@ setup_second_opinion_mcp_server() {
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
     echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
-    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: ${AI_UNIVERSE_MCP_URL})"
 
     if server_already_exists "$server_name"; then
         echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
@@ -1063,7 +1065,7 @@ setup_second_opinion_mcp_server() {
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
     local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+    json_payload=$(printf '{"type":"http","url":"%s"}' "${AI_UNIVERSE_MCP_URL}")
 
     local add_output=""
     local add_exit_code=0
@@ -1072,7 +1074,7 @@ setup_second_opinion_mcp_server() {
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • API URL: https://ai-universe-backend-final.onrender.com/mcp"
+        echo -e "     • API URL: ${AI_UNIVERSE_MCP_URL}"
         echo -e "     • Use cases: peer review, counter-arguments, solution validation"
         log_with_timestamp "Successfully added Second Opinion MCP server"
         INSTALL_RESULTS["$server_name"]="SUCCESS"
@@ -1877,8 +1879,8 @@ else
     log_with_timestamp "Attempting to add Serena MCP server via uvx"
 
     # Use add-json for uvx configuration
-    local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
-    local serena_payload
+    debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+    serena_payload=""
     serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
 

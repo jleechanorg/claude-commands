@@ -331,11 +331,8 @@ count_functional_area() {
         fi
 
         local path="${FILE_PATHS[$idx]}"
-        if [[ -n "$scope_glob" ]]; then
-            case "$path" in
-                $scope_glob) ;;
-                *) continue ;;
-            esac
+        if [[ -n "$scope_glob" ]] && [[ ! "$path" == $scope_glob ]]; then
+            continue
         fi
 
         local lines=${FILE_LINES[$idx]}

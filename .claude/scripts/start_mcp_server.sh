@@ -36,6 +36,10 @@ show_help() {
 while [[ $# -gt 0 ]]; do
     case $1 in
         --port)
+            if [[ -z "${2:-}" || "$2" == --* ]]; then
+                echo -e "${RED}❌ Error: --port requires a numeric value${NC}" >&2
+                exit 1
+            fi
             PORT="$2"
             shift 2
             ;;
@@ -68,9 +72,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # Try multiple common MCP server locations
-if [ -f "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
-elif [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
+if [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
     MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
 elif [ -f "$PROJECT_ROOT/mcp_api.py" ]; then
     MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"

@@ -22,8 +22,9 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 
 // Constants
-const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
+const DEFAULT_MCP_URL = 'https://ai-universe-backend-final.onrender.com/mcp';
+const RESOLVED_MCP_URL = process.env.AI_UNIVERSE_MCP_URL || DEFAULT_MCP_URL;
 
 // Configuration
 const CONFIG = {
@@ -36,7 +37,7 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
-  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
+  productionMcpUrl: RESOLVED_MCP_URL
 };
 
 // Validate required configuration
@@ -77,21 +78,21 @@ async function ensureTokenDir() {
  */
 function openBrowser(url) {
   const platform = process.platform;
-  let command;
+  let openCmd;
   let args;
 
   if (platform === 'darwin') {
-    command = 'open';
+    openCmd = 'open';
     args = [url];
   } else if (platform === 'win32') {
-    command = 'cmd';
+    openCmd = 'cmd';
     args = ['/c', 'start', '', url];
   } else {
-    command = 'xdg-open';
+    openCmd = 'xdg-open';
     args = [url];
   }
 
-  const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+  const child = spawn(openCmd, args, { detached: true, stdio: 'ignore' });
   child.on('error', (err) => {
     console.error('⚠️  Failed to open browser automatically:', err.message);
     console.error(`   Please open ${url} manually in your browser.`);
@@ -183,7 +184,8 @@ function getAuthHtml(callbackUrl) {
       try {
         const result = await signInWithPopup(auth, provider);
         const user = result.user;
-        const idToken = await user.getIdToken();
+        const tokenResult = await user.getIdTokenResult();
+        const idToken = tokenResult.token;
 
         // Send token back to CLI server
         const response = await fetch('${callbackUrl}', {
@@ -195,7 +197,8 @@ function getAuthHtml(callbackUrl) {
               uid: user.uid,
               email: user.email,
               displayName: user.displayName
-            }
+            },
+            expiresAt: tokenResult.expirationTime
           })
         });
 
@@ -237,7 +240,7 @@ async function login() {
   // Handle token callback
   app.post(CONFIG.callbackPath, async (req, res) => {
     try {
-      const { idToken, user } = req.body;
+      const { idToken, user, expiresAt: clientExpiresAt } = req.body;
 
       if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
         res.status(400).json({ error: 'Missing or invalid token' });
@@ -249,13 +252,43 @@ async function login() {
         return;
       }
 
+      let expiresAtIso = null;
+      if (typeof clientExpiresAt === 'string' && clientExpiresAt.trim()) {
+        const parsedClient = new Date(clientExpiresAt);
+        if (!Number.isNaN(parsedClient.getTime())) {
+          expiresAtIso = parsedClient.toISOString();
+        }
+      }
+
+      if (!expiresAtIso) {
+        try {
+          const [, payloadSegment] = idToken.split('.');
+          if (payloadSegment) {
+            const payload = JSON.parse(Buffer.from(payloadSegment, 'base64url').toString('utf8'));
+            if (payload?.exp) {
+              const expDate = new Date(payload.exp * 1000);
+              if (!Number.isNaN(expDate.getTime())) {
+                expiresAtIso = expDate.toISOString();
+              }
+            }
+          }
+        } catch (parseErr) {
+          // Fall through to validation error below
+        }
+      }
+
+      if (!expiresAtIso) {
+        res.status(400).json({ error: 'Cannot determine token expiration' });
+        return;
+      }
+
       // Save token to file
       await ensureTokenDir();
       const tokenData = {
         idToken,
         user,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        expiresAt: expiresAtIso
       };
 
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
@@ -380,7 +413,12 @@ async function status() {
  */
 async function getToken() {
   try {
-    const { tokenData } = await readTokenData();
+    const { tokenData, expired } = await readTokenData({ allowExpired: true });
+
+    if (expired) {
+      console.error('❌ Token expired. Run: node scripts/auth-cli.mjs login');
+      process.exit(1);
+    }
 
     // Output just the token (for piping to other commands)
     console.log(tokenData.idToken);

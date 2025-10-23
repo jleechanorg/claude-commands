@@ -3,7 +3,7 @@
 # Test Script for PR #1884 - /secondo Command
 # Tests authentication and secondo-cli.sh functionality
 
-set -e
+set -Eeuo pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -15,7 +15,10 @@ NC='\033[0m'
 echo -e "${BLUE}🧪 Testing PR #1884: /secondo Command${NC}\n"
 
 # Test credentials from ~/.bashrc (test-credentials skill)
-source ~/.bashrc 2>/dev/null || true
+# shellcheck source=/dev/null
+if [ -r "$HOME/.bashrc" ]; then
+  . "$HOME/.bashrc"
+fi
 
 echo -e "${BLUE}📋 Test Plan:${NC}"
 echo "1. Dependency checks"
@@ -32,7 +35,13 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo -n "Checking Node.js... "
 if command -v node >/dev/null 2>&1; then
     NODE_VERSION=$(node --version)
-    echo -e "${GREEN}✅ $NODE_VERSION${NC}"
+    NODE_MAJOR=$(node -p "parseInt(process.versions.node.split('.')[0], 10)")
+    if [[ "$NODE_MAJOR" =~ ^[0-9]+$ ]] && [ "$NODE_MAJOR" -ge 18 ]; then
+        echo -e "${GREEN}✅ $NODE_VERSION${NC}"
+    else
+        echo -e "${RED}❌ $NODE_VERSION (need >= 18)${NC}"
+        exit 1
+    fi
 else
     echo -e "${RED}❌ Not installed${NC}"
     exit 1
