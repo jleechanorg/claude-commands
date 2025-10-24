@@ -20,9 +20,10 @@ import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 
 // Constants
-const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (1 month)
+const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (fallback)
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 
 // Configuration
@@ -72,26 +73,43 @@ async function ensureTokenDir() {
   }
 }
 
+function decodeJwtPayload(token) {
+  try {
+    const parts = token.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+    let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+    while (payload.length % 4 !== 0) {
+      payload += '=';
+    }
+    const json = Buffer.from(payload, 'base64').toString('utf8');
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Open URL in default browser (cross-platform)
  */
 function openBrowser(url) {
   const platform = process.platform;
-  let command;
+  let openCommand;
   let args;
 
   if (platform === 'darwin') {
-    command = 'open';
+    openCommand = 'open';
     args = [url];
   } else if (platform === 'win32') {
-    command = 'cmd';
+    openCommand = 'cmd';
     args = ['/c', 'start', '', url];
   } else {
-    command = 'xdg-open';
+    openCommand = 'xdg-open';
     args = [url];
   }
 
-  const child = spawn(command, args, { detached: true, stdio: 'ignore' });
+  const child = spawn(openCommand, args, { detached: true, stdio: 'ignore' });
   child.on('error', (err) => {
     console.error('⚠️  Failed to open browser automatically:', err.message);
     console.error(`   Please open ${url} manually in your browser.`);
@@ -142,7 +160,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
 /**
  * Generate authentication HTML page served on localhost
  */
-function getAuthHtml(callbackUrl) {
+function getAuthHtml(callbackUrl, state) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -174,6 +192,7 @@ function getAuthHtml(callbackUrl) {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
+    const csrfState = '${state}';
 
     window.signIn = async function() {
       const statusDiv = document.getElementById('status');
@@ -191,6 +210,7 @@ function getAuthHtml(callbackUrl) {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             idToken,
+            state: csrfState,
             user: {
               uid: user.uid,
               email: user.email,
@@ -224,20 +244,45 @@ async function login() {
 
   const app = express();
   app.use(express.json());
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    next();
+  });
 
   let server;
   let tokenReceived = false;
+  const csrfState = randomBytes(16).toString('hex');
 
   // Serve authentication page
   app.get('/', (req, res) => {
     const callbackUrl = `http://127.0.0.1:${CONFIG.callbackPort}${CONFIG.callbackPath}`;
-    res.send(getAuthHtml(callbackUrl));
+    res.send(getAuthHtml(callbackUrl, csrfState));
   });
 
   // Handle token callback
   app.post(CONFIG.callbackPath, async (req, res) => {
     try {
-      const { idToken, user } = req.body;
+      const { idToken, user, state } = req.body || {};
+
+      const origin = req.headers.origin || '';
+      const host = req.headers.host || '';
+      const expectedOrigin = `http://127.0.0.1:${CONFIG.callbackPort}`;
+      const localhostOrigin = `http://localhost:${CONFIG.callbackPort}`;
+      const expectedHost = `127.0.0.1:${CONFIG.callbackPort}`;
+      const localhostHost = `localhost:${CONFIG.callbackPort}`;
+      const remoteAddress = req.socket.remoteAddress;
+      const isLoopback = remoteAddress === '127.0.0.1' || remoteAddress === '::1' || remoteAddress === '::ffff:127.0.0.1';
+
+      if (
+        state !== csrfState ||
+        !isLoopback ||
+        !(origin === expectedOrigin || origin === localhostOrigin) ||
+        !(host === expectedHost || host === localhostHost)
+      ) {
+        res.status(403).json({ error: 'Forbidden' });
+        return;
+      }
 
       if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
         res.status(400).json({ error: 'Missing or invalid token' });
@@ -251,11 +296,18 @@ async function login() {
 
       // Save token to file
       await ensureTokenDir();
+      const jwtPayload = decodeJwtPayload(idToken);
+      const expiresAtMs = jwtPayload && typeof jwtPayload.exp === 'number'
+        ? jwtPayload.exp * 1000
+        : Date.now() + TOKEN_EXPIRATION_MS;
+      const createdAtMs = jwtPayload && typeof jwtPayload.iat === 'number'
+        ? jwtPayload.iat * 1000
+        : Date.now();
       const tokenData = {
         idToken,
         user,
-        createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        createdAt: new Date(createdAtMs).toISOString(),
+        expiresAt: new Date(expiresAtMs).toISOString()
       };
 
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
@@ -356,6 +408,7 @@ async function status() {
 
     if (!tokenData) {
       console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
+      process.exitCode = 1;
       return;
     }
 

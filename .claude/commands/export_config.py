@@ -37,6 +37,11 @@ EXPORTABLE_COMPONENTS = [
 # - Export commands should skip these directories
 
 EXCLUDED_COMPONENTS = [
+    "analysis",         # Project analytics and reporting
+    "automation",       # Automation scripts outside Claude Code core
+    "claude-bot-commands",  # Project-specific bot commands
+    "coding_prompts",   # Prompt libraries specific to the project
+    "prototype",        # Experimental project code
     "config",            # Project-specific configuration (not user config)
     "framework",         # Project development frameworks
     "guides",            # Project-specific guides

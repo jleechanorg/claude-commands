@@ -2,11 +2,17 @@
 
 # Second Opinion CLI - Get multi-model AI feedback
 # Usage: ./scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
-# Explicit error handling is used (no `set -e`) to preserve interactive shells.
+# Error handling strategy:
+#   - `set -e` is intentionally NOT used to preserve interactive shell behavior.
+#   - Functions return non-zero exit codes on error and print error messages.
+#   - Callers are expected to check return codes and handle errors explicitly.
+#   - This approach allows for more granular control and user-friendly error reporting.
 
 # Configuration
-MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"
+MCP_URL="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-final.onrender.com/mcp}"
 TIMEOUT=180
+
+set -o pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -63,7 +69,7 @@ check_auth() {
   if ! check_dependencies; then
     return 1
   fi
-  if ! node scripts/auth-cli.mjs status >/dev/null 2>&1; then
+  if ! node scripts/auth-cli.mjs token >/dev/null 2>&1; then
     error "Not authenticated"
     echo ""
     echo "Please authenticate first:"

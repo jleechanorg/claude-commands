@@ -14,7 +14,7 @@ import re
 import json
 import requests
 from pathlib import Path
-from export_config import get_exportable_components
+from export_config import get_exportable_components, get_excluded_components
 
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
@@ -601,15 +601,16 @@ class ClaudeCommandsExporter:
 
         target_dir = os.path.join(staging_dir, 'orchestration')
 
-        # Use rsync with explicit exclusions
-        exclude_patterns = [
-            '--exclude=analysis/',
-            '--exclude=automation/',
-            '--exclude=claude-bot-commands/',
-            '--exclude=coding_prompts/',
-            '--exclude=prototype/',
-            '--exclude=tasks/',
-        ]
+        # Use rsync with explicit exclusions pulled from shared configuration
+        excluded_components = {
+            component.rstrip('/')
+            for component in get_excluded_components()
+            if '.' not in component
+        }
+        # tasks/ is generated locally and not part of the shared exclusion list
+        excluded_components.add('tasks')
+
+        exclude_patterns = [f'--exclude={component}/' for component in sorted(excluded_components)]
 
         cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
 
@@ -627,7 +628,12 @@ class ClaudeCommandsExporter:
 
     def _copy_orchestration_manual(self, source_dir, target_dir):
         """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks'}
+        excluded_dirs = {
+            component.rstrip('/')
+            for component in get_excluded_components()
+            if '.' not in component
+        }
+        excluded_dirs.add('tasks')
         for root, dirs, files in os.walk(source_dir):
             # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
@@ -1280,7 +1286,11 @@ This is a filtered reference export from a working Claude Code project. Commands
         """Verify that excluded directories are not present"""
         print("🔍 Verifying directory exclusions...")
 
-        excluded_dirs = ['analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype']
+        excluded_dirs = [
+            component.rstrip('/')
+            for component in get_excluded_components()
+            if '.' not in component
+        ]
         found_excluded = []
 
         for dir_name in excluded_dirs:

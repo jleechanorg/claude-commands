@@ -2,7 +2,8 @@
 # WorldArchitect MCP Server Startup Script
 # Starts the MCP server with configurable transport options
 
-set -e
+set -Eeuo pipefail
+trap 'echo "ERROR: start_mcp_server.sh failed at line $LINENO" >&2' ERR
 
 # Default configuration
 PORT=8081
@@ -10,9 +11,7 @@ MODE="dual"  # dual, http-only, stdio-only
 
 # Color codes for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Help message
@@ -65,8 +64,20 @@ done
 
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+project_root_hint="${PROJECT_ROOT:-mvp_site}"
+if [[ "${PROJECT_ROOT:-}" = /* ]]; then
+    MCP_SERVER_PATH="${PROJECT_ROOT}/mcp_api.py"
+else
+    MCP_SERVER_PATH="$REPO_ROOT/$project_root_hint/mcp_api.py"
+fi
+
+if [ ! -f "$MCP_SERVER_PATH" ]; then
+    if [ -f "$REPO_ROOT/mcp_api.py" ]; then
+        MCP_SERVER_PATH="$REPO_ROOT/mcp_api.py"
+    fi
+fi
 
 # Validate MCP server exists
 if [ ! -f "$MCP_SERVER_PATH" ]; then

@@ -2,7 +2,7 @@
   "name": "worldarchitect-ai-scripts",
   "version": "1.0.0",
   "type": "module",
-  "description": "Node.js dependencies for Your Project automation scripts",
+  "description": "Node.js dependencies for Claude Commands automation scripts",
   "private": true,
   "engines": {
     "node": ">=20.0.0"
@@ -15,6 +15,6 @@
     "secondo": "bash scripts/secondo-cli.sh"
   },
   "keywords": ["cli", "authentication", "ai-universe"],
-  "author": "Your Project",
+  "author": "Claude Commands Maintainers",
   "license": "MIT"
 }
