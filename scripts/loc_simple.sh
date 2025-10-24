@@ -9,90 +9,279 @@ IFS=$'\n\t'
 echo "📊 Lines of Code Count (Production Focus)"
 echo "=========================================="
 
-# Function to count lines with proper exclusions
-count_files() {
-    local ext="$1"
-    local mode="$2"
-    local scope_pattern="${3:-}"
+# Utility to normalize glob scopes used for functional area summaries
+normalize_scope_glob() {
+    local scope="$1"
 
-    local -a find_args=(
-        find .
-        -type f
-        -name "*.${ext}"
-        ! -path "*/node_modules/*"
-        ! -path "*/.git/*"
-        ! -path "*/venv/*"
-        ! -path "*/__pycache__/*"
-        ! -path "./tmp/*"
-        ! -path "./roadmap/*"
-    )
-
-    if [[ -n "$scope_pattern" ]]; then
-        local scope_glob="$scope_pattern"
-
-        if [[ "$scope_glob" != ./* && "$scope_glob" != /* ]]; then
-            scope_glob="./${scope_glob#./}"
-        fi
-
-        if [[ "$scope_glob" != *\** ]]; then
-            scope_glob="${scope_glob%/}/*"
-        elif [[ "$scope_glob" == */ ]]; then
-            scope_glob="${scope_glob}*"
-        fi
-
-        find_args+=( -path "$scope_glob" )
+    if [[ -z "$scope" ]]; then
+        echo ""
+        return
     fi
 
-    local -a test_selector=(
-        \( -path "*/tests/*"
-        -o -path "*/test/*"
-        -o -path "*/testing/*"
-        -o -name "test_*.${ext}"
-        -o -name "*_test.${ext}"
-        -o -name "*_tests.${ext}"
-        \)
-    )
+    local glob="$scope"
 
-    local count
-    if [[ "$mode" == "test" ]]; then
-        count=$(
-            "${find_args[@]}" "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
-                | awk '!/ total$/ {sum += $1} END {print sum+0}'
-        )
-    else
-        count=$(
-            "${find_args[@]}" ! "${test_selector[@]}" -exec wc -l {} + 2>/dev/null \
-                | awk '!/ total$/ {sum += $1} END {print sum+0}'
-        )
+    if [[ "$glob" != ./* && "$glob" != /* ]]; then
+        glob="./${glob#./}"
     fi
 
-    echo "${count:-0}"
+    if [[ "$glob" == */ ]]; then
+        glob="${glob}*"
+    elif [[ "$glob" != *\** && "$glob" != *\?* ]]; then
+        glob="${glob%/}/*"
+    fi
+
+    echo "$glob"
 }
 
-# Overall language totals
-echo "🐍 Python (.py):"
-py_prod=$(count_files "py" "prod")
-py_test=$(count_files "py" "test")
-echo "  Production: ${py_prod:-0} lines"
-echo "  Test:       ${py_test:-0} lines"
+# Identify whether a file path should be considered test code
+is_test_file() {
+    local path="$1"
+    local ext="$2"
 
-echo "🌟 JavaScript (.js):"
-js_prod=$(count_files "js" "prod")
-js_test=$(count_files "js" "test")
-echo "  Production: ${js_prod:-0} lines"
-echo "  Test:       ${js_test:-0} lines"
+    local path_lc="${path,,}"
+    if [[ "$path_lc" == *"/tests/"* \
+        || "$path_lc" == *"/test/"* \
+        || "$path_lc" == *"/testing/"* \
+        || "$path_lc" == *"/__tests__/"* \
+        || "$path_lc" == *"/__test__/"* \
+        || "$path_lc" == *"/spec/"* \
+        || "$path_lc" == *"/specs/"* \
+        || "$path_lc" == *"/integration_tests/"* \
+        || "$path_lc" == *"/integration-test/"* \
+        || "$path_lc" == *"/qa/"* ]]; then
+        return 0
+    fi
 
-echo "🌐 HTML (.html):"
-html_prod=$(count_files "html" "prod")
-html_test=$(count_files "html" "test")
-echo "  Production: ${html_prod:-0} lines"
-echo "  Test:       ${html_test:-0} lines"
+    local filename="${path##*/}"
+    local filename_lc="${filename,,}"
+
+    if [[ "$filename_lc" == test_* ]]; then
+        return 0
+    fi
+
+    if [[ "$filename_lc" == *_test."$ext" || "$filename_lc" == *_tests."$ext" || "$filename_lc" == *_spec."$ext" ]]; then
+        return 0
+    fi
+
+    if [[ "$filename_lc" == *.test."$ext" || "$filename_lc" == *.tests."$ext" || "$filename_lc" == *.spec."$ext" ||
+          "$filename_lc" == *.unit."$ext" || "$filename_lc" == *.integration."$ext" || "$filename_lc" == *.e2e."$ext" ]]; then
+        return 0
+    fi
+
+    return 1
+}
+
+declare -a LANGUAGE_SPECS=(
+    "py|🐍 Python (.py)"
+    "pyi|🐍 Python Stubs (.pyi)"
+    "pyx|🐍 Cython (.pyx)"
+    "pxd|🐍 Cython Declarations (.pxd)"
+    "js|🌟 JavaScript (.js)"
+    "mjs|✨ JavaScript Modules (.mjs)"
+    "cjs|📦 CommonJS (.cjs)"
+    "jsx|⚛️ React JSX (.jsx)"
+    "ts|🌀 TypeScript (.ts)"
+    "tsx|🧩 TypeScript JSX (.tsx)"
+    "cts|🌀 TypeScript (.cts)"
+    "mts|🌀 TypeScript (.mts)"
+    "vue|🗂️ Vue Single File (.vue)"
+    "svelte|🔥 Svelte (.svelte)"
+    "astro|🌌 Astro (.astro)"
+    "html|🌐 HTML (.html)"
+    "htm|🌐 HTML (.htm)"
+    "css|🎨 CSS (.css)"
+    "scss|🎨 SCSS (.scss)"
+    "sass|🎨 SASS (.sass)"
+    "less|🎨 LESS (.less)"
+    "styl|🎨 Stylus (.styl)"
+    "json|🧾 JSON (.json)"
+    "jsonc|🧾 JSONC (.jsonc)"
+    "yaml|🧾 YAML (.yaml)"
+    "yml|🧾 YAML (.yml)"
+    "toml|🧾 TOML (.toml)"
+    "ini|🧾 INI (.ini)"
+    "cfg|🧾 Config (.cfg)"
+    "conf|🧾 Config (.conf)"
+    "xml|🧾 XML (.xml)"
+    "xsd|🧾 XML Schema (.xsd)"
+    "xsl|🧾 XSL (.xsl)"
+    "sql|🗄️ SQL (.sql)"
+    "graphql|🧬 GraphQL (.graphql)"
+    "gql|🧬 GraphQL (.gql)"
+    "prisma|🗄️ Prisma (.prisma)"
+    "proto|🔌 Protobuf (.proto)"
+    "rb|💎 Ruby (.rb)"
+    "php|🐘 PHP (.php)"
+    "go|🐹 Go (.go)"
+    "rs|🦀 Rust (.rs)"
+    "java|☕ Java (.java)"
+    "kt|📱 Kotlin (.kt)"
+    "kts|📱 Kotlin Script (.kts)"
+    "swift|🕊️ Swift (.swift)"
+    "cs|#️⃣ C# (.cs)"
+    "fs|🧠 F# (.fs)"
+    "fsx|🧠 F# Script (.fsx)"
+    "scala|🛠️ Scala (.scala)"
+    "clj|🌿 Clojure (.clj)"
+    "cljs|🌿 ClojureScript (.cljs)"
+    "groovy|🛠️ Groovy (.groovy)"
+    "dart|🎯 Dart (.dart)"
+    "r|📊 R (.r)"
+    "jl|🔬 Julia (.jl)"
+    "hs|📐 Haskell (.hs)"
+    "ex|⚙️ Elixir (.ex)"
+    "exs|⚙️ Elixir Script (.exs)"
+    "erl|⚙️ Erlang (.erl)"
+    "lua|🌙 Lua (.lua)"
+    "pl|🐪 Perl (.pl)"
+    "pm|🐪 Perl Module (.pm)"
+    "ps1|🪟 PowerShell (.ps1)"
+    "sh|🐚 Shell (.sh)"
+    "bash|🐚 Bash (.bash)"
+    "zsh|🐚 Zsh (.zsh)"
+    "fish|🐚 Fish (.fish)"
+    "bat|🪟 Batch (.bat)"
+    "cmd|🪟 Command (.cmd)"
+    "make|🛠️ Make (.make)"
+    "mk|🛠️ Make (.mk)"
+    "cmake|🛠️ CMake (.cmake)"
+    "gradle|🛠️ Gradle (.gradle)"
+    "c|🔧 C (.c)"
+    "cc|⚙️ C++ (.cc)"
+    "cpp|⚙️ C++ (.cpp)"
+    "cxx|⚙️ C++ (.cxx)"
+    "h|📄 Header (.h)"
+    "hh|📄 Header (.hh)"
+    "hpp|📄 Header (.hpp)"
+    "inl|📄 Inline Header (.inl)"
+    "ipp|📄 Inline Header (.ipp)"
+    "mm|🍎 Objective-C++ (.mm)"
+    "m|🍎 Objective-C (.m)"
+    "cshtml|🌐 Razor (.cshtml)"
+    "mdx|📝 MDX (.mdx)"
+    "nix|🧪 Nix (.nix)"
+    "tf|🌍 Terraform (.tf)"
+    "tfvars|🌍 Terraform Vars (.tfvars)"
+    "hcl|🌍 HCL (.hcl)"
+)
+
+declare -A LANGUAGE_LABELS=()
+declare -A PROD_COUNTS=()
+declare -A TEST_COUNTS=()
+declare -a ORDERED_EXTS=()
+declare -a ACTIVE_LANGUAGE_EXTS=()
+
+for spec in "${LANGUAGE_SPECS[@]}"; do
+    IFS='|' read -r ext label <<< "$spec"
+    ORDERED_EXTS+=("$ext")
+    LANGUAGE_LABELS["$ext"]="$label"
+done
+
+declare -a FIND_NAME_ARGS=()
+for ext in "${ORDERED_EXTS[@]}"; do
+    if (( ${#FIND_NAME_ARGS[@]} == 0 )); then
+        FIND_NAME_ARGS+=( -iname "*.${ext}" )
+    else
+        FIND_NAME_ARGS+=( -o -iname "*.${ext}" )
+    fi
+done
+
+declare -a FIND_CMD=( find . -type f )
+if (( ${#FIND_NAME_ARGS[@]} > 0 )); then
+    FIND_CMD+=( "(" "${FIND_NAME_ARGS[@]}" ")" )
+else
+    echo "📚 Language Breakdown:"
+    echo "  No language extensions configured."
+    exit 0
+fi
+
+FIND_CMD+=(
+    ! -path "*/node_modules/*"
+    ! -path "*/.git/*"
+    ! -path "*/venv/*"
+    ! -path "*/__pycache__/*"
+    ! -path "./tmp/*"
+    ! -path "./roadmap/*"
+    -print0
+)
+
+declare -a FILE_PATHS=()
+declare -a FILE_EXTS=()
+declare -a FILE_LINES=()
+declare -a FILE_MODES=()
+
+while IFS= read -r -d '' file; do
+    ext="${file##*.}"
+    ext="${ext,,}"
+
+    if [[ -z ${LANGUAGE_LABELS["$ext"]+x} ]]; then
+        continue
+    fi
+
+    lines=$(wc -l < "$file" 2>/dev/null || echo 0)
+    lines=${lines//[[:space:]]/}
+    if [[ -z "$lines" ]]; then
+        lines=0
+    fi
+
+    mode="prod"
+    if is_test_file "$file" "$ext"; then
+        mode="test"
+    fi
+
+    if [[ "$mode" == "test" ]]; then
+        current_test=${TEST_COUNTS["$ext"]:-0}
+        TEST_COUNTS["$ext"]=$((current_test + lines))
+    else
+        current_prod=${PROD_COUNTS["$ext"]:-0}
+        PROD_COUNTS["$ext"]=$((current_prod + lines))
+    fi
+
+    FILE_PATHS+=("$file")
+    FILE_EXTS+=("$ext")
+    FILE_LINES+=("$lines")
+    FILE_MODES+=("$mode")
+done < <("${FIND_CMD[@]}")
+
+for ext in "${ORDERED_EXTS[@]}"; do
+    prod_value=${PROD_COUNTS["$ext"]:-0}
+    test_value=${TEST_COUNTS["$ext"]:-0}
+    if (( prod_value + test_value > 0 )); then
+        ACTIVE_LANGUAGE_EXTS+=("$ext")
+    fi
+done
+
+echo "📚 Language Breakdown:"
+if (( ${#ACTIVE_LANGUAGE_EXTS[@]} > 0 )); then
+    for ext in "${ORDERED_EXTS[@]}"; do
+        prod_value=${PROD_COUNTS["$ext"]:-0}
+        test_value=${TEST_COUNTS["$ext"]:-0}
+        total_value=$((prod_value + test_value))
+        if (( total_value == 0 )); then
+            continue
+        fi
+        label=${LANGUAGE_LABELS["$ext"]}
+        echo "$label:"
+        echo "  Production: ${prod_value} lines"
+        echo "  Test:       ${test_value} lines"
+    done
+else
+    echo "  No source files found for the configured extensions."
+fi
 
 # Summary
 echo ""
 echo "📋 Summary:"
-total_prod=$((${py_prod:-0} + ${js_prod:-0} + ${html_prod:-0}))
-total_test=$((${py_test:-0} + ${js_test:-0} + ${html_test:-0}))
+
+total_prod=0
+total_test=0
+for ext in "${ORDERED_EXTS[@]}"; do
+    prod_value=${PROD_COUNTS["$ext"]:-0}
+    test_value=${TEST_COUNTS["$ext"]:-0}
+    total_prod=$((total_prod + prod_value))
+    total_test=$((total_test + test_value))
+done
+
 total_all=$((total_prod + total_test))
 
 echo "  Production Code: $total_prod lines"
@@ -113,14 +302,67 @@ count_functional_area() {
     local pattern="$1"
     local name="$2"
 
-    py_count=$(count_files "py" "prod" "$pattern")
-    js_count=$(count_files "js" "prod" "$pattern")
-    html_count=$(count_files "html" "prod" "$pattern")
+    local scope_glob
+    scope_glob=$(normalize_scope_glob "$pattern")
 
-    total=$((py_count + js_count + html_count))
+    local total=0
+    local -a languages_to_scan=()
+    local -A area_counts=()
 
-    if [[ $total -gt 0 ]]; then
-        printf "  %-20s: %6d lines (py:%5d js:%4d html:%4d)\n" "$name" "$total" "$py_count" "$js_count" "$html_count"
+    if (( ${#ACTIVE_LANGUAGE_EXTS[@]} > 0 )); then
+        languages_to_scan=("${ACTIVE_LANGUAGE_EXTS[@]}")
+    else
+        languages_to_scan=("${ORDERED_EXTS[@]}")
+    fi
+
+    local -A allowed_exts=()
+    for ext in "${languages_to_scan[@]}"; do
+        allowed_exts["$ext"]=1
+    done
+
+    for idx in "${!FILE_PATHS[@]}"; do
+        if [[ "${FILE_MODES[$idx]}" != "prod" ]]; then
+            continue
+        fi
+
+        local ext="${FILE_EXTS[$idx]}"
+        if [[ -z ${allowed_exts["$ext"]+x} ]]; then
+            continue
+        fi
+
+        local path="${FILE_PATHS[$idx]}"
+        if [[ -n "$scope_glob" ]]; then
+            case "$path" in
+                $scope_glob) ;;
+                *) continue ;;
+            esac
+        fi
+
+        local lines=${FILE_LINES[$idx]}
+        area_counts["$ext"]=$(( ${area_counts["$ext"]:-0} + lines ))
+        total=$((total + lines))
+    done
+
+    if (( total > 0 )); then
+        local -a segments=()
+        for ext in "${languages_to_scan[@]}"; do
+            local count=${area_counts["$ext"]:-0}
+            if (( count > 0 )); then
+                segments+=("${ext}:${count}")
+            fi
+        done
+
+        local joined=""
+        if (( ${#segments[@]} > 0 )); then
+            joined=$(printf ", %s" "${segments[@]}")
+            joined=${joined:2}
+        fi
+
+        if [[ -n "$joined" ]]; then
+            printf "  %-20s: %6d lines (%s)\n" "$name" "$total" "$joined"
+        else
+            printf "  %-20s: %6d lines\n" "$name" "$total"
+        fi
     fi
 }
 
