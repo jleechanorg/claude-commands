@@ -6,35 +6,46 @@ set -Eeuo pipefail
 trap 'echo "ERROR: mcp_dual_background.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MCP_PROJECT_SUBDIR=${PROJECT_ROOT:-mvp_site}
 
 resolve_project_root() {
     local search_dir="$SCRIPT_DIR"
 
     # Walk up the directory tree until we find the repo assets we depend on
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/scripts/setup_production_env.sh" && -f "$search_dir/$PROJECT_ROOT/mcp_api.py" ]]; then
-            echo "$search_dir"
-            return 0
+        if [[ -f "$search_dir/scripts/setup_production_env.sh" ]]; then
+            if [[ -n "$MCP_PROJECT_SUBDIR" && -f "$search_dir/$MCP_PROJECT_SUBDIR/mcp_api.py" ]]; then
+                echo "$search_dir"
+                return 0
+            elif [[ -f "$search_dir/mcp_api.py" ]]; then
+                echo "$search_dir"
+                return 0
+            fi
         fi
         search_dir="$(dirname "$search_dir")"
     done
 
     if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
-       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/scripts/setup_production_env.sh" && \
-          -f "${WORLDARCHITECT_PROJECT_ROOT}/$PROJECT_ROOT/mcp_api.py" ]]; then
-        echo "${WORLDARCHITECT_PROJECT_ROOT}"
-        return 0
+       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/scripts/setup_production_env.sh" ]]; then
+        if [[ -n "$MCP_PROJECT_SUBDIR" && \
+              -f "${WORLDARCHITECT_PROJECT_ROOT}/$MCP_PROJECT_SUBDIR/mcp_api.py" ]]; then
+            echo "${WORLDARCHITECT_PROJECT_ROOT}"
+            return 0
+        elif [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/mcp_api.py" ]]; then
+            echo "${WORLDARCHITECT_PROJECT_ROOT}"
+            return 0
+        fi
     fi
 
     return 1
 }
 
-PROJECT_ROOT="$(resolve_project_root)" || {
-    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and $PROJECT_ROOT/mcp_api.py" >&2
+REPO_ROOT="$(resolve_project_root)" || {
+    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and mcp_api.py" >&2
     exit 1
 }
 
-SETUP_SCRIPT="$PROJECT_ROOT/scripts/setup_production_env.sh"
+SETUP_SCRIPT="$REPO_ROOT/scripts/setup_production_env.sh"
 if [[ -f "$SETUP_SCRIPT" ]]; then
     # shellcheck disable=SC1090
     source "$SETUP_SCRIPT"
@@ -47,7 +58,7 @@ fi
 
 echo "Starting MCP server in production mode (dual transport: stdio + HTTP)..." >&2
 
-PYTHON_BIN="$PROJECT_ROOT/venv/bin/python"
+PYTHON_BIN="$REPO_ROOT/venv/bin/python"
 if [[ ! -x "$PYTHON_BIN" ]]; then
     PYTHON_BIN="${PYTHON_EXEC:-python3}"
 fi
@@ -58,11 +69,12 @@ if ! command -v "$PYTHON_BIN" >/dev/null 2>&1 && [[ ! -x "$PYTHON_BIN" ]]; then
 fi
 
 MCP_SERVER_PATH=""
-for candidate in \
-    "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" \
-    "$PROJECT_ROOT/src/mcp_api.py" \
-    "$PROJECT_ROOT/mcp_api.py"
-do
+candidate_paths=("$REPO_ROOT/src/mcp_api.py" "$REPO_ROOT/mcp_api.py")
+if [[ -n "$MCP_PROJECT_SUBDIR" ]]; then
+    candidate_paths=("$REPO_ROOT/$MCP_PROJECT_SUBDIR/mcp_api.py" "${candidate_paths[@]}")
+fi
+
+for candidate in "${candidate_paths[@]}"; do
     if [[ -f "$candidate" ]]; then
         MCP_SERVER_PATH="$candidate"
         break
@@ -70,14 +82,14 @@ do
 done
 
 if [[ -z "$MCP_SERVER_PATH" ]]; then
-    echo "ERROR: Unable to locate mcp_api.py under $PROJECT_ROOT" >&2
+    echo "ERROR: Unable to locate mcp_api.py under $REPO_ROOT" >&2
     exit 1
 fi
 
 if [[ -z "${PYTHONPATH:-}" ]]; then
-    export PYTHONPATH="$PROJECT_ROOT"
+    export PYTHONPATH="$REPO_ROOT"
 else
-    export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+    export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
 fi
 
 # Securely create a named pipe for persistent stdin

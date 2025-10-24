@@ -72,6 +72,24 @@ async function ensureTokenDir() {
   }
 }
 
+function getJwtExpMs(idToken) {
+  if (!idToken || typeof idToken !== 'string') {
+    return null;
+  }
+
+  try {
+    const segments = idToken.split('.');
+    if (segments.length < 2) {
+      return null;
+    }
+    const payload = Buffer.from(segments[1], 'base64url').toString('utf8');
+    const parsed = JSON.parse(payload);
+    return typeof parsed.exp === 'number' ? parsed.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Open URL in default browser (cross-platform)
  */
@@ -124,10 +142,14 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
     throw new Error(`Corrupted token file: ${err.message}. Please login again.`);
   }
 
-  const expiresAt = new Date(tokenData.expiresAt);
-  if (Number.isNaN(expiresAt.getTime())) {
+  const jwtExpMs = getJwtExpMs(tokenData.idToken);
+  const fallbackExpMs = Date.parse(tokenData.expiresAt);
+  const effectiveExpMs = Number.isFinite(jwtExpMs) ? jwtExpMs : fallbackExpMs;
+  if (!Number.isFinite(effectiveExpMs)) {
     throw new Error('Token has an invalid expiration timestamp. Please login again.');
   }
+
+  const expiresAt = new Date(effectiveExpMs);
 
   const now = new Date();
   const expired = now > expiresAt;
@@ -251,11 +273,12 @@ async function login() {
 
       // Save token to file
       await ensureTokenDir();
+      const expMs = getJwtExpMs(idToken);
       const tokenData = {
         idToken,
         user,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        expiresAt: new Date(expMs ?? Date.now() + 55 * 60 * 1000).toISOString()
       };
 
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });
@@ -276,7 +299,8 @@ async function login() {
       }
 
       console.log('\n✅ Authentication successful!');
-      console.log(`   User: ${user.displayName} (${user.email})`);
+      const maskedEmail = typeof user.email === 'string' ? user.email.replace(/(.).+(@.*)/, '$1***$2') : 'user@example.com';
+      console.log(`   User: ${user.displayName ?? 'user'} (${maskedEmail})`);
       console.log(`   Token saved to: ${CONFIG.tokenPath}\n`);
       console.log('You can now use authenticated MCP tools.');
 

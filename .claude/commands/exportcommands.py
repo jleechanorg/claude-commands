@@ -53,7 +53,11 @@ class ClaudeCommandsExporter:
         base_components = get_exportable_components()
         # Remove 'settings.json' from subdirs list (it's a file, not a directory)
         self.EXPORT_SUBDIRS = [c for c in base_components if c != 'settings.json']
-        # Add orchestration for GitHub export
+        # Add orchestration for GitHub export. These assets are intentionally kept
+        # out of the shared configuration because they are only relevant when
+        # publishing to GitHub (the local export flow installs orchestration
+        # dependencies separately). Documenting the rationale here keeps the
+        # GitHub-specific behavior explicit without overloading the shared config.
         if 'orchestration' not in self.EXPORT_SUBDIRS:
             self.EXPORT_SUBDIRS.append('orchestration')
 

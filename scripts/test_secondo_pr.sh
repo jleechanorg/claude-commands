@@ -194,11 +194,11 @@ else
     echo -e "${GREEN}   Fixed permissions${NC}"
 fi
 
-# Check for set -e
-if grep -q "set -e" scripts/secondo-cli.sh; then
-    echo -e "${GREEN}✅ Error handling with 'set -e'${NC}"
+# Verify explicit error-handling comment is present
+if grep -q "Explicit error handling is used" scripts/secondo-cli.sh; then
+    echo -e "${GREEN}✅ Error handling rationale documented${NC}"
 else
-    echo -e "${YELLOW}⚠️  Missing 'set -e'${NC}"
+    echo -e "${YELLOW}⚠️  Error handling rationale missing${NC}"
 fi
 
 # Check for required functions

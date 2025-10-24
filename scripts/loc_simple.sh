@@ -1,5 +1,22 @@
 #!/bin/bash
 
+# macOS ships with Bash 3.2 which lacks associative arrays and lowercase
+# parameter expansion. Re-exec with a newer Bash if one is available.
+if (( BASH_VERSINFO[0] < 4 )); then
+    if [[ -z "${LOC_SIMPLE_BASH_REEXECED:-}" ]]; then
+        for candidate in /opt/homebrew/bin/bash /usr/local/bin/bash $(command -v bash 2>/dev/null); do
+            if [[ -n "$candidate" && -x "$candidate" ]]; then
+                if "$candidate" -c 'exit $(( BASH_VERSINFO[0] >= 4 ? 0 : 1 ))'; then
+                    LOC_SIMPLE_BASH_REEXECED=1 exec "$candidate" "$0" "$@"
+                fi
+            fi
+        done
+    fi
+    echo "❌ Bash 4+ is required to run scripts/loc_simple.sh" >&2
+    echo "   Install a newer Bash (e.g., via Homebrew) and ensure it is on your PATH." >&2
+    exit 1
+fi
+
 set -euo pipefail
 IFS=$'\n\t'
 
@@ -166,8 +183,7 @@ declare -a LANGUAGE_SPECS=(
 )
 
 declare -A LANGUAGE_LABELS=()
-declare -A PROD_COUNTS=()
-declare -A TEST_COUNTS=()
+declare -A MODE_COUNTS=()
 declare -a ORDERED_EXTS=()
 declare -a ACTIVE_LANGUAGE_EXTS=()
 
@@ -229,13 +245,9 @@ while IFS= read -r -d '' file; do
         mode="test"
     fi
 
-    if [[ "$mode" == "test" ]]; then
-        current_test=${TEST_COUNTS["$ext"]:-0}
-        TEST_COUNTS["$ext"]=$((current_test + lines))
-    else
-        current_prod=${PROD_COUNTS["$ext"]:-0}
-        PROD_COUNTS["$ext"]=$((current_prod + lines))
-    fi
+    key="$ext:$mode"
+    current_mode_total=${MODE_COUNTS["$key"]:-0}
+    MODE_COUNTS["$key"]=$((current_mode_total + lines))
 
     FILE_PATHS+=("$file")
     FILE_EXTS+=("$ext")
@@ -244,8 +256,8 @@ while IFS= read -r -d '' file; do
 done < <("${FIND_CMD[@]}")
 
 for ext in "${ORDERED_EXTS[@]}"; do
-    prod_value=${PROD_COUNTS["$ext"]:-0}
-    test_value=${TEST_COUNTS["$ext"]:-0}
+    prod_value=${MODE_COUNTS["$ext:prod"]:-0}
+    test_value=${MODE_COUNTS["$ext:test"]:-0}
     if (( prod_value + test_value > 0 )); then
         ACTIVE_LANGUAGE_EXTS+=("$ext")
     fi
@@ -254,8 +266,8 @@ done
 echo "📚 Language Breakdown:"
 if (( ${#ACTIVE_LANGUAGE_EXTS[@]} > 0 )); then
     for ext in "${ORDERED_EXTS[@]}"; do
-        prod_value=${PROD_COUNTS["$ext"]:-0}
-        test_value=${TEST_COUNTS["$ext"]:-0}
+        prod_value=${MODE_COUNTS["$ext:prod"]:-0}
+        test_value=${MODE_COUNTS["$ext:test"]:-0}
         total_value=$((prod_value + test_value))
         if (( total_value == 0 )); then
             continue
@@ -276,8 +288,8 @@ echo "📋 Summary:"
 total_prod=0
 total_test=0
 for ext in "${ORDERED_EXTS[@]}"; do
-    prod_value=${PROD_COUNTS["$ext"]:-0}
-    test_value=${TEST_COUNTS["$ext"]:-0}
+    prod_value=${MODE_COUNTS["$ext:prod"]:-0}
+    test_value=${MODE_COUNTS["$ext:test"]:-0}
     total_prod=$((total_prod + prod_value))
     total_test=$((total_test + test_value))
 done

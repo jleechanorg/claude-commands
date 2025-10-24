@@ -3,6 +3,10 @@
 # Second Opinion CLI - Get multi-model AI feedback
 # Usage: ./scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
 # Explicit error handling is used (no `set -e`) to preserve interactive shells.
+# Rationale: We avoid `set -e` so we can surface tailored error messages,
+# gracefully recover from expected failures, and prevent the shell from exiting
+# when the CLI is sourced or run within interactive workflows. Critical error
+# paths return explicit exit codes and emit descriptive output instead.
 
 # Configuration
 MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"

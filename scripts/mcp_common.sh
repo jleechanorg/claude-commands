@@ -9,6 +9,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     exit 1
 fi
 
+PROJECT_ROOT=${PROJECT_ROOT:-mvp_site}
+
 if [[ -z "${MCP_LAUNCHER_PATH:-}" ]]; then
     if [[ ${#BASH_SOURCE[@]} -gt 0 ]]; then
         MCP_LAUNCHER_PATH="${BASH_SOURCE[${#BASH_SOURCE[@]}-1]}"
@@ -219,6 +221,7 @@ if [ "$TEST_MODE" = true ]; then
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
+declare -a DEFAULT_MCP_ENV_FLAGS=()
 if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
@@ -245,6 +248,7 @@ log_error_details() {
 
 # Get Node and NPX paths with cross-platform detection
 NODE_PATH=$(command -v node 2>/dev/null || true)
+NPM_PATH=$(command -v npm 2>/dev/null || true)
 NPX_PATH=$(command -v npx 2>/dev/null || true)
 
 # Mac homebrew specific detection if not found
@@ -261,6 +265,9 @@ if [ -z "$NODE_PATH" ] && [ "$MACHINE" = "Mac" ]; then
             NODE_DIR=$(dirname "$NODE_PATH")
             if [ -x "$NODE_DIR/npx" ]; then
                 NPX_PATH="$NODE_DIR/npx"
+            fi
+            if [ -x "$NODE_DIR/npm" ]; then
+                NPM_PATH="$NODE_DIR/npm"
             fi
             break
         fi
@@ -292,6 +299,11 @@ if [ -z "$NODE_PATH" ] && { [ "$MACHINE" = "Git" ] || [ "$MACHINE" = "MinGw" ] |
         elif [ -x "$NODE_DIR/npx" ]; then
             NPX_PATH="$NODE_DIR/npx"
         fi
+        if [ -x "$NODE_DIR/npm.exe" ]; then
+            NPM_PATH="$NODE_DIR/npm.exe"
+        elif [ -x "$NODE_DIR/npm" ]; then
+            NPM_PATH="$NODE_DIR/npm"
+        fi
     fi
 fi
 
@@ -304,11 +316,17 @@ if [ -z "$NODE_PATH" ] || [ -z "$NPX_PATH" ]; then
     safe_exit 1
 fi
 
+if [ -z "$NPM_PATH" ]; then
+    echo -e "${RED}❌ npm executable not found alongside Node.js. Please ensure npm is installed.${NC}"
+    safe_exit 1
+fi
+
 echo -e "${BLUE}📍 Node path: $NODE_PATH${NC}"
+echo -e "${BLUE}📍 npm path: $NPM_PATH${NC}"
 echo -e "${BLUE}📍 NPX path: $NPX_PATH${NC}"
 
 # Check Node.js version and warn about compatibility
-NODE_VERSION=$(node --version)
+NODE_VERSION="$("$NODE_PATH" --version)"
 echo -e "${BLUE}📍 Node version: $NODE_VERSION${NC}"
 log_with_timestamp "Node.js version: $NODE_VERSION"
 
@@ -324,7 +342,7 @@ fi
 
 # Check npm permissions and suggest alternatives
 echo -e "${BLUE}🔍 Checking npm global installation permissions...${NC}"
-if npm list -g --depth=0 >/dev/null 2>&1; then
+if "$NPM_PATH" list -g --depth=0 >/dev/null 2>&1; then
     echo -e "${GREEN}✅ NPM global permissions look good${NC}"
     USE_GLOBAL=true
 else
@@ -384,7 +402,7 @@ package_exists() {
         # Check PyPI registry (not local installation)
         python3 -c "import requests; import sys; response = requests.get(f'https://pypi.org/pypi/{sys.argv[1]}/json'); sys.exit(0 if response.status_code == 200 else 1)" "$package" 2>/dev/null
     else
-        npm view "$package" version >/dev/null 2>&1
+        "$NPM_PATH" view "$package" version >/dev/null 2>&1
     fi
 }
 
@@ -416,7 +434,7 @@ install_package() {
         # Capture detailed error output
         local install_output
         local exit_code
-        capture_command_output install_output exit_code npm install -g "$package"
+        capture_command_output install_output exit_code "$NPM_PATH" install -g "$package"
 
         if [ $exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Package $package installed globally${NC}"
@@ -594,7 +612,7 @@ add_mcp_server() {
         echo -e "${BLUE}  🔍 Checking if package $package exists in npm registry...${NC}"
         local registry_check
         local registry_exit_code
-        capture_command_output registry_check registry_exit_code npm view "$package" version
+        capture_command_output registry_check registry_exit_code "$NPM_PATH" view "$package" version
 
         if [ $registry_exit_code -ne 0 ]; then
             echo -e "${RED}  ❌ Package $package not found in npm registry${NC}"
@@ -633,7 +651,7 @@ add_mcp_server() {
             echo -e "${BLUE}  🔍 Checking global npm installation...${NC}"
             local global_check
             local global_exit_code
-            capture_command_output global_check global_exit_code npm list -g "$package"
+            capture_command_output global_check global_exit_code "$NPM_PATH" list -g "$package"
 
             if [ $global_exit_code -ne 0 ]; then
                 echo -e "${YELLOW}  📦 Package $package not installed globally, installing...${NC}"
@@ -660,10 +678,7 @@ add_mcp_server() {
     fi
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
+    safe_remove_dual_if_enabled "$name"
 
     # Add server with error checking
     echo -e "${BLUE}  🔗 Adding MCP server $name...${NC}"
@@ -677,10 +692,10 @@ add_mcp_server() {
     if [ "$name" = "grok-mcp" ]; then
         echo -e "${BLUE}  🔧 Special setup for grok-mcp using direct node execution...${NC}"
         local grok_path=""
-        if command -v npm >/dev/null 2>&1; then
+        if [ -n "$NPM_PATH" ] && [ -x "$NPM_PATH" ]; then
             local npm_root_output=""
             local npm_root_status=0
-            capture_command_output npm_root_output npm_root_status npm root -g
+            capture_command_output npm_root_output npm_root_status "$NPM_PATH" root -g
             if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
                 grok_path="${npm_root_output}/grok-mcp/build/index.js"
             fi
@@ -691,14 +706,14 @@ add_mcp_server() {
 
                 local install_output
                 local install_exit_code
-                capture_command_output install_output install_exit_code npm install -g grok-mcp --registry https://registry.npmjs.org/
+                capture_command_output install_output install_exit_code "$NPM_PATH" install -g grok-mcp --registry https://registry.npmjs.org/
 
                 if [ $install_exit_code -eq 0 ]; then
                     echo -e "${GREEN}  ✅ Successfully installed grok-mcp globally${NC}"
                     log_with_timestamp "grok-mcp installed successfully"
 
                     # Re-calculate path after installation to get actual location
-                    capture_command_output npm_root_output npm_root_status npm root -g
+                    capture_command_output npm_root_output npm_root_status "$NPM_PATH" root -g
                     if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
                         grok_path="${npm_root_output}/grok-mcp/build/index.js"
                     else
@@ -729,7 +744,7 @@ add_mcp_server() {
             fi
         else
             grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
-            echo -e "${YELLOW}  ⚠️ npm command not found, using fallback path: $grok_path${NC}"
+            echo -e "${YELLOW}  ⚠️ npm executable unavailable, using fallback path: $grok_path${NC}"
         fi
 
         # Add XAI_API_KEY environment variable for grok-mcp
@@ -1057,7 +1072,7 @@ setup_second_opinion_mcp_server() {
         return 0
     fi
 
-    ${MCP_CLI_BIN} mcp remove "$server_name" >/dev/null 2>&1 || true
+    safe_remove_dual_if_enabled "$server_name"
 
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
@@ -1261,10 +1276,10 @@ install_react_mcp() {
 
                 local dep_exit_code=0
                 if [ -f "${REPO_ROOT}/react-mcp/package-lock.json" ]; then
-                    capture_command_output dep_output dep_exit_code npm --prefix "${REPO_ROOT}/react-mcp" ci
+                    capture_command_output dep_output dep_exit_code "$NPM_PATH" --prefix "${REPO_ROOT}/react-mcp" ci
                 else
                     echo -e "${YELLOW}  ⚠️ No package-lock.json found, using npm install instead${NC}"
-                    capture_command_output dep_output dep_exit_code npm --prefix "${REPO_ROOT}/react-mcp" install
+                    capture_command_output dep_output dep_exit_code "$NPM_PATH" --prefix "${REPO_ROOT}/react-mcp" install
                 fi
 
                 if [ $dep_exit_code -ne 0 ]; then
@@ -1416,9 +1431,9 @@ install_ios_simulator_mcp() {
     echo -e "${BLUE}  📦 Installing dependencies...${NC}"
     local -a dep_cmd
     if [ -f "$TEMP_DIR/ios-simulator-mcp/package-lock.json" ]; then
-        dep_cmd=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" ci)
+        dep_cmd=("$NPM_PATH" --prefix "$TEMP_DIR/ios-simulator-mcp" ci)
     else
-        dep_cmd=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" install)
+        dep_cmd=("$NPM_PATH" --prefix "$TEMP_DIR/ios-simulator-mcp" install)
     fi
     if ! "${dep_cmd[@]}" >/dev/null 2>&1; then
         echo -e "${RED}  ❌ Failed to install dependencies${NC}"
@@ -1435,7 +1450,7 @@ install_ios_simulator_mcp() {
     BUILD_LOG_FILE="$(mktemp)"
     trap 'rm -f "$BUILD_LOG_FILE"' RETURN
     local -a build_runner
-    build_runner=(npm --prefix "$TEMP_DIR/ios-simulator-mcp" run build)
+    build_runner=("$NPM_PATH" --prefix "$TEMP_DIR/ios-simulator-mcp" run build)
     if [ -n "$TIMEOUT_CMD" ]; then
         build_runner=("$TIMEOUT_CMD" 180s "${build_runner[@]}")
     fi

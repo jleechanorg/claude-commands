@@ -10,9 +10,7 @@ MODE="dual"  # dual, http-only, stdio-only
 
 # Color codes for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Help message
@@ -65,11 +63,16 @@ done
 
 # Get script directory and resolve project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+MCP_PROJECT_SUBDIR=${PROJECT_ROOT:-mvp_site}
 
 resolve_project_root() {
     if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]]; then
         local candidate="${WORLDARCHITECT_PROJECT_ROOT}"
-        if [[ -f "$candidate/$PROJECT_ROOT/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
+        if [[ -n "$MCP_PROJECT_SUBDIR" && -f "$candidate/$MCP_PROJECT_SUBDIR/mcp_api.py" ]]; then
+            echo "$candidate"
+            return 0
+        fi
+        if [[ -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
             echo "$candidate"
             return 0
         fi
@@ -77,7 +80,11 @@ resolve_project_root() {
 
     local search_dir="$SCRIPT_DIR"
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/$PROJECT_ROOT/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
+        if [[ -n "$MCP_PROJECT_SUBDIR" && -f "$search_dir/$MCP_PROJECT_SUBDIR/mcp_api.py" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+        if [[ -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
             echo "$search_dir"
             return 0
         fi
@@ -87,7 +94,7 @@ resolve_project_root() {
     return 1
 }
 
-if PROJECT_ROOT="$(resolve_project_root)"; then
+if REPO_ROOT="$(resolve_project_root)"; then
     :
 else
     echo -e "${RED}❌ Error: Unable to locate project root. Set WORLDARCHITECT_PROJECT_ROOT to override.${NC}" >&2
@@ -95,24 +102,24 @@ else
 fi
 
 if [[ -z "${PYTHONPATH:-}" ]]; then
-    export PYTHONPATH="$PROJECT_ROOT"
+    export PYTHONPATH="$REPO_ROOT"
 else
-    export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
+    export PYTHONPATH="$REPO_ROOT:$PYTHONPATH"
 fi
 
 MCP_SERVER_ENV_DEFAULT="${MCP_SERVER_PATH:-}"
 
 # Try multiple common MCP server locations
-if [ -f "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
-elif [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
-elif [ -f "$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
+if [[ -n "$MCP_PROJECT_SUBDIR" && -f "$REPO_ROOT/$MCP_PROJECT_SUBDIR/mcp_api.py" ]]; then
+    MCP_SERVER_PATH="$REPO_ROOT/$MCP_PROJECT_SUBDIR/mcp_api.py"
+elif [ -f "$REPO_ROOT/src/mcp_api.py" ]; then
+    MCP_SERVER_PATH="$REPO_ROOT/src/mcp_api.py"
+elif [ -f "$REPO_ROOT/mcp_api.py" ]; then
+    MCP_SERVER_PATH="$REPO_ROOT/mcp_api.py"
 elif [ -n "$MCP_SERVER_ENV_DEFAULT" ]; then
     MCP_SERVER_PATH="$MCP_SERVER_ENV_DEFAULT"
 else
-    MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
+    MCP_SERVER_PATH="$REPO_ROOT/src/mcp_api.py"
 fi
 
 # Validate MCP server exists
@@ -123,8 +130,8 @@ fi
 
 # Get Python executable
 if [[ -z "${PYTHON_EXEC:-}" ]]; then
-    if [[ -x "$PROJECT_ROOT/venv/bin/python" ]]; then
-        PYTHON_EXEC="$PROJECT_ROOT/venv/bin/python"
+    if [[ -x "$REPO_ROOT/venv/bin/python" ]]; then
+        PYTHON_EXEC="$REPO_ROOT/venv/bin/python"
     else
         PYTHON_EXEC="python3"
     fi
