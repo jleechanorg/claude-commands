@@ -39,7 +39,32 @@ if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+mcp_common__resolve_repo_root() {
+    if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
+       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/$PROJECT_ROOT/mcp_api.py" ]]; then
+        echo "${WORLDARCHITECT_PROJECT_ROOT}"
+        return 0
+    fi
+
+    local search_dir="$SCRIPT_DIR"
+    while [[ "$search_dir" != "/" ]]; do
+        if [[ -f "$search_dir/$PROJECT_ROOT/mcp_api.py" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+        search_dir="$(dirname "$search_dir")"
+    done
+
+    return 1
+}
+
+if REPO_ROOT="$(mcp_common__resolve_repo_root)"; then
+    :
+else
+    REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    echo "⚠️ Warning: Unable to automatically resolve project root. Falling back to $REPO_ROOT" >&2
+fi
 
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
@@ -58,6 +83,23 @@ if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
 else
     MCP_SCOPE_ARGS=(--scope "$MCP_SCOPE")
 fi
+
+safe_remove() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    fi
+}
+
+safe_remove_dual_if_enabled() {
+    local name="$1"
+    safe_remove "$name"
+    if [[ "${MCP_CLI_BIN}" != "codex" ]] && [[ "${MCP_INSTALL_DUAL_SCOPE}" == "true" ]] && [[ "$MCP_SCOPE" == "local" ]]; then
+        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    fi
+}
 
 for mcp_common_arg in "$@"; do
     if [[ "$mcp_common_arg" == "--test" ]]; then
@@ -474,7 +516,7 @@ test_mcp_server() {
 cleanup_failed_server() {
     local name="$1"
     echo -e "${YELLOW}  🧹 Cleaning up failed installation of $name...${NC}"
-    ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    safe_remove_dual_if_enabled "$name"
 }
 
 # Function to display current step with dynamic counting
@@ -660,10 +702,7 @@ add_mcp_server() {
     fi
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
+    safe_remove_dual_if_enabled "$name"
 
     # Add server with error checking
     echo -e "${BLUE}  🔗 Adding MCP server $name...${NC}"
@@ -990,7 +1029,7 @@ setup_render_mcp_server() {
             echo -e "${BLUE}  📋 Features: Service management, database queries, deployment monitoring${NC}"
 
             # Remove existing render server to reconfigure
-            ${MCP_CLI_BIN} mcp remove "render" >/dev/null 2>&1 || true
+            safe_remove "render"
 
             # Add Render MCP server using HTTP transport with secure JSON configuration
             echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
@@ -1057,7 +1096,7 @@ setup_second_opinion_mcp_server() {
         return 0
     fi
 
-    ${MCP_CLI_BIN} mcp remove "$server_name" >/dev/null 2>&1 || true
+    safe_remove "$server_name"
 
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
@@ -1279,7 +1318,7 @@ install_react_mcp() {
         fi
 
         # Remove existing react-mcp server to reconfigure
-        ${MCP_CLI_BIN} mcp remove "react-mcp" >/dev/null 2>&1 || true
+        safe_remove "react-mcp"
 
         # Add React MCP server
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
@@ -1531,10 +1570,7 @@ install_ios_simulator_mcp() {
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration...${NC}"
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
+    safe_remove_dual_if_enabled "$name"
 
     # Add server using node to run the compiled entrypoint
     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
@@ -1582,7 +1618,7 @@ install_github_mcp() {
         log_with_timestamp "Adding GitHub official remote MCP server"
 
         # Remove any old deprecated GitHub server first
-        ${MCP_CLI_BIN} mcp remove "github-server" >/dev/null 2>&1 || true
+        safe_remove "github-server"
 
         # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
         local temp_config=$(mktemp -t github_mcp.XXXXXX)
@@ -1632,7 +1668,7 @@ MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
 echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
 
 # Remove existing memory server to reconfigure
-${MCP_CLI_BIN} mcp remove "memory-server" -s "${MCP_SCOPE}" >/dev/null 2>&1 || true
+safe_remove_dual_if_enabled "memory-server"
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
@@ -1686,10 +1722,10 @@ display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
-${MCP_CLI_BIN} mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "perplexity-ask" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "perplexity-search" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "ddg-search" >/dev/null 2>&1 || true
+safe_remove "web-search-duckduckgo"
+safe_remove "perplexity-ask"
+safe_remove "perplexity-search"
+safe_remove "ddg-search"
 
 # DuckDuckGo is now installed in Batch 2
 echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
@@ -1741,7 +1777,7 @@ if server_already_exists "filesystem"; then
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing filesystem server to reconfigure with proper directory access
-    ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
+    safe_remove "filesystem"
 
     # Determine filesystem server directories based on configuration
     FS_SERVER_DIRS=("$HOME/projects")
@@ -1804,7 +1840,7 @@ else
         log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
 
         # Remove existing worldarchitect server to reconfigure
-        ${MCP_CLI_BIN} mcp remove "worldarchitect" >/dev/null 2>&1 || true
+        safe_remove "worldarchitect"
 
         # Add WorldArchitect MCP server using Python with proper environment
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
@@ -1870,7 +1906,7 @@ else
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing serena server to reconfigure
-    ${MCP_CLI_BIN} mcp remove "serena" >/dev/null 2>&1 || true
+    safe_remove "serena"
 
     # Add Serena MCP server using uvx with git repository
     echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
