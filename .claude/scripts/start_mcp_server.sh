@@ -2,7 +2,7 @@
 # WorldArchitect MCP Server Startup Script
 # Starts the MCP server with configurable transport options
 
-set -e
+set -Eeuo pipefail
 
 # Default configuration
 PORT=8081
@@ -10,9 +10,7 @@ MODE="dual"  # dual, http-only, stdio-only
 
 # Color codes for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Help message
@@ -66,7 +64,7 @@ done
 # Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
-MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
 
 # Validate MCP server exists
 if [ ! -f "$MCP_SERVER_PATH" ]; then

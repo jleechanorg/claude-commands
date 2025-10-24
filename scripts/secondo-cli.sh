@@ -2,10 +2,10 @@
 
 # Second Opinion CLI - Get multi-model AI feedback
 # Usage: ./scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
-# Explicit error handling is used (no `set -e`) to preserve interactive shells.
+# Error handling is done explicitly without relying on `set -e`, to preserve interactive shells.
 
 # Configuration
-MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"
+MCP_URL="${MCP_URL:-https://ai-universe-backend-final.onrender.com/mcp}"
 TIMEOUT=180
 
 # Colors

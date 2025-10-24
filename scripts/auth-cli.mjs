@@ -13,13 +13,13 @@
  *   node scripts/auth-cli.mjs token
  */
 
-import express from 'express';
 import { createServer } from 'http';
 import { readFile, writeFile, unlink, mkdir } from 'fs/promises';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { spawn } from 'child_process';
+import { randomBytes } from 'crypto';
 
 // Constants
 const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (1 month)
@@ -38,6 +38,11 @@ const CONFIG = {
   tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
   productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
 };
+
+if (typeof fetch !== 'function') {
+  console.error('❌ Node 18+ required: global fetch is unavailable.');
+  process.exit(1);
+}
 
 // Validate required configuration
 function validateConfig() {
@@ -142,7 +147,7 @@ async function readTokenData({ allowExpired = false, returnNullIfMissing = false
 /**
  * Generate authentication HTML page served on localhost
  */
-function getAuthHtml(callbackUrl) {
+function getAuthHtml(callbackUrl, state) {
   return `<!DOCTYPE html>
 <html>
 <head>
@@ -174,6 +179,7 @@ function getAuthHtml(callbackUrl) {
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
+    const SESSION_STATE = '${state}';
 
     window.signIn = async function() {
       const statusDiv = document.getElementById('status');
@@ -188,8 +194,9 @@ function getAuthHtml(callbackUrl) {
         // Send token back to CLI server
         const response = await fetch('${callbackUrl}', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-CSRF-STATE': SESSION_STATE },
           body: JSON.stringify({
+            state: SESSION_STATE,
             idToken,
             user: {
               uid: user.uid,
@@ -222,22 +229,30 @@ function getAuthHtml(callbackUrl) {
 async function login() {
   console.log('🔐 Starting authentication flow...\n');
 
+  const { default: express } = await import('express');
   const app = express();
   app.use(express.json());
 
   let server;
   let tokenReceived = false;
+  const authState = randomBytes(32).toString('hex');
 
   // Serve authentication page
   app.get('/', (req, res) => {
     const callbackUrl = `http://127.0.0.1:${CONFIG.callbackPort}${CONFIG.callbackPath}`;
-    res.send(getAuthHtml(callbackUrl));
+    res.send(getAuthHtml(callbackUrl, authState));
   });
 
   // Handle token callback
   app.post(CONFIG.callbackPath, async (req, res) => {
     try {
-      const { idToken, user } = req.body;
+      const { idToken, user, state } = req.body;
+      const headerState = req.get('x-csrf-state');
+
+      if (!state || state !== authState || headerState !== authState) {
+        res.status(403).json({ error: 'Invalid authentication state' });
+        return;
+      }
 
       if (!idToken || typeof idToken !== 'string' || !idToken.trim()) {
         res.status(400).json({ error: 'Missing or invalid token' });

@@ -13,8 +13,27 @@ import shutil
 import re
 import json
 import requests
+import importlib.util
 from pathlib import Path
-from export_config import get_exportable_components
+
+
+def _load_get_exportable_components():
+    candidates = [
+        Path(__file__).parent / "export_config.py",
+        Path(__file__).parents[2] / ".claude" / "commands" / "export_config.py",
+        Path(__file__).parents[2] / "src" / ".claude" / "commands" / "export_config.py",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            spec = importlib.util.spec_from_file_location("export_config", candidate)
+            if spec and spec.loader:
+                module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(module)  # type: ignore[attr-defined]
+                return module.get_exportable_components
+    raise ImportError("export_config.py not found in expected locations")
+
+
+get_exportable_components = _load_get_exportable_components()
 
 # Constants for file limits
 MAX_FILE_SAMPLE_SIZE = 3
@@ -560,7 +579,7 @@ class ClaudeCommandsExporter:
             return
 
         # Create settings_file in staging (will map to .claude/settings.json in repo)
-        target_file = os.path.join(staging_dir, 'settings_json')
+        target_file = os.path.join(staging_dir, 'settings.json')
         shutil.copy2(settings_file, target_file)
         self._apply_content_filtering(target_file)
 
@@ -1199,7 +1218,7 @@ This is a filtered reference export from a working Claude Code project. Commands
             'agents': os.path.join(claude_dir, 'agents'),
             'claude_scripts': os.path.join(claude_dir, 'scripts'),  # .claude/scripts directory
             'skills': os.path.join(claude_dir, 'skills'),           # .claude/skills directory
-            'settings_json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
+            'settings.json': os.path.join(claude_dir, 'settings.json'),  # .claude/settings.json file
             'orchestration': 'orchestration',  # Goes to repo root
             'scripts': None                    # Goes to repo root within scripts/
         }

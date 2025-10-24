@@ -59,14 +59,14 @@ is_test_file() {
         return 0
     fi
 
-    case "$filename_lc" in
-        *_test."${ext}"|*_tests."${ext}"|*_spec."${ext}")
-            return 0
-            ;;
-        *.test."${ext}"|*.tests."${ext}"|*.spec."${ext}"|*.unit."${ext}"|*.integration."${ext}"|*.e2e."${ext}")
-            return 0
-            ;;
-    esac
+    if [[ "$filename_lc" == *_test."$ext" || "$filename_lc" == *_tests."$ext" || "$filename_lc" == *_spec."$ext" ]]; then
+        return 0
+    fi
+
+    if [[ "$filename_lc" == *.test."$ext" || "$filename_lc" == *.tests."$ext" || "$filename_lc" == *.spec."$ext" ||
+          "$filename_lc" == *.unit."$ext" || "$filename_lc" == *.integration."$ext" || "$filename_lc" == *.e2e."$ext" ]]; then
+        return 0
+    fi
 
     return 1
 }

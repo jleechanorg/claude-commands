@@ -72,5 +72,15 @@ if [[ -z "${XAI_DEFAULT_CHAT_MODEL:-}" ]]; then
     export XAI_DEFAULT_CHAT_MODEL="$GROK_DEFAULT_MODEL"
 fi
 
-source "$SCRIPT_DIR/scripts/mcp_common.sh" "${args[@]}"
+mcp_common_path=""
+if [[ -f "$SCRIPT_DIR/../../scripts/mcp_common.sh" ]]; then
+    mcp_common_path="$SCRIPT_DIR/../../scripts/mcp_common.sh"
+elif [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then
+    mcp_common_path="$SCRIPT_DIR/mcp_common.sh"
+else
+    echo "Error: mcp_common.sh not found relative to $SCRIPT_DIR" >&2
+    exit 1
+fi
+
+source "$mcp_common_path" "${args[@]}"
 exit $?

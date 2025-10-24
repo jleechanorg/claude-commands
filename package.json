@@ -1,5 +1,5 @@
 {
-  "name": "worldarchitect-ai-scripts",
+  "name": "$PROJECT_NAME-ai-scripts",
   "version": "1.0.0",
   "type": "module",
   "description": "Node.js dependencies for Your Project automation scripts",

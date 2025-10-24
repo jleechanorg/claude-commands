@@ -3,7 +3,7 @@
 # Test Script for PR #1884 - /secondo Command
 # Tests authentication and secondo-cli.sh functionality
 
-set -e
+set -Eeuo pipefail
 
 # Colors
 RED='\033[0;31m'
@@ -32,6 +32,11 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo -n "Checking Node.js... "
 if command -v node >/dev/null 2>&1; then
     NODE_VERSION=$(node --version)
+    NODE_MAJOR=$(echo "$NODE_VERSION" | sed -E 's/^v([0-9]+).*/\1/')
+    if ! [[ "$NODE_MAJOR" =~ ^[0-9]+$ ]] || [ "$NODE_MAJOR" -lt 18 ]; then
+        echo -e "${RED}❌ $NODE_VERSION (Node 18+ required)${NC}"
+        exit 1
+    fi
     echo -e "${GREEN}✅ $NODE_VERSION${NC}"
 else
     echo -e "${RED}❌ Not installed${NC}"
@@ -65,7 +70,7 @@ else
 fi
 
 echo -n "Checking express npm package... "
-if node -e "require('express')" 2>/dev/null; then
+if node -e "import('express').catch(() => { throw new Error('missing'); })" >/dev/null 2>&1; then
     echo -e "${GREEN}✅ Installed${NC}"
 else
     echo -e "${RED}❌ Not installed (run: npm install express)${NC}"

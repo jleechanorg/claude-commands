@@ -19,7 +19,7 @@ EXPORTABLE_COMPONENTS = [
     "commands",      # Slash commands (.md and .py files) - STANDARD
     "hooks",         # Lifecycle hooks (.sh, .py, .md files) - STANDARD
     "agents",        # Subagents/specialized AI assistants (.md files) - STANDARD
-    "scripts",       # Claude Code utility scripts (.sh, .py files) - STANDARD
+    "scripts",       # Claude Code utility scripts (.sh, .py, .mjs files) - STANDARD
     "skills",        # Skill documentation and guides (.md files) - STANDARD
     "settings.json"  # Configuration file - STANDARD
 ]
