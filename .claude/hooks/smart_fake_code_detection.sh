@@ -121,7 +121,7 @@ fi
 set -e
 
 printf '%s\n' "$CLAUDE_OUTPUT" >>"$LOG_FILE"
-printf "---\n" >>"$LOG_FILE"
+printf '%s\n' '---' >>"$LOG_FILE"
 
 echo "📋 /fake audit results:" >&2
 printf '%s\n' "$CLAUDE_OUTPUT" >&2

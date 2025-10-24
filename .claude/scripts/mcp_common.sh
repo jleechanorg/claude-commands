@@ -1548,8 +1548,11 @@ install_ios_simulator_mcp() {
     # Add server to ${MCP_PRODUCT_NAME} MCP configuration
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration...${NC}"
 
-    # Remove existing server if present (from current scope and optional alternate scope)
-    remove_server_from_scopes "$name" "$MCP_SCOPE"
+    # Remove existing server if present (from current scope and dual-scope if enabled)
+    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
+        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    fi
 
     # Add server using node to run the compiled entrypoint
     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
@@ -1770,7 +1773,6 @@ else
         fi
         FS_SERVER_DIRS+=("${allowlist_paths[@]}")
 
-        # Deduplicate directories
         declare -A __fs_seen=()
         unique_dirs=()
         for dir in "${FS_SERVER_DIRS[@]}"; do
