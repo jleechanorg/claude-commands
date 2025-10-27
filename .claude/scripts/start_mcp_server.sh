@@ -66,10 +66,21 @@ done
 # Get script directory and resolve project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+PROJECT_MODULE_DIR_DEFAULT="orchestration"
+if [[ -n "${WORLDARCHITECT_MODULE_DIR:-}" ]]; then
+    PROJECT_MODULE_DIR="$WORLDARCHITECT_MODULE_DIR"
+elif [[ -n "${PROJECT_MODULE_DIR:-}" ]]; then
+    PROJECT_MODULE_DIR="$PROJECT_MODULE_DIR"
+elif [[ -n "${PROJECT_ROOT:-}" && "${PROJECT_ROOT}" != /* ]]; then
+    PROJECT_MODULE_DIR="$PROJECT_ROOT"
+else
+    PROJECT_MODULE_DIR="$PROJECT_MODULE_DIR_DEFAULT"
+fi
+
 resolve_project_root() {
     if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]]; then
         local candidate="${WORLDARCHITECT_PROJECT_ROOT}"
-        if [[ -f "$candidate/$PROJECT_ROOT/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
+        if [[ -f "$candidate/$PROJECT_MODULE_DIR/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
             echo "$candidate"
             return 0
         fi
@@ -77,7 +88,7 @@ resolve_project_root() {
 
     local search_dir="$SCRIPT_DIR"
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/$PROJECT_ROOT/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
+        if [[ -f "$search_dir/$PROJECT_MODULE_DIR/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
             echo "$search_dir"
             return 0
         fi
@@ -103,8 +114,8 @@ fi
 MCP_SERVER_ENV_DEFAULT="${MCP_SERVER_PATH:-}"
 
 # Try multiple common MCP server locations
-if [ -f "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+if [ -f "$PROJECT_ROOT/$PROJECT_MODULE_DIR/mcp_api.py" ]; then
+    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_MODULE_DIR/mcp_api.py"
 elif [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
     MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
 elif [ -f "$PROJECT_ROOT/mcp_api.py" ]; then

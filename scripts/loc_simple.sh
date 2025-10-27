@@ -71,6 +71,48 @@ is_test_file() {
     return 1
 }
 
+parse_ext_list() {
+    local raw_list="$1"
+    local -n target_map=$2
+
+    if [[ -z "$raw_list" ]]; then
+        return 0
+    fi
+
+    local sanitized="${raw_list//,/ }"
+    for token in $sanitized; do
+        token="${token,,}"
+        token="${token#.}"
+        token="${token//[^a-z0-9_]/}"
+        if [[ -n "$token" ]]; then
+            target_map["$token"]=1
+        fi
+    done
+}
+
+build_language_catalog() {
+    ORDERED_EXTS=()
+    LANGUAGE_LABELS=()
+
+    local spec
+    local ext label
+    for spec in "${LANGUAGE_SPECS[@]}"; do
+        IFS='|' read -r ext label <<< "$spec"
+        ext="${ext,,}"
+
+        if (( ${#INCLUDE_EXT_FILTER[@]} > 0 )) && [[ -z ${INCLUDE_EXT_FILTER["$ext"]+x} ]]; then
+            continue
+        fi
+
+        if [[ -n ${EXCLUDE_EXT_FILTER["$ext"]+x} ]]; then
+            continue
+        fi
+
+        ORDERED_EXTS+=("$ext")
+        LANGUAGE_LABELS["$ext"]="$label"
+    done
+}
+
 declare -a LANGUAGE_SPECS=(
     "py|🐍 Python (.py)"
     "pyi|🐍 Python Stubs (.pyi)"
@@ -171,11 +213,33 @@ declare -A TEST_COUNTS=()
 declare -a ORDERED_EXTS=()
 declare -a ACTIVE_LANGUAGE_EXTS=()
 
-for spec in "${LANGUAGE_SPECS[@]}"; do
-    IFS='|' read -r ext label <<< "$spec"
-    ORDERED_EXTS+=("$ext")
-    LANGUAGE_LABELS["$ext"]="$label"
-done
+declare -A INCLUDE_EXT_FILTER=()
+declare -A EXCLUDE_EXT_FILTER=()
+parse_ext_list "${LOC_INCLUDE_EXTS:-}" INCLUDE_EXT_FILTER
+parse_ext_list "${LOC_EXCLUDE_EXTS:-}" EXCLUDE_EXT_FILTER
+
+build_language_catalog
+
+if (( ${#ORDERED_EXTS[@]} == 0 )); then
+    if (( ${#INCLUDE_EXT_FILTER[@]} > 0 )); then
+        echo "⚠️ LOC_INCLUDE_EXTS did not match any known extensions; reverting to default catalog." >&2
+        INCLUDE_EXT_FILTER=()
+        build_language_catalog
+    fi
+fi
+
+if (( ${#ORDERED_EXTS[@]} == 0 )); then
+    echo "📚 Language Breakdown:"
+    echo "  No language extensions configured."
+    exit 0
+fi
+
+if (( ${#INCLUDE_EXT_FILTER[@]} > 0 )); then
+    echo "🔍 LOC_INCLUDE_EXTS filter applied: ${!INCLUDE_EXT_FILTER[@]}"
+fi
+if (( ${#EXCLUDE_EXT_FILTER[@]} > 0 )); then
+    echo "🔍 LOC_EXCLUDE_EXTS filter applied: ${!EXCLUDE_EXT_FILTER[@]}"
+fi
 
 declare -a FIND_NAME_ARGS=()
 for ext in "${ORDERED_EXTS[@]}"; do

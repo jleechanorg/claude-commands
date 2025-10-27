@@ -41,12 +41,26 @@ fi
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
+WORLDARCHITECT_MODULE_DIR_DEFAULT="orchestration"
+if [[ -n "${WORLDARCHITECT_MODULE_DIR:-}" ]]; then
+    :
+elif [[ -n "${PROJECT_ROOT:-}" && "${PROJECT_ROOT}" != /* ]]; then
+    WORLDARCHITECT_MODULE_DIR="$PROJECT_ROOT"
+else
+    WORLDARCHITECT_MODULE_DIR="$WORLDARCHITECT_MODULE_DIR_DEFAULT"
+fi
+WORLDARCHITECT_PROJECT_ROOT="${WORLDARCHITECT_PROJECT_ROOT:-$REPO_ROOT}"
+
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
 MCP_PRODUCT_NAME=${MCP_PRODUCT_NAME:-"Claude"}
 MCP_CLI_BIN=${MCP_CLI_BIN:-"claude"}
 MCP_SCOPE=${MCP_SCOPE:-local}
-MCP_INSTALL_DUAL_SCOPE=${MCP_INSTALL_DUAL_SCOPE:-true}  # Install to both local and user scopes
+# MCP_INSTALL_DUAL_SCOPE controls whether the MCP server is installed in both project-local
+# and system-wide (user) scopes. Dual installation keeps the server available for local
+# development as well as any other projects on the same machine. Set this to "false" if you
+# only need one scope or want to avoid permission prompts for system-wide installs.
+MCP_INSTALL_DUAL_SCOPE=${MCP_INSTALL_DUAL_SCOPE:-true}
 MCP_STATS_LOCK_FILE=${MCP_STATS_LOCK_FILE:-"/tmp/${MCP_CLI_BIN}_mcp_stats.lock"}
 MCP_LOG_FILE_PREFIX=${MCP_LOG_FILE_PREFIX:-"/tmp/${MCP_CLI_BIN}_mcp"}
 MCP_BACKUP_PREFIX=${MCP_BACKUP_PREFIX:-${MCP_CLI_BIN}}
@@ -470,11 +484,21 @@ test_mcp_server() {
     fi
 }
 
+# Helper to remove an MCP server respecting the active scope configuration
+safe_remove() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    fi
+}
+
 # Function to cleanup failed server installation
 cleanup_failed_server() {
     local name="$1"
     echo -e "${YELLOW}  🧹 Cleaning up failed installation of $name...${NC}"
-    ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    safe_remove_dual_if_enabled "$name"
 }
 
 # Function to display current step with dynamic counting
@@ -547,7 +571,7 @@ collect_parallel_results() {
 # Helper function to safely remove MCP server from current scope and dual-scope if enabled
 safe_remove_dual_if_enabled() {
     local name="$1"
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    safe_remove "$name"
     if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
         ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
     fi
@@ -1744,14 +1768,21 @@ if server_already_exists "filesystem"; then
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing filesystem server to reconfigure with proper directory access
-    ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
+    safe_remove_dual_if_enabled "filesystem"
 
     # Determine filesystem server directories based on configuration
     FS_SERVER_DIRS=("$HOME/projects")
     wide_fs_enabled=false
     if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
-        FS_SERVER_DIRS+=("/tmp" "$HOME")
-        wide_fs_enabled=true
+        echo -e "${YELLOW}⚠️  SECURITY WARNING: Granting filesystem server access to /tmp and \$HOME can expose sensitive data, including SSH keys, browser profiles, and credentials. This may allow access to files belonging to other users or processes. Proceed only if you understand and accept these risks.${NC}"
+        read -r -p "Type YES to continue with wide filesystem access (or anything else to abort): " WIDE_FS_CONFIRM || true
+        if [[ "$WIDE_FS_CONFIRM" == "YES" ]]; then
+            FS_SERVER_DIRS+=("/tmp" "$HOME")
+            wide_fs_enabled=true
+        else
+            echo -e "${RED}  ❌ Aborting: Wide filesystem access not confirmed.${NC}"
+            safe_exit 1
+        fi
     fi
 
     allowed_dirs_display=$(printf "%s, " "${FS_SERVER_DIRS[@]}")
@@ -1788,7 +1819,7 @@ install_react_mcp
 display_step "Setting up WorldArchitect MCP Server..."
 TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 echo -e "${BLUE}  🎮 Configuring project MCP server for application mechanics...${NC}"
-log_with_timestamp "Setting up MCP server: worldarchitect (local: $PROJECT_ROOT/mcp_api.py)"
+log_with_timestamp "Setting up MCP server: worldarchitect (local: ${WORLDARCHITECT_MODULE_DIR}/mcp_api.py)"
 
 # Check if server already exists
 if server_already_exists "worldarchitect"; then
@@ -1798,7 +1829,7 @@ if server_already_exists "worldarchitect"; then
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Get the absolute path to the WorldArchitect project
-    WORLDARCHITECT_MCP_PATH="$REPO_ROOT/$PROJECT_ROOT/mcp_api.py"
+    WORLDARCHITECT_MCP_PATH="$WORLDARCHITECT_PROJECT_ROOT/$WORLDARCHITECT_MODULE_DIR/mcp_api.py"
     WORLDARCHITECT_PYTHON="$REPO_ROOT/venv/bin/python"
 
     # Check if mcp_api.py exists

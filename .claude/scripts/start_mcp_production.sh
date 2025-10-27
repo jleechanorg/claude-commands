@@ -7,29 +7,48 @@ trap 'echo "ERROR: start_mcp_production.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+PROJECT_MODULE_DIR_DEFAULT="orchestration"
+if [[ -n "${WORLDARCHITECT_MODULE_DIR:-}" ]]; then
+    PROJECT_MODULE_DIR="$WORLDARCHITECT_MODULE_DIR"
+elif [[ -n "${PROJECT_MODULE_DIR:-}" ]]; then
+    PROJECT_MODULE_DIR="$PROJECT_MODULE_DIR"
+elif [[ -n "${PROJECT_ROOT:-}" && "${PROJECT_ROOT}" != /* ]]; then
+    PROJECT_MODULE_DIR="$PROJECT_ROOT"
+else
+    PROJECT_MODULE_DIR="$PROJECT_MODULE_DIR_DEFAULT"
+fi
+
+WORLDARCHITECT_PROJECT_ROOT="${WORLDARCHITECT_PROJECT_ROOT:-}"
+
 resolve_project_root() {
     local search_dir="$SCRIPT_DIR"
 
+    if [[ -n "$WORLDARCHITECT_PROJECT_ROOT" ]]; then
+        if [[ -f "$WORLDARCHITECT_PROJECT_ROOT/scripts/setup_production_env.sh" && \
+              ( -f "$WORLDARCHITECT_PROJECT_ROOT/$PROJECT_MODULE_DIR/mcp_api.py" || \
+                -f "$WORLDARCHITECT_PROJECT_ROOT/src/mcp_api.py" || \
+                -f "$WORLDARCHITECT_PROJECT_ROOT/mcp_api.py" ) ]]; then
+            echo "$WORLDARCHITECT_PROJECT_ROOT"
+            return 0
+        fi
+    fi
+
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/scripts/setup_production_env.sh" && -f "$search_dir/$PROJECT_ROOT/mcp_api.py" ]]; then
+        if [[ -f "$search_dir/scripts/setup_production_env.sh" && \
+              ( -f "$search_dir/$PROJECT_MODULE_DIR/mcp_api.py" || \
+                -f "$search_dir/src/mcp_api.py" || \
+                -f "$search_dir/mcp_api.py" ) ]]; then
             echo "$search_dir"
             return 0
         fi
         search_dir="$(dirname "$search_dir")"
     done
 
-    if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
-       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/scripts/setup_production_env.sh" && \
-          -f "${WORLDARCHITECT_PROJECT_ROOT}/$PROJECT_ROOT/mcp_api.py" ]]; then
-        echo "${WORLDARCHITECT_PROJECT_ROOT}"
-        return 0
-    fi
-
     return 1
 }
 
 PROJECT_ROOT="$(resolve_project_root)" || {
-    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and $PROJECT_ROOT/mcp_api.py" >&2
+    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and ${PROJECT_MODULE_DIR}/mcp_api.py" >&2
     exit 1
 }
 
@@ -58,7 +77,7 @@ fi
 
 MCP_SERVER_PATH=""
 for candidate in \
-    "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" \
+    "$PROJECT_ROOT/$PROJECT_MODULE_DIR/mcp_api.py" \
     "$PROJECT_ROOT/src/mcp_api.py" \
     "$PROJECT_ROOT/mcp_api.py"
 do

@@ -5,7 +5,7 @@
   "description": "Node.js dependencies for Your Project automation scripts",
   "private": true,
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=16.0.0"
   },
   "dependencies": {
     "express": "^4.19.2"
