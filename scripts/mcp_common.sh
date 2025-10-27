@@ -544,6 +544,19 @@ collect_parallel_results() {
     declare -A PARALLEL_STATUS_FILES
 }
 
+# Helper function to safely remove MCP server from current scope and dual-scope if enabled
+safe_remove_dual_if_enabled() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" != "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    fi
+    if [[ "${MCP_CLI_BIN}" != "codex" ]] && [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
+        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    fi
+}
+
 # Enhanced function to add MCP server with full error checking
 add_mcp_server() {
     local name="$1"
@@ -660,10 +673,7 @@ add_mcp_server() {
     fi
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
+    safe_remove_dual_if_enabled "$name"
 
     # Add server with error checking
     echo -e "${BLUE}  🔗 Adding MCP server $name...${NC}"
@@ -1531,10 +1541,7 @@ install_ios_simulator_mcp() {
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration...${NC}"
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
+    safe_remove_dual_if_enabled "$name"
 
     # Add server using node to run the compiled entrypoint
     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"

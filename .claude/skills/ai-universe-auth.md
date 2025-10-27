@@ -108,7 +108,7 @@ export FIREBASE_PROJECT_ID="your-project-id"
 **Authenticated Users:**
 - 60 requests per hour
 - Multi-model synthesis: 1 per hour
-- Token TTL: 8 hours (work day)
+- Token TTL: 30 days
 
 ## Security Notes
 
@@ -116,7 +116,7 @@ export FIREBASE_PROJECT_ID="your-project-id"
 - OAuth flow uses localhost callback (127.0.0.1:9005)
 - Browser-based authentication (similar to gh CLI, gcloud CLI)
 - Never commit authentication tokens
-- Tokens auto-expire after 8 hours (work day)
+- Tokens auto-expire after 30 days
 
 ## Integration with Commands
 

@@ -22,7 +22,7 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 
 // Constants
-const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days (1 month)
+const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 
 // Configuration

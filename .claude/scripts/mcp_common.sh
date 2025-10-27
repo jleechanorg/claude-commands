@@ -39,7 +39,32 @@ if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+mcp_common__resolve_repo_root() {
+    if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
+       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/mvp_site/mcp_api.py" ]]; then
+        echo "${WORLDARCHITECT_PROJECT_ROOT}"
+        return 0
+    fi
+
+    local search_dir="$SCRIPT_DIR"
+    while [[ "$search_dir" != "/" ]]; do
+        if [[ -f "$search_dir/mvp_site/mcp_api.py" ]]; then
+            echo "$search_dir"
+            return 0
+        fi
+        search_dir="$(dirname "$search_dir")"
+    done
+
+    return 1
+}
+
+if REPO_ROOT="$(mcp_common__resolve_repo_root)"; then
+    :
+else
+    REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+    echo "⚠️ Warning: Unable to automatically resolve project root. Falling back to $REPO_ROOT" >&2
+fi
 
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
@@ -58,6 +83,23 @@ if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
 else
     MCP_SCOPE_ARGS=(--scope "$MCP_SCOPE")
 fi
+
+safe_remove() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    fi
+}
+
+safe_remove_dual_if_enabled() {
+    local name="$1"
+    safe_remove "$name"
+    if [[ "${MCP_CLI_BIN}" != "codex" ]] && [[ "${MCP_INSTALL_DUAL_SCOPE}" == "true" ]] && [[ "$MCP_SCOPE" == "local" ]]; then
+        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    fi
+}
 
 for mcp_common_arg in "$@"; do
     if [[ "$mcp_common_arg" == "--test" ]]; then
@@ -470,74 +512,11 @@ test_mcp_server() {
     fi
 }
 
-# Helper function for scope-aware MCP server removal (handles both claude and codex CLI)
-remove_mcp_server_scoped() {
-    local name="$1"
-    local scope="${2:-$MCP_SCOPE}"  # Use provided scope or default to MCP_SCOPE
-
-    # Codex CLI doesn't support --scope flag, uses single config file
-    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
-        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
-    else
-        ${MCP_CLI_BIN} mcp remove --scope "$scope" "$name" >/dev/null 2>&1 || true
-    fi
-}
-
-# Helper function for dual-scope MCP server removal
-remove_mcp_server_dual_scope() {
-    local name="$1"
-
-    # Remove from current scope
-    remove_mcp_server_scoped "$name" "$MCP_SCOPE"
-
-    # If dual-scope enabled and we're in local scope, also remove from user scope
-    # Skip for codex since it doesn't support dual-scope
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-        remove_mcp_server_scoped "$name" "user"
-    fi
-}
-
 # Function to cleanup failed server installation
 cleanup_failed_server() {
     local name="$1"
     echo -e "${YELLOW}  🧹 Cleaning up failed installation of $name...${NC}"
-    remove_mcp_server_dual_scope "$name"
-}
-
-# Helper function for dual-scope JSON-based MCP server installation
-# Handles both local and optional user scope installation for HTTP/JSON servers
-add_mcp_server_json_dual_scope() {
-    local name="$1"
-    local json_payload="$2"
-    local add_output="$3"  # Variable name to store output
-    local add_exit_code="$4"  # Variable name to store exit code
-
-    # Add to current scope first
-    local local_output
-    local local_exit_code
-    capture_command_output local_output local_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$name" "$json_payload"
-
-    # Set the output variables for caller
-    eval "$add_output=\"\$local_output\""
-    eval "$add_exit_code=\$local_exit_code"
-
-    # If successful and dual-scope enabled, also install to user scope
-    # Skip for codex since it doesn't support --scope flag
-    if [ $local_exit_code -eq 0 ] && [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-        echo -e "${BLUE}  🔄 Also installing $name to user scope for system-wide availability...${NC}"
-        local user_output
-        local user_exit_code
-
-        capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add-json --scope user "$name" "$json_payload"
-
-        if [ $user_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully added $name to user scope${NC}"
-            log_with_timestamp "Successfully added MCP server to user scope: $name"
-        else
-            echo -e "${YELLOW}  ⚠️ Failed to add $name to user scope (local scope succeeded)${NC}"
-            log_with_timestamp "User scope installation failed for $name: $user_output"
-        fi
-    fi
+    safe_remove_dual_if_enabled "$name"
 }
 
 # Function to display current step with dynamic counting
@@ -723,7 +702,7 @@ add_mcp_server() {
     fi
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    remove_mcp_server_dual_scope "$name"
+    safe_remove_dual_if_enabled "$name"
 
     # Add server with error checking
     echo -e "${BLUE}  🔗 Adding MCP server $name...${NC}"
@@ -1050,7 +1029,7 @@ setup_render_mcp_server() {
             echo -e "${BLUE}  📋 Features: Service management, database queries, deployment monitoring${NC}"
 
             # Remove existing render server to reconfigure
-            remove_mcp_server_dual_scope "render"
+            safe_remove "render"
 
             # Add Render MCP server using HTTP transport with secure JSON configuration
             echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
@@ -1067,7 +1046,7 @@ setup_render_mcp_server() {
             echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
             local json_payload
             json_payload=$(<"$json_temp")
-            add_mcp_server_json_dual_scope "render" "$json_payload" add_output add_exit_code
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" "$json_payload"
             rm -f "$json_temp"
 
             # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
@@ -1117,7 +1096,7 @@ setup_second_opinion_mcp_server() {
         return 0
     fi
 
-    remove_mcp_server_dual_scope "$server_name"
+    safe_remove "$server_name"
 
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
@@ -1127,7 +1106,7 @@ setup_second_opinion_mcp_server() {
 
     local add_output=""
     local add_exit_code=0
-    add_mcp_server_json_dual_scope "$server_name" "$json_payload" add_output add_exit_code
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
@@ -1339,7 +1318,7 @@ install_react_mcp() {
         fi
 
         # Remove existing react-mcp server to reconfigure
-        remove_mcp_server_dual_scope "react-mcp"
+        safe_remove "react-mcp"
 
         # Add React MCP server
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
@@ -1351,20 +1330,6 @@ install_react_mcp() {
             log_with_timestamp "Successfully added React MCP server"
             INSTALL_RESULTS["react-mcp"]="SUCCESS"
             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-
-            # Dual-scope installation if enabled
-            if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-                echo -e "${BLUE}  🔄 Also installing react-mcp to user scope...${NC}"
-                local user_output user_exit_code
-                capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH"
-                if [ $user_exit_code -eq 0 ]; then
-                    echo -e "${GREEN}  ✅ Successfully added react-mcp to user scope${NC}"
-                    log_with_timestamp "Successfully added react-mcp to user scope"
-                else
-                    echo -e "${YELLOW}  ⚠️ Failed to add react-mcp to user scope (local scope succeeded)${NC}"
-                    log_with_timestamp "User scope installation failed for react-mcp: $user_output"
-                fi
-            fi
         else
             echo -e "${RED}  ❌ Failed to add React MCP server${NC}"
             log_error_details "${MCP_CLI_BIN} mcp add react-mcp" "react-mcp" "$add_output"
@@ -1605,7 +1570,7 @@ install_ios_simulator_mcp() {
     echo -e "${BLUE}  🔗 Adding iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration...${NC}"
 
     # Remove existing server if present (from current scope and dual-scope if enabled)
-    remove_mcp_server_dual_scope "$name"
+    safe_remove_dual_if_enabled "$name"
 
     # Add server using node to run the compiled entrypoint
     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
@@ -1620,20 +1585,6 @@ install_ios_simulator_mcp() {
         log_with_timestamp "Successfully added iOS Simulator MCP server"
         INSTALL_RESULTS["$name"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-
-        # Dual-scope installation if enabled
-        if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-            echo -e "${BLUE}  🔄 Also installing $name to user scope...${NC}"
-            local user_output user_exit_code
-            capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
-            if [ $user_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully added $name to user scope${NC}"
-                log_with_timestamp "Successfully added $name to user scope"
-            else
-                echo -e "${YELLOW}  ⚠️ Failed to add $name to user scope (local scope succeeded)${NC}"
-                log_with_timestamp "User scope installation failed for $name: $user_output"
-            fi
-        fi
     else
         echo -e "${RED}  ❌ Failed to add iOS Simulator MCP server to ${MCP_PRODUCT_NAME} configuration${NC}"
         log_error_details "${MCP_CLI_BIN} mcp add ios-simulator-mcp" "$name" "$add_output"
@@ -1667,15 +1618,16 @@ install_github_mcp() {
         log_with_timestamp "Adding GitHub official remote MCP server"
 
         # Remove any old deprecated GitHub server first
-        remove_mcp_server_dual_scope "github-server"
+        safe_remove "github-server"
 
         # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
-        local json_payload
-        json_payload=$(cat <<EOF
+        local temp_config=$(mktemp -t github_mcp.XXXXXX)
+        chmod 600 "$temp_config"
+        cat > "$temp_config" <<EOF
 {"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
 EOF
-)
-        add_mcp_server_json_dual_scope "github-server" "$json_payload" add_output add_exit_code
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "github-server" - < "$temp_config"
+        rm -f "$temp_config"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
@@ -1716,7 +1668,7 @@ MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
 echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
 
 # Remove existing memory server to reconfigure
-remove_mcp_server_dual_scope "memory-server"
+safe_remove_dual_if_enabled "memory-server"
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
@@ -1727,20 +1679,6 @@ capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_
 if [ $add_exit_code -eq 0 ]; then
     echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
     log_with_timestamp "Successfully added memory server with custom path: $MEMORY_PATH"
-
-    # Dual-scope installation if enabled
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-        echo -e "${BLUE}  🔄 Also installing memory-server to user scope...${NC}"
-        local user_output user_exit_code
-        capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${memory_env_flags[@]}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory"
-        if [ $user_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully added memory-server to user scope${NC}"
-            log_with_timestamp "Successfully added memory-server to user scope"
-        else
-            echo -e "${YELLOW}  ⚠️ Failed to add memory-server to user scope (local scope succeeded)${NC}"
-            log_with_timestamp "User scope installation failed for memory-server: $user_output"
-        fi
-    fi
 else
     echo -e "${YELLOW}  ⚠️ Environment variable method failed, trying fallback...${NC}"
     log_with_timestamp "Environment variable method failed: $add_output"
@@ -1767,20 +1705,6 @@ EOF
     if [ $fallback_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
         log_with_timestamp "Successfully added memory server with wrapper script"
-
-        # Dual-scope installation if enabled
-        if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-            echo -e "${BLUE}  🔄 Also installing memory-server to user scope (wrapper method)...${NC}"
-            local user_fallback_output user_fallback_exit_code
-            capture_command_output user_fallback_output user_fallback_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT"
-            if [ $user_fallback_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully added memory-server to user scope${NC}"
-                log_with_timestamp "Successfully added memory-server to user scope (wrapper method)"
-            else
-                echo -e "${YELLOW}  ⚠️ Failed to add memory-server to user scope (local scope succeeded)${NC}"
-                log_with_timestamp "User scope installation failed for memory-server (wrapper): $user_fallback_output"
-            fi
-        fi
     else
         echo -e "${RED}  ❌ Both methods failed for memory server${NC}"
         log_error_details "${MCP_CLI_BIN} mcp add wrapper" "memory-server" "$fallback_output"
@@ -1798,10 +1722,10 @@ display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
-remove_mcp_server_dual_scope "web-search-duckduckgo"
-remove_mcp_server_dual_scope "perplexity-ask"
-remove_mcp_server_dual_scope "perplexity-search"
-remove_mcp_server_dual_scope "ddg-search"
+safe_remove "web-search-duckduckgo"
+safe_remove "perplexity-ask"
+safe_remove "perplexity-search"
+safe_remove "ddg-search"
 
 # DuckDuckGo is now installed in Batch 2
 echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
@@ -1826,20 +1750,6 @@ if [ -n "$PERPLEXITY_API_KEY" ]; then
         log_with_timestamp "Successfully added Perplexity search server with API key"
         INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-
-        # Dual-scope installation if enabled
-        if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-            echo -e "${BLUE}    🔄 Also installing perplexity-ask to user scope...${NC}"
-            local user_output user_exit_code
-            capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${perplex_env_flags[@]}" "perplexity-ask" "$NPX_PATH" "@chatmcp/server-perplexity-ask"
-            if [ $user_exit_code -eq 0 ]; then
-                echo -e "${GREEN}    ✅ Successfully added perplexity-ask to user scope${NC}"
-                log_with_timestamp "Successfully added perplexity-ask to user scope"
-            else
-                echo -e "${YELLOW}    ⚠️ Failed to add perplexity-ask to user scope (local scope succeeded)${NC}"
-                log_with_timestamp "User scope installation failed for perplexity-ask: $user_output"
-            fi
-        fi
     else
         echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
         log_error_details "${MCP_CLI_BIN} mcp add perplexity" "perplexity-ask" "$add_output"
@@ -1867,7 +1777,7 @@ if server_already_exists "filesystem"; then
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing filesystem server to reconfigure with proper directory access
-    remove_mcp_server_dual_scope "filesystem"
+    safe_remove "filesystem"
 
     # Determine filesystem server directories based on configuration
     FS_SERVER_DIRS=("$HOME/projects")
@@ -1895,20 +1805,6 @@ else
         log_with_timestamp "Successfully added filesystem server with access to: ${allowed_dirs_display}"
         INSTALL_RESULTS["filesystem"]="SUCCESS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-
-        # Dual-scope installation if enabled
-        if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-            echo -e "${BLUE}  🔄 Also installing filesystem to user scope...${NC}"
-            local user_output user_exit_code
-            capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
-            if [ $user_exit_code -eq 0 ]; then
-                echo -e "${GREEN}  ✅ Successfully added filesystem to user scope${NC}"
-                log_with_timestamp "Successfully added filesystem to user scope"
-            else
-                echo -e "${YELLOW}  ⚠️ Failed to add filesystem to user scope (local scope succeeded)${NC}"
-                log_with_timestamp "User scope installation failed for filesystem: $user_output"
-            fi
-        fi
     else
         echo -e "${RED}  ❌ Failed to add filesystem server${NC}"
         log_error_details "${MCP_CLI_BIN} mcp add filesystem" "filesystem" "$add_output"
@@ -1944,7 +1840,7 @@ else
         log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
 
         # Remove existing worldarchitect server to reconfigure
-        remove_mcp_server_dual_scope "worldarchitect"
+        safe_remove "worldarchitect"
 
         # Add WorldArchitect MCP server using Python with proper environment
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
@@ -1963,20 +1859,6 @@ else
             log_with_timestamp "Successfully added WorldArchitect MCP server"
             INSTALL_RESULTS["worldarchitect"]="SUCCESS"
             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-
-            # Dual-scope installation if enabled
-            if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
-                echo -e "${BLUE}  🔄 Also installing worldarchitect to user scope...${NC}"
-                local user_output user_exit_code
-                capture_command_output user_output user_exit_code "${MCP_CLI_BIN}" mcp add --scope user "${world_env_flags[@]}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
-                if [ $user_exit_code -eq 0 ]; then
-                    echo -e "${GREEN}  ✅ Successfully added worldarchitect to user scope${NC}"
-                    log_with_timestamp "Successfully added worldarchitect to user scope"
-                else
-                    echo -e "${YELLOW}  ⚠️ Failed to add worldarchitect to user scope (local scope succeeded)${NC}"
-                    log_with_timestamp "User scope installation failed for worldarchitect: $user_output"
-                fi
-            fi
         else
             echo -e "${RED}  ❌ Failed to add WorldArchitect MCP server${NC}"
             log_error_details "${MCP_CLI_BIN} mcp add worldarchitect" "worldarchitect" "$add_output"
@@ -2024,7 +1906,7 @@ else
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing serena server to reconfigure
-    remove_mcp_server_dual_scope "serena"
+    safe_remove "serena"
 
     # Add Serena MCP server using uvx with git repository
     echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
@@ -2034,7 +1916,7 @@ else
     local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
     local serena_payload
     serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-    add_mcp_server_json_dual_scope "serena" "$serena_payload" add_output add_exit_code
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"

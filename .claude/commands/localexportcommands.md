@@ -38,13 +38,19 @@ This command copies standard Claude Code directories to ~/.claude:
 - **Skills** (.claude/skills/) → ~/.claude/skills/ - Skill documentation and guides
 - **Settings** (.claude/settings.json) → ~/.claude/settings.json - Configuration
 - **Dependencies** (package.json, package-lock.json) → ~/.claude/ - Node.js dependencies for secondo command
+- **MCP Launchers** (claude_mcp.sh, codex_mcp.sh) → ~/.claude/ - MCP server launchers with dry-run support
 
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 **✅ INCLUDES**:
-- MCP server scripts (claude_mcp.sh, codex_mcp.sh, mcp_common.sh, etc.)
+- MCP server scripts (mcp_common.sh, mcp_dual_background.sh, mcp_stdio_wrapper.py, etc. in scripts/)
+- MCP launcher scripts (claude_mcp.sh, codex_mcp.sh in project root)
 - Secondo authentication CLI (auth-cli.mjs)
 - Node.js dependencies (package.json, package-lock.json)
+
+**🚀 DRY-RUN SUPPORT**:
+- Both claude_mcp.sh and codex_mcp.sh support `--dry-run` flag for testing without making changes
+- Example: `~/.claude/claude_mcp.sh --dry-run` or `~/.claude/codex_mcp.sh --dry-run`
 
 ## Implementation
 
@@ -228,6 +234,28 @@ else
     echo "   ⚠️  package-lock.json not found, skipping"
 fi
 
+# Export MCP launcher scripts from project root
+
+echo ""
+echo "📦 Exporting MCP launcher scripts (with dry-run support)..."
+echo "================================="
+
+mcp_launchers=("claude_mcp.sh" "codex_mcp.sh")
+launcher_count=0
+
+for launcher in "${mcp_launchers[@]}"; do
+    if [ -f "$launcher" ]; then
+        cp "$launcher" "$HOME/.claude/$launcher"
+        chmod +x "$HOME/.claude/$launcher"
+        echo "   ✅ Exported $launcher"
+        launcher_count=$((launcher_count + 1))
+    else
+        echo "   ⚠️  $launcher not found in project root, skipping"
+    fi
+done
+
+echo "   📊 Exported $launcher_count MCP launcher scripts"
+
 # Set executable permissions on hook files
 
 if [ -d "$HOME/.claude/hooks" ]; then
@@ -297,9 +325,15 @@ echo "4. Agents directory: $([ -d "$HOME/.claude/agents" ] && echo "✅ Present"
 echo "5. Scripts directory: $([ -d "$HOME/.claude/scripts" ] && echo "✅ Present" || echo "❌ Missing")"
 echo "6. Skills directory: $([ -d "$HOME/.claude/skills" ] && echo "✅ Present" || echo "❌ Missing")"
 echo "7. package.json: $([ -f "$HOME/.claude/package.json" ] && echo "✅ Present" || echo "⚠️  Missing (secondo may not work)")"
+echo "8. claude_mcp.sh launcher: $([ -f "$HOME/.claude/claude_mcp.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
+echo "9. codex_mcp.sh launcher: $([ -f "$HOME/.claude/codex_mcp.sh" ] && echo "✅ Present" || echo "⚠️  Missing")"
 
 echo ""
 echo "🎉 Local export completed successfully!"
+echo ""
+echo "🚀 Test MCP launchers with dry-run mode:"
+echo "   cd ~ && ~/.claude/claude_mcp.sh --dry-run"
+echo "   cd ~ && ~/.claude/codex_mcp.sh --dry-run"
 ```
 
 ## Benefits

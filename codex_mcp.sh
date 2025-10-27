@@ -6,6 +6,16 @@ MCP_LAUNCHER_PATH="$0"
 MCP_PRODUCT_NAME="Codex"
 MCP_CLI_BIN="codex"
 
+# Support --dry-run as an alias for --test
+args=()
+for arg in "$@"; do
+    if [[ "$arg" == "--dry-run" ]]; then
+        args+=("--test")
+    else
+        args+=("$arg")
+    fi
+done
+
 # Ensure secrets that live in ~/.bashrc are available even when this launcher
 # runs in a non-interactive shell (e.g. via `bash -lc`).
 load_interactive_env_var() {
@@ -62,5 +72,18 @@ if [[ -z "${XAI_DEFAULT_CHAT_MODEL:-}" ]]; then
     export XAI_DEFAULT_CHAT_MODEL="$GROK_DEFAULT_MODEL"
 fi
 
-source "$SCRIPT_DIR/scripts/mcp_common.sh" "$@"
+# Location-aware sourcing: works from both root and scripts/ directory
+if [[ -f "$SCRIPT_DIR/mcp_common.sh" ]]; then
+    # shellcheck disable=SC1090
+    source "$SCRIPT_DIR/mcp_common.sh" "${args[@]}"
+elif [[ -f "$SCRIPT_DIR/scripts/mcp_common.sh" ]]; then
+    # shellcheck disable=SC1090
+    source "$SCRIPT_DIR/scripts/mcp_common.sh" "${args[@]}"
+else
+    echo "❌ Error: Cannot find mcp_common.sh" >&2
+    echo "Searched:" >&2
+    echo "  - $SCRIPT_DIR/mcp_common.sh" >&2
+    echo "  - $SCRIPT_DIR/scripts/mcp_common.sh" >&2
+    exit 1
+fi
 exit $?
