@@ -14,6 +14,7 @@ import re
 import json
 import requests
 from pathlib import Path
+from typing import Iterable, Optional
 from export_config import get_exportable_components
 
 # Constants for file limits
@@ -448,12 +449,11 @@ class ClaudeCommandsExporter:
         target_dir.mkdir(parents=True, exist_ok=True)
 
         scripts_count = 0
-        copied_names = set()
+        copied_names: set[str] = set()
 
-        def copy_script(path: Path):
-            nonlocal scripts_count
-            if not path.exists() or not path.is_file():
-                return
+        def copy_script(path: Path) -> int:
+            if not path.exists() or not path.is_file() or path.name in copied_names:
+                return 0
 
             destination = target_dir / path.name
             shutil.copy2(path, destination)
@@ -466,16 +466,20 @@ class ClaudeCommandsExporter:
                     pass
 
             copied_names.add(path.name)
-            scripts_count += 1
             print(f"   📜 {path.name}")
+            return 1
+
+        def find_script_in_candidates(script_name: str, search_paths: Iterable[Path]) -> Optional[Path]:
+            for candidate in search_paths:
+                if candidate.exists() and candidate.is_file():
+                    return candidate
+            return None
 
         # Export native Claude scripts (.claude/scripts)
         if source_dir.exists():
             for pattern in ('*.py', '*.sh'):
                 for file_path in source_dir.glob(pattern):
-                    if file_path.name in copied_names:
-                        continue
-                    copy_script(file_path)
+                    scripts_count += copy_script(file_path)
         else:
             print("⚠️  Warning: .claude/scripts directory not found; attempting legacy MCP locations")
 
@@ -514,10 +518,10 @@ class ClaudeCommandsExporter:
         for script_name, candidates in legacy_candidates.items():
             if script_name in copied_names:
                 continue
-            for legacy_path in candidates:
-                if legacy_path.exists():
-                    copy_script(legacy_path)
-                    break
+
+            legacy_path = find_script_in_candidates(script_name, candidates)
+            if legacy_path is not None:
+                scripts_count += copy_script(legacy_path)
 
         if scripts_count == 0:
             print("⚠️  Warning: No scripts were exported from available locations")

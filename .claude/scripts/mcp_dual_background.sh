@@ -6,13 +6,14 @@ set -Eeuo pipefail
 trap 'echo "ERROR: mcp_dual_background.sh failed at line $LINENO" >&2' ERR
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT_SUBDIR="mvp_site"
 
 resolve_project_root() {
     local search_dir="$SCRIPT_DIR"
 
     # Walk up the directory tree until we find the repo assets we depend on
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/scripts/setup_production_env.sh" && -f "$search_dir/$PROJECT_ROOT/mcp_api.py" ]]; then
+        if [[ -f "$search_dir/scripts/setup_production_env.sh" && -f "$search_dir/$PROJECT_ROOT_SUBDIR/mcp_api.py" ]]; then
             echo "$search_dir"
             return 0
         fi
@@ -21,7 +22,7 @@ resolve_project_root() {
 
     if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
        [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/scripts/setup_production_env.sh" && \
-          -f "${WORLDARCHITECT_PROJECT_ROOT}/$PROJECT_ROOT/mcp_api.py" ]]; then
+          -f "${WORLDARCHITECT_PROJECT_ROOT}/$PROJECT_ROOT_SUBDIR/mcp_api.py" ]]; then
         echo "${WORLDARCHITECT_PROJECT_ROOT}"
         return 0
     fi
@@ -30,7 +31,7 @@ resolve_project_root() {
 }
 
 PROJECT_ROOT="$(resolve_project_root)" || {
-    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and $PROJECT_ROOT/mcp_api.py" >&2
+    echo "ERROR: Unable to locate project root containing scripts/setup_production_env.sh and mvp_site/mcp_api.py" >&2
     exit 1
 }
 
@@ -59,7 +60,7 @@ fi
 
 MCP_SERVER_PATH=""
 for candidate in \
-    "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" \
+    "$PROJECT_ROOT/$PROJECT_ROOT_SUBDIR/mcp_api.py" \
     "$PROJECT_ROOT/src/mcp_api.py" \
     "$PROJECT_ROOT/mcp_api.py"
 do

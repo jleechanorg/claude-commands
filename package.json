@@ -8,13 +8,17 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "express": "^4.19.2"
+    "express": "^4.21.2"
   },
   "scripts": {
     "auth": "node scripts/auth-cli.mjs",
     "secondo": "bash scripts/secondo-cli.sh"
   },
-  "keywords": ["cli", "authentication", "ai-universe"],
+  "keywords": [
+    "cli",
+    "authentication",
+    "ai-universe"
+  ],
   "author": "Your Project",
   "license": "MIT"
 }

@@ -1,6 +1,8 @@
 ---
 description: Get multi-model second opinion on design, code review, or bugs
 aliases: [secondopinion]
+type: ai
+execution_mode: immediate
 ---
 
 # Second Opinion Command
@@ -38,11 +40,11 @@ Requires authentication token from `node scripts/auth-cli.mjs login`
 
 - **Authenticated**: 60 requests/hour (includes synthesis requests)
 - **Multi-model synthesis**: 1 per hour per user (counts toward the 60/hr quota)
-- Token expires after 30 days
+- Token expires after approximately 1 hour (Firebase ID token TTL)
 
 ## Output Format
 
-Display results in markdown with:
+Display results in Markdown with:
 - 📊 Summary (models used, tokens, cost)
 - 🎯 Primary Opinion (Cerebras)
 - 💡 Secondary Perspectives (Gemini, Perplexity, OpenAI, Grok)

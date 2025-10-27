@@ -10,9 +10,7 @@ MODE="dual"  # dual, http-only, stdio-only
 
 # Color codes for output
 RED='\033[0;31m'
-GREEN='\033[0;32m'
 BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
 # Help message
@@ -65,11 +63,12 @@ done
 
 # Get script directory and resolve project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT_SUBDIR="mvp_site"
 
 resolve_project_root() {
     if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]]; then
         local candidate="${WORLDARCHITECT_PROJECT_ROOT}"
-        if [[ -f "$candidate/$PROJECT_ROOT/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
+        if [[ -f "$candidate/$PROJECT_ROOT_SUBDIR/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
             echo "$candidate"
             return 0
         fi
@@ -77,7 +76,7 @@ resolve_project_root() {
 
     local search_dir="$SCRIPT_DIR"
     while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/$PROJECT_ROOT/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
+        if [[ -f "$search_dir/$PROJECT_ROOT_SUBDIR/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
             echo "$search_dir"
             return 0
         fi
@@ -103,8 +102,8 @@ fi
 MCP_SERVER_ENV_DEFAULT="${MCP_SERVER_PATH:-}"
 
 # Try multiple common MCP server locations
-if [ -f "$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT/mcp_api.py"
+if [ -f "$PROJECT_ROOT/$PROJECT_ROOT_SUBDIR/mcp_api.py" ]; then
+    MCP_SERVER_PATH="$PROJECT_ROOT/$PROJECT_ROOT_SUBDIR/mcp_api.py"
 elif [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
     MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
 elif [ -f "$PROJECT_ROOT/mcp_api.py" ]; then

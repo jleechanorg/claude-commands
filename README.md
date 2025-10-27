@@ -696,9 +696,9 @@ tmux attach-session -t task-agent-frontend  # Direct agent access
 
 ## 🎯 What You're Really Getting: A Cognitive Capital Management System
 
-This export contains **182 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
+This export contains **139 commands** that transform Claude Code from a productivity tool into a **cognitive capital allocation platform**:
 
-> **Note**: Command count is automatically updated during export to reflect the actual number of commands, libraries, and utilities included.
+> **Note**: Counts are verified against the repository snapshot for this export (139 commands, 45 hooks, 17 scripts, 3 skills — 204 assets total).
 
 ### 🏭 Management System vs Individual Tools
 
@@ -816,9 +816,9 @@ The productivity gains available right now represent the largest arbitrage oppor
 ### v1.1.0 (2025-10-25)
 
 **Export Statistics**:
-- **182 Commands**: Complete workflow orchestration system
-- **41 Hooks**: Claude Code automation and workflow hooks
-- **23 Scripts**: Development and automation tools (scripts/ directory)
+- **139 Commands**: Complete workflow orchestration system
+- **45 Hooks**: Claude Code automation and workflow hooks
+- **17 Scripts**: Development and automation tools (scripts/ directory)
 - **3 Skills**: Shared knowledge references (.claude/skills/)
 
 **Major Changes**:
@@ -835,7 +835,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude Code specific vs universally useful tools
+- Better categorization of Claude Code-specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:

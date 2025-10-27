@@ -778,6 +778,8 @@ add_mcp_server() {
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
 
+        # Prioritize explicit overrides before falling back to grok defaults
+        # Order: GROK_DEFAULT_MODEL > XAI_DEFAULT_CHAT_MODEL > grok-mcp internal default
         local grok_default_model=""
         if [ -n "${GROK_DEFAULT_MODEL:-}" ]; then
             grok_default_model="$GROK_DEFAULT_MODEL"
@@ -1085,8 +1087,10 @@ setup_second_opinion_mcp_server() {
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
+    local second_opinion_url="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-final.onrender.com/mcp}"
+
     echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
-    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: ${second_opinion_url})"
 
     if server_already_exists "$server_name"; then
         echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
@@ -1102,7 +1106,7 @@ setup_second_opinion_mcp_server() {
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
     local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+    json_payload=$(printf '{"type":"http","url":"%s"}' "$second_opinion_url")
 
     local add_output=""
     local add_exit_code=0
@@ -1111,7 +1115,7 @@ setup_second_opinion_mcp_server() {
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • API URL: https://ai-universe-backend-final.onrender.com/mcp"
+        echo -e "     • API URL: ${second_opinion_url}"
         echo -e "     • Use cases: peer review, counter-arguments, solution validation"
         log_with_timestamp "Successfully added Second Opinion MCP server"
         INSTALL_RESULTS["$server_name"]="SUCCESS"
@@ -1900,40 +1904,39 @@ else
 
     # Check if server already exists
     if server_already_exists "serena"; then
-    echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
-    log_with_timestamp "Server serena already exists, skipping"
-    INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Remove existing serena server to reconfigure
-    safe_remove "serena"
-
-    # Add Serena MCP server using uvx with git repository
-    echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
-    log_with_timestamp "Attempting to add Serena MCP server via uvx"
-
-    # Use add-json for uvx configuration
-    local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
-    local serena_payload
-    serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
-        echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Repository: https://github.com/oraios/serena"
-        echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
-        echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
-        echo -e "     • Configuration: ~/.serena/serena_config.yml"
-        log_with_timestamp "Successfully added Serena MCP server via uvx"
-        INSTALL_RESULTS["serena"]="SUCCESS"
+        echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
+        log_with_timestamp "Server serena already exists, skipping"
+        INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
-        echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add-json serena" "serena" "$add_output"
-        INSTALL_RESULTS["serena"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
+        # Remove existing serena server to reconfigure
+        safe_remove "serena"
+
+        # Add Serena MCP server using uvx with git repository
+        echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
+        log_with_timestamp "Attempting to add Serena MCP server via uvx"
+
+        # Use add-json for uvx configuration
+        debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+        serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
+
+        if [ $add_exit_code -eq 0 ]; then
+            echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
+            echo -e "${BLUE}  📋 Server info:${NC}"
+            echo -e "     • Repository: https://github.com/oraios/serena"
+            echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
+            echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
+            echo -e "     • Configuration: ~/.serena/serena_config.yml"
+            log_with_timestamp "Successfully added Serena MCP server via uvx"
+            INSTALL_RESULTS["serena"]="SUCCESS"
+            SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+        else
+            echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
+            log_error_details "${MCP_CLI_BIN} mcp add-json serena" "serena" "$add_output"
+            INSTALL_RESULTS["serena"]="ADD_FAILED"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
     fi
 fi
 

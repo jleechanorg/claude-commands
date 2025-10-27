@@ -22,7 +22,6 @@ import { join } from 'path';
 import { spawn } from 'child_process';
 
 // Constants
-const TOKEN_EXPIRATION_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 const AUTH_TIMEOUT_MS = 300000; // 5 minutes
 
 // Configuration
@@ -36,7 +35,7 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
-  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
+  productionMcpUrl: process.env.MCP_URL || 'https://ai-universe-backend-final.onrender.com/mcp'
 };
 
 // Validate required configuration
@@ -69,6 +68,20 @@ async function ensureTokenDir() {
     await chmod(tokenDir, 0o700);
   } catch (err) {
     // Ignore chmod errors on Windows
+  }
+}
+
+function decodeJwtPayload(token) {
+  const parts = token.split('.');
+  if (parts.length !== 3) {
+    throw new Error('Invalid ID token format');
+  }
+
+  try {
+    const payloadJson = Buffer.from(parts[1], 'base64url').toString('utf8');
+    return JSON.parse(payloadJson);
+  } catch (err) {
+    throw new Error(`Unable to decode ID token payload: ${err.message}`);
   }
 }
 
@@ -249,13 +262,19 @@ async function login() {
         return;
       }
 
+      const payload = decodeJwtPayload(idToken);
+      const expSeconds = typeof payload.exp === 'number' ? payload.exp : null;
+      const expiresAtIso = expSeconds
+        ? new Date(expSeconds * 1000).toISOString()
+        : new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
       // Save token to file
       await ensureTokenDir();
       const tokenData = {
         idToken,
         user,
         createdAt: new Date().toISOString(),
-        expiresAt: new Date(Date.now() + TOKEN_EXPIRATION_MS).toISOString()
+        expiresAt: expiresAtIso
       };
 
       await writeFile(CONFIG.tokenPath, JSON.stringify(tokenData, null, 2), { mode: 0o600 });

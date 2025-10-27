@@ -28,7 +28,7 @@ node scripts/auth-cli.mjs login
 - Opens browser to Firebase Google sign-in
 - User signs in with Google account
 - Token saved to `~/.ai-universe/auth-token.json`
-- Token expires after 30 days
+- Token expires after approximately 1 hour (Firebase ID token TTL)
 
 ### 2. Check Authentication Status
 
@@ -76,8 +76,10 @@ node scripts/auth-cli.mjs logout
 ### Port 9005 Already in Use
 
 ```bash
-# Find process using port 9005
-lsof -ti:9005 | xargs kill -9
+# Find process using port 9005 (macOS/Linux)
+pids=$(lsof -ti:9005) && [ -n "$pids" ] && kill $pids 2>/dev/null || true
+sleep 1
+[ -n "$pids" ] && kill -9 $pids 2>/dev/null || true
 
 # Or use different port (requires code modification)
 ```
@@ -108,7 +110,7 @@ export FIREBASE_PROJECT_ID="your-project-id"
 **Authenticated Users:**
 - 60 requests per hour
 - Multi-model synthesis: 1 per hour
-- Token TTL: 30 days
+- Token TTL: ~1 hour (3600 seconds)
 
 ## Security Notes
 
@@ -116,7 +118,7 @@ export FIREBASE_PROJECT_ID="your-project-id"
 - OAuth flow uses localhost callback (127.0.0.1:9005)
 - Browser-based authentication (similar to gh CLI, gcloud CLI)
 - Never commit authentication tokens
-- Tokens auto-expire after 30 days
+- Tokens auto-expire after ~1 hour; refresh with `node scripts/auth-cli.mjs login`
 
 ## Integration with Commands
 

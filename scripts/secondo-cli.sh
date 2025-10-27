@@ -5,7 +5,7 @@
 # Explicit error handling is used (no `set -e`) to preserve interactive shells.
 
 # Configuration
-MCP_URL="https://ai-universe-backend-final.onrender.com/mcp"
+MCP_URL="${SECONDO_MCP_URL:-https://ai-universe-backend-final.onrender.com/mcp}"
 TIMEOUT=180
 
 # Colors

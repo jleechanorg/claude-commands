@@ -250,6 +250,7 @@ fi
 
 ```bash
 #!/bin/bash
+set -euo pipefail
 
 # Get token
 TOKEN=$(node scripts/auth-cli.mjs token 2>/dev/null)
@@ -276,7 +277,7 @@ RESPONSE=$(echo "{
     }
   },
   \"id\": 1
-}" | http POST "https://ai-universe-backend-final.onrender.com/mcp" \
+}" | http POST "$MCP_URL" \
   Accept:'application/json, text/event-stream' \
   Authorization:"Bearer $TOKEN" \
   --timeout=180 \

@@ -59,6 +59,15 @@ else
     MCP_SCOPE_ARGS=(--scope "$MCP_SCOPE")
 fi
 
+safe_remove() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    fi
+}
+
 for mcp_common_arg in "$@"; do
     if [[ "$mcp_common_arg" == "--test" ]]; then
         TEST_MODE=true
@@ -474,7 +483,7 @@ test_mcp_server() {
 cleanup_failed_server() {
     local name="$1"
     echo -e "${YELLOW}  🧹 Cleaning up failed installation of $name...${NC}"
-    ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    safe_remove "$name"
 }
 
 # Function to display current step with dynamic counting
@@ -547,8 +556,8 @@ collect_parallel_results() {
 # Helper function to safely remove MCP server from current scope and dual-scope if enabled
 safe_remove_dual_if_enabled() {
     local name="$1"
-    ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
+    safe_remove "$name"
+    if [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ] && [[ "${MCP_CLI_BIN}" != "codex" ]]; then
         ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
     fi
 }
@@ -745,6 +754,8 @@ add_mcp_server() {
             grok_env_flags+=(--env "XAI_API_KEY=$api_key")
         fi
 
+        # Prioritize explicit overrides before falling back to legacy defaults
+        # Order: GROK_DEFAULT_MODEL > XAI_DEFAULT_CHAT_MODEL > grok-mcp internal default
         local grok_default_model=""
         if [ -n "${GROK_DEFAULT_MODEL:-}" ]; then
             grok_default_model="$GROK_DEFAULT_MODEL"
@@ -774,9 +785,9 @@ add_mcp_server() {
         elif [ -n "$grok_default_model" ]; then
             grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=("${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=("${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -794,9 +805,9 @@ add_mcp_server() {
 
             # Build user scope command (same as local but with --scope user)
             if [ "$name" = "grok-mcp" ]; then
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+                local user_add_cmd=("${MCP_CLI_BIN}" mcp add --scope user "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
             else
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+                local user_add_cmd=("${MCP_CLI_BIN}" mcp add --scope user "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
             fi
 
             capture_command_output user_add_output user_add_exit_code "${user_add_cmd[@]}"
@@ -996,7 +1007,7 @@ setup_render_mcp_server() {
             echo -e "${BLUE}  📋 Features: Service management, database queries, deployment monitoring${NC}"
 
             # Remove existing render server to reconfigure
-            ${MCP_CLI_BIN} mcp remove "render" >/dev/null 2>&1 || true
+            safe_remove "render"
 
             # Add Render MCP server using HTTP transport with secure JSON configuration
             echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
@@ -1052,8 +1063,10 @@ setup_second_opinion_mcp_server() {
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
+    local second_opinion_url="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-final.onrender.com/mcp}"
+
     echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
-    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: ${second_opinion_url})"
 
     if server_already_exists "$server_name"; then
         echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
@@ -1063,13 +1076,13 @@ setup_second_opinion_mcp_server() {
         return 0
     fi
 
-    ${MCP_CLI_BIN} mcp remove "$server_name" >/dev/null 2>&1 || true
+    safe_remove "$server_name"
 
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
     local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+    json_payload=$(printf '{"type":"http","url":"%s"}' "$second_opinion_url")
 
     local add_output=""
     local add_exit_code=0
@@ -1078,7 +1091,7 @@ setup_second_opinion_mcp_server() {
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • API URL: https://ai-universe-backend-final.onrender.com/mcp"
+        echo -e "     • API URL: ${second_opinion_url}"
         echo -e "     • Use cases: peer review, counter-arguments, solution validation"
         log_with_timestamp "Successfully added Second Opinion MCP server"
         INSTALL_RESULTS["$server_name"]="SUCCESS"
@@ -1285,7 +1298,7 @@ install_react_mcp() {
         fi
 
         # Remove existing react-mcp server to reconfigure
-        ${MCP_CLI_BIN} mcp remove "react-mcp" >/dev/null 2>&1 || true
+        safe_remove "react-mcp"
 
         # Add React MCP server
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
@@ -1585,7 +1598,7 @@ install_github_mcp() {
         log_with_timestamp "Adding GitHub official remote MCP server"
 
         # Remove any old deprecated GitHub server first
-        ${MCP_CLI_BIN} mcp remove "github-server" >/dev/null 2>&1 || true
+        safe_remove "github-server"
 
         # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
         local temp_config=$(mktemp -t github_mcp.XXXXXX)
@@ -1635,7 +1648,7 @@ MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
 echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
 
 # Remove existing memory server to reconfigure
-${MCP_CLI_BIN} mcp remove "memory-server" -s "${MCP_SCOPE}" >/dev/null 2>&1 || true
+safe_remove "memory-server"
 
 # Add memory server with environment variable configuration
 echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
@@ -1689,10 +1702,10 @@ display_step "Setting up Web Search MCP Servers..."
 echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
 # Remove existing web search servers to avoid conflicts
-${MCP_CLI_BIN} mcp remove "web-search-duckduckgo" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "perplexity-ask" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "perplexity-search" >/dev/null 2>&1 || true
-${MCP_CLI_BIN} mcp remove "ddg-search" >/dev/null 2>&1 || true
+safe_remove "web-search-duckduckgo"
+safe_remove "perplexity-ask"
+safe_remove "perplexity-search"
+safe_remove "ddg-search"
 
 # DuckDuckGo is now installed in Batch 2
 echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
@@ -1744,7 +1757,7 @@ if server_already_exists "filesystem"; then
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing filesystem server to reconfigure with proper directory access
-    ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
+    safe_remove "filesystem"
 
     # Determine filesystem server directories based on configuration
     FS_SERVER_DIRS=("$HOME/projects")
@@ -1807,7 +1820,7 @@ else
         log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
 
         # Remove existing worldarchitect server to reconfigure
-        ${MCP_CLI_BIN} mcp remove "worldarchitect" >/dev/null 2>&1 || true
+        safe_remove "worldarchitect"
 
         # Add WorldArchitect MCP server using Python with proper environment
         echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
@@ -1873,7 +1886,7 @@ else
     SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
 else
     # Remove existing serena server to reconfigure
-    ${MCP_CLI_BIN} mcp remove "serena" >/dev/null 2>&1 || true
+    safe_remove "serena"
 
     # Add Serena MCP server using uvx with git repository
     echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"

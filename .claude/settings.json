@@ -405,11 +405,12 @@
     "worldarchitect": {
       "command": "python3",
       "args": [
-        "${HOME}/projects/worktree_worker2/$PROJECT_ROOT/mcp_api.py",
+        "$WORLDARCHITECT_PROJECT_ROOT/mvp_site/mcp_api.py",
         "--stdio"
       ],
       "env": {
-        "PYTHONPATH": "${HOME}/projects/worktree_worker2"
+        "WORLDARCHITECT_PROJECT_ROOT": "${HOME}/projects/worktree_worker2",
+        "PYTHONPATH": "${WORLDARCHITECT_PROJECT_ROOT}"
       }
     }
   }

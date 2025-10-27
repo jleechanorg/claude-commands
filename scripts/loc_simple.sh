@@ -38,7 +38,8 @@ is_test_file() {
     local path="$1"
     local ext="$2"
 
-    local path_lc="${path,,}"
+    local path_lc
+    path_lc=$(printf '%s' "$path" | tr '[:upper:]' '[:lower:]')
     if [[ "$path_lc" == *"/tests/"* \
         || "$path_lc" == *"/test/"* \
         || "$path_lc" == *"/testing/"* \
@@ -46,14 +47,16 @@ is_test_file() {
         || "$path_lc" == *"/__test__/"* \
         || "$path_lc" == *"/spec/"* \
         || "$path_lc" == *"/specs/"* \
+        # Support both underscore and hyphen integration test directories used across repos
         || "$path_lc" == *"/integration_tests/"* \
-        || "$path_lc" == *"/integration-test/"* \
+        || "$path_lc" == *"/integration-tests/"* \
         || "$path_lc" == *"/qa/"* ]]; then
         return 0
     fi
 
     local filename="${path##*/}"
-    local filename_lc="${filename,,}"
+    local filename_lc
+    filename_lc=$(printf '%s' "$filename" | tr '[:upper:]' '[:lower:]')
 
     if [[ "$filename_lc" == test_* ]]; then
         return 0
@@ -212,7 +215,7 @@ declare -a FILE_MODES=()
 
 while IFS= read -r -d '' file; do
     ext="${file##*.}"
-    ext="${ext,,}"
+    ext=$(printf '%s' "$ext" | tr '[:upper:]' '[:lower:]')
 
     if [[ -z ${LANGUAGE_LABELS["$ext"]+x} ]]; then
         continue
@@ -332,6 +335,7 @@ count_functional_area() {
 
         local path="${FILE_PATHS[$idx]}"
         if [[ -n "$scope_glob" ]]; then
+            # shellcheck disable=SC2254  # intentional glob evaluation for scope filtering
             case "$path" in
                 $scope_glob) ;;
                 *) continue ;;

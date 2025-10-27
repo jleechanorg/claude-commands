@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This launcher intentionally mirrors scripts/claude_mcp.sh so the installer can
+# source it from either the project root or the exported .claude/scripts folder.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 MCP_LAUNCHER_PATH="$0"
 
