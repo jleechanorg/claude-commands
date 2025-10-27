@@ -826,6 +826,7 @@ The productivity gains available right now represent the largest arbitrage oppor
      - Commands: N command definitions
      - Hooks: N Claude Code automation hooks
      - Scripts: N reusable scripts (scripts/ directory)
+     - Skills: N shared knowledge references (.claude/skills/)
 
      **Changes**:
      - Key change summaries based on actual modifications
