@@ -76,7 +76,8 @@ check_auth() {
 # Get authentication token
 get_token() {
   TOKEN=$(node scripts/auth-cli.mjs token 2>/dev/null)
-  if [ $? -ne 0 ] || [ -z "$TOKEN" ]; then
+  token_exit=$?
+  if [ $token_exit -ne 0 ] || [ -z "$TOKEN" ]; then
     error "Failed to get authentication token"
     return 1
   fi

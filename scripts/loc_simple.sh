@@ -165,6 +165,32 @@ declare -a LANGUAGE_SPECS=(
     "hcl|🌍 HCL (.hcl)"
 )
 
+declare -A ALL_LANGUAGE_LABELS=()
+for spec in "${LANGUAGE_SPECS[@]}"; do
+    IFS='|' read -r ext label <<< "$spec"
+    ext="${ext,,}"
+    ALL_LANGUAGE_LABELS["$ext"]="$label"
+done
+
+# Optional: limit scanning to a comma-separated list of extensions via LOC_INCLUDE_LANGUAGES or LOC_INCLUDE_EXTS.
+LANGUAGE_FILTER_RAW="${LOC_INCLUDE_LANGUAGES:-${LOC_INCLUDE_EXTS:-}}"
+declare -A LANGUAGE_FILTER_SET=()
+if [[ -n "$LANGUAGE_FILTER_RAW" ]]; then
+    IFS=',' read -r -a raw_filters <<< "$LANGUAGE_FILTER_RAW"
+    for raw_filter in "${raw_filters[@]}"; do
+        filter=$(printf '%s' "$raw_filter" | tr '[:upper:]' '[:lower:]')
+        filter="${filter//[[:space:]]/}"
+        if [[ -z "$filter" ]]; then
+            continue
+        fi
+        if [[ -n ${ALL_LANGUAGE_LABELS["$filter"]+x} ]]; then
+            LANGUAGE_FILTER_SET["$filter"]=1
+        else
+            echo "⚠️ Unknown language extension '$filter' in LOC_INCLUDE_LANGUAGES; ignoring." >&2
+        fi
+    done
+fi
+
 declare -A LANGUAGE_LABELS=()
 declare -A PROD_COUNTS=()
 declare -A TEST_COUNTS=()
@@ -173,6 +199,10 @@ declare -a ACTIVE_LANGUAGE_EXTS=()
 
 for spec in "${LANGUAGE_SPECS[@]}"; do
     IFS='|' read -r ext label <<< "$spec"
+    ext="${ext,,}"
+    if (( ${#LANGUAGE_FILTER_SET[@]} > 0 )) && [[ -z ${LANGUAGE_FILTER_SET["$ext"]+x} ]]; then
+        continue
+    fi
     ORDERED_EXTS+=("$ext")
     LANGUAGE_LABELS["$ext"]="$label"
 done
