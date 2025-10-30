@@ -758,11 +758,11 @@ Claude Code will:
 
 **What It Does**: Get comprehensive feedback from 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) with synthesized recommendations for design decisions, code reviews, and bug analysis.
 
-**Installation** (from WorldArchitect.AI repository):
+**Installation** (from your project repository):
 ```bash
 # Clone the repository with the secondo plugin
-git clone https://github.com/jleechanorg/worldarchitect.ai.git
-cd worldarchitect.ai
+git clone https://github.com/jleechanorg/YOUR_PROJECT_NAME.git
+cd YOUR_PROJECT_NAME
 
 # Install the complete plugin suite (includes secondo MCP server)
 /plugin install .
@@ -800,7 +800,7 @@ node scripts/auth-cli.mjs login
 - ✅ **MCP Compliant**: Full Model Context Protocol implementation
 
 **Architecture**:
-```
+```text
 Claude Code → Secondo MCP Server (port 3003) → secondo-cli.sh → AI Universe Backend
 ```
 
@@ -880,7 +880,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-10-30)
+### v1.2.0 (2025-10-30)
 
 **Export Statistics**:
 - **182 Commands**: Complete workflow orchestration system
