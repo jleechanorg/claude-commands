@@ -754,6 +754,73 @@ Claude Code will:
 /copilot                                # → Fix PR conflicts and comments
 ```
 
+### 🤖 Secondo Plugin - Multi-Model AI Second Opinion
+
+**What It Does**: Get comprehensive feedback from 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) with synthesized recommendations for design decisions, code reviews, and bug analysis.
+
+**Installation** (from your project repository):
+```bash
+# Clone the repository with the secondo plugin
+git clone https://github.com/jleechanorg/YOUR_PROJECT_NAME.git
+cd YOUR_PROJECT_NAME
+
+# Install the complete plugin suite (includes secondo MCP server)
+/plugin install .
+
+# Authenticate with AI Universe backend (required for secondo)
+node scripts/auth-cli.mjs login
+```
+
+**What Gets Installed**:
+- **`/secondo` command**: Quick multi-model feedback interface
+- **`/second_opinion` command**: Detailed second opinion workflow
+- **Secondo MCP server**: HTTP server on port 3003 for tool integration
+- **OAuth authentication**: Secure token management via AI Universe backend
+- **Dependencies**: Automatic npm installation of Express.js and related packages
+
+**Usage**:
+```bash
+# Get comprehensive feedback (all types)
+/secondo
+
+# Specific feedback type
+/secondo design         # Design review
+/secondo code-review    # Code quality analysis
+/secondo bugs           # Bug detection
+
+# With custom question
+/secondo "Should I use Redis or in-memory caching for rate limiting?"
+```
+
+**Features**:
+- ✅ **Multi-Model Synthesis**: Consults 5 different AI models for comprehensive perspectives
+- ✅ **OAuth Security**: Secure authentication via AI Universe backend
+- ✅ **Rate Limited**: 60 requests/hour (enforced by backend)
+- ✅ **Industry Sources**: Includes citations and references
+- ✅ **MCP Compliant**: Full Model Context Protocol implementation
+
+**Architecture**:
+```text
+Claude Code → Secondo MCP Server (port 3003) → secondo-cli.sh → AI Universe Backend
+```
+
+**Requirements**:
+- Node.js ≥20.0.0 (for MCP server)
+- Authentication via `auth-cli.mjs login` (one-time setup)
+- Network access to AI Universe backend
+
+**Troubleshooting**:
+```bash
+# Check authentication status
+node scripts/auth-cli.mjs status
+
+# Re-authenticate if needed
+node scripts/auth-cli.mjs login
+
+# Check MCP server logs
+tail -f /tmp/secondo-mcp-test.log
+```
+
 ## 🎯 Adaptation Guide
 
 ### Project-Specific Placeholders

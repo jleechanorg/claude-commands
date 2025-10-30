@@ -356,7 +356,7 @@ async function status() {
 
     if (!tokenData) {
       console.log('❌ Not authenticated. Run: node scripts/auth-cli.mjs login');
-      return;
+      process.exit(1);
     }
 
     console.log('📊 Authentication Status:');
@@ -368,6 +368,7 @@ async function status() {
 
     if (expired) {
       console.log('⚠️  Token expired. Run: node scripts/auth-cli.mjs login');
+      process.exit(1);
     }
   } catch (error) {
     console.error('❌ Error reading status:', error.message);
