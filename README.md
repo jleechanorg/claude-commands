@@ -754,6 +754,73 @@ Claude Code will:
 /copilot                                # → Fix PR conflicts and comments
 ```
 
+### 🤖 Secondo Plugin - Multi-Model AI Second Opinion
+
+**What It Does**: Get comprehensive feedback from 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) with synthesized recommendations for design decisions, code reviews, and bug analysis.
+
+**Installation** (from WorldArchitect.AI repository):
+```bash
+# Clone the repository with the secondo plugin
+git clone https://github.com/jleechanorg/worldarchitect.ai.git
+cd worldarchitect.ai
+
+# Install the complete plugin suite (includes secondo MCP server)
+/plugin install .
+
+# Authenticate with AI Universe backend (required for secondo)
+node scripts/auth-cli.mjs login
+```
+
+**What Gets Installed**:
+- **`/secondo` command**: Quick multi-model feedback interface
+- **`/second_opinion` command**: Detailed second opinion workflow
+- **Secondo MCP server**: HTTP server on port 3003 for tool integration
+- **OAuth authentication**: Secure token management via AI Universe backend
+- **Dependencies**: Automatic npm installation of Express.js and related packages
+
+**Usage**:
+```bash
+# Get comprehensive feedback (all types)
+/secondo
+
+# Specific feedback type
+/secondo design         # Design review
+/secondo code-review    # Code quality analysis
+/secondo bugs           # Bug detection
+
+# With custom question
+/secondo "Should I use Redis or in-memory caching for rate limiting?"
+```
+
+**Features**:
+- ✅ **Multi-Model Synthesis**: Consults 5 different AI models for comprehensive perspectives
+- ✅ **OAuth Security**: Secure authentication via AI Universe backend
+- ✅ **Rate Limited**: 60 requests/hour (enforced by backend)
+- ✅ **Industry Sources**: Includes citations and references
+- ✅ **MCP Compliant**: Full Model Context Protocol implementation
+
+**Architecture**:
+```
+Claude Code → Secondo MCP Server (port 3003) → secondo-cli.sh → AI Universe Backend
+```
+
+**Requirements**:
+- Node.js ≥20.0.0 (for MCP server)
+- Authentication via `auth-cli.mjs login` (one-time setup)
+- Network access to AI Universe backend
+
+**Troubleshooting**:
+```bash
+# Check authentication status
+node scripts/auth-cli.mjs status
+
+# Re-authenticate if needed
+node scripts/auth-cli.mjs login
+
+# Check MCP server logs
+tail -f /tmp/secondo-mcp-test.log
+```
+
 ## 🎯 Adaptation Guide
 
 ### Project-Specific Placeholders
@@ -812,6 +879,36 @@ The productivity gains available right now represent the largest arbitrage oppor
 **This framework is how you seize that opportunity.**
 
 ## 📚 Version History
+
+### v1.1.0 (2025-10-30)
+
+**Export Statistics**:
+- **182 Commands**: Complete workflow orchestration system
+- **41 Hooks**: Claude Code automation and workflow hooks
+- **23 Scripts**: Development and automation tools (scripts/ directory)
+- **3 Skills**: Shared knowledge references (.claude/skills/)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Scripts Included**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated scripts export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
 
 ### v1.1.0 (2025-10-26)
 

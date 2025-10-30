@@ -178,6 +178,7 @@ mcp_scripts=(
     "mcp_stdio_wrapper.py"
     "start_mcp_production.sh"
     "start_mcp_server.sh"
+    "auth-cli.mjs"
 )
 
 mcp_copied=0
