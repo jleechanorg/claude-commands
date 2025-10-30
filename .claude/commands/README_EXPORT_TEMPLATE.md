@@ -758,11 +758,11 @@ Claude Code will:
 
 **What It Does**: Get comprehensive feedback from 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) with synthesized recommendations for design decisions, code reviews, and bug analysis.
 
-**Installation** (from Your Project repository):
+**Installation** (from your project repository):
 ```bash
-# Clone the repository with the secondo plugin
-git clone https://github.com/jleechanorg/your-project.com.git
-cd your-project.com
+# Clone your project repository that includes the Secondo plugin
+git clone https://github.com/$USER/your-project.com.git
+cd $PROJECT_ROOT
 
 # Install the complete plugin suite (includes secondo MCP server)
 /plugin install .
