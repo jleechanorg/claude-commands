@@ -1,0 +1,32 @@
+{
+  "name": "secondo-mcp",
+  "version": "1.0.0",
+  "description": "Multi-model AI second opinion plugin. Get comprehensive feedback from 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) with synthesized recommendations.",
+  "author": {
+    "name": "WorldArchitect.AI maintainers"
+  },
+  "homepage": "https://worldarchitect.ai",
+  "repository": "https://github.com/jleechanorg/worldarchitect.ai.git",
+  "license": "MIT",
+  "keywords": [
+    "secondo",
+    "multi-model",
+    "code-review",
+    "mcp",
+    "ai-feedback",
+    "design-review"
+  ],
+  "commands": [
+    "../.claude/commands/secondo.md",
+    "../.claude/commands/second_opinion.md"
+  ],
+  "mcpServers": {
+    "secondo": {
+      "command": "node",
+      "args": ["mcp_servers/secondo/server.js"],
+      "env": {
+        "MCP_SECONDO_PORT": "3003"
+      }
+    }
+  }
+}

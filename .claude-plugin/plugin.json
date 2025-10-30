@@ -1,7 +1,7 @@
 {
   "name": "worldarchitect-ai-suite",
-  "version": "0.1.0",
-  "description": "Opinionated automation, governance, and quality guardrails for WorldArchitect.AI projects.",
+  "version": "0.3.0",
+  "description": "Opinionated automation, governance, and quality guardrails for WorldArchitect.AI projects. Includes secondo multi-model AI feedback plugin with MCP server.",
   "author": {
     "name": "WorldArchitect.AI maintainers"
   },
@@ -13,7 +13,11 @@
     "automation",
     "hooks",
     "quality",
-    "governance"
+    "governance",
+    "secondo",
+    "multi-model",
+    "code-review",
+    "mcp"
   ],
   "commands": [
     "../.claude/commands/"
@@ -21,5 +25,15 @@
   "agents": [
     "../.claude/agents/"
   ],
-  "hooks": "../.claude/hooks/hooks.plugin.json"
+  "hooks": "../.claude/hooks/hooks.plugin.json",
+  "mcpServers": {
+    "secondo": {
+      "command": "node",
+      "args": ["mcp_servers/secondo/server.js"],
+      "env": {
+        "MCP_SECONDO_PORT": "3003",
+        "MCP_SECONDO_HOST": "localhost"
+      }
+    }
+  }
 }

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "get_second_opinion",
+    "description": "Get comprehensive multi-model AI feedback on code, design decisions, or bug analysis. Consults 5 AI models (Cerebras, Gemini, Perplexity, OpenAI, Grok) and provides synthesized recommendations with industry sources. Requires authentication via auth-cli.mjs login.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "feedback_type": {
+          "type": "string",
+          "enum": ["design", "code-review", "bugs", "all"],
+          "default": "all",
+          "description": "Type of feedback to request: 'design' for architecture review, 'code-review' for code quality, 'bugs' for bug investigation, 'all' for comprehensive analysis"
+        },
+        "question": {
+          "type": "string",
+          "description": "Specific question or context for the second opinion. If not provided, uses default prompts based on feedback_type."
+        }
+      },
+      "required": []
+    }
+  }
+]

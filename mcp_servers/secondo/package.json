@@ -1,0 +1,34 @@
+{
+  "name": "secondo-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for multi-model AI second opinion tool",
+  "type": "commonjs",
+  "main": "server.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "curl -s http://localhost:3003/health | jq ."
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "multi-model",
+    "second-opinion",
+    "claude",
+    "anthropic"
+  ],
+  "author": "WorldArchitect.AI",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jleechanorg/worldarchitect.ai.git",
+    "directory": "mcp_servers/secondo"
+  }
+}
