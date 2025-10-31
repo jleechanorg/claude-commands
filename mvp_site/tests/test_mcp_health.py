@@ -144,7 +144,7 @@ class TestMCPServerHealth(unittest.TestCase):
         # Premium servers that require API keys
         premium_servers = {
             "perplexity-mcp": ["PERPLEXITY_API_KEY"],
-            "grok-mcp": ["GROK_API_KEY", "XAI_API_KEY"],
+            "grok": ["GROK_API_KEY", "XAI_API_KEY"],
         }
 
         with open(self.mcp_config_path) as f:

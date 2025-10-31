@@ -24,7 +24,7 @@ Equip Claude with a quick-start orientation for the WorldArchitect.ai repository
    # or
    ./run_local_server.sh
    ```
-4. **Pair MCP tools**: Use `./claude_mcp.sh` or `./start_game_mcp.sh` depending on the workflow.
+4. **Pair MCP tools**: Use `./scripts/install_mcp_servers.sh claude` or `./start_game_mcp.sh` depending on the workflow.
 5. **Stop services**: `./kill_dev_server.sh` cleans up hanging processes.
 
 ## Frequently referenced commands

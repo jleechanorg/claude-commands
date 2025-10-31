@@ -2,6 +2,7 @@
 # Shared MCP installer logic used by both Claude and Codex wrappers.
 
 __MCP_COMMON_PREV_SHELLOPTS=$(set +o)
+DEFAULT_MCP_ENV_FLAGS=()
 set -euo pipefail
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
@@ -39,32 +40,7 @@ if [[ -z "${MCP_BASH_REEXEC_DONE:-}" ]]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-mcp_common__resolve_repo_root() {
-    if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]] && \
-       [[ -f "${WORLDARCHITECT_PROJECT_ROOT}/mvp_site/mcp_api.py" ]]; then
-        echo "${WORLDARCHITECT_PROJECT_ROOT}"
-        return 0
-    fi
-
-    local search_dir="$SCRIPT_DIR"
-    while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/mvp_site/mcp_api.py" ]]; then
-            echo "$search_dir"
-            return 0
-        fi
-        search_dir="$(dirname "$search_dir")"
-    done
-
-    return 1
-}
-
-if REPO_ROOT="$(mcp_common__resolve_repo_root)"; then
-    :
-else
-    REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
-    echo "⚠️ Warning: Unable to automatically resolve project root. Falling back to $REPO_ROOT" >&2
-fi
+REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 # Allow callers to preconfigure behaviour while providing sensible defaults.
 TEST_MODE=${TEST_MODE:-false}
@@ -84,23 +60,6 @@ else
     MCP_SCOPE_ARGS=(--scope "$MCP_SCOPE")
 fi
 
-safe_remove() {
-    local name="$1"
-    if [[ "${MCP_CLI_BIN}" == "codex" ]]; then
-        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
-    else
-        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
-    fi
-}
-
-safe_remove_dual_if_enabled() {
-    local name="$1"
-    safe_remove "$name"
-    if [[ "${MCP_CLI_BIN}" != "codex" ]] && [[ "${MCP_INSTALL_DUAL_SCOPE}" == "true" ]] && [[ "$MCP_SCOPE" == "local" ]]; then
-        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
-    fi
-}
-
 for mcp_common_arg in "$@"; do
     if [[ "$mcp_common_arg" == "--test" ]]; then
         TEST_MODE=true
@@ -108,6 +67,41 @@ for mcp_common_arg in "$@"; do
     fi
 done
 unset mcp_common_arg
+
+# Set up test installation directory if provided
+TEST_INSTALL_DIR="${TEST_INSTALL_DIR:-}"
+TEST_CONFIG_FILE=""
+if [[ -n "$TEST_INSTALL_DIR" ]]; then
+    TEST_MODE=true
+
+    # Create test directory structure
+    mkdir -p "$TEST_INSTALL_DIR"/{configs,npm_global,mcp_servers}
+
+    # Create temporary config file based on product
+    if [[ "${MCP_CLI_BIN}" == "claude" ]]; then
+        TEST_CONFIG_FILE="$TEST_INSTALL_DIR/configs/claude.json"
+        echo '{"mcpServers":{}}' > "$TEST_CONFIG_FILE"
+
+        # Override MCP_SCOPE_ARGS to use test config
+        MCP_SCOPE_ARGS=(--mcp-config "$TEST_CONFIG_FILE")
+    elif [[ "${MCP_CLI_BIN}" == "codex" ]]; then
+        TEST_CONFIG_FILE="$TEST_INSTALL_DIR/configs/codex.toml"
+        echo '[mcp]' > "$TEST_CONFIG_FILE"
+
+        # For Codex, we'll need to handle this differently
+        # Codex doesn't have --mcp-config, so we use empty scope args
+        # and rely on environment variable overrides if possible
+        MCP_SCOPE_ARGS=()
+    fi
+
+    # Override npm global installation to use test directory
+    # This redirects all npm install -g and npm root -g to test location
+    export npm_config_prefix="$TEST_INSTALL_DIR/npm_global"
+    export NPM_CONFIG_PREFIX="$TEST_INSTALL_DIR/npm_global"
+
+    echo "[TEST MODE] Using config: $TEST_CONFIG_FILE" >&2
+    echo "[TEST MODE] npm global prefix: $npm_config_prefix" >&2
+fi
 
 GITHUB_TOKEN_LOADED=${GITHUB_TOKEN_LOADED:-false}
 RENDER_API_KEY=${RENDER_API_KEY:-}
@@ -142,6 +136,7 @@ safe_exit() {
     builtin exit "$code"
   }
 }
+
 
 # Check bash version for associative array support
 if [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
@@ -253,21 +248,159 @@ update_stats() {
 LOG_FILE="${MCP_LOG_FILE_PREFIX}_$(date +%Y%m%d_%H%M%S).log"
 echo "📝 Logging to: $LOG_FILE"
 
-# In test mode, exit early with success
-if [ "$TEST_MODE" = true ]; then
-    echo "🧪 Test mode: Exiting early with success"
+# In test mode without TEST_INSTALL_DIR, exit early with success
+# If TEST_INSTALL_DIR is set, continue with actual installation to isolated location
+if [ "$TEST_MODE" = true ] && [ -z "${TEST_INSTALL_DIR:-}" ]; then
+    echo "🧪 Test mode (legacy): Exiting early with success"
     safe_exit 0
     return 0 2>/dev/null || exit 0
 fi
 
 # Default environment flags to reduce verbose MCP tool discovery and logging
-if [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
+# Check if variable is set and non-empty without triggering set -u
+if ! declare -p DEFAULT_MCP_ENV_FLAGS >/dev/null 2>&1; then
+    DEFAULT_MCP_ENV_FLAGS=(
+        --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
+        --env "MCP_VERBOSE_TOOLS=false"
+        --env "MCP_AUTO_DISCOVER=false"
+    )
+elif [ ${#DEFAULT_MCP_ENV_FLAGS[@]} -eq 0 ]; then
     DEFAULT_MCP_ENV_FLAGS=(
         --env "MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG=false"
         --env "MCP_VERBOSE_TOOLS=false"
         --env "MCP_AUTO_DISCOVER=false"
     )
 fi
+
+# Single-server selection utilities
+normalize_server_name() {
+    local name="$1"
+    name="${name## }"
+    name="${name%% }"
+    name="$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]')"
+    name="${name// /-}"
+    name="${name//_/ -}"
+    name="${name// /-}"
+    name="${name//--/-}"
+    echo "$name"
+}
+
+declare -a ALL_SERVER_NAMES=(
+    "context7"
+    "sequential-thinking"
+    "chrome-superpower"
+    "playwright-mcp"
+    "gemini-cli-mcp"
+    "grok"
+    "ddg-search"
+    "perplexity-ask"
+    "filesystem"
+    "react-mcp"
+)
+
+SERVER_FILTER_ACTIVE=false
+declare -a REQUESTED_SERVERS=()
+declare -a __REMAINING_ARGS=()
+SHOW_SERVER_LIST=false
+
+is_known_server() {
+    local target="$1"
+    for server in "${ALL_SERVER_NAMES[@]}"; do
+        if [[ "$server" == "$target" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+add_requested_server() {
+    local raw_value="$1"
+    IFS=',' read -r -a _server_candidates <<<"$raw_value"
+    for candidate in "${_server_candidates[@]}"; do
+        candidate="${candidate## }"
+        candidate="${candidate%% }"
+        if [[ -z "$candidate" ]]; then
+            continue
+        fi
+        local normalized
+        normalized="$(normalize_server_name "$candidate")"
+        if [[ -z "$normalized" ]]; then
+            continue
+        fi
+        if [[ "$normalized" == "all" ]]; then
+            REQUESTED_SERVERS=()
+            SERVER_FILTER_ACTIVE=false
+            continue
+        fi
+        if ! is_known_server "$normalized"; then
+            echo "❌ Error: Unknown MCP server '$candidate'" >&2
+            echo "   Run with --list-servers to view available options." >&2
+            safe_exit 1
+        fi
+        local already_present=false
+        for existing in "${REQUESTED_SERVERS[@]}"; do
+            if [[ "$existing" == "$normalized" ]]; then
+                already_present=true
+                break
+            fi
+        done
+        if [[ "$already_present" == false ]]; then
+            REQUESTED_SERVERS+=("$normalized")
+        fi
+        SERVER_FILTER_ACTIVE=true
+    done
+}
+
+while (($#)); do
+    case "$1" in
+        --server)
+            shift || { echo "❌ Error: --server requires a value" >&2; safe_exit 1; }
+            add_requested_server "$1"
+            ;;
+        --server=*)
+            add_requested_server "${1#*=}"
+            ;;
+        --only)
+            shift || { echo "❌ Error: --only requires a value" >&2; safe_exit 1; }
+            add_requested_server "$1"
+            ;;
+        --only=*)
+            add_requested_server "${1#*=}"
+            ;;
+        --list-servers)
+            SHOW_SERVER_LIST=true
+            ;;
+        *)
+            __REMAINING_ARGS+=("$1")
+            ;;
+    esac
+    shift || break
+done
+
+set -- "${__REMAINING_ARGS[@]}"
+unset __REMAINING_ARGS
+
+if [[ "$SHOW_SERVER_LIST" == true ]]; then
+    echo "Available MCP servers:"
+    for server in "${ALL_SERVER_NAMES[@]}"; do
+        echo "  - $server"
+    done
+    safe_exit 0
+fi
+
+should_install_server() {
+    local name
+    name="$(normalize_server_name "$1")"
+    if [[ "$SERVER_FILTER_ACTIVE" == false ]]; then
+        return 0
+    fi
+    for requested in "${REQUESTED_SERVERS[@]}"; do
+        if [[ "$requested" == "$name" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
 
 # Function to log with timestamp
 log_with_timestamp() {
@@ -516,7 +649,7 @@ test_mcp_server() {
 cleanup_failed_server() {
     local name="$1"
     echo -e "${YELLOW}  🧹 Cleaning up failed installation of $name...${NC}"
-    safe_remove_dual_if_enabled "$name"
+    ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
 }
 
 # Function to display current step with dynamic counting
@@ -584,6 +717,19 @@ collect_parallel_results() {
     declare -A PARALLEL_PIDS
     unset PARALLEL_STATUS_FILES
     declare -A PARALLEL_STATUS_FILES
+}
+
+# Helper function to safely remove MCP server from current scope and dual-scope if enabled
+safe_remove_dual_if_enabled() {
+    local name="$1"
+    if [[ "${MCP_CLI_BIN}" != "codex" ]]; then
+        ${MCP_CLI_BIN} mcp remove --scope "$MCP_SCOPE" "$name" >/dev/null 2>&1 || true
+    else
+        ${MCP_CLI_BIN} mcp remove "$name" >/dev/null 2>&1 || true
+    fi
+    if [[ "${MCP_CLI_BIN}" != "codex" ]] && [ "$MCP_INSTALL_DUAL_SCOPE" = true ] && [ "$MCP_SCOPE" = "local" ]; then
+        ${MCP_CLI_BIN} mcp remove --scope user "$name" >/dev/null 2>&1 || true
+    fi
 }
 
 # Enhanced function to add MCP server with full error checking
@@ -712,70 +858,70 @@ add_mcp_server() {
     local add_output
     local add_cmd
 
-    # Special handling for grok-mcp which requires direct node execution
-    if [ "$name" = "grok-mcp" ]; then
-        echo -e "${BLUE}  🔧 Special setup for grok-mcp using direct node execution...${NC}"
+    # Special handling for grok which requires direct node execution
+    if [ "$name" = "grok" ]; then
+        echo -e "${BLUE}  🔧 Special setup for grok using direct node execution...${NC}"
         local grok_path=""
         if command -v npm >/dev/null 2>&1; then
             local npm_root_output=""
             local npm_root_status=0
             capture_command_output npm_root_output npm_root_status npm root -g
             if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
-                grok_path="${npm_root_output}/grok-mcp/build/index.js"
+                grok_path="${npm_root_output}/@chinchillaenterprises/mcp-grok/dist/index.js"
             fi
             if [ -z "$grok_path" ] || [ ! -f "$grok_path" ]; then
                 echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path${NC}"
-                echo -e "${BLUE}  📦 Installing grok-mcp globally from npm...${NC}"
-                log_with_timestamp "grok-mcp not found, installing globally"
+                echo -e "${BLUE}  📦 Installing @chinchillaenterprises/mcp-grok globally from npm...${NC}"
+                log_with_timestamp "grok not found, installing @chinchillaenterprises/mcp-grok globally"
 
                 local install_output
                 local install_exit_code
-                capture_command_output install_output install_exit_code npm install -g grok-mcp --registry https://registry.npmjs.org/
+                capture_command_output install_output install_exit_code npm install -g @chinchillaenterprises/mcp-grok --registry https://registry.npmjs.org/
 
                 if [ $install_exit_code -eq 0 ]; then
-                    echo -e "${GREEN}  ✅ Successfully installed grok-mcp globally${NC}"
-                    log_with_timestamp "grok-mcp installed successfully"
+                    echo -e "${GREEN}  ✅ Successfully installed @chinchillaenterprises/mcp-grok globally${NC}"
+                    log_with_timestamp "@chinchillaenterprises/mcp-grok installed successfully"
 
                     # Re-calculate path after installation to get actual location
                     capture_command_output npm_root_output npm_root_status npm root -g
                     if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
-                        grok_path="${npm_root_output}/grok-mcp/build/index.js"
+                        grok_path="${npm_root_output}/@chinchillaenterprises/mcp-grok/dist/index.js"
                     else
                         grok_path=""
                     fi
 
                     # Verify installation at actual location
                     if [ -n "$grok_path" ] && [ -f "$grok_path" ]; then
-                        echo -e "${GREEN}  ✅ Verified grok-mcp at $grok_path${NC}"
+                        echo -e "${GREEN}  ✅ Verified grok at $grok_path${NC}"
                     else
-                        echo -e "${RED}  ❌ grok-mcp installation succeeded but file not found at expected path: $grok_path${NC}"
-                        log_error_details "grok-mcp verification" "grok-mcp" "File not found after installation at expected path: $grok_path"
+                        echo -e "${RED}  ❌ grok installation succeeded but file not found at expected path: $grok_path${NC}"
+                        log_error_details "grok verification" "grok" "File not found after installation at expected path: $grok_path"
                         INSTALL_RESULTS["$name"]="VERIFY_FAILED"
                         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
                         return 1
                     fi
                 else
-                    echo -e "${RED}  ❌ Failed to install grok-mcp globally${NC}"
-                    log_error_details "npm install grok-mcp" "grok-mcp" "$install_output"
+                    echo -e "${RED}  ❌ Failed to install @chinchillaenterprises/mcp-grok globally${NC}"
+                    log_error_details "npm install @chinchillaenterprises/mcp-grok" "grok" "$install_output"
                     echo -e "${RED}  📋 Install error: $install_output${NC}"
                     INSTALL_RESULTS["$name"]="INSTALL_FAILED"
                     FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
                     return 1
                 fi
             else
-                echo -e "${GREEN}  ✅ Found grok-mcp at $grok_path${NC}"
-                log_with_timestamp "grok-mcp found at global installation"
+                echo -e "${GREEN}  ✅ Found grok at $grok_path${NC}"
+                log_with_timestamp "grok found at global installation"
             fi
         else
-            grok_path="/usr/local/lib/node_modules/grok-mcp/build/index.js"
+            grok_path="/usr/local/lib/node_modules/@chinchillaenterprises/mcp-grok/dist/index.js"
             echo -e "${YELLOW}  ⚠️ npm command not found, using fallback path: $grok_path${NC}"
         fi
 
-        # Add XAI_API_KEY environment variable for grok-mcp
-        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+        # Add GROK_API_KEY environment variable for grok (chinchilla package uses GROK_API_KEY)
+        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
         if [ -n "${XAI_API_KEY:-}" ] || [ -n "${GROK_API_KEY:-}" ]; then
-            local api_key="${XAI_API_KEY:-$GROK_API_KEY}"
-            grok_env_flags+=(--env "XAI_API_KEY=$api_key")
+            local api_key="${GROK_API_KEY:-$XAI_API_KEY}"
+            grok_env_flags+=(--env "GROK_API_KEY=$api_key")
         fi
 
         local grok_default_model=""
@@ -807,9 +953,9 @@ add_mcp_server() {
         elif [ -n "$grok_default_model" ]; then
             grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]:-}" "${cli_args[@]}" "$name" "${grok_env_flags[@]}" -- "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]:-}" "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -826,10 +972,10 @@ add_mcp_server() {
             local user_add_exit_code
 
             # Build user scope command (same as local but with --scope user)
-            if [ "$name" = "grok-mcp" ]; then
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${grok_env_flags[@]}" "$name" "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+            if [ "$name" = "grok" ]; then
+                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "$name" "${grok_env_flags[@]}" -- "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
             else
-                local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NPX_PATH" "$package" "${cmd_args[@]}")
+            local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
             fi
 
             capture_command_output user_add_output user_add_exit_code "${user_add_cmd[@]}"
@@ -854,8 +1000,21 @@ add_mcp_server() {
         fi
     else
         echo -e "${RED}  ❌ Failed to add $name to ${MCP_PRODUCT_NAME} MCP${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add" "$name" "$add_output"
-        echo -e "${RED}  📋 Add error: $add_output${NC}"
+
+        # Redact API keys from error output before logging
+        local add_output_redacted="$add_output"
+        if [ "$name" = "grok" ]; then
+            # Redact both GROK_API_KEY and XAI_API_KEY if present
+            if [ -n "${GROK_API_KEY:-}" ]; then
+                add_output_redacted="${add_output_redacted//${GROK_API_KEY}/<GROK_API_KEY>}"
+            fi
+            if [ -n "${XAI_API_KEY:-}" ]; then
+                add_output_redacted="${add_output_redacted//${XAI_API_KEY}/<XAI_API_KEY>}"
+            fi
+        fi
+
+        log_error_details "${MCP_CLI_BIN} mcp add" "$name" "$add_output_redacted"
+        echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
         cleanup_failed_server "$name"
         INSTALL_RESULTS["$name"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
@@ -943,11 +1102,19 @@ check_github_requirements() {
 }
 
 # Enhanced MCP server checking with parallel health checks
-echo -e "${BLUE}🔍 Checking existing MCP installations and health status...${NC}"
-log_with_timestamp "Checking existing MCP servers with parallel health checks"
+# Skip in test mode with TEST_INSTALL_DIR since config isolation doesn't work for mcp list
+if [ -n "${TEST_INSTALL_DIR:-}" ]; then
+    echo -e "${YELLOW}🧪 Test mode: Skipping existing server check (starting with empty config)${NC}"
+    log_with_timestamp "Test mode: Skipping existing server check"
+    EXISTING_SERVERS=""
+    EXISTING_COUNT=0
+else
+    echo -e "${BLUE}🔍 Checking existing MCP installations and health status...${NC}"
+    log_with_timestamp "Checking existing MCP servers with parallel health checks"
+fi
 
-EXISTING_SERVERS=""
-if EXISTING_SERVERS=$(${MCP_CLI_BIN} mcp list 2>&1); then
+EXISTING_SERVERS="${EXISTING_SERVERS:-}"
+if [ -z "${TEST_INSTALL_DIR:-}" ] && EXISTING_SERVERS=$(${MCP_CLI_BIN} mcp list "${MCP_SCOPE_ARGS[@]:-}" 2>&1); then
     EXISTING_COUNT=$(printf '%s\n' "$EXISTING_SERVERS" | awk -F':' '/^[A-Za-z].*:/{count++} END {print count+0}')
     echo -e "${GREEN}✅ Found $EXISTING_COUNT existing MCP servers${NC}"
     log_with_timestamp "Found $EXISTING_COUNT existing MCP servers"
@@ -1029,28 +1196,30 @@ setup_render_mcp_server() {
             echo -e "${BLUE}  📋 Features: Service management, database queries, deployment monitoring${NC}"
 
             # Remove existing render server to reconfigure
-            safe_remove "render"
+            ${MCP_CLI_BIN} mcp remove "render" >/dev/null 2>&1 || true
 
-            # Add Render MCP server using HTTP transport with secure JSON configuration
+            # Add Render MCP server using appropriate CLI capabilities
             echo -e "${BLUE}  🔗 Adding Render MCP server with HTTP transport...${NC}"
             log_with_timestamp "Attempting to add Render MCP server with API key"
 
-            # 🚨 SECURITY FIX: Use secure temp file to avoid API key in process list
-            # 🔧 ESCAPING FIX: Properly escape API key for JSON to handle special characters
-            escaped_api_key="${RENDER_API_KEY//\\/\\\\}"  # Escape backslashes
-            escaped_api_key="${escaped_api_key//\"/\\\"}"    # Escape quotes
+            local add_output_redacted=""
+            if [[ "$MCP_CLI_BIN" == "codex" ]]; then
+                capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url "https://mcp.render.com/mcp" --bearer-token-env-var RENDER_API_KEY "render"
+                add_output_redacted="$add_output"
+            else
+                escaped_api_key="${RENDER_API_KEY//\\/\\\\}"
+                escaped_api_key="${escaped_api_key//\"/\\\"}"
 
-            # Create secure temp file (600 permissions)
-            json_temp=$(mktemp)
-            chmod 600 "$json_temp"
-            echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
-            local json_payload
-            json_payload=$(<"$json_temp")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" "$json_payload"
-            rm -f "$json_temp"
+                json_temp=$(mktemp)
+                chmod 600 "$json_temp"
+                echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
+                local json_payload
+                json_payload=$(<"$json_temp")
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "render" "$json_payload"
+                rm -f "$json_temp"
 
-            # 🚨 SECURITY FIX: Redact API key from logs to prevent secret leakage
-            add_output_redacted=${add_output//${RENDER_API_KEY}/<RENDER_API_KEY>}
+                add_output_redacted=${add_output//${RENDER_API_KEY}/<RENDER_API_KEY>}
+            fi
 
             if [ $add_exit_code -eq 0 ]; then
                 echo -e "${GREEN}  ✅ Successfully configured Render MCP server${NC}"
@@ -1096,17 +1265,22 @@ setup_second_opinion_mcp_server() {
         return 0
     fi
 
-    safe_remove "$server_name"
+    ${MCP_CLI_BIN} mcp remove "$server_name" >/dev/null 2>&1 || true
 
     echo -e "${BLUE}  🔗 Adding Second Opinion MCP server with HTTP transport...${NC}"
     echo -e "${BLUE}  📋 Features: multi-model analysis, rebuttal drafts, refinement guidance${NC}"
 
-    local json_payload
-    json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
-
     local add_output=""
     local add_exit_code=0
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
+    local command_label="${MCP_CLI_BIN} mcp add-json"
+    if [[ "$MCP_CLI_BIN" == "codex" ]]; then
+        command_label="${MCP_CLI_BIN} mcp add"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url "https://ai-universe-backend-final.onrender.com/mcp" "$server_name"
+    else
+        local json_payload
+        json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "$server_name" "$json_payload"
+    fi
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
@@ -1118,7 +1292,7 @@ setup_second_opinion_mcp_server() {
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
         echo -e "${RED}  ❌ Failed to add Second Opinion MCP server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add-json" "$server_name" "$add_output"
+        log_error_details "$command_label" "$server_name" "$add_output"
         echo -e "${RED}  📋 Add error: $add_output${NC}"
         INSTALL_RESULTS["$server_name"]="ADD_FAILED"
         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
@@ -1126,9 +1300,11 @@ setup_second_opinion_mcp_server() {
 }
 
 # Check environment requirements
-echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
-check_github_requirements
-echo ""
+if should_install_server "github-server" || [[ "$SERVER_FILTER_ACTIVE" == false ]]; then
+    echo -e "${BLUE}🔍 Checking environment requirements...${NC}"
+    check_github_requirements
+    echo ""
+fi
 
 # Define server installation batches for parallel processing
 # Group servers that can be installed concurrently without conflicts
@@ -1147,8 +1323,7 @@ declare -A BATCH_1=(
 declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
     ["ddg-search"]="@oevortex/ddg_search"
-    ["grok-mcp"]="grok-mcp"
-    ["chrome-devtools"]="chrome-devtools-mcp"
+    ["grok"]="@chinchillaenterprises/mcp-grok"
 )
 
 # Function to install server batch in parallel
@@ -1156,11 +1331,23 @@ install_batch_parallel() {
     local -n batch_ref=$1
     local batch_name="$2"
 
+    local -a selected_servers=()
+    for server_name in "${!batch_ref[@]}"; do
+        if should_install_server "$server_name"; then
+            selected_servers+=("$server_name")
+        fi
+    done
+
+    if [[ ${#selected_servers[@]} -eq 0 ]]; then
+        echo -e "${BLUE}  ℹ️ Skipping $batch_name — no requested servers${NC}"
+        return 0
+    fi
+
     echo -e "${BLUE}🚀 Installing $batch_name in parallel...${NC}"
     log_with_timestamp "Starting parallel installation of $batch_name"
 
     # Start installations in parallel
-    for server_name in "${!batch_ref[@]}"; do
+    for server_name in "${selected_servers[@]}"; do
         local package="${batch_ref[$server_name]}"
         local result_file
         local log_file
@@ -1192,7 +1379,7 @@ install_batch_parallel() {
     # Wait for all installations to complete
     echo -e "${BLUE}  ⏳ Waiting for $batch_name installations to complete...${NC}"
 
-    for server_name in "${!batch_ref[@]}"; do
+    for server_name in "${selected_servers[@]}"; do
         set +u
         local pid="${PARALLEL_PIDS[$server_name]}"
         local result_file="${PARALLEL_RESULT_FILES[$server_name]}"
@@ -1250,6 +1437,46 @@ install_batch_parallel() {
     declare -A PARALLEL_LOG_FILES
 
     echo -e "${GREEN}✅ $batch_name installation batch completed${NC}"
+}
+
+# Function to install Chrome Superpowers MCP server (local plugin)
+install_chrome_superpower_mcp() {
+    local chrome_plugin_path="${HOME}/.claude/plugins/cache/superpowers-chrome/mcp/dist/index.js"
+
+    echo -e "${BLUE}  🌐 Installing Chrome Superpowers MCP server...${NC}"
+
+    update_stats "TOTAL" "chrome-superpower" ""
+
+    # Check if Chrome Superpowers plugin is installed
+    if [ ! -f "$chrome_plugin_path" ]; then
+        echo -e "${YELLOW}  ⚠️ Chrome Superpowers plugin not found at: $chrome_plugin_path${NC}"
+        echo -e "${YELLOW}  💡 Install via Claude Code settings or skip this server${NC}"
+        update_stats "FAILURE" "chrome-superpower" "DEPENDENCY_MISSING"
+        return 0
+    fi
+
+    # Check if server already exists
+    if server_already_exists "chrome-superpower"; then
+        echo -e "${GREEN}  ✅ Server chrome-superpower already exists, skipping installation${NC}"
+        log_with_timestamp "Server chrome-superpower already exists, skipping"
+        update_stats "SUCCESS" "chrome-superpower" "ALREADY_EXISTS"
+        return 0
+    fi
+
+    # Add Chrome Superpowers MCP server
+    local add_output=""
+    local add_exit_code=0
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "chrome-superpower" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "node" "$chrome_plugin_path"
+
+    if [ $add_exit_code -eq 0 ]; then
+        echo -e "${GREEN}  ✅ Successfully installed chrome-superpower${NC}"
+        log_with_timestamp "Successfully added chrome-superpower MCP server"
+        update_stats "SUCCESS" "chrome-superpower" "SUCCESS"
+    else
+        echo -e "${RED}  ❌ Failed to install chrome-superpower${NC}"
+        log_error_details "${MCP_CLI_BIN} mcp add" "chrome-superpower" "$add_output"
+        update_stats "FAILURE" "chrome-superpower" "ADD_FAILED"
+    fi
 }
 
 # Function to install Playwright MCP server with environment guard
@@ -1318,13 +1545,13 @@ install_react_mcp() {
         fi
 
         # Remove existing react-mcp server to reconfigure
-        safe_remove "react-mcp"
+        ${MCP_CLI_BIN} mcp remove "react-mcp" >/dev/null 2>&1 || true
 
         # Add React MCP server
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "react-mcp" "$NODE_PATH" "$REACT_MCP_PATH"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "react-mcp" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NODE_PATH" "$REACT_MCP_PATH"
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1573,7 +1800,7 @@ install_ios_simulator_mcp() {
     safe_remove_dual_if_enabled "$name"
 
     # Add server using node to run the compiled entrypoint
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "$name" "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
@@ -1618,16 +1845,19 @@ install_github_mcp() {
         log_with_timestamp "Adding GitHub official remote MCP server"
 
         # Remove any old deprecated GitHub server first
-        safe_remove "github-server"
+        ${MCP_CLI_BIN} mcp remove "github-server" >/dev/null 2>&1 || true
 
-        # Add the new official GitHub HTTP MCP server (secure: token via temporary file)
-        local temp_config=$(mktemp -t github_mcp.XXXXXX)
-        chmod 600 "$temp_config"
-        cat > "$temp_config" <<EOF
+        if [[ "$MCP_CLI_BIN" == "codex" ]]; then
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url "https://api.githubcopilot.com/mcp/" --bearer-token-env-var GITHUB_PERSONAL_ACCESS_TOKEN "github-server"
+        else
+            local temp_config=$(mktemp -t github_mcp.XXXXXX)
+            chmod 600 "$temp_config"
+            cat > "$temp_config" <<EOF
 {"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
 EOF
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "github-server" - < "$temp_config"
-        rm -f "$temp_config"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "github-server" - < "$temp_config"
+            rm -f "$temp_config"
+        fi
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully added GitHub remote MCP server${NC}"
@@ -1636,8 +1866,9 @@ EOF
             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
         else
             echo -e "${RED}  ❌ Failed to add GitHub remote MCP server${NC}"
-            log_error_details "${MCP_CLI_BIN} mcp add-json" "github-server" "$add_output"
-            echo -e "${RED}  📋 Add error: $add_output${NC}"
+            add_output_redacted="${add_output//${GITHUB_PERSONAL_ACCESS_TOKEN}/<GITHUB_TOKEN>}"
+            log_error_details "${MCP_CLI_BIN} mcp add-json" "github-server" "$add_output_redacted"
+            echo -e "${RED}  📋 Add error: $add_output_redacted${NC}"
             INSTALL_RESULTS["github-server"]="ADD_FAILED"
             FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         fi
@@ -1647,295 +1878,325 @@ EOF
 # Core MCP Servers Installation
 echo -e "${BLUE}📊 Installing Core MCP Servers with Parallel Processing...${NC}"
 
-display_step "Setting up GitHub MCP Server (Official Remote)..."
-# GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
-# The new server is HTTP-based and hosted by GitHub for better reliability and features
-install_github_mcp
+# DISABLED: GitHub MCP Server (not needed - using gh CLI instead)
+# if should_install_server "github-server"; then
+#     display_step "Setting up GitHub MCP Server (Official Remote)..."
+#     # GitHub released a new official MCP server that replaces @modelcontextprotocol/server-github
+#     # The new server is HTTP-based and hosted by GitHub for better reliability and features
+#     install_github_mcp
+# fi
 
-display_step "Installing Batch 1 Servers (Parallel)..."
-install_batch_parallel BATCH_1 "Batch 1"
+if should_install_server "sequential-thinking" || should_install_server "context7"; then
+    display_step "Installing Batch 1 Servers (Parallel)..."
+    install_batch_parallel BATCH_1 "Batch 1"
+fi
 
-display_step "Installing Optional Playwright MCP Server..."
-install_playwright_mcp
+if should_install_server "chrome-superpower"; then
+    display_step "Installing Chrome Superpowers MCP Server..."
+    install_chrome_superpower_mcp
+fi
 
-display_step "Setting up Memory MCP Server..."
-# Create memory data directory in user's home
-mkdir -p ~/.cache/mcp-memory
-echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
+if should_install_server "playwright-mcp"; then
+    display_step "Installing Optional Playwright MCP Server..."
+    install_playwright_mcp
+fi
 
-# Configure memory server with custom data path
-MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
-echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
+# DISABLED: Memory MCP Server (not needed - using standard state management)
+# if should_install_server "memory-server"; then
+#     display_step "Setting up Memory MCP Server..."
+#     # Create memory data directory in user's home
+#     mkdir -p ~/.cache/mcp-memory
+#     echo -e "${BLUE}  📁 Memory data directory: ~/.cache/mcp-memory/${NC}"
+#
+#     # Configure memory server with custom data path
+#     MEMORY_PATH="$HOME/.cache/mcp-memory/memory.json"
+#     echo -e "${BLUE}  📁 Memory file path: $MEMORY_PATH${NC}"
+#
+#     # Add memory server with environment variable configuration
+#     echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
+#     memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+#     memory_env_flags+=(--env "MEMORY_FILE_PATH=$MEMORY_PATH")
+#     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "memory-server" "${memory_env_flags[@]}" -- "$NPX_PATH" "@modelcontextprotocol/server-memory"
+#
+#     if [ $add_exit_code -eq 0 ]; then
+#         echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
+#         log_with_timestamp "Successfully added memory server with custom path: $MEMORY_PATH"
+#     else
+#         echo -e "${YELLOW}  ⚠️ Environment variable method failed, trying fallback...${NC}"
+#         log_with_timestamp "Environment variable method failed: $add_output"
+#
+#         # Fallback: use standard add but create a symlink or wrapper script
+#         echo -e "${BLUE}  🔄 Using fallback configuration method...${NC}"
+#
+#         # Create wrapper script that sets the environment variable
+#         WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
+#         debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+#         cat > "$WRAPPER_SCRIPT" <<EOF
+# #!/bin/bash
+# export MEMORY_FILE_PATH="\$HOME/.cache/mcp-memory/memory.json"
+# export ${debug_env_var}=false
+# export MCP_VERBOSE_TOOLS=false
+# export MCP_AUTO_DISCOVER=false
+# exec "$NPX_PATH" @modelcontextprotocol/server-memory "\$@"
+# EOF
+#         chmod +x "$WRAPPER_SCRIPT"
+#
+#         # Add server using the wrapper script
+#         capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "memory-server" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$WRAPPER_SCRIPT"
+#
+#         if [ $fallback_exit_code -eq 0 ]; then
+#             echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
+#             log_with_timestamp "Successfully added memory server with wrapper script"
+#         else
+#             echo -e "${RED}  ❌ Both methods failed for memory server${NC}"
+#             log_error_details "${MCP_CLI_BIN} mcp add wrapper" "memory-server" "$fallback_output"
+#             echo -e "${YELLOW}  💡 You may need to manually configure the memory server${NC}"
+#         fi
+#     fi
+# fi
 
-# Remove existing memory server to reconfigure
-safe_remove_dual_if_enabled "memory-server"
+if should_install_server "gemini-cli-mcp" || should_install_server "ddg-search" || should_install_server "grok"; then
+    display_step "Installing Batch 2 Servers (Parallel)..."
+    install_batch_parallel BATCH_2 "Batch 2"
+fi
 
-# Add memory server with environment variable configuration
-echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
-memory_env_flags+=(--env "MEMORY_FILE_PATH=$MEMORY_PATH")
-capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${memory_env_flags[@]}" "memory-server" "$NPX_PATH" "@modelcontextprotocol/server-memory"
+# DISABLED: iOS Simulator MCP (not needed for this project)
+# if should_install_server "ios-simulator-mcp"; then
+#     display_step "Installing iOS Simulator MCP Server..."
+#     install_ios_simulator_mcp
+# fi
 
-if [ $add_exit_code -eq 0 ]; then
-    echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
-    log_with_timestamp "Successfully added memory server with custom path: $MEMORY_PATH"
-else
-    echo -e "${YELLOW}  ⚠️ Environment variable method failed, trying fallback...${NC}"
-    log_with_timestamp "Environment variable method failed: $add_output"
+if should_install_server "perplexity-ask" || should_install_server "ddg-search"; then
+    display_step "Setting up Web Search MCP Servers..."
+    echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
 
-    # Fallback: use standard add but create a symlink or wrapper script
-    echo -e "${BLUE}  🔄 Using fallback configuration method...${NC}"
+    if should_install_server "ddg-search"; then
+        echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
+        echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
+        echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
+    fi
 
-    # Create wrapper script that sets the environment variable
-    WRAPPER_SCRIPT="$HOME/.cache/mcp-memory/memory-server-wrapper.sh"
-    debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
-    cat > "$WRAPPER_SCRIPT" <<EOF
-#!/bin/bash
-export MEMORY_FILE_PATH="\$HOME/.cache/mcp-memory/memory.json"
-export ${debug_env_var}=false
-export MCP_VERBOSE_TOOLS=false
-export MCP_AUTO_DISCOVER=false
-exec "$NPX_PATH" @modelcontextprotocol/server-memory "\$@"
-EOF
-    chmod +x "$WRAPPER_SCRIPT"
+    if should_install_server "perplexity-ask"; then
+        echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
+        if [ -n "$PERPLEXITY_API_KEY" ]; then
+            echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
+            echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
 
-    # Add server using the wrapper script
-    capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "memory-server" "$WRAPPER_SCRIPT"
+            echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
+            perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+            perplex_env_flags+=(--env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY")
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "perplexity-ask" "${perplex_env_flags[@]}" -- "$NPX_PATH" "@chatmcp/server-perplexity-ask"
 
-    if [ $fallback_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
-        log_with_timestamp "Successfully added memory server with wrapper script"
-    else
-        echo -e "${RED}  ❌ Both methods failed for memory server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add wrapper" "memory-server" "$fallback_output"
-        echo -e "${YELLOW}  💡 You may need to manually configure the memory server${NC}"
+            if [ $add_exit_code -eq 0 ]; then
+                echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
+                log_with_timestamp "Successfully added Perplexity search server with API key"
+                INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+            else
+                echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
+                add_output_redacted="${add_output//${PERPLEXITY_API_KEY}/<PERPLEXITY_API_KEY>}"
+                log_error_details "${MCP_CLI_BIN} mcp add perplexity" "perplexity-ask" "$add_output_redacted"
+                INSTALL_RESULTS["perplexity-ask"]="ADD_FAILED"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            fi
+        else
+            echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
+            echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
+            echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
+            log_with_timestamp "Perplexity API key not found, skipping premium server installation"
+        fi
     fi
 fi
 
-display_step "Installing Batch 2 Servers (Parallel)..."
-install_batch_parallel BATCH_2 "Batch 2"
+if should_install_server "filesystem"; then
+    display_step "Setting up Filesystem MCP Server..."
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
+    log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
 
-display_step "Installing iOS Simulator MCP Server..."
-install_ios_simulator_mcp
-
-display_step "Setting up Web Search MCP Servers..."
-echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
-
-# Remove existing web search servers to avoid conflicts
-safe_remove "web-search-duckduckgo"
-safe_remove "perplexity-ask"
-safe_remove "perplexity-search"
-safe_remove "ddg-search"
-
-# DuckDuckGo is now installed in Batch 2
-echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
-echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
-echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
-
-# Install Perplexity search server (premium, requires API key)
-echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
-if [ -n "$PERPLEXITY_API_KEY" ]; then
-    echo -e "${GREEN}✅ Perplexity API key found - installing premium search server${NC}"
-    echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
-
-    # Add Perplexity server with API key - using @chatmcp/server-perplexity-ask (working alternative)
-    # Note: Replaced problematic 'server-perplexity-ask' package with working distribution
-    echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-    perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
-    perplex_env_flags+=(--env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY")
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${perplex_env_flags[@]}" "perplexity-ask" "$NPX_PATH" "@chatmcp/server-perplexity-ask"
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
-        log_with_timestamp "Successfully added Perplexity search server with API key"
-        INSTALL_RESULTS["perplexity-ask"]="SUCCESS"
+    if server_already_exists "filesystem"; then
+        echo -e "${GREEN}  ✅ Server filesystem already exists, skipping installation${NC}"
+        log_with_timestamp "Server filesystem already exists, skipping"
+        INSTALL_RESULTS["filesystem"]="ALREADY_EXISTS"
         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
     else
-        echo -e "${RED}    ❌ Failed to add Perplexity search server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add perplexity" "perplexity-ask" "$add_output"
-        INSTALL_RESULTS["perplexity-ask"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-else
-    echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
-    echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
-    echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
-    log_with_timestamp "Perplexity API key not found, skipping premium server installation"
-fi
+        ${MCP_CLI_BIN} mcp remove "filesystem" >/dev/null 2>&1 || true
 
-# Optional: Notion Server (if available)
-display_step "Setting up Filesystem MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  📁 Configuring filesystem access for projects directory...${NC}"
-log_with_timestamp "Setting up MCP server: filesystem (package: @modelcontextprotocol/server-filesystem)"
+        FS_SERVER_DIRS=("$HOME/projects")
+        wide_fs_enabled=false
+        if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
+            FS_SERVER_DIRS+=("/tmp" "$HOME")
+            wide_fs_enabled=true
+        fi
 
-# Check if server already exists
-if server_already_exists "filesystem"; then
-    echo -e "${GREEN}  ✅ Server filesystem already exists, skipping installation${NC}"
-    log_with_timestamp "Server filesystem already exists, skipping"
-    INSTALL_RESULTS["filesystem"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Remove existing filesystem server to reconfigure with proper directory access
-    safe_remove "filesystem"
+        allowed_dirs_display=$(printf "%s, " "${FS_SERVER_DIRS[@]}")
+        allowed_dirs_display=${allowed_dirs_display%, }
 
-    # Determine filesystem server directories based on configuration
-    FS_SERVER_DIRS=("$HOME/projects")
-    wide_fs_enabled=false
-    if [[ "${ALLOW_WIDE_FS:-false}" == "true" ]]; then
-        FS_SERVER_DIRS+=("/tmp" "$HOME")
-        wide_fs_enabled=true
-    fi
+        if [[ "$wide_fs_enabled" == true ]]; then
+            echo -e "${YELLOW}  ⚠️ Granting filesystem server access to ${allowed_dirs_display} (ALLOW_WIDE_FS=true)...${NC}"
+            log_with_timestamp "ALLOW_WIDE_FS=true: Granting filesystem access to: ${allowed_dirs_display}"
+        else
+            echo -e "${BLUE}  🔗 Adding filesystem server with ${allowed_dirs_display} access...${NC}"
+            log_with_timestamp "Granting filesystem access to: ${allowed_dirs_display}"
+        fi
 
-    allowed_dirs_display=$(printf "%s, " "${FS_SERVER_DIRS[@]}")
-    allowed_dirs_display=${allowed_dirs_display%, }
-
-    if [[ "$wide_fs_enabled" == true ]]; then
-        echo -e "${YELLOW}  ⚠️ Granting filesystem server access to ${allowed_dirs_display} (ALLOW_WIDE_FS=true)...${NC}"
-        log_with_timestamp "ALLOW_WIDE_FS=true: Granting filesystem access to: ${allowed_dirs_display}"
-    else
-        echo -e "${BLUE}  🔗 Adding filesystem server with ${allowed_dirs_display} access...${NC}"
-        log_with_timestamp "Granting filesystem access to: ${allowed_dirs_display}"
-    fi
-
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${DEFAULT_MCP_ENV_FLAGS[@]}" "filesystem" "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured filesystem server with access to ${allowed_dirs_display}${NC}"
-        log_with_timestamp "Successfully added filesystem server with access to: ${allowed_dirs_display}"
-        INSTALL_RESULTS["filesystem"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        echo -e "${RED}  ❌ Failed to add filesystem server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add filesystem" "filesystem" "$add_output"
-        INSTALL_RESULTS["filesystem"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-fi
-
-
-
-display_step "Setting up React MCP Server..."
-install_react_mcp
-
-display_step "Setting up WorldArchitect MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🎮 Configuring project MCP server for application mechanics...${NC}"
-log_with_timestamp "Setting up MCP server: worldarchitect (local: mvp_site/mcp_api.py)"
-
-# Check if server already exists
-if server_already_exists "worldarchitect"; then
-    echo -e "${GREEN}  ✅ Server worldarchitect already exists, skipping installation${NC}"
-    log_with_timestamp "Server worldarchitect already exists, skipping"
-    INSTALL_RESULTS["worldarchitect"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Get the absolute path to the WorldArchitect project
-    WORLDARCHITECT_MCP_PATH="$REPO_ROOT/mvp_site/mcp_api.py"
-    WORLDARCHITECT_PYTHON="$REPO_ROOT/venv/bin/python"
-
-    # Check if mcp_api.py exists
-    if [ -f "$WORLDARCHITECT_MCP_PATH" ]; then
-        echo -e "${GREEN}  ✅ Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH${NC}"
-        log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
-
-        # Remove existing worldarchitect server to reconfigure
-        safe_remove "worldarchitect"
-
-        # Add WorldArchitect MCP server using Python with proper environment
-        echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
-        log_with_timestamp "Attempting to add WorldArchitect MCP server"
-
-        world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
-        world_env_flags+=(--env "PYTHONPATH=$REPO_ROOT")
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "${world_env_flags[@]}" "worldarchitect" "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "filesystem" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
 
         if [ $add_exit_code -eq 0 ]; then
-            echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
-            echo -e "${BLUE}  📋 Server info:${NC}"
-            echo -e "     • Path: $WORLDARCHITECT_MCP_PATH"
-            echo -e "     • Available tools: D&D campaign creation, character management, game actions, world state"
-            echo -e "     • Features: Real D&D 5e mechanics, Gemini API integration, Firebase storage"
-            log_with_timestamp "Successfully added WorldArchitect MCP server"
-            INSTALL_RESULTS["worldarchitect"]="SUCCESS"
+            echo -e "${GREEN}  ✅ Successfully configured filesystem server with access to ${allowed_dirs_display}${NC}"
+            log_with_timestamp "Successfully added filesystem server with access to: ${allowed_dirs_display}"
+            INSTALL_RESULTS["filesystem"]="SUCCESS"
             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
         else
-            echo -e "${RED}  ❌ Failed to add WorldArchitect MCP server${NC}"
-            log_error_details "${MCP_CLI_BIN} mcp add worldarchitect" "worldarchitect" "$add_output"
-            INSTALL_RESULTS["worldarchitect"]="ADD_FAILED"
+            echo -e "${RED}  ❌ Failed to add filesystem server${NC}"
+            log_error_details "${MCP_CLI_BIN} mcp add filesystem" "filesystem" "$add_output"
+            INSTALL_RESULTS["filesystem"]="ADD_FAILED"
             FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
         fi
-    else
-        echo -e "${RED}  ❌ WorldArchitect MCP server not found at expected path: $WORLDARCHITECT_MCP_PATH${NC}"
-        echo -e "${YELLOW}  💡 Ensure you're running this script from the WorldArchitect.AI project root${NC}"
-        log_with_timestamp "ERROR: WorldArchitect MCP server not found at $WORLDARCHITECT_MCP_PATH"
-        INSTALL_RESULTS["worldarchitect"]="DEPENDENCY_MISSING"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
     fi
 fi
 
-# Setup Render MCP Server
-setup_render_mcp_server
+
+if should_install_server "react-mcp"; then
+    display_step "Setting up React MCP Server..."
+    install_react_mcp
+fi
+
+# DISABLED: WorldArchitect MCP (D&D campaigns - unrelated to this project)
+# if should_install_server "worldarchitect"; then
+#     display_step "Setting up WorldArchitect MCP Server..."
+#     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+#     echo -e "${BLUE}  🎮 Configuring project MCP server for application mechanics...${NC}"
+#     log_with_timestamp "Setting up MCP server: worldarchitect (local: mvp_site/mcp_api.py)"
+#
+#     if server_already_exists "worldarchitect"; then
+#         echo -e "${GREEN}  ✅ Server worldarchitect already exists, skipping installation${NC}"
+#         log_with_timestamp "Server worldarchitect already exists, skipping"
+#         INSTALL_RESULTS["worldarchitect"]="ALREADY_EXISTS"
+#         SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+#     else
+#         WORLDARCHITECT_MCP_PATH="$REPO_ROOT/mvp_site/mcp_api.py"
+#         WORLDARCHITECT_PYTHON="$REPO_ROOT/venv/bin/python"
+#
+#         if [ -f "$WORLDARCHITECT_MCP_PATH" ]; then
+#             echo -e "${GREEN}  ✅ Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH${NC}"
+#             log_with_timestamp "Found WorldArchitect MCP server at: $WORLDARCHITECT_MCP_PATH"
+#
+#             ${MCP_CLI_BIN} mcp remove "worldarchitect" >/dev/null 2>&1 || true
+#
+#             echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
+#             log_with_timestamp "Attempting to add WorldArchitect MCP server"
+#
+#             world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+#             world_env_flags+=(--env "PYTHONPATH=$REPO_ROOT")
+#             add_output=""
+#             add_exit_code=0
+#             capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "worldarchitect" "${world_env_flags[@]}" -- "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
+#
+#             if [ $add_exit_code -eq 0 ]; then
+#                 echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
+#                 echo -e "${BLUE}  📋 Server info:${NC}"
+#                 echo -e "     • Path: $WORLDARCHITECT_MCP_PATH"
+#                 echo -e "     • Available tools: D&D campaign creation, character management, game actions, world state"
+#                 echo -e "     • Features: Real D&D 5e mechanics, Gemini API integration, Firebase storage"
+#                 log_with_timestamp "Successfully added WorldArchitect MCP server"
+#                 INSTALL_RESULTS["worldarchitect"]="SUCCESS"
+#                 SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+#             else
+#                 echo -e "${RED}  ❌ Failed to add WorldArchitect MCP server${NC}"
+#                 log_error_details "${MCP_CLI_BIN} mcp add worldarchitect" "worldarchitect" "$add_output"
+#                 INSTALL_RESULTS["worldarchitect"]="ADD_FAILED"
+#                 FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+#             fi
+#         else
+#             echo -e "${RED}  ❌ WorldArchitect MCP server not found at expected path: $WORLDARCHITECT_MCP_PATH${NC}"
+#             echo -e "${YELLOW}  💡 Ensure you're running this script from the WorldArchitect.AI project root${NC}"
+#             log_with_timestamp "ERROR: WorldArchitect MCP server not found at $WORLDARCHITECT_MCP_PATH"
+#             INSTALL_RESULTS["worldarchitect"]="DEPENDENCY_MISSING"
+#             FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+#         fi
+#     fi
+# fi
+
+# DISABLED: Render MCP (Render.com deployment - but we use Google Cloud)
+# if should_install_server "render"; then
+#     setup_render_mcp_server
+# fi
 
 # Setup Second Opinion MCP Server
-setup_second_opinion_mcp_server
+# DISABLED: Second Opinion Tool (using direct curl instead via /secondo command)
+# if should_install_server "second-opinion-tool"; then
+#     setup_second_opinion_mcp_server
+# fi
 
-display_step "Setting up Serena MCP Server..."
-TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
-echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
-log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
-
-# Pre-flight check: Ensure uvx is available
-echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
-if ! command -v uvx >/dev/null 2>&1; then
-    echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
-    echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
-    log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
-    INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
-    FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    TOTAL_SERVERS=$((TOTAL_SERVERS - 1))  # Correct count since we're not installing
-else
-    echo -e "${GREEN}  ✅ uvx found: $(uvx --version 2>/dev/null || echo "available")${NC}"
-    log_with_timestamp "uvx dependency check passed"
-
-    # Check if server already exists
-    if server_already_exists "serena"; then
-    echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
-    log_with_timestamp "Server serena already exists, skipping"
-    INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
-    SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-else
-    # Remove existing serena server to reconfigure
-    safe_remove "serena"
-
-    # Add Serena MCP server using uvx with git repository
-    echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
-    log_with_timestamp "Attempting to add Serena MCP server via uvx"
-
-    # Use add-json for uvx configuration
-    local debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
-    local serena_payload
-    serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
-        echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Repository: https://github.com/oraios/serena"
-        echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
-        echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
-        echo -e "     • Configuration: ~/.serena/serena_config.yml"
-        log_with_timestamp "Successfully added Serena MCP server via uvx"
-        INSTALL_RESULTS["serena"]="SUCCESS"
-        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
-    else
-        echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add-json serena" "serena" "$add_output"
-        INSTALL_RESULTS["serena"]="ADD_FAILED"
-        FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
-    fi
-    fi
-fi
+# DISABLED: Serena MCP (semantic code analysis - using standard file tools instead)
+# if should_install_server "serena"; then
+#     display_step "Setting up Serena MCP Server..."
+#     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+#     echo -e "${BLUE}  🧠 Configuring Serena MCP server for semantic code analysis...${NC}"
+#     log_with_timestamp "Setting up MCP server: serena (uvx: git+https://github.com/oraios/serena)"
+#
+#     echo -e "${BLUE}  🔍 Checking uvx availability...${NC}"
+#     if ! command -v uvx >/dev/null 2>&1; then
+#         echo -e "${RED}  ❌ 'uvx' not found - required for Serena MCP server${NC}"
+#         echo -e "${YELLOW}  💡 Install uvx with: pip install uv${NC}"
+#         log_with_timestamp "ERROR: uvx not found, skipping Serena MCP server installation"
+#         INSTALL_RESULTS["serena"]="DEPENDENCY_MISSING"
+#         FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+#         TOTAL_SERVERS=$((TOTAL_SERVERS - 1))
+#     else
+#         echo -e "${GREEN}  ✅ uvx found: $(uvx --version 2>/dev/null || echo "available")${NC}"
+#         log_with_timestamp "uvx dependency check passed"
+#
+#         if server_already_exists "serena"; then
+#             echo -e "${GREEN}  ✅ Server serena already exists, skipping installation${NC}"
+#             log_with_timestamp "Server serena already exists, skipping"
+#             INSTALL_RESULTS["serena"]="ALREADY_EXISTS"
+#             SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+#         else
+#             ${MCP_CLI_BIN} mcp remove "serena" >/dev/null 2>&1 || true
+#
+#             echo -e "${BLUE}  🔗 Adding Serena MCP server via uvx...${NC}"
+#             log_with_timestamp "Attempting to add Serena MCP server via uvx"
+#
+#             debug_env_var="MCP_${MCP_PRODUCT_NAME_UPPER}_DEBUG"
+#             serena_command_label=""
+#             add_output=""
+#             add_exit_code=0
+#             if [[ "$MCP_CLI_BIN" == "codex" ]]; then
+#                 serena_command_label="${MCP_CLI_BIN} mcp add serena"
+#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add \
+#                     --env "${debug_env_var}=false" \
+#                     --env "MCP_VERBOSE_TOOLS=false" \
+#                     --env "MCP_AUTO_DISCOVER=false" \
+#                     "serena" \
+#                     "uvx" "--from" "git+https://github.com/oraios/serena" "serena" "start-mcp-server"
+#             else
+#                 serena_command_label="${MCP_CLI_BIN} mcp add-json serena"
+#                 serena_payload=""
+#                 serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
+#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "serena" "$serena_payload"
+#             fi
+#
+#             if [ $add_exit_code -eq 0 ]; then
+#                 echo -e "${GREEN}  ✅ Successfully configured Serena MCP server${NC}"
+#                 echo -e "${BLUE}  📋 Server info:${NC}"
+#                 echo -e "     • Repository: https://github.com/oraios/serena"
+#                 echo -e "     • Available tools: Semantic code analysis, file operations, memory system"
+#                 echo -e "     • Dashboard: http://127.0.0.1:24282/dashboard/index.html"
+#                 echo -e "     • Configuration: ~/.serena/serena_config.yml"
+#                 log_with_timestamp "Successfully added Serena MCP server via uvx"
+#                 INSTALL_RESULTS["serena"]="SUCCESS"
+#                 SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+#             else
+#                 echo -e "${RED}  ❌ Failed to add Serena MCP server${NC}"
+#                 log_error_details "$serena_command_label" "serena" "$add_output"
+#                 INSTALL_RESULTS["serena"]="ADD_FAILED"
+#                 FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+#             fi
+#         fi
+#     fi
+# fi
 
 # Final verification and results
 echo -e "\n${BLUE}✅ Verifying final installation...${NC}"

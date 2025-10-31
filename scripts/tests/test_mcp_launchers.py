@@ -5,10 +5,16 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
-def run_launcher(script_name: str):
-    script_path = PROJECT_ROOT / script_name
+def run_unified_installer(product: str, extra_args=None):
+    """Run the unified MCP installer for testing"""
+    script_path = PROJECT_ROOT / "scripts" / "install_mcp_servers.sh"
+    args = [str(script_path)]
+    if extra_args:
+        args.extend(extra_args)
+    args.append(product)
+
     result = subprocess.run(
-        [str(script_path), "--test"],
+        args,
         capture_output=True,
         text=True,
         cwd=PROJECT_ROOT,
@@ -17,14 +23,16 @@ def run_launcher(script_name: str):
     return result
 
 
-def test_codex_launcher_exits_cleanly():
-    result = run_launcher("codex_mcp.sh")
+def test_codex_installer_exits_cleanly():
+    """Test that Codex installer runs in test mode without errors"""
+    result = run_unified_installer("codex", ["--test"])
     assert result.returncode == 0
-    assert "📝 Logging to: /tmp/codex_mcp" in result.stdout
+    assert "Codex MCP Server Installer" in result.stdout
 
 
-def test_claude_launcher_reexecs_to_newer_bash():
-    result = run_launcher("claude_mcp.sh")
+def test_claude_installer_exits_cleanly():
+    """Test that Claude installer runs in test mode without errors"""
+    result = run_unified_installer("claude", ["--test"])
     assert result.returncode == 0
-    assert "📝 Logging to: /tmp/claude_mcp" in result.stdout
+    assert "Claude MCP Server Installer" in result.stdout
     assert "requires bash 4.0" not in result.stdout

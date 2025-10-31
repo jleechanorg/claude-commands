@@ -379,7 +379,7 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 - **Benefits**: Package caching, private package hosting, offline capability
 
 🚨 **MCP SERVER INSTALLATION:** Standard global npm installation pattern
-- **Install**: `npm install -g <mcp-server-package>` (e.g., `npm install -g grok-mcp`)
+- **Install**: `npm install -g <mcp-server-package>` (e.g., `npm install -g @chinchillaenterprises/mcp-grok`)
 - **Path**: Global packages in `$(npm root -g)/<package-name>/build/index.js`
 - **MCP Config**: Point to `node $(npm root -g)/<package>/build/index.js` or use full path
 - **Benefits**: Simple, standard npm workflow, automatic PATH availability, easy updates with `npm update -g`

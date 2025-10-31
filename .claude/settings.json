@@ -323,13 +323,6 @@
         "@oevortex/ddg_search"
       ]
     },
-    "chrome-devtools": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "chrome-devtools-mcp"
-      ]
-    },
     "playwright-mcp": {
       "command": "npx",
       "args": [
