@@ -7,6 +7,14 @@ aliases: [secondopinion]
 
 Get comprehensive multi-model AI feedback on your code, design decisions, or bug analysis.
 
+## ⚡ Execution Instructions for Claude
+
+When `/second_opinion` (or its `/secondo` alias) is invoked, follow this protocol:
+
+1. Call the AI Universe MCP tool `agent.second_opinion` (or run `scripts/secondo-cli.sh`) using only the necessary context arguments such as `feedback_type` and the end-user question.
+2. **Do not** include optional tuning fields like `primaryModel`, `secondaryModels`, or `maxOpinions` in the request payload—allow the backend defaults to determine model selection and opinion counts.
+3. If no question is provided, fall back to the built-in prompts from the CLI for the chosen `feedback_type`.
+
 ## Usage
 
 ```bash
