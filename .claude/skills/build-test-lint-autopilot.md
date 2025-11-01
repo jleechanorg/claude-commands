@@ -1,3 +1,9 @@
+---
+description: Turnkey workflow for running tests, lint, and quality automation
+type: usage
+scope: project
+---
+
 # Build, Test & Lint Autopilot
 
 ## Purpose

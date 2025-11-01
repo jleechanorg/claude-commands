@@ -1,3 +1,9 @@
+---
+description: Best practices and automation helpers for creating and maintaining high-quality pull requests
+type: usage
+scope: project
+---
+
 # PR Workflow Manager
 
 ## Purpose

@@ -1,3 +1,9 @@
+---
+description: Securely guide teammates through cloud configuration, secrets management, and incident triage
+type: usage
+scope: project
+---
+
 # Cloud Ops & Credential Guard
 
 ## Purpose

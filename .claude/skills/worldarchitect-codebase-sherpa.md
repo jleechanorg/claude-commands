@@ -1,3 +1,9 @@
+---
+description: Orientation guide for navigating the WorldArchitect.ai repository and tooling
+type: usage
+scope: project
+---
+
 # WorldArchitect Codebase Sherpa
 
 ## Purpose
