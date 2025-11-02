@@ -92,11 +92,50 @@ PY
 fi
 
 
+# --- Production Deployment Protection ---
+block_local_production_deployment() {
+    # Block local production deployments - must use GitHub Actions workflow
+    if [[ "$ENVIRONMENT" == "stable" ]] && [[ "${GITHUB_ACTIONS:-}" != "true" ]]; then
+        cat <<'EOF'
+
+================================================================================
+🚨 PRODUCTION DEPLOYMENT BLOCKED 🚨
+================================================================================
+
+Production deployments are NOT allowed from local machines for safety.
+
+You must use the GitHub Actions workflow with manual approval:
+
+1. Go to: https://github.com/jleechanorg/worldarchitect.ai/actions/workflows/deploy-production.yml
+2. Click "Run workflow"
+3. Type "DEPLOY TO PRODUCTION" in the confirmation field
+4. Click "Run workflow"
+5. Wait for designated reviewer approval
+6. Deployment proceeds after approval
+
+This ensures:
+✅ Proper approval process
+✅ Full audit trail
+✅ Prevents accidental production deployments
+✅ Team visibility of production changes
+
+For development/staging deployments, use:
+  ./deploy.sh mvp_site       (deploys to dev)
+
+================================================================================
+EOF
+        exit 1
+    fi
+}
+
 # --- Final Check & Configuration ---
 echo "--- Deployment Details ---"
 echo "Target Directory: $TARGET_DIR"
 echo "Environment:      $ENVIRONMENT"
 echo "--------------------------"
+
+# Check for production deployment protection
+block_local_production_deployment
 
 if [ ! -f "$TARGET_DIR/Dockerfile" ]; then
     echo "Error: No Dockerfile found in '$TARGET_DIR'."
