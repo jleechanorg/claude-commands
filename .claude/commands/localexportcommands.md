@@ -41,9 +41,9 @@ This command copies standard Claude Code directories to ~/.claude:
 **🚨 EXCLUDED**: Project-specific directories (schemas, templates, framework, guides, learnings, memory_templates, research) are NOT exported to maintain clean global ~/.claude structure.
 
 **✅ INCLUDES**:
-- MCP server scripts (mcp_common.sh, mcp_dual_background.sh, mcp_stdio_wrapper.py, etc. in scripts/)
+- MCP server scripts (mcp_common.sh, mcp_dual_background.sh, mcp_stdio_wrapper.py, etc.)
 - **Unified MCP installer** (install_mcp_servers.sh) - Installs all MCP servers for Claude/Codex/both
-- Secondo authentication CLI (auth-cli.mjs)
+- **Secondo authentication CLI** (auth-cli.mjs in .claude/scripts/)
 - Node.js dependencies (package.json, package-lock.json)
 
 **🚀 UNIFIED MCP INSTALLER**:
@@ -171,6 +171,7 @@ echo "================================="
 mkdir -p ".claude/scripts"
 
 # Copy MCP-related scripts from root to .claude/scripts/
+# Note: auth-cli.mjs is already in .claude/scripts/ (not in root scripts/)
 mcp_scripts=(
     "mcp_common.sh"
     "mcp_dual_background.sh"
@@ -178,7 +179,6 @@ mcp_scripts=(
     "start_mcp_production.sh"
     "start_mcp_server.sh"
     "install_mcp_servers.sh"
-    "auth-cli.mjs"
 )
 
 mcp_copied=0
@@ -309,7 +309,33 @@ echo "8. install_mcp_servers.sh: $([ -f "$HOME/.claude/scripts/install_mcp_serve
 echo ""
 echo "🎉 Local export completed successfully!"
 echo ""
-echo "🚀 Test MCP installer:"
+
+# Install Node.js dependencies if package.json was exported
+if [ -f "$HOME/.claude/package.json" ]; then
+    echo "📦 Installing Node.js dependencies for secondo authentication..."
+    if command -v npm >/dev/null 2>&1; then
+        (cd "$HOME/.claude" && npm install --silent 2>&1 | grep -v "^npm WARN" || true)
+        if [ -d "$HOME/.claude/node_modules/express" ]; then
+            echo "   ✅ Express installed successfully"
+        else
+            echo "   ⚠️  Express installation may have failed"
+            echo "   Run manually: cd ~/.claude && npm install"
+        fi
+    else
+        echo "   ⚠️  npm not found. Install Node.js dependencies manually:"
+        echo "      cd ~/.claude && npm install"
+    fi
+    echo ""
+fi
+
+echo "🚀 Next steps:"
+echo "1. Authenticate (run outside Claude Code):"
+echo "   node ~/.claude/scripts/auth-cli.mjs login"
+echo ""
+echo "2. Test authentication:"
+echo "   node ~/.claude/scripts/auth-cli.mjs status"
+echo ""
+echo "3. Test MCP installer:"
 echo "   ~/.claude/scripts/install_mcp_servers.sh --test-dir /tmp/mcp-test claude"
 ```
 

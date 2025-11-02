@@ -13,10 +13,17 @@ if ! [[ "$MAX_OPINIONS" =~ ^[0-9]+$ ]] || [ "$MAX_OPINIONS" -le 0 ]; then
   echo "Error: MAX_OPINIONS must be a positive integer." >&2
   exit 1
 fi
-TOKEN_FILE="$HOME/.ai-universe/auth-token.json"
 
-if [ ! -f "$TOKEN_FILE" ]; then
-  echo "Error: $TOKEN_FILE not found. Authenticate with 'node scripts/auth-cli.mjs login' outside Claude Code." >&2
+# Locate auth-cli.mjs (check ~/.claude/scripts first, then project scripts)
+AUTH_CLI="$HOME/.claude/scripts/auth-cli.mjs"
+if [ ! -f "$AUTH_CLI" ]; then
+  # Fallback to project root scripts directory
+  AUTH_CLI="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)/.claude/scripts/auth-cli.mjs"
+fi
+
+if [ ! -f "$AUTH_CLI" ]; then
+  echo "❌ Error: auth-cli.mjs not found. Expected at ~/.claude/scripts/auth-cli.mjs" >&2
+  echo "   Run /localexportcommands to install authentication CLI" >&2
   exit 1
 fi
 
@@ -65,10 +72,18 @@ jq -n \
     id: 1
   }' > "$REQUEST_FILE"
 
-TOKEN=$(jq -r '.idToken // empty' "$TOKEN_FILE")
+echo "→ Retrieving authentication token (auto-refreshes if expired)"
+if ! TOKEN=$(node "$AUTH_CLI" token 2>&1); then
+  echo "❌ Error: Failed to get authentication token." >&2
+  echo "$TOKEN" >&2
+  echo "" >&2
+  echo "   Please authenticate with:" >&2
+  echo "   node $AUTH_CLI login" >&2
+  exit 1
+fi
 
 if [ -z "$TOKEN" ]; then
-  echo "Error: Failed to read idToken from $TOKEN_FILE. Re-authenticate with 'node scripts/auth-cli.mjs login'." >&2
+  echo "❌ Error: Empty token returned from auth-cli.mjs" >&2
   exit 1
 fi
 

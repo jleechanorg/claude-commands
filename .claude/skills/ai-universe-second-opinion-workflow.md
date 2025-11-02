@@ -17,12 +17,26 @@ scope: project
 - Questions about cost, rate limits, or interpreting multi-model output.
 
 ## Prerequisites & authentication
-1. Verify token availability **before doing anything else**:
+1. **Verify auth-cli.mjs installation**:
    ```bash
-   test -f ~/.ai-universe/auth-token.json && echo "✅ Authenticated" || echo "❌ Not authenticated"
+   test -f ~/.claude/scripts/auth-cli.mjs && echo "✅ Installed" || echo "❌ Not found - run /localexportcommands"
    ```
-2. If not authenticated, stop and run `node scripts/auth-cli.mjs login` **outside** Claude Code.
-3. Ensure `http` (HTTPie), `jq`, and `python3` are installed in the environment.
+2. **Check authentication status**:
+   ```bash
+   node ~/.claude/scripts/auth-cli.mjs status
+   ```
+3. **If not authenticated or token expired**, run login (opens browser for OAuth):
+   ```bash
+   # Run this outside Claude Code in a regular terminal
+   node ~/.claude/scripts/auth-cli.mjs login
+   ```
+4. Ensure `http` (HTTPie), `jq`, `python3`, and `node` (>=20.0.0) are installed in the environment.
+
+> ℹ️ **Seamless Auto-Refresh**: The `/secondo` command uses the exact same auth-cli.mjs from AI Universe repo. If your token is valid, it does nothing. If expired, it auto-refreshes using your refresh token (silent, no browser popup). Only prompts for login if refresh token expires (30+ days).
+
+> ℹ️ **Token Location**: All tokens stored in `~/.ai-universe/auth-token.json` (same as AI Universe repo)
+> - ID token: 1-hour expiration
+> - Refresh token: enables 30+ day sessions
 
 > ℹ️ For a dedicated authentication walkthrough see [ai-universe-auth.md](ai-universe-auth.md). Dependency notes live in [secondo-dependencies.md](secondo-dependencies.md).
 
@@ -54,10 +68,10 @@ scope: project
    }
    EOF
    ```
-2. **Capture token** without command substitution nesting:
+2. **Get authentication token** (auto-refresh from AI Universe repo):
    ```bash
-   jq -r '.idToken' ~/.ai-universe/auth-token.json > /tmp/secondo_token.txt
-   TOKEN=$(cat /tmp/secondo_token.txt)
+   # Get token (auto-refreshes if expired, does nothing if valid)
+   TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
    ```
 3. **Send request** (allowing up to 180s for cold starts):
    ```bash

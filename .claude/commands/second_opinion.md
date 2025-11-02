@@ -28,32 +28,38 @@ Get comprehensive multi-model AI feedback on your code, design decisions, or bug
 
 ## How It Works
 
-This command uses a direct curl-based approach to maximize context:
+This command uses a direct approach with auth-cli.mjs for secure token management:
 
-1. **Gather Full PR Context**:
+1. **Authentication** (Auto-Refresh):
+   - Uses `~/.claude/scripts/auth-cli.mjs token` for secure token retrieval
+   - Automatically refreshes expired ID tokens using refresh token (silent, no browser popup)
+   - ID tokens expire after 1 hour, refresh tokens enable 30+ day sessions
+   - Only opens browser for initial login or if refresh token expires
+
+2. **Gather Full PR Context**:
    - Current branch vs main git diff
    - All changed file contents
    - Recent commit messages
    - Critical code sections
 
-2. **Build Comprehensive Request**:
+3. **Build Comprehensive Request**:
    - Create detailed analysis request (optimized to stay under 25K tokens)
    - Include all relevant code context
    - Add production context and testing requirements
 
-3. **Direct MCP Server Call**:
-   - Uses curl to bypass MCP tool interface limits
+4. **Direct MCP Server Call**:
+   - Uses HTTPie with auto-refreshed Bearer token
    - Sends to: `https://ai-universe-backend-final.onrender.com/mcp`
    - Handles streaming responses properly
    - Saves results locally
 
-4. **Multi-Model Analysis**:
+5. **Multi-Model Analysis**:
    - Gemini (Primary model)
    - Perplexity (Secondary)
    - OpenAI (Secondary)
    - Synthesis with 50+ authoritative sources
 
-5. **Results Display**:
+6. **Results Display**:
    - Save comprehensive report to `tmp/secondo_analysis_[timestamp].md`
    - Display verdict and key findings
    - Show token usage and cost breakdown
@@ -61,6 +67,32 @@ This command uses a direct curl-based approach to maximize context:
 ## Implementation Protocol
 
 When executing `/second_opinion` or `/secondo`:
+
+### Step 0: Authentication Setup (Auto-Refresh)
+```bash
+# Verify auth-cli.mjs is installed
+if [ ! -f "$HOME/.claude/scripts/auth-cli.mjs" ]; then
+  echo "❌ auth-cli.mjs not found. Run /localexportcommands to install"
+  exit 1
+fi
+
+# Get token (auto-refreshes if expired using refresh token)
+# This is silent - only prompts for login if refresh token is invalid/missing
+TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+
+# If this fails, user needs to authenticate
+if [ $? -ne 0 ]; then
+  echo "❌ Authentication failed. Please run:"
+  echo "   node ~/.claude/scripts/auth-cli.mjs login"
+  exit 1
+fi
+```
+
+**Key Behavior**:
+- **Seamless Auto-Refresh**: Automatically renews ID tokens using refresh token (no browser popup)
+- **30+ Day Sessions**: Refresh tokens enable long-lived sessions without re-authentication
+- **Browser Only When Needed**: Only opens browser for initial login or if refresh token expires
+- **Same Token File**: Uses `~/.ai-universe/auth-token.json` (exact same as AI Universe repo)
 
 ### Step 1: Gather PR Context
 ```bash
@@ -193,9 +225,26 @@ COST=$(jq -r '.result.content[0].text' /tmp/secondo_response.json | grep -o 'Tot
 4. Keep question focused (~500 words)
 5. Skip unchanged context
 
-## Rate Limits
+## Authentication & Rate Limits
 
-**Direct MCP server call has no special authentication** - public endpoint
+**Authentication**: Required via Firebase OAuth (exact same as AI Universe repo)
+- **Initial Login**: `node ~/.claude/scripts/auth-cli.mjs login` (browser-based OAuth, run outside Claude Code)
+- **Check Status**: `node ~/.claude/scripts/auth-cli.mjs status` (view current auth status)
+- **Token Location**: `~/.ai-universe/auth-token.json` (ID token + refresh token)
+- **Session Duration**: 30+ days (refresh tokens auto-renew ID tokens silently)
+- **Auto-Refresh**: `/secondo` automatically refreshes expired ID tokens (no browser popup needed)
+
+**Token Lifecycle**:
+- **ID Token**: Expires after 1 hour (Firebase security policy)
+- **Refresh Token**: Enables automatic ID token renewal for 30+ days
+- **Auto-Renewal**: Silent, seamless - only opens browser if refresh token expires
+
+**When You'll Need to Re-authenticate**:
+- Initial setup (no token file exists)
+- After 30+ days (when refresh token expires)
+- If token file is corrupted or manually deleted
+
+**Rate Limits**: Applied per authenticated user based on Firebase account
 
 **Practical limits**:
 - Server timeout: 180 seconds max
