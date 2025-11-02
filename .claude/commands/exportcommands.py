@@ -355,7 +355,7 @@ class ClaudeCommandsExporter:
 
         script_patterns = [
             # Claude Code infrastructure (generally useful for Claude Code users)
-            'claude_start.sh', 'claude_mcp.sh',
+            'claude_start.sh', 'install_mcp_servers.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
             # Code analysis and metrics
@@ -368,8 +368,8 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
-        # MCP helper scripts (required by claude_mcp.sh) - must be from scripts/ subdirectory
-        mcp_helper_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
+        # MCP helper scripts (required by install_mcp_servers.sh) - must be from scripts/ subdirectory
+        mcp_helper_scripts = ['mcp_common.sh', 'load_tokens.sh']
 
         # Secondo command scripts (multi-model AI feedback system)
         secondo_scripts = ['auth-cli.mjs', 'secondo-cli.sh', 'test_secondo_pr.sh']
@@ -481,13 +481,9 @@ class ClaudeCommandsExporter:
 
         # Backfill MCP launchers/utilities that remain outside .claude/scripts
         legacy_candidates = {
-            'claude_mcp.sh': [
-                Path(self.project_root) / 'claude_mcp.sh',
-                Path(self.project_root) / 'scripts' / 'claude_mcp.sh',
-            ],
-            'codex_mcp.sh': [
-                Path(self.project_root) / 'codex_mcp.sh',
-                Path(self.project_root) / 'scripts' / 'codex_mcp.sh',
+            'install_mcp_servers.sh': [
+                Path(self.project_root) / 'scripts' / 'install_mcp_servers.sh',
+                Path(self.project_root) / 'install_mcp_servers.sh',
             ],
             'mcp_common.sh': [
                 Path(self.project_root) / 'scripts' / 'mcp_common.sh',
