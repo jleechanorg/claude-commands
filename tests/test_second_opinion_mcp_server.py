@@ -7,6 +7,9 @@ import unittest
 from pathlib import Path
 
 
+SECOND_OPINION_MCP_URL = "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
+
+
 class TestSecondOpinionMCPServer(unittest.TestCase):
     """Validate the Second Opinion MCP server configuration in mcp_common.sh."""
 
@@ -22,11 +25,11 @@ class TestSecondOpinionMCPServer(unittest.TestCase):
         self.assertIn("Setting up Second Opinion MCP Server", contents)
         self.assertIn("second-opinion-tool", contents)
         self.assertIn(
-            "https://ai-universe-backend-final.onrender.com/mcp",
+            f"local second_opinion_mcp_url=\"{SECOND_OPINION_MCP_URL}\"",
             contents,
         )
         self.assertIn(
-            "log_with_timestamp \"Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)\"",
+            "log_with_timestamp \"Setting up MCP server: ${server_name} (HTTP: ${second_opinion_mcp_url})\"",
             contents,
         )
 
@@ -46,11 +49,16 @@ class TestSecondOpinionMCPServer(unittest.TestCase):
     def test_second_opinion_uses_add_json_command(self) -> None:
         """Ensure the configuration leverages the secure add-json helper."""
         contents = self.script_path.read_text()
-        expected_line = (
+        expected_add_json_line = (
             'capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json '
             '"${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"'
         )
-        self.assertIn(expected_line, contents)
+        expected_codex_line = (
+            'capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url '
+            '"${second_opinion_mcp_url}" "$server_name"'
+        )
+        self.assertIn(expected_add_json_line, contents)
+        self.assertIn(expected_codex_line, contents)
 
 
 if __name__ == "__main__":

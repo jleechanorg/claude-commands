@@ -327,7 +327,7 @@ curl -X POST http://localhost:3003/execute \
 - [Model Context Protocol Docs](https://docs.anthropic.com/en/docs/agents-and-tools/mcp)
 - [Claude Code Plugins](https://www.anthropic.com/news/claude-code-plugins)
 - [MCP GitHub](https://github.com/modelcontextprotocol)
-- [AI Universe Backend](https://ai-universe-backend-final.onrender.com)
+- [AI Universe Backend](https://ai-universe-backend-dev-114133832173.us-central1.run.app)
 
 ## License
 

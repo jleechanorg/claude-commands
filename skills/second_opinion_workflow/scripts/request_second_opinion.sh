@@ -9,6 +9,8 @@ fi
 QUESTION="$1"
 MAX_OPINIONS="${2:-3}"
 
+MCP_URL="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
+
 if ! [[ "$MAX_OPINIONS" =~ ^[0-9]+$ ]] || [ "$MAX_OPINIONS" -le 0 ]; then
   echo "Error: MAX_OPINIONS must be a positive integer." >&2
   exit 1
@@ -88,7 +90,7 @@ if [ -z "$TOKEN" ]; then
 fi
 
 echo "→ Sending request via HTTPie (timeout 180s)"
-if ! http --check-status POST https://ai-universe-backend-final.onrender.com/mcp \
+if ! http --check-status POST "$MCP_URL" \
   "Accept:application/json, text/event-stream" \
   "Authorization:Bearer $TOKEN" \
   < "$REQUEST_FILE" \

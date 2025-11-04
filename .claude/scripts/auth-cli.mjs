@@ -39,7 +39,7 @@ const CONFIG = {
   callbackPort: 9005,
   callbackPath: '/auth/callback',
   tokenPath: join(homedir(), '.ai-universe', 'auth-token.json'),
-  productionMcpUrl: 'https://ai-universe-backend-final.onrender.com/mcp'
+  mcpUrl: 'https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp'
 };
 
 // Validate required configuration
@@ -508,7 +508,7 @@ async function testMcp() {
 
     console.log('🧪 Testing authenticated MCP connection...\n');
 
-    const response = await fetch(CONFIG.productionMcpUrl, {
+    const response = await fetch(CONFIG.mcpUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -632,7 +632,7 @@ Examples:
   # Use token in HTTPie request
   TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
   echo '{"jsonrpc":"2.0","method":"tools/list","params":{},"id":1}' | \\
-    http POST ${CONFIG.productionMcpUrl} \\
+    http POST ${CONFIG.mcpUrl} \\
     Accept:'application/json, text/event-stream' \\
     Authorization:"Bearer $TOKEN"
 `);

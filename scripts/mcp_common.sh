@@ -1251,11 +1251,12 @@ setup_render_mcp_server() {
 
 setup_second_opinion_mcp_server() {
     local server_name="second-opinion-tool"
+    local second_opinion_mcp_url="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
     echo -e "${BLUE}  🩺 Configuring Second Opinion MCP server for complementary insights...${NC}"
-    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: https://ai-universe-backend-final.onrender.com/mcp)"
+    log_with_timestamp "Setting up MCP server: ${server_name} (HTTP: ${second_opinion_mcp_url})"
 
     if server_already_exists "$server_name"; then
         echo -e "${GREEN}  ✅ Server ${server_name} already exists, skipping installation${NC}"
@@ -1275,17 +1276,17 @@ setup_second_opinion_mcp_server() {
     local command_label="${MCP_CLI_BIN} mcp add-json"
     if [[ "$MCP_CLI_BIN" == "codex" ]]; then
         command_label="${MCP_CLI_BIN} mcp add"
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url "https://ai-universe-backend-final.onrender.com/mcp" "$server_name"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add --url "${second_opinion_mcp_url}" "$server_name"
     else
         local json_payload
-        json_payload=$(printf '{"type":"http","url":"%s"}' "https://ai-universe-backend-final.onrender.com/mcp")
+        json_payload=$(printf '{"type":"http","url":"%s"}' "${second_opinion_mcp_url}")
         capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
     fi
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured Second Opinion MCP server${NC}"
         echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • API URL: https://ai-universe-backend-final.onrender.com/mcp"
+        echo -e "     • API URL: ${second_opinion_mcp_url}"
         echo -e "     • Use cases: peer review, counter-arguments, solution validation"
         log_with_timestamp "Successfully added Second Opinion MCP server"
         INSTALL_RESULTS["$server_name"]="SUCCESS"

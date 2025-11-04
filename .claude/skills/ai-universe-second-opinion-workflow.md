@@ -45,7 +45,7 @@ scope: project
 | --- | --- |
 | Quick question (when SlashCommand is working) | `/secondo "Should I use Redis or in-memory caching?"` |
 | Create MCP request file | `cat > /tmp/mcp_request.json <<'EOF'` (see detailed workflow) |
-| Call MCP via HTTPie | `http POST https://ai-universe-backend-final.onrender.com/mcp "Authorization:Bearer $TOKEN" < /tmp/mcp_request.json --timeout=180 --print=b` |
+| Call MCP via HTTPie | `http POST https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp "Authorization:Bearer $TOKEN" < /tmp/mcp_request.json --timeout=180 --print=b` |
 | Parse embedded JSON response | `jq -r '.result.content[0].text' /tmp/mcp_response.json > /tmp/mcp_parsed.json` |
 | Summarize models/costs | `python3 skills/second_opinion_workflow/scripts/parse_second_opinion.py /tmp/mcp_parsed.json` |
 | End-to-end helper | `skills/second_opinion_workflow/scripts/request_second_opinion.sh "QUESTION" [MAX_OPINIONS]` |
@@ -75,7 +75,7 @@ scope: project
    ```
 3. **Send request** (allowing up to 180s for cold starts):
    ```bash
-   http POST https://ai-universe-backend-final.onrender.com/mcp \
+   http POST https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp \
      "Accept:application/json, text/event-stream" \
      "Authorization:Bearer $TOKEN" \
      < /tmp/mcp_request.json \

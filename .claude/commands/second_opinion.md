@@ -49,7 +49,7 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
 
 4. **Direct MCP Server Call**:
    - Uses HTTPie with auto-refreshed Bearer token
-   - Sends to: `https://ai-universe-backend-final.onrender.com/mcp`
+   - Sends to: `https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp`
    - Handles streaming responses properly
    - Saves results locally
 
@@ -171,7 +171,7 @@ Do NOT provide style or documentation feedback. Only report bugs that could caus
 
 ```bash
 # Call MCP server directly with curl
-curl -X POST "https://ai-universe-backend-final.onrender.com/mcp" \
+curl -X POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json, text/event-stream" \
   --data-binary @/tmp/secondo_request.json \
