@@ -36,11 +36,11 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
    - ID tokens expire after 1 hour, refresh tokens enable 30+ day sessions
    - Only opens browser for initial login or if refresh token expires
 
-2. **Gather Full PR Context**:
-   - Current branch vs main git diff
-   - All changed file contents
-   - Recent commit messages
-   - Critical code sections
+2. **Gather Full PR Context** *(automated via `build_second_opinion_request.py`)*:
+   - Resolve branch + base reference (prefers `SECOND_OPINION_BASE_REF`, falls back to `origin/main` → `main` → `master`)
+   - Capture `git status --short`, `git diff --stat`, and recent commits for orientation
+   - Generate a full diff versus the base ref (truncated to stay under token budgets with explicit notices)
+   - Attach per-file patches (up to configurable limit) so the MCP tool sees real code snippets instead of summaries
 
 3. **Build Comprehensive Request**:
    - Create detailed analysis request (optimized to stay under 25K tokens)
@@ -94,90 +94,88 @@ fi
 - **Browser Only When Needed**: Only opens browser for initial login or if refresh token expires
 - **Same Token File**: Uses `~/.ai-universe/auth-token.json` (exact same as AI Universe repo)
 
-### Step 1: Gather PR Context
+### Step 1: Gather PR Context *(now automated)*
+
+`skills/second_opinion_workflow/scripts/request_second_opinion.sh` calls
+`build_second_opinion_request.py` to harvest the full PR delta. The helper:
+
+- Resolves the comparison base (env override `SECOND_OPINION_BASE_REF`, then `origin/main` → `main` → `master`, finally `HEAD^`).
+- Captures branch name, repo root, remote URL, `git status --short`, `git diff --stat`, recent commits, and the full diff.
+- Extracts per-file patches for up to `SECOND_OPINION_MAX_FILES` (default 20) with truncation markers when limits are hit.
+- Annotates the payload with `gitContextNotices` so the MCP tool sees exactly what was trimmed.
+
+Manual usage if you want to inspect the payload directly:
+
 ```bash
-# Get current branch name
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
+python3 skills/second_opinion_workflow/scripts/build_second_opinion_request.py \
+  /tmp/secondo_request.json \
+  "What should I double-check before merging?" \
+  3 \
+  origin/main
+```
 
-# Get git diff stats
-git diff origin/main...HEAD --stat > /tmp/secondo_diff_stats.txt
+Tune the capture limits with environment variables:
 
-# Get full git diff
-git diff origin/main...HEAD > /tmp/secondo_diff_full.txt
-
-# Get recent commits
-git log origin/main..HEAD --oneline --no-decorate > /tmp/secondo_commits.txt
-
-# Get changed files list
-git diff origin/main...HEAD --name-only > /tmp/secondo_files.txt
+```bash
+export SECOND_OPINION_BASE_REF=origin/main   # override comparison base
+export SECOND_OPINION_MAX_FILES=25           # number of per-file patches to attach
+export SECOND_OPINION_MAX_DIFF_CHARS=32000   # full diff char budget
+export SECOND_OPINION_MAX_PATCH_CHARS=8000   # per-file diff char budget
 ```
 
 ### Step 2: Build Analysis Request
 
-Create `/tmp/secondo_request.json` with this structure:
+The generated payload now includes the git context automatically:
+
 ```json
 {
   "jsonrpc": "2.0",
   "method": "tools/call",
   "params": {
-    "name": "agent_second_opinion",
+    "name": "agent.second_opinion",
     "arguments": {
-      "question": "[Comprehensive question with full PR context - see template below]",
-      "primaryModel": "gemini",
-      "secondaryModels": ["perplexity", "openai"],
-      "maxOpinions": 3
+      "question": "Should I land this patch set as-is?",
+      "maxOpinions": 3,
+      "gitContext": {
+        "branch": "feature/refactor",
+        "base": "origin/main",
+        "diffstat": "…",
+        "recentCommits": "…",
+        "changedFiles": [
+          {"status": "M", "path": "mvp_site/api/routes.py"},
+          {"status": "A", "path": "mvp_site/services/cache.py"}
+        ],
+        "patches": {
+          "mvp_site/api/routes.py": "@@ -42,6 +42,15 @@ …",
+          "mvp_site/services/cache.py": "@@ -0,0 +1,200 @@ …"
+        },
+        "limits": {
+          "maxFiles": 20,
+          "diffCharLimit": 24000,
+          "patchCharLimit": 6000
+        }
+      },
+      "gitContextNotices": [
+        "git diff origin/main...HEAD truncated by 1520 characters (limit 24000)."
+      ]
     }
   },
   "id": 1
 }
 ```
 
-**Question Template** (optimize to ~500 words for maximum code context):
-```
-# PR Analysis Request
-
-**Branch**: [branch_name]
-**Base**: main
-**Changes**: [X files, +Y/-Z lines]
-
-## Critical Changes
-
-[Include git diff --stat output]
-
-## Key Code Sections
-
-[Include critical changed sections from main files]
-
-## Commits
-
-[Include commit messages]
-
-## Production Context
-
-This is production code for [project description].
-
-## Question
-
-Analyze this PR for serious correctness bugs, security issues, and production safety concerns. Focus on:
-1. Logic errors and edge cases
-2. Security vulnerabilities
-3. Production safety (error handling, resource management)
-4. Data integrity issues
-
-Do NOT provide style or documentation feedback. Only report bugs that could cause failures, data loss, or security issues in production.
-```
+> 💡 You can still tailor the natural-language question, but you no longer need to paste diff snippets manually—the helper attaches them for you.
 
 ### Step 3: Execute Request
 
 ```bash
-# Call MCP server directly with curl
-curl -X POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
-  -H "Content-Type: application/json" \
-  -H "Accept: application/json, text/event-stream" \
-  --data-binary @/tmp/secondo_request.json \
-  --silent \
-  --max-time 180 \
-  -o /tmp/secondo_response.json
+# Call MCP server with HTTPie (matches request_second_opinion.sh)
+http POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
+  "Accept:application/json, text/event-stream" \
+  "Authorization:Bearer $TOKEN" \
+  < /tmp/secondo_request.json \
+  --timeout=180 \
+  --print=b > /tmp/secondo_response.json
 
 # Check if successful
 if [ $? -eq 0 ] && [ -s /tmp/secondo_response.json ]; then

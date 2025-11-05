@@ -44,36 +44,29 @@ scope: project
 | Scenario | Command |
 | --- | --- |
 | Quick question (when SlashCommand is working) | `/secondo "Should I use Redis or in-memory caching?"` |
-| Create MCP request file | `cat > /tmp/mcp_request.json <<'EOF'` (see detailed workflow) |
+| Build MCP request with PR context | `python3 skills/second_opinion_workflow/scripts/build_second_opinion_request.py /tmp/mcp_request.json "QUESTION" 3 origin/main` |
 | Call MCP via HTTPie | `http POST https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp "Authorization:Bearer $TOKEN" < /tmp/mcp_request.json --timeout=180 --print=b` |
 | Parse embedded JSON response | `jq -r '.result.content[0].text' /tmp/mcp_response.json > /tmp/mcp_parsed.json` |
 | Summarize models/costs | `python3 skills/second_opinion_workflow/scripts/parse_second_opinion.py /tmp/mcp_parsed.json` |
 | End-to-end helper | `skills/second_opinion_workflow/scripts/request_second_opinion.sh "QUESTION" [MAX_OPINIONS]` |
 
 ## Recommended workflow (HTTPie)
-1. **Prepare request body** with your question and `maxOpinions` (default 3):
+1. **Generate the request payload** (captures diff + per-file patches automatically):
    ```bash
-   cat > /tmp/mcp_request.json <<'EOF'
-   {
-     "jsonrpc": "2.0",
-     "method": "tools/call",
-     "params": {
-       "name": "agent.second_opinion",
-       "arguments": {
-         "question": "YOUR QUESTION HERE",
-         "maxOpinions": 3
-       }
-     },
-     "id": 1
-   }
-   EOF
+   python3 skills/second_opinion_workflow/scripts/build_second_opinion_request.py \
+     /tmp/mcp_request.json \
+     "YOUR QUESTION HERE" \
+     3 \
+     origin/main
    ```
-2. **Get authentication token** (auto-refresh from AI Universe repo):
+   Adjust `SECOND_OPINION_MAX_FILES`, `SECOND_OPINION_MAX_DIFF_CHARS`, or `SECOND_OPINION_MAX_PATCH_CHARS` if you need more/less context.
+2. **(Optional) Inspect/tweak** `/tmp/mcp_request.json` to refine the natural-language question while keeping the attached git context intact.
+3. **Get authentication token** (auto-refresh from AI Universe repo):
    ```bash
    # Get token (auto-refreshes if expired, does nothing if valid)
    TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
    ```
-3. **Send request** (allowing up to 180s for cold starts):
+4. **Send request** (allowing up to 180s for cold starts):
    ```bash
    http POST https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp \
      "Accept:application/json, text/event-stream" \
@@ -82,7 +75,7 @@ scope: project
      --timeout=180 \
      --print=b > /tmp/mcp_response.json
    ```
-4. **Parse embedded JSON** and display summary (or use the helper script):
+5. **Parse embedded JSON** and display summary (or use the helper script):
    ```bash
    jq -r '.result.content[0].text' /tmp/mcp_response.json > /tmp/mcp_parsed.json
    python3 <<'PYEOF'
@@ -100,7 +93,7 @@ scope: project
    ```bash
    python3 skills/second_opinion_workflow/scripts/parse_second_opinion.py /tmp/mcp_parsed.json
    ```
-5. **Review synthesis** to confirm consensus and recommended actions.
+6. **Review synthesis** to confirm consensus and recommended actions.
 
 > 📌 Need more HTTPie patterns? Use [ai-universe-httpie.md](ai-universe-httpie.md) as a companion reference.
 
@@ -114,7 +107,7 @@ skills/second_opinion_workflow/scripts/request_second_opinion.sh "How should I h
 ```
 The script:
 1. Validates token presence and checks that `MAX_OPINIONS` is a positive integer.
-2. Builds a temporary JSON-RPC payload.
+2. Invokes `build_second_opinion_request.py` to embed branch/base metadata, diffstat, recent commits, and per-file patches into the payload.
 3. Calls the MCP endpoint with HTTPie and a 180s timeout.
 4. Parses the embedded JSON and prints model count, token usage, cost, and the primary + synthesis responses.
 5. Writes raw artifacts to `/tmp`; set `KEEP_TEMP_FILES=1` when running the script to keep them after completion.

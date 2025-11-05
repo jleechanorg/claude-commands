@@ -30,6 +30,7 @@ if [ ! -f "$AUTH_CLI" ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BUILD_SCRIPT="$SCRIPT_DIR/build_second_opinion_request.py"
 REQUEST_FILE=""
 RESPONSE_FILE=""
 PARSED_FILE=""
@@ -53,26 +54,44 @@ for cmd in http jq python3; do
   fi
 done
 
+if [ ! -f "$BUILD_SCRIPT" ]; then
+  echo "Error: request builder not found at $BUILD_SCRIPT" >&2
+  exit 1
+fi
+
 REQUEST_FILE="$(mktemp /tmp/secondo_request.XXXXXX.json)"
 RESPONSE_FILE="$(mktemp /tmp/secondo_response.XXXXXX.json)"
 PARSED_FILE="$(mktemp /tmp/secondo_parsed.XXXXXX.json)"
 
-echo "→ Building request payload at $REQUEST_FILE"
-jq -n \
-  --arg question "$QUESTION" \
-  --argjson maxOpinions "$MAX_OPINIONS" \
-  '{
-    jsonrpc: "2.0",
-    method: "tools/call",
-    params: {
-      name: "agent.second_opinion",
-      arguments: {
-        question: $question,
-        maxOpinions: $maxOpinions
-      }
-    },
-    id: 1
-  }' > "$REQUEST_FILE"
+BASE_REF=""
+BASE_CANDIDATES=()
+if [ -n "${SECOND_OPINION_BASE_REF:-}" ]; then
+  BASE_CANDIDATES+=("$SECOND_OPINION_BASE_REF")
+fi
+BASE_CANDIDATES+=("origin/main" "main" "master")
+
+for candidate in "${BASE_CANDIDATES[@]}"; do
+  if git rev-parse --verify "${candidate}^{commit}" >/dev/null 2>&1; then
+    BASE_REF="$candidate"
+    break
+  fi
+done
+
+if [ -z "$BASE_REF" ]; then
+  if git rev-parse --verify "HEAD^" >/dev/null 2>&1; then
+    BASE_REF="HEAD^"
+    echo "⚠️  Warning: Could not resolve base branch, using HEAD^ for diff context." >&2
+  else
+    BASE_REF="HEAD"
+    echo "⚠️  Warning: Could not resolve comparison point; using HEAD (no diff)." >&2
+  fi
+fi
+
+echo "→ Building request payload with git context (base: $BASE_REF)"
+if ! python3 "$BUILD_SCRIPT" "$REQUEST_FILE" "$QUESTION" "$MAX_OPINIONS" "$BASE_REF"; then
+  echo "Error: Failed to build MCP request payload." >&2
+  exit 1
+fi
 
 echo "→ Retrieving authentication token (auto-refreshes if expired)"
 if ! TOKEN=$(node "$AUTH_CLI" token 2>&1); then
