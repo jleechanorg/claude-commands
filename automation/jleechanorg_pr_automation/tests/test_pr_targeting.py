@@ -5,6 +5,7 @@ Test PR targeting functionality for jleechanorg_pr_monitor - Codex Strategy Test
 
 import unittest
 
+from jleechanorg_pr_automation.codex_config import build_comment_intro
 from jleechanorg_pr_automation.jleechanorg_pr_monitor import JleechanorgPRMonitor
 
 
@@ -14,9 +15,31 @@ class TestPRTargeting(unittest.TestCase):
     def test_extract_commit_marker(self):
         """Commit markers can be parsed from Codex comments"""
         monitor = JleechanorgPRMonitor()
-        test_comment = f"@codex @coderabbitai @copilot @cursor [AI automation] Test comment\n\n{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+        intro_line = build_comment_intro(
+            assistant_mentions=monitor.assistant_mentions
+        )
+        test_comment = (
+            f"{intro_line} Test comment\n\n"
+            f"{monitor.CODEX_COMMIT_MARKER_PREFIX}abc123{monitor.CODEX_COMMIT_MARKER_SUFFIX}"
+        )
         marker = monitor._extract_commit_marker(test_comment)
         self.assertEqual(marker, "abc123")
+
+    def test_intro_prose_avoids_duplicate_mentions(self):
+        """Review assistants should not retain '@' prefixes in prose text."""
+
+        intro_line = build_comment_intro(
+            assistant_mentions="@codex @coderabbitai @copilot @cursor"
+        )
+        _, _, intro_body = intro_line.partition("] ")
+        self.assertIn("coderabbitai", intro_body)
+        self.assertNotIn("@coderabbitai", intro_body)
+
+    def test_intro_without_mentions_has_no_leading_space(self):
+        """Explicitly blank mention lists should not add stray whitespace."""
+
+        intro_line = build_comment_intro(assistant_mentions="")
+        self.assertTrue(intro_line.startswith("[AI automation]"))
 
     def test_detect_pending_codex_commit(self):
         """Codex bot summary comments referencing head commit trigger pending detection."""

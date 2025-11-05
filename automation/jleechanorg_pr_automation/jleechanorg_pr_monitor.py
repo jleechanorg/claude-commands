@@ -25,6 +25,7 @@ from .automation_utils import AutomationUtils
 from .codex_config import (
     CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
     CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
+    build_comment_intro,
 )
 
 
@@ -658,7 +659,8 @@ class JleechanorgPRMonitor:
     ) -> str:
         """Build comment body that tells all AI assistants to fix PR comments, tests, and merge conflicts"""
 
-        comment_body = f"""{self.assistant_mentions} [AI automation] Please make the following changes to this PR
+        intro_line = build_comment_intro(assistant_mentions=self.assistant_mentions)
+        comment_body = f"""{intro_line}
 
 **Summary (Execution Flow):**
 1. Review every outstanding PR comment to understand required fixes and clarifications.
