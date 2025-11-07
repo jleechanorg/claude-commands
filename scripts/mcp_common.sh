@@ -294,7 +294,7 @@ declare -a ALL_SERVER_NAMES=(
     "grok"
     "ddg-search"
     "perplexity-ask"
-    "filesystem"
+    # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
 )
 
