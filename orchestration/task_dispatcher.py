@@ -56,7 +56,13 @@ CLI_PROFILES = {
         "command_template": "{binary} exec --yolo",
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
-        "detection_keywords": ["codex exec", "codex cli", "use codex"],
+        "detection_keywords": [
+            "codex",
+            "codex exec",
+            "codex cli",
+            "use codex",
+            "use the codex cli",
+        ],
     },
 }
 
@@ -393,11 +399,18 @@ class TaskDispatcher:
 
         task_lower = task_description.lower()
 
-        # Keyword-driven detection sourced from CLI profiles
+        # Keyword and binary-name detection sourced from CLI profiles
         for cli_name, profile in CLI_PROFILES.items():
             keywords = profile.get("detection_keywords", [])
-            if any(keyword in task_lower for keyword in keywords):
+            binary_name = profile.get("binary")
+
+            if any(keyword and keyword.lower() in task_lower for keyword in keywords):
                 return cli_name
+
+            if binary_name:
+                pattern = rf"\b{re.escape(binary_name.lower())}\b"
+                if re.search(pattern, task_lower):
+                    return cli_name
 
         # Auto-select an available CLI if only one is installed
         available_clis = []
