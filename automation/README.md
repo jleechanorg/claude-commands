@@ -169,6 +169,178 @@ ruff check .
 4. Ensure all tests pass
 5. Submit a pull request
 
+## Claude Code Integration
+
+### Slash Command Plugin
+
+This automation system is integrated with Claude Code through a custom slash command plugin located at `.claude/commands/automation.md`. This allows seamless PR automation directly from your Claude Code sessions.
+
+#### Installation
+
+**Option 1: Via `/exportcommands` (Recommended)**
+
+If you're using the WorldArchitect.AI command system, the automation command is automatically exported:
+
+```bash
+/exportcommands
+```
+
+**Option 2: Manual Installation**
+
+Copy the automation command from this repository to your Claude Code commands directory:
+
+```bash
+# From the worldarchitect.ai repository root
+# For project-specific installation
+cp .claude/commands/automation.md <your-project>/.claude/commands/
+
+# For user-wide installation (available across all projects)
+cp .claude/commands/automation.md ~/.claude/commands/
+```
+
+#### Usage in Claude Code
+
+Once installed, you can use the `/automation` command directly in Claude Code:
+
+```bash
+# Check automation status
+/automation status
+
+# Process PRs for a specific repository
+/automation monitor worldarchitect.ai
+
+# Process a specific PR
+/automation process 123 --repo jleechanorg/worldarchitect.ai
+
+# Check safety limits and configuration
+/automation safety check
+
+# Clear safety data (resets limits)
+/automation safety clear
+```
+
+#### Features Available Through Claude Code
+
+- **PR Monitoring**: Automatically discover and process actionable PRs
+- **Safety Management**: Built-in safety limits prevent automation abuse
+- **Actionable Counting**: Only processes PRs that need attention
+- **Cross-Process Safety**: Thread-safe operations with file-based persistence
+- **Email Notifications**: Optional SMTP integration for automation alerts
+
+#### Configuration for Claude Code
+
+The automation system uses environment variables for configuration. Set these in your shell profile or `.env` file:
+
+```bash
+# Required
+export GITHUB_TOKEN="your_github_token_here"
+
+# Optional - Customize safety limits
+export AUTOMATION_PR_LIMIT=5           # Max attempts per PR (default: 5)
+export AUTOMATION_GLOBAL_LIMIT=50      # Max global runs (default: 50)
+export AUTOMATION_APPROVAL_HOURS=24    # Approval expiry (default: 24)
+
+# Optional - Custom workspace
+export PR_AUTOMATION_WORKSPACE="/custom/path"
+
+# Optional - Email notifications
+export SMTP_SERVER="smtp.gmail.com"
+export SMTP_PORT=587
+export EMAIL_USER="your-email@gmail.com"
+export EMAIL_PASS="your-app-password"
+export EMAIL_TO="recipient@example.com"
+```
+
+#### Plugin Architecture
+
+The automation plugin follows Claude Code's plugin architecture:
+
+- **Slash Commands**: `.claude/commands/automation.md` - Main automation interface
+- **Hooks Integration**: Can be triggered via Claude Code hooks for automated workflows
+- **MCP Integration**: Compatible with Memory MCP for learning from automation patterns
+- **TodoWrite Integration**: Tracks automation tasks in Claude Code's todo system
+
+#### Advanced: Automation Hooks
+
+You can create Claude Code hooks to automatically trigger PR automation:
+
+**Example: Post-Push Hook** (`.claude/hooks/post-push.sh`)
+
+```bash
+#!/bin/bash
+# Automatically check for PRs after pushing
+
+# Get current repo and branch
+REPO=$(gh repo view --json nameWithOwner -q .nameWithOwner)
+BRANCH=$(git branch --show-current)
+
+# Check if there's an open PR for this branch
+PR_NUMBER=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
+
+if [[ -n "$PR_NUMBER" ]]; then
+    echo "🤖 PR #$PR_NUMBER detected - triggering automation check"
+    jleechanorg-pr-monitor --target-pr "$PR_NUMBER" --target-repo "$REPO"
+fi
+```
+
+**Example: Scheduled Monitoring** (Cron Job)
+
+```bash
+# Add to crontab for hourly PR monitoring
+0 * * * * cd ~/worldarchitect.ai && jleechanorg-pr-monitor
+```
+
+#### Slash Command Documentation
+
+The `/automation` slash command provides a multi-phase execution workflow:
+
+**Phase 0: Preflight Installation & Token Check**
+- Verifies `jleechanorg-pr-automation` package is installed
+- Checks GitHub token environment variable
+- Validates dependencies before execution
+
+**Phase 1: Parse Action and Arguments**
+- Extracts action (status, monitor, process, safety) from command
+- Validates action type and parameters
+- Sets defaults for missing values
+
+**Phase 2: STATUS Action** - `/automation status`
+- Displays global automation runs vs limits
+- Shows per-PR attempt counts
+- Reports safety configuration and active PRs
+
+**Phase 3: MONITOR Action** - `/automation monitor [repository]`
+- Discovers and processes actionable PRs
+- Respects safety limits
+- Reports results and skip reasons
+
+**Phase 4: PROCESS Action** - `/automation process <pr_number> --repo <repository>`
+- Processes a specific PR
+- Initializes safety manager
+- Records attempt results
+
+**Phase 5: SAFETY Action** - `/automation safety <subaction>`
+- `check`: Display safety limits and status
+- `clear`: Reset all safety data (with warning)
+- `check-pr`: Check specific PR's processability
+
+**Phase 6: TodoWrite Integration**
+- Tracks complex operations as todo items
+- Updates progress in real-time
+- Maintains error context
+
+For complete execution workflow details, see `.claude/commands/automation.md` in this repository.
+
+#### Plugin Export
+
+When you run `/exportcommands`, the automation slash command (`.claude/commands/automation.md`) is automatically included in the export to the `jleechanorg/claude-commands` repository. This allows others to install the automation plugin in their Claude Code environments.
+
+The export process:
+1. Copies `.claude/commands/automation.md` to the commands export
+2. Includes automation documentation in the exported README
+3. Provides installation instructions for end users
+4. Transforms project-specific paths to generic placeholders
+
 ## License
 
 MIT License - see LICENSE file for details.
