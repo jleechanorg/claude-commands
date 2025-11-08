@@ -9,7 +9,7 @@ deploy_common::get_project_id() {
 deploy_common::submit_build() {
   local context_dir=$1
   local image_tag=$2
-  (cd "$context_dir" && gcloud builds submit . --tag "$image_tag")
+  (cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --no-stream-logs)
 }
 
 deploy_common::deploy_service() {
