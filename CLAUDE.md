@@ -384,6 +384,30 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 - **MCP Config**: Point to `node $(npm root -g)/<package>/build/index.js` or use full path
 - **Benefits**: Simple, standard npm workflow, automatic PATH availability, easy updates with `npm update -g`
 
+🚨 **RENDER API ENVIRONMENT VARIABLE MANAGEMENT:** ⚠️ CRITICAL - PUT replaces ALL variables
+- **API Behavior**: Render API PUT method for `/services/{id}/env-vars` **REPLACES ALL** environment variables, not just one
+- ❌ **NEVER**: Use PUT to update a single env var without including all others
+- ✅ **REQUIRED PROTOCOL**:
+  1. Fetch all current env vars: `GET /services/{id}/env-vars`
+  2. Modify the specific variable(s) in the complete list
+  3. Send complete updated list via PUT
+- **Safety Pattern**:
+  ```bash
+  # 1. Backup current env vars
+  curl -H "Authorization: Bearer $RENDER_API_KEY" \
+    "https://api.render.com/v1/services/$SERVICE_ID/env-vars" \
+    | jq '[.[] | {key: .envVar.key, value: .envVar.value}]' > backup.json
+
+  # 2. Update specific variable(s)
+  cat backup.json | jq 'map(if .key == "TARGET_KEY" then .value = "new_value" else . end)' > updated.json
+
+  # 3. Apply complete updated list
+  curl -X PUT -H "Authorization: Bearer $RENDER_API_KEY" \
+    -H "Content-Type: application/json" --data @updated.json \
+    "https://api.render.com/v1/services/$SERVICE_ID/env-vars"
+  ```
+- **Verification**: Always verify all env vars are present after PUT operation
+
 ## Operations Guide
 
 **Data Defense:** Use `dict.get()`, validate structures, implement code safeguards.
