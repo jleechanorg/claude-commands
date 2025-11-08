@@ -95,6 +95,12 @@ This was tried and **failed** because it:
 - **Usage**: `python3 copilot_resolver.py file1.py file2.py`
 - **Features**: Backup, validation, rollback
 
+### **savetmp.py** - Evidence Archiver
+
+- **Purpose**: Creates timestamped `/tmp/<repo>/<branch>/<work>/` evidence packages with methodology, notes, and copied artifacts.
+- **Usage**: `python .claude/commands/savetmp.py <work_name> [--methodology ... --artifact ...]`
+- **Outputs**: `README.md`, section markdown files, `metadata.json`, and an `artifacts/` directory for preserved logs/screenshots.
+
 ## 🔧 **Development Guidelines**
 
 ### **Adding New Commands**
