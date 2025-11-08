@@ -49,7 +49,7 @@ This command uses a direct approach with auth-cli.mjs for secure token managemen
 
 4. **Direct MCP Server Call**:
    - Uses HTTPie with auto-refreshed Bearer token
-   - Sends to: `https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp`
+   - Sends to: `${SECOND_OPINION_MCP_URL}` (defaults to dev environment)
    - Handles streaming responses properly
    - Saves results locally
 
@@ -170,7 +170,8 @@ The generated payload now includes the git context automatically:
 
 ```bash
 # Call MCP server with HTTPie (matches request_second_opinion.sh)
-http POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
+# Set SECOND_OPINION_MCP_URL environment variable to use a different endpoint
+http POST "${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}" \
   "Accept:application/json, text/event-stream" \
   "Authorization:Bearer $TOKEN" \
   < /tmp/secondo_request.json \

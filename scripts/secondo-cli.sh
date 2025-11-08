@@ -5,7 +5,8 @@
 # Explicit error handling is used (no `set -e`) to preserve interactive shells.
 
 # Configuration
-MCP_URL="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
+# Use environment variable with fallback to default dev URL
+MCP_URL="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
 TIMEOUT=180
 
 # Colors

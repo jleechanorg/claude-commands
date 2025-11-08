@@ -40,8 +40,12 @@ export TOKEN=$(node scripts/auth-cli.mjs token)
 
 ### MCP Server Configuration
 
+> **Note:** The following MCP_URL points to a development/staging environment. Do **not** use for production workloads.  
+> When the production endpoint is available, update `MCP_URL` accordingly. You can also set the `SECOND_OPINION_MCP_URL` environment variable to override this default.
+
 ```bash
-MCP_URL="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
+# Use environment variable or default to dev URL
+MCP_URL="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
 ```
 
 ## Example: Second Opinion Request
@@ -276,7 +280,7 @@ RESPONSE=$(echo "{
     }
   },
   \"id\": 1
-}" | http POST "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp" \
+}" | http POST "${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}" \
   Accept:'application/json, text/event-stream' \
   Authorization:"Bearer $TOKEN" \
   --timeout=180 \
