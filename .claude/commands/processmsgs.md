@@ -1,5 +1,5 @@
 ---
-description: /processmsgs - Intelligent Email Processing with MCP Gmail Agent
+description: /processmsgs - Intelligent Email Processing with MCP Mail Agent
 type: llm-orchestration
 execution_mode: guided
 ---
@@ -35,8 +35,8 @@ execution_mode: guided
 ### Phase 1: 🎯 Email Discovery & Retrieval (LIGHTWEIGHT - METADATA ONLY)
 
 **Action Steps:**
-1. **Check MCP Gmail Server Availability**: Verify MCP Gmail server is configured and accessible
-2. **Retrieve Email Metadata**: Use Gmail query filters to fetch ONLY metadata (id, subject, from, date)
+1. **Check MCP Mail Server Availability**: Verify MCP Mail server is configured and accessible
+2. **Retrieve Email Metadata**: Use Mail query filters to fetch ONLY metadata (id, subject, from, date)
    - Limit: 20 emails maximum
    - Query: `is:unread` or `newer_than:1d` with server-side filtering
    - DO NOT fetch full email bodies yet (performance optimization)
@@ -70,7 +70,7 @@ execution_mode: guided
    - Skip if email already processed (has "claude-processed" label)
 2. **Draft Responses**: For URGENT + ACTION_REQUIRED (max 5 drafts)
    - Generate contextually appropriate draft replies
-   - **AUTOMATICALLY save drafts** using MCP Gmail tools (parallel if possible)
+   - **AUTOMATICALLY save drafts** using MCP Mail tools (parallel if possible)
    - NO user confirmation needed during execution - drafts are safe, nothing sent
    - Limit: 5 drafts per run (user reviews in Gmail later, not during command)
 3. **Extract Tasks**: For emails with action items (lightweight extraction)
@@ -105,7 +105,7 @@ execution_mode: guided
 
 ## 📋 REFERENCE DOCUMENTATION
 
-# /processmsgs Command - Intelligent Email Processing with MCP Gmail Agent
+# /processmsgs Command - Intelligent Email Processing with MCP Mail Agent
 
 **Usage**: `/processmsgs [options]`
 
@@ -113,9 +113,9 @@ execution_mode: guided
 
 ## 🛠️ Prerequisites
 
-- MCP Gmail server configured in `.claude/settings.json`
-- Gmail API authentication completed (see `.claude/skills/mcp-gmail-agent.md`)
-- Appropriate Gmail permissions (read, compose, modify)
+- MCP Mail server configured in `.claude/settings.json`
+- Mail API authentication completed (see `.claude/skills/mcp-mail-agent.md`)
+- Appropriate Mail permissions (read, compose, modify)
 
 ## 📚 Command Options
 
@@ -130,7 +130,7 @@ execution_mode: guided
 ## 🎯 What This Command Does
 
 **Core Actions (NEVER just read):**
-1. **Reads** unread emails using MCP Gmail tools
+1. **Reads** unread emails using MCP Mail tools
 2. **Analyzes** content for action items, urgency, importance
 3. **Classifies** emails into categories
 4. **Drafts** responses for emails requiring action
@@ -180,7 +180,7 @@ execution_mode: guided
 
 **Data Handling:**
 - Email content analyzed locally, not stored permanently
-- No external API calls beyond configured MCP Gmail server
+- No external API calls beyond configured MCP Mail server
 - User maintains full control over what gets sent (reviews drafts in Gmail)
 
 ## 📊 Success Metrics
@@ -219,7 +219,7 @@ execution_mode: guided
 
 ## 📖 Related Skills
 
-See `.claude/skills/mcp-gmail-agent.md` for detailed MCP Gmail server setup and authentication instructions.
+See `.claude/skills/mcp-mail-agent.md` for detailed MCP Mail server setup and authentication instructions.
 
 ## 🎓 Examples
 
