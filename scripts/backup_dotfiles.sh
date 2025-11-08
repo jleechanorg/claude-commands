@@ -16,13 +16,39 @@ BACKUP_DIR="./dotfiles_backup" # Relative to the repo root
 # Create the backup directory if it doesn't exist
 mkdir -p "$BACKUP_DIR"
 
+# Auto-detect machine type for appropriate filename suffix
+detect_machine_type() {
+    local os_type
+    os_type="$(uname -s)"
+
+    case "$os_type" in
+        Darwin*)
+            # macOS - check if it's actually a MacBook
+            if system_profiler SPHardwareDataType 2>/dev/null | grep -q "MacBook"; then
+                echo "macbook"
+            else
+                echo "mac"
+            fi
+            ;;
+        Linux*)
+            echo "pc"
+            ;;
+        *)
+            echo "unknown"
+            ;;
+    esac
+}
+
+MACHINE_TYPE="$(detect_machine_type)"
+echo "Detected machine type: $MACHINE_TYPE"
+
 # --- List of dotfiles to back up ---
 # Format: "Source Path in Home Dir|Destination Filename in BACKUP_DIR"
 DOTFILES_TO_BACKUP=(
-    "$HOME/.bashrc|bashrc_pc.txt"
-    "$HOME/.gitconfig|gitconfig_pc.txt" # Example
+    "$HOME/.bashrc|bashrc_${MACHINE_TYPE}.txt"
+    "$HOME/.gitconfig|gitconfig_${MACHINE_TYPE}.txt"
     # Add more files here if needed:
-    # "$HOME/.vimrc|vimrc_cloudworkstation.txt"
+    # "$HOME/.vimrc|vimrc_${MACHINE_TYPE}.txt"
 )
 # --- End of list ---
 
@@ -35,22 +61,22 @@ filter_sensitive_data() {
 
     # Use sed to remove lines containing sensitive patterns
     sed -E '
-        # Remove lines with tokens, keys, passwords
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Tt][Oo][Kk][Ee][Nn][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Kk][Ee][Yy][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Pp][Aa][Ss][Ss][Ww]?[Oo]?[Rr]?[Dd]?[[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ss][Ee][Cc][Rr][Ee][Tt][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Aa][Pp][Ii][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Cc][Rr][Ee][Dd][[:space:]]*=/d
+        # Remove lines with tokens, keys, passwords (matches both PREFIX_KEYWORD and KEYWORD_SUFFIX)
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Tt][Oo][Kk][Ee][Nn][A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Kk][Ee][Yy][A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Pp][Aa][Ss][Ss][Ww]?[Oo]?[Rr]?[Dd]?[A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ss][Ee][Cc][Rr][Ee][Tt][A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Aa][Pp][Ii][A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Cc][Rr][Ee][Dd][A-Z_]*[[:space:]]*=/d
         # Remove webhook URLs and sensitive URLs
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ww][Ee][Bb][Hh][Oo][Oo][Kk][[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ww][Ee][Bb][Hh][Oo][Oo][Kk][A-Z_]*[[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Uu][Rr][Ll][[:space:]]*=.*hooks\.slack\.com/d
-        /^[[:space:]]*(export[[:space:]]+)?SLACK_WEBHOOK_URL[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?SLACK_WEBHOOK_URL[A-Z_]*[[:space:]]*=/d
         # Remove email/username patterns if they look sensitive
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ee][Mm][Aa][Ii][Ll][[:space:]]*=/d
-        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Uu][Ss][Ee][Rr][[:space:]]*=/d
-        # Remove test credentials
-        /^[[:space:]]*(export[[:space:]]+)?TEST_PASSWORD[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Ee][Mm][Aa][Ii][Ll][A-Z_]*[[:space:]]*=/d
+        /^[[:space:]]*(export[[:space:]]+)?[A-Z_]*[Uu][Ss][Ee][Rr][A-Z_]*[[:space:]]*=/d
+        # Remove test credentials (matches TEST_PASSWORD, TEST_PASSWORD_UI, etc.)
+        /^[[:space:]]*(export[[:space:]]+)?TEST_PASSWORD[A-Z_]*[[:space:]]*=/d
         # Remove Firebase UIDs and test credentials
         /^[[:space:]]*(export[[:space:]]+)?FIREBASE.*UID[[:space:]]*=/d
         /^[[:space:]]*(export[[:space:]]+)?.*TEST.*UID[[:space:]]*=/d

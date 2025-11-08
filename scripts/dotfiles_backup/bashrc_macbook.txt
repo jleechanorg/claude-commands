@@ -38,15 +38,32 @@ export CODEX_NO_CEREB_PORT=11000
 #   - Internal MCP: Port 2999 downward (auto-assigned, searches 2999→2998→2997...)
 #   - Endpoints: /health, /mcp (streaming MCP protocol)
 #
-# Ports 2100-2101: Conversation MCP Server Development
-#   - Port 2100: A2A protocol server (Agent-to-Agent communication)
-#   - Port 2101: FastMCP server for conversation tools
+# Port 45000: Reserved FastMCP loopback socket
+#   - Used internally by FastMCP for HTTP streaming before proxying to public /mcp
+#   - Never start other services on this port; conflicts crash the backend (EADDRINUSE)
+#   - Cleanup helper: `lsof -ti:45000 | xargs kill -9` before starting the backend if needed
+# Commented out to enable random port selection for FastMCP internal server
+# export FASTMCP_LOOPBACK_PORT=45000
+#
+# Port 6379: Redis for AI Universe Rate Limiting
+#   - Local Redis instance for distributed rate limiting development
+#   - Project: /Users/<redacted>/project_ai_universe/ai_universe
+#   - Control: Managed by run_local_server.sh (auto-start via Docker)
+#   - Container: ai-universe-redis (docker run -d -p 6379:6379 --name ai-universe-redis redis:latest)
+#   - Connection: REDIS_URL=redis://localhost:6379
+#   - Usage: Integration tests, local development with production-like rate limiting
+export REDIS_PORT=6379
+export REDIS_URL="redis://localhost:${REDIS_PORT}"
+#
+# Ports 6000-6001: Conversation MCP Server Development
+#   - Port 6000: A2A protocol server (Agent-to-Agent communication)
+#   - Port 6001: FastMCP server for conversation tools
 #   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo
 #   - Control: npm start, npm run dev, or npx tsx src/server/server.ts
 #
-# Ports 2200-2201: Conversation MCP Testing Server
-#   - Port 2200: A2A protocol testing server
-#   - Port 2201: FastMCP testing server for comprehensive method testing
+# Ports 6100-6101: Conversation MCP Testing Server
+#   - Port 6100: A2A protocol testing server
+#   - Port 6101: FastMCP testing server for comprehensive method testing
 #   - Same project as above, testing instance on different ports
 #   - Standalone conversation MCP server extracted from AI Universe
 #   - Project: /Users/<redacted>/project_ai_universe_convo/ai_universe_convo
@@ -66,6 +83,51 @@ export CODEX_NO_CEREB_PORT=11000
 #   - Port 8081: Primary Vite preview server (built AI Universe app)
 #   - Port 8082: Fallback preview server
 #   - Port 9000: Future AI Universe backend services
+
+# Port 8765: MCP Agent Mail HTTP Server
+#   - FastMCP mail/coordination server shared by Codex/Claude/Gemini agents
+#   - Project: /Users/<redacted>/mcp_agent_mail
+#   - Control helper: run_mcp_agent_mail_server (defined below) which backgrounds the process
+#   - Logs: /tmp/mcp_agent_mail_server.log
+#   - PID file: ~/.mcp_agent_mail_server.pid
+export MCP_AGENT_MAIL_PORT=8765
+export MCP_AGENT_MAIL_LOG=/tmp/mcp_agent_mail_server.log
+export MCP_AGENT_MAIL_PIDFILE="${HOME}/.mcp_agent_mail_server.pid"
+export MCP_AGENT_MAIL_RESERVATION_FILE="${HOME}/.mcp_agent_mail_port_reserved"
+
+reserve_mcp_agent_mail_port() {
+  local in_use
+  in_use="$(lsof -ti tcp:${MCP_AGENT_MAIL_PORT} 2>/dev/null | tr '\n' ' ')"
+  if [[ -n "${in_use}" ]]; then
+    echo "⚠️  MCP Agent Mail port ${MCP_AGENT_MAIL_PORT} already in use by PID(s): ${in_use}" >&2
+    echo "    Stop those processes (kill <pid>) before starting the mail server." >&2
+    return 1
+  fi
+  echo "${MCP_AGENT_MAIL_PORT}" > "${MCP_AGENT_MAIL_RESERVATION_FILE}"
+  return 0
+}
+
+run_mcp_agent_mail_server() {
+  reserve_mcp_agent_mail_port || return 1
+  bash -lc "cd /Users/<redacted>/mcp_agent_mail && ./scripts/run_server_with_token.sh >\"${MCP_AGENT_MAIL_LOG}\" 2>&1 & echo \$!" | tee "${MCP_AGENT_MAIL_PIDFILE}"
+  echo "MCP Agent Mail server starting in background. PID saved to ${MCP_AGENT_MAIL_PIDFILE}."
+  echo "Tail logs with: tail -f ${MCP_AGENT_MAIL_LOG}"
+}
+
+stop_mcp_agent_mail_server() {
+  if [[ -f "${MCP_AGENT_MAIL_PIDFILE}" ]]; then
+    local pid
+    pid="$(cat "${MCP_AGENT_MAIL_PIDFILE}")"
+    if [[ -n "${pid}" ]] && ps -p "${pid}" >/dev/null 2>&1; then
+      kill "${pid}" && echo "Stopped MCP Agent Mail server (PID ${pid})."
+    else
+      echo "No running MCP Agent Mail server found for PID ${pid}."
+    fi
+  else
+    echo "PID file ${MCP_AGENT_MAIL_PIDFILE} not found."
+  fi
+  rm -f "${MCP_AGENT_MAIL_PIDFILE}" "${MCP_AGENT_MAIL_RESERVATION_FILE}"
+}
 
 # Ports 4000-4099: Claude Mistake Detection System
 #   - Port 4001: Grafana dashboard (local setup)
@@ -94,6 +156,12 @@ export CODEX_NO_CEREB_PORT=11000
 #   - Project: /Users/<redacted>/projects_other/worldai_ralph
 #   - Control: npm run dev|build|start (set PORT=3301)
 #   - Endpoints: /health, /api/status
+
+# Port 3302: WorldAI Genesis MCP Server
+#   - FastMCP server for the WorldArchitect.AI Genesis TypeScript migration
+#   - Project: /Users/<redacted>/projects_other/worldai_genesis
+#   - Control: npm run build && MCP_INTERNAL_PORT=3339 PORT=3302 node dist/server.js
+#   - Endpoints: /health, /api/*, /mcp
 #
 # SHELL CONFIGURATION
 
@@ -252,7 +320,6 @@ fi
 
 # Claude API Configuration
 export CLAUDE_BASH_MAINTAIN_PROJECT_WORKING_DIR=1
-export CLAUDE_CODE_MAX_OUTPUT_TOKENS=20000
 
 # Cerebras API configuration (Qwen3-Coder)
 export CEREBRAS_BASE_URL="https://api.cerebras.ai/v1"
@@ -268,6 +335,8 @@ export CEREBRAS_MODEL="gpt-oss-120b"
 # Email Configuration
 
 # Test Credentials
+
+# Alternate Cypress UI account
 
 # Load Gemini API Key from a secret file if it exists
 if [ -f ~/.gemini_api_key_secret ]; then
@@ -306,6 +375,7 @@ codex() {
 # Quick launch (fast, no-approval dev mode) using default model
 alias codexd='codex --yolo'
 alias codexdr='codexd -- --resume'
+alias codexc='/Users/<redacted>/projects_other/codex_plus/codex_cereb.sh'
 
 # Basic System Aliases
 alias ls='ls --color=auto'
@@ -335,7 +405,7 @@ alias git-header='bash ~/projects/worldarchitect.ai/claude_command_scripts/git-h
 # Claude Aliases
 alias claudedanger='claude --dangerously-skip-permissions --model sonnet'
 alias clauded='claude --dangerously-skip-permissions --model sonnet'
-alias claudedc='claude --dangerously-skip-permissions --model sonnet --continue && echo "
+alias claudedc='claude --dangerously-skip-permissions --model sonnet --continue; if [ -f /tmp/d/TEST_REPORT.md ]; then echo "
 
 🔍 SKEPTICAL ANALYSIS: Test Results from /tmp/d
 ================================================
@@ -353,14 +423,14 @@ Analyzing test evidence with critical eye...
 7. Do the file sizes make sense for the expected JSON payloads?
 
 🔬 FILE INTEGRITY CHECK:
-" && ls -lah /tmp/d/responses/ && echo "
-" && wc -c /tmp/d/responses/*.json && echo "
+" && { ls -lah /tmp/d/responses/ 2>/dev/null || true; } && echo "
+" && { wc -c /tmp/d/responses/*.json 2>/dev/null || true; } && echo "
 
 📊 JSON VALIDATION:
-" && for f in /tmp/d/responses/*.json; do echo "Checking $f..." && jq . "$f" > /dev/null 2>&1 && echo "  ✅ Valid JSON" || echo "  ❌ INVALID JSON"; done && echo "
+" && for f in /tmp/d/responses/*.json; do [ -f "$f" ] || continue; echo "Checking $f..."; if jq . "$f" > /dev/null 2>&1; then echo "  ✅ Valid JSON"; else echo "  ❌ INVALID JSON"; fi; done && echo "
 
 🎯 VERDICT: Review the above evidence critically before accepting test success.
-"'
+"; fi; true'
 alias claudep='source ./claude_start.sh'
 alias claudepw='source ./claude_start.sh --worker'
 alias claudeps='source ./claude_start.sh --supervisor'
