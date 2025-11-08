@@ -10,9 +10,10 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 
 ## Prerequisites
 
-- Node.js installed
-- Firebase project configured
+- Node.js (>=20.0.0) installed
+- Express dependency installed (`npm install`)
 - Browser for OAuth flow
+- Run `/localexportcommands` to install auth-cli.mjs to ~/.claude/scripts/
 
 ## Authentication Flow
 
@@ -20,21 +21,23 @@ This skill provides authentication setup for the AI Universe MCP server, which p
 
 ```bash
 # Start browser-based OAuth authentication
-node scripts/auth-cli.mjs login
+# Note: Run this outside Claude Code in a regular terminal
+node ~/.claude/scripts/auth-cli.mjs login
 ```
 
 **What happens:**
 - Starts local callback server on port 9005
 - Opens browser to Firebase Google sign-in
 - User signs in with Google account
-- Token saved to `~/.ai-universe/auth-token.json`
-- Token expires after 30 days
+- ID token and refresh token saved to `~/.ai-universe/auth-token.json`
+- ID token expires after 1 hour (Firebase security policy)
+- Refresh token enables automatic token renewal
 
 ### 2. Check Authentication Status
 
 ```bash
 # Verify current authentication status
-node scripts/auth-cli.mjs status
+node ~/.claude/scripts/auth-cli.mjs status
 ```
 
 **Output includes:**
@@ -46,16 +49,30 @@ node scripts/auth-cli.mjs status
 ### 3. Get Token for Scripts
 
 ```bash
-# Output token for use in other scripts
-TOKEN=$(node scripts/auth-cli.mjs token)
+# Get token (auto-refreshes if expired, does nothing if valid)
+TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
 echo $TOKEN
 ```
 
-### 4. Test MCP Connection
+**Token Behavior (Exact AI Universe Repo Logic):**
+- **Token Valid**: Does nothing, just returns it ✅
+- **Token Expired**: Auto-refreshes using refresh token (silent, no browser popup) ✅
+- **Refresh Token Expired**: Prompts for login (browser OAuth) ⚠️
+
+This enables seamless 30+ day sessions - exact same behavior as AI Universe repo.
+
+### 4. Manual Token Refresh
+
+```bash
+# Manually refresh token before expiration
+node ~/.claude/scripts/auth-cli.mjs refresh
+```
+
+### 5. Test MCP Connection
 
 ```bash
 # Verify authenticated connection to MCP server
-node scripts/auth-cli.mjs test
+node ~/.claude/scripts/auth-cli.mjs test
 ```
 
 **Validates:**
@@ -64,11 +81,11 @@ node scripts/auth-cli.mjs test
 - Rate limit status
 - Current usage and remaining requests
 
-### 5. Logout
+### 6. Logout
 
 ```bash
 # Remove saved authentication token
-node scripts/auth-cli.mjs logout
+node ~/.claude/scripts/auth-cli.mjs logout
 ```
 
 ## Troubleshooting
@@ -85,8 +102,14 @@ lsof -ti:9005 | xargs kill -9
 ### Token Expired
 
 ```bash
-# Simply login again to refresh
-node scripts/auth-cli.mjs login
+# Get token (automatically refreshes using refresh token)
+TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token)
+
+# Or manually refresh
+node ~/.claude/scripts/auth-cli.mjs refresh
+
+# If refresh token is also expired, re-login
+node ~/.claude/scripts/auth-cli.mjs login
 ```
 
 ### Firebase Config Missing
@@ -106,22 +129,25 @@ export FIREBASE_PROJECT_ID="your-project-id"
 ## Rate Limits
 
 **Authenticated Users:**
-- 60 requests per hour
-- Multi-model synthesis: 1 per hour
-- Token TTL: 30 days
+- Rate limits applied per Firebase account
+- Multi-model synthesis available
+- ID Token TTL: 1 hour (Firebase security policy)
+- Refresh token enables automatic renewal
 
 ## Security Notes
 
 - Token stored in `~/.ai-universe/auth-token.json`
+  - ID token: 1-hour expiration
+  - Refresh token: enables automatic renewal without re-authentication
 - OAuth flow uses localhost callback (127.0.0.1:9005)
 - Browser-based authentication (similar to gh CLI, gcloud CLI)
 - Never commit authentication tokens
-- Tokens auto-expire after 30 days
+- Firebase security best practices enforced
 
 ## Integration with Commands
 
 Once authenticated, use with:
-- `/secondo` - Multi-model second opinion
-- Direct HTTPie/curl calls to MCP server
+- `/secondo` - Multi-model second opinion (uses exact AI Universe auth-cli.mjs with auto-refresh)
+- Direct HTTPie/curl calls to MCP server (use `node ~/.claude/scripts/auth-cli.mjs token`)
 
 See [ai-universe-httpie.md](ai-universe-httpie.md) for HTTPie usage examples.
