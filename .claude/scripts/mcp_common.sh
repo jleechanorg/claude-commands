@@ -1251,7 +1251,8 @@ setup_render_mcp_server() {
 
 setup_second_opinion_mcp_server() {
     local server_name="second-opinion-tool"
-    local second_opinion_mcp_url="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
+    # Use environment variable with fallback to default dev URL
+    local second_opinion_mcp_url="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 

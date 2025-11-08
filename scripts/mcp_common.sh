@@ -861,13 +861,15 @@ add_mcp_server() {
     # Special handling for grok which requires direct node execution
     if [ "$name" = "grok" ]; then
         echo -e "${BLUE}  🔧 Special setup for grok using direct node execution...${NC}"
+        # Define grok package path structure for easier maintenance
+        local GROK_PACKAGE_PATH="@chinchillaenterprises/mcp-grok/dist/index.js"
         local grok_path=""
         if command -v npm >/dev/null 2>&1; then
             local npm_root_output=""
             local npm_root_status=0
             capture_command_output npm_root_output npm_root_status npm root -g
             if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
-                grok_path="${npm_root_output}/@chinchillaenterprises/mcp-grok/dist/index.js"
+                grok_path="${npm_root_output}/${GROK_PACKAGE_PATH}"
             fi
             if [ -z "$grok_path" ] || [ ! -f "$grok_path" ]; then
                 echo -e "${YELLOW}  ⚠️ Grok MCP not found at $grok_path${NC}"
@@ -885,7 +887,7 @@ add_mcp_server() {
                     # Re-calculate path after installation to get actual location
                     capture_command_output npm_root_output npm_root_status npm root -g
                     if [ "$npm_root_status" -eq 0 ] && [ -n "$npm_root_output" ]; then
-                        grok_path="${npm_root_output}/@chinchillaenterprises/mcp-grok/dist/index.js"
+                        grok_path="${npm_root_output}/${GROK_PACKAGE_PATH}"
                     else
                         grok_path=""
                     fi
@@ -913,11 +915,12 @@ add_mcp_server() {
                 log_with_timestamp "grok found at global installation"
             fi
         else
-            grok_path="/usr/local/lib/node_modules/@chinchillaenterprises/mcp-grok/dist/index.js"
+            grok_path="/usr/local/lib/node_modules/${GROK_PACKAGE_PATH}"
             echo -e "${YELLOW}  ⚠️ npm command not found, using fallback path: $grok_path${NC}"
         fi
 
         # Add GROK_API_KEY environment variable for grok (chinchilla package uses GROK_API_KEY)
+        # Note: XAI_API_KEY is provided as a fallback for backward compatibility
         local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
         if [ -n "${XAI_API_KEY:-}" ] || [ -n "${GROK_API_KEY:-}" ]; then
             local api_key="${GROK_API_KEY:-$XAI_API_KEY}"
@@ -1251,7 +1254,8 @@ setup_render_mcp_server() {
 
 setup_second_opinion_mcp_server() {
     local server_name="second-opinion-tool"
-    local second_opinion_mcp_url="https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
+    # Use environment variable with fallback to default dev URL
+    local second_opinion_mcp_url="${SECOND_OPINION_MCP_URL:-https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp}"
     display_step "Setting up Second Opinion MCP Server..."
     TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
 
