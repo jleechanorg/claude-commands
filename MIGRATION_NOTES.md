@@ -79,6 +79,51 @@ export SECOND_OPINION_MCP_URL="https://your-production-backend.example.com/mcp"
 
 ## Code Quality Improvements
 
+### Command Syntax Standardization
+
+**Date**: 2025-11-08  
+**Affected Component**: `scripts/mcp_common.sh`
+
+#### What Changed
+The MCP server installation commands now use a standardized syntax with the `--` separator:
+```bash
+${MCP_CLI_BIN} mcp add [scope-args] [cli-args] <server-name> [env-flags] -- <command> [cmd-args]
+```
+
+#### CLI Compatibility
+The script is designed to work with both:
+- **Claude CLI** (`claude` command)
+- **Codex CLI** (`codex` command)
+
+The `MCP_CLI_BIN` environment variable controls which CLI is used (defaults to `claude`).
+
+#### Command Structure
+The new syntax places components in this order:
+1. Base command: `${MCP_CLI_BIN} mcp add`
+2. Scope arguments: `--scope local` or `--scope user`
+3. Additional CLI arguments (if any)
+4. Server name: e.g., `"grok"`
+5. Environment flags: e.g., `--env "GROK_API_KEY=..."`
+6. Separator: `--`
+7. Execution command: e.g., `node` or `npx`
+8. Command arguments: package path or name
+
+#### Example Commands
+```bash
+# Grok server with direct node execution
+claude mcp add --scope local "grok" --env "GROK_API_KEY=xxx" -- node /path/to/grok/index.js
+
+# Standard npm package with npx
+claude mcp add --scope local "server-name" -- npx @package/name
+```
+
+#### Compatibility Notes
+- The `--` separator is a POSIX standard for separating options from arguments
+- Both Claude and Codex CLI tools support this syntax
+- The script includes specific logic to handle differences between the two CLIs (lines 725-731)
+
+## Code Quality Improvements
+
 ### Grok Package Path Extraction
 
 **Date**: 2025-11-08  
