@@ -67,7 +67,7 @@ jobs:
 
       - name: Configure gcloud CLI defaults
         run: |
-          gcloud config set project ai-universe-2025
+          gcloud config set project worldarchitecture-ai
           gcloud config set run/region us-central1
 
       - name: Verify GCP authentication
@@ -91,7 +91,7 @@ jobs:
         run: |
           URL=$(gcloud run services describe mvp-site-app-stable \
             --region=us-central1 \
-            --project=ai-universe-2025 \
+            --project=worldarchitecture-ai \
             --format='value(status.url)')
           if [ -z "$URL" ]; then
             echo "❌ Failed to retrieve deployment URL"
@@ -138,7 +138,7 @@ jobs:
           echo "**Environment:** Production" >> $GITHUB_STEP_SUMMARY
           echo "**Service:** mvp-site-app-stable" >> $GITHUB_STEP_SUMMARY
           echo "**Region:** us-central1" >> $GITHUB_STEP_SUMMARY
-          echo "**Project:** ai-universe-2025" >> $GITHUB_STEP_SUMMARY
+          echo "**Project:** worldarchitecture-ai" >> $GITHUB_STEP_SUMMARY
           echo "**Deployment URL:** ${{ steps.get-url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
           echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "**Deployed by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
@@ -146,8 +146,8 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Quick Links" >> $GITHUB_STEP_SUMMARY
           echo "- [Service Health](${{ steps.get-url.outputs.url }}/health)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Cloud Run Console](https://console.cloud.google.com/run/detail/us-central1/mvp-site-app-stable?project=ai-universe-2025)" >> $GITHUB_STEP_SUMMARY
-          echo "- [Logs](https://console.cloud.google.com/logs/query?project=ai-universe-2025&query=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22mvp-site-app-stable%22)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Cloud Run Console](https://console.cloud.google.com/run/detail/us-central1/mvp-site-app-stable?project=worldarchitecture-ai)" >> $GITHUB_STEP_SUMMARY
+          echo "- [Logs](https://console.cloud.google.com/logs/query?project=worldarchitecture-ai&query=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22mvp-site-app-stable%22)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### ✅ Production Deployment Successful!" >> $GITHUB_STEP_SUMMARY
           echo "The service has been deployed to production and health checks passed." >> $GITHUB_STEP_SUMMARY
