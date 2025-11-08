@@ -52,12 +52,12 @@ NC='\033[0m' # No Color
 detect_squash_merged_commits() {
     local commit_count=$1
     local squash_merged_count=0
-    
+
     echo "   🔍 Checking if commits were squash-merged..."
-    
+
     # Get list of commits not in origin/main
     local commits_list=$(git rev-list origin/main..HEAD 2>/dev/null)
-    
+
     for commit_hash in $commits_list; do
         # Get commit subject (first line of commit message)
         local commit_subject=$(git log --format="%s" -n 1 "$commit_hash" 2>/dev/null)
@@ -65,23 +65,23 @@ detect_squash_merged_commits() {
             # Remove PR number suffix to match squash-merged commits (e.g., "Fix bug (#123)" -> "Fix bug")
             # Use POSIX-compatible regex that matches single and multi-digit PR numbers
             local base_subject=$(echo "$commit_subject" | sed 's/ (#[0-9]\+)$//')
-            
+
             # Skip if base_subject is empty (prevents matching all commits)
             if [ -z "$base_subject" ]; then
                 echo -e "   ${YELLOW}?${NC} $commit_hash → empty subject after stripping PR number"
                 continue
             fi
-            
+
             # Search for similar commit message in recent origin/main commits (configurable depth)
             local search_depth="${DETECT_SQUASH_SEARCH_DEPTH:-200}"
             local similar_commit
             similar_commit=$(git log origin/main --oneline "-${search_depth}" --fixed-strings --grep="$base_subject" 2>/dev/null | head -1)
-            
+
             if [ -n "$similar_commit" ]; then
                 local main_commit_hash=$(echo "$similar_commit" | cut -d' ' -f1)
                 local local_files=$(git diff-tree --no-commit-id --name-only -r "$commit_hash" | sort)
                 local main_files=$(git diff-tree --no-commit-id --name-only -r "$main_commit_hash" | sort)
-                
+
                 # If same files changed, likely squash-merged
                 if [ "$local_files" = "$main_files" ] && [ -n "$local_files" ]; then
                     squash_merged_count=$((squash_merged_count + 1))
@@ -94,7 +94,7 @@ detect_squash_merged_commits() {
             fi
         fi
     done
-    
+
     # Return success if all commits appear squash-merged
     if [ $commit_count -eq $squash_merged_count ] && [ $squash_merged_count -gt 0 ]; then
         echo -e "   ${GREEN}🎉 All $commit_count commit(s) were squash-merged into origin/main${NC}"
@@ -116,15 +116,15 @@ export PATH="$HOME/.local/bin:$PATH"
 # Check for required tools and provide helpful messages
 check_dependencies() {
     local missing_tools=()
-    
+
     if ! command -v gh >/dev/null 2>&1; then
         missing_tools+=("gh (GitHub CLI)")
     fi
-    
+
     if ! command -v jq >/dev/null 2>&1; then
         missing_tools+=("jq")
     fi
-    
+
     if [ ${#missing_tools[@]} -gt 0 ]; then
         echo -e "${YELLOW}⚠️  Some optional tools are missing:${NC}"
         for tool in "${missing_tools[@]}"; do
@@ -348,7 +348,7 @@ if [ "$current_branch" != "main" ] && [ "$NEW_BRANCH_MODE" = false ]; then
             echo "   📊 FILES CHANGED:"
             git diff --name-only origin/main..HEAD | head -10 | sed 's/^/     /'
             echo ""
-            
+
             # Check if commits were squash-merged before requiring --force
             if detect_squash_merged_commits $commit_count; then
                 echo -e "${GREEN}✅ Proceeding automatically - all commits were squash-merged into origin/main${NC}"
@@ -466,40 +466,66 @@ if git merge-base --is-ancestor HEAD origin/main; then
     fi
 
 elif git merge-base --is-ancestor origin/main HEAD; then
-    # Local main is ahead of origin/main → create PR for commits
-    echo -e "${GREEN}✅ Local main ahead, creating PR to sync${NC}"
+    # Local main is ahead of origin/main → check for actual file changes first
     commit_count=$(git rev-list --count origin/main..HEAD)
     echo "   Found $commit_count commits ahead of origin/main"
 
-    # Generate timestamp for branch naming
-    timestamp=$(date +%Y%m%d-%H%M%S)
+    # Check for actual file differences (not just commit differences)
+    if git diff --quiet origin/main...HEAD; then
+        # No file changes detected - likely merge commits or already-merged changes
+        echo -e "${YELLOW}⚠️  No file changes detected (likely merge commits only)${NC}"
+        echo "   These commits don't contain actual changes:"
+        git log --oneline origin/main..HEAD | sed 's/^/     /'
+        echo ""
+        echo "   Resetting local main to match origin/main instead of creating blank PR"
 
-    # Create temporary branch for PR
-    sync_branch="sync-main-$timestamp"
-    echo "   Creating sync branch: $sync_branch"
-
-    if ! git checkout -b "$sync_branch"; then
-        die 1 "Failed to create sync branch"
-    fi
-
-    if ! git push -u origin HEAD; then
-        die 1 "Failed to push sync branch"
-    fi
-
-    # Create PR if gh is available
-    if command -v gh >/dev/null 2>&1; then
-        pr_title="Sync main branch commits (integrate.sh)"
-        # Dynamic commit listing based on count
-        commit_limit=${PR_COMMIT_LIMIT:-10}
-        if [ "$commit_count" -le "$commit_limit" ]; then
-            commit_list=$(git log --oneline origin/main..HEAD)
+        if [ "$FORCE_MODE" = true ]; then
+            echo -e "${RED}🚨 FORCE MODE: Resetting local main to origin/main${NC}"
+            git reset --hard origin/main
+            echo -e "${GREEN}✅ Local main synchronized with origin/main${NC}"
+            die 0 "Local main successfully synchronized with origin/main in FORCE_MODE."
         else
-            commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit")
-            commit_list="$commit_list
-   ...and $((commit_count - commit_limit)) more commits not shown"
+            echo ""
+            echo "   To reset local main to origin/main:"
+            echo "   git reset --hard origin/main"
+            echo ""
+            echo "   Or use --force mode to reset automatically:"
+            echo "   ./integrate.sh --force"
+            die 1 "Local main has commits without file changes - manual reset required"
+        fi
+    else
+        # Actual file changes exist - proceed with PR creation
+        echo -e "${GREEN}✅ Local main ahead with actual file changes, creating PR to sync${NC}"
+
+        # Generate timestamp for branch naming
+        timestamp=$(date +%Y%m%d-%H%M%S)
+
+        # Create temporary branch for PR
+        sync_branch="sync-main-$timestamp"
+        echo "   Creating sync branch: $sync_branch"
+
+        if ! git checkout -b "$sync_branch"; then
+            die 1 "Failed to create sync branch"
         fi
 
-        pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
+        if ! git push -u origin HEAD; then
+            die 1 "Failed to push sync branch"
+        fi
+
+        # Create PR if gh is available
+        if command -v gh >/dev/null 2>&1; then
+            pr_title="Sync main branch commits (integrate.sh)"
+            # Dynamic commit listing based on count
+            commit_limit=${PR_COMMIT_LIMIT:-10}
+            if [ "$commit_count" -le "$commit_limit" ]; then
+                commit_list=$(git log --oneline origin/main..HEAD)
+            else
+                commit_list=$(git log --oneline origin/main..HEAD | head -"$commit_limit")
+                commit_list="$commit_list
+   ...and $((commit_count - commit_limit)) more commits not shown"
+            fi
+
+            pr_body="Auto-generated PR to sync $commit_count commits that were ahead on local main.
 
 This PR was created by integrate.sh to handle repository branch protection rules.
 
@@ -508,21 +534,22 @@ $commit_list
 
 Please review and merge to complete the integration process."
 
-        if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
-            echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
-            echo "   Please review and merge the PR, then re-run integrate.sh"
-            die 0
+            if pr_url=$(gh pr create --title "$pr_title" --body "$pr_body" 2>/dev/null); then
+                echo -e "${GREEN}✅ Created PR: $pr_url${NC}"
+                echo "   Please review and merge the PR, then re-run integrate.sh"
+                die 0
+            else
+                echo "⚠️  Could not create PR automatically. Please create one manually:"
+                echo "   Branch: $sync_branch"
+                echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
+                die 1 "Could not create PR automatically. Please create one manually using the URL above"
+            fi
         else
-            echo "⚠️  Could not create PR automatically. Please create one manually:"
+            echo "⚠️  gh CLI not available. Please create PR manually:"
             echo "   Branch: $sync_branch"
             echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-            die 1 "Could not create PR automatically. Please create one manually using the URL above"
+            die 1 "gh CLI not available. Please create PR manually using the URL above"
         fi
-    else
-        echo "⚠️  gh CLI not available. Please create PR manually:"
-        echo "   Branch: $sync_branch"
-        echo "   URL: https://github.com/$(get_github_repo_url)/compare/$sync_branch"
-        die 1 "gh CLI not available. Please create PR manually using the URL above"
     fi
 
 else
