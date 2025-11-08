@@ -63,57 +63,10 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Get script directory and resolve project root
+# Get script directory and project root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
-resolve_project_root() {
-    if [[ -n "${WORLDARCHITECT_PROJECT_ROOT:-}" ]]; then
-        local candidate="${WORLDARCHITECT_PROJECT_ROOT}"
-        if [[ -f "$candidate/mvp_site/mcp_api.py" || -f "$candidate/src/mcp_api.py" || -f "$candidate/mcp_api.py" ]]; then
-            echo "$candidate"
-            return 0
-        fi
-    fi
-
-    local search_dir="$SCRIPT_DIR"
-    while [[ "$search_dir" != "/" ]]; do
-        if [[ -f "$search_dir/mvp_site/mcp_api.py" || -f "$search_dir/src/mcp_api.py" || -f "$search_dir/mcp_api.py" ]]; then
-            echo "$search_dir"
-            return 0
-        fi
-        search_dir="$(dirname "$search_dir")"
-    done
-
-    return 1
-}
-
-if PROJECT_ROOT="$(resolve_project_root)"; then
-    :
-else
-    echo -e "${RED}❌ Error: Unable to locate project root. Set WORLDARCHITECT_PROJECT_ROOT to override.${NC}" >&2
-    exit 1
-fi
-
-if [[ -z "${PYTHONPATH:-}" ]]; then
-    export PYTHONPATH="$PROJECT_ROOT"
-else
-    export PYTHONPATH="$PROJECT_ROOT:$PYTHONPATH"
-fi
-
-MCP_SERVER_ENV_DEFAULT="${MCP_SERVER_PATH:-}"
-
-# Try multiple common MCP server locations
-if [ -f "$PROJECT_ROOT/mvp_site/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/mvp_site/mcp_api.py"
-elif [ -f "$PROJECT_ROOT/src/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
-elif [ -f "$PROJECT_ROOT/mcp_api.py" ]; then
-    MCP_SERVER_PATH="$PROJECT_ROOT/mcp_api.py"
-elif [ -n "$MCP_SERVER_ENV_DEFAULT" ]; then
-    MCP_SERVER_PATH="$MCP_SERVER_ENV_DEFAULT"
-else
-    MCP_SERVER_PATH="$PROJECT_ROOT/src/mcp_api.py"
-fi
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+MCP_SERVER_PATH="$PROJECT_ROOT/mvp_site/mcp_api.py"
 
 # Validate MCP server exists
 if [ ! -f "$MCP_SERVER_PATH" ]; then
@@ -122,15 +75,8 @@ if [ ! -f "$MCP_SERVER_PATH" ]; then
 fi
 
 # Get Python executable
-if [[ -z "${PYTHON_EXEC:-}" ]]; then
-    if [[ -x "$PROJECT_ROOT/venv/bin/python" ]]; then
-        PYTHON_EXEC="$PROJECT_ROOT/venv/bin/python"
-    else
-        PYTHON_EXEC="python3"
-    fi
-fi
-
-if ! command -v "$PYTHON_EXEC" &> /dev/null && [[ ! -x "$PYTHON_EXEC" ]]; then
+PYTHON_EXEC="${PYTHON_EXEC:-python3}"
+if ! command -v "$PYTHON_EXEC" &> /dev/null; then
     echo -e "${RED}❌ Error: Python executable '$PYTHON_EXEC' not found${NC}" >&2
     exit 1
 fi

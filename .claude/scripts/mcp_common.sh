@@ -294,7 +294,7 @@ declare -a ALL_SERVER_NAMES=(
     "grok"
     "ddg-search"
     "perplexity-ask"
-    "filesystem"
+    # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
 )
 
@@ -918,7 +918,7 @@ add_mcp_server() {
         fi
 
         # Add GROK_API_KEY environment variable for grok (chinchilla package uses GROK_API_KEY)
-        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+        local grok_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
         if [ -n "${XAI_API_KEY:-}" ] || [ -n "${GROK_API_KEY:-}" ]; then
             local api_key="${GROK_API_KEY:-$XAI_API_KEY}"
             grok_env_flags+=(--env "GROK_API_KEY=$api_key")
@@ -953,9 +953,9 @@ add_mcp_server() {
         elif [ -n "$grok_default_model" ]; then
             grok_env_flags+=(--env "XAI_MODEL=$grok_default_model")
         fi
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]:-}" "${cli_args[@]}" "$name" "${grok_env_flags[@]}" -- "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "$name" "${grok_env_flags[@]}" -- "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
     else
-        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]:-}" "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
+        add_cmd=(${MCP_CLI_BIN} mcp add "${MCP_SCOPE_ARGS[@]}" "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
     fi
 
     local add_exit_code
@@ -975,7 +975,7 @@ add_mcp_server() {
             if [ "$name" = "grok" ]; then
                 local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "$name" "${grok_env_flags[@]}" -- "$NODE_PATH" "$grok_path" "${cmd_args[@]}")
             else
-            local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
+            local user_add_cmd=(${MCP_CLI_BIN} mcp add --scope user "${cli_args[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NPX_PATH" "$package" "${cmd_args[@]}")
             fi
 
             capture_command_output user_add_output user_add_exit_code "${user_add_cmd[@]}"
@@ -1114,7 +1114,7 @@ else
 fi
 
 EXISTING_SERVERS="${EXISTING_SERVERS:-}"
-if [ -z "${TEST_INSTALL_DIR:-}" ] && EXISTING_SERVERS=$(${MCP_CLI_BIN} mcp list "${MCP_SCOPE_ARGS[@]:-}" 2>&1); then
+if [ -z "${TEST_INSTALL_DIR:-}" ] && EXISTING_SERVERS=$(${MCP_CLI_BIN} mcp list "${MCP_SCOPE_ARGS[@]}" 2>&1); then
     EXISTING_COUNT=$(printf '%s\n' "$EXISTING_SERVERS" | awk -F':' '/^[A-Za-z].*:/{count++} END {print count+0}')
     echo -e "${GREEN}✅ Found $EXISTING_COUNT existing MCP servers${NC}"
     log_with_timestamp "Found $EXISTING_COUNT existing MCP servers"
@@ -1215,7 +1215,7 @@ setup_render_mcp_server() {
                 echo "{\"type\":\"http\",\"url\":\"https://mcp.render.com/mcp\",\"headers\":{\"Authorization\":\"Bearer $escaped_api_key\"}}" > "$json_temp"
                 local json_payload
                 json_payload=$(<"$json_temp")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "render" "$json_payload"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "render" "$json_payload"
                 rm -f "$json_temp"
 
                 add_output_redacted=${add_output//${RENDER_API_KEY}/<RENDER_API_KEY>}
@@ -1280,7 +1280,7 @@ setup_second_opinion_mcp_server() {
     else
         local json_payload
         json_payload=$(printf '{"type":"http","url":"%s"}' "${second_opinion_mcp_url}")
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "$server_name" "$json_payload"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "$server_name" "$json_payload"
     fi
 
     if [ $add_exit_code -eq 0 ]; then
@@ -1467,7 +1467,7 @@ install_chrome_superpower_mcp() {
     # Add Chrome Superpowers MCP server
     local add_output=""
     local add_exit_code=0
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "chrome-superpower" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "node" "$chrome_plugin_path"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "chrome-superpower" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "node" "$chrome_plugin_path"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully installed chrome-superpower${NC}"
@@ -1552,7 +1552,7 @@ install_react_mcp() {
         echo -e "${BLUE}  🔗 Adding React MCP server...${NC}"
         log_with_timestamp "Attempting to add React MCP server"
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "react-mcp" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NODE_PATH" "$REACT_MCP_PATH"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "react-mcp" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NODE_PATH" "$REACT_MCP_PATH"
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured React MCP server${NC}"
             log_with_timestamp "Successfully added React MCP server"
@@ -1801,7 +1801,7 @@ install_ios_simulator_mcp() {
     safe_remove_dual_if_enabled "$name"
 
     # Add server using node to run the compiled entrypoint
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
+    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "$name" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NODE_PATH" "$IOS_MCP_ENTRYPOINT"
 
     if [ $add_exit_code -eq 0 ]; then
         echo -e "${GREEN}  ✅ Successfully configured iOS Simulator MCP server${NC}"
@@ -1856,7 +1856,7 @@ install_github_mcp() {
             cat > "$temp_config" <<EOF
 {"type":"http","url":"https://api.githubcopilot.com/mcp/","authorization_token":"Bearer ${GITHUB_PERSONAL_ACCESS_TOKEN}"}
 EOF
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "github-server" - < "$temp_config"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "github-server" - < "$temp_config"
             rm -f "$temp_config"
         fi
 
@@ -1915,9 +1915,9 @@ fi
 #
 #     # Add memory server with environment variable configuration
 #     echo -e "${BLUE}  🔗 Adding memory server with custom configuration...${NC}"
-#     memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+#     memory_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
 #     memory_env_flags+=(--env "MEMORY_FILE_PATH=$MEMORY_PATH")
-#     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "memory-server" "${memory_env_flags[@]}" -- "$NPX_PATH" "@modelcontextprotocol/server-memory"
+#     capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "memory-server" "${memory_env_flags[@]}" -- "$NPX_PATH" "@modelcontextprotocol/server-memory"
 #
 #     if [ $add_exit_code -eq 0 ]; then
 #         echo -e "${GREEN}  ✅ Successfully configured memory server with custom path${NC}"
@@ -1943,7 +1943,7 @@ fi
 #         chmod +x "$WRAPPER_SCRIPT"
 #
 #         # Add server using the wrapper script
-#         capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "memory-server" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$WRAPPER_SCRIPT"
+#         capture_command_output fallback_output fallback_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "memory-server" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$WRAPPER_SCRIPT"
 #
 #         if [ $fallback_exit_code -eq 0 ]; then
 #             echo -e "${GREEN}  ✅ Successfully added memory server with wrapper script${NC}"
@@ -1984,9 +1984,9 @@ if should_install_server "perplexity-ask" || should_install_server "ddg-search";
             echo -e "${BLUE}📋 Features: AI-powered search, real-time web research, advanced queries${NC}"
 
             echo -e "${BLUE}    🔧 Installing Perplexity search server...${NC}"
-            perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+            perplex_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
             perplex_env_flags+=(--env "PERPLEXITY_API_KEY=$PERPLEXITY_API_KEY")
-            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "perplexity-ask" "${perplex_env_flags[@]}" -- "$NPX_PATH" "@chatmcp/server-perplexity-ask"
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "perplexity-ask" "${perplex_env_flags[@]}" -- "$NPX_PATH" "@chatmcp/server-perplexity-ask"
 
             if [ $add_exit_code -eq 0 ]; then
                 echo -e "${GREEN}    ✅ Successfully added Perplexity search server${NC}"
@@ -2041,7 +2041,7 @@ if should_install_server "filesystem"; then
             log_with_timestamp "Granting filesystem access to: ${allowed_dirs_display}"
         fi
 
-        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "filesystem" "${DEFAULT_MCP_ENV_FLAGS[@]:-}" -- "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
+        capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "filesystem" "${DEFAULT_MCP_ENV_FLAGS[@]}" -- "$NPX_PATH" "@modelcontextprotocol/server-filesystem" "${FS_SERVER_DIRS[@]}"
 
         if [ $add_exit_code -eq 0 ]; then
             echo -e "${GREEN}  ✅ Successfully configured filesystem server with access to ${allowed_dirs_display}${NC}"
@@ -2088,11 +2088,11 @@ fi
 #             echo -e "${BLUE}  🔗 Adding WorldArchitect MCP server...${NC}"
 #             log_with_timestamp "Attempting to add WorldArchitect MCP server"
 #
-#             world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]:-}")
+#             world_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
 #             world_env_flags+=(--env "PYTHONPATH=$REPO_ROOT")
 #             add_output=""
 #             add_exit_code=0
-#             capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]:-}" "worldarchitect" "${world_env_flags[@]}" -- "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
+#             capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "worldarchitect" "${world_env_flags[@]}" -- "$WORLDARCHITECT_PYTHON" "$WORLDARCHITECT_MCP_PATH" "--stdio"
 #
 #             if [ $add_exit_code -eq 0 ]; then
 #                 echo -e "${GREEN}  ✅ Successfully configured WorldArchitect MCP server${NC}"
@@ -2176,7 +2176,7 @@ fi
 #                 serena_command_label="${MCP_CLI_BIN} mcp add-json serena"
 #                 serena_payload=""
 #                 serena_payload=$(printf '{"command":"uvx","args":["--from","git+https://github.com/oraios/serena","serena","start-mcp-server"],"env":{"%s":"false","MCP_VERBOSE_TOOLS":"false","MCP_AUTO_DISCOVER":"false"}}' "$debug_env_var")
-#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]:-}" "serena" "$serena_payload"
+#                 capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add-json "${MCP_SCOPE_ARGS[@]}" "serena" "$serena_payload"
 #             fi
 #
 #             if [ $add_exit_code -eq 0 ]; then
