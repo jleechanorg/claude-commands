@@ -355,7 +355,7 @@ class ClaudeCommandsExporter:
 
         script_patterns = [
             # Claude Code infrastructure (generally useful for Claude Code users)
-            'claude_start.sh', 'claude_mcp.sh',
+            'claude_start.sh', 'install_mcp_servers.sh',
             # Generally useful git/development workflow scripts
             'integrate.sh', 'resolve_conflicts.sh', 'sync_branch.sh', 'create_worktree.sh',
             # Code analysis and metrics
@@ -368,8 +368,8 @@ class ClaudeCommandsExporter:
             'create_snapshot.sh', 'schedule_branch_work.sh', 'push.sh'
         ]
 
-        # MCP helper scripts (required by claude_mcp.sh) - must be from scripts/ subdirectory
-        mcp_helper_scripts = ['codex_mcp.sh', 'mcp_common.sh', 'load_tokens.sh']
+        # MCP helper scripts (required by install_mcp_servers.sh) - must be from scripts/ subdirectory
+        mcp_helper_scripts = ['mcp_common.sh', 'load_tokens.sh']
 
         # Secondo command scripts (multi-model AI feedback system)
         secondo_scripts = ['auth-cli.mjs', 'secondo-cli.sh', 'test_secondo_pr.sh']
@@ -481,13 +481,9 @@ class ClaudeCommandsExporter:
 
         # Backfill MCP launchers/utilities that remain outside .claude/scripts
         legacy_candidates = {
-            'claude_mcp.sh': [
-                Path(self.project_root) / 'claude_mcp.sh',
-                Path(self.project_root) / 'scripts' / 'claude_mcp.sh',
-            ],
-            'codex_mcp.sh': [
-                Path(self.project_root) / 'codex_mcp.sh',
-                Path(self.project_root) / 'scripts' / 'codex_mcp.sh',
+            'install_mcp_servers.sh': [
+                Path(self.project_root) / 'scripts' / 'install_mcp_servers.sh',
+                Path(self.project_root) / 'install_mcp_servers.sh',
             ],
             'mcp_common.sh': [
                 Path(self.project_root) / 'scripts' / 'mcp_common.sh',
@@ -609,6 +605,7 @@ class ClaudeCommandsExporter:
             '--exclude=coding_prompts/',
             '--exclude=prototype/',
             '--exclude=tasks/',
+            '--exclude=task-agent-create-autono-slash/',
         ]
 
         cmd = ['rsync', '-av'] + exclude_patterns + [f"{source_dir}/", f"{target_dir}/"]
@@ -627,7 +624,7 @@ class ClaudeCommandsExporter:
 
     def _copy_orchestration_manual(self, source_dir, target_dir):
         """Manual orchestration copy with exclusions for Windows compatibility"""
-        excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks'}
+        excluded_dirs = {'analysis', 'automation', 'claude-bot-commands', 'coding_prompts', 'prototype', 'tasks', 'task-agent-create-autono-slash'}
         for root, dirs, files in os.walk(source_dir):
             # Filter out excluded directories
             dirs[:] = [d for d in dirs if d not in excluded_dirs]
@@ -1266,6 +1263,13 @@ This is a filtered reference export from a working Claude Code project. Commands
         for item in os.listdir(src_dir):
             src_item = os.path.join(src_dir, item)
             dst_item = os.path.join(dst_dir, item)
+
+            # Skip virtual environments, node_modules, and broken symlinks
+            if item in ('venv', 'node_modules', '__pycache__', '.git'):
+                continue
+            if os.path.islink(src_item) and not os.path.exists(src_item):
+                print(f"   ⏭ Skipping broken symlink: {item}")
+                continue
 
             if os.path.isdir(src_item):
                 self._copy_directory_additive(src_item, dst_item)
