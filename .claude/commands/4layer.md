@@ -48,21 +48,21 @@ Implements comprehensive Test-Driven Development across 4 testing layers to ensu
 - Focus on individual function/method behavior
 - Files typically affected:
   - `test_main_[feature].py`
-  - `test_gemini_service_[feature].py`
-  - `test_firestore_service_[feature].py`
+  - `test_llm_service_[feature].py`
+  - `test_database_service_[feature].py`
   - `test_frontend_[feature].js`
 
 ### Layer 2: Python Integration Tests
 
 - Test complete backend flow
-- Mock ONLY external services (Firestore, Gemini API)
+- Mock ONLY external services (hosted databases, LLM APIs, third-party integrations)
 - Verify data flow through all Python modules
 - File: `test_integration/test_[feature]_integration.py`
 
 ### Layer 3: Browser Tests (Mocked Services)
 
 - Full UI testing with Playwright
-- Mock Firestore and Gemini API
+- Mock Firebase projects, database layers, and LLM/external APIs
 - Capture screenshots of UI behavior
 - Verify frontend-backend integration
 - File: `testing_ui/test_[feature]_browser_mock.py`
@@ -70,7 +70,7 @@ Implements comprehensive Test-Driven Development across 4 testing layers to ensu
 ### Layer 4: Browser Tests (Real Services)
 
 - Complete end-to-end testing
-- Use real Firebase and Gemini API
+- Use real Firebase resources, production-grade databases, and LLM/external APIs
 - Capture screenshots of actual behavior
 - Validate entire system integration
 - File: `testing_ui/test_[feature]_browser_real.py`
@@ -89,22 +89,22 @@ def test_response_includes_structured_fields():
 # Layer 2: test_structured_fields_integration.py
 
 def test_structured_fields_flow():
-    """Integration: Full backend flow with mocked APIs"""
-    # Mock only Firestore and Gemini
+    """Integration: Full backend flow with mocked external services"""
+    # Mock only hosted databases, LLMs, and other third-party APIs
     # Test complete data flow
 
 # Layer 3: test_structured_fields_browser_mock.py
 
 def test_structured_fields_display():
-    """Browser: UI displays fields correctly (mocked)"""
-    # Use Playwright with mocked backend
+    """Browser: UI displays fields correctly (mocked services)"""
+    # Use Playwright with mocked backend integrations
     # Capture screenshots
 
 # Layer 4: test_structured_fields_browser_real.py
 
 def test_structured_fields_e2e():
-    """E2E: Complete system with real APIs"""
-    # No mocks - real Firebase/Gemini
+    """E2E: Complete system with real external services"""
+    # No mocks - real Firebase/databases/LLM APIs
     # Final validation screenshots
 ```
 
