@@ -1,102 +1,92 @@
 ---
-description: /processmsgs - Intelligent Email Processing with MCP Gmail Agent
+description: /processmsgs - Intelligent Agent Message Processing with MCP Agent Mail
 type: llm-orchestration
 execution_mode: guided
 ---
 ## ⚡ EXECUTION WORKFLOW FOR CLAUDE
 
 **When this command is invoked, you should execute these steps systematically.**
-**Important: Always create drafts for user review before any send operations.**
-**Use TodoWrite or an equivalent tracker to monitor progress through multi-phase workflows.**
+**Use TodoWrite to track progress through multi-phase workflows.**
 
-**CORE BEHAVIOR:** Read messages, surface necessary actions, and prepare follow-ups. **DO NOT just read messages and stop.**
+**CORE BEHAVIOR:** Read agent messages, surface necessary actions, and prepare follow-ups. **DO NOT just read messages and stop.**
 
 **SIMPLE WORKFLOW:**
-1. **Fetch unread emails** (metadata only: subject, sender, date) - max 20 emails
+1. **Fetch unread agent messages** (metadata only: subject, sender, date) - max 20 messages
 2. **Classify** based on subject/sender (urgent, action needed, low-priority)
-3. **Take actions** for each email (FULLY AUTOMATED - no user confirmation needed):
-   - Draft responses for urgent/action items (max 5 drafts - automatically saved)
-   - Apply labels (claude-processed, urgent, action-required)
-   - Archive low-priority emails
-   - Star urgent items
+3. **Take actions** for each message (AUTOMATED - analyze and respond):
+   - Draft replies for urgent/action items (max 5 replies)
+   - Extract action items and tasks
+   - Mark messages as read
+   - Report findings
 4. **Report** what you did with counts and any urgent items
 
-**IMPORTANT:** Drafts are created automatically and saved to Gmail. Nothing is sent. User reviews/sends drafts later in Gmail at their convenience. This keeps execution fast (10-30s) and automated.
+**IMPORTANT:** This processes inter-agent messages from MCP Agent Mail, not email. Agents communicate via the MCP Agent Mail server for project coordination.
 
 **PERFORMANCE RULES:**
-- Max 20 emails per run
-- Fetch full content only for top 10 priority emails
-- Batch label/archive operations (not one-by-one)
+- Max 20 messages per run
+- Fetch full content only for top 10 priority messages
 - Use parallel MCP calls where possible
 - Stop at 60 seconds if not done
 
 ## 🚨 DETAILED EXECUTION WORKFLOW
 
-### Phase 1: 🎯 Email Discovery & Retrieval (LIGHTWEIGHT - METADATA ONLY)
+### Phase 1: 🎯 Message Discovery & Retrieval (LIGHTWEIGHT - METADATA ONLY)
 
 **Action Steps:**
-1. **Check MCP Gmail Server Availability**: Verify MCP Gmail server is configured and accessible
-2. **Retrieve Email Metadata**: Use Gmail query filters to fetch ONLY metadata (id, subject, from, date)
-   - Limit: 20 emails maximum
-   - Query: `is:unread` or `newer_than:1d` with server-side filtering
-   - DO NOT fetch full email bodies yet (performance optimization)
+1. **Check MCP Agent Mail Server Availability**: Verify MCP Agent Mail server is configured and accessible
+2. **Retrieve Message Metadata**: Use `fetch_inbox` to get ONLY metadata initially
+   - Limit: 20 messages maximum
+   - DO NOT fetch full message bodies yet (performance optimization)
 3. **Fast Filtering**: Apply urgency/priority filters to metadata only
-   - Sender domain whitelist (e.g., @company.com, @client.com)
-   - Subject keywords (urgent, deadline, action required)
-   - Skip automated senders (noreply@, no-reply@, notifications@)
+   - Check importance flags (urgent, high, normal, low)
+   - Check ack_required status
+   - Identify sender agents
 
-### Phase 2: 🔍 Email Analysis & Classification (METADATA-BASED - FAST)
+### Phase 2: 🔍 Message Analysis & Classification (METADATA-BASED - FAST)
 
 **Action Steps:**
 1. **Metadata Analysis**: Classify using ONLY subject/sender (no full content yet)
-   - Urgency indicators in subject: "urgent", "asap", "deadline", "action required"
-   - Sender importance: Known domains vs automated senders
-   - Information type: Newsletter patterns, notification patterns
+   - Urgency indicators in subject: "urgent", "asap", "deadline", "blocker"
+   - Sender importance: Known collaborator agents vs automated agents
+   - Message type: Question, status update, request, notification
 2. **Fast Categorization**: Classify into categories based on metadata:
-   - **URGENT**: Subject contains urgency keywords + important sender
-   - **ACTION_REQUIRED**: Subject ends with "?" or contains "please", "request"
-   - **AUTOMATED**: Sender matches noreply/automated patterns
-   - **LOW_PRIORITY**: Newsletters, notifications, automated emails
+   - **URGENT**: Importance="urgent" or "high" + ack_required=True
+   - **ACTION_REQUIRED**: Subject ends with "?" or contains "please", "review", "request"
+   - **STATUS_UPDATE**: Sender patterns for progress reports
+   - **LOW_PRIORITY**: Notifications, automated status updates
 3. **Priority Queue**: Create ordered list (top 10 only need full content)
    - Priority 1-2 (Urgent): Fetch full content immediately
-   - Priority 3 (Action): Fetch if under email limit
-   - Priority 4-5 (Info/Auto): Archive without reading full content
+   - Priority 3 (Action): Fetch if under message limit
+   - Priority 4-5 (Info): Mark as read without fetching full content
 
-### Phase 3: 🚀 Action Execution (BATCHED - PARALLEL WHERE POSSIBLE)
+### Phase 3: 🚀 Action Execution (TARGETED - PARALLEL WHERE POSSIBLE)
 
 **Action Steps:**
-1. **Fetch Full Content**: Only for top 10 priority emails (parallel MCP calls)
-   - Use parallel tool invocation for multiple email fetches
-   - Skip if email already processed (has "claude-processed" label)
-2. **Draft Responses**: For URGENT + ACTION_REQUIRED (max 5 drafts)
-   - Generate contextually appropriate draft replies
-   - **AUTOMATICALLY save drafts** using MCP Gmail tools (parallel if possible)
-   - NO user confirmation needed during execution - drafts are safe, nothing sent
-   - Limit: 5 drafts per run (user reviews in Gmail later, not during command)
-3. **Extract Tasks**: For emails with action items (lightweight extraction)
-   - Extract specific tasks and deadlines
+1. **Fetch Full Content**: Only for top 10 priority messages (parallel MCP calls if possible)
+   - Use `fetch_inbox` with `include_bodies=True` for priority messages
+   - Skip if message already processed
+2. **Draft Replies**: For URGENT + ACTION_REQUIRED (max 5 replies)
+   - Analyze message content and context
+   - Generate contextually appropriate draft replies using `reply_message`
+   - Limit: 5 replies per run (avoid overwhelming recipients)
+3. **Extract Tasks**: For messages with action items (lightweight extraction)
+   - Extract specific tasks and deadlines from message bodies
    - Create simple task list in output (don't create external tasks yet)
-4. **Batch Label Operations**: Apply labels in single batch operation
-   - Collect all email IDs needing labels first
-   - Single MCP batch call to apply all labels at once
-   - Labels: "claude-processed", "action-required", "urgent"
-5. **Batch Archive**: Archive low-priority emails in single operation
-   - Collect all AUTOMATED and LOW_PRIORITY email IDs
-   - Single MCP batch archive call (not one-by-one)
-6. **Star Urgent**: Flag URGENT emails (parallel operation if >1)
+4. **Mark as Read**: Mark processed messages using `mark_message_read`
+   - Batch operation for all processed messages
+5. **Identify Blockers**: Flag any blocking issues or urgent attention items
 
 ### Phase 4: 📊 Summary & Reporting (CONCISE OUTPUT)
 
 **Action Steps:**
 1. **Concise Summary**: Single-paragraph overview with counts
-   - Total emails scanned: X (metadata only)
+   - Total messages scanned: X (metadata only)
    - Fully processed: Y (with content analysis)
-   - Categories: Urgent: N, Action: M, Low-priority: P
+   - Categories: Urgent: N, Action: M, Status: P
 2. **Actions Taken**: Bulleted list (max 10 lines)
-   - Drafts created: N
-   - Emails labeled: M
-   - Emails archived: P
-   - Emails starred: Q
+   - Replies drafted: N
+   - Messages marked read: M
+   - Tasks extracted: P
 3. **Urgent Items**: Highlight ONLY urgent items (max 3)
    - Show subject + sender + brief summary
 4. **Performance**: Report execution time and efficiency
@@ -105,121 +95,110 @@ execution_mode: guided
 
 ## 📋 REFERENCE DOCUMENTATION
 
-# /processmsgs Command - Intelligent Email Processing with MCP Gmail Agent
+# /processmsgs Command - Intelligent Agent Message Processing
 
 **Usage**: `/processmsgs [options]`
 
-**Purpose**: Automated email processing that reads messages, analyzes content, and takes intelligent actions - never just reads and does nothing
+**Purpose**: Automated agent message processing that reads inter-agent communications, analyzes content, and takes intelligent actions
 
 ## 🛠️ Prerequisites
 
-- MCP Gmail server configured in `.claude/settings.json`
-- Gmail API authentication completed (see `.claude/skills/mcp-gmail-agent.md`)
-- Appropriate Gmail permissions (read, compose, modify)
+- MCP Agent Mail server configured and running
+- Agent registered in the project (use `register_agent` first)
+- Project initialized with `ensure_project`
 
 ## 📚 Command Options
 
 ```bash
-/processmsgs                    # Process all unread emails
-/processmsgs recent             # Process emails from last 24h regardless of read status
-/processmsgs urgent             # Process only urgent/flagged emails
-/processmsgs sender:example.com # Process emails from specific domain
-/processmsgs label:inbox        # Process emails with specific label
+/processmsgs                    # Process all unread agent messages
+/processmsgs urgent             # Process only urgent/flagged messages
+/processmsgs sender:BlueLake    # Process messages from specific agent
 ```
 
 ## 🎯 What This Command Does
 
 **Core Actions (NEVER just read):**
-1. **Reads** unread emails using MCP Gmail tools
+1. **Reads** unread agent messages using MCP Agent Mail tools
 2. **Analyzes** content for action items, urgency, importance
-3. **Classifies** emails into categories
-4. **Drafts** responses for emails requiring action
-5. **Labels** emails for organization
-6. **Archives** low-priority emails
-7. **Flags** urgent items
-8. **Creates** task lists from action items
-9. **Reports** summary of all actions taken
+3. **Classifies** messages into categories
+4. **Drafts** replies for messages requiring action
+5. **Extracts** task lists from action items
+6. **Marks** messages as read
+7. **Reports** summary of all actions taken
 
 **Anti-Pattern Prevention:**
-- ❌ Reading emails without taking action
+- ❌ Reading messages without taking action
 - ❌ Processing without classification
 - ❌ Analysis without follow-up
-- ✅ Every email processed is classified and reported, with actions taken where appropriate
+- ✅ Every message processed is classified and reported, with actions taken where appropriate
 
 ## ⚡ Performance Optimization
 
 **Lightweight & Fast Execution:**
-- **20 email limit**: Processes max 20 emails per run (prevents timeout)
+- **20 message limit**: Processes max 20 messages per run (prevents timeout)
 - **Metadata-first**: Fetches only subject/sender initially, full content on-demand
-- **Top 10 rule**: Only fetches full content for top 10 priority emails
-- **Batch operations**: Labels/archives in single MCP calls (not iterative)
+- **Top 10 rule**: Only fetches full content for top 10 priority messages
 - **Parallel calls**: Uses parallel MCP tool invocation where possible
 - **60s timeout**: Stops processing at 60 seconds (early exit)
-- **5 draft limit**: Max 5 drafts per run (user reviews later in Gmail, not during execution)
+- **5 reply limit**: Max 5 replies per run
 
 **Typical Performance:**
-- Execution time: 10-30 seconds for 20 emails
+- Execution time: 10-30 seconds for 20 messages
 - MCP calls: 5-8 calls total (batch operations reduce overhead)
 - Context usage: <10K tokens (metadata-focused approach)
 
 ## 🚀 Workflow Integration
 
 **Typical Use Cases:**
-- **Morning Routine**: `/processmsgs` - Process overnight emails before starting work
-- **Quick Check**: `/processmsgs urgent` - Handle time-sensitive matters
-- **Batch Processing**: `/processmsgs recent` - Process accumulated messages
-- **Targeted Review**: `/processmsgs sender:client.com` - Focus on specific communications
+- **Project Coordination**: Process messages from other agents working on same project
+- **Task Assignment**: Receive and acknowledge task assignments from coordinator
+- **Status Updates**: Process progress reports from collaborating agents
+- **Question/Answer**: Respond to questions from other agents
 
 ## 🔐 Security & Privacy
 
 **Safe Automation Model:**
-- **Drafts created automatically** - Safe operation, nothing is sent without user action
-- User reviews and sends drafts from Gmail at their convenience
-- All actions (label, archive, star) are reversible and safe
-- NO emails sent automatically - only drafts created
-
-**Data Handling:**
-- Email content analyzed locally, not stored permanently
-- No external API calls beyond configured MCP Gmail server
-- User maintains full control over what gets sent (reviews drafts in Gmail)
+- Messages are project-scoped (no cross-project access)
+- Full audit trail via Git repository
+- No external API calls beyond MCP Agent Mail server
+- All actions are reversible
 
 ## 📊 Success Metrics
 
 **Processing Results Include:**
-- Total emails processed
-- Categories breakdown (urgent: 2, action: 5, info: 10, etc.)
-- Actions taken (drafts: 3, labels: 15, archived: 8, flagged: 2)
-- Tasks created with deadlines
+- Total messages processed
+- Categories breakdown (urgent: 2, action: 5, status: 10, etc.)
+- Actions taken (replies: 3, tasks extracted: 5, marked read: 15)
 - Urgent items requiring immediate attention
 
 ## 🔄 Continuous Improvement
 
 **Learning Mechanism:**
-- Track which actions user approves/modifies
+- Track which message types require action
 - Improve classification accuracy over time
-- Adapt to user's communication patterns
-- Suggest better email management strategies
+- Adapt to agent communication patterns
+- Suggest better collaboration strategies
 
 ## 🛡️ Error Handling
 
 **Graceful Failures:**
 - MCP server unavailable → Report status, suggest troubleshooting
-- Authentication expired → Provide re-authentication instructions
-- API rate limits → Process in batches, queue remaining
+- Agent not registered → Provide registration instructions
+- Project not initialized → Suggest running `ensure_project`
 - Network issues → Retry with exponential backoff
 
 ## 🚨 CRITICAL: Classification-First Accountability
 
-**Every email MUST be classified and reported. Actions are required when appropriate:**
-- **URGENT** and **ACTION_REQUIRED** emails demand concrete follow-up (draft, label, task, etc.)
-- **INFORMATION** and **AUTOMATED** emails may simply be summarized and archived if no action is needed
+**Every message MUST be classified and reported. Actions are required when appropriate:**
+- **URGENT** and **ACTION_REQUIRED** messages demand concrete follow-up (reply, task extraction, etc.)
+- **STATUS_UPDATE** and **INFORMATION** messages may simply be summarized and marked read if no action is needed
 - Always explain what was processed and why each item was handled that way
 
-**NEVER output**: "I've read 10 emails" without detailing the disposition of each message.
+**NEVER output**: "I've read 10 messages" without detailing the disposition of each message.
 
 ## 📖 Related Skills
 
-See `.claude/skills/mcp-gmail-agent.md` for detailed MCP Gmail server setup and authentication instructions.
+See `.claude/skills/mcp-agent-mail.md` for detailed MCP Agent Mail server setup and usage instructions.
 
 ## 🎓 Examples
 
@@ -229,62 +208,64 @@ See `.claude/skills/mcp-gmail-agent.md` for detailed MCP Gmail server setup and 
 ```
 **Output:**
 ```
-📧 Email Processing Complete
+📬 Agent Message Processing Complete
 
-Processed: 15 emails
-├─ URGENT (2): Client deadline inquiry, Server alert
-├─ ACTION_REQUIRED (5): PR reviews, Meeting requests
-├─ INFORMATION (6): Team updates, Release notes
-└─ AUTOMATED (2): Newsletter, Notifications
+Processed: 15 messages
+├─ URGENT (2): Database migration blocker, Test failure in CI
+├─ ACTION_REQUIRED (5): Code review requests, Design feedback needed
+├─ STATUS_UPDATE (6): Progress reports, Task completions
+└─ INFORMATION (2): Notifications, FYI updates
 
 Actions Taken:
-✅ 3 draft replies created (PR reviews)
-✅ 2 emails flagged as urgent
+✅ 3 draft replies created (code reviews, blocker response)
 ✅ 5 action items extracted to task list
-✅ 8 emails labeled and archived
-✅ 2 emails starred for follow-up
+✅ 15 messages marked as read
+✅ 2 urgent items flagged for immediate attention
 
 ⚠️ URGENT ATTENTION REQUIRED:
-1. Client deadline moved to tomorrow - draft response prepared
-2. Server CPU usage >90% - investigate immediately
+1. Database migration blocked - Worker agent needs schema approval
+2. CI tests failing on main branch - requires immediate investigation
 ```
 
 ### Targeted Processing
 ```bash
-/processmsgs sender:github.com
+/processmsgs sender:CoordinatorBot
 ```
 **Output:**
 ```
-📧 GitHub Email Processing Complete
+📬 CoordinatorBot Message Processing Complete
 
-Processed: 8 GitHub emails
-├─ PR Comments (3)
-├─ Issue Mentions (2)
-├─ Security Alerts (1)
-├─ Release Notifications (2)
+Processed: 5 messages from CoordinatorBot
+├─ Task Assignments (3)
+├─ Status Requests (1)
+├─ Deadline Reminders (1)
 
 Actions Taken:
-✅ 3 draft responses to PR comments
-✅ 1 security issue flagged URGENT
-✅ 2 PRs added to review queue
-✅ 2 release emails archived
+✅ 3 task assignments acknowledged
+✅ 1 status update drafted
+✅ 1 deadline confirmed
+✅ 5 messages marked as read
 ```
 
 ## 🔗 Integration Points
 
-- **Task Management**: Extracted tasks can integrate with `/memory` command
-- **PR Workflow**: GitHub emails trigger `/copilot` or `/fixpr` workflows
-- **Calendar**: Meeting requests auto-draft acceptance/decline responses
-- **Documentation**: Questions about codebase can trigger `/learn` lookups
+- **Project Coordination**: Multi-agent workflows via message passing
+- **Task Management**: Task extraction integrates with project tracking
+- **Status Reporting**: Progress updates to coordinator agents
+- **Collaboration**: Inter-agent question/answer workflows
 
 ## ⚙️ Configuration
 
-**Configuration roadmap:** Future iterations may add configurable thresholds for auto-archiving, urgency keyword tuning, and trusted sender lists. Track progress in the linked follow-up issue before attempting to rely on configuration files.
+**MCP Agent Mail Setup**: See `.claude/skills/mcp-agent-mail.md` for:
+- Server configuration
+- Agent registration
+- Project initialization
+- Message sending/receiving patterns
 
 ## 🎯 Success Criteria
 
 Command considered successful when:
-1. ✅ All retrieved emails classified
+1. ✅ All retrieved messages classified
 2. ✅ Appropriate actions taken for each category (mandatory for URGENT/ACTION_REQUIRED)
 3. ✅ Summary report generated
 4. ✅ Urgent items clearly highlighted

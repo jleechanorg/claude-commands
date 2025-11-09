@@ -70,14 +70,14 @@ fi
 # This ensures both /localexportcommands and /exportcommands export the same directories
 
 if [ -f ".claude/commands/export_config.py" ]; then
-    # Read exportable components from Python config
-    mapfile -t EXPORTABLE_COMPONENTS < <(python3 -c "
+    # Read exportable components from Python config (portable - no mapfile)
+    EXPORTABLE_COMPONENTS=($(python3 -c "
 import sys
 sys.path.insert(0, '.claude/commands')
 from export_config import get_exportable_components
 for component in get_exportable_components():
     print(component)
-")
+"))
     echo "✅ Using shared Python export configuration"
 else
     echo "⚠️  Warning: Shared export config not found, using fallback list"
