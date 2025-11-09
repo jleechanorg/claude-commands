@@ -57,7 +57,6 @@ CLI_PROFILES = {
         "stdin_template": "{prompt_file}",
         "quote_prompt": True,
         "detection_keywords": [
-            "codex",
             "codex exec",
             "codex cli",
             "use codex",
