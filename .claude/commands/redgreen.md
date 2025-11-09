@@ -10,10 +10,10 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### 🔴 Phase 1: RED - Exact Error Reproduction
+### 🔴 Phase 1: RED - Test-First Error Reproduction
 
 **Action Steps:**
-**MANDATORY**: Must reproduce the EXACT same error the user mentioned before proceeding
+**MANDATORY**: Must use test-first approach to catch and reproduce the error before proceeding
 
 ### Phase 2: Step 1: Error Analysis
 
@@ -22,19 +22,37 @@ execution_mode: immediate
 2. Identify the file, line number, and error type
 3. Understand the context and conditions that trigger the error
 
-### Phase 3: Step 2: Reproduction Setup
+### Phase 3: Step 2: Find Existing Tests
 
 **Action Steps:**
-1. Create minimal test case that reproduces the exact error
-2. Verify the error occurs with deterministic error signature (not byte-for-byte stack traces)
-3. Document reproduction steps and environment
+1. Search for existing tests that should catch this error
+2. Look for integration tests (with real services), functional tests (with fixtures), and unit tests
+3. Use judgment to determine which test type is most appropriate
+4. Document which existing tests are relevant
+
+### Phase 4: Step 3: Confirm Tests Reproduce Error
+
+**Action Steps:**
+1. Run existing tests to check if they catch the error
+2. Verify if tests fail with the expected error message
+3. Document whether existing tests successfully reproduce the issue
+
+### Phase 5: Step 4: Update or Create Tests (If Needed)
+
+**Action Steps:**
+1. **ONLY IF existing tests don't catch the error**: Update or create new tests
+2. Consider test types: integration tests (real services), functional tests (fixtures), unit tests
+3. Create minimal test case that reproduces the exact error
 4. Use normalized error signatures: `ErrorType | ["key", "tokens"] | file:function`
+5. Document why new/updated tests were needed
 
-### Phase 4: Step 3: Red Confirmation
+### Phase 6: Step 5: Confirm Tests Fail
 
 **Action Steps:**
-1. Confirm test fails with expected error message
-2. Verify test accurately reproduces the issue
+1. Run the tests to confirm they fail with expected error message
+2. Verify the error occurs with deterministic error signature (not byte-for-byte stack traces)
+3. Ensure test accurately reproduces the issue
+4. Document reproduction steps and environment
 
 ### 🔧 Phase 2: CODE - Fix Implementation
 
@@ -62,20 +80,27 @@ execution_mode: immediate
 2. Verify no new errors introduced
 3. Test fix in isolation
 
-### 🟢 Phase 3: GREEN - Working Verification
+### 🟢 Phase 3: GREEN - Test-Driven Verification
 
 **Action Steps:**
-**Validation**: Confirm the fix works and error is completely resolved
+**Validation**: Confirm tests pass and error is completely resolved
 
-### Phase 10: Step 1: Direct Fix Test
+### Phase 10: Step 1: Confirm Tests Pass
+
+**Action Steps:**
+1. **PRIMARY VALIDATION**: Run the tests that were failing in Phase 1
+2. Verify all tests now pass after the fix
+3. Confirm the specific error is no longer occurring
+4. Control randomness/time (fixed seed, frozen time) to ensure determinism
+
+### Phase 11: Step 2: Direct Fix Test
 
 **Action Steps:**
 1. Run the exact same scenario that caused the original error
 2. Verify error no longer occurs
 3. Confirm expected behavior works
-4. Control randomness/time (fixed seed, frozen time) to ensure determinism
 
-### Phase 11: Step 2: Regression Testing
+### Phase 12: Step 3: Regression Testing
 
 **Action Steps:**
 1. Run existing tests to ensure no breaks
@@ -83,11 +108,12 @@ execution_mode: immediate
 3. Verify broader system stability
 4. Re-run the focused test N times to detect flakiness
 
-### Phase 12: Step 3: Green Confirmation
+### Phase 13: Step 4: Green Confirmation
 
 **Action Steps:**
-1. Confirm all tests pass after implementation
+1. **CONFIRM ALL TESTS PASS**: Primary validation that fix is complete
 2. Verify fix resolves the original issue
+3. Document test results and success evidence
 
 ### Phase 1 (RED):
 
@@ -189,11 +215,13 @@ Use the comprehensive matrix testing approach from `/tdd`:
 
 ## 🚨 Critical Rules
 
-**RULE 1**: Cannot proceed to CODE phase without exact error reproduction in RED
-**RULE 2**: Cannot proceed to GREEN phase without implementing a fix in CODE
-**RULE 3**: Must verify exact same error is resolved, not just "similar" behavior
-**RULE 4**: Fix must be minimal and targeted to the specific error
-**RULE 5**: Green phase must demonstrate working functionality, not just absence of error
+**RULE 1**: Must search for existing tests BEFORE attempting to reproduce error manually
+**RULE 2**: Cannot proceed to CODE phase without failing tests that reproduce the error
+**RULE 3**: Cannot proceed to GREEN phase without implementing a fix in CODE
+**RULE 4**: Must verify exact same error is resolved via passing tests
+**RULE 5**: Fix must be minimal and targeted to the specific error
+**RULE 6**: Green phase must demonstrate all tests pass, not just absence of error
+**RULE 7**: Consider test types: integration tests (real services), functional tests (fixtures), unit tests - use judgment
 
 ## Example Workflow
 
@@ -201,14 +229,24 @@ Use the comprehensive matrix testing approach from `/tdd`:
 
 # User reports: "UnboundLocalError: cannot access local variable 'os'"
 
-# Reproduce exact error and capture normalized signature
+# Step 1: Search for existing tests
+# Look for tests in mvp_site/tests/ that test main.py functionality
 
-python3 mvp_site/main.py
+# Step 2: Run existing tests to see if they catch the error
+TESTING=true vpython mvp_site/tests/test_main.py
 
+# Step 3: If tests don't exist or don't catch it, create/update tests
+# Consider: integration test (real service), functional test (fixtures), or unit test
+
+# Step 4: Confirm tests fail
+TESTING=true vpython mvp_site/tests/test_main.py
 # ✅ Signature: UnboundLocalError | ["cannot access local variable", "os"] | mvp_site/main.py:main
 
-# Add failing test first, then minimal fix for the os import issue
+# Step 5: Implement minimal fix for the os import issue
 
+# Step 6: Confirm tests pass
+TESTING=true vpython mvp_site/tests/test_main.py
+# ✅ All tests pass
 # ✅ Confirmed: Application starts successfully
 
 ```
@@ -237,4 +275,13 @@ python3 mvp_site/main.py
 
 ---
 
-**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` starts with reproducing actual bugs or errors. It then systematically fixes them with verification, concluding with `/consensus` validation of the entire debugging flow.
+**Key Difference from `/tdd`**: While `/tdd` drives development with failing tests for new features, `/redgreen` takes a test-first approach to debugging actual bugs or errors:
+
+1. **Search existing tests first** - Check if tests already catch the error
+2. **Run tests to confirm reproduction** - Verify tests fail with the error
+3. **Create/update tests only if needed** - Don't duplicate existing test coverage
+4. **Confirm tests fail** - Ensure error is reproduced
+5. **Fix** - Implement minimal fix
+6. **Confirm tests pass** - Primary validation of fix
+
+The workflow emphasizes finding and using existing tests before creating new ones, and uses test types (integration/functional/unit) based on judgment. It concludes with `/consensus` validation of the entire debugging flow.
