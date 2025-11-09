@@ -18,6 +18,12 @@ class TestAgentCliSelection(unittest.TestCase):
         agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
         self.assertEqual(agent_specs[0]["cli"], "codex")
 
+    def test_detects_codex_cli_name_reference(self):
+        """Mentioning the CLI name directly should select the Codex profile."""
+        task = "Codex should handle the red team hardening checklist"
+        agent_specs = self.dispatcher.analyze_task_and_create_agents(task)
+        self.assertEqual(agent_specs[0]["cli"], "codex")
+
     def test_auto_selects_only_available_cli(self):
         """Fallback to installed CLI when task has no explicit preference."""
 
