@@ -1,0 +1,11 @@
+# ESLint ignore patterns for root-level linting
+# Frontend v2 has its own TypeScript ESLint config and dependencies
+mvp_site/frontend_v2/
+
+# Standard exclusions
+node_modules/
+venv/
+.venv/
+dist/
+build/
+*.min.js

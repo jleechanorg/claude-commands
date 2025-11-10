@@ -1,0 +1,109 @@
+name: Presubmit Checks
+
+# Security permissions
+permissions:
+  contents: read
+  pull-requests: read
+  actions: read  # Required for cache actions
+
+# Run on all pushes and pull requests
+on:
+  push:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'roadmap/**'
+      - '.github/ISSUE_TEMPLATE/**'
+  pull_request:
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'roadmap/**'
+      - '.github/ISSUE_TEMPLATE/**'
+
+jobs:
+  # Python linting with Ruff
+  python-lint:
+    name: Python Linting (Ruff)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Ruff
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff==0.8.4
+
+      - name: Run Ruff linter
+        run: |
+          # Non-blocking for incremental adoption - shows errors but doesn't fail CI
+          ruff check . --output-format=github || true
+
+      - name: Run Ruff formatter check
+        run: |
+          # Non-blocking for incremental adoption
+          ruff format --check . || true
+
+  # Python type checking with mypy
+  python-typecheck:
+    name: Python Type Checking (mypy)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d  # v5.1.0
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install mypy with pinned version
+          pip install mypy==1.13.0
+          # Install project dependencies for type checking
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          if [ -f mvp_site/requirements.txt ]; then pip install -r mvp_site/requirements.txt; fi
+
+      - name: Run mypy type checker
+        run: |
+          # Run mypy on the main code directories
+          # Non-blocking for incremental adoption - shows errors but doesn't fail CI
+          mypy mvp_site/ --config-file mvp_site/mypy.ini --no-error-summary || true
+
+  # JavaScript linting with ESLint
+  javascript-lint:
+    name: JavaScript Linting (ESLint)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Set up Node.js
+        uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8  # v4.0.2
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: |
+          # ESLint installed via npm ci from package.json
+          # .eslintignore excludes frontend_v2 (has its own TypeScript ESLint config)
+          # Lints both .js and .mjs files (ES modules)
+          # Non-blocking for incremental adoption - shows errors but doesn't fail CI
+          npx eslint . --ext .js,.mjs || true
