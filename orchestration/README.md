@@ -28,11 +28,11 @@ This system implements the **core design philosophy**: **one general agent per t
 ✅ Agent completes task in isolated workspace
 ✅ Agent commits, pushes, and creates PR
 ✅ Monitor tracks progress every 2 minutes
-```
+```text
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │         File-Based A2A Protocol + Simple Safety Boundaries     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
@@ -52,7 +52,7 @@ This system implements the **core design philosophy**: **one general agent per t
                                 │
                                 ▼
                         File System: /tmp/orchestration/a2a/
-```
+```text
 
 ## 🖥️ Why tmux? The Terminal Multiplexer Architecture
 
@@ -70,7 +70,7 @@ The orchestration system uses **tmux (terminal multiplexer)** as the core proces
 
 ### tmux Session Lifecycle
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                    Complete tmux Lifecycle                         │
 └─────────────────────────────────────────────────────────────────────┘

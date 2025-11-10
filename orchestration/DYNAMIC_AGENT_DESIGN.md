@@ -221,7 +221,7 @@ codex exec --yolo < /tmp/agent_prompt_task-agent-fix-tests-1234.txt \
 ```
 
 **Phase 8: Agent Execution**
-```
+```text
 Inside tmux session, the LLM agent:
 1. Reads the comprehensive prompt
 2. Understands the task and exit criteria

@@ -207,7 +207,7 @@ See `.claude/skills/mcp-agent-mail.md` for detailed MCP Agent Mail server setup 
 /processmsgs
 ```
 **Output:**
-```
+```text
 📬 Agent Message Processing Complete
 
 Processed: 15 messages
@@ -232,7 +232,7 @@ Actions Taken:
 /processmsgs sender:CoordinatorBot
 ```
 **Output:**
-```
+```text
 📬 CoordinatorBot Message Processing Complete
 
 Processed: 5 messages from CoordinatorBot
