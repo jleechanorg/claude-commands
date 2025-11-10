@@ -44,6 +44,7 @@ class ImportValidator(ast.NodeVisitor):
         # Allow conditional imports for optional dependencies and testing
         self.allowed_conditional_imports = {
             'uuid', 'os', 'tempfile', 'threading', 'concurrent.futures',
+            'argparse', 'glob', 'shlex',
             'google.cloud', 'google.auth', 'google', 'genai',
             'firebase_admin', 'firestore_service', 'world_logic',
             'http.server', 'BaseHTTPRequestHandler', 'HTTPServer',
@@ -74,7 +75,15 @@ class ImportValidator(ast.NodeVisitor):
             'testing_framework.integration_utils',
             # Optional A2A test dependencies (conditional imports for tests)
             'a2a',
-            'httpx'
+            'httpx',
+            # Orchestration modules that support both direct execution and package import
+            'orchestration.a2a_integration', 'orchestration.a2a_agent_wrapper',
+            'orchestration.message_broker', 'orchestration.task_dispatcher',
+            'orchestration.constants', 'orchestration.agent_system',
+            'orchestration.a2a_monitor', 'orchestration.debug_worker',
+            'orchestration.live_mode',
+            'agent_system', 'message_broker', 'a2a_integration', 'task_dispatcher',
+            'constants', 'a2a_agent_wrapper', 'a2a_monitor', 'debug_worker', 'live_mode'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:

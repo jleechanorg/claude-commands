@@ -4,15 +4,22 @@ Unified Orchestration System - LLM-Driven with File-based Coordination
 Pure file-based A2A protocol without Redis dependencies
 """
 
+# Allow direct script execution - add parent directory to sys.path
+import os
+import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import glob
 import json
-import os
 import shutil
 import subprocess
-import sys
 import time
 from datetime import datetime, timedelta, timezone
-from task_dispatcher import TaskDispatcher
+
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.task_dispatcher import TaskDispatcher
 
 # Constraint system removed - using simple safety boundaries only
 

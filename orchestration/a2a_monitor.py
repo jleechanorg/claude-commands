@@ -6,15 +6,22 @@ Monitors A2A system health, cleans up stale registrations,
 and provides system status reporting.
 """
 
-import json
-import logging
+# Allow direct script execution - add parent directory to sys.path
 import os
 import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+import json
+import logging
 import threading
 import time
 from pathlib import Path
 from typing import Any
-from a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
+
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.a2a_integration import A2A_BASE_DIR, AgentRegistry, TaskPool
 
 logger = logging.getLogger(__name__)
 
