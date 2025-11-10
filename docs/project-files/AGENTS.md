@@ -1,10 +1,57 @@
 # Repository Guidelines
 
+## Skills System
+
+**Added 2025-11-10** | Last updated: 2025-11-10
+
+**IMPORTANT: Before starting any task, check both skill directories for relevant skill files:**
+- **Personal skills**: `~/.claude/skills/` (user-specific, takes precedence)
+- **Project skills**: `.claude/skills/` (team-shared, repository-specific)
+
+Skills are modular capabilities that provide specialized knowledge and workflows. Each skill is a markdown file with:
+- **Frontmatter**: YAML metadata including `description`, `type`, and `scope`
+- **Content**: Instructions, commands, best practices, and guidelines for specific tasks
+
+**Example skill file structure** (`.claude/skills/pr-workflow-manager.md`):
+
+```
+---
+description: "Create and manage pull requests"
+type: "workflow"
+scope: "github"
+---
+
+## Overview
+Summarize the workflow goals and any prerequisites.
+
+## Quick Start
+List the core commands (e.g., `/commentreply`, `/pushl`) required for the standard PR path.
+
+## Advanced Patterns
+Cover escalation steps, edge cases, and how to coordinate with automation.
+```
+
+### How to Use Skills
+1. **Automatic Discovery**: Scan both `~/.claude/skills/*.md` and `.claude/skills/*.md` files at the start of each conversation
+2. **Priority System**: Personal skills (`~/.claude/skills/`) override project skills (`.claude/skills/`) when names conflict
+3. **Match to Context**: When a user request matches a skill's description or activation cues, load and follow that skill's guidelines
+4. **Progressive Disclosure**: Skills open with quick-start guidance, then layer in advanced patterns and edge cases so users can reveal detail only when needed
+5. **Follow Instructions**: Treat skill content as authoritative guidelines for that domain
+
+### Skill Activation Patterns
+- User requests match skill descriptions (e.g., "create a PR" → `pr-workflow-manager.md`)
+- Task domain aligns with skill scope (e.g., MCP operations → `mcp-agent-mail.md`)
+- Codebase questions match orientation skills (e.g., "where is X?" → `worldarchitect-codebase-sherpa.md`)
+
+See `.claude/` for orchestrator command references and additional skill examples.
+
+**Behavior Standard**: Follow the same skill discovery and activation pattern as the Claude Code CLI: automatically load relevant skills without explicit user invocation, prioritizing personal skills when overlaps occur.
+
 ## Project Structure & Module Organization
 - `mvp_site/`: Python 3.11 backend (Flask, MCP tooling), tests, templates, and static assets. Frontends live in `mvp_site/frontend_v1/` and `mvp_site/frontend_v2/`.
 - `mvp_site/tests/` and `mvp_site/test_integration/`: Unit and integration tests. Additional top‑level tests exist in `tests/`.
 - `scripts/` and top‑level `run_*.sh`: Development, CI, and utility commands.
-- `.claude/` and related folders: Agent orchestration commands and docs.
+- `.claude/` and related folders: Agent orchestration commands and docs (detailed conventions live in `docs/CLAUDE.md`).
 - `docs/`, `roadmap/`, `world/`: Documentation, plans, and content assets.
 
 ## Build, Test, and Development Commands
