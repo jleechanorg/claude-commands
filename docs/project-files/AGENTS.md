@@ -80,5 +80,50 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Firebase `serviceAccountKey.json` and `GEMINI_API_KEY` must be set as documented in `README.md`.
 - Prefer local mocks for tests; guard credentials with environment variables.
 
+## Git Workflow & Rebase Best Practices
+
+### Rebase Hook Awareness
+Git hooks (including pre-commit) run during `git rebase --continue`. If hooks fail (lint/type-check), the rebase appears to "hang."
+
+### Mandatory Pre-Rebase-Continue Checklist
+Before `git rebase --continue`:
+
+```bash
+# 1. Check for conflict markers
+rg '<<<<<<<|=======|>>>>>>>' --type-add 'code:*.{js,jsx,ts,tsx}' --type code
+
+# 2. Run lint (fix all errors)
+npm run lint  # or: cd mvp_site/frontend_v2 && npm run lint
+
+# 3. Run type-check (TypeScript)
+npm run type-check  # or: tsc --noEmit
+
+# 4. Stage and verify
+git add <resolved-files>
+git status
+
+# 5. Continue rebase
+git rebase --continue
+```
+
+### Troubleshooting Blocked Rebases
+**Symptom**: `git rebase --continue` hangs.
+
+**Quick Fix**:
+```bash
+# Ctrl+C to interrupt
+rg '<<<<<<<'           # Find conflict markers
+npm run lint           # See actual errors
+# Fix all errors
+git rebase --continue  # Retry
+```
+
+**Abort if stuck**: `git rebase --abort`
+
+**Key Rules**:
+- ✅ Always check for conflict markers before continuing
+- ✅ Run lint/type-check manually during rebase
+- ❌ Never continue with lint/type errors present
+
 ## Agent‑Specific Notes
 - Prefer edits under `mvp_site/` and existing scripts. Follow formatting via `pre-commit` before proposing changes. See `.claude/`, `CLAUDE.md`, and `QWEN.md` for orchestration conventions.
