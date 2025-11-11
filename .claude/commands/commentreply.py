@@ -706,10 +706,8 @@ def main():
     print(f"   ❌ Missing responses: {missing_responses}")
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
-    if successful_replies < len(processed_comments):
-        print("\n⚠️ WARNING: Some replies failed - manual review recommended")
-        sys.exit(1)
-
+    # Note: No additional failure check needed here - coverage_valid check at line 692
+    # already exits if coverage is invalid or missing_responses > 0
     print("\n🎉 SUCCESS: All comments processed with verified coverage!")
 
 if __name__ == "__main__":

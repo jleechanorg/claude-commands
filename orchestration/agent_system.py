@@ -10,8 +10,8 @@ import threading
 import time
 from typing import Any
 
-from .a2a_agent_wrapper import create_a2a_wrapper
-from .message_broker import MessageBroker, MessageType, TaskMessage
+from orchestration.a2a_agent_wrapper import create_a2a_wrapper
+from orchestration.message_broker import MessageBroker, MessageType, TaskMessage
 
 
 class AgentBase:
