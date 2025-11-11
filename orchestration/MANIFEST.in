@@ -1,0 +1,21 @@
+# Include documentation
+include README.md
+include *.md
+
+# Include configuration files
+include *.yaml
+include *.conf
+include config/*.yaml
+
+# Include scripts
+include *.sh
+
+# Include Python files
+recursive-include . *.py
+
+# Exclude test files from distribution
+recursive-exclude tests *
+recursive-exclude . __pycache__
+recursive-exclude . *.pyc
+recursive-exclude . *.pyo
+recursive-exclude . .DS_Store

@@ -10,9 +10,13 @@
   "dependencies": {
     "express": "^4.19.2"
   },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  },
   "scripts": {
     "auth": "node scripts/auth-cli.mjs",
-    "secondo": "bash scripts/secondo-cli.sh"
+    "secondo": "bash scripts/secondo-cli.sh",
+    "lint": "eslint . --ext .js,.mjs"
   },
   "keywords": ["cli", "authentication", "ai-universe"],
   "author": "Your Project",

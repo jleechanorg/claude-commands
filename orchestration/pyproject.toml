@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ai_orch"
+version = "0.1.0"
+description = "AI Orchestration - tmux-based interactive AI CLI wrapper and multi-agent orchestration system"
+authors = [
+    {name = "jleechan", email = "jlee@jleechan.org"}
+]
+readme = "README.md"
+license = "MIT"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Shells",
+    "Topic :: Terminals",
+    "License :: OSI Approved :: MIT License",
+]
+keywords = ["ai", "orchestration", "tmux", "claude", "codex", "cli", "automation", "agents", "terminal", "interactive"]
+requires-python = ">=3.9"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/jleechanorg/worldarchitect.ai"
+Repository = "https://github.com/jleechanorg/worldarchitect.ai"
+Issues = "https://github.com/jleechanorg/worldarchitect.ai/issues"
+Documentation = "https://github.com/jleechanorg/worldarchitect.ai/tree/main/orchestration"
+
+[project.scripts]
+ai_orch = "orchestration.live_mode:main"
+orch = "orchestration.live_mode:main"
+
+[tool.setuptools]
+# PyPI package name is 'ai_orch' but Python package name is 'orchestration'
+# This allows 'pip install ai_orch' while using 'from orchestration import ...'
+packages = ["orchestration"]
+
+[tool.setuptools.package-data]
+orchestration = ["*.md", "*.txt", "*.yaml", "*.conf", "config/*.yaml"]
+
+[tool.black]
+line-length = 120
+target-version = ['py39']
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]

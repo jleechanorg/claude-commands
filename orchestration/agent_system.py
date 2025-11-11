@@ -3,29 +3,15 @@
 Simple agent system for multi-terminal orchestration.
 """
 
+import os
 import subprocess
+import sys
 import threading
 import time
 from typing import Any
 
-from message_broker import MessageBroker, MessageType, TaskMessage
-
-try:
-    from a2a_agent_wrapper import create_a2a_wrapper
-
-    A2A_WRAPPER_AVAILABLE = True
-except ImportError:
-    A2A_WRAPPER_AVAILABLE = False
-
-# Keep legacy adapter for compatibility
-try:
-    from a2a_adapter import A2AAdapter, A2AMessage
-
-    LEGACY_A2A_AVAILABLE = True
-except ImportError:
-    LEGACY_A2A_AVAILABLE = False
-
-import sys
+from .a2a_agent_wrapper import create_a2a_wrapper
+from .message_broker import MessageBroker, MessageType, TaskMessage
 
 
 class AgentBase:
@@ -46,28 +32,19 @@ class AgentBase:
         self.capabilities = capabilities or []
         self.children = []
 
-        # A2A Integration - Use new wrapper if available, fallback to legacy
+        # A2A Integration
         self.enable_a2a = enable_a2a
         self.a2a_wrapper = None
-        self.a2a_adapter = None  # Legacy adapter
 
         if enable_a2a:
-            if A2A_WRAPPER_AVAILABLE:
-                # Use new A2A wrapper system
-                self.a2a_wrapper = create_a2a_wrapper(
-                    agent_id=agent_id,
-                    agent_type=agent_type,
-                    capabilities=self.capabilities,
-                    workspace=f"/tmp/orchestration/agents/{agent_id}",
-                )
-                print(f"Agent {agent_id} initialized with new A2A wrapper")
-            elif LEGACY_A2A_AVAILABLE:
-                # Fallback to legacy adapter
-                self.a2a_adapter = A2AAdapter()
-                self.a2a_adapter.start_message_listener()
-                print(f"Agent {agent_id} initialized with legacy A2A adapter")
-            else:
-                print(f"Warning: A2A requested but not available for agent {agent_id}")
+            # Use A2A wrapper system
+            self.a2a_wrapper = create_a2a_wrapper(
+                agent_id=agent_id,
+                agent_type=agent_type,
+                capabilities=self.capabilities,
+                workspace=f"/tmp/orchestration/agents/{agent_id}",
+            )
+            print(f"Agent {agent_id} initialized with A2A wrapper")
 
     def start(self):
         """Start the agent with A2A support."""
@@ -80,11 +57,6 @@ class AgentBase:
         # Start A2A wrapper if enabled
         if self.enable_a2a and self.a2a_wrapper:
             self.a2a_wrapper.start()
-        # Register with legacy A2A adapter if enabled
-        elif self.enable_a2a and self.a2a_adapter:
-            self.a2a_adapter.register_agent(
-                self.agent_id, self.agent_type, self.capabilities
-            )
 
         # Start message processing thread
         self.message_thread = threading.Thread(target=self._process_messages)
@@ -131,34 +103,31 @@ class AgentBase:
         """Process A2A messages."""
         while self.running:
             try:
-                if self.a2a_adapter:
-                    # Get A2A messages
-                    messages = self.a2a_adapter.get_messages(self.agent_id)
-                    for message in messages:
-                        self._handle_a2a_message(message)
-
-                    # Send heartbeat via A2A
-                    self.a2a_adapter.heartbeat(self.agent_id)
+                if self.a2a_wrapper:
+                    # A2A wrapper handles message processing internally
+                    # This thread is reserved for future direct message handling
+                    pass
 
                 time.sleep(1)
             except Exception as e:
                 print(f"Error processing A2A message: {e}")
                 time.sleep(1)
 
-    def _handle_a2a_message(self, message: A2AMessage):
+    def _handle_a2a_message(self, message: dict):
         """Handle A2A message - override in subclasses."""
-        print(f"Agent {self.agent_id} received A2A message: {message.payload}")
+        print(f"Agent {self.agent_id} received A2A message: {message.get('payload', {})}")
 
         # Basic protocol handling
-        if message.payload.get("action") == "ping":
-            # Respond to ping
+        payload = message.get("payload", {})
+        if payload.get("action") == "ping":
+            # Respond to ping via A2A wrapper
             response_data = {
                 "action": "pong",
                 "agent_id": self.agent_id,
                 "timestamp": time.time(),
             }
-            if message.message_type.value == "request":
-                self.a2a_adapter.send_response(self.agent_id, message, response_data)
+            # A2A wrapper handles response sending
+            print(f"Agent {self.agent_id} responding to ping")
 
     def _heartbeat_loop(self):
         """Send periodic heartbeats with health monitoring."""
@@ -239,6 +208,9 @@ class OpusAgent(AgentBase):
         """Spawn a new Sonnet agent in tmux session."""
         agent_id = f"sonnet-{len(self.subordinates) + 1}"
 
+        # Get absolute path to orchestration directory
+        orchestration_dir = os.path.dirname(os.path.abspath(__file__))
+
         # Create tmux session for the agent
         cmd = [
             "tmux",
@@ -250,7 +222,11 @@ class OpusAgent(AgentBase):
             "-c",
             f"""
 import sys
-sys.path.append('.')
+import os
+orchestration_dir = '{orchestration_dir}'
+if orchestration_dir not in sys.path:
+    sys.path.insert(0, orchestration_dir)
+
 from agent_system import SonnetAgent
 from message_broker import MessageBroker
 
@@ -309,6 +285,9 @@ class SonnetAgent(AgentBase):
         """Spawn a subagent for complex tasks."""
         subagent_id = f"{self.agent_id}-sub-{len(self.subagents) + 1}"
 
+        # Get absolute path to orchestration directory
+        orchestration_dir = os.path.dirname(os.path.abspath(__file__))
+
         cmd = [
             "tmux",
             "new-session",
@@ -319,7 +298,11 @@ class SonnetAgent(AgentBase):
             "-c",
             f"""
 import sys
-sys.path.append('.')
+import os
+orchestration_dir = '{orchestration_dir}'
+if orchestration_dir not in sys.path:
+    sys.path.insert(0, orchestration_dir)
+
 from agent_system import SubAgent
 from message_broker import MessageBroker
 
