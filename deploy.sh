@@ -13,7 +13,8 @@ if [ -f "./Dockerfile" ]; then
     # If so, we've found our target.
     TARGET_DIR="."
     # Check if an argument was provided, and if so, assume it's the environment.
-    if [[ "${1:-}" == "stable" ]]; then
+    # "prod", "production", and "stable" all map to "stable" environment
+    if [[ "${1:-}" == "stable" ]] || [[ "${1:-}" == "prod" ]] || [[ "${1:-}" == "production" ]]; then
         ENVIRONMENT="stable"
     fi
 else
@@ -22,7 +23,8 @@ else
     if [ -d "${1:-}" ]; then
         TARGET_DIR="${1:-}"
         # Check if the second argument is the environment.
-        if [[ "${2:-}" == "stable" ]]; then
+        # "prod", "production", and "stable" all map to "stable" environment
+        if [[ "${2:-}" == "stable" ]] || [[ "${2:-}" == "prod" ]] || [[ "${2:-}" == "production" ]]; then
             ENVIRONMENT="stable"
         fi
     fi
@@ -81,7 +83,8 @@ PY
         if [[ -n $app ]]; then
             TARGET_DIR=$app
             # After selection, check if an argument was passed for the environment
-            if [[ "${1:-}" == "stable" ]]; then
+            # "prod", "production", and "stable" all map to "stable" environment
+            if [[ "${1:-}" == "stable" ]] || [[ "${1:-}" == "prod" ]] || [[ "${1:-}" == "production" ]]; then
                 ENVIRONMENT="stable"
             fi
             break

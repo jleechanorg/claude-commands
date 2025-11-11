@@ -79,12 +79,8 @@ from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
 # Firestore service imports
-from mvp_site import (
-    constants,
-    firestore_service,
-    logging_util,
-    world_logic,  # For MCP fallback logic
-)
+from mvp_site import world_logic  # For MCP fallback logic
+from mvp_site import constants, firestore_service, logging_util
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
@@ -234,10 +230,12 @@ def create_app() -> Flask:
     CORS(app, resources=CORS_RESOURCES)
 
     # Configure rate limiting
+    # NOTE: No default_limits - we only rate limit specific API routes
+    # Static files and frontend routes are exempt to prevent CSS/JS loading failures
     limiter = Limiter(
         app=app,
         key_func=get_remote_address,
-        default_limits=["200 per day", "50 per hour", "10 per minute"],
+        default_limits=[],  # No default limits - only apply to specific routes
         storage_uri="memory://",
     )
 
@@ -300,6 +298,7 @@ def create_app() -> Flask:
 
     # Cache busting route for testing - only activates with special header
     @app.route("/frontend_v1/<path:filename>")
+    @limiter.exempt  # Exempt static files from rate limiting
     def frontend_files_with_cache_busting(filename):
         """Serve frontend files with optional cache-busting for testing"""
         frontend_folder = os.path.join(os.path.dirname(__file__), "frontend_v1")
@@ -315,6 +314,7 @@ def create_app() -> Flask:
 
     # Backward compatibility route for /static/ paths
     @app.route("/static/<path:filename>")
+    @limiter.exempt  # Exempt static redirects from rate limiting
     def static_files_redirect(filename):
         """Redirect old /static/ paths to /frontend_v1/ for backward compatibility"""
         return redirect(
@@ -404,6 +404,7 @@ def create_app() -> Flask:
 
     # --- API Routes ---
     @app.route("/api/campaigns", methods=["GET"])
+    @limiter.limit("100 per hour, 20 per minute")  # Reading campaigns can be frequent
     @check_token
     @async_route
     async def get_campaigns(user_id: UserId) -> Response | tuple[Response, int]:
@@ -466,6 +467,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns/<campaign_id>", methods=["GET"])
+    @limiter.limit("100 per hour, 20 per minute")  # Reading campaigns can be frequent
     @check_token
     @async_route
     async def get_campaign(
@@ -572,6 +574,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns", methods=["POST"])
+    @limiter.limit("20 per hour, 5 per minute")  # Creating campaigns is less frequent
     @check_token
     def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         try:
@@ -607,6 +610,9 @@ def create_app() -> Flask:
             return generic_error_response("create campaign")
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
+    @limiter.limit(
+        "50 per hour, 10 per minute"
+    )  # Updating campaigns is moderate frequency
     @check_token
     @async_route
     async def update_campaign(
@@ -779,6 +785,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns/<campaign_id>/export", methods=["GET"])
+    @limiter.limit("10 per hour, 2 per minute")  # Exporting is infrequent
     @check_token
     @async_route
     async def export_campaign(
@@ -837,6 +844,7 @@ def create_app() -> Flask:
 
     # --- Time Sync Route for Clock Skew Detection ---
     @app.route("/api/time", methods=["GET"])
+    @limiter.limit("200 per hour, 30 per minute")  # Time sync can be frequent
     def get_server_time() -> Response:
         """
         Get current server time for client clock skew detection and compensation.
@@ -856,6 +864,7 @@ def create_app() -> Flask:
 
     # --- Settings Routes ---
     @app.route("/settings")
+    @limiter.limit("120 per hour, 20 per minute")  # Prevent brute-force refreshes
     @check_token
     def settings_page(user_id: UserId) -> Response:
         """Settings page for authenticated users."""
@@ -863,6 +872,9 @@ def create_app() -> Flask:
         return render_template("settings.html")
 
     @app.route("/api/settings", methods=["GET", "POST"])
+    @limiter.limit(
+        "50 per hour, 10 per minute"
+    )  # Settings access is moderate frequency
     @check_token
     @async_route
     async def api_settings(user_id: UserId) -> Response | tuple[Response, int]:
@@ -941,6 +953,7 @@ def create_app() -> Flask:
     # --- Frontend Serving ---
     @app.route("/", defaults={"path": ""})
     @app.route("/<path:path>")
+    @limiter.exempt  # Exempt frontend routes from rate limiting
     def serve_frontend(path: str) -> Response:
         """Serve the frontend files. This is the fallback for any non-API routes."""
         frontend_folder = os.path.join(os.path.dirname(__file__), "frontend_v1")
@@ -950,6 +963,7 @@ def create_app() -> Flask:
 
     # Fallback route for old cached frontend code calling /handle_interaction
     @app.route("/handle_interaction", methods=["POST"])
+    @limiter.limit("60 per hour, 10 per minute")  # Legacy endpoint should remain rate limited
     def handle_interaction_fallback():
         """Fallback for cached frontend code calling old endpoint"""
         return jsonify(
