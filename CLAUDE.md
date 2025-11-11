@@ -344,7 +344,23 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 - ALL changes require PR (including docs)
 - Never switch branches without request
 
-⚠️ **GITHUB TOKEN SCOPES**: For gh CLI scope errors, use `GITHUB_TOKEN=$(cat ~/.token) gh command` - admin scopes (admin:org) encompass read scopes (read:org)
+🚨 **GITHUB TOKEN AVAILABILITY:** ⚠️ MANDATORY - GitHub token access for agents and operations
+
+**⚠️ Security Note**: This documents the current token storage approach. For production use, consider more secure alternatives like `gh auth login` (uses OS credential manager) or environment-only token management.
+
+- ✅ **ALWAYS AVAILABLE**: User's GitHub token is currently accessible at `~/.token`
+  - **Security**: Plain text storage - ensure proper file permissions (`chmod 600 ~/.token`)
+  - **Alternative**: Use `gh auth login` for secure OS keychain/credential manager storage
+- ✅ **GITHUB CLI (local)**: Use `GITHUB_TOKEN=$(cat ~/.token)` for gh CLI authentication
+  - **Recommended**: After `gh auth login`, use `gh` commands directly without manual token management
+- ✅ **GITHUB ACTIONS**: Use `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` environment variable (automatically provided by GitHub Actions)
+- ✅ **AGENT ACCESS**: All agents can read from `~/.token` and set `GITHUB_TOKEN` environment variable
+- ✅ **SCOPE COVERAGE**: Current token has admin scopes (admin:org) which encompass read scopes (read:org)
+  - **Best Practice**: Use minimum required scopes (e.g., `repo`, `read:org`) for production tokens
+  - **Note**: Admin scopes should only be used when necessary for specific operations
+- ✅ **USAGE PATTERNS**:
+  - Local/agents: `export GITHUB_TOKEN=$(cat ~/.token)` or `GITHUB_TOKEN=$(cat ~/.token) gh command`
+  - GitHub Actions: `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` as environment variable in workflow steps
 
 ## GitHub Actions Security
 

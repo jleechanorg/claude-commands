@@ -80,6 +80,27 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Firebase `serviceAccountKey.json` and `GEMINI_API_KEY` must be set as documented in `README.md`.
 - Prefer local mocks for tests; guard credentials with environment variables.
 
+### GitHub Token Access
+**Available for all agents and automation:**
+
+**⚠️ Security Note**: This documents the current token storage approach. For production use, consider more secure alternatives like `gh auth login` (uses OS credential manager) or environment-only token management.
+
+- **Token Location**: User's GitHub token is currently accessible at `~/.token`
+  - **Security**: Plain text storage - ensure proper file permissions (`chmod 600 ~/.token`)
+  - **Alternative**: Use `gh auth login` for secure OS keychain/credential manager storage
+- **GitHub CLI (local)**: Use `GITHUB_TOKEN=$(cat ~/.token)` for gh CLI authentication
+  - **Recommended**: After `gh auth login`, use `gh` commands directly without manual token management
+- **GitHub Actions**: Use `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` environment variable (automatically provided by GitHub Actions)
+- **Agent Usage**: All agents can read from `~/.token` and set `GITHUB_TOKEN` environment variable for local operations
+- **Scope Coverage**: Current token has admin scopes (admin:org) which encompass read scopes (read:org)
+  - **Best Practice**: Use minimum required scopes (e.g., `repo`, `read:org`) for production tokens
+  - **Note**: Admin scopes should only be used when necessary for specific operations
+- **Usage Examples**:
+  - Local session: `export GITHUB_TOKEN=$(cat ~/.token)`
+  - Inline command: `GITHUB_TOKEN=$(cat ~/.token) gh pr list`
+  - Agent scripts: Read from `~/.token` and set as environment variable
+  - GitHub Actions workflow: `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` as environment variable in workflow steps
+
 ## Git Workflow & Rebase Best Practices
 
 ### Rebase Hook Awareness
