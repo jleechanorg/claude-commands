@@ -10,101 +10,158 @@ execution_mode: immediate
 
 ## 🚨 EXECUTION WORKFLOW
 
-### 🔴 Phase 1: RED – Test-First Error Reproduction
+### 🔴 Phase 1: RED - Test-First Error Reproduction
 
-**MANDATORY**: Use a test-first approach to catch and reproduce the error before proceeding.
+**Action Steps:**
+**MANDATORY**: Must use test-first approach to catch and reproduce the error before proceeding
 
-#### Step 1: Error Analysis
-1. Parse the exact error message from user input.
-2. Identify the file, line number, and error type.
-3. Understand the context and conditions that trigger the error.
+### Phase 2: Step 1: Error Analysis
 
-#### Step 2: Find Existing Tests
-1. Search for existing tests that should catch this error.
-2. Look for integration (real services), functional (fixtures), and unit tests.
-3. Use judgment to determine the most appropriate test type.
-4. Document which existing tests are relevant.
+**Action Steps:**
+1. Parse the exact error message from user input
+2. Identify the file, line number, and error type
+3. Understand the context and conditions that trigger the error
 
-#### Step 3: Confirm Tests Reproduce Error
-1. Run existing tests to check if they catch the error.
-2. Verify the tests fail with the expected error message.
-3. Document whether existing tests successfully reproduce the issue.
+### Phase 3: Step 2: Find Existing Tests
 
-#### Step 4: Update or Create Tests (If Needed)
-1. **ONLY IF** existing tests do not catch the error: update or create new tests.
-2. Choose the right level (integration, functional, unit) for the regression test.
-3. Create the minimal test case that reproduces the exact error.
-4. Use normalized error signatures: `ErrorType | ["key", "tokens"] | file:function`.
-5. Document why new or updated tests were needed.
+**Action Steps:**
+1. Search for existing tests that should catch this error
+2. Look for integration tests (with real services), functional tests (with fixtures), and unit tests
+3. Use judgment to determine which test type is most appropriate
+4. Document which existing tests are relevant
 
-#### Step 5: Confirm Tests Fail
-1. Run the tests to confirm they fail with the expected error message.
-2. Verify the failure occurs with a deterministic error signature (avoid brittle stack traces).
-3. Ensure the test accurately reproduces the issue.
-4. Document reproduction steps and environment.
+### Phase 4: Step 3: Confirm Tests Reproduce Error
 
-### 🔧 Phase 2: CODE – Fix Implementation
+**Action Steps:**
+1. Run existing tests to check if they catch the error
+2. Verify if tests fail with the expected error message
+3. Document whether existing tests successfully reproduce the issue
 
-Write the minimal code change required to fix the reproduced error.
+### Phase 5: Step 4: Update or Create Tests (If Needed)
 
-#### Step 1: Root Cause Analysis
-1. Identify why the error occurs (scope issues, import problems, etc.).
-2. Determine the minimal fix approach.
-3. Consider side effects and compatibility.
+**Action Steps:**
+1. **ONLY IF existing tests don't catch the error**: Update or create new tests
+2. Consider test types: integration tests (real services), functional tests (fixtures), unit tests
+3. Create minimal test case that reproduces the exact error
+4. Use normalized error signatures: `ErrorType | ["key", "tokens"] | file:function`
+5. Document why new/updated tests were needed
 
-#### Step 2: Code Changes
-1. Make the targeted fix that resolves the specific error.
-2. Avoid unnecessary changes or refactoring.
-3. Maintain existing functionality.
+### Phase 6: Step 5: Confirm Tests Fail
 
-#### Step 3: Implementation Verification
-1. Ensure the fix addresses the root cause.
-2. Verify no new errors were introduced.
-3. Test the fix in isolation when possible.
+**Action Steps:**
+1. Run the tests to confirm they fail with expected error message
+2. Verify the error occurs with deterministic error signature (not byte-for-byte stack traces)
+3. Ensure test accurately reproduces the issue
+4. Document reproduction steps and environment
 
-### 🟢 Phase 3: GREEN – Test-Driven Verification
+### 🔧 Phase 2: CODE - Fix Implementation
 
-Confirm the tests pass and the error is completely resolved.
+**Action Steps:**
+**Implementation**: Write minimal code change to fix the reproduced error
 
-#### Step 1: Confirm Tests Pass
-1. **PRIMARY VALIDATION**: Run the tests that were failing in Phase 1.
-2. Verify all tests now pass after the fix.
-3. Confirm the specific error is no longer occurring.
-4. Control randomness/time (fixed seed, frozen time) to ensure determinism.
+### Phase 6: Step 1: Root Cause Analysis
 
-#### Step 2: Direct Fix Test
-1. Run the same scenario that caused the original error.
-2. Verify the error no longer occurs.
-3. Confirm the expected behavior works.
+**Action Steps:**
+1. Identify why the error occurs (scope issues, import problems, etc.)
+2. Determine minimal fix approach
+3. Consider side effects and compatibility
 
-#### Step 3: Regression Testing
-1. Run existing tests to ensure nothing else broke.
-2. Test related functionality that could have been affected.
-3. Verify broader system stability.
-4. Re-run the focused test multiple times to detect flakiness.
+### Phase 7: Step 2: Code Changes
 
-#### Step 4: Green Confirmation
-1. **CONFIRM ALL TESTS PASS**: primary validation that the fix is complete.
-2. Verify the fix resolves the original issue.
-3. Document test results and success evidence.
+**Action Steps:**
+1. Make targeted fix to resolve the specific error
+2. Avoid unnecessary changes or refactoring
+3. Maintain existing functionality
 
-### 🔍 Phase 4: CONSENSUS – Flow Validation
+### Phase 8: Step 3: Implementation Verification
 
-Verify the entire red-green debug flow was legitimate and properly executed.
+**Action Steps:**
+1. Ensure fix addresses root cause
+2. Verify no new errors introduced
+3. Test fix in isolation
 
-#### Step 1: Consensus Check
-1. Run `/consensus` to validate the debugging approach was sound.
-2. Ensure all phases were properly executed with evidence.
-3. Confirm the fix addresses the root issue comprehensively.
+### 🟢 Phase 3: GREEN - Test-Driven Verification
 
-#### Step 2: Flow Legitimacy
-1. Verify the RED → CODE → GREEN flow was followed without shortcuts.
-2. Confirm all phases completed with evidence.
+**Action Steps:**
+**Validation**: Confirm tests pass and error is completely resolved
 
-### ✅ Phase Completion Checklist
-- RED phase: Actual error reproduced with evidence.
-- CODE phase: Minimal, targeted fix implemented.
-- GREEN phase: Complete resolution verified.
+### Phase 10: Step 1: Confirm Tests Pass
+
+**Action Steps:**
+1. **PRIMARY VALIDATION**: Run the tests that were failing in Phase 1
+2. Verify all tests now pass after the fix
+3. Confirm the specific error is no longer occurring
+4. Control randomness/time (fixed seed, frozen time) to ensure determinism
+
+### Phase 11: Step 2: Direct Fix Test
+
+**Action Steps:**
+1. Run the exact same scenario that caused the original error
+2. Verify error no longer occurs
+3. Confirm expected behavior works
+
+### Phase 12: Step 3: Regression Testing
+
+**Action Steps:**
+1. Run existing tests to ensure no breaks
+2. Test related functionality
+3. Verify broader system stability
+4. Re-run the focused test N times to detect flakiness
+
+### Phase 13: Step 4: Green Confirmation
+
+**Action Steps:**
+1. **CONFIRM ALL TESTS PASS**: Primary validation that fix is complete
+2. Verify fix resolves the original issue
+3. Document test results and success evidence
+
+### Phase 1 (RED):
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 2 (CODE):
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### Phase 3 (GREEN):
+
+**Action Steps:**
+python3 $PROJECT_ROOT/main.py
+
+### 🔍 Phase 4: CONSENSUS - Flow Validation
+
+**Action Steps:**
+**Validation**: Verify the entire red-green debug flow was legitimate and properly executed
+
+### Phase 17: Step 1: Consensus Check
+
+**Action Steps:**
+1. Run `/consensus` to validate the debugging approach was sound
+2. Ensure all phases were properly executed with evidence
+3. Confirm the fix addresses the root issue comprehensively
+
+### Phase 18: Step 3: Flow Legitimacy
+
+**Action Steps:**
+1. Verify proper RED-GREEN-REFACTOR flow was followed
+2. Confirm all phases completed with evidence
+
+### ✅ RED phase: Actual error reproduced with evidence
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### ✅ CODE phase: Minimal, targeted fix implemented
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
+
+### ✅ GREEN phase: Complete resolution verified
+
+**Action Steps:**
+1. Review the reference documentation below and execute the detailed steps.
 
 ## 📋 REFERENCE DOCUMENTATION
 
@@ -161,7 +218,7 @@ Use the comprehensive matrix testing approach from `/tdd`:
 **RULE 1**: Must search for existing tests BEFORE attempting to reproduce error manually
 **RULE 2**: Cannot proceed to CODE phase without failing tests that reproduce the error
 **RULE 3**: Cannot proceed to GREEN phase without implementing a fix in CODE
-**RULE 4**: Must verify the same error is resolved via passing tests
+**RULE 4**: Must verify exact same error is resolved via passing tests
 **RULE 5**: Fix must be minimal and targeted to the specific error
 **RULE 6**: Green phase must demonstrate all tests pass, not just absence of error
 **RULE 7**: Consider test types: integration tests (real services), functional tests (fixtures), unit tests - use judgment

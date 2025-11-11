@@ -902,7 +902,37 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
+- Enhanced documentation for script adaptability across projects
+
+**Documentation**:
+- Updated scripts export description
+- Clear separation between project-specific and generally useful scripts
+- Improved adaptation guidance for cross-project usage
+
+### v1.1.0 (2025-11-07)
+
+**Export Statistics**:
+- **185 Commands**: Complete workflow orchestration system
+- **41 Hooks**: Claude Code automation and workflow hooks
+- **21 Scripts**: Development and automation tools (scripts/ directory)
+- **9 Skills**: Shared knowledge references (.claude/skills/)
+
+**Major Changes**:
+- **Script Allowlist Expansion**: Added 12 generally useful development scripts to the scripts export
+- **Development Workflow Tools**: Now includes git workflow, code analysis, testing, and CI/CD scripts
+- **Enhanced Export Utility**: Broader coverage of reusable development infrastructure
+
+**New Scripts Included**:
+- **Git Workflow**: create_worktree.sh, push.sh for branch management
+- **Code Analysis**: codebase_loc.sh, loc.sh, loc_simple.sh for metrics
+- **Testing Utilities**: run_tests_with_coverage.sh, run_lint.sh
+- **CI/CD Tools**: setup-github-runner.sh, setup_email.sh
+- **Development Environment**: create_snapshot.sh, schedule_branch_work.sh
+
+**Technical Improvements**:
+- Expanded script_patterns list from 5 to 15 generally useful scripts
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -932,7 +962,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -961,7 +991,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -990,7 +1020,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1019,7 +1049,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1048,7 +1078,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1077,7 +1107,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1106,7 +1136,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1135,7 +1165,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1164,7 +1194,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1193,7 +1223,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1222,7 +1252,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1251,7 +1281,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
@@ -1280,7 +1310,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 **Technical Improvements**:
 - Expanded script_patterns list from 5 to 15 generally useful scripts
-- Better categorization of Claude-Code-specific vs universally useful tools
+- Better categorization of Claude Code specific vs universally useful tools
 - Enhanced documentation for script adaptability across projects
 
 **Documentation**:
