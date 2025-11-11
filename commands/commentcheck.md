@@ -313,12 +313,12 @@ else
 
     echo ""
     echo "🚨 CRITICAL: COPILOT EXECUTION HALTED"
-    echo "🚨 REASON: $FINAL_UNRESPONDED_COUNT unresponded comments detected"
+    echo "🚨 REASON: $NEEDS_RESPONSE_COUNT unresponded comments detected"
     echo "🚨 REQUIRED ACTION: Address ALL unresponded comments before copilot can continue"
     echo ""
     echo "🔧 **REQUIRED ACTION**: Run /commentreply to address unresponded comments"
     echo "⚠️ **WORKFLOW HALT**: Cannot proceed until all comments addressed"
-    echo "📊 **COMMENTFETCH DATA**: $FINAL_TOTAL_COUNT total, $FINAL_UNRESPONDED_COUNT unresponded"
+    echo "📊 **COMMENTFETCH DATA**: $TOTAL_COMMENTS total, $NEEDS_RESPONSE_COUNT unresponded"
     echo ""
     echo "EXIT CODE: 1 (FAILURE - Copilot execution must halt)"
     exit 1
