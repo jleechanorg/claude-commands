@@ -28,11 +28,11 @@ This system implements the **core design philosophy**: **one general agent per t
 ✅ Agent completes task in isolated workspace
 ✅ Agent commits, pushes, and creates PR
 ✅ Monitor tracks progress every 2 minutes
-```
+```text
 
 ## 🏗️ Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
 │         File-Based A2A Protocol + Simple Safety Boundaries     │
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐             │
@@ -52,6 +52,223 @@ This system implements the **core design philosophy**: **one general agent per t
                                 │
                                 ▼
                         File System: /tmp/orchestration/a2a/
+```text
+
+## 🖥️ Why tmux? The Terminal Multiplexer Architecture
+
+The orchestration system uses **tmux (terminal multiplexer)** as the core process isolation and monitoring mechanism. This design choice provides several critical benefits:
+
+### Key Benefits of tmux
+
+1. **Visual Monitoring**: Developers can attach to any agent session and watch it work in real-time
+2. **Process Isolation**: Each agent runs in its own independent terminal session
+3. **Session Persistence**: Agents survive terminal disconnects and continue working
+4. **Clean Separation**: Each task gets its own environment without interference
+5. **Easy Debugging**: Inspect agent output, logs, and errors interactively
+6. **Resource Management**: Simple to kill, restart, or monitor individual agents
+7. **Production Ready**: tmux is a mature, battle-tested tool available on all Unix systems
+
+### tmux Session Lifecycle
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Complete tmux Lifecycle                         │
+└─────────────────────────────────────────────────────────────────────┘
+
+1. USER COMMAND
+   └─> /orch "Fix all failing tests"
+       └─> .claude/commands/orchestrate.md
+           └─> python3 orchestration/orchestrate_unified.py
+
+2. TASK ANALYSIS (orchestrate_unified.py)
+   └─> TaskDispatcher.analyze_task_and_create_agents()
+       ├─> Detect CLI (claude or codex)
+       ├─> Detect PR context (new vs update)
+       └─> Generate agent specifications
+
+3. WORKSPACE CREATION (task_dispatcher.py)
+   └─> Create git worktree from main branch
+       ├─> Location: ~/projects/orch_{repo_name}/{agent_name}/
+       ├─> Branch: {agent_name}-work
+       └─> Fresh checkout from main
+
+4. PROMPT GENERATION
+   └─> Write comprehensive prompt to /tmp/agent_prompt_{agent}.txt
+       ├─> Task description
+       ├─> Completion instructions
+       ├─> PR creation requirements
+       └─> Exit criteria
+
+5. BASH SCRIPT CREATION
+   └─> Generate /tmp/{agent}_run.sh
+       ├─> Signal handlers (SIGINT, SIGTERM)
+       ├─> CLI execution command
+       ├─> Logging and error handling
+       ├─> Result file creation
+       └─> 1-hour keep-alive
+
+6. TMUX SESSION START
+   └─> tmux new-session -d -s {agent_name} -c {agent_dir} bash {script}
+       ├─> Detached session (-d)
+       ├─> Named session (-s {agent_name})
+       ├─> Working directory (-c {agent_dir})
+       └─> Executes bash script
+
+7. CLI EXECUTION (Inside tmux)
+   └─> Claude CLI:
+       ├─> claude --model sonnet -p @{prompt_file}
+       ├─> --output-format stream-json
+       ├─> --verbose
+       └─> --dangerously-skip-permissions
+   └─> Codex CLI:
+       ├─> codex exec --yolo
+       └─> < {prompt_file}
+
+8. AGENT WORK (Inside tmux session)
+   └─> Agent reads prompt
+   └─> Executes task
+   └─> Commits changes
+   └─> Creates PR (mandatory)
+   └─> Writes result file
+
+9. MONITORING (agent_monitor.py)
+   └─> Pings every 2 minutes
+   ├─> Check tmux session exists
+   ├─> Capture recent output
+   ├─> Check workspace modifications
+   ├─> Detect stuck agents
+   └─> Auto-restart if needed
+
+10. COMPLETION
+    └─> Agent writes result to /tmp/orchestration_results/{agent}_results.json
+    └─> Session stays alive for 1 hour for debugging
+    └─> Auto-cleanup after timeout
+```
+
+### How tmux Calls Claude or Codex
+
+The system supports multiple LLM CLIs through a profile-based architecture:
+
+**Claude CLI Profile:**
+```python
+{
+    "binary": "claude",
+    "command_template": (
+        "{binary} --model sonnet -p @{prompt_file} "
+        "--output-format stream-json --verbose{continue_flag} "
+        "--dangerously-skip-permissions"
+    ),
+    "stdin_template": "/dev/null",
+    "quote_prompt": False
+}
+```
+
+**Codex CLI Profile:**
+```python
+{
+    "binary": "codex",
+    "command_template": "{binary} exec --yolo",
+    "stdin_template": "{prompt_file}",
+    "quote_prompt": True
+}
+```
+
+**tmux Command Construction:**
+```bash
+# 1. Create bash script with CLI execution
+bash_cmd = '''
+#!/bin/bash
+# Signal handlers for interruption
+trap 'echo "Agent interrupted" | tee -a {log_file}; exit 130' SIGINT
+trap 'echo "Agent terminated" | tee -a {log_file}; exit 143' SIGTERM
+
+# Log startup
+echo "[$(date)] Starting agent {agent_name}" | tee -a {log_file}
+
+# Execute CLI (Claude example)
+claude --model sonnet -p @{prompt_file} \
+    --output-format stream-json \
+    --verbose \
+    --dangerously-skip-permissions \
+    2>&1 | tee -a {log_file}
+
+# Capture exit code
+CLI_EXIT=$?
+
+# Log completion
+if [ $CLI_EXIT -eq 0 ]; then
+    echo "Agent completed successfully" | tee -a {log_file}
+else
+    echo "Agent failed with exit code $CLI_EXIT" | tee -a {log_file}
+fi
+
+# Keep session alive for 1 hour
+sleep 3600
+'''
+
+# 2. Write script to /tmp/{agent}_run.sh
+# 3. Make executable: chmod 700
+# 4. Create tmux session
+tmux new-session -d -s {agent_name} -c {agent_dir} bash {script_path}
+```
+
+### Monitoring tmux Sessions
+
+**Interactive Monitoring:**
+```bash
+# List all agent sessions
+tmux list-sessions | grep task-agent
+
+# Attach to agent (watch it work)
+tmux attach -t task-agent-12345
+
+# Detach without killing (Ctrl-b, then d)
+
+# View agent output (last 50 lines)
+tmux capture-pane -t task-agent-12345 -p | tail -50
+
+# Check if agent is still working
+tmux has-session -t task-agent-12345 && echo "Active" || echo "Completed"
+```
+
+**Automated Monitoring (agent_monitor.py):**
+```python
+def ping_agent(agent_name: str) -> dict:
+    """Ping agent and collect status"""
+    # 1. Check if tmux session exists
+    subprocess.run(["tmux", "has-session", "-t", agent_name])
+
+    # 2. Capture recent output
+    subprocess.run(["tmux", "capture-pane", "-t", agent_name, "-p"])
+
+    # 3. Check workspace modifications
+    os.stat(workspace_path).st_mtime
+
+    # 4. Check result files
+    result_file = f"/tmp/orchestration_results/{agent_name}_results.json"
+
+    # 5. Detect stuck agents (no activity for 10 minutes)
+    if time_since_activity > 10 minutes:
+        restart_agent(agent_name)
+```
+
+### Session Management
+
+**Automatic Cleanup:**
+- Sessions auto-close after 1 hour of inactivity
+- Completed agents detected by monitoring system
+- Stale sessions cleaned up on orchestration restart
+
+**Manual Management:**
+```bash
+# Kill specific agent
+tmux kill-session -t task-agent-12345
+
+# Kill all agent sessions
+tmux list-sessions | grep task-agent | cut -d: -f1 | xargs -I {} tmux kill-session -t {}
+
+# Stop entire system
+./orchestration/start_system.sh stop
 ```
 
 ## 🖥️ Why tmux? The Terminal Multiplexer Architecture
