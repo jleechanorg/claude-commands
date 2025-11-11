@@ -706,7 +706,7 @@ def main():
     print(f"   ❌ Missing responses: {missing_responses}")
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
-    if successful_replies < len(processed_comments):
+    if missing_responses > 0 or not coverage_valid:
         print(f"\n⚠️ WARNING: Some replies failed - manual review recommended")
         sys.exit(1)
 
