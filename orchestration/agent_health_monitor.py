@@ -4,8 +4,14 @@ Agent Health Monitor for Multi-Agent Orchestration System
 Monitors agent health, handles failures, and provides auto-recovery
 """
 
-import json
+# Allow direct script execution - add parent directory to sys.path
 import os
+import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+import json
 import shutil
 import subprocess
 import time
@@ -13,8 +19,8 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-# Import shared utilities from task_dispatcher
-from task_dispatcher import get_tmux_config_path
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.task_dispatcher import get_tmux_config_path
 
 
 @dataclass

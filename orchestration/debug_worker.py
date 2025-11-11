@@ -1,14 +1,21 @@
 #!/usr/bin/env python3
 """Debug worker to test message flow"""
 
-import json
+# Allow direct script execution - add parent directory to sys.path
+import os
 import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
+import json
 import time
 import traceback
 from dataclasses import asdict
 from datetime import datetime
 
-from message_broker import MessageBroker, MessageType, TaskMessage
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.message_broker import MessageBroker, MessageType, TaskMessage
 
 try:
     print("✅ Imports successful")
