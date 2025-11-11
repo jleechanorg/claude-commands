@@ -6,15 +6,22 @@ This script identifies and cleans up completed tmux agents that are sitting idle
 Agents are considered completed if they have completion markers in their logs.
 """
 
+# Allow direct script execution - add parent directory to sys.path
+import os
+import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import argparse
 import json
-import os
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any, Dict, List, Set
-from constants import IDLE_MINUTES_THRESHOLD
+
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.constants import IDLE_MINUTES_THRESHOLD
 
 
 def get_tmux_sessions() -> List[str]:

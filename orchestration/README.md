@@ -306,6 +306,133 @@ python3 orchestration/orchestrate_unified.py "Update the UI styling"
 /orch "fix tests --max-changes 3 --no-servers"
 ```
 
+## 🎮 tmux Live Mode - Interactive AI CLI
+
+Beyond slash commands, you can now use the orchestration system as a CLI tool to start interactive AI sessions wrapped in tmux.
+
+### Installation as PyPI Package
+
+```bash
+# Install from source (in orchestration directory)
+cd orchestration
+pip install -e .
+
+# Or install from PyPI (when published)
+pip install ai_orch
+```
+
+### Using Live Mode
+
+```bash
+# Start interactive Claude session
+ai_orch live
+
+# Start interactive Codex session
+ai_orch live --cli codex
+
+# Start with custom session name
+ai_orch live --name my-coding-session
+
+# Start in specific directory
+ai_orch live --dir ~/my-project
+
+# Start with specific model
+ai_orch live --model opus
+
+# Start in detached mode (don't attach immediately)
+ai_orch live --detached
+
+# List all active AI sessions
+ai_orch list
+
+# Attach to existing session
+ai_orch attach my-coding-session
+
+# Kill a session
+ai_orch kill my-coding-session
+```
+
+### Live Mode Features
+
+**Interactive Terminal Access:**
+- Direct interaction with Claude or Codex CLI
+- Full tmux session management
+- Persistent sessions that survive disconnects
+- Multiple concurrent sessions supported
+
+**Session Management:**
+- Auto-generated unique session names
+- Custom session naming
+- List all active sessions
+- Attach/detach from sessions
+- Clean session termination
+
+**tmux Integration:**
+- Detach: `Ctrl+b`, then `d`
+- Reattach: `ai_orch attach <session-name>`
+- View all sessions: `ai_orch list`
+- Kill session: `ai_orch kill <session-name>` or `tmux kill-session -t <session-name>`
+
+### Use Cases
+
+**Development Workflow:**
+```bash
+# Start a coding session
+ai_orch live --name feature-auth --dir ~/projects/myapp
+
+# Work interactively with Claude...
+# Detach when needed (Ctrl+b, d)
+
+# Reattach later
+ai_orch attach feature-auth
+```
+
+**Multiple Parallel Sessions:**
+```bash
+# Frontend work
+ai_orch live --name frontend --dir ~/app/ui
+
+# Backend work in different session
+ai_orch live --name backend --dir ~/app/api
+
+# List all sessions
+ai_orch list
+# Output:
+#   - ai-live-claude-frontend
+#   - ai-live-claude-backend
+```
+
+**Quick Tasks:**
+```bash
+# Start quick session for current directory
+ai_orch live
+
+# Or use the shorter alias
+orch live
+```
+
+### Architecture
+
+Live mode uses the same CLI profiles as the orchestration system:
+
+- **Claude Profile**: Interactive `claude` CLI with model selection
+- **Codex Profile**: Interactive `codex exec` mode
+- **tmux Wrapper**: Each session runs in isolated tmux session
+- **Working Directory**: Sessions start in specified directory
+- **Persistence**: Sessions survive terminal disconnects
+
+### Comparison: Live Mode vs Orchestration Mode
+
+| Feature | Live Mode (`ai_orch live`) | Orchestration Mode (`/orch`) |
+|---------|---------------------------|------------------------------|
+| **Interaction** | Interactive, user-driven | Autonomous agent execution |
+| **Sessions** | Single persistent session | One session per task |
+| **Workspace** | Current/specified directory | Git worktree per agent |
+| **Output** | Real-time terminal output | Logged to files |
+| **Use Case** | Direct development work | Automated task completion |
+| **PR Creation** | Manual (user decision) | Mandatory (agent task) |
+| **Control** | Full user control | Agent-driven with constraints |
+
 ## 🛡️ Simple Safety Boundary System
 
 ### Clear, Reliable Boundaries

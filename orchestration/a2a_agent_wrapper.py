@@ -6,13 +6,21 @@ Enhances existing agents with A2A capabilities while preserving
 all existing tmux-based orchestration functionality.
 """
 
+# Allow direct script execution - add parent directory to sys.path
+import os
+import sys
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if parent_dir not in sys.path:
+    sys.path.insert(0, parent_dir)
+
 import logging
 import threading
 import time
 from collections.abc import Callable
 from typing import Any
 
-from a2a_integration import A2AClient, A2AMessage, get_a2a_status
+# Use absolute imports with package name for __main__ compatibility
+from orchestration.a2a_integration import A2AClient, A2AMessage, get_a2a_status
 
 logger = logging.getLogger(__name__)
 
