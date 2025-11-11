@@ -8,11 +8,12 @@ This wrapper enforces safety limits before running PR automation:
 - Email notifications when limits are reached
 """
 
-import sys
+import logging
 import os
 import subprocess
-import logging
+import sys
 from pathlib import Path
+
 from .automation_safety_manager import AutomationSafetyManager
 
 
@@ -23,7 +24,7 @@ def setup_logging() -> logging.Logger:
 
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
+        format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.FileHandler(log_dir / "automation_safety.log"),
             logging.StreamHandler()
@@ -66,8 +67,8 @@ def main() -> int:
 
         # Execute with environment variables for safety integration
         env = os.environ.copy()
-        env['AUTOMATION_SAFETY_DATA_DIR'] = str(data_dir)
-        env['AUTOMATION_SAFETY_WRAPPER'] = '1'
+        env["AUTOMATION_SAFETY_DATA_DIR"] = str(data_dir)
+        env["AUTOMATION_SAFETY_WRAPPER"] = "1"
 
         # Record the global run *before* launching the monitor so the attempt
         # is counted even if the subprocess fails to start or exits early.
@@ -78,8 +79,8 @@ def main() -> int:
         )
 
         result = subprocess.run(
-            [sys.executable, '-m', 'jleechanorg_pr_automation.jleechanorg_pr_monitor'],
-            env=env,
+            [sys.executable, "-m", "jleechanorg_pr_automation.jleechanorg_pr_monitor"],
+            check=False, env=env,
             capture_output=True,
             text=True,
             timeout=3600,
@@ -112,5 +113,5 @@ def main() -> int:
         manager.check_and_notify_limits()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

@@ -17,6 +17,7 @@ from prototype.tests.milestone_0_4.test_structured_generation import (
     TestApproach,
     TestHarness,
 )
+
 from scripts.test_scenarios import get_all_scenarios
 
 

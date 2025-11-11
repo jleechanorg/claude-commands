@@ -6,6 +6,7 @@ This checks the code changes rather than running the full system.
 
 import os
 
+
 def verify_fix_implementation():
     """Verify that the key changes for the AI personalization fix are in place"""
 
@@ -17,7 +18,7 @@ def verify_fix_implementation():
 
     gemini_request_file = "mvp_site/gemini_request.py"
     if os.path.exists(gemini_request_file):
-        with open(gemini_request_file, 'r') as f:
+        with open(gemini_request_file) as f:
             content = f.read()
 
         # Check if campaign_data parameter was added
@@ -41,7 +42,7 @@ def verify_fix_implementation():
 
     gemini_service_file = "mvp_site/gemini_service.py"
     if os.path.exists(gemini_service_file):
-        with open(gemini_service_file, 'r') as f:
+        with open(gemini_service_file) as f:
             content = f.read()
 
         # Check if campaign_data parameter was added to function signature
@@ -65,7 +66,7 @@ def verify_fix_implementation():
 
     world_logic_file = "mvp_site/world_logic.py"
     if os.path.exists(world_logic_file):
-        with open(world_logic_file, 'r') as f:
+        with open(world_logic_file) as f:
             content = f.read()
 
         # Check if campaign_data dict is built

@@ -11,11 +11,10 @@ All tests are designed to FAIL initially (RED phase) and pass after implementati
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 import unittest
-from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
+
 from orchestration.task_dispatcher import TaskDispatcher
 
 
@@ -488,9 +487,7 @@ class TestWorktreeLocationMatrix(unittest.TestCase):
                 if isinstance(cmd, list):
                     if cmd[0] == "which" and cmd[1] == "claude":
                         return MagicMock(returncode=0, stdout="/usr/local/bin/claude", stderr="")
-                    elif cmd[0] == "git" and "worktree" in cmd:
-                        return MagicMock(returncode=0, stdout="", stderr="")
-                    elif cmd[0] == "tmux":
+                    if (cmd[0] == "git" and "worktree" in cmd) or cmd[0] == "tmux":
                         return MagicMock(returncode=0, stdout="", stderr="")
                 # Default successful return
                 return MagicMock(returncode=0, stdout="", stderr="")

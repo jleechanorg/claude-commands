@@ -2,20 +2,23 @@
 Comprehensive FastAPI Test Suite for E-commerce Order Management API
 Tests all CRUD operations, validation, and error handling
 """
-import unittest
 import os
-from decimal import Decimal
+import unittest
 from uuid import uuid4
-from datetime import datetime
+
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
 
 # Import the FastAPI app and models
 from main import (
-    app, Customer, Product, Order, OrderItem, Base,
-    CustomerCreate, ProductCreate, OrderCreate, OrderItemCreate
+    Base,
+    Customer,
+    Order,
+    OrderItem,
+    Product,
+    app,
 )
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 # Setup test database
 TEST_DATABASE_URL = "sqlite:///./test_ecommerce.db"
@@ -34,6 +37,7 @@ def override_get_db():
 
 # Override the database dependency
 from main import get_db
+
 app.dependency_overrides[get_db] = override_get_db
 
 

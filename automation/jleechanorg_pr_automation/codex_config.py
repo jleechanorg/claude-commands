@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-
 DEFAULT_ASSISTANT_HANDLE = "coderabbitai"
 
 
@@ -25,7 +24,7 @@ CODEX_COMMENT_INTRO_BODY = (
 CODEX_COMMENT_TEMPLATE = (
     "{comment_intro}\n\n"
     "Use your judgment to fix comments from everyone or explain why it should not be fixed. "
-    "Follow binary response protocol - every comment needs \"DONE\" or \"NOT DONE\" classification "
+    'Follow binary response protocol - every comment needs "DONE" or "NOT DONE" classification '
     "explicitly with an explanation. Address all comments on this PR. Fix any failing tests and "
     "resolve merge conflicts. Push any commits needed to remote so the PR is updated."
 )
@@ -115,7 +114,7 @@ class CodexConfig:
     commit_marker_suffix: str = CODEX_COMMIT_MARKER_SUFFIX
 
     @classmethod
-    def from_env(cls, assistant_handle: str | None) -> "CodexConfig":
+    def from_env(cls, assistant_handle: str | None) -> CodexConfig:
         handle = normalise_handle(assistant_handle)
         return cls(
             assistant_handle=handle,

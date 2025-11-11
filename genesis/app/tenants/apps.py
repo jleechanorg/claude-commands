@@ -8,4 +8,3 @@ class TenantsConfig(AppConfig):
 
     def ready(self):
         """Initialize tenant-specific configurations when app starts."""
-        pass

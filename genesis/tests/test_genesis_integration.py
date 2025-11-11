@@ -8,10 +8,7 @@ import os
 import sys
 import tempfile
 import unittest
-import subprocess
-import json
-from unittest.mock import MagicMock, patch, mock_open
-from pathlib import Path
+from unittest.mock import mock_open, patch
 
 # Add genesis directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))

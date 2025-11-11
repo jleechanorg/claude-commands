@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import argparse
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import List, Optional, Sequence
 
 DEFAULT_MAX_ITERATIONS = 20
 DEFAULT_POOL_SIZE = 5
@@ -44,8 +44,8 @@ class GenesisArguments:
     """Normalized configuration for Genesis style scripts."""
 
     mode: str  # "goal" or "refine"
-    goal_directory: Optional[str]
-    refine_goal: Optional[str]
+    goal_directory: str | None
+    refine_goal: str | None
     max_iterations: int = DEFAULT_MAX_ITERATIONS
     skip_initial_generation: bool = False
     interactive: bool = False
@@ -66,13 +66,13 @@ def _build_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def extract_model_preference(argv: Optional[Sequence[str]]) -> Optional[bool]:
+def extract_model_preference(argv: Sequence[str] | None) -> bool | None:
     """Return model preference flag without validating positional arguments."""
 
     if argv is None:
         return None
 
-    use_codex: Optional[bool] = None
+    use_codex: bool | None = None
     for value in argv:
         if value == "--claude":
             use_codex = False
@@ -106,12 +106,12 @@ def parse_genesis_cli(argv: Sequence[str]) -> GenesisArguments:
     elif namespace.claude_flag:
         use_codex = False
 
-    positional: List[str] = list(namespace.positional)
+    positional: list[str] = list(namespace.positional)
 
     # Determine mode and positional requirements.
     mode: str
-    goal_directory: Optional[str] = None
-    refine_goal: Optional[str] = None
+    goal_directory: str | None = None
+    refine_goal: str | None = None
     max_iterations = DEFAULT_MAX_ITERATIONS
 
     if namespace.refine is not None:
@@ -168,7 +168,7 @@ def parse_genesis_cli(argv: Sequence[str]) -> GenesisArguments:
     )
 
 
-def print_usage(message: Optional[str] = None) -> None:
+def print_usage(message: str | None = None) -> None:
     """Print the shared usage message, optionally prefixed by an error."""
 
     if message:

@@ -17,7 +17,7 @@ import tempfile
 import threading
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
 
 
 class SafeJSONManager:
@@ -46,7 +46,7 @@ class SafeJSONManager:
         with lock:
             try:
                 if os.path.exists(file_path):
-                    with open(file_path, 'r') as f:
+                    with open(file_path) as f:
                         # Add file lock for cross-process safety
                         fcntl.flock(f.fileno(), fcntl.LOCK_SH)
                         try:
@@ -55,7 +55,7 @@ class SafeJSONManager:
                             fcntl.flock(f.fileno(), fcntl.LOCK_UN)
                 else:
                     return default if default is not None else {}
-            except (json.JSONDecodeError, IOError) as e:
+            except (OSError, json.JSONDecodeError) as e:
                 logging.warning(f"Failed to read JSON from {file_path}: {e}")
                 return default if default is not None else {}
 
@@ -78,7 +78,7 @@ class SafeJSONManager:
                 )
 
                 try:
-                    with os.fdopen(fd, 'w') as f:
+                    with os.fdopen(fd, "w") as f:
                         # Add exclusive file lock for cross-process safety
                         fcntl.flock(f.fileno(), fcntl.LOCK_EX)
                         try:
@@ -99,8 +99,8 @@ class SafeJSONManager:
                         except OSError:
                             pass
 
-            except (IOError, OSError) as e:
-                logging.error(f"Failed to write JSON to {file_path}: {e}")
+            except OSError as e:
+                logging.exception(f"Failed to write JSON to {file_path}: {e}")
                 return False
 
     def update_json(self, file_path: str, update_func, lock_timeout: int = 10) -> bool:
@@ -112,7 +112,7 @@ class SafeJSONManager:
                 updated_data = update_func(data)
                 return self.write_json(file_path, updated_data)
             except Exception as e:
-                logging.error(f"Failed to update JSON {file_path}: {e}")
+                logging.exception(f"Failed to update JSON {file_path}: {e}")
                 return False
 
 
@@ -133,7 +133,7 @@ def setup_logging(name: str, level: int = logging.INFO,
 
     # Create formatter
     formatter = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
 
     # Console handler
@@ -165,29 +165,29 @@ def get_env_config(prefix: str = "AUTOMATION_") -> Dict[str, str]:
 def get_email_config() -> Dict[str, str]:
     """Get email configuration from environment variables"""
     email_config = {
-        'smtp_server': os.getenv('SMTP_SERVER', 'localhost'),
-        'smtp_port': int(os.getenv('SMTP_PORT', '587')),
-        'email_user': os.getenv('EMAIL_USER', ''),
-        'email_pass': os.getenv('EMAIL_PASS', ''),
-        'email_to': os.getenv('EMAIL_TO', ''),
-        'email_from': os.getenv('EMAIL_FROM', os.getenv('EMAIL_USER', ''))
+        "smtp_server": os.getenv("SMTP_SERVER", "localhost"),
+        "smtp_port": int(os.getenv("SMTP_PORT", "587")),
+        "email_user": os.getenv("EMAIL_USER", ""),
+        "email_pass": os.getenv("EMAIL_PASS", ""),
+        "email_to": os.getenv("EMAIL_TO", ""),
+        "email_from": os.getenv("EMAIL_FROM", os.getenv("EMAIL_USER", ""))
     }
     return email_config
 
 
 def validate_email_config(config: Dict[str, str]) -> bool:
     """Validate that required email configuration is present"""
-    required_fields = ['smtp_server', 'email_user', 'email_pass', 'email_to']
+    required_fields = ["smtp_server", "email_user", "email_pass", "email_to"]
     return all(config.get(field) for field in required_fields)
 
 
 def get_automation_limits() -> Dict[str, int]:
     """Get automation safety limits from environment or defaults"""
     return {
-        'pr_limit': int(os.getenv('AUTOMATION_PR_LIMIT', '5')),
-        'global_limit': int(os.getenv('AUTOMATION_GLOBAL_LIMIT', '50')),
-        'approval_hours': int(os.getenv('AUTOMATION_APPROVAL_HOURS', '24')),
-        'subprocess_timeout': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '300'))
+        "pr_limit": int(os.getenv("AUTOMATION_PR_LIMIT", "5")),
+        "global_limit": int(os.getenv("AUTOMATION_GLOBAL_LIMIT", "50")),
+        "approval_hours": int(os.getenv("AUTOMATION_APPROVAL_HOURS", "24")),
+        "subprocess_timeout": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300"))
     }
 
 
@@ -224,9 +224,9 @@ def parse_timestamp(timestamp_str: str) -> datetime:
 def get_test_email_config() -> Dict[str, str]:
     """Get standardized test email configuration"""
     return {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'testpass',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "testpass",
+        "EMAIL_TO": "admin@example.com"
     }

@@ -4,16 +4,14 @@ Analyze git statistics excluding vendor/generated files.
 Provides real development metrics by filtering out noise.
 """
 
+import argparse
 import json
 import re
+import statistics
 import subprocess
 import sys
-import os
-import argparse
-import statistics
 from collections import defaultdict
 from datetime import datetime, timedelta
-from pathlib import Path
 
 # Patterns to exclude from statistics
 EXCLUDE_PATTERNS = [
@@ -573,21 +571,19 @@ def analyze_pr_for_bug_vs_improvement(pr_title, pr_body=""):
     # Decision logic
     if bug_score > improvement_score and bug_score > feature_score:
         return "bug"
-    elif improvement_score > bug_score and improvement_score >= feature_score:
+    if improvement_score > bug_score and improvement_score >= feature_score:
         return "improvement"
-    elif feature_score > bug_score and feature_score > improvement_score:
+    if feature_score > bug_score and feature_score > improvement_score:
         return "feature"
-    else:
-        # Check for "fix:" prefix patterns
-        if title_lower.startswith("fix:"):
-            # Context clues for fix: titles
-            if any(word in combined for word in ["broken", "error", "issue", "problem", "critical"]):
-                return "bug"
-            elif any(word in combined for word in ["improve", "enhance", "better", "optimize"]):
-                return "improvement"
-            else:
-                return "unclear"
+    # Check for "fix:" prefix patterns
+    if title_lower.startswith("fix:"):
+        # Context clues for fix: titles
+        if any(word in combined for word in ["broken", "error", "issue", "problem", "critical"]):
+            return "bug"
+        if any(word in combined for word in ["improve", "enhance", "better", "optimize"]):
+            return "improvement"
         return "unclear"
+    return "unclear"
 
 def get_week_number(date_str, start_date):
     """Calculate week number from start date"""
@@ -612,11 +608,11 @@ def analyze_git_diff_vs_main(main_branch="main"):
             try:
                 # Get diff stats - Security: Use shell=False
                 diff_stats_cmd = ["git", "diff", "--stat", f"{branch}...HEAD"]
-                diff_stats = subprocess.run(diff_stats_cmd, shell=False, capture_output=True, text=True, timeout=30)
+                diff_stats = subprocess.run(diff_stats_cmd, check=False, shell=False, capture_output=True, text=True, timeout=30)
 
                 # Get changed files - Security: Use shell=False
                 diff_files_cmd = ["git", "diff", "--name-only", f"{branch}...HEAD"]
-                diff_files = subprocess.run(diff_files_cmd, shell=False, capture_output=True, text=True, timeout=30)
+                diff_files = subprocess.run(diff_files_cmd, check=False, shell=False, capture_output=True, text=True, timeout=30)
 
                 if diff_stats.returncode == 0 and diff_files.returncode == 0:
                     break
@@ -761,7 +757,7 @@ def detect_outdated_pr_description(pr_number):
     try:
         # Get PR description via gh CLI - Security: Use shell=False
         pr_cmd = ["gh", "pr", "view", str(pr_number), "--json", "body,title"]
-        pr_result = subprocess.run(pr_cmd, shell=False, capture_output=True, text=True, timeout=30)
+        pr_result = subprocess.run(pr_cmd, check=False, shell=False, capture_output=True, text=True, timeout=30)
 
         if pr_result.returncode != 0:
             return {"error": f"Failed to fetch PR #{pr_number}"}
@@ -897,7 +893,7 @@ def analyze_prs_by_week(since_date):
 
 def print_weekly_bug_report(results, max_examples=10):
     """Print formatted weekly bug analysis report."""
-    print(f"\n## Weekly Bug Analysis Report")
+    print("\n## Weekly Bug Analysis Report")
     print(f"Analysis Period: {results['since_date']} to present ({results['total_weeks']} weeks)")
     print("=" * 80)
 
@@ -968,7 +964,7 @@ def fetch_repo_prs_with_fallback(repo_full_name, since_date):
             pass
 
     # Fallback: Try smaller batch for large/active repos
-    print(f"    ⚠️ Timeout detected, using smaller batch (200 most recent)...")
+    print("    ⚠️ Timeout detected, using smaller batch (200 most recent)...")
     cmd_small = f"gh pr list --repo {repo_full_name} --state merged --limit 200 --json number,title,createdAt,mergedAt,additions,deletions"
     output_small = run_git_command(cmd_small)
 
@@ -1054,7 +1050,7 @@ def analyze_multi_org_stats(orgs, since_date, output_file=None):
 def generate_markdown_report(stats, output_file):
     """Generate a markdown report from multi-org stats."""
     with open(output_file, 'w') as f:
-        f.write(f"# Multi-Organization PR Statistics Report\n\n")
+        f.write("# Multi-Organization PR Statistics Report\n\n")
         f.write(f"**Generated:** {stats['generated_at']}  \n")
         f.write(f"**Period:** Since {stats['since_date']}  \n")
         f.write(f"**Total Organizations:** {len(stats['orgs'])}  \n")
@@ -1211,18 +1207,17 @@ Examples:
 
         if args.json:
             print(json.dumps(result, indent=2))
+        elif "error" in result:
+            print(f"❌ Error: {result['error']}")
+        elif result.get("is_outdated"):
+            print("⚠️ PR description appears outdated:")
+            print(f"   PR shows: {result['pr_count']} files")
+            print(f"   Current: {result['current_count']} files")
+            print(f"   Deviation: {result['deviation']:.1f}%")
         else:
-            if "error" in result:
-                print(f"❌ Error: {result['error']}")
-            elif result.get("is_outdated"):
-                print(f"⚠️ PR description appears outdated:")
-                print(f"   PR shows: {result['pr_count']} files")
-                print(f"   Current: {result['current_count']} files")
-                print(f"   Deviation: {result['deviation']:.1f}%")
-            else:
-                print("✅ PR description is up to date")
-                if "reason" in result:
-                    print(f"   Reason: {result['reason']}")
+            print("✅ PR description is up to date")
+            if "reason" in result:
+                print(f"   Reason: {result['reason']}")
         return
 
     # Change failure rate analysis

@@ -7,6 +7,7 @@ import os
 import re
 import unittest
 
+from mvp_site.gemini_response import GeminiResponse
 from mvp_site.main import (
     CORS_RESOURCES,
     DEFAULT_TEST_USER,
@@ -17,9 +18,7 @@ from mvp_site.main import (
     KEY_SUCCESS,
     create_app,
 )
-
 from mvp_site.tests.fake_services import FakeServiceManager
-from mvp_site.gemini_response import GeminiResponse
 from mvp_site.world_logic import format_game_state_updates
 
 # Configure test environment and initialize fakes

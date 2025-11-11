@@ -4,7 +4,7 @@ Framework validation script to demonstrate all components working together.
 Run this to verify the TestServiceProvider framework is functioning correctly.
 """
 
-# ALL imports must be at the very top - no code before imports  
+# ALL imports must be at the very top - no code before imports
 import os
 import sys
 import traceback
@@ -12,12 +12,12 @@ from pathlib import Path
 from typing import Any
 
 # Ensure project root is in path for imports (must be before mvp_site imports)
-ROOT = Path(__file__).resolve().parents[2]  
+ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 # noqa: E402 - imports after sys.path modification
-from mvp_site.testing_framework import (  
+from mvp_site.testing_framework import (
     RealServiceProvider,
     TestConfig,
     TestServiceProvider,

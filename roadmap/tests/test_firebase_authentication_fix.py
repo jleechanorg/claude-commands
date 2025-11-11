@@ -4,13 +4,13 @@ End-to-end test to validate Firebase authentication fix for Milestone 2.
 Tests the complete authentication flow from React V2 frontend.
 """
 
+import json
 import os
 import sys
 import time
-import json
+from typing import Any
+
 import requests
-from typing import Dict, Any
-from unittest.mock import patch, MagicMock
 
 # Add mvp_site to path - go up from roadmap/tests/ to project root
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -52,7 +52,7 @@ class FirebaseAuthenticationTest:
         if os.environ.get("TESTING") == "true":
             self.log_result("Servers Running", True, "Mock servers simulated as running (test mode)")
             return True
-            
+
         # Test frontend
         try:
             response = requests.get(self.frontend_url, timeout=5)
@@ -88,7 +88,7 @@ class FirebaseAuthenticationTest:
         if os.environ.get("TESTING") == "true":
             self.log_result("Frontend Firebase Loading", True, "Mock frontend Firebase loading successful (test mode)")
             return True
-            
+
         try:
             response = requests.get(self.frontend_url, timeout=10)
             if response.status_code != 200:
@@ -106,9 +106,8 @@ class FirebaseAuthenticationTest:
             if "<title>WorldAI</title>" in content or "WorldArchitect" in content or "vite" in content.lower():
                 self.log_result("Frontend Firebase Loading", True, "Frontend React V2 app loading correctly")
                 return True
-            else:
-                self.log_result("Frontend Firebase Loading", False, "Frontend not loading expected React V2 content")
-                return False
+            self.log_result("Frontend Firebase Loading", False, "Frontend not loading expected React V2 content")
+            return False
 
         except requests.exceptions.RequestException as e:
             self.log_result("Frontend Firebase Loading", False, "Error loading frontend", str(e))
@@ -120,7 +119,7 @@ class FirebaseAuthenticationTest:
         if os.environ.get("TESTING") == "true":
             self.log_result("API Authentication", True, "Mock API authentication validation successful (test mode)")
             return True
-            
+
         # Test unauthenticated request
         try:
             response = requests.get(f"{self.backend_url}/api/campaigns", timeout=5)
@@ -149,7 +148,7 @@ class FirebaseAuthenticationTest:
         if os.environ.get("TESTING") == "true":
             self.log_result("Firebase Configuration Consistency", True, "Mock configuration consistency validated (test mode)")
             return True
-            
+
         try:
             # Use project-relative paths
             project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
@@ -161,10 +160,10 @@ class FirebaseAuthenticationTest:
                 return False
 
             # Get project IDs
-            with open(env_file, 'r') as f:
+            with open(env_file) as f:
                 env_content = f.read()
 
-            with open(service_account, 'r') as f:
+            with open(service_account) as f:
                 service_data = json.load(f)
 
             # Extract project ID from .env
@@ -197,7 +196,7 @@ class FirebaseAuthenticationTest:
         if os.environ.get("TESTING") == "true":
             self.log_result("Milestone 2 Readiness", True, "Mock milestone readiness validated (test mode)")
             return True
-            
+
         # Check that we have all the components needed for Milestone 2
         project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
         required_components = [
@@ -222,13 +221,12 @@ class FirebaseAuthenticationTest:
                 except requests.exceptions.RequestException:
                     self.log_result(f"Component: {component}", False, "Not accessible")
                     all_ready = False
+            # Test file path
+            elif os.path.exists(path_or_url):
+                self.log_result(f"Component: {component}", True, "File exists")
             else:
-                # Test file path
-                if os.path.exists(path_or_url):
-                    self.log_result(f"Component: {component}", True, "File exists")
-                else:
-                    self.log_result(f"Component: {component}", False, "File missing")
-                    all_ready = False
+                self.log_result(f"Component: {component}", False, "File missing")
+                all_ready = False
 
         if all_ready:
             self.log_result("Milestone 2 Readiness", True, "All components ready for Milestone 2 testing")
@@ -237,7 +235,7 @@ class FirebaseAuthenticationTest:
 
         return all_ready
 
-    def generate_report(self) -> Dict[str, Any]:
+    def generate_report(self) -> dict[str, Any]:
         """Generate final test report."""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r['success'])

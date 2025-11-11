@@ -4,9 +4,9 @@ Expand user mimicry system prompt to 50k+ tokens with comprehensive behavioral a
 """
 
 import pickle
-import json
-import datetime
 from collections import defaultdict
+import tiktoken
+
 
 def analyze_all_prompts():
     """Process all 44 prompts and generate comprehensive analysis"""
@@ -425,7 +425,7 @@ class UserMimicryEngine:
   Effort: {prompt['expected_result']['estimated_effort']}
 """
 
-    prompt_content += f"""
+    prompt_content += """
 
 ### Intent-Specific Generation Patterns
 
@@ -653,11 +653,10 @@ if __name__ == "__main__":
         f.write(comprehensive_prompt)
 
     # Calculate final size
-    import tiktoken
     encoding = tiktoken.encoding_for_model('gpt-4')
     tokens = encoding.encode(comprehensive_prompt)
 
-    print(f"\nFinal system prompt statistics:")
+    print("\nFinal system prompt statistics:")
     print(f"Token count: {len(tokens):,}")
     print(f"Character count: {len(comprehensive_prompt):,}")
     print(f"Target achievement: {len(tokens)/50000*100:.1f}% of 50k target")
@@ -667,4 +666,4 @@ if __name__ == "__main__":
     else:
         print(f"⚠️  Still need {50000-len(tokens):,} more tokens")
 
-    print(f"System prompt saved to: docs/genesis/user_mimicry_system_prompt.md")
+    print("System prompt saved to: docs/genesis/user_mimicry_system_prompt.md")

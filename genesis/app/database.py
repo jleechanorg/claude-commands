@@ -2,9 +2,9 @@
 Database Configuration for Genesis E-commerce Application
 """
 import os
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/ecommerce")

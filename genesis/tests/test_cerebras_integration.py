@@ -4,15 +4,12 @@ Matrix-Enhanced TDD Tests for Cerebras Genesis Integration
 RED PHASE: Comprehensive failing tests for all matrix scenarios
 """
 
-import unittest
+import importlib
 import os
 import sys
-import tempfile
-import json
-import importlib
-from unittest.mock import Mock, patch, MagicMock, call
-from pathlib import Path
 import time
+import unittest
+from unittest.mock import Mock, patch
 
 # Add genesis directory to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))

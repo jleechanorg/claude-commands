@@ -13,18 +13,22 @@ from typing import Dict, Tuple
 from playwright.async_api import (
     Browser,
     BrowserContext,
-    Error as PlaywrightError,
     Page,
-    TimeoutError as PlaywrightTimeoutError,
     async_playwright,
+)
+from playwright.async_api import (
+    Error as PlaywrightError,
+)
+from playwright.async_api import (
+    TimeoutError as PlaywrightTimeoutError,
 )
 
 CHATGPT_CODEX_URL = "https://chatgpt.com/codex"
 CREDENTIALS_PATH = Path.home() / ".chatgpt_codex_credentials.json"
 AUTH_STATE_PATH = Path.home() / ".chatgpt_codex_auth_state.json"
-TASK_CARD_SELECTOR = "[data-testid=\"codex-task-card\"]"
-UPDATE_BRANCH_BUTTON_SELECTOR = "button:has-text(\"Update Branch\")"
-TASK_TITLE_SELECTOR = "[data-testid=\"codex-task-title\"]"
+TASK_CARD_SELECTOR = '[data-testid="codex-task-card"]'
+UPDATE_BRANCH_BUTTON_SELECTOR = 'button:has-text("Update Branch")'
+TASK_TITLE_SELECTOR = '[data-testid="codex-task-title"]'
 
 
 def _save_credentials(credentials: Dict[str, str]) -> None:

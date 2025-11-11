@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, TypeVar
+from typing import Any, TypeVar
 
 from mvp_site import constants
 
@@ -30,10 +30,10 @@ def _get_structured_attr(
     return value
 
 
-def extract_structured_fields(gemini_response_obj: Any) -> Dict[str, Any]:
+def extract_structured_fields(gemini_response_obj: Any) -> dict[str, Any]:
     """Extract structured fields from a GeminiResponse-like object."""
 
-    structured_fields: Dict[str, Any] = {}
+    structured_fields: dict[str, Any] = {}
 
     sr = getattr(gemini_response_obj, "structured_response", None)
     if sr:

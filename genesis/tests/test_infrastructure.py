@@ -3,10 +3,11 @@ Test Suite for Docker Infrastructure
 Tests all services defined in docker-compose.yml to ensure proper connectivity and health.
 """
 
-import pytest
 import time
+
 import docker
 import psycopg2
+import pytest
 import redis
 import requests
 from requests.adapters import HTTPAdapter
@@ -437,7 +438,7 @@ class TestDockerInfrastructure:
         healthy_services = sum(health_status.values())
         total_services = len(health_status)
 
-        print(f"\n📊 Infrastructure Health Report:")
+        print("\n📊 Infrastructure Health Report:")
         for service, status in health_status.items():
             status_icon = "✅" if status else "❌"
             print(f"  {status_icon} {service.replace('_', ' ').title()}: {'Healthy' if status else 'Unhealthy'}")

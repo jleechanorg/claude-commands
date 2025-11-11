@@ -24,16 +24,16 @@ import itertools
 import statistics
 import sys
 import time
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, Iterable, List, Optional, Sequence
 
 # ---------------------------------------------------------------------------
 # Helpers for loading the optional memory_backup_crdt module
 # ---------------------------------------------------------------------------
 
 
-def _load_crdt_module() -> Optional[object]:
+def _load_crdt_module() -> object | None:
     """Attempt to import ``memory_backup_crdt`` from common locations.
 
     Historically the CRDT module has moved between ``scripts/`` and
@@ -79,7 +79,7 @@ CRDT_AVAILABLE = MemoryBackupCRDT is not None and crdt_merge is not None
 class ScenarioResult:
     name: str
     status: str
-    details: List[str] = field(default_factory=list)
+    details: list[str] = field(default_factory=list)
 
     def with_prefix(self) -> str:
         icon = {"pass": "✅", "fail": "❌", "skip": "⚠️"}[self.status]
@@ -117,7 +117,7 @@ def _pass(name: str, *details: str) -> ScenarioResult:
 # ---------------------------------------------------------------------------
 
 
-def _entry(entry_id: str, content: str, host: str, timestamp: str, unique_id: str) -> Dict[str, object]:
+def _entry(entry_id: str, content: str, host: str, timestamp: str, unique_id: str) -> dict[str, object]:
     return {
         "id": entry_id,
         "content": content,
@@ -130,10 +130,10 @@ def _entry(entry_id: str, content: str, host: str, timestamp: str, unique_id: st
     }
 
 
-def _run_merge(*datasets: Sequence[Iterable[Dict[str, object]]]):
+def _run_merge(*datasets: Sequence[Iterable[dict[str, object]]]):
     if not CRDT_AVAILABLE:
         raise RuntimeError("CRDT module not available")
-    formatted: List[List[Dict[str, object]]] = []
+    formatted: list[list[dict[str, object]]] = []
     for dataset in datasets:
         formatted.append(list(dataset))
     return crdt_merge(formatted)
@@ -289,7 +289,7 @@ def _scenario_timestamp_parsing() -> ScenarioResult:
         "1970-01-01T00:00:00Z",
     ]
 
-    failures: List[str] = []
+    failures: list[str] = []
     for case in cases:
         try:
             parsed = _parse_timestamp(case)
@@ -308,7 +308,7 @@ def _scenario_timestamp_parsing() -> ScenarioResult:
 # ---------------------------------------------------------------------------
 
 
-def _generate_entries(count: int, host: str = "perf") -> List[Dict[str, object]]:
+def _generate_entries(count: int, host: str = "perf") -> list[dict[str, object]]:
     return [
         _entry(
             f"perf_{index % 50}",
@@ -326,7 +326,7 @@ def _scenario_throughput() -> ScenarioResult:
         return _skip("Throughput", "memory_backup_crdt module is not available")
 
     counts = [200, 400, 800]
-    merge_times: List[float] = []
+    merge_times: list[float] = []
 
     for count in counts:
         dataset = _generate_entries(count)
@@ -378,7 +378,7 @@ def _scenario_concurrent_backups() -> ScenarioResult:
         return _skip("Concurrent backups", "memory_backup_crdt module is not available")
 
     hosts = ["web-1", "web-2", "worker-1", "scheduler-1"]
-    host_batches: List[List[Dict[str, object]]] = []
+    host_batches: list[list[dict[str, object]]] = []
 
     for host in hosts:
         batch = []
@@ -436,7 +436,7 @@ def _scenario_input_sanitization() -> ScenarioResult:
         {"id": "dos", "content": "X" * 50000},
     ]
 
-    issues: List[str] = []
+    issues: list[str] = []
     for payload in malicious_payloads:
         try:
             enriched = backup.inject_metadata(payload)
@@ -456,7 +456,7 @@ def _scenario_input_sanitization() -> ScenarioResult:
 # ---------------------------------------------------------------------------
 
 
-SCENARIO_GROUPS: Dict[str, ScenarioGroup] = {
+SCENARIO_GROUPS: dict[str, ScenarioGroup] = {
     "properties": ScenarioGroup(
         name="CRDT mathematical properties",
         description="Core algebraic guarantees that the merge function must satisfy.",
@@ -517,12 +517,12 @@ def _list_groups() -> None:
         print()
 
 
-def _run_group(group_key: str) -> List[ScenarioResult]:
+def _run_group(group_key: str) -> list[ScenarioResult]:
     group = SCENARIO_GROUPS[group_key]
     print(f"\n=== {group.name} ===")
     print(group.description)
 
-    results: List[ScenarioResult] = []
+    results: list[ScenarioResult] = []
     for scenario in group.scenarios:
         try:
             result = scenario.runner()
@@ -535,7 +535,7 @@ def _run_group(group_key: str) -> List[ScenarioResult]:
     return results
 
 
-def main(argv: Optional[Sequence[str]] = None) -> int:
+def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Unified CRDT validation harness")
     parser.add_argument(
         "--group",
@@ -553,7 +553,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     groups_to_run = args.group or list(SCENARIO_GROUPS.keys())
 
-    all_results: List[ScenarioResult] = []
+    all_results: list[ScenarioResult] = []
     for group_key in groups_to_run:
         all_results.extend(_run_group(group_key))
 

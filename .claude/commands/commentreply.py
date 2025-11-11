@@ -290,7 +290,7 @@ def get_response_for_comment(comment: Dict, responses_data: Dict, commit_hash: s
     """
     # SECURITY: Validate comment data first
     if not validate_comment_data(comment):
-        print(f"⚠️ SECURITY: Invalid comment data structure, skipping")
+        print("⚠️ SECURITY: Invalid comment data structure, skipping")
         return ""
 
     comment_id = str(comment.get("id"))
@@ -346,7 +346,7 @@ def create_issue_comment_reply(owner: str, repo: str, pr_number: str, comment: D
     """Create a reply to an issue comment (general PR discussion)"""
     # SECURITY: Validate inputs
     if not validate_comment_data(comment):
-        print(f"❌ SECURITY: Invalid comment data for issue comment reply")
+        print("❌ SECURITY: Invalid comment data for issue comment reply")
         return False
 
     comment_id = comment.get("id")
@@ -505,7 +505,7 @@ def create_review_comment_reply(owner: str, repo: str, pr_number: str, comment_i
                     print(f"❌ FALLBACK FAILED: Both review threading and issue comment failed for #{comment_id}")
                     return False
             else:
-                print(f"🔍 DEBUG 422: Comment object not available for detailed analysis")
+                print("🔍 DEBUG 422: Comment object not available for detailed analysis")
                 print(f"↪️ SKIP: GitHub returned 422 (likely stale comment or threading constraint) for #{comment_id}")
                 return False
         print(f"❌ ERROR: Failed to create review comment reply for #{comment_id}")
@@ -565,14 +565,14 @@ def post_final_summary(owner: str, repo: str, pr_number: str, processed_count: i
         try:
             response_data = json.loads(response_json)
             summary_url = response_data.get("html_url")
-            print(f"✅ SUCCESS: Final summary comment posted")
+            print("✅ SUCCESS: Final summary comment posted")
             print(f"🔗 SUMMARY URL: {summary_url}")
             return True
         except json.JSONDecodeError:
-            print(f"⚠️ WARNING: Summary posted but couldn't parse response")
+            print("⚠️ WARNING: Summary posted but couldn't parse response")
             return True
     else:
-        print(f"❌ ERROR: Failed to post final summary comment")
+        print("❌ ERROR: Failed to post final summary comment")
         print(f"   Error: {stderr}")
         return False
 
@@ -690,15 +690,15 @@ def main():
 
     # Fail on insufficient coverage
     if not coverage_valid:
-        print(f"\n❌ CRITICAL: Coverage validation failed")
+        print("\n❌ CRITICAL: Coverage validation failed")
         sys.exit(1)
 
     # Step 5: Post final summary
-    print(f"\n📝 SUMMARY: Posting final summary comment")
+    print("\n📝 SUMMARY: Posting final summary comment")
     post_final_summary(owner, repo, pr_number, len(processed_comments), successful_replies, commit_hash)
 
     # Step 6: Final report
-    print(f"\n✅ COMPLETE: Comment processing finished")
+    print("\n✅ COMPLETE: Comment processing finished")
     print(f"   📊 Total comments: {len(all_comments)}")
     print(f"   🎯 Target comments: {total_targets}")
     print(f"   ✅ Successful replies: {successful_replies}")
@@ -707,10 +707,10 @@ def main():
     print(f"   🎯 Coverage valid: {'Yes' if coverage_valid else 'No'}")
 
     if successful_replies < len(processed_comments):
-        print(f"\n⚠️ WARNING: Some replies failed - manual review recommended")
+        print("\n⚠️ WARNING: Some replies failed - manual review recommended")
         sys.exit(1)
 
-    print(f"\n🎉 SUCCESS: All comments processed with verified coverage!")
+    print("\n🎉 SUCCESS: All comments processed with verified coverage!")
 
 if __name__ == "__main__":
     main()

@@ -8,7 +8,6 @@ over time to ensure optimization effectiveness.
 """
 
 import logging
-from typing import Dict, List, Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -18,8 +17,8 @@ class TestMonitoringDashboard:
         self.test_results = []
         self.performance_metrics = {}
         self.trend_data = []
-        
-    def generate_performance_report(self) -> Dict:
+
+    def generate_performance_report(self) -> dict:
         """Generate a performance report from test results"""
         try:
             logger.info("Generating performance report")
@@ -37,8 +36,8 @@ class TestMonitoringDashboard:
         except Exception as e:
             logger.error(f"Error generating performance report: {str(e)}")
             raise
-            
-    def track_test_trends(self) -> List[Dict]:
+
+    def track_test_trends(self) -> list[dict]:
         """Track test execution trends over time"""
         try:
             logger.info("Tracking test trends")
@@ -46,21 +45,21 @@ class TestMonitoringDashboard:
             if not self.test_results:
                 logger.warning("No test results available for trend tracking")
                 return trends
-                
+
             # Group results by date and calculate daily metrics
             daily_metrics = {}
             for result in self.test_results:
                 date_key = result.get('timestamp', datetime.now().date().isoformat())
                 if date_key not in daily_metrics:
                     daily_metrics[date_key] = {'total': 0, 'passed': 0, 'failed': 0, 'duration_sum': 0}
-                    
+
                 daily_metrics[date_key]['total'] += 1
                 if result.get('status') == 'passed':
                     daily_metrics[date_key]['passed'] += 1
                 else:
                     daily_metrics[date_key]['failed'] += 1
                 daily_metrics[date_key]['duration_sum'] += result.get('duration', 0)
-            
+
             # Create trend data
             for date, metrics in daily_metrics.items():
                 trend = {
@@ -70,36 +69,36 @@ class TestMonitoringDashboard:
                     'total_executed': metrics['total']
                 }
                 trends.append(trend)
-                
+
             self.trend_data = sorted(trends, key=lambda x: x['date'])
             logger.info("Test trends tracked successfully")
             return self.trend_data
         except Exception as e:
             logger.error(f"Error tracking test trends: {str(e)}")
             raise
-            
+
     def create_dashboard_html(self, output_path: str = "test_dashboard.html") -> str:
         """Create an HTML dashboard with performance metrics and trends"""
         try:
             logger.info("Creating dashboard HTML")
             if not self.performance_metrics:
                 self.generate_performance_report()
-                
+
             if not self.trend_data:
                 self.track_test_trends()
-                
+
             html_content = self._generate_html_template()
-            
+
             with open(output_path, 'w') as f:
                 f.write(html_content)
-                
+
             logger.info(f"Dashboard HTML created at {output_path}")
             return output_path
         except Exception as e:
             logger.error(f"Error creating dashboard HTML: {str(e)}")
             raise
-            
-    def monitor_regression(self) -> Dict:
+
+    def monitor_regression(self) -> dict:
         """Monitor for test regression patterns"""
         try:
             logger.info("Monitoring for test regressions")
@@ -109,14 +108,14 @@ class TestMonitoringDashboard:
                 'failed_tests': [],
                 'performance_degradation': []
             }
-            
+
             # Check for failed tests
             failed_tests = [r for r in self.test_results if r.get('status') == 'failed']
             if failed_tests:
                 regression_report['regressions_detected'] = True
                 regression_report['failed_tests'] = failed_tests
                 logger.warning(f"Regression detected: {len(failed_tests)} failed tests")
-                
+
             # Check for performance degradation (simplified check)
             if len(self.trend_data) > 1:
                 current_avg = self.trend_data[-1]['average_duration']
@@ -129,26 +128,26 @@ class TestMonitoringDashboard:
                         'increase_percentage': ((current_avg - previous_avg) / previous_avg) * 100
                     })
                     logger.warning("Performance degradation detected")
-                    
+
             return regression_report
         except Exception as e:
             logger.error(f"Error monitoring regression: {str(e)}")
             raise
-            
+
     def _calculate_average_duration(self) -> float:
         """Calculate average test duration"""
         if not self.test_results:
             return 0.0
         durations = [r.get('duration', 0) for r in self.test_results]
         return sum(durations) / len(durations) if durations else 0.0
-        
+
     def _calculate_success_rate(self) -> float:
         """Calculate test success rate"""
         if not self.test_results:
             return 0.0
         passed = len([r for r in self.test_results if r.get('status') == 'passed'])
         return (passed / len(self.test_results)) * 100 if self.test_results else 0.0
-        
+
     def _generate_html_template(self) -> str:
         """Generate HTML template for dashboard"""
         return f"""

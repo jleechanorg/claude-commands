@@ -5,12 +5,10 @@ Quickly scan Python files for inline imports and generate actionable reports.
 """
 
 import ast
+import glob
 import os
 import sys
-import glob
-from pathlib import Path
 from dataclasses import dataclass
-from typing import List, Dict, Tuple
 
 
 @dataclass
@@ -25,7 +23,7 @@ class InlineImportInfo:
 class QuickInlineDetector(ast.NodeVisitor):
     """Fast AST visitor for detecting inline imports."""
 
-    def __init__(self, file_path: str, source_lines: List[str]):
+    def __init__(self, file_path: str, source_lines: list[str]):
         self.file_path = file_path
         self.source_lines = source_lines
         self.inline_imports = []
@@ -100,10 +98,9 @@ class QuickInlineDetector(ast.NodeVisitor):
         if isinstance(node, ast.Import):
             names = [alias.name for alias in node.names]
             return f"import {', '.join(names)}"
-        else:
-            module = node.module or ""
-            names = [alias.name for alias in node.names]
-            return f"from {module} import {', '.join(names)}"
+        module = node.module or ""
+        names = [alias.name for alias in node.names]
+        return f"from {module} import {', '.join(names)}"
 
     def _get_context_description(self):
         """Describe the context where import was found."""
@@ -120,16 +117,15 @@ class QuickInlineDetector(ast.NodeVisitor):
         """Determine severity of the inline import."""
         if self.in_function and not self.in_conditional:
             return "HIGH"
-        elif self.in_conditional:
+        if self.in_conditional:
             return "MEDIUM"
-        else:
-            return "LOW"
+        return "LOW"
 
 
-def analyze_file(file_path: str) -> List[InlineImportInfo]:
+def analyze_file(file_path: str) -> list[InlineImportInfo]:
     """Analyze a single Python file for inline imports."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             source = f.read()
             source_lines = source.splitlines()
 
@@ -143,7 +139,7 @@ def analyze_file(file_path: str) -> List[InlineImportInfo]:
         return []
 
 
-def find_python_files(paths: List[str]) -> List[str]:
+def find_python_files(paths: list[str]) -> list[str]:
     """Find all Python files in given paths."""
     python_files = []
 
@@ -157,7 +153,7 @@ def find_python_files(paths: List[str]) -> List[str]:
     return python_files
 
 
-def generate_pr_groups(files_with_imports: List[str]) -> Dict[str, List[str]]:
+def generate_pr_groups(files_with_imports: list[str]) -> dict[str, list[str]]:
     """Group files by logical modules for PR strategy."""
     groups = {
         'scripts': [],
@@ -182,13 +178,13 @@ def generate_pr_groups(files_with_imports: List[str]) -> Dict[str, List[str]]:
     return {k: v for k, v in groups.items() if v}  # Remove empty groups
 
 
-def print_analysis_report(all_imports: List[InlineImportInfo]):
+def print_analysis_report(all_imports: list[InlineImportInfo]):
     """Print comprehensive analysis report."""
     if not all_imports:
         print("✅ No inline imports found!")
         return
 
-    print(f"🔍 INLINE IMPORT ANALYSIS REPORT")
+    print("🔍 INLINE IMPORT ANALYSIS REPORT")
     print(f"{'='*50}")
     print(f"Total inline imports found: {len(all_imports)}")
     print()
@@ -219,7 +215,7 @@ def print_analysis_report(all_imports: List[InlineImportInfo]):
             print(f"    Line {imp.line_number:3d}: {imp.import_statement:<30} [{imp.severity}] ({imp.context})")
 
     # PR Grouping Strategy
-    print(f"\n🚀 PR SPLITTING STRATEGY:")
+    print("\n🚀 PR SPLITTING STRATEGY:")
     print(f"{'='*50}")
 
     files_with_imports = list(file_groups.keys())

@@ -7,10 +7,9 @@ Tests the complete workflow including parallel backups.
 import importlib.util
 import json
 import os
-import sys
 import tempfile
 import unittest
-from pathlib import Path
+
 
 # Import CRDT module using importlib to avoid sys.path manipulation
 def _import_crdt_module():

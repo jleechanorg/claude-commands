@@ -1,8 +1,7 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
-from django.utils.safestring import mark_safe
-from .models import Tenant, TenantMembership, TenantConfiguration
+
+from .models import Tenant, TenantConfiguration, TenantMembership
 
 
 @admin.register(Tenant)

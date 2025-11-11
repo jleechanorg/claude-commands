@@ -8,13 +8,11 @@ This test reproduces the exact issue discovered:
 - No default manual override (should require explicit --manual_override)
 """
 
-import unittest
-import tempfile
-import os
-import shutil
 import argparse
-import json
-from datetime import datetime, timedelta
+import shutil
+import tempfile
+import unittest
+from datetime import datetime
 
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
@@ -81,12 +79,12 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
         # Test that we can use --manual_override
         # Parse the new arguments
         parser = argparse.ArgumentParser()
-        parser.add_argument('--manual_override', type=str, help='Correct command')
+        parser.add_argument("--manual_override", type=str, help="Correct command")
 
         # The --manual_override command should work
-        args = parser.parse_args(['--manual_override', 'test@example.com'])
+        args = parser.parse_args(["--manual_override", "test@example.com"])
         self.assertIsNotNone(args.manual_override, "--manual_override command works")
-        self.assertEqual(args.manual_override, 'test@example.com')
+        self.assertEqual(args.manual_override, "test@example.com")
 
         # Test that --approve should no longer exist in the real CLI
         # (This test verifies our refactoring was successful)
@@ -124,7 +122,7 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
         This test documents the issue but doesn't enforce rate limiting yet.
         """
         # Document that rate limiting doesn't exist (future enhancement)
-        self.assertFalse(hasattr(self.manager, 'check_rate_limit'),
+        self.assertFalse(hasattr(self.manager, "check_rate_limit"),
                         "Rate limiting could be added as future enhancement")
 
         # Document the excessive rate that occurred (historical reference)
@@ -143,7 +141,7 @@ class TestAutomationOverRunningReproduction(unittest.TestCase):
                        "New limits (100 max) would have prevented 346 runs")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("🟢 GREEN PHASE: Running tests that now PASS after fixes")
     print("✅ Automation over-running issue RESOLVED")
     print("")

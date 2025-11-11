@@ -3,12 +3,13 @@ Matrix 3: Session Management Tests - TDD RED Phase
 Tests all session state transitions, logging, and recovery scenarios.
 """
 
-import pytest
-import tempfile
-import os
 import json
+import os
+import tempfile
 import time
-from unittest.mock import Mock, patch, MagicMock, mock_open
+
+import pytest
+
 from genesis import safe_session_write, update_progress_file
 
 
@@ -71,7 +72,7 @@ class TestSessionManagementMatrix:
             # This will fail until session resumption is implemented
             if recovery_scenario == "crash_recovery":
                 # Should load and continue from previous state
-                with open(session_file, "r") as f:
+                with open(session_file) as f:
                     loaded_session = json.load(f)
 
                 assert loaded_session["iteration"] == 3
@@ -85,7 +86,7 @@ class TestSessionManagementMatrix:
             # This will fail until corruption handling is implemented
             if recovery_scenario == "partial_completion":
                 try:
-                    with open(session_file, "r") as f:
+                    with open(session_file) as f:
                         json.load(f)
                     pytest.fail("Should have detected corruption")
                 except json.JSONDecodeError:
@@ -120,7 +121,7 @@ class TestSessionManagementMatrix:
                 safe_session_write(session_file, session_data_2)
 
                 # Last writer should win, but should handle conflicts
-                with open(session_file, "r") as f:
+                with open(session_file) as f:
                     final_data = json.load(f)
 
                 # Should have conflict resolution
@@ -174,7 +175,7 @@ class TestSessionManagementMatrix:
 
             # Should create progress file with correct data
             if os.path.exists(progress_file):
-                with open(progress_file, "r") as f:
+                with open(progress_file) as f:
                     saved_data = json.load(f)
 
                 for key, value in progress_data.items():
@@ -212,7 +213,7 @@ class TestSessionManagementMatrix:
             # This will fail until recovery scenarios are implemented
             try:
                 if os.path.exists(session_file):
-                    with open(session_file, "r") as f:
+                    with open(session_file) as f:
                         session_data = json.load(f)
 
                     # Recovery logic should handle each scenario appropriately
@@ -275,7 +276,7 @@ class TestSessionManagementMatrix:
 
         # Final state should be consistent
         if os.path.exists(session_file):
-            with open(session_file, "r") as f:
+            with open(session_file) as f:
                 final_session = json.load(f)
             assert "writer" in final_session, "Final session should have writer info"
 

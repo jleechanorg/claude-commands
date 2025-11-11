@@ -4,12 +4,12 @@ Comprehensive Cerebras MCP Test Suite
 Proves 80% Cerebras usage target and validates integration quality
 """
 import asyncio
-import time
-import subprocess
 import json
+import subprocess
 import sys
-from pathlib import Path
-from typing import Dict, List, Any
+import time
+from typing import Any
+
 
 class CerebrasTestSuite:
     """Comprehensive test suite for Cerebras MCP integration"""
@@ -101,10 +101,9 @@ class CerebrasTestSuite:
                 self.log_test("direct_mcp_call", True,
                              f"Tool executed in {duration:.3f}s (target: <2s)", duration)
                 return True
-            else:
-                self.log_test("direct_mcp_call", False,
-                             f"Tool too slow: {duration:.3f}s", duration)
-                return False
+            self.log_test("direct_mcp_call", False,
+                         f"Tool too slow: {duration:.3f}s", duration)
+            return False
 
         except Exception as e:
             duration = time.time() - start_time
@@ -149,13 +148,11 @@ class CerebrasTestSuite:
                     self.log_test("code_quality", True,
                                  f"Quality: {passed_checks}/{total_checks} checks passed", duration)
                     return True
-                else:
-                    self.log_test("code_quality", False,
-                                 f"Quality: {passed_checks}/{total_checks} checks passed", duration)
-                    return False
-            else:
-                self.log_test("code_quality", False, "Tool call failed", duration)
+                self.log_test("code_quality", False,
+                             f"Quality: {passed_checks}/{total_checks} checks passed", duration)
                 return False
+            self.log_test("code_quality", False, "Tool call failed", duration)
+            return False
 
         except Exception as e:
             duration = time.time() - start_time
@@ -201,13 +198,11 @@ class CerebrasTestSuite:
                     self.results["performance"]["avg_call_time"] = avg_time
                     self.results["performance"]["success_rate"] = successful_calls / len(prompts)
                     return True
-                else:
-                    self.log_test("performance_baseline", False,
-                                 f"Too slow: {avg_time:.3f}s/call average", duration)
-                    return False
-            else:
-                self.log_test("performance_baseline", False, "No successful calls", time.time() - start_time)
+                self.log_test("performance_baseline", False,
+                             f"Too slow: {avg_time:.3f}s/call average", duration)
                 return False
+            self.log_test("performance_baseline", False, "No successful calls", time.time() - start_time)
+            return False
 
         except Exception as e:
             duration = time.time() - start_time
@@ -223,7 +218,7 @@ class CerebrasTestSuite:
             result = subprocess.run([
                 "bash", "-c",
                 'echo "Use cerebras_generate to create Python hello world" | timeout 30s claude --dangerously-skip-permissions'
-            ], capture_output=True, text=True, timeout=35)
+            ], check=False, capture_output=True, text=True, timeout=35)
 
             duration = time.time() - start_time
 
@@ -243,10 +238,9 @@ class CerebrasTestSuite:
                 self.log_test("claude_cli_integration", True,
                              f"CLI integration working: {positive_indicators}/4 indicators", duration)
                 return True
-            else:
-                self.log_test("claude_cli_integration", False,
-                             f"CLI integration issues: {positive_indicators}/4 indicators", duration)
-                return False
+            self.log_test("claude_cli_integration", False,
+                         f"CLI integration issues: {positive_indicators}/4 indicators", duration)
+            return False
 
         except Exception as e:
             duration = time.time() - start_time
@@ -294,17 +288,16 @@ class CerebrasTestSuite:
                 self.results["coverage"]["total_cases"] = len(use_cases)
                 self.results["coverage"]["success_rate"] = success_rate
                 return True
-            else:
-                self.log_test("use_case_coverage", False,
-                             f"Low coverage: {successful_cases}/{len(use_cases)}", duration)
-                return False
+            self.log_test("use_case_coverage", False,
+                         f"Low coverage: {successful_cases}/{len(use_cases)}", duration)
+            return False
 
         except Exception as e:
             duration = time.time() - start_time
             self.log_test("use_case_coverage", False, f"Error: {e}", duration)
             return False
 
-    async def call_cerebras_tool(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    async def call_cerebras_tool(self, arguments: dict[str, Any]) -> dict[str, Any]:
         """Helper: Call Cerebras tool directly"""
         try:
             # Import and call tool directly for testing

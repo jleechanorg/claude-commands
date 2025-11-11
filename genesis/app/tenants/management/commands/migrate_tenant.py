@@ -1,9 +1,9 @@
+import logging
+
+from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.db import connection
 from tenants.models import Tenant
-from django.core.management import call_command
-import logging
-
 
 logger = logging.getLogger(__name__)
 

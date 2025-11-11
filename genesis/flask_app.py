@@ -1,12 +1,11 @@
+import os
+import random
+import time
+
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 from influxdb_client import InfluxDBClient, Point
 from influxdb_client.client.write_api import SYNCHRONOUS
-import os
-import json
-import random
-import threading
-import time
 
 # Initialize Flask app and SocketIO
 app = Flask(__name__)

@@ -13,11 +13,11 @@ The package is structured with:
 """
 
 from .operations import (
-    count_words,
+    convert_case,
     count_characters,
     count_lines,
+    count_words,
     replace_text,
-    convert_case
 )
 
 __version__ = "1.0.0"

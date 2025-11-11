@@ -3,12 +3,12 @@ Matrix 4: Error Handling Tests - TDD RED Phase
 Tests all error handling and edge case combinations.
 """
 
-import pytest
-import tempfile
-import os
 import subprocess
-from unittest.mock import Mock, patch, MagicMock
-from genesis import execute_claude_command, detect_goal_ambiguities
+from unittest.mock import Mock, patch
+
+import pytest
+
+from genesis import detect_goal_ambiguities, execute_claude_command
 
 
 class TestErrorHandlingMatrix:
@@ -185,7 +185,7 @@ class TestErrorHandlingMatrix:
                 # Simulate various failures
                 if operation_id % 3 == 0:
                     raise ValueError(f"Simulated error {operation_id}")
-                elif operation_id % 7 == 0:
+                if operation_id % 7 == 0:
                     raise OSError(f"Resource error {operation_id}")
 
                 # This will fail until concurrent error handling is implemented

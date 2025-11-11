@@ -4,12 +4,13 @@ Comprehensive Command Frequency Analysis for Agents 3-10
 Processes conversation data to extract and analyze slash commands
 """
 
+import glob
 import json
 import os
 import re
-import glob
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from datetime import datetime
+
 
 def is_valid_slash_command(text):
     """
@@ -82,7 +83,7 @@ def process_agent_directory(agent_dir):
 
     for progress_file in progress_files:
         try:
-            with open(progress_file, 'r', encoding='utf-8') as f:
+            with open(progress_file, encoding='utf-8') as f:
                 data = json.load(f)
 
             processed_files += 1

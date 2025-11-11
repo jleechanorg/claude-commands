@@ -4,13 +4,12 @@ Comprehensive User Prompt Analysis and System Prompt Generation
 Processes 6,399 user prompts from Claude Code CLI conversations for behavioral analysis
 """
 
-import os
-import json
 import glob
+import json
+import os
 import re
-from datetime import datetime, timedelta
 from collections import Counter, defaultdict
-import pickle
+from datetime import datetime, timedelta
 
 
 def extract_all_user_prompts():
@@ -25,7 +24,7 @@ def extract_all_user_prompts():
 
     for file_path in files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -218,7 +217,7 @@ def analyze_task_categories(prompts):
         'refactoring': ['refactor', 'clean', 'optimize', 'improve']
     }
 
-    categorized = {category: 0 for category in categories}
+    categorized = dict.fromkeys(categories, 0)
 
     for prompt in prompts:
         text = prompt['prompt_text'].lower()
@@ -419,7 +418,7 @@ def select_command(task_type, context_clues, urgency_level):
         percentage = (count / sum(analysis['task_categories'].values())) * 100 if sum(analysis['task_categories'].values()) > 0 else 0
         prompt += f"- **{category.replace('_', ' ').title()}**: {count} prompts ({percentage:.1f}%)\n"
 
-    prompt += f"""
+    prompt += """
 
 ### Technical Preference Analysis
 
@@ -461,14 +460,14 @@ def select_command(task_type, context_clues, urgency_level):
     for phrase, count in analysis['language_patterns']['common_2grams'][:10]:
         prompt += f"- \"{phrase}\": {count} occurrences\n"
 
-    prompt += f"""
+    prompt += """
 
 **Common 3-Word Patterns**:
 """
     for phrase, count in analysis['language_patterns']['common_3grams'][:10]:
         prompt += f"- \"{phrase}\": {count} occurrences\n"
 
-    prompt += f"""
+    prompt += """
 
 ## Workflow Pattern Analysis
 
@@ -624,7 +623,7 @@ def generate_next_prompt(context_analysis, conversation_state):
     for i, example in enumerate(feature_examples, 1):
         prompt += f'{i}. "{example["prompt_text"][:100]}..."\n'
 
-    prompt += f"""
+    prompt += """
 
 **Bug Fix Examples**:
 """
@@ -633,7 +632,7 @@ def generate_next_prompt(context_analysis, conversation_state):
     for i, example in enumerate(bug_examples, 1):
         prompt += f'{i}. "{example["prompt_text"][:100]}..."\n'
 
-    prompt += f"""
+    prompt += """
 
 **Testing Examples**:
 """
@@ -642,7 +641,7 @@ def generate_next_prompt(context_analysis, conversation_state):
     for i, example in enumerate(test_examples, 1):
         prompt += f'{i}. "{example["prompt_text"][:100]}..."\n'
 
-    prompt += f"""
+    prompt += """
 
 ### Communication Authenticity Metrics
 
@@ -859,7 +858,7 @@ def main():
     # Calculate token count estimate (rough)
     token_count = len(expanded_prompt.split()) * 1.3  # Rough token estimation
 
-    print(f"Analysis complete!")
+    print("Analysis complete!")
     print(f"Generated system prompt: {len(expanded_prompt):,} characters")
     print(f"Estimated token count: {token_count:,.0f} tokens")
     print(f"Analysis saved to: {analysis_file}")

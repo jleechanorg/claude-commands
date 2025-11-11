@@ -6,16 +6,16 @@ Implements Last-Write-Wins (LWW) conflict resolution.
 
 import json
 import socket
-from datetime import datetime, timezone
-from typing import Any, Dict, List, Optional
 import sys
+from datetime import UTC, datetime
+from typing import Any
 
 
 def add_crdt_metadata(
-    entry: Dict[str, Any],
-    host: Optional[str] = None,
-    timestamp: Optional[str] = None
-) -> Dict[str, Any]:
+    entry: dict[str, Any],
+    host: str | None = None,
+    timestamp: str | None = None
+) -> dict[str, Any]:
     """
     Add CRDT metadata to a memory entry.
 
@@ -31,7 +31,7 @@ def add_crdt_metadata(
         host = socket.gethostname()
 
     if timestamp is None:
-        timestamp = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z')
+        timestamp = datetime.now(UTC).isoformat().replace('+00:00', 'Z')
 
     # Get entry ID for unique ID generation
     entry_id = entry.get('id', 'unknown')
@@ -56,7 +56,7 @@ def add_crdt_metadata(
     return entry
 
 
-def merge_by_lww(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def merge_by_lww(entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     Merge entries using Last-Write-Wins strategy.
 
@@ -67,7 +67,7 @@ def merge_by_lww(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         Merged list with conflicts resolved by LWW
     """
     # Group entries by ID
-    entries_by_id: Dict[str, List[Dict[str, Any]]] = {}
+    entries_by_id: dict[str, list[dict[str, Any]]] = {}
 
     for entry in entries:
         if not isinstance(entry, dict):
@@ -104,7 +104,7 @@ def merge_by_lww(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return merged_entries
 
 
-def validate_crdt_structure(entry: Dict[str, Any]) -> bool:
+def validate_crdt_structure(entry: dict[str, Any]) -> bool:
     """
     Validate that an entry has proper CRDT metadata structure.
 
@@ -128,7 +128,7 @@ def validate_crdt_structure(entry: Dict[str, Any]) -> bool:
     return all(field in metadata for field in required_fields)
 
 
-def _get_entry_timestamp(entry: Dict[str, Any]) -> datetime:
+def _get_entry_timestamp(entry: dict[str, Any]) -> datetime:
     """
     Get timestamp from entry metadata.
 
@@ -177,13 +177,12 @@ def compare_timestamps(ts1: str, ts2: str) -> int:
 
     if t1 < t2:
         return -1
-    elif t1 > t2:
+    if t1 > t2:
         return 1
-    else:
-        return 0
+    return 0
 
 
-def create_unified_memory(memory_files: List[str]) -> List[Dict[str, Any]]:
+def create_unified_memory(memory_files: list[str]) -> list[dict[str, Any]]:
     """
     Create unified memory from multiple memory files.
 
@@ -197,7 +196,7 @@ def create_unified_memory(memory_files: List[str]) -> List[Dict[str, Any]]:
 
     for file_path in memory_files:
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 entries = json.load(f)
                 if isinstance(entries, list):
                     all_entries.extend(entries)

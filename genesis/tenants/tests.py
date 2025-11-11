@@ -1,11 +1,14 @@
-from django.test import TestCase, TransactionTestCase
-from django.db import connection
-from django.core.management import call_command
-from django.core.exceptions import ValidationError
-from django.conf import settings
-from io import StringIO
 import uuid
+from io import StringIO
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.core.management import call_command
+from django.db import connection
+from django.test import TestCase, TransactionTestCase
+
 from .models import Tenant
+
 
 class TenantModelTest(TestCase):
     def test_tenant_creation(self):

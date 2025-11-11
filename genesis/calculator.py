@@ -8,7 +8,6 @@ with comprehensive error handling and input validation.
 """
 
 import sys
-from typing import Union, Tuple
 
 
 class Calculator:
@@ -105,11 +104,10 @@ def run_calculator():
                     continue_calc = input("\nContinue? (y/n): ").strip().lower()
                     if continue_calc in ['y', 'yes']:
                         break
-                    elif continue_calc in ['n', 'no']:
+                    if continue_calc in ['n', 'no']:
                         print("Calculator closing. Goodbye!")
                         return
-                    else:
-                        print("Please enter 'y' for yes or 'n' for no.")
+                    print("Please enter 'y' for yes or 'n' for no.")
                 except KeyboardInterrupt:
                     print("\nCalculator closing. Goodbye!")
                     return
@@ -165,7 +163,7 @@ def run_tests():
             else:
                 print(f"Test {i}: FAILED - Unexpected exception: {type(e).__name__}: {e}")
 
-    print(f"\n=== Test Results ===")
+    print("\n=== Test Results ===")
     print(f"Passed: {passed}/{total}")
     print(f"Success Rate: {(passed/total)*100:.1f}%")
 

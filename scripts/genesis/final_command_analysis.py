@@ -4,6 +4,7 @@ Create a refined analysis focusing on actual user slash commands
 """
 import json
 
+
 def is_real_user_command(cmd, count):
     """Determine if this is likely a real user command vs noise"""
 
@@ -47,7 +48,7 @@ def is_real_user_command(cmd, count):
 
 def main():
     # Read the full analysis
-    with open('/Users/jleechan/projects/worktree_genesis/roadmap/agent_001_command_frequency.json', 'r') as f:
+    with open('/Users/jleechan/projects/worktree_genesis/roadmap/agent_001_command_frequency.json') as f:
         data = json.load(f)
 
     # Filter to real user commands
@@ -92,7 +93,7 @@ def main():
     for i, (cmd, data) in enumerate(list(refined_analysis['command_frequencies'].items())[:20]):
         print(f"{i+1:2d}. {cmd:15s} : {data['count']:3d} occurrences")
 
-    print(f"\nFull results saved to: roadmap/agent_001_command_frequency_refined.json")
+    print("\nFull results saved to: roadmap/agent_001_command_frequency_refined.json")
 
 if __name__ == "__main__":
     main()

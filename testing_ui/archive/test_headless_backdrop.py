@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Test if headless Chrome supports backdrop-filter."""
 
+import os
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-import os
 
 # Set up Chrome options for headless mode
 chrome_options = Options()

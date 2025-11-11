@@ -3,9 +3,9 @@
 Apply the comprehensive analysis template to the last 10 user prompts
 """
 
-import os
-import json
 import glob
+import json
+import os
 import re
 from datetime import datetime, timedelta
 
@@ -20,7 +20,7 @@ def get_last_10_prompts():
 
     for file_path in files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -254,7 +254,7 @@ def main():
         json.dump(analyses, f, indent=2)
 
     # Print summary
-    print(f"\n=== COMPREHENSIVE ANALYSIS OF LAST 10 PROMPTS ===\n")
+    print("\n=== COMPREHENSIVE ANALYSIS OF LAST 10 PROMPTS ===\n")
 
     for i, analysis in enumerate(analyses, 1):
         print(f"**PROMPT {i}**: \"{analysis['raw_prompt'][:60]}...\"")
@@ -279,7 +279,7 @@ def main():
     intents = [a['cognitive_analysis']['intent_classification']['primary_intent'] for a in analyses]
     intent_counts = {intent: intents.count(intent) for intent in set(intents)}
 
-    print(f"\n=== SUMMARY STATISTICS ===")
+    print("\n=== SUMMARY STATISTICS ===")
     print(f"Average Authenticity Score: {avg_authenticity:.3f}")
     print(f"Average Cognitive Load: {avg_cognitive_load:.1f}/5")
     print(f"Intent Distribution: {intent_counts}")

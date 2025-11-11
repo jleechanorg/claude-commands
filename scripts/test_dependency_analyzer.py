@@ -26,7 +26,6 @@ import sys
 import time
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Dict, List, Set, Union
 
 # Configure logging
 logging.basicConfig(
@@ -43,7 +42,7 @@ class DependencyAnalyzer:
         self.project_root = self._find_project_root()
         self.config_path = config_path or os.path.join(self.project_root, "test_selection_config.json")
         self.config = self._load_config()
-        self.selected_tests: Set[str] = set()
+        self.selected_tests: set[str] = set()
 
     def _validate_path_safety(self, path: Path) -> bool:
         """Validate that a resolved path stays within project boundaries.
@@ -85,23 +84,23 @@ class DependencyAnalyzer:
         # Fallback to script's grandparent directory (scripts/ is usually one level down from project root)
         return str(Path(__file__).parent.parent.absolute())
 
-    def _load_config(self) -> Dict:
+    def _load_config(self) -> dict:
         """Load test selection configuration."""
         if not os.path.exists(self.config_path):
             logger.warning(f"Config file not found at {self.config_path}, using defaults")
             return self._get_default_config()
 
         try:
-            with open(self.config_path, 'r') as f:
+            with open(self.config_path) as f:
                 config = json.load(f)
                 logger.info(f"Loaded configuration from {self.config_path}")
                 return config
-        except (json.JSONDecodeError, IOError) as e:
+        except (OSError, json.JSONDecodeError) as e:
             logger.error(f"Failed to load config from {self.config_path}: {e}")
             logger.info("Falling back to default configuration")
             return self._get_default_config()
 
-    def _get_default_config(self) -> Dict:
+    def _get_default_config(self) -> dict:
         """Get default configuration for test mappings - focused on mvp_site/ intelligence."""
         return {
             "mappings": {
@@ -145,7 +144,7 @@ class DependencyAnalyzer:
             }
         }
 
-    def get_git_changes(self, base_branch: str = "origin/main") -> List[str]:
+    def get_git_changes(self, base_branch: str = "origin/main") -> list[str]:
         """Get list of changed files from git diff with robust branch detection."""
         try:
             # Use environment variables if available (CI-friendly)
@@ -161,7 +160,7 @@ class DependencyAnalyzer:
                 try:
                     cmd = ["git", "diff", "--name-only", f"{branch}...HEAD"]
                     result = subprocess.run(
-                        cmd, capture_output=True, text=True,
+                        cmd, check=False, capture_output=True, text=True,
                         cwd=self.project_root, timeout=10
                     )
 
@@ -181,7 +180,7 @@ class DependencyAnalyzer:
             logger.error(f"Error getting git changes: {e}")
             return []
 
-    def find_matching_tests(self, file_path: str) -> List[str]:
+    def find_matching_tests(self, file_path: str) -> list[str]:
         """Find tests that match a given file path using corrected strategy."""
         matching_tests = []
 
@@ -201,7 +200,7 @@ class DependencyAnalyzer:
 
         return matching_tests
 
-    def _find_mvp_site_tests(self, file_path: str) -> List[str]:
+    def _find_mvp_site_tests(self, file_path: str) -> list[str]:
         """Find tests for mvp_site/ files using intelligent mapping."""
         matching_tests = []
 
@@ -235,14 +234,14 @@ class DependencyAnalyzer:
 
         return any(file_path.startswith(prefix) for prefix in tests_subdir_directories)
 
-    def _find_other_directory_tests(self, file_path: str) -> List[str]:
+    def _find_other_directory_tests(self, file_path: str) -> list[str]:
         """Find tests for specific directories using simple tests/ subdirectory pattern."""
         # Use the existing tests/ subdirectory logic
         test_patterns = self._find_tests_subdirectories(file_path)
         logger.debug(f"Tests subdir mapping: {file_path} -> {test_patterns}")
         return test_patterns
 
-    def _find_tests_subdirectories(self, file_path: str) -> List[str]:
+    def _find_tests_subdirectories(self, file_path: str) -> list[str]:
         """Find tests/ subdirectories for specific changed files only.
 
         This only looks for tests in the immediate directory of the changed file,
@@ -250,7 +249,7 @@ class DependencyAnalyzer:
         """
         start_time = time.perf_counter()
 
-        tests_patterns: List[str] = []
+        tests_patterns: list[str] = []
         file_dir = Path(file_path).parent
 
         # Only check the immediate directory and its parent for tests/ subdirectory
@@ -280,7 +279,7 @@ class DependencyAnalyzer:
 
         return tests_patterns
 
-    def _get_conservative_mappings(self, file_path: str) -> List[str]:
+    def _get_conservative_mappings(self, file_path: str) -> list[str]:
         """Conservative fallback mappings when no specific rules match."""
         conservative_tests = []
 
@@ -322,7 +321,7 @@ class DependencyAnalyzer:
 
         return conservative_tests
 
-    def expand_test_patterns(self, test_patterns: List[str]) -> List[str]:
+    def expand_test_patterns(self, test_patterns: list[str]) -> list[str]:
         """Expand glob patterns to actual test file paths."""
         actual_tests = []
 
@@ -331,16 +330,15 @@ class DependencyAnalyzer:
                 # Handle glob patterns
                 expanded = self._expand_glob_pattern(pattern)
                 actual_tests.extend(expanded)
+            # Handle direct file paths
+            elif self._test_file_exists(pattern):
+                actual_tests.append(pattern)
             else:
-                # Handle direct file paths
-                if self._test_file_exists(pattern):
-                    actual_tests.append(pattern)
-                else:
-                    logger.debug(f"Test file not found: {pattern}")
+                logger.debug(f"Test file not found: {pattern}")
 
         return actual_tests
 
-    def _expand_glob_pattern(self, pattern: str) -> List[str]:
+    def _expand_glob_pattern(self, pattern: str) -> list[str]:
         """Expand a glob pattern to matching test files."""
         try:
             # Convert pattern to absolute path for searching
@@ -367,20 +365,19 @@ class DependencyAnalyzer:
                             if match.is_file() and self._validate_path_safety(match):
                                 relative_path = match.relative_to(project_path)
                                 matches.append(str(relative_path))
-            else:
-                # Simple glob pattern - search entire project for matches
-                if "*" in search_pattern:
-                    # Use rglob for comprehensive search
-                    for match in project_path.rglob(search_pattern):
-                        if match.is_file() and match.name.startswith("test_") and self._validate_path_safety(match):
-                            relative_path = match.relative_to(project_path)
-                            matches.append(str(relative_path))
-                else:
-                    # Direct file path
-                    pattern_path = project_path / search_pattern
-                    if pattern_path.exists() and pattern_path.is_file() and self._validate_path_safety(pattern_path):
-                        relative_path = pattern_path.relative_to(project_path)
+            # Simple glob pattern - search entire project for matches
+            elif "*" in search_pattern:
+                # Use rglob for comprehensive search
+                for match in project_path.rglob(search_pattern):
+                    if match.is_file() and match.name.startswith("test_") and self._validate_path_safety(match):
+                        relative_path = match.relative_to(project_path)
                         matches.append(str(relative_path))
+            else:
+                # Direct file path
+                pattern_path = project_path / search_pattern
+                if pattern_path.exists() and pattern_path.is_file() and self._validate_path_safety(pattern_path):
+                    relative_path = pattern_path.relative_to(project_path)
+                    matches.append(str(relative_path))
 
             logger.debug(f"Pattern '{pattern}' expanded to {len(matches)} files: {matches[:5]}...")
             return matches
@@ -405,7 +402,7 @@ class DependencyAnalyzer:
             self.selected_tests.update(expanded)
             logger.debug(f"Always run: {test_pattern} -> {len(expanded)} tests")
 
-    def add_modified_test_files(self, changed_files: List[str]):
+    def add_modified_test_files(self, changed_files: list[str]):
         """Add any test files that were directly modified."""
         for file_path in changed_files:
             if "test_" in file_path and file_path.endswith(".py"):
@@ -413,7 +410,7 @@ class DependencyAnalyzer:
                     self.selected_tests.add(file_path)
                     logger.debug(f"Modified test file included: {file_path}")
 
-    def analyze_changes(self, changed_files: List[str]) -> Set[str]:
+    def analyze_changes(self, changed_files: list[str]) -> set[str]:
         """Analyze changed files and return set of tests to run."""
         logger.info(f"Analyzing {len(changed_files)} changed files")
 
@@ -465,7 +462,7 @@ class DependencyAnalyzer:
         try:
             # Avoid shell entirely for better security
             git_result = subprocess.run(
-                ["git", "ls-files"], capture_output=True, text=True,
+                ["git", "ls-files"], check=False, capture_output=True, text=True,
                 cwd=self.project_root, timeout=10
             )
             if git_result.returncode == 0:
@@ -476,7 +473,7 @@ class DependencyAnalyzer:
         # Fallback estimate
         return 500
 
-    def _get_all_tests(self) -> Set[str]:
+    def _get_all_tests(self) -> set[str]:
         """Get all test files in the repository."""
         all_tests = set()
 
@@ -492,7 +489,7 @@ class DependencyAnalyzer:
         logger.info(f"Found {len(all_tests)} total test files")
         return all_tests
 
-    def _get_core_safety_tests(self) -> Set[str]:
+    def _get_core_safety_tests(self) -> set[str]:
         """Get core safety tests as fallback."""
         safety_tests = set()
         always_run = self.config.get("mappings", {}).get("always_run", [])

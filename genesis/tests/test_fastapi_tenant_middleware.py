@@ -2,32 +2,27 @@
 Comprehensive FastAPI Tenant Middleware Tests
 Tests for multi-tenant FastAPI middleware functionality including header, path, and subdomain resolution.
 """
-import pytest
-import asyncio
-import uuid
-from decimal import Decimal
-from unittest.mock import Mock, AsyncMock, patch, MagicMock, call
-from fastapi.testclient import TestClient
-from fastapi import FastAPI, Request, Depends
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.exc import SQLAlchemyError
 import os
 import sys
-from typing import Generator
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+from fastapi import FastAPI, Request
+from fastapi.testclient import TestClient
+from sqlalchemy import text
+from sqlalchemy.exc import SQLAlchemyError
 
 # Add parent directories to path to import our modules
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from main import app, get_db, SessionLocal, Customer, Product, Order, OrderItem, Base
 from app.tenant_middleware import (
-    TenantMiddleware,
     TenantDatabaseDependency,
-    create_tenant_database_dependency,
+    TenantMiddleware,
     create_tenant_schema,
     drop_tenant_schema,
-    list_tenant_schemas
+    list_tenant_schemas,
 )
+from main import app, get_db
 
 
 class TestTenantMiddleware:

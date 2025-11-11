@@ -4,20 +4,19 @@ Proto Genesis - Interactive Goal Refinement System
 Executes goal refinement using claude -p based on pre-defined goals from /goal command
 """
 
+import fcntl
 import json
 import os
 import re
 import select
-import signal
 import subprocess
 import sys
 import threading
 import time
-from pathlib import Path
-from enum import Enum
 from dataclasses import dataclass, field
-from typing import Optional, Dict, Any, List
-import fcntl
+from enum import Enum
+from pathlib import Path
+from typing import Any
 
 from .common_cli import (
     GenesisArguments,
@@ -25,11 +24,12 @@ from .common_cli import (
     GenesisUsageError,
     extract_model_preference,
     parse_genesis_cli,
+)
+from .common_cli import (
     print_usage as print_cli_usage,
 )
 
-
-GENESIS_USE_CODEX: Optional[bool] = None
+GENESIS_USE_CODEX: bool | None = None
 
 # Token burn prevention constants (centralized to avoid duplication)
 MAX_TOKENS_PER_ITERATION = 50_000  # Hard limit per iteration
@@ -37,7 +37,7 @@ MAX_PROMPT_LENGTH = 100_000  # Context overflow prevention
 MAX_FIELD_SIZE = 50_000  # Session field size limit
 
 
-def is_codex_enabled(argv: Optional[List[str]] = None) -> bool:
+def is_codex_enabled(argv: list[str] | None = None) -> bool:
     """Determine whether Codex should be used (Codex default)."""
     global GENESIS_USE_CODEX
 
@@ -82,31 +82,31 @@ class WorkflowState:
     # Core Status Fields
     goal_complete: bool = False
     tests_passing: bool = False
-    implementation_gaps: Optional[str] = None
+    implementation_gaps: str | None = None
     current_phase: str = "B1"
-    error_message: Optional[str] = None
+    error_message: str | None = None
 
     # Enhanced Tracking Fields
-    phase_history: List[str] = field(default_factory=list)
+    phase_history: list[str] = field(default_factory=list)
     iteration_count: int = 0
     max_iterations: int = 20
-    start_timestamp: Optional[float] = None
-    end_timestamp: Optional[float] = None
+    start_timestamp: float | None = None
+    end_timestamp: float | None = None
 
     # Validation State
-    validation_errors: List[str] = field(default_factory=list)
-    test_failures: List[str] = field(default_factory=list)
-    integration_status: Optional[str] = None
+    validation_errors: list[str] = field(default_factory=list)
+    test_failures: list[str] = field(default_factory=list)
+    integration_status: str | None = None
 
     # Progress Metrics
     completion_percentage: float = 0.0
-    phase_durations: Dict[str, float] = field(default_factory=dict)
+    phase_durations: dict[str, float] = field(default_factory=dict)
     retry_count: int = 0
     max_retries: int = 3
 
     # Token Usage Tracking (prevent infinite burn)
     total_tokens_used: int = 0
-    iteration_tokens: Dict[int, int] = field(default_factory=dict)
+    iteration_tokens: dict[int, int] = field(default_factory=dict)
     max_tokens_per_iteration: int = field(default_factory=lambda: MAX_TOKENS_PER_ITERATION)
 
     def __post_init__(self) -> None:
@@ -134,11 +134,11 @@ class WorkflowState:
         )
 
     @property
-    def duration(self) -> Optional[float]:
+    def duration(self) -> float | None:
         """Calculate total workflow duration if completed"""
         if self.start_timestamp and self.end_timestamp:
             return self.end_timestamp - self.start_timestamp
-        elif self.start_timestamp:
+        if self.start_timestamp:
             import time
             return time.time() - self.start_timestamp
         return None
@@ -148,10 +148,9 @@ class WorkflowState:
         """Determine current workflow status"""
         if self.is_complete:
             return WorkflowStatus.COMPLETED
-        elif self.is_failed:
+        if self.is_failed:
             return WorkflowStatus.FAILED
-        else:
-            return WorkflowStatus.IN_PROGRESS
+        return WorkflowStatus.IN_PROGRESS
 
     def advance_phase(self, new_phase: str) -> None:
         """Advance to new phase with proper tracking"""
@@ -312,7 +311,7 @@ class WorkflowState:
         # Update completion percentage
         self.calculate_completion_percentage()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization"""
         return {
             'goal_complete': self.goal_complete,
@@ -337,7 +336,7 @@ class WorkflowState:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> 'WorkflowState':
+    def from_dict(cls, data: dict[str, Any]) -> 'WorkflowState':
         """Create WorkflowState from dictionary"""
         # Handle optional fields with defaults
         instance = cls(
@@ -401,7 +400,7 @@ class SecureFileHandler:
             return ""
 
         try:
-            with open(filepath, 'r') as f:
+            with open(filepath) as f:
                 # Try file locking if available (Unix systems)
                 try:
                     fcntl.flock(f.fileno(), fcntl.LOCK_SH)
@@ -450,8 +449,7 @@ def smart_model_call(prompt):
     use_codex = is_codex_enabled()  # Global flag affects all calls within single Genesis instance
     if use_codex:
         return execute_codex_command(prompt)
-    else:
-        return execute_claude_command(prompt, use_cerebras=False)
+    return execute_claude_command(prompt, use_cerebras=False)
 
 def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=False, iteration_token_count=None, workflow_state=None):
     """Execute claude, codex, or cerebras command with prompt and return output."""
@@ -477,7 +475,7 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
         current_iteration = getattr(workflow_state, 'iteration_count', 0)
         # Track token usage and enforce limit
         if not workflow_state.add_token_usage(estimated_tokens, current_iteration):
-            print(f"🛑 TOKEN BUDGET EXCEEDED via workflow_state tracking")
+            print("🛑 TOKEN BUDGET EXCEEDED via workflow_state tracking")
             print("    Preventing infinite token burn - operation cancelled")
             return None
     print(f"📊 TOKEN USAGE: Estimated {estimated_tokens} input tokens, iteration total: {iteration_token_count or 0}")
@@ -500,10 +498,10 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
             # Add maximum verbosity config overrides for codex
             if verbose_mode:
                 command.extend(["-c", "verbose=true"])
-                print(f"    🔊 CODEX: Maximum verbosity enabled", flush=True)
+                print("    🔊 CODEX: Maximum verbosity enabled", flush=True)
             if debug_mode:
                 command.extend(["-c", "debug=true"])
-                print(f"    🐛 CODEX: Debug mode enabled", flush=True)
+                print("    🐛 CODEX: Debug mode enabled", flush=True)
             tool_name = "codex"
             input_method = "stdin"
         elif use_cerebras:
@@ -520,36 +518,35 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
                     command = ["codex", "exec", "--yolo"]
                     tool_name = "codex"
                     if verbose_mode:
-                        print(f"    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
+                        print("    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
                 else:
                     command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
                     tool_name = "claude"
                     if verbose_mode:
                         command.extend(["--verbose"])
-                        print(f"    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
+                        print("    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
                     if debug_mode:
                         command.extend(["--debug", "api,hooks,mcp"])
-                        print(f"    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
+                        print("    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
                 input_method = "stdin"
+        # Use codex by default (controlled by is_codex_enabled())
+        elif is_codex_enabled():
+            command = ["codex", "exec", "--yolo"]
+            tool_name = "codex"
+            input_method = "stdin"
+            if verbose_mode:
+                print("    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
         else:
-            # Use codex by default (controlled by is_codex_enabled())
-            if is_codex_enabled():
-                command = ["codex", "exec", "--yolo"]
-                tool_name = "codex"
-                input_method = "stdin"
-                if verbose_mode:
-                    print(f"    🔊 CODEX: Using Codex CLI (larger context)", flush=True)
-            else:
-                # Pass model flag and value as separate args so CLI parses it correctly
-                command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
-                if verbose_mode:
-                    command.extend(["--verbose"])
-                    print(f"    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
-                if debug_mode:
-                    command.extend(["--debug", "api,hooks,mcp"])
-                    print(f"    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
-                tool_name = "claude"
-                input_method = "stdin"
+            # Pass model flag and value as separate args so CLI parses it correctly
+            command = ["claude", "-p", "--dangerously-skip-permissions", "--model", "sonnet"]
+            if verbose_mode:
+                command.extend(["--verbose"])
+                print("    🔊 CLAUDE: Maximum verbosity enabled (no streaming to prevent hangs)", flush=True)
+            if debug_mode:
+                command.extend(["--debug", "api,hooks,mcp"])
+                print("    🐛 CLAUDE: Full debug mode enabled (api,hooks,mcp)", flush=True)
+            tool_name = "claude"
+            input_method = "stdin"
 
         print(f"    🚀 EXECUTING {tool_name.upper()} COMMAND:")
         print(f"    └─ Command: {' '.join(command[:2])}...")
@@ -698,7 +695,7 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
         end_time = time.time()
         duration = end_time - start_time
 
-        print(f"    ⏱️  EXECUTION COMPLETED:")
+        print("    ⏱️  EXECUTION COMPLETED:")
         print(f"    └─ Duration: {duration:.2f}s")
         print(f"    └─ Return code: {result.returncode}")
 
@@ -714,37 +711,36 @@ def execute_claude_command(prompt, timeout=600, use_codex=False, use_cerebras=Fa
                 print(f"    └─ Truncated to: {len(output)} characters")
 
             return output
-        else:
-            # Enhanced error diagnostics for codex failures
-            full_output = result.stdout.strip()
-            error_output = full_output if full_output else "No output captured"
+        # Enhanced error diagnostics for codex failures
+        full_output = result.stdout.strip()
+        error_output = full_output if full_output else "No output captured"
 
-            print(f"    └─ Error: {error_output}")
-            print(f"    └─ Full stdout: {repr(full_output)}")
+        print(f"    └─ Error: {error_output}")
+        print(f"    └─ Full stdout: {repr(full_output)}")
 
-            # Specific codex error pattern detection
-            if use_codex:
-                print(f"    🔍 CODEX ERROR ANALYSIS:")
-                if "Broken pipe" in full_output:
-                    print(f"    └─ Issue: Broken pipe - codex process terminated unexpectedly")
-                    print(f"    └─ Check: Is codex proxy running on localhost:10000?")
-                elif "Not inside a trusted directory" in full_output:
-                    print(f"    └─ Issue: Git trust directory error")
-                    print(f"    └─ Solution: Using --skip-git-repo-check flag")
-                elif "permission" in full_output.lower():
-                    print(f"    └─ Issue: Permission error")
-                elif "connection" in full_output.lower() or "refused" in full_output.lower():
-                    print(f"    └─ Issue: Connection error to codex proxy")
-                    print(f"    └─ Check: curl http://localhost:10000/health")
-                else:
-                    print(f"    └─ Issue: Unknown codex error - see full output above")
+        # Specific codex error pattern detection
+        if use_codex:
+            print("    🔍 CODEX ERROR ANALYSIS:")
+            if "Broken pipe" in full_output:
+                print("    └─ Issue: Broken pipe - codex process terminated unexpectedly")
+                print("    └─ Check: Is codex proxy running on localhost:10000?")
+            elif "Not inside a trusted directory" in full_output:
+                print("    └─ Issue: Git trust directory error")
+                print("    └─ Solution: Using --skip-git-repo-check flag")
+            elif "permission" in full_output.lower():
+                print("    └─ Issue: Permission error")
+            elif "connection" in full_output.lower() or "refused" in full_output.lower():
+                print("    └─ Issue: Connection error to codex proxy")
+                print("    └─ Check: curl http://localhost:10000/health")
+            else:
+                print("    └─ Issue: Unknown codex error - see full output above")
 
-            print(f"Error running {tool_name}: {error_output}")
-            return None
+        print(f"Error running {tool_name}: {error_output}")
+        return None
     except subprocess.TimeoutExpired:
         end_time = time.time()
         duration = end_time - start_time
-        print(f"    ⏱️  EXECUTION TIMED OUT:")
+        print("    ⏱️  EXECUTION TIMED OUT:")
         print(f"    └─ Duration: {duration:.2f}s (exceeded {timeout}s limit)")
         print(f"{tool_name.title()} command timed out")
         return None
@@ -830,16 +826,16 @@ def load_goal_from_directory(goal_dir):
     print(f"📂 LOADING GOAL FROM DIRECTORY: {goal_dir}", flush=True)
 
     if goal_dir is None:
-        print(f"❌ Error: Goal directory is None", flush=True)
+        print("❌ Error: Goal directory is None", flush=True)
         return None, None
 
     # Validate goal directory path length before attempting filesystem operations
     if len(goal_dir) > 200:
         print(f"❌ Error: Goal directory path too long ({len(goal_dir)} chars > 200 limit)", flush=True)
-        print(f"💡 Hint: Use --refine mode for long descriptions:", flush=True)
-        print(f"   python genesis/genesis.py --refine 'short description' [iterations]", flush=True)
-        print(f"💡 Or create a proper goal directory with short name:", flush=True)
-        print(f"   mkdir goals/2025-09-22-debug-codex && populate with goal files", flush=True)
+        print("💡 Hint: Use --refine mode for long descriptions:", flush=True)
+        print("   python genesis/genesis.py --refine 'short description' [iterations]", flush=True)
+        print("💡 Or create a proper goal directory with short name:", flush=True)
+        print("   mkdir goals/2025-09-22-debug-codex && populate with goal files", flush=True)
         return None, None
 
     goal_path = Path(goal_dir)
@@ -850,14 +846,13 @@ def load_goal_from_directory(goal_dir):
             return None, None
     except OSError as e:
         if e.errno == 63:  # File name too long
-            print(f"❌ Error: Goal directory name too long for filesystem", flush=True)
-            print(f"💡 Use --refine mode: python genesis/genesis.py --refine 'description' [iterations]", flush=True)
+            print("❌ Error: Goal directory name too long for filesystem", flush=True)
+            print("💡 Use --refine mode: python genesis/genesis.py --refine 'description' [iterations]", flush=True)
             return None, None
-        else:
-            print(f"❌ Error accessing goal directory: {e}", flush=True)
-            return None, None
+        print(f"❌ Error accessing goal directory: {e}", flush=True)
+        return None, None
 
-    print(f"✅ Goal directory exists, checking files...", flush=True)
+    print("✅ Goal directory exists, checking files...", flush=True)
 
     # Load goal definition
     goal_def_file = goal_path / "00-goal-definition.md"
@@ -871,7 +866,7 @@ def load_goal_from_directory(goal_dir):
 
     try:
         if goal_def_file.exists():
-            print(f"📖 Reading goal definition file...", flush=True)
+            print("📖 Reading goal definition file...", flush=True)
             with open(goal_def_file) as f:
                 content = f.read()
                 print(f"📊 Goal definition content length: {len(content)} characters", flush=True)
@@ -894,7 +889,7 @@ def load_goal_from_directory(goal_dir):
                         break
 
                 if not refined_goal:
-                    print(f"⚠️  No 'refined goal' section found, using fallback...", flush=True)
+                    print("⚠️  No 'refined goal' section found, using fallback...", flush=True)
                     # Fallback: take first meaningful paragraph
                     for line in lines:
                         if len(line.strip()) > 20 and not line.startswith("#"):
@@ -903,7 +898,7 @@ def load_goal_from_directory(goal_dir):
                             break
 
         if criteria_file.exists():
-            print(f"📖 Reading success criteria file...", flush=True)
+            print("📖 Reading success criteria file...", flush=True)
             with open(criteria_file) as f:
                 exit_criteria = f.read()
                 print(f"📊 Success criteria content length: {len(exit_criteria)} characters", flush=True)
@@ -968,9 +963,8 @@ Generate all files now:"""
                     print(f"✅ Generated: {filename.strip()}")
 
             return True
-        else:
-            print(f"❌ Fast generation failed")
-            return False
+        print("❌ Fast generation failed")
+        return False
 
     except Exception as e:
         print(f"❌ Fast generation error: {e}")
@@ -1199,9 +1193,9 @@ def generate_execution_strategy(
         except Exception as e:
             print(f"  ⚠️  Error loading simulation prompt: {e}")
     elif use_codex:
-        print(f"  🔧 Skipping user simulation prompt for Codex (direct instruction mode)")
+        print("  🔧 Skipping user simulation prompt for Codex (direct instruction mode)")
     else:
-        print(f"  🚀 Skipping user simulation prompt for Cerebras (fast generation mode)")
+        print("  🚀 Skipping user simulation prompt for Cerebras (fast generation mode)")
 
     # Use different prompt structure for Cerebras vs Claude vs Codex
     if use_cerebras:
@@ -1315,7 +1309,7 @@ OUTPUT REQUIREMENTS: Keep response to 2-3 sentences maximum. Use slash commands 
     print("  📤 SENDING PROMPT TO CLAUDE:")
     print(f"  └─ Prompt length: {len(prompt)} characters")
     print(f"  └─ Using codex: {use_codex}")
-    print(f"  └─ Timeout: 600s")
+    print("  └─ Timeout: 600s")
 
     # Log execution plan to human-readable log
     if 'human_logger' in globals():
@@ -1645,9 +1639,8 @@ def check_goal_completion(consensus_response, exit_criteria):
         # Additional validation - must also have evidence of real work
         if "working code" in response_lower or "functional implementation" in response_lower:
             return True
-        else:
-            print("⚠️ Completion claimed but no working code evidence - requiring more validation")
-            return False
+        print("⚠️ Completion claimed but no working code evidence - requiring more validation")
+        return False
 
     # Parse progress percentages with robust error handling
     progress_patterns = [
@@ -1715,7 +1708,7 @@ def update_genesis_instructions(goal_dir, learnings, use_codex=False, iteration_
     from pathlib import Path
 
     if goal_dir is None:
-        return  # Skip if no goal directory available
+        return None  # Skip if no goal directory available
 
     genesis_file = Path(goal_dir) / "GENESIS.md"
     existing_instructions = ""
@@ -1925,7 +1918,7 @@ def resolve_tracked_todos(session_data, use_codex=True):
         return True
 
     print(f"\n{'='*80}")
-    print(f"📝 TODO RESOLUTION PHASE")
+    print("📝 TODO RESOLUTION PHASE")
     print(f"{'='*80}")
     print(f"  Found {len(tracked_todos)} tracked TODO(s) from previous iterations")
 
@@ -1937,7 +1930,7 @@ def resolve_tracked_todos(session_data, use_codex=True):
             todos_by_type[todo_type] = []
         todos_by_type[todo_type].append(todo)
 
-    print(f"\n  📊 TODO Breakdown:")
+    print("\n  📊 TODO Breakdown:")
     for todo_type, todos in todos_by_type.items():
         print(f"     └─ {todo_type}: {len(todos)} items")
 
@@ -1970,14 +1963,14 @@ REQUIREMENTS:
 Execute using claude -p for each resolution.
 """
 
-    print(f"\n  📤 SENDING TODO RESOLUTION PROMPT:")
+    print("\n  📤 SENDING TODO RESOLUTION PROMPT:")
     print(f"  └─ Prompt length: {len(resolution_prompt)} characters")
     print(f"  └─ TODOs to resolve: {len(tracked_todos)}")
 
     result = execute_claude_command(resolution_prompt, timeout=600, use_codex=use_codex)
 
     if result:
-        print(f"  📥 TODO RESOLUTION RESPONSE:")
+        print("  📥 TODO RESOLUTION RESPONSE:")
         print(f"  └─ Response length: {len(result)} characters")
 
         # Validate that TODOs were actually resolved
@@ -1988,13 +1981,12 @@ Execute using claude -p for each resolution.
             # Add new TODOs to tracking
             session_data['tracked_todos'] = new_todos
         else:
-            print(f"  ✅ All TODOs resolved successfully")
+            print("  ✅ All TODOs resolved successfully")
             session_data['tracked_todos'] = []
 
         return True
-    else:
-        print(f"  ❌ No resolution response received")
-        return False
+    print("  ❌ No resolution response received")
+    return False
 
 def integrate_git_workflow(goal_dir, iteration_summary, use_codex=False):
     """Genesis pattern: Auto-commit when tests pass"""
@@ -2069,10 +2061,9 @@ def detect_workflow_phase(iteration_num, total_iterations, skip_initial_generati
     """
     if skip_initial_generation:
         return "ITERATIVE_REFINEMENT"
-    elif iteration_num <= 2:
+    if iteration_num <= 2:
         return "BULK_GENERATION"
-    else:
-        return "ITERATIVE_REFINEMENT"
+    return "ITERATIVE_REFINEMENT"
 
 
 def define_milestones_from_failures(test_results, refined_goal, session_data):
@@ -2117,7 +2108,7 @@ def main():
         import subprocess
         repo_name = os.path.basename(os.getcwd())
         branch_result = subprocess.run(['git', 'rev-parse', '--abbrev-ref', 'HEAD'],
-                                     capture_output=True, text=True, cwd=os.getcwd())
+                                     check=False, capture_output=True, text=True, cwd=os.getcwd())
         branch_name = branch_result.stdout.strip() if branch_result.returncode == 0 else 'unknown'
 
         log_dir = f"/tmp/{repo_name}/{branch_name}"
@@ -2209,10 +2200,10 @@ def main():
                 self.log_file.flush()
 
             def log_execution_plan(self, plan_summary, prompt_preview=""):
-                self.log_file.write(f"\n📋 EXECUTION PLAN:\n")
+                self.log_file.write("\n📋 EXECUTION PLAN:\n")
                 self.log_file.write(f"  Summary: {plan_summary}\n")
                 if prompt_preview:
-                    self.log_file.write(f"  Prompt Preview (first 500 chars):\n")
+                    self.log_file.write("  Prompt Preview (first 500 chars):\n")
                     self.log_file.write("  " + "-" * 50 + "\n")
                     preview = prompt_preview[:500].replace('\n', '\n    ')
                     self.log_file.write(f"    {preview}...\n")
@@ -2220,7 +2211,7 @@ def main():
                 self.log_file.flush()
 
             def log_execution(self, action, result="pending"):
-                self.log_file.write(f"\n⚡ EXECUTION:\n")
+                self.log_file.write("\n⚡ EXECUTION:\n")
                 self.log_file.write(f"  Action: {action}\n")
                 self.log_file.write(f"  Status: {result}\n")
                 self.log_file.flush()
@@ -2256,7 +2247,7 @@ def main():
 
         print(f"📝 Logging to: {log_file}", flush=True)
         print(f"📝 Human-readable log: {human_log_file}", flush=True)
-        print(f"📝 All output will be logged to both terminal and file", flush=True)
+        print("📝 All output will be logged to both terminal and file", flush=True)
 
     except Exception as e:
         print(f"⚠️ Could not set up logging: {e}", flush=True)
@@ -2356,11 +2347,10 @@ def main():
                         approval = "y"
                 if approval in ["y", "yes"]:
                     break
-                elif approval in ["n", "no"]:
+                if approval in ["n", "no"]:
                     print("Let's refine again...\n")
                     continue
-                else:
-                    print("Please enter 'y' or 'n'")
+                print("Please enter 'y' or 'n'")
             else:
                 print("Error refining goal. Please try again.")
                 return
@@ -2396,7 +2386,7 @@ def main():
         goal_dir = cli_args.goal_directory
         max_iterations = cli_args.max_iterations
 
-        print(f"📁 ENTERING GOAL DIRECTORY MODE", flush=True)
+        print("📁 ENTERING GOAL DIRECTORY MODE", flush=True)
         print(f"📂 Goal Directory: {goal_dir}", flush=True)
 
         print("=" * 60)
@@ -2427,7 +2417,7 @@ def main():
     # Genesis-inspired iteration loop with stage summarization
     print("STARTING GENESIS-INSPIRED ITERATIONS")
     print("=" * 30)
-    print(f"Genesis Principles: One item per loop | Direct claude -p execution | Enhanced context: 2000 tokens | No placeholders")
+    print("Genesis Principles: One item per loop | Direct claude -p execution | Enhanced context: 2000 tokens | No placeholders")
     print()
 
     # Genesis-style context variables (minimal)
@@ -2785,7 +2775,7 @@ ORIGINAL STRATEGY CONTEXT:
 
                 if goal_dir and goal_dir != "unknown":
                     with open(completion_file, 'w') as f:
-                        f.write(f"# Genesis Completion Report\n\n")
+                        f.write("# Genesis Completion Report\n\n")
                         f.write(f"**Completion Time**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
                         f.write(f"**Final Iteration**: {i + 1}/{max_iterations}\n\n")
                         f.write(f"## Final Assessment\n{consensus_response}\n\n")
@@ -2906,7 +2896,7 @@ ORIGINAL STRATEGY CONTEXT:
 
         # Genesis-style continuation (trust the process)
         if i < max_iterations - 1:
-            print(f"📈 Progress made this iteration. Genesis continues...")
+            print("📈 Progress made this iteration. Genesis continues...")
             print("Genesis principle: Trust the process, focus on next single task")
             print()
 
@@ -2983,7 +2973,7 @@ def _parse_goal_status(output: str) -> WorkflowStatus:
     return WorkflowStatus.PENDING
 
 
-def _extract_implementation_gaps(output: str) -> Optional[str]:
+def _extract_implementation_gaps(output: str) -> str | None:
     """Extract specific implementation gaps from goal validation output."""
     # Look for gap patterns in the output
     gap_patterns = [
@@ -3059,17 +3049,16 @@ def enhanced_genesis_workflow(goal, iteration_num, previous_output=None):
         prompt = f"Enhanced Goal Generation: Take this goal and expand it into a comprehensive specification with clear milestones: {goal}"
         return cerebras_call(prompt)
 
-    elif iteration_num == 2:
+    if iteration_num == 2:
         # A2: Comprehensive TDD (Cerebras)
         prompt = f"Comprehensive TDD Implementation: Create complete test suite and initial implementation for: {previous_output}"
         return cerebras_call(prompt)
 
-    else:
-        # Stage B: Use detailed design workflow (B1-B5) with /tmp file data flow
-        current_suite = previous_output
+    # Stage B: Use detailed design workflow (B1-B5) with /tmp file data flow
+    current_suite = previous_output
 
-        # Detailed workflow implementation follows B1-B5 design specification
-        return execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path)
+    # Detailed workflow implementation follows B1-B5 design specification
+    return execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path)
 
 
 def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
@@ -3084,7 +3073,7 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
         workflow_state.current_phase = f"B{iteration + 1}"
 
         # TOKEN BURN PREVENTION: Log iteration start with token tracking
-        print(f"📊 ITERATION STATS:")
+        print("📊 ITERATION STATS:")
         print(f"  └─ Total tokens used: {workflow_state.total_tokens_used}")
         print(f"  └─ Iteration {iteration + 1} tokens: {workflow_state.iteration_tokens.get(iteration, 0)}")
         print(f"  └─ Token budget remaining: {workflow_state.max_tokens_per_iteration - workflow_state.iteration_tokens.get(iteration, 0)}")
@@ -3126,10 +3115,10 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
 
         # Check dual termination condition using structured status
         if workflow_state.goal_complete and workflow_state.tests_passing:
-            print(f"✅ Workflow complete: Both goal validation and tests satisfied")
+            print("✅ Workflow complete: Both goal validation and tests satisfied")
             workflow_state.current_phase = "COMPLETE"
             return current_suite  # Workflow complete
-        elif workflow_state.goal_complete:
+        if workflow_state.goal_complete:
             print(f"🟡 Goal complete but tests failing - will retry (iteration {iteration + 1}/{max_iterations})")
         elif workflow_state.tests_passing:
             print(f"🟡 Tests passing but goal not complete - will retry (iteration {iteration + 1}/{max_iterations})")
@@ -3204,19 +3193,18 @@ def execute_detailed_b1_to_b5_workflow(current_suite, goal, tmp_path):
 
                 # Check if tests pass using structured status
                 if test_status == TestStatus.PASSED:
-                    print(f"✅ B4.3 Test validation passed")
+                    print("✅ B4.3 Test validation passed")
                     workflow_state.error_message = None
                     break
-                else:
-                    retry_count += 1
-                    print(f"⚠️  B4.3 Test validation failed (attempt {retry_count}/{max_retries}), retrying...")
-                    workflow_state.error_message = f"Test failures in B4.3: {_extract_test_errors(b43_output)}"
+                retry_count += 1
+                print(f"⚠️  B4.3 Test validation failed (attempt {retry_count}/{max_retries}), retrying...")
+                workflow_state.error_message = f"Test failures in B4.3: {_extract_test_errors(b43_output)}"
 
-                    # Write failure details for next iteration with secure handling
-                    SecureFileHandler.write_with_lock(
-                        f"{tmp_path}/genesis_failure_details.txt",
-                        f"Test Failures: {workflow_state.error_message}"
-                    )
+                # Write failure details for next iteration with secure handling
+                SecureFileHandler.write_with_lock(
+                    f"{tmp_path}/genesis_failure_details.txt",
+                    f"Test Failures: {workflow_state.error_message}"
+                )
 
             # B5: Code Review (Model-Specific)
             workflow_state.current_phase = "B5"

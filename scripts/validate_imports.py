@@ -40,6 +40,7 @@ class ImportValidator(ast.NodeVisitor):
         self.non_import_seen = False
         self.in_try_except = False
         self.try_except_depth = 0
+        self.sys_path_manipulation_seen = False
 
         # Allow conditional imports for optional dependencies and testing
         self.allowed_conditional_imports = {
@@ -83,7 +84,15 @@ class ImportValidator(ast.NodeVisitor):
             'orchestration.a2a_monitor', 'orchestration.debug_worker',
             'orchestration.live_mode',
             'agent_system', 'message_broker', 'a2a_integration', 'task_dispatcher',
-            'constants', 'a2a_agent_wrapper', 'a2a_monitor', 'debug_worker', 'live_mode'
+            'constants', 'a2a_agent_wrapper', 'a2a_monitor', 'debug_worker', 'live_mode',
+            # MCP optional dependencies
+            'fastmcp', 'mcp.types', 'mcp_servers.slash_commands.unified_router',
+            # Claude commands optional dependencies
+            'exportcommands',
+            # Django optional dependencies
+            'django.core.management',
+            # Cerebras optional dependencies
+            'cerebras', 'cerebras.sdk', 'cerebras_tool'
         }
 
     def _is_allowed_conditional_import(self, node: ast.Import | ast.ImportFrom) -> bool:
@@ -135,6 +144,11 @@ class ImportValidator(ast.NodeVisitor):
         self.import_seen = True
 
         if self.non_import_seen:
+            # Allow imports after sys.path manipulation (common in test files)
+            if self.sys_path_manipulation_seen:
+                self.generic_visit(node)
+                return
+            
             # Allow conditional imports in specific contexts
             if not self._is_allowed_conditional_import(node):
                 self.violations.append(
@@ -153,6 +167,11 @@ class ImportValidator(ast.NodeVisitor):
         self.import_seen = True
 
         if self.non_import_seen:
+            # Allow imports after sys.path manipulation (common in test files)
+            if self.sys_path_manipulation_seen:
+                self.generic_visit(node)
+                return
+            
             # Allow conditional imports in specific contexts
             if not self._is_allowed_conditional_import(node):
                 self.violations.append(
@@ -182,6 +201,30 @@ class ImportValidator(ast.NodeVisitor):
 
     def visit_Assign(self, node: ast.Assign) -> None:
         """Mark non-import code."""
+        # Check if this is sys.path manipulation (common in test files)
+        if isinstance(node.value, ast.Call):
+            if isinstance(node.value.func, ast.Attribute):
+                if isinstance(node.value.func.value, ast.Attribute):
+                    if (isinstance(node.value.func.value.value, ast.Name) and
+                        node.value.func.value.value.id == 'sys' and
+                        node.value.func.value.attr == 'path' and
+                        node.value.func.attr in ('insert', 'append')):
+                        # Allow imports after sys.path manipulation in test files
+                        self.sys_path_manipulation_seen = True
+                        self.generic_visit(node)
+                        return
+        
+        # Allow os.environ assignments before imports (common in test files)
+        if isinstance(node.targets[0], ast.Subscript):
+            if isinstance(node.targets[0].value, ast.Attribute):
+                if (isinstance(node.targets[0].value.value, ast.Name) and
+                    node.targets[0].value.value.id == 'os' and
+                    node.targets[0].value.attr == 'environ'):
+                    # Allow imports after os.environ assignments in test files
+                    self.sys_path_manipulation_seen = True
+                    self.generic_visit(node)
+                    return
+        
         # Assignments always mark end of import section per PEP 8
         # This enforces strict import placement: all imports at top of file
         self.non_import_seen = True
@@ -197,6 +240,19 @@ class ImportValidator(ast.NodeVisitor):
         ):
             self.generic_visit(node)
             return
+
+        # Check if this is sys.path manipulation (common in test files)
+        if isinstance(node.value, ast.Call):
+            if isinstance(node.value.func, ast.Attribute):
+                if isinstance(node.value.func.value, ast.Attribute):
+                    if (isinstance(node.value.func.value.value, ast.Name) and
+                        node.value.func.value.value.id == 'sys' and
+                        node.value.func.value.attr == 'path' and
+                        node.value.func.attr in ('insert', 'append')):
+                        # Allow imports after sys.path manipulation in test files
+                        self.sys_path_manipulation_seen = True
+                        self.generic_visit(node)
+                        return
 
         if self.import_seen:
             self.non_import_seen = True

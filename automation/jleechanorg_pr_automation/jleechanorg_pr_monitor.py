@@ -7,26 +7,29 @@ posting configurable automation comments with safety limits integration.
 """
 
 import argparse
-import os
-import sys
 import json
-import subprocess
-import logging
+import os
 import re
+import subprocess
+import sys
 import traceback
 from collections import Counter
-from pathlib import Path
 from datetime import datetime, timedelta
-from typing import List, Dict, Optional, Tuple
-from .automation_safety_manager import AutomationSafetyManager
-from .utils import setup_logging, json_manager
-from .automation_utils import AutomationUtils
+from pathlib import Path
+from typing import Dict, List, Optional, Tuple
 
+from .automation_safety_manager import AutomationSafetyManager
+from .automation_utils import AutomationUtils
 from .codex_config import (
     CODEX_COMMIT_MARKER_PREFIX as SHARED_MARKER_PREFIX,
+)
+from .codex_config import (
     CODEX_COMMIT_MARKER_SUFFIX as SHARED_MARKER_SUFFIX,
+)
+from .codex_config import (
     build_comment_intro,
 )
+from .utils import json_manager, setup_logging
 
 
 class JleechanorgPRMonitor:
@@ -35,9 +38,9 @@ class JleechanorgPRMonitor:
     @staticmethod
     def _redact_email(email: Optional[str]) -> Optional[str]:
         """Redact email for logging while preserving domain for debugging"""
-        if not email or '@' not in email:
+        if not email or "@" not in email:
             return email
-        user, domain = email.rsplit('@', 1)
+        user, domain = email.rsplit("@", 1)
         if len(user) <= 2:
             return f"***@{domain}"
         return f"{user[:2]}***@{domain}"
@@ -142,7 +145,7 @@ class JleechanorgPRMonitor:
         self.organization = "jleechanorg"
         self.base_project_dir = Path.home() / "projects"
 
-        safety_data_dir = os.environ.get('AUTOMATION_SAFETY_DATA_DIR')
+        safety_data_dir = os.environ.get("AUTOMATION_SAFETY_DATA_DIR")
         if not safety_data_dir:
             default_dir = Path.home() / "Library" / "Application Support" / "worldarchitect-automation"
             default_dir.mkdir(parents=True, exist_ok=True)
@@ -150,16 +153,16 @@ class JleechanorgPRMonitor:
 
         self.safety_manager = AutomationSafetyManager(safety_data_dir)
 
-        self.logger.info(f"🏢 Initialized jleechanorg PR monitor")
+        self.logger.info("🏢 Initialized jleechanorg PR monitor")
         self.logger.info(f"📁 History storage: {self.history_base_dir}")
-        self.logger.info(f"💬 Comment-only automation mode")
+        self.logger.info("💬 Comment-only automation mode")
     def _get_history_file(self, repo_name: str, branch_name: str) -> Path:
         """Get history file path for specific repo/branch"""
         repo_dir = self.history_base_dir / repo_name
         repo_dir.mkdir(parents=True, exist_ok=True)
 
         # Replace slashes in branch names to avoid creating nested directories
-        safe_branch_name = branch_name.replace('/', '_')
+        safe_branch_name = branch_name.replace("/", "_")
         return repo_dir / f"{safe_branch_name}.json"
 
     def _load_branch_history(self, repo_name: str, branch_name: str) -> Dict[str, str]:
@@ -219,18 +222,18 @@ class JleechanorgPRMonitor:
     def is_pr_actionable(self, pr_data: Dict) -> bool:
         """Determine if a PR is actionable (should be processed)"""
         # Closed PRs are not actionable
-        if pr_data.get('state', '').lower() != 'open':
+        if pr_data.get("state", "").lower() != "open":
             return False
 
         # PRs with no commits are not actionable
-        head_ref_oid = pr_data.get('headRefOid')
+        head_ref_oid = pr_data.get("headRefOid")
         if not head_ref_oid:
             return False
 
         # Check if already processed with this commit
-        repo_name = pr_data.get('repository', '')
-        branch_name = pr_data.get('headRefName', '')
-        pr_number = pr_data.get('number', 0)
+        repo_name = pr_data.get("repository", "")
+        branch_name = pr_data.get("headRefName", "")
+        pr_number = pr_data.get("number", 0)
 
         if self._should_skip_pr(repo_name, branch_name, pr_number, head_ref_oid):
             return False
@@ -273,7 +276,7 @@ class JleechanorgPRMonitor:
         all_prs = self.discover_open_prs()
 
         # Sort by most recently updated first
-        all_prs.sort(key=lambda pr: pr.get('updatedAt', ''), reverse=True)
+        all_prs.sort(key=lambda pr: pr.get("updatedAt", ""), reverse=True)
 
         actionable_processed = 0
         skipped_count = 0
@@ -293,9 +296,9 @@ class JleechanorgPRMonitor:
                 continue  # Already counted in skipped above
 
             # Attempt to process the PR
-            repo_name = pr.get('repository', '')
-            pr_number = pr.get('number', 0)
-            repo_full = pr.get('repositoryFullName', f"jleechanorg/{repo_name}")
+            repo_name = pr.get("repository", "")
+            pr_number = pr.get("number", 0)
+            repo_full = pr.get("repositoryFullName", f"jleechanorg/{repo_name}")
 
             # Reserve a processing slot for this PR
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full):
@@ -317,17 +320,17 @@ class JleechanorgPRMonitor:
                 self.safety_manager.release_pr_slot(pr_number, repo=repo_full)
 
         return {
-            'actionable_processed': actionable_processed,
-            'total_discovered': len(all_prs),
-            'skipped_count': skipped_count,
-            'processing_failures': processing_failures
+            "actionable_processed": actionable_processed,
+            "total_discovered": len(all_prs),
+            "skipped_count": skipped_count,
+            "processing_failures": processing_failures
         }
 
     def _process_pr_comment(self, repo_name: str, pr_number: int, pr_data: Dict) -> bool:
         """Process a PR by posting a comment (used by tests and enhanced monitoring)"""
         try:
             # Use the existing comment posting method
-            repo_full_name = pr_data.get('repositoryFullName', f"jleechanorg/{repo_name}")
+            repo_full_name = pr_data.get("repositoryFullName", f"jleechanorg/{repo_name}")
             result = self.post_codex_instruction_simple(repo_full_name, pr_number, pr_data)
             # Return True only if comment was actually posted
             return result == "posted"
@@ -342,9 +345,9 @@ class JleechanorgPRMonitor:
 
         now = datetime.utcnow()
         one_day_ago = now - timedelta(hours=24)
-        self.logger.info("📅 Filtering PRs updated since: %s UTC", one_day_ago.strftime('%Y-%m-%d %H:%M:%S'))
+        self.logger.info("📅 Filtering PRs updated since: %s UTC", one_day_ago.strftime("%Y-%m-%d %H:%M:%S"))
 
-        graphql_query = '''
+        graphql_query = """
         query($searchQuery: String!, $cursor: String) {
           search(type: ISSUE, query: $searchQuery, first: 100, after: $cursor) {
             nodes {
@@ -366,7 +369,7 @@ class JleechanorgPRMonitor:
             pageInfo { hasNextPage endCursor }
           }
         }
-        '''
+        """
 
         search_query = f"org:{self.organization} is:pr is:open"
         cursor: Optional[str] = None
@@ -395,57 +398,57 @@ class JleechanorgPRMonitor:
                 self.logger.error("❌ Failed to parse GraphQL response: %s", exc)
                 raise
 
-            search_data = api_data.get('data', {}).get('search')
+            search_data = api_data.get("data", {}).get("search")
             if not search_data:
                 break
 
-            nodes = search_data.get('nodes', [])
+            nodes = search_data.get("nodes", [])
             for node in nodes:
-                if node.get('__typename') != 'PullRequest':
+                if node.get("__typename") != "PullRequest":
                     continue
 
-                updated_str = node.get('updatedAt')
+                updated_str = node.get("updatedAt")
                 if not updated_str:
                     continue
 
                 try:
-                    updated_time = datetime.fromisoformat(updated_str.replace('Z', '+00:00')).replace(tzinfo=None)
+                    updated_time = datetime.fromisoformat(updated_str.replace("Z", "+00:00")).replace(tzinfo=None)
                 except ValueError:
                     self.logger.debug(
-                        "⚠️ Invalid date format for PR %s: %s", node.get('number'), updated_str
+                        "⚠️ Invalid date format for PR %s: %s", node.get("number"), updated_str
                     )
                     continue
 
                 if updated_time < one_day_ago:
                     continue
 
-                repo_info = node.get('repository') or {}
-                author_info = node.get('author') or {}
-                if 'login' not in author_info:
-                    author_info = {**author_info, 'login': author_info.get('login')}
+                repo_info = node.get("repository") or {}
+                author_info = node.get("author") or {}
+                if "login" not in author_info:
+                    author_info = {**author_info, "login": author_info.get("login")}
 
                 normalized = {
-                    'number': node.get('number'),
-                    'title': node.get('title'),
-                    'headRefName': node.get('headRefName'),
-                    'baseRefName': node.get('baseRefName'),
-                    'updatedAt': updated_str,
-                    'url': node.get('url'),
-                    'author': author_info,
-                    'headRefOid': node.get('headRefOid'),
-                    'state': node.get('state'),
-                    'isDraft': node.get('isDraft'),
-                    'repository': repo_info.get('name'),
-                    'repositoryFullName': repo_info.get('nameWithOwner'),
-                    'updated_datetime': updated_time,
+                    "number": node.get("number"),
+                    "title": node.get("title"),
+                    "headRefName": node.get("headRefName"),
+                    "baseRefName": node.get("baseRefName"),
+                    "updatedAt": updated_str,
+                    "url": node.get("url"),
+                    "author": author_info,
+                    "headRefOid": node.get("headRefOid"),
+                    "state": node.get("state"),
+                    "isDraft": node.get("isDraft"),
+                    "repository": repo_info.get("name"),
+                    "repositoryFullName": repo_info.get("nameWithOwner"),
+                    "updated_datetime": updated_time,
                 }
                 recent_prs.append(normalized)
 
-            page_info = search_data.get('pageInfo') or {}
-            if not page_info.get('hasNextPage'):
+            page_info = search_data.get("pageInfo") or {}
+            if not page_info.get("hasNextPage"):
                 break
 
-            cursor = page_info.get('endCursor')
+            cursor = page_info.get("endCursor")
             if not cursor:
                 break
 
@@ -453,9 +456,9 @@ class JleechanorgPRMonitor:
             self.logger.info("📭 No recent open PRs discovered")
             return []
 
-        recent_prs.sort(key=lambda x: x.get('updated_datetime', datetime.min), reverse=True)
+        recent_prs.sort(key=lambda x: x.get("updated_datetime", datetime.min), reverse=True)
 
-        repo_counter = Counter(pr.get('repository') for pr in recent_prs if pr.get('repository'))
+        repo_counter = Counter(pr.get("repository") for pr in recent_prs if pr.get("repository"))
         for repo_name, count in repo_counter.items():
             self.logger.info("📋 %s: %s recent PRs", repo_name, count)
 
@@ -463,8 +466,8 @@ class JleechanorgPRMonitor:
 
         self.logger.info("📊 Most recently updated PRs:")
         for i, pr in enumerate(recent_prs[:5], 1):
-            updated_str = pr['updated_datetime'].strftime('%Y-%m-%d %H:%M')
-            self.logger.info("  %s. %s #%s - %s", i, pr['repositoryFullName'], pr['number'], updated_str)
+            updated_str = pr["updated_datetime"].strftime("%Y-%m-%d %H:%M")
+            self.logger.info("  %s. %s #%s - %s", i, pr["repositoryFullName"], pr["number"], updated_str)
 
         return recent_prs
 
@@ -534,8 +537,8 @@ class JleechanorgPRMonitor:
         self.logger.info(f"💬 Requesting Codex support for {repo_full} PR #{pr_number}")
 
         # Extract repo name and branch from PR data
-        repo_name = repo_full.split('/')[-1]
-        branch_name = pr_data.get('headRefName', 'unknown')
+        repo_name = repo_full.split("/")[-1]
+        branch_name = pr_data.get("headRefName", "unknown")
 
         # Get current PR state including commit SHA
         head_sha, comments = self._get_pr_comment_state(repo_full, pr_number)
@@ -630,7 +633,7 @@ class JleechanorgPRMonitor:
             ], timeout=30)
 
             pr_status = json.loads(result.stdout)
-            status_checks = pr_status.get('statusCheckRollup', [])
+            status_checks = pr_status.get("statusCheckRollup", [])
 
             # If no status checks are configured, assume tests are failing
             if not status_checks:
@@ -639,7 +642,7 @@ class JleechanorgPRMonitor:
 
             # Check if all status checks are successful
             for check in status_checks:
-                if check.get('state') not in ['SUCCESS', 'NEUTRAL']:
+                if check.get("state") not in ["SUCCESS", "NEUTRAL"]:
                     self.logger.debug(f"❌ Status check failed: {check.get('name')} - {check.get('state')}")
                     return False
 
@@ -730,7 +733,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
             # Ensure comments are sorted by creation time (oldest first)
             # GitHub API should return them sorted, but let's be explicit
             comments.sort(
-                key=lambda c: (c.get('createdAt') or c.get('updatedAt') or '')
+                key=lambda c: (c.get("createdAt") or c.get("updatedAt") or "")
             )
 
             return head_sha, comments
@@ -765,7 +768,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 
         # Validate GitHub naming constraints (alphanumeric, hyphens, periods, underscores, max 100 chars)
         import re
-        github_name_pattern = re.compile(r'^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$')
+        github_name_pattern = re.compile(r"^[a-zA-Z0-9]([a-zA-Z0-9\-\._]{0,98}[a-zA-Z0-9])?$")
         if not github_name_pattern.match(owner) or not github_name_pattern.match(name):
             self.logger.warning(
                 "⚠️ Invalid GitHub identifiers: owner='%s', name='%s'",
@@ -1024,7 +1027,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                     pr_number,
                     result,
                     repo=repo_full,
-                    branch=pr_data.get('headRefName'),
+                    branch=pr_data.get("headRefName"),
                 )
 
                 if success:
@@ -1102,7 +1105,7 @@ Use your judgment to fix comments from everyone or explain why it should not be 
                 skipped_count += 1
                 continue
 
-            branch_name = pr.get('headRefName', 'unknown')
+            branch_name = pr.get("headRefName", "unknown")
 
             if not self.safety_manager.try_process_pr(pr_number, repo=repo_full_name, branch=branch_name):
                 self.logger.info(
@@ -1160,25 +1163,25 @@ Use your judgment to fix comments from everyone or explain why it should not be 
 def main():
     """CLI interface for jleechanorg PR monitor"""
 
-    parser = argparse.ArgumentParser(description='jleechanorg PR Monitor')
-    parser.add_argument('--dry-run', action='store_true',
-                        help='Discover PRs but do not process them')
-    parser.add_argument('--single-repo',
-                        help='Process only specific repository')
-    parser.add_argument('--max-prs', type=int, default=5,
-                        help='Maximum PRs to process per cycle')
-    parser.add_argument('--target-pr', type=int,
-                        help='Process specific PR number')
-    parser.add_argument('--target-repo',
-                        help='Repository for target PR (required with --target-pr)')
+    parser = argparse.ArgumentParser(description="jleechanorg PR Monitor")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Discover PRs but do not process them")
+    parser.add_argument("--single-repo",
+                        help="Process only specific repository")
+    parser.add_argument("--max-prs", type=int, default=5,
+                        help="Maximum PRs to process per cycle")
+    parser.add_argument("--target-pr", type=int,
+                        help="Process specific PR number")
+    parser.add_argument("--target-repo",
+                        help="Repository for target PR (required with --target-pr)")
 
     args = parser.parse_args()
 
     # Validate target PR arguments
     if args.target_pr and not args.target_repo:
-        parser.error('--target-repo is required when using --target-pr')
+        parser.error("--target-repo is required when using --target-pr")
     if args.target_repo and not args.target_pr:
-        parser.error('--target-pr is required when using --target-repo')
+        parser.error("--target-pr is required when using --target-repo")
 
     monitor = JleechanorgPRMonitor()
 
@@ -1202,5 +1205,5 @@ def main():
         monitor.run_monitoring_cycle(single_repo=args.single_repo, max_prs=args.max_prs)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

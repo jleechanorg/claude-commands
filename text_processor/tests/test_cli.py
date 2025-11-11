@@ -2,19 +2,20 @@
 Integration tests for text_processor CLI functionality.
 """
 
-import pytest
-import tempfile
 import os
-import sys
+import tempfile
 from io import StringIO
-from unittest.mock import patch, mock_open
+from unittest.mock import mock_open, patch
+
+import pytest
+
 from text_processor.text_processor import (
-    read_input,
+    create_parser,
+    handle_case_command,
     handle_count_command,
     handle_replace_command,
-    handle_case_command,
-    create_parser,
-    main
+    main,
+    read_input,
 )
 
 

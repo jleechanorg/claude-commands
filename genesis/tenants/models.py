@@ -1,7 +1,9 @@
-from django.db import models
-from django.core.exceptions import ValidationError
-from django.conf import settings
 import uuid
+
+from django.conf import settings
+from django.core.exceptions import ValidationError
+from django.db import models
+
 
 class Tenant(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)

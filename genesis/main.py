@@ -2,22 +2,35 @@
 FastAPI E-commerce Order Management System
 Main application with PostgreSQL integration and comprehensive CRUD operations
 """
+import os
 from datetime import datetime
 from decimal import Decimal
-from typing import List, Optional
 from uuid import UUID, uuid4
 
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.middleware.cors import CORSMiddleware
-from app.tenant_middleware import TenantMiddleware, create_tenant_database_dependency
-from sqlalchemy import create_engine, Column, String, DateTime, Numeric, Integer, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID as PGUUID
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker, Session, relationship
-from sqlalchemy.sql import func
-from pydantic import BaseModel, Field
-import os
 import uvicorn
+from app.tenant_middleware import (
+    TenantMiddleware,
+    create_tenant_database_dependency,
+    create_tenant_schema,
+    drop_tenant_schema,
+    list_tenant_schemas,
+)
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    create_engine,
+)
+from sqlalchemy.dialects.postgresql import UUID as PGUUID
+from sqlalchemy.orm import Session, declarative_base, relationship, sessionmaker
+from sqlalchemy.sql import func
 
 # Database Configuration
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/ecommerce")
@@ -92,7 +105,7 @@ class CustomerBase(BaseModel):
     email: str = Field(..., description="Customer email address")
     first_name: str = Field(..., min_length=1, max_length=100)
     last_name: str = Field(..., min_length=1, max_length=100)
-    phone: Optional[str] = Field(None, max_length=20)
+    phone: str | None = Field(None, max_length=20)
 
 class CustomerCreate(CustomerBase):
     pass
@@ -100,13 +113,13 @@ class CustomerCreate(CustomerBase):
 class CustomerResponse(CustomerBase):
     id: UUID
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     model_config = {'from_attributes': True}
 
 class ProductBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
-    description: Optional[str] = None
+    description: str | None = None
     price: Decimal = Field(..., gt=0)
     stock_quantity: int = Field(default=0, ge=0)
     sku: str = Field(..., min_length=1, max_length=100)
@@ -117,7 +130,7 @@ class ProductCreate(ProductBase):
 class ProductResponse(ProductBase):
     id: UUID
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
 
     model_config = {'from_attributes': True}
 
@@ -138,18 +151,18 @@ class OrderItemResponse(OrderItemBase):
 class OrderBase(BaseModel):
     customer_id: UUID
     status: str = Field(default="pending")
-    shipping_address: Optional[str] = None
+    shipping_address: str | None = None
 
 class OrderCreate(OrderBase):
-    order_items: List[OrderItemCreate] = Field(..., min_length=1)
+    order_items: list[OrderItemCreate] = Field(..., min_length=1)
 
 class OrderResponse(OrderBase):
     id: UUID
     total_amount: Decimal
     created_at: datetime
-    updated_at: Optional[datetime]
+    updated_at: datetime | None
     customer: CustomerResponse
-    order_items: List[OrderItemResponse]
+    order_items: list[OrderItemResponse]
 
     model_config = {'from_attributes': True}
 
@@ -200,7 +213,7 @@ def create_customer(customer: CustomerCreate, db: Session = Depends(get_tenant_d
     db.refresh(db_customer)
     return db_customer
 
-@app.get("/customers/", response_model=List[CustomerResponse])
+@app.get("/customers/", response_model=list[CustomerResponse])
 def get_customers(skip: int = 0, limit: int = 100, db: Session = Depends(get_tenant_db)):
     """Get list of customers"""
     customers = db.query(Customer).offset(skip).limit(limit).all()
@@ -234,7 +247,7 @@ def create_product(product: ProductCreate, db: Session = Depends(get_tenant_db))
     db.refresh(db_product)
     return db_product
 
-@app.get("/products/", response_model=List[ProductResponse])
+@app.get("/products/", response_model=list[ProductResponse])
 def get_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_tenant_db)):
     """Get list of products"""
     products = db.query(Product).offset(skip).limit(limit).all()
@@ -329,7 +342,7 @@ def create_order(order: OrderCreate, db: Session = Depends(get_tenant_db)):
     db.refresh(db_order)
     return db_order
 
-@app.get("/orders/", response_model=List[OrderResponse])
+@app.get("/orders/", response_model=list[OrderResponse])
 def get_orders(skip: int = 0, limit: int = 100, db: Session = Depends(get_tenant_db)):
     """Get list of orders"""
     orders = db.query(Order).offset(skip).limit(limit).all()
@@ -369,7 +382,7 @@ def update_order_status(order_id: UUID, status_update: dict, db: Session = Depen
     db.commit()
     return {"message": "Order status updated successfully", "new_status": new_status}
 
-@app.get("/customers/{customer_id}/orders", response_model=List[OrderResponse])
+@app.get("/customers/{customer_id}/orders", response_model=list[OrderResponse])
 def get_customer_orders(customer_id: UUID, db: Session = Depends(get_tenant_db)):
     """Get all orders for a specific customer"""
     customer = db.query(Customer).filter(Customer.id == customer_id).first()
@@ -387,7 +400,6 @@ def get_customer_orders(customer_id: UUID, db: Session = Depends(get_tenant_db))
 @app.post("/tenants/{tenant_slug}", status_code=status.HTTP_201_CREATED)
 async def create_tenant(tenant_slug: str):
     """Create a new tenant schema"""
-    from app.tenant_middleware import create_tenant_schema
     try:
         await create_tenant_schema(tenant_slug, DATABASE_URL)
         return {"message": f"Tenant '{tenant_slug}' created successfully", "tenant_slug": tenant_slug}
@@ -400,7 +412,6 @@ async def create_tenant(tenant_slug: str):
 @app.delete("/tenants/{tenant_slug}")
 async def delete_tenant(tenant_slug: str):
     """Delete a tenant schema (use with caution!)"""
-    from app.tenant_middleware import drop_tenant_schema
     try:
         await drop_tenant_schema(tenant_slug, DATABASE_URL)
         return {"message": f"Tenant '{tenant_slug}' deleted successfully", "tenant_slug": tenant_slug}
@@ -413,7 +424,6 @@ async def delete_tenant(tenant_slug: str):
 @app.get("/tenants/")
 async def list_tenants():
     """List all tenant schemas"""
-    from app.tenant_middleware import list_tenant_schemas
     try:
         schemas = await list_tenant_schemas(DATABASE_URL)
         tenants = [schema.replace('tenant_', '') for schema in schemas]

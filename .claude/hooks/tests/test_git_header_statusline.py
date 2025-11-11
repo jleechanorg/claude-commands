@@ -40,7 +40,7 @@ class TestGitHeaderStatusline:
     | no remote  | ❌    | ✓           | (no remote +uncommitted) |
     """
 
-    @pytest.fixture()
+    @pytest.fixture
     def temp_git_repo(self):
         """Create temporary git repository for testing"""
         temp_dir = tempfile.mkdtemp()
@@ -63,7 +63,7 @@ class TestGitHeaderStatusline:
         os.chdir("/")
         shutil.rmtree(temp_dir, ignore_errors=True)
 
-    @pytest.fixture()
+    @pytest.fixture
     def git_header_script(self):
         """Path to git-header.sh script"""
         # Find the script relative to test file (now in .claude/hooks/tests/)

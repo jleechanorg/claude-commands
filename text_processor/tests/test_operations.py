@@ -3,13 +3,14 @@ Unit tests for text_processor.operations module.
 """
 
 import pytest
+
 from text_processor.operations import (
-    count_words,
+    convert_case,
     count_characters,
     count_lines,
+    count_words,
+    get_text_stats,
     replace_text,
-    convert_case,
-    get_text_stats
 )
 
 

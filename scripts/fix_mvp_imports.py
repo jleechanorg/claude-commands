@@ -10,7 +10,7 @@ from pathlib import Path
 def fix_file_imports(filepath: str) -> bool:
     """Fix inline imports in a specific file."""
     try:
-        with open(filepath, 'r', encoding='utf-8') as f:
+        with open(filepath, encoding='utf-8') as f:
             content = f.read()
 
         original_content = content
@@ -28,9 +28,8 @@ def fix_file_imports(filepath: str) -> bool:
                 f.write(content)
             print(f"Fixed imports in {filepath}")
             return True
-        else:
-            print(f"No changes needed in {filepath}")
-            return False
+        print(f"No changes needed in {filepath}")
+        return False
 
     except Exception as e:
         print(f"Error fixing {filepath}: {e}")

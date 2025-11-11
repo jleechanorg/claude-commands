@@ -5,8 +5,6 @@ Verifies that custom workspace names properly prevent collisions and use correct
 """
 
 import os
-import sys
-import tempfile
 import time
 import unittest
 from unittest.mock import MagicMock, patch

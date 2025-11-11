@@ -6,8 +6,9 @@ Combines results from agents 1-2 (refined) and agents 3-10 (refined) for complet
 
 import json
 import os
-from collections import defaultdict, Counter
+from collections import Counter
 from datetime import datetime
+
 
 def load_agent_data():
     """
@@ -24,7 +25,7 @@ def load_agent_data():
 
     # Load agent 1
     if os.path.exists(agent_001_file):
-        with open(agent_001_file, 'r', encoding='utf-8') as f:
+        with open(agent_001_file, encoding='utf-8') as f:
             agent_001_data = json.load(f)
             # Handle agent 1 structure: command_frequencies[cmd]['count']
             commands_dict = {}
@@ -41,7 +42,7 @@ def load_agent_data():
 
     # Load agent 2
     if os.path.exists(agent_002_file):
-        with open(agent_002_file, 'r', encoding='utf-8') as f:
+        with open(agent_002_file, encoding='utf-8') as f:
             agent_002_data = json.load(f)
             # Handle agent 2 structure: command_frequencies[cmd]['count']
             commands_dict = {}
@@ -58,7 +59,7 @@ def load_agent_data():
 
     # Load agents 3-10 combined
     if os.path.exists(agents_3_10_file):
-        with open(agents_3_10_file, 'r', encoding='utf-8') as f:
+        with open(agents_3_10_file, encoding='utf-8') as f:
             agents_3_10_data = json.load(f)
             agents_data['agents_3_10'] = {
                 'prompts': agents_3_10_data['original_summary']['total_prompts_analyzed'],
@@ -194,24 +195,24 @@ def main():
 
         # Display key results
         dataset_info = consolidated_results['dataset_info']
-        print(f"\n📊 DATASET OVERVIEW:")
+        print("\n📊 DATASET OVERVIEW:")
         print(f"   Total prompts analyzed: {dataset_info['total_prompts_analyzed']:,}")
         print(f"   Expected total prompts: {dataset_info['expected_total_prompts']:,}")
         print(f"   Dataset coverage: {dataset_info['coverage_percentage']}")
 
         stats = consolidated_results['summary_statistics']
-        print(f"\n📈 COMMAND STATISTICS:")
+        print("\n📈 COMMAND STATISTICS:")
         print(f"   Unique commands found: {stats['unique_commands_total']}")
         print(f"   Total command occurrences: {stats['total_command_occurrences']:,}")
         print(f"   Average commands per prompt: {stats['average_commands_per_prompt']}")
         print(f"   Command usage percentage: {stats['command_usage_percentage']}")
 
-        print(f"\n🏆 TOP 20 COMMANDS ACROSS ALL 9,936 PROMPTS:")
+        print("\n🏆 TOP 20 COMMANDS ACROSS ALL 9,936 PROMPTS:")
         for i, (command, count) in enumerate(consolidated_results['top_commands_overall'][:20], 1):
             percentage = (count / int(stats['total_command_occurrences'])) * 100
             print(f"   {i:2d}. {command}: {count:,} occurrences ({percentage:.1f}%)")
 
-        print(f"\n🎯 PRIORITY COMMAND ANALYSIS:")
+        print("\n🎯 PRIORITY COMMAND ANALYSIS:")
         priority_data = consolidated_results['comparison_with_priorities']
         found_priorities = sorted(priority_data['found_in_dataset'].items(), key=lambda x: x[1], reverse=True)
         print(f"   Found {len(found_priorities)} of {len(priority_data['priority_commands_analyzed'])} priority commands")
@@ -219,7 +220,7 @@ def main():
             percentage = (count / int(stats['total_command_occurrences'])) * 100
             print(f"   {command}: {count:,} occurrences ({percentage:.1f}%)")
 
-        print(f"\n📊 USAGE TIER ANALYSIS:")
+        print("\n📊 USAGE TIER ANALYSIS:")
         tiers = consolidated_results['command_tier_analysis']
         for tier_name, tier_commands in tiers.items():
             if tier_commands:
@@ -229,9 +230,8 @@ def main():
 
         return consolidated_results
 
-    else:
-        print("❌ Consolidated analysis failed")
-        return None
+    print("❌ Consolidated analysis failed")
+    return None
 
 if __name__ == "__main__":
     main()

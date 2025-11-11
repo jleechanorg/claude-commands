@@ -9,11 +9,10 @@ Saves all test results to /tmp/worldarchitect_test_results/[timestamp]/
 import json
 import os
 import sys
-import time
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 import requests
 
@@ -32,7 +31,7 @@ def _generate_user_id() -> str:
     return f"codex_mcp_autotest_{unique_suffix}"
 
 
-def call_mcp_tool(name: str, arguments: Dict[str, Any], *, request_id: str | None = None) -> Dict[str, Any]:
+def call_mcp_tool(name: str, arguments: dict[str, Any], *, request_id: str | None = None) -> dict[str, Any]:
     if not MCP_SERVER_URL:
         raise RuntimeError("MCP_SERVER_URL environment variable is not set.")
 
@@ -94,7 +93,7 @@ def create_test_output_dir() -> Path:
     return output_dir
 
 
-def save_test_result(output_dir: Path, test_name: str, result_data: Dict[str, Any]) -> None:
+def save_test_result(output_dir: Path, test_name: str, result_data: dict[str, Any]) -> None:
     """Save individual test result to JSON file"""
     result_file = output_dir / f"{test_name}.json"
     with open(result_file, "w", encoding="utf-8") as f:
@@ -102,7 +101,7 @@ def save_test_result(output_dir: Path, test_name: str, result_data: Dict[str, An
     print(f"💾 Saved: {result_file.name}")
 
 
-def save_test_summary(output_dir: Path, summary_data: Dict[str, Any]) -> None:
+def save_test_summary(output_dir: Path, summary_data: dict[str, Any]) -> None:
     """Save overall test summary"""
     summary_file = output_dir / "test_summary.json"
     with open(summary_file, "w", encoding="utf-8") as f:
@@ -117,7 +116,7 @@ def save_test_summary(output_dir: Path, summary_data: Dict[str, Any]) -> None:
     print(f"📄 Test Report: {report_file}")
 
 
-def generate_markdown_report(summary_data: Dict[str, Any]) -> str:
+def generate_markdown_report(summary_data: dict[str, Any]) -> str:
     """Generate human-readable markdown test report"""
     report_lines = [
         "# WorldArchitect MCP Server Test Report",
@@ -153,7 +152,7 @@ def generate_markdown_report(summary_data: Dict[str, Any]) -> str:
     return "\n".join(report_lines)
 
 
-def run_test_case_1(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]:
+def run_test_case_1(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]:
     """Test Case 1: Dragon Knight Default Campaign"""
     print("\n" + "=" * 80)
     print("🧪 TEST CASE 1: Dragon Knight Default Campaign")
@@ -231,7 +230,7 @@ def run_test_case_1(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]
     return test_result
 
 
-def run_test_case_2(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]:
+def run_test_case_2(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]:
     """Test Case 2: Custom Campaign Random Character/World"""
     print("\n" + "=" * 80)
     print("🧪 TEST CASE 2: Custom Campaign Random Character/World")
@@ -302,7 +301,7 @@ def run_test_case_2(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]
     return test_result
 
 
-def run_test_case_3(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]:
+def run_test_case_3(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]:
     """Test Case 3: Custom Campaign Full Customization"""
     print("\n" + "=" * 80)
     print("🧪 TEST CASE 3: Custom Campaign Full Customization")
@@ -378,7 +377,7 @@ def run_test_case_3(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]
     return test_result
 
 
-def run_test_case_4(output_dir: Path, context: Dict[str, Any]) -> Dict[str, Any]:
+def run_test_case_4(output_dir: Path, context: dict[str, Any]) -> dict[str, Any]:
     """Test Case 4: Real API Integration Verification"""
     print("\n" + "=" * 80)
     print("🧪 TEST CASE 4: Real API Integration Verification")
@@ -506,7 +505,7 @@ def main():
     output_dir = create_test_output_dir()
 
     user_id = _generate_user_id() if AUTO_MODE else "test_user_mcp_validation"
-    context: Dict[str, Any] = {
+    context: dict[str, Any] = {
         "user_id": user_id,
         "campaigns": [],
         "run_id": uuid.uuid4().hex[:6],
@@ -514,7 +513,7 @@ def main():
     }
 
     # Execute test cases
-    test_results: List[Dict[str, Any]] = []
+    test_results: list[dict[str, Any]] = []
 
     test_results.append(run_test_case_1(output_dir, context))
     test_results.append(run_test_case_2(output_dir, context))

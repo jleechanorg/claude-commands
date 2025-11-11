@@ -1,9 +1,8 @@
-from django.core.management.base import BaseCommand
-from tenants.models import Tenant
-from django.utils import timezone
-from datetime import datetime
 import csv
 import sys
+
+from django.core.management.base import BaseCommand
+from tenants.models import Tenant
 
 
 class Command(BaseCommand):

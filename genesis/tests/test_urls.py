@@ -1,9 +1,8 @@
 import unittest
-from django.test import TestCase, Client
-from django.urls import reverse, resolve
-from django.http import JsonResponse
+
 from django.conf import settings
-from unittest.mock import patch
+from django.test import Client, TestCase
+from django.urls import resolve, reverse
 
 
 class URLsTestCase(TestCase):

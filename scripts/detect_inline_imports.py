@@ -12,18 +12,17 @@ Author: AI Assistant
 Created: 2025-01-07
 """
 
-import ast
 import argparse
+import ast
+import glob
 import json
 import logging
 import os
 import sys
-from dataclasses import dataclass, asdict
-from pathlib import Path
-from typing import Dict, List, Optional, Set, Union, Any
+from dataclasses import asdict, dataclass
 from enum import Enum
-import glob
-import subprocess
+from pathlib import Path
+from typing import Any
 
 
 class ImportType(Enum):
@@ -52,11 +51,11 @@ class InlineImport:
     import_statement: str
     import_type: ImportType
     severity: Severity
-    context_lines: List[str]
-    parent_function: Optional[str] = None
-    parent_class: Optional[str] = None
-    reason: Optional[str] = None
-    suggestions: List[str] = None
+    context_lines: list[str]
+    parent_function: str | None = None
+    parent_class: str | None = None
+    reason: str | None = None
+    suggestions: list[str] = None
 
 
 @dataclass
@@ -64,9 +63,9 @@ class ModuleAnalysis:
     """Analysis results for a single module."""
     file_path: str
     total_imports: int
-    inline_imports: List[InlineImport]
-    module_level_imports: List[str]
-    suggested_moves: List[str]
+    inline_imports: list[InlineImport]
+    module_level_imports: list[str]
+    suggested_moves: list[str]
 
 
 @dataclass
@@ -74,23 +73,23 @@ class ProjectAnalysis:
     """Complete project analysis results."""
     total_files_analyzed: int
     total_inline_imports: int
-    modules: List[ModuleAnalysis]
-    pr_grouping_suggestions: Dict[str, List[str]]
-    summary_by_type: Dict[str, int]
-    summary_by_severity: Dict[str, int]
+    modules: list[ModuleAnalysis]
+    pr_grouping_suggestions: dict[str, list[str]]
+    summary_by_type: dict[str, int]
+    summary_by_severity: dict[str, int]
 
 
 class InlineImportDetector(ast.NodeVisitor):
     """AST visitor to detect inline imports."""
 
-    def __init__(self, file_path: str, source_lines: List[str]):
+    def __init__(self, file_path: str, source_lines: list[str]):
         self.file_path = file_path
         self.source_lines = source_lines
-        self.inline_imports: List[InlineImport] = []
-        self.module_level_imports: List[str] = []
-        self.context_stack: List[Dict[str, Any]] = []
-        self.current_function: Optional[str] = None
-        self.current_class: Optional[str] = None
+        self.inline_imports: list[InlineImport] = []
+        self.module_level_imports: list[str] = []
+        self.context_stack: list[dict[str, Any]] = []
+        self.current_function: str | None = None
+        self.current_class: str | None = None
 
     def visit_Import(self, node: ast.Import) -> None:
         """Visit import statements."""
@@ -168,8 +167,8 @@ class InlineImportDetector(ast.NodeVisitor):
         self.generic_visit(node)
         self.context_stack.pop()
 
-    def _analyze_import_node(self, node: Union[ast.Import, ast.ImportFrom],
-                           names: List[ast.alias]) -> None:
+    def _analyze_import_node(self, node: ast.Import | ast.ImportFrom,
+                           names: list[ast.alias]) -> None:
         """Analyze an import node to determine if it's inline."""
         import_statement = self._get_import_statement(node, names)
         line_number = node.lineno
@@ -199,20 +198,19 @@ class InlineImportDetector(ast.NodeVisitor):
 
         self.inline_imports.append(inline_import)
 
-    def _get_import_statement(self, node: Union[ast.Import, ast.ImportFrom],
-                            names: List[ast.alias]) -> str:
+    def _get_import_statement(self, node: ast.Import | ast.ImportFrom,
+                            names: list[ast.alias]) -> str:
         """Reconstruct the import statement as string."""
         if isinstance(node, ast.Import):
             imports = ", ".join(alias.name for alias in names)
             return f"import {imports}"
-        else:
-            module = node.module or ""
-            level = "." * (node.level or 0)
-            imports = ", ".join(
-                f"{alias.name} as {alias.asname}" if alias.asname else alias.name
-                for alias in names
-            )
-            return f"from {level}{module} import {imports}"
+        module = node.module or ""
+        level = "." * (node.level or 0)
+        imports = ", ".join(
+            f"{alias.name} as {alias.asname}" if alias.asname else alias.name
+            for alias in names
+        )
+        return f"from {level}{module} import {imports}"
 
     def _categorize_inline_import(self) -> tuple[ImportType, Severity, str]:
         """Categorize the inline import based on context."""
@@ -224,23 +222,22 @@ class InlineImportDetector(ast.NodeVisitor):
 
         if context_type in ['function', 'async_function']:
             return ImportType.FUNCTION_LEVEL, Severity.HIGH, "Function-level import"
-        elif context_type == 'conditional':
+        if context_type == 'conditional':
             return ImportType.CONDITIONAL, Severity.MEDIUM, "Conditional import"
-        elif context_type in ['try_block', 'except_handler']:
+        if context_type in ['try_block', 'except_handler']:
             return ImportType.EXCEPTION_HANDLER, Severity.LOW, "Exception handling import"
-        elif context_type == 'class':
+        if context_type == 'class':
             return ImportType.CLASS_METHOD, Severity.HIGH, "Class-level import"
-        else:
-            return ImportType.FUNCTION_LEVEL, Severity.MEDIUM, f"Import in {context_type}"
+        return ImportType.FUNCTION_LEVEL, Severity.MEDIUM, f"Import in {context_type}"
 
-    def _get_context_lines(self, line_number: int, context_size: int = 3) -> List[str]:
+    def _get_context_lines(self, line_number: int, context_size: int = 3) -> list[str]:
         """Get surrounding lines for context."""
         start_line = max(0, line_number - context_size - 1)
         end_line = min(len(self.source_lines), line_number + context_size)
         return self.source_lines[start_line:end_line]
 
     def _generate_suggestions(self, import_statement: str,
-                            import_type: ImportType) -> List[str]:
+                            import_type: ImportType) -> list[str]:
         """Generate refactoring suggestions."""
         suggestions = []
 
@@ -280,8 +277,8 @@ class InlineImportAnalyzer:
 
         return logger
 
-    def analyze_project(self, paths: List[str],
-                       patterns: List[str] = None) -> ProjectAnalysis:
+    def analyze_project(self, paths: list[str],
+                       patterns: list[str] = None) -> ProjectAnalysis:
         """Analyze entire project for inline imports."""
         if patterns is None:
             patterns = ["*.py"]
@@ -314,8 +311,8 @@ class InlineImportAnalyzer:
             summary_by_severity=severity_summary
         )
 
-    def _find_python_files(self, paths: List[str],
-                          patterns: List[str]) -> List[str]:
+    def _find_python_files(self, paths: list[str],
+                          patterns: list[str]) -> list[str]:
         """Find all Python files matching the patterns."""
         python_files = []
 
@@ -332,7 +329,7 @@ class InlineImportAnalyzer:
     def _analyze_file(self, file_path: str) -> ModuleAnalysis:
         """Analyze a single Python file."""
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 source_code = f.read()
                 source_lines = source_code.splitlines()
 
@@ -357,7 +354,7 @@ class InlineImportAnalyzer:
             self.logger.warning(f"Syntax error in {file_path}: {e}")
             return ModuleAnalysis(file_path, 0, [], [], [])
 
-    def _generate_pr_groupings(self, modules: List[ModuleAnalysis]) -> Dict[str, List[str]]:
+    def _generate_pr_groupings(self, modules: list[ModuleAnalysis]) -> dict[str, list[str]]:
         """Generate suggested PR groupings based on logical modules."""
         groupings = {}
 
@@ -385,7 +382,7 @@ class InlineImportAnalyzer:
 
         return groupings
 
-    def _summarize_by_type(self, modules: List[ModuleAnalysis]) -> Dict[str, int]:
+    def _summarize_by_type(self, modules: list[ModuleAnalysis]) -> dict[str, int]:
         """Summarize imports by type."""
         summary = {}
         for module in modules:
@@ -394,7 +391,7 @@ class InlineImportAnalyzer:
                 summary[type_name] = summary.get(type_name, 0) + 1
         return summary
 
-    def _summarize_by_severity(self, modules: List[ModuleAnalysis]) -> Dict[str, int]:
+    def _summarize_by_severity(self, modules: list[ModuleAnalysis]) -> dict[str, int]:
         """Summarize imports by severity."""
         summary = {}
         for module in modules:

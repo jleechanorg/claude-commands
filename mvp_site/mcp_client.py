@@ -284,7 +284,7 @@ class MCPClient:
                 # Gracefully handle missing world_logic in test mode
                 if tool_name == "get_campaigns_list":
                     return {"success": True, "campaigns": []}
-                elif tool_name in ["get_campaign_state", "process_action"]:
+                if tool_name in ["get_campaign_state", "process_action"]:
                     # Check if campaign exists in our mock storage OR in FakeFirestore
                     args = arguments or {}
                     campaign_id = args.get("campaign_id", "")

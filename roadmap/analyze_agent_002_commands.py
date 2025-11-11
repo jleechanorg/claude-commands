@@ -6,9 +6,9 @@ Extracts slash commands from user prompts and counts their frequencies.
 
 import json
 import re
-import os
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from pathlib import Path
+
 
 def extract_slash_commands(text):
     """Extract slash commands from text, filtering out file paths and URLs."""
@@ -109,7 +109,7 @@ def analyze_agent_002():
 
     for file_path in progress_files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 data = json.load(f)
 
             processed_files += 1
@@ -190,14 +190,14 @@ def analyze_agent_002():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"\nAnalysis complete!")
+    print("\nAnalysis complete!")
     print(f"Total prompts analyzed: {total_prompts}")
     print(f"Files processed: {processed_files}")
     print(f"Unique slash commands found: {len(command_counter)}")
     print(f"Results saved to: {output_path}")
 
     # Print top commands for preview
-    print(f"\nTop 10 most frequent commands:")
+    print("\nTop 10 most frequent commands:")
     for command, count in command_counter.most_common(10):
         print(f"  {command}: {count}")
 

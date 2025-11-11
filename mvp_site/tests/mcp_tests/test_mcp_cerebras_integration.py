@@ -59,13 +59,10 @@ sys.path.insert(0, str(project_root))
 try:
     from fastmcp import FastMCP
     from mcp.types import TextContent
-
     from mcp_servers.slash_commands.unified_router import (
         _execute_slash_command,
         create_tools,
-        main as server_main,
     )
-
     MCP_AVAILABLE = True
 except ImportError as e:
     # Set fallback values for unavailable MCP dependencies
@@ -73,7 +70,6 @@ except ImportError as e:
     TextContent = None
     _execute_slash_command = None
     create_tools = None
-    server_main = None
     MCP_AVAILABLE = False
     SKIP_REASON = f"MCP dependencies not available: {e}"
 

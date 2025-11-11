@@ -2,11 +2,12 @@
 """Standardize slash command markdown files with execution workflows."""
 from __future__ import annotations
 
-from collections import OrderedDict
 import argparse
-from pathlib import Path
 import re
-from typing import Any, Iterable, List, Sequence, Tuple
+from collections import OrderedDict
+from collections.abc import Iterable, Sequence
+from pathlib import Path
+from typing import Any
 
 import yaml
 
@@ -56,7 +57,7 @@ EXECUTION_HEADER = (
 )
 
 
-def parse_frontmatter(text: str) -> Tuple[dict, str]:
+def parse_frontmatter(text: str) -> tuple[dict, str]:
     """
     Parse YAML frontmatter delimited by lines that contain only '---'.
     Supports LF/CRLF and ignores trailing spaces.
@@ -118,12 +119,12 @@ def format_frontmatter(data: dict) -> str:
     return "\n".join(lines)
 
 
-def find_code_fence_ranges(text: str) -> List[Tuple[int, int]]:
+def find_code_fence_ranges(text: str) -> list[tuple[int, int]]:
     """
     Detect fenced code blocks (``` or ~~~), allowing up to 3 spaces indent.
     Ensures the closing fence matches the opening marker type.
     """
-    ranges: List[Tuple[int, int]] = []
+    ranges: list[tuple[int, int]] = []
     open_start: int | None = None
     open_marker: str | None = None
     for match in CODE_FENCE_RE.finditer(text):
@@ -147,15 +148,15 @@ def find_code_fence_ranges(text: str) -> List[Tuple[int, int]]:
     return ranges
 
 
-def is_in_code_fence(position: int, ranges: Sequence[Tuple[int, int]]) -> bool:
+def is_in_code_fence(position: int, ranges: Sequence[tuple[int, int]]) -> bool:
     for start, end in ranges:
         if start <= position < end:
             return True
     return False
 
 
-def extract_sections(text: str) -> Tuple[str, List[dict]]:
-    sections: List[dict] = []
+def extract_sections(text: str) -> tuple[str, list[dict]]:
+    sections: list[dict] = []
     matches = list(HEADING_RE.finditer(text))
     code_ranges = find_code_fence_ranges(text)
     filtered_matches = [m for m in matches if not is_in_code_fence(m.start(), code_ranges)]
@@ -235,7 +236,7 @@ def should_exclude(heading_lower: str) -> bool:
     return bool(EXCLUDE_PATTERN.search(heading_lower))
 
 
-def classify_sections(preface: str, sections: Iterable[dict]) -> Tuple[list, list, str]:
+def classify_sections(preface: str, sections: Iterable[dict]) -> tuple[list, list, str]:
     phase_sections = []
     other_sections = []
     for idx, sec in enumerate(sections):
@@ -249,9 +250,7 @@ def classify_sections(preface: str, sections: Iterable[dict]) -> Tuple[list, lis
             continue
         is_workflow = is_phase or any(key in heading_lower for key in WORKFLOW_KEYWORDS)
         if is_workflow and sec["level"] >= 2:
-            if "workflow phases" in heading_lower:
-                other_sections.append((idx, sec))
-            elif sec["content"].lstrip().startswith("###"):
+            if "workflow phases" in heading_lower or sec["content"].lstrip().startswith("###"):
                 other_sections.append((idx, sec))
             else:
                 phase_sections.append((idx, sec))
@@ -274,8 +273,8 @@ def classify_sections(preface: str, sections: Iterable[dict]) -> Tuple[list, lis
     return phase_sections, other_sections, preface
 
 
-def build_workflow(phase_sections: List[Tuple[int, dict]]) -> Tuple[str, set[int]]:
-    workflow_parts: List[str] = []
+def build_workflow(phase_sections: list[tuple[int, dict]]) -> tuple[str, set[int]]:
+    workflow_parts: list[str] = []
     phase_counter = 1
     if phase_sections:
         first_heading = phase_sections[0][1]["heading_text"]

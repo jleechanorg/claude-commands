@@ -1,0 +1,43 @@
+#!/bin/sh
+# Husky pre-push hook for WorldArchitect.AI
+# Runs comprehensive checks before pushing to remote
+
+echo "🚀 Running pre-push checks..."
+echo ""
+
+# Exit on first error
+set -e
+
+# 1. Python: Type checking with mypy (optional - can be slow)
+echo "🔍 Running mypy type checking..."
+if command -v mypy >/dev/null 2>&1; then
+    mypy mvp_site --config-file pyproject.toml || true
+    echo "✅ Type checking completed (warnings allowed)"
+else
+    echo "⚠️  Warning: mypy not found, skipping type checking"
+fi
+echo ""
+
+# 2. Security: Bandit security scanning
+echo "🔒 Running security scan..."
+if command -v bandit >/dev/null 2>&1; then
+    bandit -r mvp_site -c pyproject.toml -ll || true
+    echo "✅ Security scan completed (warnings allowed)"
+else
+    echo "⚠️  Warning: bandit not found, skipping security scan"
+fi
+echo ""
+
+# 3. Run unit tests (intelligent mode for speed)
+echo "🧪 Running unit tests..."
+if [ -f "run_tests.sh" ]; then
+    ./run_tests.sh --unit
+    echo "✅ Unit tests passed"
+else
+    echo "⚠️  Warning: run_tests.sh not found, skipping tests"
+fi
+echo ""
+
+echo "✅ All pre-push checks passed!"
+echo ""
+echo "💡 Tip: Use 'git push --no-verify' to skip these checks if needed"

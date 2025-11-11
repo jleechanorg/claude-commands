@@ -12,7 +12,6 @@ Based on copilot_comment_fetch.py from PR #796 but adapted for modular architect
 """
 
 import sys
-import os
 import argparse
 import json
 import subprocess
@@ -532,7 +531,7 @@ class CommentFetch(CopilotCommandBase):
     def execute(self) -> Dict[str, Any]:
         """Execute comment fetching from all sources."""
         self.log(f"🔄 FETCHING FRESH COMMENTS for PR #{self.pr_number} from GitHub API")
-        self.log(f"⚠️ NEVER reading from cache - always fresh API calls")
+        self.log("⚠️ NEVER reading from cache - always fresh API calls")
         self.log(f"📁 Will save to: {self.output_file}")
 
         # Fetch comments and CI status in parallel for speed

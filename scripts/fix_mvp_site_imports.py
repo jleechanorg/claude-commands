@@ -11,11 +11,9 @@ Usage:
 """
 
 import argparse
-import os
 import re
 import shutil
 from pathlib import Path
-from typing import List, Tuple
 
 # Internal mvp_site modules that should be package-qualified
 INTERNAL_MODULES = {
@@ -43,7 +41,7 @@ def is_internal_module(module_name: str) -> bool:
     return base_module in INTERNAL_MODULES
 
 
-def fix_import_line(line: str) -> Tuple[str, bool]:
+def fix_import_line(line: str) -> tuple[str, bool]:
     """
     Fix a single import line if it needs conversion.
     Returns (fixed_line, was_changed)
@@ -78,7 +76,7 @@ def fix_import_line(line: str) -> Tuple[str, bool]:
     return line, False
 
 
-def fix_file_imports(file_path: Path, dry_run: bool = False) -> Tuple[int, List[str]]:
+def fix_file_imports(file_path: Path, dry_run: bool = False) -> tuple[int, list[str]]:
     """
     Fix imports in a single file.
     Returns (num_changes, list_of_changes)
@@ -88,7 +86,7 @@ def fix_file_imports(file_path: Path, dry_run: bool = False) -> Tuple[int, List[
         return 0, []
 
     try:
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             lines = f.readlines()
     except Exception as e:
         print(f"ERROR reading {file_path}: {e}")

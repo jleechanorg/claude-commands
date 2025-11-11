@@ -1,12 +1,12 @@
-import pytest
-import json
 import hashlib
+import json
 import os
-import time
-from pathlib import Path
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
 import threading
+import time
+from collections import defaultdict
+from pathlib import Path
+
+import pytest
 
 
 class TestCache:
@@ -19,15 +19,14 @@ class TestCache:
 
     def load_cache(self):
         if self.cache_file.exists():
-            with open(self.cache_file, "r") as f:
+            with open(self.cache_file) as f:
                 self.cache = json.load(f)
         else:
             self.cache = {}
 
     def save_cache(self):
-        with self.lock:
-            with open(self.cache_file, "w") as f:
-                json.dump(self.cache, f, indent=2)
+        with self.lock, open(self.cache_file, "w") as f:
+            json.dump(self.cache, f, indent=2)
 
     def get_test_hash(self, nodeid, file_path):
         """Generate a hash based on test nodeid and file content"""
@@ -58,15 +57,15 @@ class TestCache:
         """Invalidate cache entries for a modified file"""
         if not self.cache_file.exists():
             return
-            
+
         keys_to_remove = []
         for key, value in self.cache.items():
             if value["file_path"] == str(file_path):
                 keys_to_remove.append(key)
-                
+
         for key in keys_to_remove:
             del self.cache[key]
-            
+
         self.save_cache()
 
 
@@ -83,32 +82,32 @@ class TestGroupOptimizer:
         for item in items:
             file_path = item.location[0]
             file_groups[file_path].append(item)
-            
+
         # Sort groups by total estimated duration (longest first)
         sorted_groups = sorted(
-            file_groups.items(), 
+            file_groups.items(),
             key=lambda x: sum(self.test_durations.get(item.nodeid, 1) for item in x[1]),
             reverse=True
         )
-        
+
         # Distribute tests among workers
         for i, (file_path, tests) in enumerate(sorted_groups):
             worker_id = i % self.num_workers
             self.test_groups[worker_id].extend(tests)
-            
+
         return list(self.test_groups.values())
 
     def get_cached_tests(self, items):
         cached_tests = []
         uncached_tests = []
-        
+
         for item in items:
             file_path = Path(item.location[0])
             if self.test_cache.is_cached(item.nodeid, file_path):
                 cached_tests.append(item)
             else:
                 uncached_tests.append(item)
-                
+
         return cached_tests, uncached_tests
 
 
@@ -120,26 +119,26 @@ def pytest_configure(config):
 def pytest_collection_modifyitems(config, items):
     if not config.option.cache_optimizer:
         return
-        
+
     optimizer = TestGroupOptimizer(config.option.num_workers)
-    
+
     # Load test duration history if available
     duration_file = Path(".pytest_cache_optimizer/durations.json")
     if duration_file.exists():
-        with open(duration_file, "r") as f:
+        with open(duration_file) as f:
             optimizer.test_durations = json.load(f)
-    
+
     # Separate cached and uncached tests
     cached_tests, uncached_tests = optimizer.get_cached_tests(items)
-    
+
     # Group uncached tests for parallel execution
     test_groups = optimizer.group_tests_by_file(uncached_tests)
-    
+
     # Reorder items: run cached tests first, then grouped uncached tests
     reordered_items = cached_tests.copy()
     for group in test_groups:
         reordered_items.extend(group)
-        
+
     items[:] = reordered_items
 
 
@@ -152,12 +151,12 @@ def pytest_runtest_makereport(item, call):
         result = "passed" if call.excinfo is None else "failed"
         duration = call.duration
         optimizer.test_cache.cache_result(item.nodeid, file_path, result, duration)
-        
+
         # Save duration for future grouping optimization
         duration_file = Path(".pytest_cache_optimizer/durations.json")
         durations = {}
         if duration_file.exists():
-            with open(duration_file, "r") as f:
+            with open(duration_file) as f:
                 durations = json.load(f)
         durations[item.nodeid] = duration
         with open(duration_file, "w") as f:
@@ -169,13 +168,13 @@ def pytest_sessionstart(session):
     cache_dir = Path(".pytest_cache_optimizer")
     if not cache_dir.exists():
         return
-        
+
     timestamp_file = cache_dir / "timestamps.json"
     timestamps = {}
     if timestamp_file.exists():
-        with open(timestamp_file, "r") as f:
+        with open(timestamp_file) as f:
             timestamps = json.load(f)
-    
+
     for root, dirs, files in os.walk("."):
         for file in files:
             if file.endswith(".py"):
@@ -186,7 +185,7 @@ def pytest_sessionstart(session):
                     test_cache = TestCache()
                     test_cache.invalidate_cache(file_path)
                 timestamps[str(file_path)] = mtime
-    
+
     with open(timestamp_file, "w") as f:
         json.dump(timestamps, f, indent=2)
 

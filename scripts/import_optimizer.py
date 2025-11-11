@@ -12,21 +12,15 @@ Usage:
     python import_optimizer.py --generate-prs [paths...]     # Generate PR branches
 """
 
-import ast
-import os
-import sys
 import argparse
-import subprocess
-from pathlib import Path
-from typing import List, Dict, Set, Tuple, Optional
+import sys
 from dataclasses import dataclass
-import tempfile
-import shutil
-import re
 
 from simple_inline_detector import (
-    QuickInlineDetector, InlineImportInfo,
-    analyze_file, find_python_files, generate_pr_groups
+    InlineImportInfo,
+    analyze_file,
+    find_python_files,
+    generate_pr_groups,
 )
 
 
@@ -38,7 +32,7 @@ class ImportFix:
     import_statement: str
     action: str  # 'move_to_top', 'conditional_move', 'manual_review'
     confidence: str  # 'high', 'medium', 'low'
-    risk_factors: List[str]
+    risk_factors: list[str]
 
 
 class ImportOptimizer:
@@ -49,7 +43,7 @@ class ImportOptimizer:
         self.fixes_applied = []
         self.manual_review_needed = []
 
-    def analyze_and_fix(self, paths: List[str], fix_mode: str = 'safe') -> Dict:
+    def analyze_and_fix(self, paths: list[str], fix_mode: str = 'safe') -> dict:
         """Analyze files and optionally apply fixes."""
         print(f"🔍 Analyzing files in: {', '.join(paths)}")
 
@@ -76,7 +70,7 @@ class ImportOptimizer:
             'pr_strategy': self._generate_pr_strategy(fixes)
         }
 
-    def _generate_fixes(self, imports: List[InlineImportInfo], fix_mode: str) -> List[ImportFix]:
+    def _generate_fixes(self, imports: list[InlineImportInfo], fix_mode: str) -> list[ImportFix]:
         """Generate fixes for inline imports."""
         fixes = []
 
@@ -84,9 +78,7 @@ class ImportOptimizer:
             confidence, action, risk_factors = self._analyze_import_safety(imp)
 
             # Filter based on fix mode
-            if fix_mode == 'safe' and confidence != 'high':
-                continue
-            elif fix_mode == 'medium' and confidence == 'low':
+            if (fix_mode == 'safe' and confidence != 'high') or (fix_mode == 'medium' and confidence == 'low'):
                 continue
 
             fix = ImportFix(
@@ -101,7 +93,7 @@ class ImportOptimizer:
 
         return fixes
 
-    def _analyze_import_safety(self, imp: InlineImportInfo) -> Tuple[str, str, List[str]]:
+    def _analyze_import_safety(self, imp: InlineImportInfo) -> tuple[str, str, list[str]]:
         """Analyze how safe it is to move this import."""
         risk_factors = []
 
@@ -158,7 +150,7 @@ class ImportOptimizer:
             return True
         return False
 
-    def _apply_fixes(self, fixes: List[ImportFix]) -> None:
+    def _apply_fixes(self, fixes: list[ImportFix]) -> None:
         """Apply the import fixes to files."""
         fixes_by_file = {}
 
@@ -175,12 +167,12 @@ class ImportOptimizer:
                 print(f"Error fixing {file_path}: {e}")
                 self.manual_review_needed.extend(file_fixes)
 
-    def _fix_file(self, file_path: str, fixes: List[ImportFix]) -> None:
+    def _fix_file(self, file_path: str, fixes: list[ImportFix]) -> None:
         """Fix imports in a single file."""
         print(f"🔧 Fixing {file_path}")
 
         # Read original file
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, encoding='utf-8') as f:
             lines = f.readlines()
 
         # Find existing imports section
@@ -215,7 +207,7 @@ class ImportOptimizer:
             with open(file_path, 'w', encoding='utf-8') as f:
                 f.writelines(lines)
 
-    def _find_import_insert_position(self, lines: List[str]) -> int:
+    def _find_import_insert_position(self, lines: list[str]) -> int:
         """Find the best position to insert new imports."""
         # Look for existing imports, docstrings, etc.
         in_docstring = False
@@ -245,7 +237,7 @@ class ImportOptimizer:
         # Insert after last import, or after docstring, or at beginning
         return max(last_import_line, docstring_end)
 
-    def _generate_pr_strategy(self, fixes: List[ImportFix]) -> Dict:
+    def _generate_pr_strategy(self, fixes: list[ImportFix]) -> dict:
         """Generate PR strategy for the fixes."""
         files_with_fixes = list(set(fix.file_path for fix in fixes))
         pr_groups = generate_pr_groups(files_with_fixes)
@@ -259,7 +251,7 @@ class ImportOptimizer:
 
         return strategy
 
-    def _get_pr_order(self, pr_groups: Dict[str, List[str]]) -> List[str]:
+    def _get_pr_order(self, pr_groups: dict[str, list[str]]) -> list[str]:
         """Recommend order for PR creation."""
         # Start with tests (safest), then utilities, then core code
         order = []
@@ -272,7 +264,7 @@ class ImportOptimizer:
 
         return order
 
-    def _estimate_effort(self, fixes: List[ImportFix]) -> Dict:
+    def _estimate_effort(self, fixes: list[ImportFix]) -> dict:
         """Estimate effort for the fixes."""
         by_confidence = {}
         for fix in fixes:
@@ -285,11 +277,11 @@ class ImportOptimizer:
         }
 
 
-def create_pr_branches(optimizer_result: Dict) -> None:
+def create_pr_branches(optimizer_result: dict) -> None:
     """Create separate branches for each PR group."""
     pr_strategy = optimizer_result['pr_strategy']
 
-    print(f"\n🌿 PR BRANCH CREATION STRATEGY")
+    print("\n🌿 PR BRANCH CREATION STRATEGY")
     print(f"{'='*50}")
 
     for i, group in enumerate(pr_strategy['recommended_order']):
@@ -302,9 +294,9 @@ def create_pr_branches(optimizer_result: Dict) -> None:
         print(f"  Focus: {group.replace('_', ' ').title()} import optimization")
 
         if group == 'tests':
-            print(f"  Note: Start here - safest changes")
+            print("  Note: Start here - safest changes")
         elif group == 'mvp_site':
-            print(f"  Note: Save for last - most complex")
+            print("  Note: Save for last - most complex")
 
     print(f"\nTotal estimated time: {pr_strategy['estimated_effort']['estimated_time_minutes']} minutes")
 
@@ -338,7 +330,7 @@ def main():
     try:
         result = optimizer.analyze_and_fix(args.paths, fix_mode)
 
-        print(f"\n📊 OPTIMIZATION RESULTS")
+        print("\n📊 OPTIMIZATION RESULTS")
         print(f"{'='*50}")
         print(f"Total inline imports found: {result['total_imports']}")
         print(f"Fixes generated: {result['fixes_generated']}")
@@ -354,11 +346,11 @@ def main():
             create_pr_branches(result)
 
         if dry_run and result['fixes_generated'] > 0:
-            print(f"\n💡 To actually apply fixes, use --execute")
+            print("\n💡 To actually apply fixes, use --execute")
             print(f"Example: python {sys.argv[0]} --fix-safe --execute {' '.join(args.paths)}")
 
     except KeyboardInterrupt:
-        print(f"\nOptimization interrupted by user")
+        print("\nOptimization interrupted by user")
         sys.exit(1)
 
     except Exception as e:

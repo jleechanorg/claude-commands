@@ -1,7 +1,9 @@
 import os
-from influxdb_client import InfluxDBClient, BucketRetentionRules
-from influxdb_client.client.write_api import WriteApi
+
+from influxdb_client import BucketRetentionRules, InfluxDBClient
 from influxdb_client.client.query_api import QueryApi
+from influxdb_client.client.write_api import WriteApi
+
 
 def get_influx_client() -> InfluxDBClient:
     """

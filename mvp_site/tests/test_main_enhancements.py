@@ -17,9 +17,8 @@ IMPORT_ERROR = None
 def client():
     """Flask test client fixture with proper error handling"""
     app.config["TESTING"] = True
-    with app.test_client() as client:
-        with app.app_context():
-            yield client
+    with app.test_client() as client, app.app_context():
+        yield client
 
 
 def test_flask_app_import():
@@ -49,7 +48,7 @@ def test_time_endpoint_exists(client):
     time_keys = ["server_time_utc", "server_timestamp", "server_timestamp_ms", "timestamp"]
     present_keys = [k for k in time_keys if k in data]
     assert present_keys, f"Missing expected time keys in response. Expected one of: {time_keys}"
-    
+
     # Validate at least one key has a valid time value
     for key in present_keys:
         assert data[key] is not None, f"Time key '{key}' should not be None"

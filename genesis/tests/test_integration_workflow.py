@@ -3,15 +3,18 @@ Matrix 5: Integration & Workflow Tests - TDD RED Phase
 Tests all integration scenarios with Git, progress tracking, and consensus.
 """
 
-import pytest
-import tempfile
+import json
 import os
 import subprocess
-import json
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+
+import pytest
+
 from genesis import (
-    integrate_git_workflow, update_progress_file,
-    check_consensus, append_genesis_learning
+    append_genesis_learning,
+    check_consensus,
+    integrate_git_workflow,
+    update_progress_file,
 )
 
 
@@ -23,16 +26,16 @@ class TestIntegrationWorkflowMatrix:
         """Create temporary git repository for testing"""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Initialize git repo
-            subprocess.run(["git", "init"], cwd=temp_dir, capture_output=True)
-            subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=temp_dir)
-            subprocess.run(["git", "config", "user.name", "Test User"], cwd=temp_dir)
+            subprocess.run(["git", "init"], check=False, cwd=temp_dir, capture_output=True)
+            subprocess.run(["git", "config", "user.email", "test@example.com"], check=False, cwd=temp_dir)
+            subprocess.run(["git", "config", "user.name", "Test User"], check=False, cwd=temp_dir)
 
             # Create initial commit
             readme_file = os.path.join(temp_dir, "README.md")
             with open(readme_file, "w") as f:
                 f.write("# Test Repository\n")
-            subprocess.run(["git", "add", "README.md"], cwd=temp_dir)
-            subprocess.run(["git", "commit", "-m", "Initial commit"], cwd=temp_dir)
+            subprocess.run(["git", "add", "README.md"], check=False, cwd=temp_dir)
+            subprocess.run(["git", "commit", "-m", "Initial commit"], check=False, cwd=temp_dir)
 
             yield temp_dir
 
@@ -70,21 +73,21 @@ class TestIntegrationWorkflowMatrix:
         elif git_state == "detached_head":
             # Checkout specific commit (detached HEAD)
             result = subprocess.run(["git", "rev-parse", "HEAD"],
-                                  cwd=temp_git_repo, capture_output=True, text=True)
+                                  check=False, cwd=temp_git_repo, capture_output=True, text=True)
             commit_hash = result.stdout.strip()
-            subprocess.run(["git", "checkout", commit_hash], cwd=temp_git_repo, capture_output=True)
+            subprocess.run(["git", "checkout", commit_hash], check=False, cwd=temp_git_repo, capture_output=True)
         elif git_state == "merge_conflicts":
             # Create actual merge conflict
-            subprocess.run(["git", "checkout", "-b", "test-branch"], cwd=temp_git_repo)
+            subprocess.run(["git", "checkout", "-b", "test-branch"], check=False, cwd=temp_git_repo)
             with open(os.path.join(temp_git_repo, "README.md"), "w") as f:
                 f.write("# Modified in branch\n")
-            subprocess.run(["git", "add", "."], cwd=temp_git_repo)
-            subprocess.run(["git", "commit", "-m", "Branch change"], cwd=temp_git_repo)
-            subprocess.run(["git", "checkout", "main"], cwd=temp_git_repo)
+            subprocess.run(["git", "add", "."], check=False, cwd=temp_git_repo)
+            subprocess.run(["git", "commit", "-m", "Branch change"], check=False, cwd=temp_git_repo)
+            subprocess.run(["git", "checkout", "main"], check=False, cwd=temp_git_repo)
             with open(os.path.join(temp_git_repo, "README.md"), "w") as f:
                 f.write("# Modified in main\n")
-            subprocess.run(["git", "add", "."], cwd=temp_git_repo)
-            subprocess.run(["git", "commit", "-m", "Main change"], cwd=temp_git_repo)
+            subprocess.run(["git", "add", "."], check=False, cwd=temp_git_repo)
+            subprocess.run(["git", "commit", "-m", "Main change"], check=False, cwd=temp_git_repo)
         elif git_state == "untracked_files":
             # Create untracked files
             untracked_file = os.path.join(temp_git_repo, "untracked.txt")
@@ -174,8 +177,8 @@ class TestIntegrationWorkflowMatrix:
         """Test git workflow edge cases from Matrix 5"""
 
         edge_cases = [
-            ("empty_repository", lambda: subprocess.run(["git", "checkout", "--orphan", "empty"], cwd=temp_git_repo)),
-            ("bare_repository", lambda: subprocess.run(["git", "config", "core.bare", "true"], cwd=temp_git_repo)),
+            ("empty_repository", lambda: subprocess.run(["git", "checkout", "--orphan", "empty"], check=False, cwd=temp_git_repo)),
+            ("bare_repository", lambda: subprocess.run(["git", "config", "core.bare", "true"], check=False, cwd=temp_git_repo)),
             ("corrupted_git", lambda: os.remove(os.path.join(temp_git_repo, ".git", "HEAD"))),
             ("permission_denied", lambda: os.chmod(os.path.join(temp_git_repo, ".git"), 0o000)),
         ]
@@ -246,7 +249,7 @@ class TestIntegrationWorkflowMatrix:
             learning_files = [f for f in os.listdir(temp_git_repo) if "learning" in f.lower()]
             if learning_files:
                 learning_file = learning_files[0]
-                with open(os.path.join(temp_git_repo, learning_file), "r") as f:
+                with open(os.path.join(temp_git_repo, learning_file)) as f:
                     content = f.read()
                     assert str(iteration_num) in content
                     assert learning_note in content
@@ -277,7 +280,7 @@ class TestIntegrationWorkflowMatrix:
             # Verify transition was recorded
             progress_files = [f for f in os.listdir(temp_git_repo) if "progress" in f]
             if progress_files:
-                with open(os.path.join(temp_git_repo, progress_files[0]), "r") as f:
+                with open(os.path.join(temp_git_repo, progress_files[0])) as f:
                     progress_data = json.load(f)
                     if isinstance(progress_data, dict):
                         assert progress_data.get("to_stage") == to_stage

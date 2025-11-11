@@ -114,5 +114,5 @@ class TestPRTargeting(unittest.TestCase):
         self.assertIn("5. Perform a final self-review", comment_body)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

@@ -7,16 +7,17 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
+from . import genesis as genesis_full
 from .common_cli import (
     GenesisArguments,
     GenesisHelpRequested,
     GenesisUsageError,
     parse_genesis_cli,
+)
+from .common_cli import (
     print_usage as print_cli_usage,
 )
-from . import genesis as genesis_full
 
 COMPLETION_KEYWORDS = [
     "CONVERGED",
@@ -68,7 +69,7 @@ def build_prompt(
     )
 
 
-def load_session(session_path: Path) -> Dict[str, object]:
+def load_session(session_path: Path) -> dict[str, object]:
     if not session_path.exists():
         return {}
     try:
@@ -81,12 +82,12 @@ def load_session(session_path: Path) -> Dict[str, object]:
         return {}
 
 
-def save_session(session_path: Path, session: Dict[str, object]) -> None:
+def save_session(session_path: Path, session: dict[str, object]) -> None:
     session_path.parent.mkdir(parents=True, exist_ok=True)
     session_path.write_text(json.dumps(session, indent=2), encoding="utf-8")
 
 
-def ensure_goal_context(goal_dir: Optional[str], session: Dict[str, object]) -> None:
+def ensure_goal_context(goal_dir: str | None, session: dict[str, object]) -> None:
     if not goal_dir:
         return
     session.setdefault("goal_directory", goal_dir)
@@ -97,7 +98,7 @@ def summarize_output(output: str) -> str:
     return "\n".join(lines[-MAX_SUMMARY_LINES:]) if lines else ""
 
 
-def handle_refine_mode(cli_args: GenesisArguments) -> Dict[str, Optional[str]]:
+def handle_refine_mode(cli_args: GenesisArguments) -> dict[str, str | None]:
     original_goal = cli_args.refine_goal or ""
     use_codex = cli_args.use_codex
 
@@ -105,8 +106,8 @@ def handle_refine_mode(cli_args: GenesisArguments) -> Dict[str, Optional[str]]:
     print(f"📝 Goal: {original_goal[:100]}...")
     print(f"🔢 Max Iterations: {cli_args.max_iterations}")
 
-    refined_goal: Optional[str] = None
-    exit_criteria: Optional[str] = None
+    refined_goal: str | None = None
+    exit_criteria: str | None = None
 
     while True:
         response = genesis_full.refine_goal_interactive(original_goal, use_codex)
@@ -262,7 +263,7 @@ def main() -> None:
         print(preview)
         print("-" * 60)
 
-        history: List[Dict[str, object]] = session_data.setdefault("history", [])  # type: ignore[assignment]
+        history: list[dict[str, object]] = session_data.setdefault("history", [])  # type: ignore[assignment]
         history.append(
             {
                 "iteration": iteration_number,

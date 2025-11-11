@@ -18,7 +18,6 @@ sys.path.insert(0, str(project_root))
 # Import MCP modules
 try:
     from mcp_servers.slash_commands.unified_router import create_tools, handle_tool_call
-
     MCP_ROUTER_AVAILABLE = True
 except ImportError:
     create_tools = None
@@ -40,7 +39,7 @@ class TestMCPComprehensive:
         # Fallback to environment variable or current working directory
         return Path(os.environ.get("PROJECT_ROOT", ".")).resolve()
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_tool_discovery(self):
         """Test that all slash commands are properly discovered"""
         if not MCP_ROUTER_AVAILABLE or not create_tools:
@@ -54,7 +53,7 @@ class TestMCPComprehensive:
         assert "cerebras" in cerebras_tool.description.lower()
         print(f"✅ Discovered {len(tools)} MCP tools including cerebras")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_cerebras_tool_execution(self):
         """Test cerebras tool execution through unified router"""
         if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
@@ -68,7 +67,7 @@ class TestMCPComprehensive:
         assert response_text.strip(), "Cerebras execution returned empty response"
         print("✅ Cerebras tool executed successfully")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_input_validation_basic(self):
         """Test basic input validation in handle_tool_call"""
         if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
@@ -80,7 +79,7 @@ class TestMCPComprehensive:
             assert result[0].text.strip(), "Sanitized input should still produce a response"
         print("✅ Input validation working correctly")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_invalid_tool_rejection(self):
         """Test that invalid tools are rejected"""
         if not MCP_ROUTER_AVAILABLE or not handle_tool_call:
@@ -93,7 +92,7 @@ class TestMCPComprehensive:
         )
         print("✅ Invalid tools properly rejected")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_json_rpc_communication(self):
         """Test JSON-RPC communication pattern with MCP server"""
         # Test with cerebras args
@@ -131,7 +130,7 @@ class TestMCPComprehensive:
         except Exception as e:
             pytest.fail(f"Server startup failed: {e}")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_red_green_refactor_cycle(self):
         """Test red-green-refactor methodology through MCP server"""
         # Red phase - test cerebras command with failing scenario
@@ -159,7 +158,7 @@ class TestMCPComprehensive:
 
         print("✅ Red-green-refactor cycle working through MCP")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_argument_handling(self):
         """Test various argument patterns"""
         # Test with multiple args
@@ -175,7 +174,7 @@ class TestMCPComprehensive:
 
         print("✅ Argument handling working correctly")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_syntax_error_prevention(self):
         """Test that indentation and syntax errors are prevented"""
         # This test would have failed before the fix due to indentation error
@@ -185,7 +184,7 @@ class TestMCPComprehensive:
         assert isinstance(result[0].text, str)
         print("✅ Syntax error prevention working")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_consistent_argument_parsing(self):
         """Test consistent argument key usage (args vs arguments)"""
         # Test that 'args' key is used consistently
@@ -204,7 +203,7 @@ class TestMCPComprehensive:
 
         print("✅ Consistent argument parsing working")
 
-    @pytest.mark.asyncio()
+    @pytest.mark.asyncio
     async def test_tool_restriction_logic(self):
         """Test that only cerebras tool is allowed as intended"""
         # Test that non-cerebras tools are properly rejected

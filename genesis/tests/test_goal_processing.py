@@ -3,15 +3,18 @@ Matrix 2: Goal Processing Tests - TDD RED Phase
 Tests all goal processing combinations with different types and states.
 """
 
-import pytest
-import tempfile
 import os
-import json
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+from unittest.mock import patch
+
+import pytest
+
 from genesis import (
-    load_goal_from_directory, refine_goal_interactive,
-    detect_goal_ambiguities, check_goal_completion,
-    parse_refinement
+    check_goal_completion,
+    detect_goal_ambiguities,
+    load_goal_from_directory,
+    parse_refinement,
+    refine_goal_interactive,
 )
 
 

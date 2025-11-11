@@ -3,11 +3,11 @@
 TDD Test Suite for Enhanced Genesis Workflow
 """
 
+import importlib
 import os
 import sys
 import tempfile
 import unittest
-import importlib
 from itertools import cycle
 from unittest.mock import MagicMock, patch
 

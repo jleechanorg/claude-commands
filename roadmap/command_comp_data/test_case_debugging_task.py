@@ -36,14 +36,14 @@ def test_process_data():
     test_data = [1, 2, -1, 3, 0, 4]
     expected = [2, 4, -1, 6, 0, 8]
     result = process_data(test_data)
-    
+
     print("Processing:", test_data)
     print("Result:", result)
     print("Expected:", expected)
-    
+
     assert result == expected, f"Expected {expected}, got {result}"
     print("✅ Test passed")
-    
+
 
 if __name__ == "__main__":
     test_process_data()

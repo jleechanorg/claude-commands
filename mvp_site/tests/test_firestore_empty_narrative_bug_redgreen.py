@@ -24,9 +24,10 @@ sys.path.insert(
     0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 )
 
+from tests.fake_firestore import FakeFirestoreClient
+
 from mvp_site import constants
 from mvp_site.firestore_service import add_story_entry
-from tests.fake_firestore import FakeFirestoreClient
 
 
 class TestFirestoreEmptyNarrativeBug(unittest.TestCase):

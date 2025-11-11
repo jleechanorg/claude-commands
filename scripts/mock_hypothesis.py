@@ -7,31 +7,32 @@ to allow CRDT property tests to run without the actual hypothesis dependency.
 """
 
 import logging
-from typing import Any, Callable, TypeVar, Union
+from collections.abc import Callable
 from functools import wraps
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
 # Mock strategies
 class MockStrategies:
     """Mock implementation of hypothesis strategies"""
-    
+
     @staticmethod
     def text(min_size: int = 0, max_size: int = 100) -> 'MockStrategy':
         return MockStrategy('text')
-    
+
     @staticmethod
     def integers(min_value: int = None, max_value: int = None) -> 'MockStrategy':
         return MockStrategy('integers')
-    
+
     @staticmethod
     def lists(elements: Any, min_size: int = 0, max_size: int = 10) -> 'MockStrategy':
         return MockStrategy('lists')
-    
+
     @staticmethod
     def dictionaries(keys: Any, values: Any, min_size: int = 0, max_size: int = 10) -> 'MockStrategy':
         return MockStrategy('dictionaries')
-        
+
     @staticmethod
     def booleans() -> 'MockStrategy':
         return MockStrategy('booleans')
@@ -40,21 +41,20 @@ class MockStrategy:
     """Mock strategy object"""
     def __init__(self, strategy_type: str):
         self.strategy_type = strategy_type
-        
+
     def example(self):
         """Return a mock example based on strategy type"""
         if self.strategy_type == 'text':
             return "mock_text"
-        elif self.strategy_type == 'integers':
+        if self.strategy_type == 'integers':
             return 42
-        elif self.strategy_type == 'lists':
+        if self.strategy_type == 'lists':
             return [1, 2, 3]
-        elif self.strategy_type == 'dictionaries':
+        if self.strategy_type == 'dictionaries':
             return {"key": "value"}
-        elif self.strategy_type == 'booleans':
+        if self.strategy_type == 'booleans':
             return True
-        else:
-            return None
+        return None
 
 # Mock settings
 class MockSettings:
@@ -81,7 +81,7 @@ def given(*strategies) -> Callable[[Callable], Callable]:
         def wrapper(*args, **kwargs):
             logger.info(f"Mock hypothesis test: {test_func.__name__}")
             logger.info("Skipping property-based testing - hypothesis not available")
-            
+
             # Generate mock arguments based on strategies
             mock_args = []
             for strategy in strategies:
@@ -89,7 +89,7 @@ def given(*strategies) -> Callable[[Callable], Callable]:
                     mock_args.append(strategy.example())
                 else:
                     mock_args.append("mock_value")
-            
+
             # Call the test function with mock data
             try:
                 result = test_func(*args, *mock_args, **kwargs)
@@ -99,7 +99,7 @@ def given(*strategies) -> Callable[[Callable], Callable]:
                 logger.warning(f"Mock hypothesis test {test_func.__name__} failed: {e}")
                 # Don't fail the test - just log the issue
                 return None
-                
+
         return wrapper
     return decorator
 

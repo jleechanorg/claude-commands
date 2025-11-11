@@ -4,14 +4,11 @@ Genesis Prompt Extraction Tool with Incremental Saves
 Extracts 6,208 user prompts for 10-agent processing with progress checkpoints.
 """
 
-import json
-import os
 import glob
-from datetime import datetime, timedelta
+import json
+from datetime import datetime
 from pathlib import Path
-import hashlib
-from typing import Dict, List, Set, Any
-import sys
+
 
 class PromptExtractor:
     def __init__(self, base_dir: str):
@@ -85,7 +82,7 @@ class PromptExtractor:
     def extract_from_jsonl_file(self, file_path: Path):
         """Extract user prompts from a single JSONL file."""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 for line_num, line in enumerate(f, 1):
                     if not line.strip():
                         continue

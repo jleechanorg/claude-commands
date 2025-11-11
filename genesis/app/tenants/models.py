@@ -1,7 +1,8 @@
-from django.db import models
+import uuid
+
 from django.contrib.auth.models import User
 from django.core.validators import RegexValidator
-import uuid
+from django.db import models
 
 
 class Tenant(models.Model):

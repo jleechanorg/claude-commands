@@ -4,9 +4,9 @@ Comprehensive command frequency analysis for agent_001 data chunk (prompts 1-994
 """
 import json
 import re
-import os
 from collections import defaultdict
 from pathlib import Path
+
 
 def extract_slash_commands(text):
     """Extract actual slash commands from text, filtering out file paths"""
@@ -83,7 +83,7 @@ def analyze_agent_001_commands():
         print(f"Processing {progress_file.name}...")
 
         try:
-            with open(progress_file, 'r', encoding='utf-8') as f:
+            with open(progress_file, encoding='utf-8') as f:
                 data = json.load(f)
 
             processed_files += 1

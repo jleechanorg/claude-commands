@@ -6,7 +6,6 @@ import re
 import unittest
 from pathlib import Path
 
-
 SECOND_OPINION_MCP_URL = "https://ai-universe-backend-dev-114133832173.us-central1.run.app/mcp"
 
 

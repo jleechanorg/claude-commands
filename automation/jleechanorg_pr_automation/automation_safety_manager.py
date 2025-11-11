@@ -11,20 +11,16 @@ Minimal implementation to pass the RED phase tests with:
 """
 
 import argparse
-import fcntl
 import importlib.util
 import json
-import logging
 import os
 import smtplib
 import sys
-import tempfile
 import threading
 from datetime import datetime, timedelta
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from typing import Dict, Optional, Union
-
 
 REAL_DATETIME = datetime
 
@@ -42,13 +38,9 @@ else:
 
 # Import shared utilities
 from .utils import (
+    get_automation_limits,
     json_manager,
     setup_logging,
-    get_email_config,
-    validate_email_config,
-    get_automation_limits,
-    format_timestamp,
-    parse_timestamp,
 )
 
 
@@ -62,8 +54,8 @@ class AutomationSafetyManager:
 
         # Get limits from shared utility
         limits = get_automation_limits()
-        self.pr_limit = limits['pr_limit']
-        self.global_limit = limits['global_limit']
+        self.pr_limit = limits["pr_limit"]
+        self.global_limit = limits["global_limit"]
 
         # File paths
         self.pr_attempts_file = os.path.join(data_dir, "pr_attempts.json")
@@ -118,13 +110,13 @@ class AutomationSafetyManager:
         if os.path.exists(self.config_file):
             # Load existing config
             try:
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file) as f:
                     config = json.load(f)
                     # Update limits from config
-                    if 'pr_limit' in config:
-                        self.pr_limit = config['pr_limit']
-                    if 'global_limit' in config:
-                        self.global_limit = config['global_limit']
+                    if "pr_limit" in config:
+                        self.pr_limit = config["pr_limit"]
+                    if "global_limit" in config:
+                        self.global_limit = config["global_limit"]
             except (FileNotFoundError, json.JSONDecodeError):
                 pass  # Use defaults
         else:
@@ -167,7 +159,7 @@ class AutomationSafetyManager:
         """Create a labeled key for PR attempt tracking."""
 
         repo_part = f"r={repo or ''}"
-        pr_part = f"p={str(pr_number)}"
+        pr_part = f"p={pr_number!s}"
         branch_part = f"b={branch or ''}"
         return "||".join((repo_part, pr_part, branch_part))
 
@@ -286,8 +278,7 @@ class AutomationSafetyManager:
         except (TypeError, ValueError):
             total_runs = 0
 
-        if total_runs < 0:
-            total_runs = 0
+        total_runs = max(total_runs, 0)
 
         data["total_runs"] = total_runs
 
@@ -517,7 +508,7 @@ class AutomationSafetyManager:
                 approval_date = REAL_DATETIME.fromisoformat(approval_date_str)
             except (TypeError, ValueError):
                 return False
-            approval_hours = get_automation_limits()['approval_hours']
+            approval_hours = get_automation_limits()["approval_hours"]
             expiry = approval_date + timedelta(hours=approval_hours)
 
             return datetime.now() < expiry
@@ -531,7 +522,7 @@ class AutomationSafetyManager:
             for pr_key, attempts in self._pr_attempts_cache.items():
                 if len(attempts) >= self.pr_limit:
                     self._send_limit_notification(
-                        f"PR Automation Limit Reached",
+                        "PR Automation Limit Reached",
                         f"PR {pr_key} has reached the maximum attempt limit of {self.pr_limit}."
                     )
                     notifications_sent.append(f"PR {pr_key}")
@@ -539,7 +530,7 @@ class AutomationSafetyManager:
             # Check for global limit reached
             if self._global_runs_cache >= self.global_limit:
                 self._send_limit_notification(
-                    f"Global Automation Limit Reached",
+                    "Global Automation Limit Reached",
                     f"Global automation runs have reached the maximum limit of {self.global_limit}."
                 )
                 notifications_sent.append("Global limit")
@@ -585,9 +576,9 @@ class AutomationSafetyManager:
                 password = None
 
         if username is None:
-            username = os.environ.get('SMTP_USERNAME') or os.environ.get('EMAIL_USER')
+            username = os.environ.get("SMTP_USERNAME") or os.environ.get("EMAIL_USER")
         if password is None:
-            password = os.environ.get('SMTP_PASSWORD') or os.environ.get('EMAIL_PASS')
+            password = os.environ.get("SMTP_PASSWORD") or os.environ.get("EMAIL_PASS")
 
         return username, password
 
@@ -595,20 +586,20 @@ class AutomationSafetyManager:
         """Send email notification with secure credential handling"""
         try:
             # Load email configuration
-            smtp_server = os.environ.get('SMTP_SERVER', 'smtp.gmail.com')
-            smtp_port = int(os.environ.get('SMTP_PORT', '587'))
+            smtp_server = os.environ.get("SMTP_SERVER", "smtp.gmail.com")
+            smtp_port = int(os.environ.get("SMTP_PORT", "587"))
             username, password = self._get_smtp_credentials()
-            to_email = os.environ.get('EMAIL_TO')
-            from_email = os.environ.get('EMAIL_FROM') or username
+            to_email = os.environ.get("EMAIL_TO")
+            from_email = os.environ.get("EMAIL_FROM") or username
 
             if not (username and password and to_email and from_email):
                 self.logger.info("Email configuration incomplete - skipping notification")
                 return False
 
             msg = MIMEMultipart()
-            msg['From'] = from_email
-            msg['To'] = to_email
-            msg['Subject'] = f"[WorldArchitect Automation] {subject}"
+            msg["From"] = from_email
+            msg["To"] = to_email
+            msg["Subject"] = f"[WorldArchitect Automation] {subject}"
 
             body = f"""
 {message}
@@ -619,7 +610,7 @@ System: PR Automation Safety Manager
 This is an automated notification from the WorldArchitect.AI automation system.
 """
 
-            msg.attach(MIMEText(body, 'plain'))
+            msg.attach(MIMEText(body, "plain"))
 
             # Connect and send email
             server = smtplib.SMTP(smtp_server, smtp_port)
@@ -673,13 +664,13 @@ This is an automated notification from the WorldArchitect.AI automation system.
     def load_config(self, config_file: str) -> dict:
         """Load configuration from file"""
         try:
-            with open(config_file, 'r') as f:
+            with open(config_file) as f:
                 config = json.load(f)
                 # Update limits from config
-                if 'pr_limit' in config:
-                    self.pr_limit = config['pr_limit']
-                if 'global_limit' in config:
-                    self.global_limit = config['global_limit']
+                if "pr_limit" in config:
+                    self.pr_limit = config["pr_limit"]
+                if "global_limit" in config:
+                    self.global_limit = config["global_limit"]
                 return config
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
@@ -691,7 +682,7 @@ This is an automated notification from the WorldArchitect.AI automation system.
     def has_email_config(self) -> bool:
         """Check if email configuration is available"""
         try:
-            smtp_server = os.environ.get('SMTP_SERVER')
+            smtp_server = os.environ.get("SMTP_SERVER")
             username, password = self._get_smtp_credentials()
             return bool(smtp_server and username and password)
         except Exception:
@@ -707,9 +698,9 @@ This is an automated notification from the WorldArchitect.AI automation system.
     def _is_email_configured(self) -> bool:
         """Check if email configuration is complete"""
         try:
-            smtp_server = os.environ.get('SMTP_SERVER')
-            smtp_port = os.environ.get('SMTP_PORT')
-            email_to = os.environ.get('EMAIL_TO')
+            smtp_server = os.environ.get("SMTP_SERVER")
+            smtp_port = os.environ.get("SMTP_PORT")
+            email_to = os.environ.get("EMAIL_TO")
             username, password = self._get_smtp_credentials()
             return bool(smtp_server and smtp_port and email_to and username and password)
         except Exception:
@@ -719,25 +710,25 @@ This is an automated notification from the WorldArchitect.AI automation system.
 def main():
     """CLI interface for safety manager"""
 
-    parser = argparse.ArgumentParser(description='Automation Safety Manager')
-    parser.add_argument('--data-dir', default='/tmp/automation_safety',
-                        help='Directory for safety data files')
-    parser.add_argument('--check-pr', type=int, metavar='PR_NUMBER',
-                        help='Check if PR can be processed')
-    parser.add_argument('--record-pr', nargs=2, metavar=('PR_NUMBER', 'RESULT'),
-                        help='Record PR attempt (result: success|failure)')
-    parser.add_argument('--repo', type=str,
-                        help='Repository name (owner/repo) for PR attempt operations')
-    parser.add_argument('--branch', type=str,
-                        help='Branch name for PR attempt tracking')
-    parser.add_argument('--check-global', action='store_true',
-                        help='Check if global run can start')
-    parser.add_argument('--record-global', action='store_true',
-                        help='Record global run')
-    parser.add_argument('--manual_override', type=str, metavar='EMAIL',
-                        help='Grant manual override (emergency use only)')
-    parser.add_argument('--status', action='store_true',
-                        help='Show current status')
+    parser = argparse.ArgumentParser(description="Automation Safety Manager")
+    parser.add_argument("--data-dir", default="/tmp/automation_safety",
+                        help="Directory for safety data files")
+    parser.add_argument("--check-pr", type=int, metavar="PR_NUMBER",
+                        help="Check if PR can be processed")
+    parser.add_argument("--record-pr", nargs=2, metavar=("PR_NUMBER", "RESULT"),
+                        help="Record PR attempt (result: success|failure)")
+    parser.add_argument("--repo", type=str,
+                        help="Repository name (owner/repo) for PR attempt operations")
+    parser.add_argument("--branch", type=str,
+                        help="Branch name for PR attempt tracking")
+    parser.add_argument("--check-global", action="store_true",
+                        help="Check if global run can start")
+    parser.add_argument("--record-global", action="store_true",
+                        help="Record global run")
+    parser.add_argument("--manual_override", type=str, metavar="EMAIL",
+                        help="Grant manual override (emergency use only)")
+    parser.add_argument("--status", action="store_true",
+                        help="Show current status")
 
     args = parser.parse_args()
 
@@ -826,5 +817,5 @@ def main():
         parser.print_help()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

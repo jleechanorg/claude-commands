@@ -4,12 +4,9 @@ Direct Cerebras Integration for Claude Code
 Bypasses MCP tool exposure bug by providing direct access to Cerebras generation
 """
 import asyncio
-import subprocess
-import json
-import sys
 import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 # Global configuration
 PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path.cwd()))
@@ -21,9 +18,9 @@ class CerebrasDirectAPI:
     @staticmethod
     async def generate_code(
         prompt: str,
-        context: Optional[Dict[str, Any]] = None,
-        options: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        context: dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Generate code using Cerebras with 19.6x speed advantage
 
@@ -64,7 +61,7 @@ class CerebrasDirectAPI:
             }
 
     @staticmethod
-    def _build_prompt(prompt: str, context: Dict, options: Dict) -> str:
+    def _build_prompt(prompt: str, context: dict, options: dict) -> str:
         """Build comprehensive generation prompt"""
         parts = [prompt]
 
@@ -90,7 +87,7 @@ class CerebrasDirectAPI:
         return "\n".join(parts)
 
     @staticmethod
-    async def _execute_cerebras(prompt: str) -> Dict[str, Any]:
+    async def _execute_cerebras(prompt: str) -> dict[str, Any]:
         """Execute Cerebras script with timeout"""
 
         if not CEREBRAS_SCRIPT.exists():
@@ -122,7 +119,7 @@ class CerebrasDirectAPI:
                 "returncode": process.returncode
             }
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             try:
                 process.kill()
                 await process.wait()
@@ -141,7 +138,7 @@ class CerebrasDirectAPI:
             }
 
     @staticmethod
-    def _analyze_quality(code: str) -> Dict[str, Any]:
+    def _analyze_quality(code: str) -> dict[str, Any]:
         """Analyze generated code quality"""
         return {
             "has_placeholders": "TODO" not in code and "FIXME" not in code,
@@ -157,8 +154,7 @@ async def cerebras_generate(prompt: str, **kwargs) -> str:
     result = await CerebrasDirectAPI.generate_code(prompt, **kwargs)
     if result["success"]:
         return result["generated_code"]
-    else:
-        return f"Error: {result['error']}"
+    return f"Error: {result['error']}"
 
 def cerebras_sync(prompt: str, **kwargs) -> str:
     """Synchronous version for immediate use"""
@@ -220,9 +216,9 @@ async def test_cerebras_integration():
         avg_time = sum(r["duration"] for r in successful) / len(successful)
         print(f"\n📊 Results: {len(successful)}/{len(results)} successful")
         print(f"⚡ Average time: {avg_time:.3f}s")
-        print(f"🎯 Ready for 80% Cerebras usage target!")
+        print("🎯 Ready for 80% Cerebras usage target!")
     else:
-        print(f"\n❌ All tests failed - Cerebras integration needs debugging")
+        print("\n❌ All tests failed - Cerebras integration needs debugging")
 
     return results
 

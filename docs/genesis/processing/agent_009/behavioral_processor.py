@@ -7,12 +7,12 @@ Total: 993 prompts focusing on PR security review and optimization
 """
 
 import json
-import time
 import random
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Any
+
 
 class BehavioralProcessor:
     def __init__(self, chunk_file: str, agent_id: str = "agent_009"):
@@ -24,7 +24,7 @@ class BehavioralProcessor:
         self.authenticity_scores = []
 
         # Load chunk data
-        with open(chunk_file, 'r') as f:
+        with open(chunk_file) as f:
             self.chunk_data = json.load(f)
 
         self.prompts = self.chunk_data['prompts']
@@ -38,7 +38,7 @@ class BehavioralProcessor:
         print(f"Target authenticity: {self.target_authenticity}")
         print(f"Chunk range: {self.chunk_data.get('start_index', 'unknown')} - {self.chunk_data.get('end_index', 'unknown')}")
 
-    def extract_context_features(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_context_features(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Extract contextual features from prompt"""
         content = prompt.get('content', '')
         timestamp = prompt.get('timestamp', '')
@@ -90,7 +90,7 @@ class BehavioralProcessor:
             }
         }
 
-    def analyze_cognitive_patterns(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_cognitive_patterns(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Analyze cognitive patterns in the prompt"""
         content = prompt.get('content', '')
 
@@ -112,7 +112,7 @@ class BehavioralProcessor:
             }
         }
 
-    def generate_authentic_response_pattern(self, analysis: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_authentic_response_pattern(self, analysis: dict[str, Any]) -> dict[str, Any]:
         """Generate authentic response patterns based on analysis"""
         context = analysis.get('context_features', {})
         cognitive = analysis.get('cognitive_patterns', {})
@@ -148,7 +148,7 @@ class BehavioralProcessor:
             }
         }
 
-    def process_prompt(self, prompt: Dict[str, Any], index: int) -> Dict[str, Any]:
+    def process_prompt(self, prompt: dict[str, Any], index: int) -> dict[str, Any]:
         """Process a single prompt with behavioral analysis"""
         try:
             # Extract features
@@ -185,7 +185,7 @@ class BehavioralProcessor:
                 }
             }
 
-    def process_batch(self, start_idx: int, end_idx: int) -> Dict[str, Any]:
+    def process_batch(self, start_idx: int, end_idx: int) -> dict[str, Any]:
         """Process a batch of prompts"""
         batch_results = []
         batch_authenticity_scores = []
@@ -222,7 +222,7 @@ class BehavioralProcessor:
             }
         }
 
-    def save_progress(self, batch_results: Dict[str, Any], batch_number: int):
+    def save_progress(self, batch_results: dict[str, Any], batch_number: int):
         """Save progress to file"""
         filename = f"progress_{batch_number:03d}.json"
         filepath = self.output_dir / filename
@@ -300,7 +300,7 @@ class BehavioralProcessor:
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2, default=str)
 
-        print(f"\n=== Final Summary ===")
+        print("\n=== Final Summary ===")
         print(f"Total prompts processed: {self.processed_count}")
         print(f"Target authenticity: {self.target_authenticity}")
         print(f"Achieved authenticity: {overall_avg:.3f}")
@@ -315,7 +315,7 @@ class BehavioralProcessor:
         template_file = self.output_dir / "behavioral_analysis_template.json"
 
         if template_file.exists():
-            with open(template_file, 'r') as f:
+            with open(template_file) as f:
                 template = json.load(f)
 
             # Update authenticity scores
@@ -339,12 +339,11 @@ class BehavioralProcessor:
         """Extract branch information from content"""
         if re.search(r'branch|checkout|merge', content, re.IGNORECASE):
             return 'git_operations'
-        elif re.search(r'pr|pull.request', content, re.IGNORECASE):
+        if re.search(r'pr|pull.request', content, re.IGNORECASE):
             return 'pr_workflow'
-        else:
-            return 'development'
+        return 'development'
 
-    def _extract_error_indicators(self, content: str) -> List[str]:
+    def _extract_error_indicators(self, content: str) -> list[str]:
         """Extract error indicators from content"""
         errors = []
         if re.search(r'error|fail|broke|issue|problem', content, re.IGNORECASE):
@@ -357,22 +356,21 @@ class BehavioralProcessor:
         """Classify the main work focus"""
         if re.search(r'security|vulnerability|auth|sanitiz', content, re.IGNORECASE):
             return 'security_review'
-        elif re.search(r'pr|review|merge|consensus', content, re.IGNORECASE):
+        if re.search(r'pr|review|merge|consensus', content, re.IGNORECASE):
             return 'pr_management'
-        elif re.search(r'test|spec|coverage', content, re.IGNORECASE):
+        if re.search(r'test|spec|coverage', content, re.IGNORECASE):
             return 'testing'
-        elif re.search(r'mvp|simplif|clean', content, re.IGNORECASE):
+        if re.search(r'mvp|simplif|clean', content, re.IGNORECASE):
             return 'simplification'
-        else:
-            return 'development'
+        return 'development'
 
-    def _extract_file_references(self, content: str) -> List[str]:
+    def _extract_file_references(self, content: str) -> list[str]:
         """Extract file references from content"""
         # Match common file patterns
         files = re.findall(r'[a-zA-Z0-9_-]+\.[a-z]{2,4}', content)
         return list(set(files))  # Remove duplicates
 
-    def _extract_command_references(self, content: str) -> List[str]:
+    def _extract_command_references(self, content: str) -> list[str]:
         """Extract command references from content"""
         commands = []
         command_patterns = [
@@ -386,7 +384,7 @@ class BehavioralProcessor:
 
         return list(set(commands))
 
-    def _get_complexity_indicators(self, content: str) -> List[str]:
+    def _get_complexity_indicators(self, content: str) -> list[str]:
         """Identify complexity indicators"""
         indicators = []
         if len(content.split()) > 100:
@@ -397,7 +395,7 @@ class BehavioralProcessor:
             indicators.append('collaborative_complexity')
         return indicators
 
-    def _get_urgency_signals(self, content: str) -> List[str]:
+    def _get_urgency_signals(self, content: str) -> list[str]:
         """Identify urgency signals"""
         signals = []
         urgent_words = ['critical', 'urgent', 'fix', 'merge', 'security', 'vulnerability']
@@ -413,12 +411,11 @@ class BehavioralProcessor:
             hour = dt.hour
             if 6 <= hour < 12:
                 return 'morning'
-            elif 12 <= hour < 18:
+            if 12 <= hour < 18:
                 return 'afternoon'
-            elif 18 <= hour < 22:
+            if 18 <= hour < 22:
                 return 'evening'
-            else:
-                return 'night'
+            return 'night'
         except:
             return 'unknown'
 
@@ -426,36 +423,33 @@ class BehavioralProcessor:
         """Classify project phase"""
         if re.search(r'review|pr|merge', content, re.IGNORECASE):
             return 'review_phase'
-        elif re.search(r'test|spec|coverage', content, re.IGNORECASE):
+        if re.search(r'test|spec|coverage', content, re.IGNORECASE):
             return 'testing_phase'
-        elif re.search(r'security|vulnerability', content, re.IGNORECASE):
+        if re.search(r'security|vulnerability', content, re.IGNORECASE):
             return 'security_phase'
-        else:
-            return 'development_phase'
+        return 'development_phase'
 
     def _classify_deployment_state(self, content: str) -> str:
         """Classify deployment state"""
         if re.search(r'deploy|production|staging', content, re.IGNORECASE):
             return 'deployment_focused'
-        elif re.search(r'mvp|launch|release', content, re.IGNORECASE):
+        if re.search(r'mvp|launch|release', content, re.IGNORECASE):
             return 'pre_deployment'
-        else:
-            return 'development'
+        return 'development'
 
     def _classify_intent(self, content: str) -> str:
         """Classify primary intent"""
         if re.search(r'security|vulnerability|auth', content, re.IGNORECASE):
             return 'security_analysis'
-        elif re.search(r'review|consensus|approve', content, re.IGNORECASE):
+        if re.search(r'review|consensus|approve', content, re.IGNORECASE):
             return 'collaborative_review'
-        elif re.search(r'fix|resolve|address', content, re.IGNORECASE):
+        if re.search(r'fix|resolve|address', content, re.IGNORECASE):
             return 'problem_solving'
-        elif re.search(r'merge|deploy|ship', content, re.IGNORECASE):
+        if re.search(r'merge|deploy|ship', content, re.IGNORECASE):
             return 'delivery_focused'
-        else:
-            return 'information_seeking'
+        return 'information_seeking'
 
-    def _identify_secondary_intents(self, content: str) -> List[str]:
+    def _identify_secondary_intents(self, content: str) -> list[str]:
         """Identify secondary intents"""
         intents = []
         if re.search(r'test|coverage|quality', content, re.IGNORECASE):
@@ -466,7 +460,7 @@ class BehavioralProcessor:
             intents.append('documentation')
         return intents
 
-    def _get_implicit_expectations(self, content: str) -> List[str]:
+    def _get_implicit_expectations(self, content: str) -> list[str]:
         """Identify implicit expectations"""
         expectations = []
         if re.search(r'should|must|need to|required', content, re.IGNORECASE):
@@ -506,56 +500,51 @@ class BehavioralProcessor:
 
         if word_count > 200 or tech_terms > 3:
             return 'high'
-        elif word_count > 50 or tech_terms > 1:
+        if word_count > 50 or tech_terms > 1:
             return 'medium'
-        else:
-            return 'low'
+        return 'low'
 
     def _infer_mental_state(self, content: str) -> str:
         """Infer mental state from content"""
         if re.search(r'critical|urgent|security|vulnerability', content, re.IGNORECASE):
             return 'alert'
-        elif re.search(r'review|consensus|collaborate', content, re.IGNORECASE):
+        if re.search(r'review|consensus|collaborate', content, re.IGNORECASE):
             return 'engaged'
-        elif re.search(r'clean|simplif|mvp', content, re.IGNORECASE):
+        if re.search(r'clean|simplif|mvp', content, re.IGNORECASE):
             return 'focused'
-        else:
-            return 'normal'
+        return 'normal'
 
     def _analyze_communication_style(self, content: str) -> str:
         """Analyze communication style"""
         if re.search(r'please|could|would|might', content, re.IGNORECASE):
             return 'polite'
-        elif re.search(r'fix|address|resolve|implement', content, re.IGNORECASE):
+        if re.search(r'fix|address|resolve|implement', content, re.IGNORECASE):
             return 'direct'
-        elif re.search(r'review|consensus|collaborate|team', content, re.IGNORECASE):
+        if re.search(r'review|consensus|collaborate|team', content, re.IGNORECASE):
             return 'collaborative'
-        else:
-            return 'neutral'
+        return 'neutral'
 
     def _identify_decision_pattern(self, content: str) -> str:
         """Identify decision-making pattern"""
         if re.search(r'consensus|review|team|collaborate', content, re.IGNORECASE):
             return 'consensus_seeking'
-        elif re.search(r'security|critical|must|required', content, re.IGNORECASE):
+        if re.search(r'security|critical|must|required', content, re.IGNORECASE):
             return 'security_first'
-        elif re.search(r'mvp|simple|clean|minimal', content, re.IGNORECASE):
+        if re.search(r'mvp|simple|clean|minimal', content, re.IGNORECASE):
             return 'simplicity_focused'
-        else:
-            return 'analytical'
+        return 'analytical'
 
     def _classify_problem_solving(self, content: str) -> str:
         """Classify problem-solving approach"""
         if re.search(r'step|phase|stage|first|then|next', content, re.IGNORECASE):
             return 'systematic'
-        elif re.search(r'try|test|experiment|check', content, re.IGNORECASE):
+        if re.search(r'try|test|experiment|check', content, re.IGNORECASE):
             return 'experimental'
-        elif re.search(r'consensus|review|collaborate|team', content, re.IGNORECASE):
+        if re.search(r'consensus|review|collaborate|team', content, re.IGNORECASE):
             return 'collaborative'
-        else:
-            return 'direct'
+        return 'direct'
 
-    def _calculate_natural_flow(self, context: Dict, cognitive: Dict) -> float:
+    def _calculate_natural_flow(self, context: dict, cognitive: dict) -> float:
         """Calculate natural language flow score"""
         base_score = 0.85
 
@@ -568,7 +557,7 @@ class BehavioralProcessor:
 
         return min(1.0, base_score + random.uniform(-0.05, 0.05))
 
-    def _calculate_coherence(self, context: Dict, cognitive: Dict) -> float:
+    def _calculate_coherence(self, context: dict, cognitive: dict) -> float:
         """Calculate context coherence score"""
         base_score = 0.88
 
@@ -579,7 +568,7 @@ class BehavioralProcessor:
 
         return min(1.0, base_score + random.uniform(-0.03, 0.03))
 
-    def _calculate_consistency(self, context: Dict, cognitive: Dict) -> float:
+    def _calculate_consistency(self, context: dict, cognitive: dict) -> float:
         """Calculate behavioral consistency score"""
         base_score = 0.86
 
@@ -590,7 +579,7 @@ class BehavioralProcessor:
 
         return min(1.0, base_score + random.uniform(-0.04, 0.04))
 
-    def _calculate_technical_accuracy(self, context: Dict, cognitive: Dict) -> float:
+    def _calculate_technical_accuracy(self, context: dict, cognitive: dict) -> float:
         """Calculate technical accuracy score"""
         base_score = 0.91
 
@@ -601,7 +590,7 @@ class BehavioralProcessor:
 
         return min(1.0, base_score + random.uniform(-0.02, 0.02))
 
-    def _calculate_human_variance(self, context: Dict, cognitive: Dict) -> float:
+    def _calculate_human_variance(self, context: dict, cognitive: dict) -> float:
         """Calculate human-like variance score"""
         base_score = 0.84
 
@@ -614,57 +603,53 @@ class BehavioralProcessor:
 
         return min(1.0, base_score + random.uniform(-0.08, 0.08))
 
-    def _determine_tone(self, cognitive: Dict) -> str:
+    def _determine_tone(self, cognitive: dict) -> str:
         """Determine response tone"""
         comm_style = cognitive.get('behavioral_indicators', {}).get('communication_style', 'neutral')
         intent = cognitive.get('intent_classification', {}).get('primary_intent', 'information_seeking')
 
         if intent == 'security_analysis':
             return 'professional_cautious'
-        elif comm_style == 'collaborative':
+        if comm_style == 'collaborative':
             return 'collaborative_supportive'
-        elif intent == 'problem_solving':
+        if intent == 'problem_solving':
             return 'solution_focused'
-        else:
-            return 'informative'
+        return 'informative'
 
-    def _determine_response_complexity(self, context: Dict) -> str:
+    def _determine_response_complexity(self, context: dict) -> str:
         """Determine response complexity level"""
         tech_stack = context.get('technical_context', {}).get('technology_stack', [])
         complexity_indicators = context.get('technical_context', {}).get('complexity_indicators', [])
 
         if len(tech_stack) > 4 or 'high_complexity' in complexity_indicators:
             return 'high'
-        elif len(tech_stack) > 2 or 'collaborative_complexity' in complexity_indicators:
+        if len(tech_stack) > 2 or 'collaborative_complexity' in complexity_indicators:
             return 'medium'
-        else:
-            return 'low'
+        return 'low'
 
-    def _determine_technical_depth(self, context: Dict) -> str:
+    def _determine_technical_depth(self, context: dict) -> str:
         """Determine technical depth level"""
         tech_stack = context.get('technical_context', {}).get('technology_stack', [])
 
         if 'security' in tech_stack and len(tech_stack) > 3:
             return 'expert'
-        elif len(tech_stack) > 2:
+        if len(tech_stack) > 2:
             return 'intermediate'
-        else:
-            return 'basic'
+        return 'basic'
 
-    def _determine_collaboration_style(self, cognitive: Dict) -> str:
+    def _determine_collaboration_style(self, cognitive: dict) -> str:
         """Determine collaboration style"""
         decision_pattern = cognitive.get('behavioral_indicators', {}).get('decision_making_pattern', 'analytical')
 
         if decision_pattern == 'consensus_seeking':
             return 'consensus_building'
-        elif decision_pattern == 'security_first':
+        if decision_pattern == 'security_first':
             return 'security_focused'
-        elif decision_pattern == 'simplicity_focused':
+        if decision_pattern == 'simplicity_focused':
             return 'simplification_oriented'
-        else:
-            return 'balanced'
+        return 'balanced'
 
-    def _calculate_engagement_level(self, cognitive: Dict) -> float:
+    def _calculate_engagement_level(self, cognitive: dict) -> float:
         """Calculate engagement level"""
         base_engagement = 0.8
 

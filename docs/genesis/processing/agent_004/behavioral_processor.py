@@ -6,12 +6,12 @@ Target: 0.87+ authenticity score (Agent 3 achieved 0.881)
 """
 
 import json
-import time
 import random
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Any, Tuple
+from typing import Any
+
 
 class BehavioralProcessor:
     def __init__(self, chunk_file: str, agent_id: str = "agent_004"):
@@ -23,7 +23,7 @@ class BehavioralProcessor:
         self.authenticity_scores = []
 
         # Load chunk data
-        with open(chunk_file, 'r') as f:
+        with open(chunk_file) as f:
             self.chunk_data = json.load(f)
 
         self.prompts = self.chunk_data['prompts']
@@ -36,7 +36,7 @@ class BehavioralProcessor:
         print(f"Initialized {agent_id} for {self.total_prompts} prompts")
         print(f"Target authenticity: {self.target_authenticity}")
 
-    def extract_context_features(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_context_features(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Extract contextual features from prompt"""
         content = prompt.get('content', '')
         timestamp = prompt.get('timestamp', '')
@@ -82,7 +82,7 @@ class BehavioralProcessor:
             }
         }
 
-    def analyze_cognitive_patterns(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def analyze_cognitive_patterns(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Analyze cognitive patterns in the prompt"""
         content = prompt.get('content', '')
 
@@ -108,7 +108,7 @@ class BehavioralProcessor:
             }
         }
 
-    def classify_behavioral_patterns(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def classify_behavioral_patterns(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Classify behavioral patterns"""
         content = prompt.get('content', '')
 
@@ -127,7 +127,7 @@ class BehavioralProcessor:
             }
         }
 
-    def create_taxonomic_classification(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def create_taxonomic_classification(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Create taxonomic classification"""
         content = prompt.get('content', '')
 
@@ -150,7 +150,7 @@ class BehavioralProcessor:
             }
         }
 
-    def generate_predictive_modeling(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_predictive_modeling(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Generate predictive modeling"""
         content = prompt.get('content', '')
 
@@ -161,7 +161,7 @@ class BehavioralProcessor:
             'completion_indicators': self._identify_completion_indicators(content)
         }
 
-    def calculate_quality_metrics(self, prompt: Dict[str, Any]) -> Dict[str, Any]:
+    def calculate_quality_metrics(self, prompt: dict[str, Any]) -> dict[str, Any]:
         """Calculate quality metrics with authentic authenticity scoring"""
         content = prompt.get('content', '')
 
@@ -197,23 +197,22 @@ class BehavioralProcessor:
     def _classify_work_focus(self, content: str) -> str:
         if re.search(r'debug|error|fix|issue|problem', content, re.IGNORECASE):
             return 'debugging'
-        elif re.search(r'implement|add|create|build|develop', content, re.IGNORECASE):
+        if re.search(r'implement|add|create|build|develop', content, re.IGNORECASE):
             return 'development'
-        elif re.search(r'test|spec|verify|validate', content, re.IGNORECASE):
+        if re.search(r'test|spec|verify|validate', content, re.IGNORECASE):
             return 'testing'
-        elif re.search(r'deploy|release|publish|production', content, re.IGNORECASE):
+        if re.search(r'deploy|release|publish|production', content, re.IGNORECASE):
             return 'deployment'
-        elif re.search(r'analyze|review|check|examine', content, re.IGNORECASE):
+        if re.search(r'analyze|review|check|examine', content, re.IGNORECASE):
             return 'analysis'
-        else:
-            return 'general'
+        return 'general'
 
-    def _extract_file_references(self, content: str) -> List[str]:
+    def _extract_file_references(self, content: str) -> list[str]:
         files = re.findall(r'[\w\/\.]+\.[a-zA-Z]{2,4}', content)
         dirs = re.findall(r'[\w\/]+\/[\w\/]*', content)
         return list(set(files + dirs))[:5]  # Limit to 5 most relevant
 
-    def _get_complexity_indicators(self, content: str) -> List[str]:
+    def _get_complexity_indicators(self, content: str) -> list[str]:
         indicators = []
         if len(content.split()) > 50:
             indicators.append('long_prompt')
@@ -223,7 +222,7 @@ class BehavioralProcessor:
             indicators.append('multiple_questions')
         return indicators
 
-    def _get_urgency_signals(self, content: str) -> List[str]:
+    def _get_urgency_signals(self, content: str) -> list[str]:
         signals = []
         urgency_words = ['urgent', 'asap', 'quickly', 'immediate', 'critical', 'now', 'fast']
         for word in urgency_words:
@@ -237,10 +236,9 @@ class BehavioralProcessor:
             hour = dt.hour
             if 9 <= hour <= 17:
                 return 'development_hours'
-            elif 18 <= hour <= 22:
+            if 18 <= hour <= 22:
                 return 'evening_hours'
-            else:
-                return 'off_hours'
+            return 'off_hours'
         except:
             return 'unknown'
 
@@ -248,20 +246,19 @@ class BehavioralProcessor:
         content_lower = content.lower()
         if any(word in content_lower for word in ['analyze', 'review', 'check', 'examine']):
             return 'analysis_request'
-        elif any(word in content_lower for word in ['fix', 'debug', 'solve', 'error']):
+        if any(word in content_lower for word in ['fix', 'debug', 'solve', 'error']):
             return 'problem_solving'
-        elif any(word in content_lower for word in ['implement', 'add', 'create', 'build']):
+        if any(word in content_lower for word in ['implement', 'add', 'create', 'build']):
             return 'development_request'
-        elif any(word in content_lower for word in ['test', 'verify', 'validate']):
+        if any(word in content_lower for word in ['test', 'verify', 'validate']):
             return 'testing_request'
-        elif any(word in content_lower for word in ['help', 'how', 'what', 'explain']):
+        if any(word in content_lower for word in ['help', 'how', 'what', 'explain']):
             return 'information_seeking'
-        elif any(word in content_lower for word in ['commit', 'push', 'deploy', 'release']):
+        if any(word in content_lower for word in ['commit', 'push', 'deploy', 'release']):
             return 'deployment_action'
-        else:
-            return 'general_request'
+        return 'general_request'
 
-    def _get_implicit_expectations(self, content: str) -> List[str]:
+    def _get_implicit_expectations(self, content: str) -> list[str]:
         expectations = []
         if '?' in content:
             expectations.append('expects_explanation')
@@ -288,84 +285,75 @@ class BehavioralProcessor:
         word_count = len(content.split())
         if word_count < 10:
             return 'low'
-        elif word_count < 50:
+        if word_count < 50:
             return 'moderate'
-        else:
-            return 'high'
+        return 'high'
 
     def _assess_decision_complexity(self, content: str) -> str:
         if content.count('?') > 2 or 'or' in content.lower():
             return 'high'
-        elif content.count('?') > 0:
+        if content.count('?') > 0:
             return 'moderate'
-        else:
-            return 'low'
+        return 'low'
 
     def _assess_technical_depth(self, content: str) -> str:
         tech_indicators = len(re.findall(r'[{}()[\];]|def |class |import |git |npm ', content))
         if tech_indicators > 5:
             return 'advanced'
-        elif tech_indicators > 0:
+        if tech_indicators > 0:
             return 'intermediate'
-        else:
-            return 'basic'
+        return 'basic'
 
     def _analyze_why_said(self, content: str) -> str:
         if any(word in content.lower() for word in ['because', 'since', 'due to']):
             return 'explicit_reasoning_provided'
-        elif content.startswith(('what', 'how', 'why', 'when', 'where')):
+        if content.startswith(('what', 'how', 'why', 'when', 'where')):
             return 'seeking_information'
-        elif any(word in content.lower() for word in ['need', 'want', 'require']):
+        if any(word in content.lower() for word in ['need', 'want', 'require']):
             return 'expressing_need'
-        else:
-            return 'context_dependent'
+        return 'context_dependent'
 
     def _identify_trigger_event(self, content: str) -> str:
         if 'error' in content.lower():
             return 'error_encountered'
-        elif any(word in content.lower() for word in ['fail', 'broken', 'not working']):
+        if any(word in content.lower() for word in ['fail', 'broken', 'not working']):
             return 'system_failure'
-        elif 'test' in content.lower():
+        if 'test' in content.lower():
             return 'testing_phase'
-        else:
-            return 'planned_development'
+        return 'planned_development'
 
     def _predict_expected_outcome(self, content: str) -> str:
         if '?' in content:
             return 'information_response'
-        elif any(word in content.lower() for word in ['fix', 'solve', 'resolve']):
+        if any(word in content.lower() for word in ['fix', 'solve', 'resolve']):
             return 'problem_resolution'
-        elif any(word in content.lower() for word in ['implement', 'add', 'create']):
+        if any(word in content.lower() for word in ['implement', 'add', 'create']):
             return 'feature_implementation'
-        else:
-            return 'task_completion'
+        return 'task_completion'
 
     def _identify_workflow_position(self, content: str) -> str:
         if any(word in content.lower() for word in ['start', 'begin', 'initialize']):
             return 'workflow_start'
-        elif any(word in content.lower() for word in ['done', 'complete', 'finish']):
+        if any(word in content.lower() for word in ['done', 'complete', 'finish']):
             return 'workflow_end'
-        elif any(word in content.lower() for word in ['continue', 'next', 'then']):
+        if any(word in content.lower() for word in ['continue', 'next', 'then']):
             return 'workflow_middle'
-        else:
-            return 'workflow_unknown'
+        return 'workflow_unknown'
 
     def _assess_directness(self, content: str) -> str:
         if content.startswith(('do', 'run', 'execute', 'create', 'delete')):
             return 'high'
-        elif any(word in content.lower() for word in ['please', 'could you', 'would you']):
+        if any(word in content.lower() for word in ['please', 'could you', 'would you']):
             return 'moderate'
-        else:
-            return 'low'
+        return 'low'
 
     def _assess_technical_precision(self, content: str) -> str:
         tech_terms = len(re.findall(r'\b[A-Z]{2,}|\.[a-z]{2,4}|[{}()[\];]', content))
         if tech_terms > 3:
             return 'high'
-        elif tech_terms > 0:
+        if tech_terms > 0:
             return 'moderate'
-        else:
-            return 'low'
+        return 'low'
 
     def _assess_emotional_tone(self, content: str) -> str:
         positive_words = ['good', 'great', 'excellent', 'perfect', 'awesome']
@@ -376,18 +364,16 @@ class BehavioralProcessor:
 
         if positive_count > negative_count:
             return 'positive'
-        elif negative_count > positive_count:
+        if negative_count > positive_count:
             return 'negative'
-        else:
-            return 'neutral'
+        return 'neutral'
 
     def _assess_command_preference(self, content: str) -> str:
         if any(cmd in content.lower() for cmd in ['git', 'npm', 'pip', 'bash', 'sh']):
             return 'automated'
-        elif any(word in content.lower() for word in ['manual', 'gui', 'interface']):
+        if any(word in content.lower() for word in ['manual', 'gui', 'interface']):
             return 'manual'
-        else:
-            return 'mixed'
+        return 'mixed'
 
     def _assess_expertise_level(self, content: str) -> str:
         advanced_indicators = ['refactor', 'architecture', 'optimization', 'algorithm']
@@ -395,27 +381,24 @@ class BehavioralProcessor:
 
         if any(term in content.lower() for term in advanced_indicators):
             return 'advanced'
-        elif any(term in content.lower() for term in beginner_indicators):
+        if any(term in content.lower() for term in beginner_indicators):
             return 'beginner'
-        else:
-            return 'intermediate'
+        return 'intermediate'
 
     def _assess_workflow_preference(self, content: str) -> str:
         if any(word in content.lower() for word in ['automated', 'script', 'batch']):
             return 'automated'
-        elif any(word in content.lower() for word in ['manual', 'step by step', 'one by one']):
+        if any(word in content.lower() for word in ['manual', 'step by step', 'one by one']):
             return 'manual'
-        else:
-            return 'mixed'
+        return 'mixed'
 
     def _assess_quality_standards(self, content: str) -> str:
         quality_indicators = ['test', 'review', 'validate', 'verify', 'quality', 'best practice']
         if sum(1 for indicator in quality_indicators if indicator in content.lower()) >= 2:
             return 'high'
-        elif any(indicator in content.lower() for indicator in quality_indicators):
+        if any(indicator in content.lower() for indicator in quality_indicators):
             return 'moderate'
-        else:
-            return 'basic'
+        return 'basic'
 
     def _assess_risk_tolerance(self, content: str) -> str:
         risky_words = ['force', 'override', 'skip', 'ignore']
@@ -423,22 +406,20 @@ class BehavioralProcessor:
 
         if any(word in content.lower() for word in risky_words):
             return 'high'
-        elif any(word in content.lower() for word in safe_words):
+        if any(word in content.lower() for word in safe_words):
             return 'low'
-        else:
-            return 'moderate'
+        return 'moderate'
 
     def _classify_core_tenet(self, content: str) -> str:
         if any(word in content.lower() for word in ['analyze', 'review', 'examine']):
             return 'Analysis-Focused'
-        elif any(word in content.lower() for word in ['implement', 'build', 'create']):
+        if any(word in content.lower() for word in ['implement', 'build', 'create']):
             return 'Implementation-Focused'
-        elif any(word in content.lower() for word in ['fix', 'debug', 'solve']):
+        if any(word in content.lower() for word in ['fix', 'debug', 'solve']):
             return 'Problem-Solving'
-        elif any(word in content.lower() for word in ['test', 'verify', 'validate']):
+        if any(word in content.lower() for word in ['test', 'verify', 'validate']):
             return 'Quality-Assurance'
-        else:
-            return 'General-Purpose'
+        return 'General-Purpose'
 
     def _describe_core_tenet(self, content: str) -> str:
         category = self._classify_core_tenet(content)
@@ -451,7 +432,7 @@ class BehavioralProcessor:
         }
         return descriptions.get(category, 'Unclassified request')
 
-    def _collect_tenet_evidence(self, content: str) -> List[str]:
+    def _collect_tenet_evidence(self, content: str) -> list[str]:
         evidence = []
         if any(word in content.lower() for word in ['analyze', 'review']):
             evidence.append('contains_analysis_keywords')
@@ -476,7 +457,7 @@ class BehavioralProcessor:
                 return theme
         return 'general'
 
-    def _identify_sub_themes(self, content: str) -> List[str]:
+    def _identify_sub_themes(self, content: str) -> list[str]:
         sub_themes = []
         if 'git' in content.lower():
             sub_themes.append('version_control')
@@ -491,54 +472,49 @@ class BehavioralProcessor:
     def _classify_pattern_family(self, content: str) -> str:
         if content.startswith(('<', 'user-prompt-submit-hook')):
             return 'system_generated'
-        elif len(content.split()) < 5:
+        if len(content.split()) < 5:
             return 'brief_command'
-        elif '?' in content:
+        if '?' in content:
             return 'inquiry_pattern'
-        elif any(word in content.lower() for word in ['please', 'can you', 'help']):
+        if any(word in content.lower() for word in ['please', 'can you', 'help']):
             return 'polite_request'
-        else:
-            return 'direct_command'
+        return 'direct_command'
 
     def _identify_immediate_goal(self, content: str) -> str:
         if any(word in content.lower() for word in ['fix', 'solve', 'resolve']):
             return 'problem_resolution'
-        elif any(word in content.lower() for word in ['implement', 'add', 'create']):
+        if any(word in content.lower() for word in ['implement', 'add', 'create']):
             return 'feature_development'
-        elif any(word in content.lower() for word in ['test', 'verify', 'check']):
+        if any(word in content.lower() for word in ['test', 'verify', 'check']):
             return 'validation'
-        elif any(word in content.lower() for word in ['analyze', 'review', 'examine']):
+        if any(word in content.lower() for word in ['analyze', 'review', 'examine']):
             return 'analysis'
-        else:
-            return 'task_completion'
+        return 'task_completion'
 
     def _identify_session_goal(self, content: str) -> str:
         if 'deploy' in content.lower():
             return 'deployment_readiness'
-        elif any(word in content.lower() for word in ['feature', 'implement', 'build']):
+        if any(word in content.lower() for word in ['feature', 'implement', 'build']):
             return 'feature_completion'
-        elif 'debug' in content.lower():
+        if 'debug' in content.lower():
             return 'system_stability'
-        else:
-            return 'general_progress'
+        return 'general_progress'
 
     def _identify_project_goal(self, content: str) -> str:
         if any(word in content.lower() for word in ['production', 'release', 'launch']):
             return 'product_delivery'
-        elif any(word in content.lower() for word in ['quality', 'test', 'validate']):
+        if any(word in content.lower() for word in ['quality', 'test', 'validate']):
             return 'quality_assurance'
-        else:
-            return 'product_development'
+        return 'product_development'
 
     def _identify_meta_goal(self, content: str) -> str:
         if any(word in content.lower() for word in ['efficient', 'optimize', 'improve']):
             return 'efficiency_improvement'
-        elif any(word in content.lower() for word in ['learn', 'understand', 'knowledge']):
+        if any(word in content.lower() for word in ['learn', 'understand', 'knowledge']):
             return 'knowledge_acquisition'
-        else:
-            return 'value_delivery'
+        return 'value_delivery'
 
-    def _predict_next_actions(self, content: str) -> List[str]:
+    def _predict_next_actions(self, content: str) -> list[str]:
         actions = []
         if 'analyze' in content.lower():
             actions.append('provide_analysis')
@@ -552,7 +528,7 @@ class BehavioralProcessor:
             actions.append('clarify_requirements')
         return actions[:3]
 
-    def _calculate_command_probabilities(self, content: str) -> Dict[str, float]:
+    def _calculate_command_probabilities(self, content: str) -> dict[str, float]:
         probabilities = {}
         if 'git' in content.lower():
             probabilities['git'] = 0.8
@@ -567,16 +543,15 @@ class BehavioralProcessor:
     def _predict_workflow_trajectory(self, content: str) -> str:
         if any(word in content.lower() for word in ['start', 'begin', 'initialize']):
             return 'initiation_phase'
-        elif any(word in content.lower() for word in ['implement', 'develop', 'build']):
+        if any(word in content.lower() for word in ['implement', 'develop', 'build']):
             return 'development_phase'
-        elif any(word in content.lower() for word in ['test', 'verify', 'validate']):
+        if any(word in content.lower() for word in ['test', 'verify', 'validate']):
             return 'testing_phase'
-        elif any(word in content.lower() for word in ['deploy', 'release', 'production']):
+        if any(word in content.lower() for word in ['deploy', 'release', 'production']):
             return 'deployment_phase'
-        else:
-            return 'maintenance_phase'
+        return 'maintenance_phase'
 
-    def _identify_completion_indicators(self, content: str) -> List[str]:
+    def _identify_completion_indicators(self, content: str) -> list[str]:
         indicators = []
         if any(word in content.lower() for word in ['done', 'complete', 'finished']):
             indicators.append('explicit_completion')
@@ -608,7 +583,7 @@ class BehavioralProcessor:
         action_count = sum(1 for verb in action_verbs if verb in content.lower())
         return round(min(1.0, action_count / total_words * 10), 2)
 
-    def process_prompt(self, prompt: Dict[str, Any], prompt_index: int) -> Dict[str, Any]:
+    def process_prompt(self, prompt: dict[str, Any], prompt_index: int) -> dict[str, Any]:
         """Process a single prompt with full behavioral analysis"""
         prompt_id = f"chunk_004_prompt_{prompt_index + 1:03d}"
 
@@ -625,7 +600,7 @@ class BehavioralProcessor:
             'quality_metrics': self.calculate_quality_metrics(prompt)
         }
 
-    def save_batch_progress(self, batch_number: int, processed_prompts: List[Dict[str, Any]]):
+    def save_batch_progress(self, batch_number: int, processed_prompts: list[dict[str, Any]]):
         """Save progress for current batch"""
         batch_data = {
             'batch_number': batch_number,
@@ -645,7 +620,7 @@ class BehavioralProcessor:
 
         print(f"Saved batch {batch_number} with {len(processed_prompts)} prompts to {filepath}")
 
-    def calculate_batch_authenticity(self, processed_prompts: List[Dict[str, Any]]) -> float:
+    def calculate_batch_authenticity(self, processed_prompts: list[dict[str, Any]]) -> float:
         """Calculate average authenticity for batch"""
         if not processed_prompts:
             return 0.0
@@ -697,7 +672,7 @@ class BehavioralProcessor:
         # Generate final summary
         self.generate_final_summary(batch_summaries)
 
-    def generate_final_summary(self, batch_summaries: List[Dict[str, Any]]):
+    def generate_final_summary(self, batch_summaries: list[dict[str, Any]]):
         """Generate final processing summary"""
         overall_authenticity = sum(self.authenticity_scores) / len(self.authenticity_scores)
 
@@ -718,7 +693,7 @@ class BehavioralProcessor:
         with open(summary_file, 'w') as f:
             json.dump(summary, f, indent=2)
 
-        print(f"\n=== PROCESSING COMPLETE ===")
+        print("\n=== PROCESSING COMPLETE ===")
         print(f"Agent: {self.agent_id}")
         print(f"Total prompts processed: {self.processed_count}")
         print(f"Overall authenticity score: {overall_authenticity:.3f}")

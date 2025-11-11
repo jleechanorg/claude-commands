@@ -1,9 +1,9 @@
-from django.core.management.base import BaseCommand, CommandError
-from django.db import connection, transaction
-from django.contrib.auth.models import User
-from tenants.models import Tenant, TenantConfiguration
 import logging
 
+from django.contrib.auth.models import User
+from django.core.management.base import BaseCommand, CommandError
+from django.db import connection, transaction
+from tenants.models import Tenant, TenantConfiguration
 
 logger = logging.getLogger(__name__)
 

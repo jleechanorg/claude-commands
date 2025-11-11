@@ -3,13 +3,12 @@ Matrix 1: Command Execution Tests - TDD RED Phase
 Tests all command execution combinations with timeout and streaming scenarios.
 """
 
-import pytest
-import time
 import subprocess
-import tempfile
-import os
-from unittest.mock import Mock, patch, MagicMock, call
-from genesis import execute_claude_command, SubagentPool
+from unittest.mock import Mock, patch
+
+import pytest
+
+from genesis import SubagentPool, execute_claude_command
 
 
 class TestCommandExecutionMatrix:

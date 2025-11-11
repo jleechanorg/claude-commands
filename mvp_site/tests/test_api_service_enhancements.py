@@ -26,9 +26,8 @@ def client():
         pytest.skip(f"Could not import Flask app: {IMPORT_ERROR}")
 
     flask_app.config['TESTING'] = True
-    with flask_app.test_client() as client:
-        with flask_app.app_context():
-            yield client
+    with flask_app.test_client() as client, flask_app.app_context():
+        yield client
 
 def test_time_endpoint_available(client):
     """Test that time endpoint is available and returns proper structure"""

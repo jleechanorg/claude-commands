@@ -5,14 +5,14 @@ Provides context usage insights while respecting conversation history protection
 🚨 CRITICAL: NEVER modifies ~/.claude/projects/ directory per conversation history protection protocol
 """
 
-import os
+import argparse
 import glob
-import shutil
 import json
 import logging
+import os
+import shutil
 from datetime import datetime, timedelta
-from pathlib import Path
-import argparse
+
 
 class ContextMonitor:
     def __init__(self):
@@ -51,7 +51,7 @@ class ContextMonitor:
         """Load configuration from file if exists"""
         if os.path.exists(self.config_file):
             try:
-                with open(self.config_file, 'r') as f:
+                with open(self.config_file) as f:
                     user_config = json.load(f)
                     self.config.update(user_config)
                 self.logger.info(f"Loaded configuration from {self.config_file}")

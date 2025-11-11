@@ -10,20 +10,18 @@ Consolidates common functionality used across automation components:
 - File and directory management utilities
 """
 
-import os
-import sys
+import fcntl
 import json
 import logging
+import os
 import smtplib
-import tempfile
-import threading
-import fcntl
 import subprocess
+import tempfile
 from datetime import datetime
-from pathlib import Path
-from typing import Dict, Optional, Tuple, Any
-from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
+from typing import Any, Dict, Optional, Tuple
 
 try:
     import keyring
@@ -37,12 +35,12 @@ class AutomationUtils:
 
     # Default configuration
     DEFAULT_CONFIG = {
-        'SMTP_SERVER': 'smtp.gmail.com',
-        'SMTP_PORT': 587,
-        'LOG_DIR': '~/Library/Logs/worldarchitect-automation',
-        'DATA_DIR': '~/Library/Application Support/worldarchitect-automation',
-        'MAX_SUBPROCESS_TIMEOUT': int(os.getenv('AUTOMATION_SUBPROCESS_TIMEOUT', '300')),  # 5 minutes (configurable)
-        'EMAIL_SUBJECT_PREFIX': '[WorldArchitect Automation]'
+        "SMTP_SERVER": "smtp.gmail.com",
+        "SMTP_PORT": 587,
+        "LOG_DIR": "~/Library/Logs/worldarchitect-automation",
+        "DATA_DIR": "~/Library/Application Support/worldarchitect-automation",
+        "MAX_SUBPROCESS_TIMEOUT": int(os.getenv("AUTOMATION_SUBPROCESS_TIMEOUT", "300")),  # 5 minutes (configurable)
+        "EMAIL_SUBJECT_PREFIX": "[WorldArchitect Automation]"
     }
 
     @classmethod
@@ -60,13 +58,13 @@ class AutomationUtils:
             log_filename = f"{name.split('.')[-1]}.log"
 
         # Create log directory
-        log_dir = Path(cls.DEFAULT_CONFIG['LOG_DIR']).expanduser()
+        log_dir = Path(cls.DEFAULT_CONFIG["LOG_DIR"]).expanduser()
         log_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up logging with consistent format
         logging.basicConfig(
             level=logging.INFO,
-            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
                 logging.FileHandler(log_dir / log_filename),
                 logging.StreamHandler()
@@ -84,8 +82,8 @@ class AutomationUtils:
         if env_value is not None:
             # Try to convert to appropriate type
             if isinstance(default, bool):
-                return env_value.lower() in ('true', '1', 'yes', 'on')
-            elif isinstance(default, int):
+                return env_value.lower() in ("true", "1", "yes", "on")
+            if isinstance(default, int):
                 try:
                     return int(env_value)
                 except ValueError:
@@ -96,7 +94,7 @@ class AutomationUtils:
     @classmethod
     def get_data_directory(cls, subdir: str = None) -> Path:
         """Get standardized data directory path"""
-        data_dir = Path(cls.DEFAULT_CONFIG['DATA_DIR']).expanduser()
+        data_dir = Path(cls.DEFAULT_CONFIG["DATA_DIR"]).expanduser()
         if subdir:
             data_dir = data_dir / subdir
         data_dir.mkdir(parents=True, exist_ok=True)
@@ -117,9 +115,9 @@ class AutomationUtils:
 
         # Fallback to environment variables if keyring fails or unavailable
         if not username:
-            username = os.environ.get('SMTP_USERNAME')
+            username = os.environ.get("SMTP_USERNAME")
         if not password:
-            password = os.environ.get('SMTP_PASSWORD')
+            password = os.environ.get("SMTP_PASSWORD")
 
         return username, password
 
@@ -139,13 +137,13 @@ class AutomationUtils:
         """
         try:
             # Get SMTP configuration
-            smtp_server = cls.get_config_value('SMTP_SERVER')
-            smtp_port = cls.get_config_value('SMTP_PORT')
+            smtp_server = cls.get_config_value("SMTP_SERVER")
+            smtp_port = cls.get_config_value("SMTP_PORT")
             username, password = cls.get_smtp_credentials()
 
             # Get email addresses
-            from_email = from_email or os.environ.get('MEMORY_EMAIL_FROM')
-            to_email = to_email or os.environ.get('MEMORY_EMAIL_TO')
+            from_email = from_email or os.environ.get("MEMORY_EMAIL_FROM")
+            to_email = to_email or os.environ.get("MEMORY_EMAIL_TO")
 
             if not all([username, password, from_email, to_email]):
                 print("Email configuration incomplete - skipping notification")
@@ -153,9 +151,9 @@ class AutomationUtils:
 
             # Build email message
             msg = MIMEMultipart()
-            msg['From'] = from_email
-            msg['To'] = to_email
-            msg['Subject'] = f"{cls.DEFAULT_CONFIG['EMAIL_SUBJECT_PREFIX']} {subject}"
+            msg["From"] = from_email
+            msg["To"] = to_email
+            msg["Subject"] = f"{cls.DEFAULT_CONFIG['EMAIL_SUBJECT_PREFIX']} {subject}"
 
             # Add timestamp to message
             full_message = f"""{message}
@@ -165,7 +163,7 @@ System: WorldArchitect Automation
 
 This is an automated notification from the WorldArchitect.AI automation system."""
 
-            msg.attach(MIMEText(full_message, 'plain'))
+            msg.attach(MIMEText(full_message, "plain"))
 
             # Send email with timeout and proper error handling
             with smtplib.SMTP(smtp_server, smtp_port, timeout=30) as server:
@@ -210,7 +208,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             subprocess.CalledProcessError: If command fails and check=True
         """
         if timeout is None:
-            timeout = cls.get_config_value('MAX_SUBPROCESS_TIMEOUT')
+            timeout = cls.get_config_value("MAX_SUBPROCESS_TIMEOUT")
 
         # Ensure shell=False for security, check parameter controls error handling
         result = subprocess.run(
@@ -229,7 +227,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
     def safe_read_json(cls, file_path: Path) -> dict:
         """Safely read JSON file with file locking"""
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path) as f:
                 fcntl.flock(f.fileno(), fcntl.LOCK_SH)  # Shared lock for reading
                 data = json.load(f)
                 fcntl.flock(f.fileno(), fcntl.LOCK_UN)  # Unlock
@@ -245,7 +243,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
         try:
             # Create temporary file securely
             with tempfile.NamedTemporaryFile(
-                mode='w',
+                mode="w",
                 suffix=".tmp",
                 delete=False
             ) as temp_file:
@@ -263,7 +261,7 @@ This is an automated notification from the WorldArchitect.AI automation system."
             os.rename(temp_path, file_path)
             temp_path = None  # Successful, don't clean up
 
-        except (OSError, IOError, json.JSONEncodeError) as e:
+        except (OSError, json.JSONEncodeError) as e:
             # Clean up temp file on error
             if temp_path and os.path.exists(temp_path):
                 try:
@@ -282,13 +280,13 @@ This is an automated notification from the WorldArchitect.AI automation system."
             try:
                 # Source the bash config file by running it and capturing environment
                 result = cls.execute_subprocess_with_timeout(
-                    ['bash', '-c', f'source {config_file} && env'],
+                    ["bash", "-c", f"source {config_file} && env"],
                     timeout=10
                 )
 
                 for line in result.stdout.splitlines():
-                    if '=' in line:
-                        key, value = line.split('=', 1)
+                    if "=" in line:
+                        key, value = line.split("=", 1)
                         config[key] = value
 
             except Exception as e:

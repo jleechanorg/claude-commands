@@ -17,12 +17,10 @@ Usage:
 import argparse
 import json
 import logging
-import os
 import subprocess
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Set
 
 
 # Mock classes for demo purposes (these modules don't actually exist)
@@ -123,7 +121,7 @@ class TestOptimizationSuite:
         self.monitoring_dashboard = TestMonitoringDashboard()
         self.safety_checker = None  # Initialize when needed
 
-    def analyze_test_suite(self) -> Dict:
+    def analyze_test_suite(self) -> dict:
         """Analyze current test suite for optimization opportunities."""
         logger.info("Analyzing test suite for optimization opportunities...")
 
@@ -158,7 +156,7 @@ class TestOptimizationSuite:
         logger.info(f"Analysis complete: {analysis_results['potential_elimination']} tests can be eliminated")
         return analysis_results
 
-    def create_optimization_plan(self, analysis_results: Dict) -> Dict:
+    def create_optimization_plan(self, analysis_results: dict) -> dict:
         """Create comprehensive optimization plan based on analysis."""
         logger.info("Creating optimization plan...")
 
@@ -184,7 +182,7 @@ class TestOptimizationSuite:
         logger.info(f"Plan: {total_tests} → {plan['target_test_count']} tests ({plan['estimated_time_reduction']} time reduction)")
         return plan
 
-    def execute_optimization(self, plan: Dict) -> Dict:
+    def execute_optimization(self, plan: dict) -> dict:
         """Execute the optimization plan."""
         logger.info("Executing optimization plan...")
 
@@ -236,7 +234,7 @@ class TestOptimizationSuite:
         logger.info(f"Optimization execution complete in {results['execution_time']:.2f}s")
         return results
 
-    def execute_aggressive_optimization(self, target_count: int = 80) -> Dict:
+    def execute_aggressive_optimization(self, target_count: int = 80) -> dict:
         """Execute aggressive optimization to reach specific test count target."""
         logger.info(f"Executing aggressive optimization to {target_count} tests")
 
@@ -281,12 +279,12 @@ class TestOptimizationSuite:
         logger.info(f"Aggressive optimization complete: {len(all_tests)} → {len(final_tests)} tests")
         return aggressive_results
 
-    def generate_report(self, analysis: Dict = None, plan: Dict = None, results: Dict = None) -> Dict:
+    def generate_report(self, analysis: dict = None, plan: dict = None, results: dict = None) -> dict:
         """Generate comprehensive optimization report."""
         logger.info("Generating optimization report...")
 
         if not analysis and self.results_file.exists():
-            with open(self.results_file, "r") as f:
+            with open(self.results_file) as f:
                 saved_results = json.load(f)
                 analysis = saved_results.get("analysis", {})
                 plan = saved_results.get("plan", {})
@@ -325,7 +323,7 @@ class TestOptimizationSuite:
         logger.info("Report generated successfully")
         return report
 
-    def save_results(self, analysis: Dict, plan: Dict, execution: Dict):
+    def save_results(self, analysis: dict, plan: dict, execution: dict):
         """Save all results to JSON file."""
         all_results = {
             "analysis": analysis,
@@ -366,7 +364,7 @@ def main():
     if args.optimize:
         # Load or create analysis
         if suite.results_file.exists():
-            with open(suite.results_file, "r") as f:
+            with open(suite.results_file) as f:
                 saved = json.load(f)
                 analysis = saved.get("analysis", {})
                 plan = saved.get("plan", {})
@@ -398,7 +396,7 @@ def main():
                 "--cache-optimizer",
                 "--num-workers=4",
                 str(suite.test_dir)
-            ], capture_output=True, text=True, timeout=1800)
+            ], check=False, capture_output=True, text=True, timeout=1800)
 
             logger.info(f"Test execution completed with return code: {result.returncode}")
             if result.stdout:
@@ -417,6 +415,7 @@ def main():
 
 
 import unittest
+
 
 class TestSuiteCompatibility(unittest.TestCase):
     """Test compatibility for CLI tool."""

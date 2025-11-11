@@ -6,10 +6,10 @@ including counting, replacement, and case conversion.
 """
 
 import re
-from typing import Union, Dict, Any
+from typing import Any
 
 
-def count_words(text: Union[str, None]) -> int:
+def count_words(text: str | None) -> int:
     """
     Count the number of words in the given text.
 
@@ -27,7 +27,7 @@ def count_words(text: Union[str, None]) -> int:
     return len(words)
 
 
-def count_characters(text: Union[str, None], include_spaces: bool = True) -> int:
+def count_characters(text: str | None, include_spaces: bool = True) -> int:
     """
     Count the number of characters in the given text.
 
@@ -43,11 +43,10 @@ def count_characters(text: Union[str, None], include_spaces: bool = True) -> int
 
     if include_spaces:
         return len(text)
-    else:
-        return len(text.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', ''))
+    return len(text.replace(' ', '').replace('\t', '').replace('\n', '').replace('\r', ''))
 
 
-def count_lines(text: Union[str, None]) -> int:
+def count_lines(text: str | None) -> int:
     """
     Count the number of lines in the given text.
 
@@ -69,7 +68,7 @@ def count_lines(text: Union[str, None]) -> int:
     return len(lines) if lines else 0
 
 
-def replace_text(text: Union[str, None], old: str, new: str, case_sensitive: bool = True) -> Union[str, None]:
+def replace_text(text: str | None, old: str, new: str, case_sensitive: bool = True) -> str | None:
     """
     Replace occurrences of old text with new text.
 
@@ -87,13 +86,12 @@ def replace_text(text: Union[str, None], old: str, new: str, case_sensitive: boo
 
     if case_sensitive:
         return text.replace(old, new)
-    else:
-        # Use regex for case-insensitive replacement
-        pattern = re.escape(old)
-        return re.sub(pattern, lambda _: new, text, flags=re.IGNORECASE)
+    # Use regex for case-insensitive replacement
+    pattern = re.escape(old)
+    return re.sub(pattern, lambda _: new, text, flags=re.IGNORECASE)
 
 
-def convert_case(text: Union[str, None], case_type: str) -> Union[str, None]:
+def convert_case(text: str | None, case_type: str) -> str | None:
     """
     Convert text case according to the specified type.
 
@@ -114,18 +112,17 @@ def convert_case(text: Union[str, None], case_type: str) -> Union[str, None]:
 
     if case_type == 'upper':
         return text.upper()
-    elif case_type == 'lower':
+    if case_type == 'lower':
         return text.lower()
-    elif case_type == 'title':
+    if case_type == 'title':
         return text.title()
-    elif case_type == 'capitalize':
+    if case_type == 'capitalize':
         return text.capitalize()
-    else:
-        raise ValueError(f"Unsupported case type: {case_type}. "
-                        f"Supported types: upper, lower, title, capitalize")
+    raise ValueError(f"Unsupported case type: {case_type}. "
+                    f"Supported types: upper, lower, title, capitalize")
 
 
-def get_text_stats(text: str) -> Dict[str, Any]:
+def get_text_stats(text: str) -> dict[str, Any]:
     """
     Get comprehensive statistics about the text.
 

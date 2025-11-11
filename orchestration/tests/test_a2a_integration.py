@@ -13,7 +13,6 @@ import sys
 import unittest
 from typing import Any, cast
 
-import pytest
 
 # Skip this entire test module if a2a is not available
 # This approach works with both pytest and unittest

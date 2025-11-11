@@ -3,15 +3,14 @@ FastAPI Tenant-Aware Middleware
 Multi-tenant middleware for FastAPI that routes requests to appropriate PostgreSQL schemas
 based on subdomain, header, or path-based tenant identification.
 """
-from fastapi import Request, HTTPException, status
-from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 import logging
 import os
-from typing import Optional
 from types import SimpleNamespace
+
+from fastapi import Request
+from sqlalchemy import create_engine, text
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from .database import Base
 
 logger = logging.getLogger(__name__)
@@ -58,7 +57,7 @@ class TenantMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def get_tenant_from_request(self, request: Request) -> Optional[str]:
+    def get_tenant_from_request(self, request: Request) -> str | None:
         """
         Extract tenant identifier from request.
         Priority: 1) X-Tenant header, 2) path-based, 3) subdomain, 4) None (public)
@@ -87,7 +86,6 @@ class TenantMiddleware(BaseHTTPMiddleware):
                         return subdomain.lower()
         except (KeyError, AttributeError, IndexError):
             logger.debug("Failed to extract subdomain from host header")
-            pass
 
         return None
 

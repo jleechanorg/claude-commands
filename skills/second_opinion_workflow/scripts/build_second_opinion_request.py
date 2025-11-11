@@ -8,7 +8,7 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 
 def env_int(name: str, default: int) -> int:
@@ -25,10 +25,10 @@ def env_int(name: str, default: int) -> int:
         return default
 
 
-def run_git(args: List[str], *, strip: bool = False) -> Tuple[str, Optional[str]]:
+def run_git(args: list[str], *, strip: bool = False) -> tuple[str, str | None]:
     """Run a git command and return stdout plus stderr on failure."""
 
-    proc = subprocess.run(["git", *args], stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    proc = subprocess.run(["git", *args], check=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     if proc.returncode != 0:
         return "", proc.stderr.strip() or None
     output = proc.stdout
@@ -37,7 +37,7 @@ def run_git(args: List[str], *, strip: bool = False) -> Tuple[str, Optional[str]
     return output, None
 
 
-def truncate_text(text: str, limit: int, *, label: str, notices: List[str]) -> str:
+def truncate_text(text: str, limit: int, *, label: str, notices: list[str]) -> str:
     if limit <= 0 or len(text) <= limit:
         return text
     truncated = text[:limit]
@@ -50,8 +50,8 @@ def truncate_text(text: str, limit: int, *, label: str, notices: List[str]) -> s
     return truncated
 
 
-def parse_changed_files(raw: str) -> List[Dict[str, Any]]:
-    entries: List[Dict[str, Any]] = []
+def parse_changed_files(raw: str) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
     for line in raw.splitlines():
         if not line:
             continue
@@ -70,8 +70,8 @@ def parse_changed_files(raw: str) -> List[Dict[str, Any]]:
     return entries
 
 
-def build_git_context(base_ref: str, *, max_files: int, diff_limit: int, patch_limit: int) -> Tuple[Dict[str, Any], List[str]]:
-    notices: List[str] = []
+def build_git_context(base_ref: str, *, max_files: int, diff_limit: int, patch_limit: int) -> tuple[dict[str, Any], list[str]]:
+    notices: list[str] = []
 
     branch, _ = run_git(["rev-parse", "--abbrev-ref", "HEAD"], strip=True)
     repo_root, _ = run_git(["rev-parse", "--show-toplevel"], strip=True)
@@ -90,7 +90,7 @@ def build_git_context(base_ref: str, *, max_files: int, diff_limit: int, patch_l
         notices.append(f"git diff --name-status error: {changed_err}")
     changed_entries = parse_changed_files(changed_raw)
 
-    patches: Dict[str, str] = {}
+    patches: dict[str, str] = {}
     captured = 0
     for entry in changed_entries:
         if captured >= max_files:
@@ -112,7 +112,7 @@ def build_git_context(base_ref: str, *, max_files: int, diff_limit: int, patch_l
             f"Captured patches for first {max_files} files out of {len(changed_entries)} changed files."
         )
 
-    context: Dict[str, Any] = {
+    context: dict[str, Any] = {
         "branch": branch or "<unknown>",
         "base": base_ref,
         "repoRoot": repo_root if repo_root is not None else None,
@@ -136,7 +136,7 @@ def build_git_context(base_ref: str, *, max_files: int, diff_limit: int, patch_l
     return context, notices
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     if len(argv) != 5:
         print("Usage: build_second_opinion_request.py OUTPUT_PATH QUESTION MAX_OPINIONS BASE_REF", file=sys.stderr)
         return 1
@@ -161,7 +161,7 @@ def main(argv: List[str]) -> int:
         patch_limit=patch_limit,
     )
 
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "jsonrpc": "2.0",
         "method": "tools/call",
         "params": {

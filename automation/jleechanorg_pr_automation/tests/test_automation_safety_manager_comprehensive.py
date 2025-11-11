@@ -4,15 +4,14 @@ Comprehensive test suite for AutomationSafetyManager
 Using TDD methodology with 150+ test cases covering all safety logic
 """
 
-import pytest
 import json
-import tempfile
 import os
+import tempfile
 import threading
-import time
-from pathlib import Path
 from datetime import datetime, timedelta
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
+
+import pytest
 
 # Import the automation safety manager using proper Python module path
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
@@ -47,7 +46,7 @@ class TestAutomationSafetyManagerInit:
                 "pr_limit": 3,
                 "daily_limit": 100
             }
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 json.dump(config_data, f)
 
             manager = AutomationSafetyManager(temp_dir)
@@ -62,7 +61,7 @@ class TestAutomationSafetyManagerInit:
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
             assert os.path.exists(config_file)
 
-            with open(config_file, 'r') as f:
+            with open(config_file) as f:
                 config = json.load(f)
             assert "global_limit" in config
             assert "pr_limit" in config
@@ -72,7 +71,7 @@ class TestAutomationSafetyManagerInit:
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create invalid config file
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 f.write("{ invalid json")
 
             manager = AutomationSafetyManager(temp_dir)
@@ -337,11 +336,11 @@ class TestEmailNotifications:
             yield AutomationSafetyManager(temp_dir)
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'password',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "password",
+        "EMAIL_TO": "admin@example.com"
     })
     def test_email_config_complete(self, manager):
         """Test email configuration detection when complete"""
@@ -353,8 +352,8 @@ class TestEmailNotifications:
         assert manager._is_email_configured() == False
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'EMAIL_USER': 'test@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "EMAIL_USER": "test@example.com"
         # Missing SMTP_PORT, EMAIL_PASS, EMAIL_TO
     })
     def test_email_config_partial(self, manager):
@@ -362,13 +361,13 @@ class TestEmailNotifications:
         assert manager._is_email_configured() == False
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'password',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "password",
+        "EMAIL_TO": "admin@example.com"
     })
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_send_notification_success(self, mock_smtp, manager):
         """Test successful email notification sending"""
         mock_server = Mock()
@@ -377,54 +376,54 @@ class TestEmailNotifications:
         result = manager.send_notification("Test Subject", "Test message")
 
         assert result == True
-        mock_smtp.assert_called_once_with('smtp.example.com', 587)
+        mock_smtp.assert_called_once_with("smtp.example.com", 587)
         mock_server.starttls.assert_called_once()
-        mock_server.login.assert_called_once_with('test@example.com', 'password')
+        mock_server.login.assert_called_once_with("test@example.com", "password")
         mock_server.send_message.assert_called_once()
         mock_server.quit.assert_called_once()
 
     @patch.dict(os.environ, {}, clear=True)
     def test_send_notification_no_config(self, manager):
         """Test email notification when not configured"""
-        with patch.object(manager.logger, 'info') as mock_info:
+        with patch.object(manager.logger, "info") as mock_info:
             result = manager.send_notification("Test", "Message")
 
             assert result == False
             mock_info.assert_called_with("Email configuration incomplete - skipping notification")
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'password',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "password",
+        "EMAIL_TO": "admin@example.com"
     })
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_send_notification_smtp_error(self, mock_smtp, manager):
         """Test email notification with SMTP error"""
         mock_smtp.side_effect = Exception("SMTP connection failed")
 
-        with patch.object(manager.logger, 'error') as mock_error:
+        with patch.object(manager.logger, "error") as mock_error:
             result = manager.send_notification("Test", "Message")
 
             assert result == False
             mock_error.assert_called()
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'password',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "password",
+        "EMAIL_TO": "admin@example.com"
     })
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_send_notification_login_error(self, mock_smtp, manager):
         """Test email notification with login error"""
         mock_server = Mock()
         mock_server.login.side_effect = Exception("Authentication failed")
         mock_smtp.return_value = mock_server
 
-        with patch.object(manager.logger, 'error') as mock_error:
+        with patch.object(manager.logger, "error") as mock_error:
             result = manager.send_notification("Test", "Message")
 
             assert result == False
@@ -493,7 +492,7 @@ class TestFileLocking:
         global_runs_file = os.path.join(manager.data_dir, "global_runs.json")
         manager.record_global_run()  # Create the file first
 
-        with open(global_runs_file, 'w') as f:
+        with open(global_runs_file, "w") as f:
             f.write("{ corrupted json")
 
         # Should recover gracefully
@@ -502,8 +501,8 @@ class TestFileLocking:
 
     def test_permission_error_handling(self, manager):
         """Test handling of file permission errors"""
-        with patch('jleechanorg_pr_automation.utils.json_manager.write_json', return_value=False):
-            with patch.object(manager.logger, 'error') as mock_error:
+        with patch("jleechanorg_pr_automation.utils.json_manager.write_json", return_value=False):
+            with patch.object(manager.logger, "error") as mock_error:
                 # Should not raise exception
                 manager.record_global_run()
                 mock_error.assert_called()
@@ -523,7 +522,7 @@ class TestConfigurationManagement:
                 "email_notifications": True,
                 "max_pr_size": 1000
             }
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 json.dump(config_data, f)
 
             manager = AutomationSafetyManager(temp_dir)
@@ -538,7 +537,7 @@ class TestConfigurationManagement:
                 "global_limit": 15
                 # Missing other settings
             }
-            with open(config_file, 'w') as f:
+            with open(config_file, "w") as f:
                 json.dump(config_data, f)
 
             manager = AutomationSafetyManager(temp_dir)
@@ -553,7 +552,7 @@ class TestConfigurationManagement:
             config_file = os.path.join(temp_dir, "automation_safety_config.json")
             assert os.path.exists(config_file)
 
-            with open(config_file, 'r') as f:
+            with open(config_file) as f:
                 config = json.load(f)
             assert "global_limit" in config
             assert "pr_limit" in config
@@ -655,5 +654,5 @@ class TestIntegrationScenarios:
         assert len(attempts1) == len(attempts2)
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v', '--tb=short'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v", "--tb=short"])

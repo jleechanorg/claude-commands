@@ -1,12 +1,13 @@
 #!/usr/bin/env vpython
 """Test headless browser with Figma site to verify backdrop-filter support."""
 
+import time
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import time
+
 
 def test_figma_site():
     """Take screenshots of Figma site using headless Chrome."""

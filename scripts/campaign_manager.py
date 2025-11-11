@@ -17,15 +17,15 @@ import os
 import sys
 import time
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any
 
 # Add mvp_site to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'mvp_site'))
 
 import firebase_admin
-from firebase_admin import auth, firestore
+from firebase_admin import auth
+
 import firestore_service
-from custom_types import UserId, CampaignId
 
 
 class CampaignManager:
@@ -40,7 +40,7 @@ class CampaignManager:
         if not firebase_admin._apps:
             firebase_admin.initialize_app()
 
-    def find_user_by_email(self, email: str) -> Dict[str, Any]:
+    def find_user_by_email(self, email: str) -> dict[str, Any]:
         """Find Firebase user by email address."""
         try:
             user_record = auth.get_user_by_email(email)
@@ -80,7 +80,7 @@ class CampaignManager:
                 "user_info": None
             }
 
-    def query_campaigns_by_name(self, user_id: str, campaign_name: str) -> Dict[str, Any]:
+    def query_campaigns_by_name(self, user_id: str, campaign_name: str) -> dict[str, Any]:
         """Query campaigns for a user with exact name match."""
         print(f"🔍 Querying campaigns for user: {user_id}")
         print(f"📝 Looking for campaigns named: '{campaign_name}'")
@@ -108,9 +108,9 @@ class CampaignManager:
             "full_campaign_data": matching_campaigns
         }
 
-    def get_campaigns_to_delete(self, user_id: str, campaign_name: str, max_count: int = 100) -> List[Dict[str, Any]]:
+    def get_campaigns_to_delete(self, user_id: str, campaign_name: str, max_count: int = 100) -> list[dict[str, Any]]:
         """Get campaigns that would be deleted (exact name match only)."""
-        print(f"🔍 Finding campaigns for deletion...")
+        print("🔍 Finding campaigns for deletion...")
         print(f"👤 User: {user_id}")
         print(f"📝 Exact name: '{campaign_name}'")
         print(f"🛡️ Max count limit: {max_count}")
@@ -135,7 +135,7 @@ class CampaignManager:
 
         # Show similar titles for safety
         if other_similar:
-            print(f"\n⚠️ SIMILAR TITLES (will NOT be deleted):")
+            print("\n⚠️ SIMILAR TITLES (will NOT be deleted):")
             for campaign in other_similar[:10]:  # Show first 10
                 print(f"   - '{campaign.get('title', 'No Title')}' (ID: {campaign['id']})")
             if len(other_similar) > 10:
@@ -176,7 +176,7 @@ class CampaignManager:
             print(f"❌ Error deleting campaign {campaign_id}: {e}")
             return False
 
-    def delete_campaigns(self, user_id: str, campaign_name: str, dry_run: bool = True, force: bool = False, max_count: int = 100) -> Dict[str, Any]:
+    def delete_campaigns(self, user_id: str, campaign_name: str, dry_run: bool = True, force: bool = False, max_count: int = 100) -> dict[str, Any]:
         """Delete campaigns with safety checks."""
         campaigns_to_delete = self.get_campaigns_to_delete(user_id, campaign_name, max_count)
 
@@ -255,7 +255,7 @@ class CampaignManager:
             time.sleep(0.1)
 
         # Results summary
-        print(f"\n📊 DELETION SUMMARY:")
+        print("\n📊 DELETION SUMMARY:")
         print(f"✅ Successfully deleted: {deleted_count}")
         print(f"❌ Failed to delete: {failed_count}")
         print(f"📈 Total processed: {len(campaigns_to_delete)}")

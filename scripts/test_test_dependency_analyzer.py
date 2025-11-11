@@ -110,7 +110,7 @@ class TestDependencyAnalyzerTests(unittest.TestCase):
             # Verify file was created and has content
             self.assertTrue(os.path.exists(tmp_path))
 
-            with open(tmp_path, 'r') as f:
+            with open(tmp_path) as f:
                 lines = f.readlines()
 
             self.assertTrue(len(lines) > 0)

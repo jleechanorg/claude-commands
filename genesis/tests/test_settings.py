@@ -1,9 +1,7 @@
 import unittest
-import os
-from unittest.mock import patch
-from django.test import TestCase, override_settings
+
 from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from django.test import TestCase, override_settings
 
 
 class SettingsTestCase(TestCase):

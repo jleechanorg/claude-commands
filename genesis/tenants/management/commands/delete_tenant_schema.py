@@ -1,6 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
-from tenants.models import Tenant
 from django.db import connection
+from tenants.models import Tenant
+
 
 class Command(BaseCommand):
     help = 'Delete database schema for a tenant'

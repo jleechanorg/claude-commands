@@ -1,7 +1,7 @@
-from django.http import Http404
-from django.db import connection
-from django.conf import settings
 import logging
+
+from django.conf import settings
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -97,4 +97,3 @@ class TenantMiddleware:
         Reset to public schema if an exception occurs
         """
         self.set_tenant_schema('public')
-        return None

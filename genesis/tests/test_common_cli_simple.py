@@ -1,13 +1,13 @@
-from typing import Sequence
+from collections.abc import Sequence
 
 import pytest
 
 from genesis.common_cli import (
     DEFAULT_MAX_ITERATIONS,
     DEFAULT_POOL_SIZE,
+    USAGE_MESSAGE,
     GenesisHelpRequested,
     GenesisUsageError,
-    USAGE_MESSAGE,
     extract_model_preference,
     parse_genesis_cli,
     print_usage,

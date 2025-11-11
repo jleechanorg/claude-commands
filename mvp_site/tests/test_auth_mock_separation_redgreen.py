@@ -14,8 +14,9 @@ from unittest.mock import MagicMock, patch
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mvp_site import firestore_service
 from tests.fake_firestore import FakeFirestoreClient
+
+from mvp_site import firestore_service
 
 
 class TestAuthMockSeparation(unittest.TestCase):

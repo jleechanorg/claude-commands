@@ -3,12 +3,12 @@
 Simplified User Prompt Analysis for 50k+ Token System Prompt Generation
 """
 
-import os
-import json
 import glob
+import json
+import os
 import re
+from collections import Counter
 from datetime import datetime, timedelta
-from collections import Counter, defaultdict
 
 
 def main():
@@ -22,7 +22,7 @@ def main():
 
     for file_path in files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 for line in f:
                     line = line.strip()
                     if not line:
@@ -83,7 +83,7 @@ def main():
         'analysis': ['analyze', 'review', 'check', 'investigate', 'debug']
     }
 
-    task_counts = {category: 0 for category in categories}
+    task_counts = dict.fromkeys(categories, 0)
     for prompt in unique_prompts:
         text = prompt['prompt_text'].lower()
         for category, keywords in categories.items():
@@ -170,7 +170,7 @@ The user shows a clear preference hierarchy for task types:
         percentage = (count / sum(task_counts.values())) * 100 if sum(task_counts.values()) > 0 else 0
         system_prompt += f"- **{category.replace('_', ' ').title()}**: {count} prompts ({percentage:.1f}%)\n"
 
-    system_prompt += f"""
+    system_prompt += """
 
 ### Real User Examples
 

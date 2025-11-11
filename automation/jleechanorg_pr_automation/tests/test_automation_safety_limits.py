@@ -8,14 +8,14 @@ RED Phase: All tests should FAIL initially
 - Manual approval requirement
 """
 
-import os
-import unittest
-import tempfile
 import json
+import os
 import shutil
+import tempfile
+import unittest
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from jleechanorg_pr_automation.automation_safety_manager import AutomationSafetyManager
 
@@ -30,15 +30,15 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.global_runs_file = os.path.join(self.test_dir, "global_runs.json")
         self.approval_file = os.path.join(self.test_dir, "manual_approval.json")
 
-        if hasattr(self, '_automation_manager'):
+        if hasattr(self, "_automation_manager"):
             del self._automation_manager
 
         # Initialize empty tracking files
-        with open(self.pr_attempts_file, 'w') as f:
+        with open(self.pr_attempts_file, "w") as f:
             json.dump({}, f)
-        with open(self.global_runs_file, 'w') as f:
+        with open(self.global_runs_file, "w") as f:
             json.dump({"total_runs": 0, "start_date": datetime.now().isoformat()}, f)
-        with open(self.approval_file, 'w') as f:
+        with open(self.approval_file, "w") as f:
             json.dump({"approved": False, "approval_date": None}, f)
 
     def tearDown(self):
@@ -150,13 +150,13 @@ class TestAutomationSafetyLimits(unittest.TestCase):
 
     # Matrix 4: Email Notification System
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'testpass',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "testpass",
+        "EMAIL_TO": "admin@example.com"
     })
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_email_sent_when_pr_limit_reached(self, mock_smtp):
         """RED: Email should be sent when PR reaches 5 attempts"""
         # Set up 5 attempts to trigger notification
@@ -170,13 +170,13 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         mock_smtp.assert_called_once()
 
     @patch.dict(os.environ, {
-        'SMTP_SERVER': 'smtp.example.com',
-        'SMTP_PORT': '587',
-        'EMAIL_USER': 'test@example.com',
-        'EMAIL_PASS': 'testpass',
-        'EMAIL_TO': 'admin@example.com'
+        "SMTP_SERVER": "smtp.example.com",
+        "SMTP_PORT": "587",
+        "EMAIL_USER": "test@example.com",
+        "EMAIL_PASS": "testpass",
+        "EMAIL_TO": "admin@example.com"
     })
-    @patch('smtplib.SMTP')
+    @patch("smtplib.SMTP")
     def test_email_sent_when_global_limit_reached(self, mock_smtp):
         """RED: Email should be sent when global limit of 50 is reached"""
         # Set up 50 runs to trigger notification
@@ -218,7 +218,6 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     def test_concurrent_pr_attempts_thread_safe(self):
         """RED: Concurrent PR attempts should be thread-safe"""
         import threading
-        import time
 
         # Create a single manager instance explicitly for this test
         manager = AutomationSafetyManager(self.test_dir)
@@ -247,8 +246,8 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     def test_limits_configurable_via_environment(self):
         """RED: Safety limits should be configurable via environment variables"""
         with patch.dict(os.environ, {
-            'AUTOMATION_PR_LIMIT': '3',
-            'AUTOMATION_GLOBAL_LIMIT': '25'
+            "AUTOMATION_PR_LIMIT": "3",
+            "AUTOMATION_GLOBAL_LIMIT": "25"
         }):
             manager = AutomationSafetyManager(self.test_dir)
 
@@ -307,17 +306,17 @@ class TestAutomationSafetyLimits(unittest.TestCase):
             "total_runs": 50,
             "start_date": datetime(2025, 9, 30, 12, 0, 0).isoformat()
         }
-        with open(self.global_runs_file, 'w') as f:
+        with open(self.global_runs_file, "w") as f:
             json.dump(legacy_data, f)
 
-        if hasattr(self, '_automation_manager'):
+        if hasattr(self, "_automation_manager"):
             del self._automation_manager
 
         # First run after upgrade should reset the stale counter
         self.assertTrue(self.automation_manager.can_start_global_run())
         self.assertEqual(self.automation_manager.get_global_runs(), 0)
 
-    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_new_day_resets_counter(self, mock_datetime):
         """RED: Counter should reset to 0 when a new day starts"""
         # Day 1: Record 50 runs
@@ -341,7 +340,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         self.assertTrue(result)
         self.assertEqual(self.automation_manager.get_global_runs(), 0)
 
-    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_multiple_days(self, mock_datetime):
         """RED: Counter should reset each day for multiple days"""
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
@@ -366,7 +365,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
         mock_datetime.now.return_value = day3
         self.assertEqual(self.automation_manager.get_global_runs(), 0)
 
-    @patch('jleechanorg_pr_automation.automation_safety_manager.datetime')
+    @patch("jleechanorg_pr_automation.automation_safety_manager.datetime")
     def test_daily_reset_midnight_transition(self, mock_datetime):
         """RED: Counter should reset at midnight transition"""
         mock_datetime.side_effect = lambda *args, **kw: datetime(*args, **kw)
@@ -390,7 +389,7 @@ class TestAutomationSafetyLimits(unittest.TestCase):
     def automation_manager(self):
         """RED: This property will fail - no AutomationSafetyManager exists yet"""
         # This will fail until we implement the class in GREEN phase
-        if not hasattr(self, '_automation_manager'):
+        if not hasattr(self, "_automation_manager"):
             self._automation_manager = AutomationSafetyManager(self.test_dir)
         return self._automation_manager
 
@@ -425,7 +424,7 @@ class TestAutomationIntegration(unittest.TestCase):
     def test_shell_script_respects_safety_limits(self):
         """RED: Shell script should check safety limits before processing"""
         # This test will fail - existing script doesn't have safety checks
-        with patch('subprocess.run') as mock_run:
+        with patch("subprocess.run") as mock_run:
             mock_run.return_value.returncode = 1  # Safety limit hit
 
             result = self.run_automation_script()
@@ -446,7 +445,7 @@ class TestAutomationIntegration(unittest.TestCase):
         import subprocess
         return subprocess.run([
             "/Users/jleechan/projects/worktree_worker2/automation/simple_pr_batch.sh"
-        ], capture_output=True, text=True)
+        ], check=False, capture_output=True, text=True)
 
     def read_launchd_plist(self):
         """Helper to read launchd plist file"""
@@ -455,7 +454,7 @@ class TestAutomationIntegration(unittest.TestCase):
             return f.read()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     # RED Phase: Run tests to confirm they FAIL
     print("🔴 RED Phase: Running failing tests for automation safety limits")
     print("Expected: ALL TESTS SHOULD FAIL (no implementation exists)")

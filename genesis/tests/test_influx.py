@@ -1,10 +1,9 @@
-import unittest
-from unittest.mock import patch, MagicMock
 import os
-from influxdb_client import InfluxDBClient, BucketRetentionRules
-from influxdb_client.client.write_api import WriteApi
-from influxdb_client.client.query_api import QueryApi
-from influx import get_tenant_bucket, get_write_api, get_query_api
+import unittest
+from unittest.mock import MagicMock, patch
+
+from influx import get_query_api, get_tenant_bucket, get_write_api
+
 
 class TestInfluxDBClient(unittest.TestCase):
     def setUp(self):

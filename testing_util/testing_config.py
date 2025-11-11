@@ -13,6 +13,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
+
 # Import shared configuration constants
 def get_config_value(key: str, default: str) -> str:
     """Get configuration value from environment (set by server-config.sh)"""

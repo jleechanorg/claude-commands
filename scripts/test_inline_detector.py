@@ -4,6 +4,7 @@
 import ast
 import sys
 
+
 def test_simple():
     code = '''
 import os

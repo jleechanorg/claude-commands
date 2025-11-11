@@ -17,11 +17,9 @@ import logging
 import os
 import re
 import sys
-import tempfile
 import unittest
 from glob import glob
 from pathlib import Path
-from typing import Dict, List, Set, Tuple, Union
 
 # Configure logging
 logging.basicConfig(
@@ -39,8 +37,8 @@ class PathNormalizer:
         self.project_root = self._find_project_root() if not project_root else project_root
         self.platform_patterns = self._get_platform_patterns()
         self.normalization_rules = self._get_normalization_rules()
-        self.fixed_files: List[Dict] = []
-        self.skipped_files: List[Dict] = []
+        self.fixed_files: list[dict] = []
+        self.skipped_files: list[dict] = []
 
     def _find_project_root(self) -> str:
         """Find project root by looking for project markers."""
@@ -53,7 +51,7 @@ class PathNormalizer:
         # Fallback to script's grandparent directory
         return str(Path(__file__).parent.parent.absolute())
 
-    def _get_platform_patterns(self) -> Dict[str, List[re.Pattern]]:
+    def _get_platform_patterns(self) -> dict[str, list[re.Pattern]]:
         """Get regex patterns for different platform-specific issues."""
         return {
             'user_home_paths': [
@@ -80,7 +78,7 @@ class PathNormalizer:
             ]
         }
 
-    def _get_normalization_rules(self) -> Dict[str, Dict]:
+    def _get_normalization_rules(self) -> dict[str, dict]:
         """Get normalization rules for different types of path issues."""
         return {
             'user_home_replacement': {
@@ -110,30 +108,28 @@ class PathNormalizer:
             }
         }
 
-    def _normalize_user_home(self, match: re.Match, context: Dict) -> str:
+    def _normalize_user_home(self, match: re.Match, context: dict) -> str:
         """Normalize user home paths to relative paths or environment variables."""
         matched_text = match.group(0)
 
         # If this is in a test file, prefer relative paths
         if context.get('file_type') == 'test':
             return ''  # Remove the home path prefix, making it relative
-        else:
-            # For config files or scripts, use environment variable
-            return '${HOME}/'
+        # For config files or scripts, use environment variable
+        return '${HOME}/'
 
-    def _normalize_worktree_name(self, match: re.Match, context: Dict) -> str:
+    def _normalize_worktree_name(self, match: re.Match, context: dict) -> str:
         """Normalize worktree names to a generic pattern."""
         matched_text = match.group(0)
 
         # Extract the basic pattern
         if 'worker' in matched_text.lower():
             return '/worktree_main/'
-        elif 'test' in matched_text.lower():
+        if 'test' in matched_text.lower():
             return '/worktree_tests/'
-        else:
-            return '/worktree/'
+        return '/worktree/'
 
-    def _make_relative_to_project(self, match: re.Match, context: Dict) -> str:
+    def _make_relative_to_project(self, match: re.Match, context: dict) -> str:
         """Convert absolute project paths to relative paths."""
         matched_text = match.group(0).strip('\'"')
 
@@ -151,17 +147,16 @@ class PathNormalizer:
         # Fallback: use environment variable or placeholder
         return '"${PROJECT_ROOT}"' if '"' in match.group(0) else "'${PROJECT_ROOT}'"
 
-    def _normalize_temp_path(self, match: re.Match, context: Dict) -> str:
+    def _normalize_temp_path(self, match: re.Match, context: dict) -> str:
         """Normalize temp directory paths to use portable patterns."""
         matched_text = match.group(0)
 
         # If this looks like a test temp directory, use tempfile pattern
         if context.get('file_type') == 'test':
             return 'tempfile.mkdtemp() + "/"'
-        else:
-            return '"${TMPDIR}"'
+        return '"${TMPDIR}"'
 
-    def scan_test_file_for_issues(self, file_path: str) -> Dict[str, List[Dict]]:
+    def scan_test_file_for_issues(self, file_path: str) -> dict[str, list[dict]]:
         """Scan a test file for platform-specific path issues.
 
         Returns:
@@ -176,7 +171,7 @@ class PathNormalizer:
         }
 
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 content = f.read()
                 lines = content.splitlines()
 
@@ -214,7 +209,7 @@ class PathNormalizer:
 
         return f"[Fix needed for {issue_type}]"
 
-    def fix_test_file_paths(self, file_path: str, dry_run: bool = False) -> Dict[str, Union[bool, int, List]]:
+    def fix_test_file_paths(self, file_path: str, dry_run: bool = False) -> dict[str, bool | int | list]:
         """Fix path issues in a test file.
 
         Returns:
@@ -229,7 +224,7 @@ class PathNormalizer:
 
         try:
             # Read the file content
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 original_content = f.read()
 
             # Track changes
@@ -297,7 +292,7 @@ class PathNormalizer:
 
         return result
 
-    def find_test_files_with_path_issues(self, search_patterns: List[str] = None) -> List[str]:
+    def find_test_files_with_path_issues(self, search_patterns: list[str] = None) -> list[str]:
         """Find test files that likely have path issues.
 
         Args:
@@ -338,7 +333,7 @@ class PathNormalizer:
         logger.info(f"Found {len(problematic_files)} test files with path issues")
         return problematic_files
 
-    def generate_path_compatibility_report(self, test_files: List[str]) -> Dict:
+    def generate_path_compatibility_report(self, test_files: list[str]) -> dict:
         """Generate a comprehensive report of path compatibility issues.
 
         Returns:
@@ -390,7 +385,7 @@ class PathNormalizer:
 
         return report
 
-    def _generate_fix_recommendations(self, report: Dict) -> List[Dict]:
+    def _generate_fix_recommendations(self, report: dict) -> list[dict]:
         """Generate recommended fix strategies based on the report."""
         recommendations = []
         issue_breakdown = report['issue_breakdown']
@@ -401,7 +396,7 @@ class PathNormalizer:
                 'category': 'user_home_paths',
                 'issue_count': issue_breakdown['user_home_paths'],
                 'description': 'Replace absolute user home paths with relative paths or environment variables',
-                'command': f'python3 scripts/test_path_normalizer.py --fix-paths --rule user_home_replacement'
+                'command': 'python3 scripts/test_path_normalizer.py --fix-paths --rule user_home_replacement'
             })
 
         if issue_breakdown['worktree_names'] > 0:
@@ -410,7 +405,7 @@ class PathNormalizer:
                 'category': 'worktree_names',
                 'issue_count': issue_breakdown['worktree_names'],
                 'description': 'Normalize worktree directory names to generic patterns',
-                'command': f'python3 scripts/test_path_normalizer.py --fix-paths --rule worktree_normalization'
+                'command': 'python3 scripts/test_path_normalizer.py --fix-paths --rule worktree_normalization'
             })
 
         if issue_breakdown['absolute_project_paths'] > 0:
@@ -419,7 +414,7 @@ class PathNormalizer:
                 'category': 'absolute_project_paths',
                 'issue_count': issue_breakdown['absolute_project_paths'],
                 'description': 'Convert absolute project paths to relative paths',
-                'command': f'python3 scripts/test_path_normalizer.py --fix-paths --rule project_root_relative'
+                'command': 'python3 scripts/test_path_normalizer.py --fix-paths --rule project_root_relative'
             })
 
         if issue_breakdown['path_separators'] > 0:
@@ -428,7 +423,7 @@ class PathNormalizer:
                 'category': 'path_separators',
                 'issue_count': issue_breakdown['path_separators'],
                 'description': 'Fix Windows backslash path separators',
-                'command': f'python3 scripts/test_path_normalizer.py --fix-paths --rule path_separator_fixing'
+                'command': 'python3 scripts/test_path_normalizer.py --fix-paths --rule path_separator_fixing'
             })
 
         # Sort by priority
@@ -518,7 +513,7 @@ Examples:
 
             if args.from_failure_list:
                 # Read files from failure list
-                with open(args.from_failure_list, 'r') as f:
+                with open(args.from_failure_list) as f:
                     test_files = [line.strip() for line in f if line.strip() and not line.startswith('#')]
             else:
                 # Use glob pattern
@@ -568,17 +563,17 @@ Examples:
                 print(f"Report saved to {args.output_file}")
 
             # Print summary
-            print(f"\nPath Compatibility Report:")
+            print("\nPath Compatibility Report:")
             print(f"  Files scanned: {report['summary']['total_files_scanned']}")
             print(f"  Files with issues: {report['summary']['files_with_issues']}")
             print(f"  Total issues: {report['summary']['total_issues_found']}")
 
-            print(f"\nIssue breakdown:")
+            print("\nIssue breakdown:")
             for issue_type, count in report['issue_breakdown'].items():
                 if count > 0:
                     print(f"  {issue_type}: {count}")
 
-            print(f"\nRecommended fixes:")
+            print("\nRecommended fixes:")
             for rec in report['recommended_fixes']:
                 print(f"  [{rec['priority'].upper()}] {rec['description']} ({rec['issue_count']} issues)")
                 print(f"    Command: {rec['command']}")

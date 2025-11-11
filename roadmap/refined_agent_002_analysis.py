@@ -6,9 +6,9 @@ Focuses specifically on legitimate slash commands with strict filtering.
 
 import json
 import re
-import os
-from collections import defaultdict, Counter
+from collections import Counter, defaultdict
 from pathlib import Path
+
 
 def extract_legitimate_slash_commands(text):
     """Extract only legitimate slash commands, strictly filtering file paths."""
@@ -83,7 +83,7 @@ def analyze_agent_002_refined():
 
     for file_path in progress_files:
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 data = json.load(f)
 
             processed_files += 1
@@ -151,14 +151,14 @@ def analyze_agent_002_refined():
     with open(output_path, 'w', encoding='utf-8') as f:
         json.dump(result, f, indent=2, ensure_ascii=False)
 
-    print(f"\nRefined analysis complete!")
+    print("\nRefined analysis complete!")
     print(f"Total prompts analyzed: {total_prompts}")
     print(f"Files processed: {processed_files}")
     print(f"Legitimate slash commands found: {len(command_counter)}")
     print(f"Results saved to: {output_path}")
 
     # Print all commands found
-    print(f"\nAll legitimate commands found:")
+    print("\nAll legitimate commands found:")
     for command, count in command_counter.most_common():
         print(f"  {command}: {count}")
 

@@ -7,12 +7,11 @@ Maintains 0.87+ authenticity threshold with automatic saves every 20 prompts
 
 import json
 import os
-import sys
+import re
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-import re
-from typing import Dict, List, Any, Tuple
+
 
 class BehavioralAnalyzer:
     def __init__(self, template_path: str, output_dir: str):
@@ -23,7 +22,7 @@ class BehavioralAnalyzer:
         self.target_authenticity = 0.87
 
         # Load template
-        with open(template_path, 'r') as f:
+        with open(template_path) as f:
             self.template = json.load(f)
 
     def analyze_conversation_state(self, prompt: dict) -> dict:
@@ -502,7 +501,7 @@ class BehavioralAnalyzer:
 
         # Final summary
         final_avg = self.calculate_average_authenticity()
-        print(f"\n🎯 PROCESSING COMPLETE")
+        print("\n🎯 PROCESSING COMPLETE")
         print(f"📈 Total processed: {self.processed_count}/{total_prompts}")
         print(f"🎖️ Final average authenticity: {final_avg}")
         print(f"✅ Target met: {'YES' if final_avg >= self.target_authenticity else 'NO'}")
@@ -524,7 +523,7 @@ def main():
 
     # Load chunk data
     print("📂 Loading chunk 006 data...")
-    with open(chunk_file, 'r') as f:
+    with open(chunk_file) as f:
         chunk_data = json.load(f)
 
     # Initialize analyzer

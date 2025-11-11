@@ -1,13 +1,10 @@
 import unittest
-from unittest.mock import patch, MagicMock, call
-from django.http import HttpResponse, HttpRequest
-from django.test import TestCase, override_settings
-from django.db import connection
-from django.conf import settings
-from django.test.utils import setup_test_environment, teardown_test_environment
+from unittest.mock import MagicMock, call, patch
+
 from app.middleware import TenantMiddleware
-import logging
-import os
+from django.conf import settings
+from django.http import HttpRequest, HttpResponse
+from django.test import TestCase, override_settings
 
 # Configure Django settings for testing
 if not settings.configured:

@@ -1,13 +1,15 @@
 """
 SQLAlchemy Models for Genesis E-commerce Application
 """
-from datetime import datetime
 from uuid import uuid4
-from sqlalchemy import Column, String, DateTime, Numeric, Integer, Text, ForeignKey
+
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+
 from .database import Base
+
 
 class Customer(Base):
     __tablename__ = "customers"

@@ -26,7 +26,6 @@ from pr_comment_formatter import (
 )
 
 # Import commentreply validate_comment_data - handle missing gracefully in logic
-from commentreply import validate_comment_data
 
 
 class TestCommentStatus(unittest.TestCase):

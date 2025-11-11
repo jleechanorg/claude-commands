@@ -7,8 +7,8 @@ Enhanced filtering to remove filesystem artifacts and focus on genuine slash com
 import json
 import os
 import re
-from collections import defaultdict, Counter
 from datetime import datetime
+
 
 def is_genuine_slash_command(command):
     """
@@ -119,7 +119,7 @@ def process_combined_results():
         print("❌ Combined results file not found")
         return None
 
-    with open(combined_file, 'r', encoding='utf-8') as f:
+    with open(combined_file, encoding='utf-8') as f:
         data = json.load(f)
 
     print("Applying refined filtering to combined results...")
@@ -171,7 +171,7 @@ def categorize_commands(commands):
         'system': ['config', 'settings', 'env', 'memory', 'context', 'checkpoint']
     }
 
-    categorized = {cat: {} for cat in categories.keys()}
+    categorized = {cat: {} for cat in categories}
     categorized['uncategorized'] = {}
 
     for command, count in commands.items():
@@ -211,21 +211,21 @@ def main():
         print(f"\n✅ Refined analysis complete: {output_file}")
 
         # Display key results
-        print(f"\n📊 FILTERING RESULTS:")
+        print("\n📊 FILTERING RESULTS:")
         print(f"   Original commands: {refined_results['filtering_results']['original_unique_commands']}")
         print(f"   Refined commands: {refined_results['filtering_results']['refined_unique_commands']}")
         print(f"   Filtered out: {refined_results['filtering_results']['commands_filtered_out']}")
         print(f"   Filtering efficiency: {refined_results['filtering_results']['filtering_efficiency']}")
 
-        print(f"\n🏆 TOP 15 REFINED COMMANDS:")
+        print("\n🏆 TOP 15 REFINED COMMANDS:")
         for i, (command, count) in enumerate(refined_results['top_commands_refined'][:15], 1):
             print(f"   {i:2d}. {command}: {count} occurrences")
 
-        print(f"\n🗑️  TOP 10 FILTERED OUT (FILESYSTEM ARTIFACTS):")
+        print("\n🗑️  TOP 10 FILTERED OUT (FILESYSTEM ARTIFACTS):")
         for i, (command, count) in enumerate(list(refined_results['filtered_out_commands'].items())[:10], 1):
             print(f"   {i:2d}. {command}: {count} occurrences")
 
-        print(f"\n📂 COMMAND CATEGORIES:")
+        print("\n📂 COMMAND CATEGORIES:")
         for category, commands in refined_results['command_categories'].items():
             if commands:
                 total_in_category = sum(commands.values())
@@ -236,9 +236,8 @@ def main():
 
         return refined_results
 
-    else:
-        print("❌ Refined analysis failed")
-        return None
+    print("❌ Refined analysis failed")
+    return None
 
 if __name__ == "__main__":
     main()

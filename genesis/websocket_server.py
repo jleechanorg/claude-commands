@@ -1,9 +1,10 @@
-from flask import Flask, render_template, request
-from flask_socketio import SocketIO, emit, join_room, leave_room
+import logging
+import random
 import threading
 import time
-import random
-import logging
+
+from flask import Flask, render_template, request
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from influx import get_tenant_bucket
 
 app = Flask(__name__)

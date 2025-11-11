@@ -4,12 +4,14 @@ Firebase Authentication Configuration Validator for Milestone 2.
 Focuses on identifying and fixing Firebase auth configuration issues.
 """
 
+import json
 import os
 import sys
-import requests
-import json
 import time
-from typing import Dict, Any, List
+from typing import Any
+
+import requests
+
 
 class FirebaseAuthValidator:
     """Validate Firebase authentication configuration."""
@@ -56,7 +58,7 @@ class FirebaseAuthValidator:
         env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
 
         try:
-            with open(env_file, 'r') as f:
+            with open(env_file) as f:
                 content = f.read()
 
             required_vars = [
@@ -110,7 +112,7 @@ class FirebaseAuthValidator:
 
         try:
             # Get project ID from .env
-            with open(env_file, 'r') as f:
+            with open(env_file) as f:
                 env_content = f.read()
 
             env_project_id = None
@@ -120,7 +122,7 @@ class FirebaseAuthValidator:
                     break
 
             # Get project ID from service account
-            with open(service_account, 'r') as f:
+            with open(service_account) as f:
                 service_data = json.load(f)
                 service_project_id = service_data.get('project_id', '')
 
@@ -149,7 +151,7 @@ class FirebaseAuthValidator:
         env_file = os.path.join(os.path.expanduser("~"), "projects", "worldarchitect.ai", "worktree_human", "mvp_site", "frontend_v2", ".env")
 
         try:
-            with open(env_file, 'r') as f:
+            with open(env_file) as f:
                 content = f.read()
 
             # Extract API key
@@ -182,24 +184,23 @@ class FirebaseAuthValidator:
                     pass
                 self.log_result("Firebase API Key Validity", True, "API key appears valid (400 response from Firebase)")
                 return True
-            elif response.status_code == 403:
+            if response.status_code == 403:
                 # 403 means API key is invalid or restricted
                 try:
                     error_data = response.json()
                     if "API key not valid" in str(error_data):
                         self.log_result("Firebase API Key Validity", False, "API key is invalid", str(error_data))
                         return False
-                    elif "restricted" in str(error_data).lower():
+                    if "restricted" in str(error_data).lower():
                         self.log_result("Firebase API Key Validity", False, "API key is restricted", str(error_data))
                         return False
                 except:
                     pass
                 self.log_result("Firebase API Key Validity", False, "API key validation failed (403 Forbidden)")
                 return False
-            else:
-                self.log_result("Firebase API Key Validity", False,
-                              f"Unexpected response status: {response.status_code}")
-                return False
+            self.log_result("Firebase API Key Validity", False,
+                          f"Unexpected response status: {response.status_code}")
+            return False
 
         except requests.exceptions.RequestException as e:
             self.log_result("Firebase API Key Validity", False, "Network error during API key validation", str(e))
@@ -217,7 +218,7 @@ class FirebaseAuthValidator:
             return False
 
         try:
-            with open(firebase_config_file, 'r') as f:
+            with open(firebase_config_file) as f:
                 content = f.read()
 
             # Check for required imports and configurations
@@ -251,7 +252,7 @@ class FirebaseAuthValidator:
             self.log_result("Frontend Firebase Config", False, "Error reading firebase.ts file", str(e))
             return False
 
-    def generate_report(self) -> Dict[str, Any]:
+    def generate_report(self) -> dict[str, Any]:
         """Generate final validation report."""
         total_tests = len(self.results)
         passed_tests = sum(1 for r in self.results if r['success'])

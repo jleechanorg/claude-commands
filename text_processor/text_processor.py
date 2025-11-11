@@ -7,21 +7,20 @@ word/character/line counting, text replacement, and case conversion.
 """
 
 import argparse
-import sys
 import os
-from typing import Optional, TextIO
+import sys
 
 from .operations import (
-    count_words,
+    convert_case,
     count_characters,
     count_lines,
+    count_words,
+    get_text_stats,
     replace_text,
-    convert_case,
-    get_text_stats
 )
 
 
-def read_input(file_path: Optional[str] = None) -> str:
+def read_input(file_path: str | None = None) -> str:
     """
     Read text input from file or stdin.
 
@@ -40,7 +39,7 @@ def read_input(file_path: Optional[str] = None) -> str:
             if not os.path.exists(file_path):
                 raise FileNotFoundError(f"File not found: {file_path}")
 
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(file_path, encoding='utf-8') as f:
                 return f.read()
         else:
             # Read from stdin
