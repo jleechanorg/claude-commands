@@ -169,6 +169,11 @@
         "hooks": [
           {
             "type": "command",
+            "command": "bash -c 'set -euo pipefail; SCRIPT=\"\"; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -x \"$ROOT/.claude/hooks/install-gh.sh\" ]; then SCRIPT=\"$ROOT/.claude/hooks/install-gh.sh\"; fi; fi; if [ -z \"$SCRIPT\" ] && [ -x \"$HOME/.claude/hooks/install-gh.sh\" ]; then SCRIPT=\"$HOME/.claude/hooks/install-gh.sh\"; fi; if [ -n \"$SCRIPT\" ]; then \"$SCRIPT\"; else echo \"install-gh.sh not found; skipping GitHub CLI install\" >&2; fi'",
+            "description": "Install GitHub CLI via shared hook script if not already available"
+          },
+          {
+            "type": "command",
             "command": "bash -c 'if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); [ -x \"$ROOT/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$ROOT/.claude/hooks/pre_command_optimize.py\" && exit 0; fi; [ -x \"$HOME/.claude/hooks/pre_command_optimize.py\" ] && python3 \"$HOME/.claude/hooks/pre_command_optimize.py\"; exit 0'",
             "description": "Optimize tool selection before command execution"
           },
@@ -264,6 +269,18 @@
         ]
       }
     ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'set -euo pipefail; SCRIPT=\"\"; if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then ROOT=$(git rev-parse --show-toplevel); if [ -x \"$ROOT/.claude/hooks/install-gh.sh\" ]; then SCRIPT=\"$ROOT/.claude/hooks/install-gh.sh\"; fi; fi; if [ -z \"$SCRIPT\" ] && [ -x \"$HOME/.claude/hooks/install-gh.sh\" ]; then SCRIPT=\"$HOME/.claude/hooks/install-gh.sh\"; fi; if [ -n \"$SCRIPT\" ]; then \"$SCRIPT\"; else echo \"install-gh.sh not found; skipping GitHub CLI install\" >&2; fi'",
+            "description": "Install GitHub CLI at session start via shared hook script"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "matcher": "*",
@@ -280,7 +297,8 @@
   "env": {
     "BASH_MAX_OUTPUT_LENGTH": "5000",
     "BASH_DEFAULT_TIMEOUT_MS": "60000",
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1",
+    "PATH": "${HOME}/.cache/gh-cli/bin:${PATH}"
   },
   "verbose": false,
   "statusLine": {
