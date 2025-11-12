@@ -5,17 +5,16 @@ permissions:
   contents: read
   pull-requests: read
 
-# When to run the tests
+# When to run the tests (optimized - no duplication on PR branches)
 on:
-  push:
-    branches: [ main, dev ]  # Run on pushes to these branches
+  pull_request:              # Run on all PRs regardless of target branch
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
-  pull_request:
-    branches: [ main ]       # Run on PRs targeting main
+  push:
+    branches: [ main, dev ]  # Run on pushes to main/dev for post-merge validation
     paths-ignore:
       - '**/*.md'
       - 'docs/**'

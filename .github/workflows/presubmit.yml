@@ -6,15 +6,16 @@ permissions:
   pull-requests: read
   actions: read  # Required for cache actions
 
-# Run on all pushes and pull requests
+# Optimized CI triggers - no duplication on PR branches
 on:
-  push:
+  pull_request:
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
       - 'roadmap/**'
       - '.github/ISSUE_TEMPLATE/**'
-  pull_request:
+  push:
+    branches: [ main, dev ]
     paths-ignore:
       - '**/*.md'
       - 'docs/**'

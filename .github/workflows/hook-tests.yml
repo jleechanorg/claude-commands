@@ -1,13 +1,13 @@
 name: Hook Tests
 
+# Optimized CI triggers - no duplication on PR branches
 on:
-  push:
-    branches: [ main, dev ]
+  pull_request:              # Run on all PRs regardless of target branch
     paths:
       - '.claude/hooks/**'
       - '.github/workflows/hook-tests.yml'
-  pull_request:
-    branches: [ main ]
+  push:
+    branches: [ main, dev ]  # Run on pushes to main/dev for post-merge validation
     paths:
       - '.claude/hooks/**'
       - '.github/workflows/hook-tests.yml'
