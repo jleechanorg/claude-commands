@@ -195,7 +195,9 @@ Genesis Coder, Prime Mover,
 
 🚨 **SLASH COMMAND ARCHITECTURE:** ⚠️ CRITICAL
 - `.claude/commands/*.md` = EXECUTABLE PROMPT TEMPLATES
-- **Flow:** User types `/pushl` → Claude reads `pushl.md` → Executes implementation
+- `claude-commands/.claude/commands/*.md` = SUBMODULE SLASH COMMANDS (git submodule with shared commands)
+- **Search Order:** Check both `.claude/commands/` and `claude-commands/.claude/commands/` for slash command files
+- **Flow:** User types `/pushl` → Claude reads `pushl.md` from either location → Executes implementation
 
 🚨 **NEVER SIMULATE INTELLIGENCE:**
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
@@ -456,8 +458,12 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 
 **Types:** Cognitive (`/think`, `/debug`) = semantic | Operational (`/orch`, `/handoff`) = protocol | Tool (`/execute`, `/test`, `/pr`) = direct
 
+**Command Locations:**
+- Project-specific: `.claude/commands/[command].md`
+- Shared commands (submodule): `claude-commands/.claude/commands/[command].md`
+
 🚨 **CRITICAL RULES:**
-- Scan "/" → Check `.claude/commands/[command].md` → Execute complete workflow
+- Scan "/" → Check **BOTH** `.claude/commands/[command].md` AND `claude-commands/.claude/commands/[command].md` → Execute complete workflow
 - `/orch` ALWAYS triggers tmux agents - NEVER execute directly
 - `/execute` requires TodoWrite checklist
 
