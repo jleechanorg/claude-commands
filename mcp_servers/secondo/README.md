@@ -246,10 +246,10 @@ npm list express
 
 ```bash
 # Verify secondo-cli.sh exists
-ls -la scripts/secondo-cli.sh
+ls -la ~/.claude/scripts/secondo-cli.sh
 
 # Test directly
-./scripts/secondo-cli.sh all "test question"
+~/.claude/scripts/secondo-cli.sh all "test question"
 
 # Check authentication
 node scripts/auth-cli.mjs status

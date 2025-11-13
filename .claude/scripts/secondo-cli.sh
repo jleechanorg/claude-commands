@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Second Opinion CLI - Get multi-model AI feedback
-# Usage: ./scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
+# Usage: ~/.claude/scripts/secondo-cli.sh [design|code-review|bugs|all] [question]
 # Explicit error handling is used (no `set -e`) to preserve interactive shells.
 
 # Configuration
@@ -63,11 +63,11 @@ check_auth() {
   if ! check_dependencies; then
     return 1
   fi
-  if ! node scripts/auth-cli.mjs status >/dev/null 2>&1; then
+  if ! node ~/.claude/scripts/auth-cli.mjs status >/dev/null 2>&1; then
     error "Not authenticated"
     echo ""
     echo "Please authenticate first:"
-    echo "  node scripts/auth-cli.mjs login"
+    echo "  node ~/.claude/scripts/auth-cli.mjs login"
     echo ""
     return 1
   fi
@@ -75,7 +75,7 @@ check_auth() {
 
 # Get authentication token
 get_token() {
-  TOKEN=$(node scripts/auth-cli.mjs token 2>/dev/null)
+  TOKEN=$(node ~/.claude/scripts/auth-cli.mjs token 2>/dev/null)
   if [ $? -ne 0 ] || [ -z "$TOKEN" ]; then
     error "Failed to get authentication token"
     return 1

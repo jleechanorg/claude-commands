@@ -173,29 +173,29 @@ echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━�
 echo "Testing secondo-cli.sh structure..."
 
 # Check file exists
-if [ ! -f "scripts/secondo-cli.sh" ]; then
+if [ ! -f ".claude/scripts/secondo-cli.sh" ]; then
     echo -e "${RED}❌ secondo-cli.sh not found${NC}"
     exit 1
 fi
 
 # Check shebang
-if head -1 scripts/secondo-cli.sh | grep -q "#!/bin/bash"; then
+if head -1 .claude/scripts/secondo-cli.sh | grep -q "#!/bin/bash"; then
     echo -e "${GREEN}✅ Correct shebang${NC}"
 else
     echo -e "${YELLOW}⚠️  Missing or incorrect shebang${NC}"
 fi
 
 # Check permissions
-if [ -x "scripts/secondo-cli.sh" ]; then
+if [ -x ".claude/scripts/secondo-cli.sh" ]; then
     echo -e "${GREEN}✅ Executable permissions${NC}"
 else
     echo -e "${YELLOW}⚠️  Not executable${NC}"
-    chmod +x scripts/secondo-cli.sh
+    chmod +x .claude/scripts/secondo-cli.sh
     echo -e "${GREEN}   Fixed permissions${NC}"
 fi
 
 # Check for set -e
-if grep -q "set -e" scripts/secondo-cli.sh; then
+if grep -q "set -e" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Error handling with 'set -e'${NC}"
 else
     echo -e "${YELLOW}⚠️  Missing 'set -e'${NC}"
@@ -203,28 +203,28 @@ fi
 
 # Check for required functions
 echo -n "Checking for check_auth function... "
-if grep -q "check_auth()" scripts/secondo-cli.sh; then
+if grep -q "check_auth()" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Found${NC}"
 else
     echo -e "${RED}❌ Missing${NC}"
 fi
 
 echo -n "Checking for get_token function... "
-if grep -q "get_token()" scripts/secondo-cli.sh; then
+if grep -q "get_token()" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Found${NC}"
 else
     echo -e "${RED}❌ Missing${NC}"
 fi
 
 echo -n "Checking for send_mcp_request function... "
-if grep -q "send_mcp_request()" scripts/secondo-cli.sh; then
+if grep -q "send_mcp_request()" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Found${NC}"
 else
     echo -e "${RED}❌ Missing${NC}"
 fi
 
 echo -n "Checking for display_response function... "
-if grep -q "display_response()" scripts/secondo-cli.sh; then
+if grep -q "display_response()" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Found${NC}"
 else
     echo -e "${RED}❌ Missing${NC}"
@@ -232,7 +232,7 @@ fi
 
 # Check HTTPie/curl fallback
 echo -e "\n${YELLOW}HTTPie/curl Fallback Check:${NC}"
-if grep -q "command -v http" scripts/secondo-cli.sh && grep -q "command -v curl" scripts/secondo-cli.sh; then
+if grep -q "command -v http" .claude/scripts/secondo-cli.sh && grep -q "command -v curl" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Proper fallback implementation${NC}"
 else
     echo -e "${RED}❌ Missing dependency fallback${NC}"
@@ -241,14 +241,14 @@ fi
 # Check error handling
 echo -e "\n${YELLOW}Error Handling Check:${NC}"
 echo -n "Checking for timeout handling... "
-if grep -q "timeout" scripts/secondo-cli.sh; then
+if grep -q "timeout" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Timeout configured${NC}"
 else
     echo -e "${YELLOW}⚠️  No timeout found${NC}"
 fi
 
 echo -n "Checking for error messages... "
-if grep -q "error()" scripts/secondo-cli.sh; then
+if grep -q "error()" .claude/scripts/secondo-cli.sh; then
     echo -e "${GREEN}✅ Error function defined${NC}"
 else
     echo -e "${YELLOW}⚠️  No error function${NC}"
@@ -339,7 +339,7 @@ echo -e "\n${BLUE}📝 Manual Testing Required:${NC}"
 echo "1. Install express: npm install express"
 echo "2. Set Firebase env vars: FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_PROJECT_ID"
 echo "3. Test authentication: node scripts/auth-cli.mjs login"
-echo "4. Test secondo command: ./scripts/secondo-cli.sh \"test question\""
+echo "4. Test secondo command: ~/.claude/scripts/secondo-cli.sh \"test question\""
 
 echo -e "\n${BLUE}🔍 Potential Improvements:${NC}"
 echo "1. Add unit tests for auth-cli.mjs functions"
