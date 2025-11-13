@@ -195,9 +195,7 @@ Genesis Coder, Prime Mover,
 
 🚨 **SLASH COMMAND ARCHITECTURE:** ⚠️ CRITICAL
 - `.claude/commands/*.md` = EXECUTABLE PROMPT TEMPLATES
-- `claude-commands/.claude/commands/*.md` = SUBMODULE SLASH COMMANDS (git submodule with shared commands)
-- **Search Order:** Check both `.claude/commands/` and `claude-commands/.claude/commands/` for slash command files
-- **Flow:** User types `/pushl` → Claude reads `pushl.md` from either location → Executes implementation
+- **Flow:** User types `/pushl` → Claude reads `pushl.md` from `.claude/commands/` → Executes implementation
 
 🚨 **NEVER SIMULATE INTELLIGENCE:**
 - ❌ NEVER create Python functions that simulate Claude's responses with templates
@@ -402,6 +400,14 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 - **MCP Config**: Point to `node $(npm root -g)/<package>/build/index.js` or use full path
 - **Benefits**: Simple, standard npm workflow, automatic PATH availability, easy updates with `npm update -g`
 
+🚨 **GITHUB CLI INSTALLATION:** ⚠️ MANDATORY - Use precompiled binary method
+- **Download precompiled binary from GitHub releases:**
+  `curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp`
+- **Verify installation:**
+  `/tmp/gh_2.40.1_linux_amd64/bin/gh --version`
+- **Authenticate with existing GitHub token:**
+  `/tmp/gh_2.40.1_linux_amd64/bin/gh auth status`
+
 🚨 **RENDER API ENVIRONMENT VARIABLE MANAGEMENT:** ⚠️ CRITICAL - PUT replaces ALL variables
 - **API Behavior**: Render API PUT method for `/services/{id}/env-vars` **REPLACES ALL** environment variables, not just one
 - ❌ **NEVER**: Use PUT to update a single env var without including all others
@@ -459,11 +465,10 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 **Types:** Cognitive (`/think`, `/debug`) = semantic | Operational (`/orch`, `/handoff`) = protocol | Tool (`/execute`, `/test`, `/pr`) = direct
 
 **Command Locations:**
-- Project-specific: `.claude/commands/[command].md`
-- Shared commands (submodule): `claude-commands/.claude/commands/[command].md`
+- All commands: `.claude/commands/[command].md`
 
 🚨 **CRITICAL RULES:**
-- Scan "/" → Check **BOTH** `.claude/commands/[command].md` AND `claude-commands/.claude/commands/[command].md` → Execute complete workflow
+- Scan "/" → Read `.claude/commands/[command].md` → Execute complete workflow
 - `/orch` ALWAYS triggers tmux agents - NEVER execute directly
 - `/execute` requires TodoWrite checklist
 
