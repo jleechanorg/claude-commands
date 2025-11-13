@@ -1,4 +1,9 @@
 {
+  "env": {
+    "BASH_MAX_OUTPUT_LENGTH": "5000",
+    "BASH_DEFAULT_TIMEOUT_MS": "60000",
+    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
+  },
   "permissions": {
     "allow": [
       "Bash(git:*)",
@@ -277,11 +282,6 @@
         ]
       }
     ]
-  },
-  "env": {
-    "BASH_MAX_OUTPUT_LENGTH": "5000",
-    "BASH_DEFAULT_TIMEOUT_MS": "60000",
-    "CLAUDE_CODE_DISABLE_TERMINAL_TITLE": "1"
   },
   "verbose": false,
   "statusLine": {
