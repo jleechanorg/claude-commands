@@ -64,6 +64,13 @@ If `/commentcheck` finds issues:
 
 🚨 **CRITICAL PURPOSE**: Verify 100% comment coverage and response quality after comment reply process. Count ALL comments requiring response (everything except '[AI responder]' comments).
 
+🚨 **CRITICAL CLARIFICATION - Bot Comments Must Be Addressed**:
+- ✅ **"ALL comments" explicitly INCLUDES bot comments**: CodeRabbit, GitHub Copilot, automated reviewers
+- ✅ **"ALL comments" explicitly INCLUDES human comments**: Team members, manual reviewers
+- ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own AI-generated responses)
+- 🚨 **MANDATORY**: Bot code review comments MUST have responses - either fixes or "NOT DONE: [reason]"
+- 🚨 **ZERO SKIP TOLERANCE**: 100% reply rate means bot AND human comments must be addressed
+
 🔒 **Security**: Uses safe jq --arg parameter passing to prevent command injection vulnerabilities and explicit variable validation.
 
 ## Universal Composition Integration
@@ -74,12 +81,15 @@ If `/commentcheck` finds issues:
 
 **MANDATORY**: This command MUST count ALL comments requiring response:
 - **Zero tolerance policy** - Every comment needs response except '[AI responder]' comments
+  - 🚨 **Bot comments (CodeRabbit, GitHub Copilot, automated reviewers) = MUST respond**
+  - 🚨 **Human comments = MUST respond**
+  - ❌ **[AI responder] comments = Skip (our own responses)**
 - **Simple counting** - Count comments NOT starting with '[AI responder]'
 - **Warning system** - Clear alerts when unaddressed comments > 0
-- **No complex classification** - No bot detection, no threading analysis
+- **No complex classification** - No bot detection
 - **Evidence requirement** - List any comments needing response by ID
-- **Simple principle** - Address everything except our own '[AI responder]' responses
-- **Direct reply verification** - Every non-AI-responder comment must have response
+- **Simple principle** - Address everything (human AND bot) except our own '[AI responder]' responses
+- **Direct reply verification** - Every non-AI-responder comment (including bot comments) must have response
 
 ## Description
 
@@ -330,8 +340,9 @@ fi
 🚨 **✅ PASS REQUIREMENTS**: ZERO unresponded comments with quality responses
 - **ZERO unresponded comments detected** (explicit count must be 0)
 - **Clear warning system shows no alerts** (unresponded count = 0)
-- **Every Copilot comment has a response** (technical feedback must be addressed)
-- **Every CodeRabbit comment has a response** (AI suggestions require acknowledgment)
+- **Every bot comment (CodeRabbit, GitHub Copilot, automated reviewers) has a response** (bot feedback is NOT optional)
+- **Every human reviewer comment has a response** (team feedback must be addressed)
+- 🚨 **CRITICAL**: Bot comments are NOT skippable - they need 100% reply rate like human comments
 - **All responses address specific technical content** (not generic acknowledgments)
 - **Appropriate ✅ DONE/❌ NOT DONE status** (clear resolution indication)
 - **Professional and substantial replies** (meaningful engagement with feedback)
@@ -340,18 +351,18 @@ fi
 - **ANY unresponded comment count > 0** (immediate failure with clear warning)
 - **Warning system alerts triggered** (explicit alerts when unresponded comments found)
 - **Generic/template responses** ("Thanks!" or "Will consider" are insufficient)
-- **Bot comments ignored** (Copilot/CodeRabbit feedback requires responses)
-- **Responses don't address technical content** (must engage with specific suggestions)
-- **Unprofessional or inadequate replies** (maintain PR review standards)
+- **Bot comment coverage failure** (skipping any Copilot/CodeRabbit/automated reviewer feedback violates 100% reply requirement)
+- **Responses don't address technical content** (must engage with specific suggestions from bots or humans)
+- **Unprofessional or inadequate replies** (maintain PR review standards for all comment sources)
 
 ### 🎯 SPECIFIC FAIL TRIGGERS (UNRESPONDED COMMENT FOCUS)
 
 - **Unresponded comment count > 0** (explicit count detection and warning)
 - **Zero individual responses** (like PR #864 - complete failure with 11 unresponded)
-- **Partial bot coverage** (some Copilot/CodeRabbit comments without replies)
+- **Skipped bot comment detected** (any Copilot/CodeRabbit/automated reviewer comment without reply = failure)
 - **Warning system triggered** (any alerts about unresponded comments)
 - **Template responses only** (generic acknowledgments without substance)
-- **Ignored technical suggestions** (failing to address specific code feedback)
+- **Ignored technical suggestions** (failing to address specific code feedback from bots or humans)
 
 ### When to Run
 
