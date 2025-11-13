@@ -6,6 +6,9 @@ source "$(dirname "$0")/scripts/deploy_common.sh"
 # --- Argument Parsing & Directory Logic ---
 TARGET_DIR=""
 ENVIRONMENT="dev" # Default environment
+# Ensure autoscaling changes apply consistently regardless of environment; deploy_common
+# picks the correct service based on ENVIRONMENT, so this value is shared by dev/stable.
+MAX_INSTANCES=6
 
 # --- THIS IS THE NEW CONTEXT-AWARE LOGIC ---
 # First, check if the CURRENT directory has a Dockerfile.
@@ -209,7 +212,7 @@ fi
 deploy_common::submit_build "$BUILD_CONTEXT" "$IMAGE_TAG"
 
 # --- Deploy Step ---
-echo "Deploying to Cloud Run as service '$SERVICE_NAME'..."
+echo "Deploying to Cloud Run as service '$SERVICE_NAME' with max instances set to ${MAX_INSTANCES}..."
 deploy_common::deploy_service \
     "$SERVICE_NAME" \
     "$IMAGE_TAG" \
@@ -217,7 +220,7 @@ deploy_common::deploy_service \
     "2Gi" \
     "300" \
     "1" \
-    "10" \
+    "$MAX_INSTANCES" \
     "10"
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
