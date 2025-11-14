@@ -9,9 +9,30 @@ deploy_common::get_project_id() {
 deploy_common::submit_build() {
   local context_dir=$1
   local image_tag=$2
-  # Suppress logs to avoid "This tool can only stream logs if you are Viewer/Owner" error
-  # when service account lacks Viewer/Owner role. Build still succeeds and logs are available in Cloud Console.
-  (cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --suppress-logs)
+  # Use --async to avoid "This tool can only stream logs if you are Viewer/Owner" error
+  # when service account lacks Viewer/Owner role. We poll for completion instead.
+  echo "Starting build asynchronously..."
+  local build_id
+  build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
+
+  echo "Build ID: $build_id"
+  echo "Polling for build completion..."
+
+  # Poll build status every 5 seconds
+  local status=""
+  while [[ "$status" != "SUCCESS" && "$status" != "FAILURE" && "$status" != "TIMEOUT" && "$status" != "CANCELLED" ]]; do
+    sleep 5
+    status=$(gcloud builds describe "$build_id" --format="value(status)" 2>/dev/null || echo "PENDING")
+    echo "Build status: $status"
+  done
+
+  if [[ "$status" != "SUCCESS" ]]; then
+    echo "Build failed with status: $status"
+    echo "View logs at: https://console.cloud.google.com/cloud-build/builds/$build_id"
+    return 1
+  fi
+
+  echo "Build completed successfully!"
 }
 
 deploy_common::deploy_service() {
