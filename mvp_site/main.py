@@ -862,6 +862,24 @@ def create_app() -> Flask:
             }
         )
 
+    # --- Health Check Route ---
+    @app.route("/health", methods=["GET"])
+    @limiter.exempt  # Health checks should not be rate limited
+    def health_check() -> Response:
+        """
+        Health check endpoint for deployment verification.
+
+        Used by Cloud Run and deployment workflows to verify service availability.
+        Returns 200 OK with service status information.
+        """
+        return jsonify(
+            {
+                "status": "healthy",
+                "service": "worldarchitect-ai",
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            }
+        )
+
     # --- Settings Routes ---
     @app.route("/settings")
     @limiter.limit("120 per hour, 20 per minute")  # Prevent brute-force refreshes
