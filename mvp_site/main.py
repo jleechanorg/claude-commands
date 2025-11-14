@@ -255,8 +255,8 @@ def create_app() -> Flask:
             "default-src 'self'",
             "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://www.gstatic.com https://apis.google.com",
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net",
-            "font-src 'self' https://cdn.jsdelivr.net data:",
-            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com",
+            "font-src 'self' https://cdn.jsdelivr.net https://r2cdn.perplexity.ai data:",
+            "connect-src 'self' https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://*.firebaseio.com https://cdn.jsdelivr.net https://www.gstatic.com",
             "img-src 'self' data: https://cdn.jsdelivr.net https://*.googleapis.com https://*.gstatic.com https://images.unsplash.com",
             "frame-src https://worldarchitecture-ai.firebaseapp.com",
             "object-src 'none'",
@@ -610,9 +610,7 @@ def create_app() -> Flask:
             return generic_error_response("create campaign")
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
-    @limiter.limit(
-        "50000 per hour, 1000 per minute"
-    )  # High limits, sanity checks only
+    @limiter.limit("50000 per hour, 1000 per minute")  # High limits, sanity checks only
     @check_token
     @async_route
     async def update_campaign(

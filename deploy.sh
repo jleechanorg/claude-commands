@@ -19,6 +19,8 @@ if [ -f "./Dockerfile" ]; then
     # "prod", "production", and "stable" all map to "stable" environment
     if [[ "${1:-}" == "stable" ]] || [[ "${1:-}" == "prod" ]] || [[ "${1:-}" == "production" ]]; then
         ENVIRONMENT="stable"
+    elif [[ "${1:-}" == "staging" ]]; then
+        ENVIRONMENT="staging"
     fi
 else
     # The current directory is not a deployable app.
@@ -29,6 +31,8 @@ else
         # "prod", "production", and "stable" all map to "stable" environment
         if [[ "${2:-}" == "stable" ]] || [[ "${2:-}" == "prod" ]] || [[ "${2:-}" == "production" ]]; then
             ENVIRONMENT="stable"
+        elif [[ "${2:-}" == "staging" ]]; then
+            ENVIRONMENT="staging"
         fi
     fi
 fi
@@ -89,6 +93,8 @@ PY
             # "prod", "production", and "stable" all map to "stable" environment
             if [[ "${1:-}" == "stable" ]] || [[ "${1:-}" == "prod" ]] || [[ "${1:-}" == "production" ]]; then
                 ENVIRONMENT="stable"
+            elif [[ "${1:-}" == "staging" ]]; then
+                ENVIRONMENT="staging"
             fi
             break
         else
@@ -126,7 +132,8 @@ This ensures:
 ✅ Team visibility of production changes
 
 For development/staging deployments, use:
-  ./deploy.sh mvp_site       (deploys to dev)
+  ./deploy.sh mvp_site          (deploys to dev)
+  ./deploy.sh mvp_site staging  (deploys to staging)
 
 ================================================================================
 EOF
