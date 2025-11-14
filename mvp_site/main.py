@@ -574,7 +574,7 @@ def create_app() -> Flask:
             ), 500
 
     @app.route("/api/campaigns", methods=["POST"])
-    @limiter.limit("20 per hour, 5 per minute")  # Creating campaigns is less frequent
+    @limiter.limit("20000 per hour, 1000 per minute")  # High limits, sanity checks only
     @check_token
     def create_campaign_route(user_id: UserId) -> Response | tuple[Response, int]:
         try:
@@ -611,8 +611,8 @@ def create_app() -> Flask:
 
     @app.route("/api/campaigns/<campaign_id>", methods=["PATCH"])
     @limiter.limit(
-        "50 per hour, 10 per minute"
-    )  # Updating campaigns is moderate frequency
+        "50000 per hour, 1000 per minute"
+    )  # High limits, sanity checks only
     @check_token
     @async_route
     async def update_campaign(
@@ -659,7 +659,9 @@ def create_app() -> Flask:
             return generic_error_response("update campaign")
 
     @app.route("/api/campaigns/<campaign_id>/interaction", methods=["POST"])
-    @limiter.limit("30 per hour, 5 per minute")  # Stricter for AI interactions
+    @limiter.limit(
+        "30000 per hour, 1000 per minute"
+    )  # High limits for normal conversation flow
     @check_token
     @async_route
     async def handle_interaction(
@@ -963,7 +965,9 @@ def create_app() -> Flask:
 
     # Fallback route for old cached frontend code calling /handle_interaction
     @app.route("/handle_interaction", methods=["POST"])
-    @limiter.limit("60 per hour, 10 per minute")  # Legacy endpoint should remain rate limited
+    @limiter.limit(
+        "30000 per hour, 1000 per minute"
+    )  # Match main interaction endpoint limits
     def handle_interaction_fallback():
         """Fallback for cached frontend code calling old endpoint"""
         return jsonify(
