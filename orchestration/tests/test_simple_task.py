@@ -5,7 +5,6 @@ import json
 import os
 import sys
 import time
-import unittest
 from dataclasses import asdict
 from datetime import datetime
 from orchestration.message_broker import MessageBroker, MessageType, TaskMessage

@@ -12,11 +12,8 @@ Test coverage:
 """
 
 import subprocess
-import tempfile
-import os
 import json
 import sys
-import time
 from pathlib import Path
 
 # Test constants for better maintainability

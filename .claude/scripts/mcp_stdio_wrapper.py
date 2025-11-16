@@ -3,8 +3,8 @@
 Wrapper script to run WorldArchitect MCP server in stdio-only mode for Claude Code.
 This script provides stdio transport for MCP protocol communication.
 """
-import sys
 import os
+import sys
 
 # Get the directory of this script
 script_dir = os.path.dirname(os.path.abspath(__file__))

@@ -6,25 +6,27 @@ Tests all compression rules and integration scenarios.
 """
 
 import io
-import os
-import sys
 import json
+import os
 import shutil
+import sys
 import tempfile
 import types
 import unittest
-from pathlib import Path
-from unittest.mock import patch, MagicMock, call
+from unittest.mock import patch
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from command_output_trimmer import (
-    Config,
-    OptimizedCommandOutputTrimmer as CommandOutputTrimmer,
     CompressionStats,
+    Config,
     main,
 )
+from command_output_trimmer import (
+    OptimizedCommandOutputTrimmer as CommandOutputTrimmer,
+)
+
 
 class TestCommandOutputTrimmer(unittest.TestCase):
     """Test cases for CommandOutputTrimmer"""

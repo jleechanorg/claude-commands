@@ -17,7 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from typing import List, Sequence
+from collections.abc import Sequence
 
 
 def _safe_print(message: str) -> None:
@@ -92,9 +92,9 @@ def _is_safe_path(path: str, root: str) -> bool:
     return common == root_abs
 
 
-def _build_commands(root: str, rel_path: str) -> List[List[str]]:
+def _build_commands(root: str, rel_path: str) -> list[list[str]]:
     pre_commit = shutil.which("pre-commit")
-    commands: List[List[str]] = []
+    commands: list[list[str]] = []
 
     if pre_commit:
         commands.append([pre_commit, "run", "--files", rel_path])
@@ -129,7 +129,7 @@ def _log_write(handle, text: str) -> None:
 
 def _run_worker(payload_path: str) -> int:
     try:
-        with open(payload_path, "r", encoding="utf-8") as payload_handle:
+        with open(payload_path, encoding="utf-8") as payload_handle:
             payload = json.load(payload_handle)
     except (OSError, json.JSONDecodeError) as exc:
         _safe_print(f"python_async_lint worker: failed to load payload: {exc}")
@@ -165,7 +165,7 @@ def _run_worker(payload_path: str) -> int:
             _log_write(log_handle, display)
             completed = subprocess.run(
                 command,
-                cwd=root,
+                check=False, cwd=root,
                 stdout=log_handle,
                 stderr=log_handle,
             )

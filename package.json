@@ -11,14 +11,20 @@
     "express": "^4.19.2"
   },
   "devDependencies": {
-    "eslint": "^8.57.0"
+    "eslint": "^8.57.0",
+    "husky": "^9.1.7"
   },
   "scripts": {
     "auth": "node scripts/auth-cli.mjs",
     "secondo": "bash scripts/secondo-cli.sh",
-    "lint": "eslint . --ext .js,.mjs"
+    "lint": "eslint . --ext .js,.mjs",
+    "prepare": "husky"
   },
-  "keywords": ["cli", "authentication", "ai-universe"],
+  "keywords": [
+    "cli",
+    "authentication",
+    "ai-universe"
+  ],
   "author": "Your Project",
   "license": "MIT"
 }

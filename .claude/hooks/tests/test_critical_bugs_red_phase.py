@@ -9,16 +9,16 @@ Following Red-Green-Refactor methodology:
 3. REFACTOR: Clean up implementation while maintaining tests
 """
 
-import sys
 import os
+import sys
 import unittest
-from unittest.mock import patch
 from io import StringIO
+from unittest.mock import patch
 
 # Add the hooks directory (parent of tests) to sys.path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from command_output_trimmer import OptimizedCommandOutputTrimmer, Config
+from command_output_trimmer import Config, OptimizedCommandOutputTrimmer
 
 
 class TestDictionaryKeyCollisionBug(unittest.TestCase):

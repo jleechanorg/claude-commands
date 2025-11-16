@@ -40,6 +40,8 @@ execution_mode: immediate
 1. **MANDATORY**: Generate responses for EVERY unresponded comment (prioritize human questions)
 2. **MANDATORY**: Post actual GitHub comment replies (not just drafts)
 3. **MANDATORY**: Achieve 100% ALL comment coverage (not just measure it)
+   - 🚨 **ALL = Bot comments (CodeRabbit, GitHub Copilot, automated reviewers) + Human comments**
+   - ❌ **Only exception**: "[AI responder]" tagged comments (our own responses)
 
 ### Phase 5: Verification
 

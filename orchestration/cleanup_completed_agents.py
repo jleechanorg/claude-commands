@@ -17,8 +17,7 @@ import argparse
 import json
 import subprocess
 import time
-from pathlib import Path
-from typing import Any, Dict, List, Set
+from typing import Any, Dict, List
 
 # Use absolute imports with package name for __main__ compatibility
 from orchestration.constants import IDLE_MINUTES_THRESHOLD
@@ -172,7 +171,7 @@ def check_session_timeout(session_name: str) -> Dict[str, Any]:
         if elapsed_seconds > timeout_seconds:
             return {
                 "timeout": True,
-                "reason": f"timeout_exceeded",
+                "reason": "timeout_exceeded",
                 "elapsed_seconds": elapsed_seconds,
                 "timeout_seconds": timeout_seconds,
                 "elapsed_hours": elapsed_seconds / 3600
@@ -271,7 +270,7 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
 
     total_to_cleanup = len(completed_agents) + len(timeout_agents)
 
-    print(f"\n📊 Analysis Results:")
+    print("\n📊 Analysis Results:")
     print(f"  ✅ Completed agents: {len(completed_agents)}")
     print(f"  ⏰ Timeout agents: {len(timeout_agents)}")
     print(f"  🔄 Active agents: {len(active_agents)}")
@@ -304,7 +303,7 @@ def cleanup_completed_agents(dry_run: bool = False) -> Dict[str, Any]:
     print(f"  Successfully cleaned up: {cleanup_success}/{total_to_cleanup}")
 
     if active_agents:
-        print(f"\n🔄 Active agents (not cleaned up):")
+        print("\n🔄 Active agents (not cleaned up):")
         for agent_info in active_agents:
             elapsed_min = agent_info.get("elapsed_seconds", 0) / 60
             print(f"  {agent_info['name']} - {agent_info['reason']} (active {elapsed_min:.1f} min ago)")

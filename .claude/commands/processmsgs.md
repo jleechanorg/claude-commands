@@ -5,93 +5,91 @@ execution_mode: guided
 ---
 ## ⚡ EXECUTION WORKFLOW FOR CLAUDE
 
-**When this command is invoked, you should execute these steps systematically.**
-**Use TodoWrite to track progress through multi-phase workflows.**
+**🚨 CRITICAL DIRECTIVE: You are an autonomous task executor.**
 
-**CORE BEHAVIOR:** Read agent messages, surface necessary actions, and prepare follow-ups. **DO NOT just read messages and stop.**
+**YOUR COMPLETE WORKFLOW:**
+1. **Fetch messages** (metadata only, max 20)
+2. **Classify by priority** (urgent, action, info, low)
+3. **Send acknowledgment replies** for urgent/action items
+4. **Mark messages as read**
+5. **Report what you're working on**
+6. **START WORKING** - Actually execute the tasks described in URGENT/ACTION messages
 
-**SIMPLE WORKFLOW:**
-1. **Fetch unread agent messages** (metadata only: subject, sender, date) - max 20 messages
-2. **Classify** based on subject/sender (urgent, action needed, low-priority)
-3. **Take actions** for each message (AUTOMATED - analyze and respond):
-   - Draft replies for urgent/action items (max 5 replies)
-   - Extract action items and tasks
-   - Mark messages as read
-   - Report findings
-4. **Report** what you did with counts and any urgent items
+**🚨 MANDATORY ACTIONS FOR URGENT/ACTION MESSAGES:**
+- ✅ Acknowledge the message with brief reply
+- ✅ **IMMEDIATELY START WORKING** on the task described
+- ✅ Search for files, check issue trackers, investigate code as needed
+- ✅ Use all necessary tools (Read, Grep, Glob, Beads, GitHub, etc.)
+- ✅ Complete the work fully before moving to next message
+- ✅ Report results back via reply when done
 
-**IMPORTANT:** This processes inter-agent messages from MCP Agent Mail, not email. Agents communicate via the MCP Agent Mail server for project coordination.
+**AUTONOMOUS EXECUTION WORKFLOW:**
+1. **Fetch**: `fetch_inbox(include_bodies=false, limit=20)` - metadata scan
+2. **Classify**: Categorize by subject/sender (urgent > action > info > low)
+3. **Acknowledge**: Reply: "Acknowledged - starting work now"
+4. **Execute**: **DO THE ACTUAL WORK** - investigate, code, test, fix
+5. **Complete**: Reply with results when done
+6. **Repeat**: Process next URGENT/ACTION message
 
-**PERFORMANCE RULES:**
-- Max 20 messages per run
-- Fetch full content only for top 10 priority messages
-- Use parallel MCP calls where possible
-- Stop at 60 seconds if not done
+**PERFORMANCE GUIDELINES:**
+- Process urgent/action messages one at a time (sequential execution)
+- Use all necessary tools to complete each task fully
+- Report progress and results for each task
+- Don't skip investigation steps - be thorough
 
-## 🚨 DETAILED EXECUTION WORKFLOW
+**IMPORTANT:** This processes inter-agent messages from MCP Agent Mail. Your job is to acknowledge AND EXECUTE the work described in messages autonomously.
 
-### Phase 1: 🎯 Message Discovery & Retrieval (LIGHTWEIGHT - METADATA ONLY)
+## 🚨 AUTONOMOUS EXECUTION WORKFLOW (6 STEPS)
 
-**Action Steps:**
-1. **Check MCP Agent Mail Server Availability**: Verify MCP Agent Mail server is configured and accessible
-2. **Retrieve Message Metadata**: Use `fetch_inbox` to get ONLY metadata initially
-   - Limit: 20 messages maximum
-   - DO NOT fetch full message bodies yet (performance optimization)
-3. **Fast Filtering**: Apply urgency/priority filters to metadata only
-   - Check importance flags (urgent, high, normal, low)
-   - Check ack_required status
-   - Identify sender agents
+### Step 1: 📥 Fetch Message Metadata
 
-### Phase 2: 🔍 Message Analysis & Classification (METADATA-BASED - FAST)
+**Action:**
+- `fetch_inbox(include_bodies=false, limit=20)` - Get subject, sender, date, importance
 
-**Action Steps:**
-1. **Metadata Analysis**: Classify using ONLY subject/sender (no full content yet)
-   - Urgency indicators in subject: "urgent", "asap", "deadline", "blocker"
-   - Sender importance: Known collaborator agents vs automated agents
-   - Message type: Question, status update, request, notification
-2. **Fast Categorization**: Classify into categories based on metadata:
-   - **URGENT**: Importance="urgent" or "high" + ack_required=True
-   - **ACTION_REQUIRED**: Subject ends with "?" or contains "please", "review", "request"
-   - **STATUS_UPDATE**: Sender patterns for progress reports
-   - **LOW_PRIORITY**: Notifications, automated status updates
-3. **Priority Queue**: Create ordered list (top 10 only need full content)
-   - Priority 1-2 (Urgent): Fetch full content immediately
-   - Priority 3 (Action): Fetch if under message limit
-   - Priority 4-5 (Info): Mark as read without fetching full content
+**Output:** List of message IDs with metadata for quick scanning
 
-### Phase 3: 🚀 Action Execution (TARGETED - PARALLEL WHERE POSSIBLE)
+### Step 2: 🏷️ Classify Messages
 
-**Action Steps:**
-1. **Fetch Full Content**: Only for top 10 priority messages (parallel MCP calls if possible)
-   - Use `fetch_inbox` with `include_bodies=True` for priority messages
-   - Skip if message already processed
-2. **Draft Replies**: For URGENT + ACTION_REQUIRED (max 5 replies)
-   - Analyze message content and context
-   - Generate contextually appropriate draft replies using `reply_message`
-   - Limit: 5 replies per run (avoid overwhelming recipients)
-3. **Extract Tasks**: For messages with action items (lightweight extraction)
-   - Extract specific tasks and deadlines from message bodies
-   - Create simple task list in output (don't create external tasks yet)
-4. **Mark as Read**: Mark processed messages using `mark_message_read`
-   - Batch operation for all processed messages
-5. **Identify Blockers**: Flag any blocking issues or urgent attention items
+**Classification Rules (metadata only):**
+- **URGENT**: `importance="urgent"` OR subject contains "urgent", "blocker", "asap"
+- **ACTION**: `ack_required=true` OR subject has "?", "please", "review"
+- **INFO**: Status updates, progress reports
+- **LOW**: Automated notifications
 
-### Phase 4: 📊 Summary & Reporting (CONCISE OUTPUT)
+**Output:** Prioritized list (URGENT/ACTION first)
 
-**Action Steps:**
-1. **Concise Summary**: Single-paragraph overview with counts
-   - Total messages scanned: X (metadata only)
-   - Fully processed: Y (with content analysis)
-   - Categories: Urgent: N, Action: M, Status: P
-2. **Actions Taken**: Bulleted list (max 10 lines)
-   - Replies drafted: N
-   - Messages marked read: M
-   - Tasks extracted: P
-3. **Urgent Items**: Highlight ONLY urgent items (max 3)
-   - Show subject + sender + brief summary
-4. **Performance**: Report execution time and efficiency
-   - Execution time: Xs
-   - MCP calls made: N (target: <10 for good performance)
+### Step 3: ✉️ Acknowledge First URGENT/ACTION Message
+
+**For first URGENT/ACTION message:**
+- `reply_message(body_md="Acknowledged - starting work on this now")`
+- `mark_message_read(message_id=...)`
+
+### Step 4: 🚀 Execute the Task
+
+**🚨 CRITICAL: DO THE ACTUAL WORK**
+- Search for files mentioned (Glob, Grep)
+- Check issue trackers (Beads, GitHub MCP)
+- Read code files (Read tool)
+- Investigate requirements fully
+- Write code, fix bugs, implement features
+- Test your changes
+- Use ALL tools needed to complete the task
+
+**Output:** Completed work (code changes, bug fixes, implementations)
+
+### Step 5: 📝 Report Results
+
+**After completing work:**
+- `reply_message(body_md="Completed [task summary]. [Details of what was done]")`
+- Include file paths, changes made, test results
+
+### Step 6: 🔄 Repeat or Summary
+
+**If more URGENT/ACTION messages remain:**
+- Go to Step 3 for next message
+
+**If all urgent work complete:**
+- Output final summary of all work completed
 
 ## 📋 REFERENCE DOCUMENTATION
 
@@ -117,35 +115,43 @@ execution_mode: guided
 
 ## 🎯 What This Command Does
 
-**Core Actions (NEVER just read):**
+**Core Actions - FULL AUTONOMOUS EXECUTION:**
 1. **Reads** unread agent messages using MCP Agent Mail tools
 2. **Analyzes** content for action items, urgency, importance
-3. **Classifies** messages into categories
-4. **Drafts** replies for messages requiring action
-5. **Extracts** task lists from action items
-6. **Marks** messages as read
-7. **Reports** summary of all actions taken
+3. **Classifies** messages into categories (URGENT, ACTION, INFO, LOW)
+4. **Acknowledges** urgent/action messages
+5. **EXECUTES** the work described in urgent/action messages autonomously
+6. **Completes** tasks fully (investigates, codes, tests, fixes)
+7. **Reports** results back to sender when done
+8. **Marks** messages as read
 
-**Anti-Pattern Prevention:**
-- ❌ Reading messages without taking action
-- ❌ Processing without classification
-- ❌ Analysis without follow-up
-- ✅ Every message processed is classified and reported, with actions taken where appropriate
+**Autonomous Execution Pattern:**
+- ✅ Fetch and classify messages
+- ✅ Acknowledge urgent/action items immediately
+- ✅ **ACTUALLY DO THE WORK** - don't just report, execute
+- ✅ Use all necessary tools to complete tasks
+- ✅ Report completion with results
+- ✅ Move to next urgent/action message and repeat
 
-## ⚡ Performance Optimization
+## ⚡ Performance & Execution Strategy
 
-**Lightweight & Fast Execution:**
-- **20 message limit**: Processes max 20 messages per run (prevents timeout)
-- **Metadata-first**: Fetches only subject/sender initially, full content on-demand
-- **Top 10 rule**: Only fetches full content for top 10 priority messages
-- **Parallel calls**: Uses parallel MCP tool invocation where possible
-- **60s timeout**: Stops processing at 60 seconds (early exit)
-- **5 reply limit**: Max 5 replies per run
+**Autonomous Task Processing:**
+- **20 message limit**: Fetches max 20 messages per run for classification
+- **Metadata-first**: Quick classification using metadata (subject/sender/importance)
+- **Sequential execution**: Process URGENT/ACTION messages one at a time
+- **Full completion**: Complete each task before moving to next
+- **Thorough investigation**: Use all tools needed (no shortcuts)
 
 **Typical Performance:**
-- Execution time: 10-30 seconds for 20 messages
-- MCP calls: 5-8 calls total (batch operations reduce overhead)
-- Context usage: <10K tokens (metadata-focused approach)
+- Inbox fetch: ~2 seconds (metadata only)
+- Classification: Instant (pure analysis)
+- Task execution: Variable (depends on complexity)
+  - Simple fixes: 1-3 minutes
+  - Feature implementation: 5-15 minutes
+  - Complex investigations: 15-30 minutes
+- Report & reply: ~5 seconds
+
+**Note:** This command prioritizes completion quality over speed - tasks are fully executed, not just acknowledged.
 
 ## 🚀 Workflow Integration
 
@@ -202,49 +208,62 @@ See `.claude/skills/mcp-agent-mail.md` for detailed MCP Agent Mail server setup 
 
 ## 🎓 Examples
 
-### Basic Processing
+### Autonomous Task Execution
 ```bash
 /processmsgs
 ```
 **Output:**
 ```
-📬 Agent Message Processing Complete
+📬 Processed: 13 messages
 
-Processed: 15 messages
-├─ URGENT (2): Database migration blocker, Test failure in CI
-├─ ACTION_REQUIRED (5): Code review requests, Design feedback needed
-├─ STATUS_UPDATE (6): Progress reports, Task completions
-└─ INFORMATION (2): Notifications, FYI updates
+├─ URGENT (1): Message #754 from mv - Fix multi-agent manual test serialization
+├─ ACTION (0): None
+├─ INFO (12): Completed work threads, status updates
 
-Actions Taken:
-✅ 3 draft replies created (code reviews, blocker response)
-✅ 5 action items extracted to task list
-✅ 15 messages marked as read
-✅ 2 urgent items flagged for immediate attention
+🚀 Starting work on URGENT task: mcp_agent_mail-uo7
 
-⚠️ URGENT ATTENTION REQUIRED:
-1. Database migration blocked - Worker agent needs schema approval
-2. CI tests failing on main branch - requires immediate investigation
+[Agent proceeds to work autonomously:]
+
+1. ✅ Acknowledged message #754
+2. 🔍 Checked Beads issue tracker (mcp_agent_mail-uo7 assigned to me)
+3. 🔍 Located test file: testing_llm/MULTI_AGENT_MESSAGING_TEST.md
+4. 📝 Identified issue: FastMCP Root objects not JSON serializable
+5. 🔧 Applied fix: Convert results with .model_dump() before json.dump()
+6. ✅ Verified fix works
+7. 💬 Replied to mv with completion report
+
+📊 Summary:
+- Messages processed: 13
+- Urgent tasks completed: 1
+- Files modified: testing_llm/MULTI_AGENT_MESSAGING_TEST.md
+- Status: All urgent work complete
 ```
 
-### Targeted Processing
+**What happened:**
+1. Fetched 13 message metadata
+2. Classified #754 as URGENT (new assignment from mv)
+3. Sent acknowledgment: "Acknowledged - starting work now"
+4. **ACTUALLY DID THE WORK**: Searched files, checked Beads, investigated code, applied fix
+5. Tested the fix to verify it works
+6. Replied to mv with completion report including file changes
+7. Marked #754 as read
+
+### When Everything is Info
 ```bash
-/processmsgs sender:CoordinatorBot
+/processmsgs
 ```
 **Output:**
 ```
-📬 CoordinatorBot Message Processing Complete
+📬 Processed: 8 messages
 
-Processed: 5 messages from CoordinatorBot
-├─ Task Assignments (3)
-├─ Status Requests (1)
-├─ Deadline Reminders (1)
+├─ URGENT (0): None
+├─ ACTION (0): None
+├─ INFO (8): All status updates from completed work
 
-Actions Taken:
-✅ 3 task assignments acknowledged
-✅ 1 status update drafted
-✅ 1 deadline confirmed
-✅ 5 messages marked as read
+✅ No urgent/action items requiring work
+📊 Summary: All messages are informational status updates
+
+Performance: 1 tool call, ~3s
 ```
 
 ## 🔗 Integration Points

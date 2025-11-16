@@ -289,7 +289,7 @@ class UnifiedOrchestration:
         # ENHANCED LOGGING: Track orchestration session
         start_time = time.time()
         session_id = int(start_time)
-        print(f"🔍 SESSION TRACKING:")
+        print("🔍 SESSION TRACKING:")
         print(f"  └─ Session ID: {session_id}")
         print(f"  └─ Start Time: {datetime.fromtimestamp(start_time).isoformat()}")
         print(f"  └─ Task Length: {len(task_description)} characters")
@@ -323,7 +323,7 @@ class UnifiedOrchestration:
         for i, agent in enumerate(agents):
             print(f"    {i+1}. {agent['name']} - {agent['capabilities'][:60]}...")
 
-        print(f"\n🚀 AGENT CREATION PHASE:")
+        print("\n🚀 AGENT CREATION PHASE:")
         creation_start = time.time()
         created_agents = []
         failed_agents = []
@@ -338,7 +338,7 @@ class UnifiedOrchestration:
                 print(f"    ❌ Failed: {agent_spec['name']}")
 
         creation_duration = time.time() - creation_start
-        print(f"\n📊 AGENT CREATION RESULTS:")
+        print("\n📊 AGENT CREATION RESULTS:")
         print(f"  └─ Creation Duration: {creation_duration:.2f}s")
         print(f"  └─ Successful: {len(created_agents)}/{len(agents)}")
         print(f"  └─ Failed: {len(failed_agents)}/{len(agents)}")
@@ -349,14 +349,14 @@ class UnifiedOrchestration:
 
         if created_agents:
             # GOAL VALIDATION LOGGING: Store original goal for completion verification
-            print(f"\n🎯 GOAL VALIDATION SETUP:")
+            print("\n🎯 GOAL VALIDATION SETUP:")
             print(f"  └─ Original Goal: {task_description[:100]}...")
-            print(f"  └─ Success Criteria Check: Agents must validate against original goal before claiming completion")
-            print(f"  └─ Required Validations:")
-            print(f"     • All goal requirements implemented")
-            print(f"     • Tests passing (if test requirements specified)")
-            print(f"     • No placeholder/TODO code")
-            print(f"     • Performance criteria met (if specified)")
+            print("  └─ Success Criteria Check: Agents must validate against original goal before claiming completion")
+            print("  └─ Required Validations:")
+            print("     • All goal requirements implemented")
+            print("     • Tests passing (if test requirements specified)")
+            print("     • No placeholder/TODO code")
+            print("     • Performance criteria met (if specified)")
 
             print(f"\n⏳ {len(created_agents)} agents working... Monitor with:")
             for agent in created_agents:
@@ -378,14 +378,14 @@ class UnifiedOrchestration:
             print("\n📁 File-based A2A coordination - check orchestration/results/")
 
             # Wait briefly and check for PR creation
-            print(f"\n🔍 MONITORING PHASE:")
+            print("\n🔍 MONITORING PHASE:")
             monitoring_start = time.time()
             self._check_and_display_prs(created_agents)
             monitoring_duration = time.time() - monitoring_start
 
             # SESSION COMPLETION SUMMARY
             total_duration = time.time() - start_time
-            print(f"\n📊 SESSION COMPLETION SUMMARY:")
+            print("\n📊 SESSION COMPLETION SUMMARY:")
             print(f"  └─ Session ID: {session_id}")
             print(f"  └─ Total Duration: {total_duration:.2f}s")
             print(f"  └─ Task Analysis: {analysis_duration:.2f}s")

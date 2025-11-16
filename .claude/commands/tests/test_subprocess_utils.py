@@ -13,7 +13,6 @@ import unittest
 import sys
 import os
 from unittest.mock import patch, MagicMock
-import subprocess
 
 # Add the parent commands directory to path for subprocess_utils
 parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -84,7 +83,7 @@ class TestSanitizeLogContent(unittest.TestCase):
             self.assertIn("[REDACTED_CREDENTIAL]", result,
                 f"JWT token not redacted: {content[:50]}...")
             self.assertNotIn(jwt_token, result,
-                f"JWT token still visible in output")
+                "JWT token still visible in output")
     
     def test_api_keys_are_redacted(self):
         """API keys and secrets SHOULD be redacted."""

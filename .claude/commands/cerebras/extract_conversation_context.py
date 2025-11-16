@@ -6,10 +6,8 @@ Reads from ~/.claude/projects and returns the most recent 20K tokens of conversa
 
 import os
 import json
-import glob
 import hashlib
 from pathlib import Path
-from datetime import datetime
 import sys
 import re
 

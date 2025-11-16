@@ -15,7 +15,6 @@ Integrates with /header and provides authoritative GitHub data.
 import json
 import subprocess
 import sys
-import os
 import re
 import shlex
 from datetime import datetime
@@ -36,7 +35,7 @@ def run_command(cmd, capture_output=True, shell=False):
             timeout=30
         )
         return result.stdout.strip() if result.returncode == 0 else None
-    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError) as e:
+    except (subprocess.TimeoutExpired, FileNotFoundError, ValueError):
         # ValueError can be raised by shlex.split() for invalid shell syntax
         return None
 
@@ -390,7 +389,6 @@ def get_file_changes():
 
 def main():
     """Main execution function"""
-    import sys
 
     # Check for PR number argument
     target_pr = None

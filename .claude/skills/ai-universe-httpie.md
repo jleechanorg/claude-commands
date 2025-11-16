@@ -313,4 +313,4 @@ curl -X POST "$URL" \
 
 - [ai-universe-auth.md](ai-universe-auth.md) - Authentication setup
 - [second_opinion.md](../commands/second_opinion.md) - Second opinion command docs
-- `scripts/secondo-cli.sh` - Implementation reference
+- `~/.claude/scripts/secondo-cli.sh` - Implementation reference

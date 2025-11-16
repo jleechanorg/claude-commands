@@ -133,6 +133,13 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 - **Logic**: If comment starts with '[AI responder]', mark as our response
 - **Simple Rule**: Everything else requires response - NO EXCEPTIONS
 
+🚨 **CRITICAL CLARIFICATION - Bot Comments Included**:
+- ✅ **"ALL comments" explicitly INCLUDES bot comments**: CodeRabbit, GitHub Copilot, automated reviewers
+- ✅ **"ALL comments" explicitly INCLUDES human comments**: Team members, manual reviewers
+- ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own AI-generated responses)
+- 🚨 **MANDATORY**: Bot code review comments MUST be addressed with 100% reply rate
+- 🚨 **ZERO SKIP TOLERANCE**: Bot comments are NOT optional - they require responses just like human comments
+
 ### 2. No Complex Classification
 
 - No bot detection patterns
@@ -146,6 +153,8 @@ Saves structured JSON data to `/tmp/{branch_name}/comments.json` with:
 - **Metadata**: `"requires_response_count": X` for verification
 - **Fresh Data**: Always fetches current GitHub state
 - **Principle**: Address everything except our own '[AI responder]' comments
+  - 🚨 **This means**: Bot comments (CodeRabbit, GitHub Copilot, automated reviewers) + Human comments ALL require responses
+  - 🚨 **Only skip**: Our own "[AI responder]" tagged responses
 
 ## Implementation
 

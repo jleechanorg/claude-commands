@@ -97,6 +97,13 @@ graph TD
 
 🎯 **Purpose**: Systematically process ALL PR comments with real technical responses and GitHub threading
 
+🚨 **CRITICAL: 100% Reply Rate for ALL Comments** - This explicitly includes:
+- ✅ **Bot comments**: CodeRabbit, GitHub Copilot, automated reviewers
+- ✅ **Human comments**: Team members, manual reviewers
+- ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own responses)
+- 🚨 **MANDATORY**: Every bot code review comment must be either FIXED or explained with "NOT DONE: [reason]"
+- 🚨 **ZERO SKIP TOLERANCE**: Bot comments are NOT optional - 100% reply rate applies to bot AND human comments
+
 # MUST run /commentfetch first in session to populate comment data
 
 # Load comments from: /tmp/{branch_name}/comments.json
@@ -301,6 +308,9 @@ Before processing any comments:
 ## 📊 SUCCESS CRITERIA
 
 - **✅ 100% Comment Coverage**: Every comment gets a technical response
+  - 🚨 **Includes ALL bot comments**: CodeRabbit, GitHub Copilot, automated reviewers
+  - 🚨 **Includes ALL human comments**: Team members, manual reviewers
+  - ❌ **Only exception**: "[AI responder]" tagged comments (our own responses)
 - **✅ Real Fixes Implemented**: Actual file changes for code issues
 - **✅ Technical Quality**: Specific analysis, not generic templates
 - **✅ GitHub Threading**: Proper in_reply_to threading via Python

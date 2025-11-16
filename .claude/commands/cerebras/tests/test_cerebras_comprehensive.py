@@ -11,11 +11,10 @@ import json
 import os
 import sys
 import subprocess
-import stat
 import hashlib
 import importlib
 from pathlib import Path
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 import shutil
 
 # Add parent directory to path to import the module under test

@@ -4,7 +4,6 @@ Red-Green test for orchestration task dispatcher fix.
 Verifies that the system creates general task agents instead of hardcoded test agents.
 """
 
-import os
 import unittest
 from unittest.mock import MagicMock, patch
 

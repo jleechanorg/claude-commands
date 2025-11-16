@@ -4,15 +4,16 @@ Command Output Trimmer Hook - OPTIMIZED VERSION
 Reduces slash command token consumption by 50-70% with <5ms overhead.
 """
 
-import sys
-import re
 import json
 import os
-import time
+import re
+import sys
 import threading
+import time
 from collections import deque
-from typing import List, Dict, Optional, Pattern, Any
 from dataclasses import dataclass
+from typing import Any
+
 
 @dataclass
 class CompressionStats:
@@ -77,7 +78,7 @@ class Config:
 
 class OptimizedCommandOutputTrimmer:
     # Pre-compiled regex patterns for performance
-    COMMAND_PATTERNS: Dict[str, Pattern] = {
+    COMMAND_PATTERNS: dict[str, re.Pattern] = {
         'test': re.compile(r'(Running tests|PASSED|FAILED|test_\w+|pytest|unittest)', re.IGNORECASE),
         'pushl': re.compile(r'(git push|PR #\d+|Labels applied|Pushing to|origin/)', re.IGNORECASE),
         'copilot': re.compile(r'(Phase \d+|COPILOT|Comment coverage|⏱️ EXECUTION TIMING)', re.IGNORECASE),
@@ -150,7 +151,7 @@ class OptimizedCommandOutputTrimmer:
 
             try:
                 if os.path.exists(settings_path):
-                    with open(settings_path, 'r') as f:
+                    with open(settings_path) as f:
                         settings = json.load(f)
                         if 'output_trimmer' in settings:
                             user_config = settings['output_trimmer']
@@ -195,16 +196,15 @@ class OptimizedCommandOutputTrimmer:
                     if not isinstance(value, expected_type):
                         sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {' or '.join(t.__name__ for t in expected_type)}, got {type(value).__name__}. Using default.\n")
                         continue
-                else:
-                    if not isinstance(value, expected_type):
-                        sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {expected_type.__name__}, got {type(value).__name__}. Using default.\n")
-                        continue
+                elif not isinstance(value, expected_type):
+                    sys.stderr.write(f"⚠️ CONFIG: {settings_path} - '{key}' should be {expected_type.__name__}, got {type(value).__name__}. Using default.\n")
+                    continue
 
                 # Additional validation for specific keys
                 if key == 'compression_threshold' and not (0.0 <= value <= 1.0):
                     sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'compression_threshold' should be between 0.0 and 1.0, got {value}. Using default.\n")
                     continue
-                elif key == 'max_output_lines' and value < 1:
+                if key == 'max_output_lines' and value < 1:
                     sys.stderr.write(f"⚠️ CONFIG: {settings_path} - 'max_output_lines' should be positive, got {value}. Using default.\n")
                     continue
 
@@ -223,7 +223,7 @@ class OptimizedCommandOutputTrimmer:
                 return cmd_type
         return 'generic'
 
-    def fast_trim(self, lines: List[str], max_lines: int = None) -> List[str]:
+    def fast_trim(self, lines: list[str], max_lines: int = None) -> list[str]:
         """Ultra-fast generic trimming with intelligent middle summarization"""
         if max_lines is None:
             max_lines = Config.FAST_TRIM_MAX_LINES
@@ -243,7 +243,7 @@ class OptimizedCommandOutputTrimmer:
         trimmed.extend(lines[-Config.FAST_TRIM_KEEP_LAST:])
         return trimmed
 
-    def _summarize_middle_content(self, middle_lines: List[str], max_summary_lines: int = 25) -> List[str]:
+    def _summarize_middle_content(self, middle_lines: list[str], max_summary_lines: int = 25) -> list[str]:
         """
         Create an intelligent summary of middle content with bounded memory usage.
         Extracts key patterns, errors, URLs, and important information.
@@ -361,9 +361,9 @@ class OptimizedCommandOutputTrimmer:
             return True
 
         # Normalize different output views lazily so we only compute them once
-        lowered_output: Optional[str] = None
-        collapsed_output: Optional[str] = None
-        collapsed_lowered_output: Optional[str] = None
+        lowered_output: str | None = None
+        collapsed_output: str | None = None
+        collapsed_lowered_output: str | None = None
 
         def get_lowered_output() -> str:
             nonlocal lowered_output
@@ -479,8 +479,7 @@ class OptimizedCommandOutputTrimmer:
             })
 
             return '\n'.join(trimmed_lines)
-        else:
-            return output
+        return output
 
     def _update_stats(self, original_count: int, trimmed_count: int):
         """Update statistics with automatic reset to prevent memory leaks"""
@@ -502,7 +501,7 @@ class OptimizedCommandOutputTrimmer:
                 'total_saved': 0
             }
 
-    def trim_test_output(self, lines: List[str]) -> List[str]:
+    def trim_test_output(self, lines: list[str]) -> list[str]:
         """Optimized test output compression"""
         config = self.config['custom_rules']['test']
         trimmed = []
@@ -528,7 +527,7 @@ class OptimizedCommandOutputTrimmer:
 
         return trimmed
 
-    def trim_pushl_output(self, lines: List[str]) -> List[str]:
+    def trim_pushl_output(self, lines: list[str]) -> list[str]:
         """Optimized pushl output compression"""
         config = self.config['custom_rules']['pushl']
         trimmed = []
@@ -546,15 +545,13 @@ class OptimizedCommandOutputTrimmer:
 
         return trimmed
 
-    def trim_copilot_output(self, lines: List[str]) -> List[str]:
+    def trim_copilot_output(self, lines: list[str]) -> list[str]:
         """Optimized copilot output compression"""
         trimmed = []
 
         for line in lines:
             # Keep only phase markers and status
-            if 'Phase' in line or '✅' in line or '❌' in line or 'WARNING' in line:
-                trimmed.append(line)
-            elif len(trimmed) < 5:  # Keep minimal context
+            if 'Phase' in line or '✅' in line or '❌' in line or 'WARNING' in line or len(trimmed) < 5:
                 trimmed.append(line)
 
         return trimmed
@@ -617,11 +614,11 @@ class OptimizedCommandOutputTrimmer:
                         # Preserve original type and value if under limit
                         trimmed_list.append(arg)
             return trimmed_list
-        elif isinstance(args, str):
+        if isinstance(args, str):
             if len(args) > Config.ARG_LENGTH_LIMIT:
                 return args[:Config.ARG_LENGTH_LIMIT]
             return args
-        elif isinstance(args, dict):
+        if isinstance(args, dict):
             trimmed_dict = {}
             collision_counter = {}
 
@@ -657,12 +654,11 @@ class OptimizedCommandOutputTrimmer:
 
                 trimmed_dict[final_key] = final_value
             return trimmed_dict
-        else:
-            # For other types (int, float, bool, etc.), preserve type unless string representation is too long
-            arg_str = str(args)
-            if len(arg_str) > Config.ARG_LENGTH_LIMIT:
-                return arg_str[:Config.ARG_LENGTH_LIMIT]
-            return args
+        # For other types (int, float, bool, etc.), preserve type unless string representation is too long
+        arg_str = str(args)
+        if len(arg_str) > Config.ARG_LENGTH_LIMIT:
+            return arg_str[:Config.ARG_LENGTH_LIMIT]
+        return args
 
     def process_command_output(self, output: str) -> str:
         """
@@ -742,9 +738,7 @@ class OptimizedCommandOutputTrimmer:
         # Execute compression logic - preserve TODO states and checklists
         trimmed = []
         for line in lines:
-            if '✅' in line or '🔄' in line or '❌' in line or 'TODO:' in line or '- [' in line:
-                trimmed.append(line)
-            elif len(trimmed) < 10:  # Keep some early context
+            if '✅' in line or '🔄' in line or '❌' in line or 'TODO:' in line or '- [' in line or len(trimmed) < 10:
                 trimmed.append(line)
         return trimmed
 

@@ -5,7 +5,6 @@ Exports Claude Code command system to GitHub repository with automatic PR creati
 """
 
 import os
-import sys
 import time
 import subprocess
 import tempfile
@@ -763,7 +762,7 @@ class ClaudeCommandsExporter:
         # For this specific export, we want to use v1.1.0 for today's changes
         # regardless of what's in the target repository
         version = "1.1.0"
-        print(f"   📋 Using v1.1.0 for command count consistency fixes")
+        print("   📋 Using v1.1.0 for command count consistency fixes")
         return version
 
     def _get_existing_version_from_target(self):
@@ -1435,14 +1434,14 @@ This is a filtered reference export. Commands may need adaptation for specific e
             print(f"📦 Archive: {archive_files[0]}")
         print(f"🌟 Branch: {self.export_branch}")
         print(f"🔗 Pull Request: {pr_url}")
-        print(f"\n📊 Export Summary:")
+        print("\n📊 Export Summary:")
         print(f"   Commands: {self.commands_count}")
         print(f"   Hooks: {self.hooks_count}")
         print(f"   Agents: {self.agents_count}")
         print(f"   Scripts: {self.scripts_count}")
         print(f"   Skills: {self.skills_count}")
-        print(f"   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
-        print(f"\n🎯 The export has been published and is ready for review!")
+        print("   Excluded: analysis/, automation/, claude-bot-commands/, coding_prompts/, prototype/")
+        print("\n🎯 The export has been published and is ready for review!")
 
     def handle_error(self, error):
         """Handle export errors gracefully"""
