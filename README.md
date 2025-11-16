@@ -1,354 +1,583 @@
-# WorldAI MCP Server
+# WorldArchitect.AI
 
-AI-powered tabletop RPG platform integration via Model Context Protocol (MCP).
+**AI-Powered Tabletop RPG Platform - Your Digital D&D 5e Game Master**
 
-## Installation
+## 📋 Table of Contents
 
-### From GitHub Repository
+- [Overview](#overview)
+- [Tech Stack & Competitive Positioning](#tech-stack--competitive-positioning)
+  - [Core Technology Stack](#core-technology-stack)
+  - [Competitive Differentiation](#competitive-differentiation)
+  - [Technical Highlights](#technical-highlights)
+  - [Architecture Philosophy](#architecture-philosophy)
+- [Architecture](#architecture)
+  - [File Placement Guidelines](#file-placement-guidelines)
+  - [Backend (Python/Flask)](#backend-pythonflask)
+  - [Frontend (JavaScript/HTML/CSS)](#frontend-javascripthtmlcss)
+- [Key Components](#key-components)
+- [Directory Structure](#directory-structure)
+- [Testing Infrastructure](#testing-infrastructure)
+- [Key Features](#key-features)
+- [Development Notes](#development-notes)
+- [Dependencies](#dependencies)
+- [Configuration](#configuration)
 
-```bash
-# Install the published package (after this PR merges)
-pip install git+https://github.com/jleechanorg/worldarchitect.ai.git@main
+## Overview
 
-# Install the in-flight branch for testing prior to merge
-pip install git+https://github.com/jleechanorg/worldarchitect.ai.git@worktree_mcp_worldai
+WorldArchitect.AI is an AI-powered tabletop RPG platform that serves as a digital D&D 5e Game Master. The application uses Flask for the backend API and vanilla JavaScript with Bootstrap for the frontend.
 
-# Verify installation
-worldarchitect-mcp --help
+**📋 [Comprehensive Code Review & File Responsibilities →](CODE_REVIEW_SUMMARY.md)**
+
+## Tech Stack & Competitive Positioning
+
+### Core Technology Stack
+
+WorldArchitect.AI leverages a carefully selected stack that balances rapid development with production scalability:
+
+#### Backend Foundation
+- **Python 3.11** with **Flask 2.x** - Lightweight web framework for rapid API development
+- **Google Gemini AI (latest SDK)** - `from google import genai` for state-of-the-art language model integration
+- **Firebase Firestore** - NoSQL document database with real-time synchronization capabilities
+- **Firebase Authentication** - Enterprise-grade user management and security
+
+#### AI & Content Generation
+- **Advanced Prompt Engineering** - Custom `PromptBuilder` class with sophisticated context management
+- **Robust Model Fallback** - Model cycling with automatic failover for 99.9% uptime
+- **Structured JSON Response Parsing** - Type-safe AI output validation using Pydantic schemas
+- **Entity Tracking System** - Maintains narrative consistency across multi-turn conversations
+- **Dual-Pass Generation** - Retry mechanisms for complex content generation scenarios
+
+#### Frontend & User Experience
+- **Vanilla JavaScript** - Zero-framework frontend for maximum performance and minimal dependencies
+- **Bootstrap 5.x** - Responsive design with custom theme system (light/dark/fantasy/cyberpunk)
+- **Real-time State Synchronization** - WebSocket-style updates without framework overhead
+- **Progressive Web App** - Offline-capable design with service worker integration
+
+#### Testing & Quality Assurance
+- **67% Test Coverage** - Comprehensive test suite covering thousands of statements
+- **Multi-Modal Testing** - Browser automation (Playwright headless), HTTP testing, and integration tests
+- **Mock Service Architecture** - Granular mocking for cost-effective development and CI/CD
+- **Automated Code Quality** - Ruff linting, MyPy type checking, and Bandit security scanning
+
+### Competitive Differentiation
+
+Compared to other GenAI tabletop RPG platforms, WorldArchitect.AI makes several distinctive technical choices:
+
+#### **vs. AI Dungeon / NovelAI** (Pure LLM Approaches)
+- **Hybrid Architecture**: Combines rule-based D&D 5e validation with generative content, ensuring mechanical accuracy
+- **State Management**: Explicit game state tracking vs. pure context-based memory
+- **Export Capabilities**: Multi-format document generation (PDF/DOCX/TXT) for offline campaign management
+
+#### **vs. D&D Beyond AI Features** (Enterprise Integration)
+- **Independent Platform**: Not constrained by official content licensing or corporate content policies
+- **Open Development**: Transparent architecture vs. closed proprietary systems
+- **Custom AI Pipeline**: Direct model access vs. mediated enterprise API layers
+
+#### **vs. Character.AI** (Conversational Focus)
+- **Campaign Persistence**: Long-term story continuity with structured state management
+- **Multi-Modal Output**: Rich document generation beyond conversational interfaces
+- **GM-Centric Design**: Purpose-built for game master workflows vs. general chat applications
+
+#### **vs. Dungeon Alchemist** (Procedural Generation)
+- **Narrative Focus**: Story and character development vs. primarily visual/map content
+- **AI-Native Design**: LLM-first architecture vs. traditional procedural algorithms
+- **Integrated Workflow**: Combined story generation, state management, and export in single platform
+
+### Technical Highlights
+
+#### **Standout Engineering Decisions**
+
+1. **Latest Gemini SDK Integration**: Uses `from google import genai` for cutting-edge AI capabilities
+2. **Granular Mock Architecture**: Environment-variable controlled mocking (`USE_MOCK_GEMINI`, `USE_MOCK_FIREBASE`) for development velocity
+3. **Token-Aware Design**: Built-in cost management and token counting throughout the AI pipeline
+4. **File-Based Prompt Management**: Version-controlled AI system instructions in `/prompts/` directory
+5. **Zero-Framework Frontend**: Deliberate choice for performance and maintainability over trendy JS frameworks
+
+#### **Production-Ready Features**
+
+- **Model Cycling**: Automatic fallback between Gemini models for reliability
+- **Content Validation**: Multi-layer validation ensuring narrative consistency and D&D rule compliance
+- **Caching Strategy**: Intelligent file caching with TTL for frequently accessed content
+- **Logging Infrastructure**: Emoji-enhanced logging with structured JSON output for monitoring
+- **Security Hardening**: Bandit security scanning, input sanitization, and Firebase Authentication integration
+
+### Architecture Philosophy
+
+WorldArchitect.AI's technical approach reflects a **pragmatic AI-first design**:
+
+- **Minimalism Over Complexity**: Vanilla JS frontend avoids unnecessary framework overhead
+- **AI Integration Over Simulation**: Direct LLM integration rather than simulated intelligence patterns
+- **Explicit State Over Implicit Context**: Structured game state management for reliable long-term campaigns
+- **Developer Experience**: Comprehensive testing, mocking, and debugging infrastructure for sustainable development
+
+This stack positions WorldArchitect.AI as a technically sophisticated yet maintainable platform that bridges the gap between experimental AI tools and production-ready tabletop RPG solutions.
+
+## Architecture
+
+### 📁 File Placement Guidelines
+
+**🚨 CRITICAL**: Do not create new directories without explicit permission. Follow these guidelines:
+
+#### Testing Files
+- **Browser Tests**: `/testing_ui/` (project root) - Playwright browser automation tests
+- **HTTP Tests**: `/testing_http/` (project root) - HTTP API endpoint tests
+- **MVP Site Browser Tests**: `mvp_site/testing_ui/` - Browser tests specific to MVP site
+- **Integration Tests**: `mvp_site/test_integration/` - Cross-component integration tests
+- **Unit Tests**: `mvp_site/tests/` - Individual component unit tests
+
+#### Development Tools
+- **Scripts**: `/tools/` (project root) - Development and utility scripts
+- **Diagnostic Tools**: `/testing_ui/` - Browser diagnostic and debugging tools
+
+#### Documentation
+- **Project Documentation**: `/` (project root) - README, CLAUDE.md, setup guides
+- **Roadmap & Planning**: `/roadmap/` - Project planning and milestone documentation
+- **Code Documentation**: `mvp_site/` - Architecture and component-specific docs
+
+#### Source Code
+- **Core Application**: `mvp_site/` - All production application code
+- **Frontend Assets**: `mvp_site/frontend_v1/` - CSS, JS, images, themes (formerly static/)
+- **AI Prompts**: `mvp_site/prompts/` - AI system instructions and templates
+- **MCP Protocol**: Clean separation between HTTP API and D&D business logic via MCP (Model Context Protocol)
+  - **main.py**: Pure API gateway translating HTTP requests to MCP tool calls
+  - **world_logic.py**: MCP server containing all D&D 5e game mechanics and business logic
+  - **mcp_client.py**: HTTP client for communicating with MCP server
+  - **Zero breaking changes**: Frontend receives identical JSON response formats
+
+**Rule**: When in doubt about file placement, ask for clarification rather than creating new directories.
+
+### Backend (Python/Flask) - MCP Architecture
+
+#### Core MCP Architecture (NEW)
+- **main.py** - Pure API Gateway (HTTP ↔ MCP translation layer)
+- **world_logic.py** - Complete D&D business logic (campaigns, AI, game mechanics)
+- **mcp_api.py** - MCP protocol wrapper (JSON-RPC 2.0 tool registration)
+- **mcp_client.py** - Enhanced MCP client with direct-call optimization (`skip_http=False`)
+
+#### AI & Game Services
+- **gemini_service.py** (2,209 lines) - AI service integration and response processing
+- **firestore_service.py** (1,101 lines) - Database operations and state management
+- **narrative_response_schema.py** (752 lines) - AI response validation and parsing
+- **entity_validator.py** (636 lines) - Entity state validation and consistency
+- **game_state.py** (488 lines) - Core game state management and validation
+- **gemini_response.py** (487 lines) - AI response processing and transformation
+- **entity_instructions.py** (407 lines) - Entity handling and instruction generation
+- **json_utils.py** (324 lines) - JSON parsing and utility functions
+- **dual_pass_generator.py** (326 lines) - Advanced AI generation with dual-pass system
+- **memory_integration.py** (303 lines) - Memory and context management
+- **entity_preloader.py** (283 lines) - Entity preloading and optimization
+- **robust_json_parser.py** (254 lines) - Robust JSON parsing with error handling
+- **narrative_sync_validator.py** (227 lines) - Narrative synchronization validation
+- **constants.py** (216 lines) - Shared constants and configuration
+- **logging_util.py** (212 lines) - Centralized logging with emoji enhancement
+- **debug_mode_parser.py** (194 lines) - Debug command parsing and execution
+- **debug_hybrid_system.py** (175 lines) - Debug system integration
+- **document_generator.py** (157 lines) - Document export functionality
+- **custom_types.py** (145 lines) - Custom type definitions and utilities
+- **file_cache.py** (142 lines) - File caching system with TTL support
+- **world_loader.py** (121 lines) - World content loading and management
+
+### Frontend (JavaScript/HTML/CSS)
+- **frontend_v1/index.html** - Main HTML template with theme integration
+- **frontend_v1/app.js** - Core frontend application logic
+- **frontend_v1/api.js** - API communication layer
+- **frontend_v1/auth.js** - Authentication handling
+- **frontend_v1/style.css** - Main stylesheet
+- **frontend_v1/themes/** - Complete theme system (base, light, dark, fantasy, cyberpunk)
+
+**Architectural Principles**:
+- **Separation of Concerns**: Logic (JS modules), presentation (organized CSS), structure (HTML)
+- **Progressive Enhancement**: Core functionality works without JavaScript
+- **Modularity**: Small, focused files with clear dependencies and reusable components
+- **Theme System**: Runtime theme switching with CSS custom properties
+- **frontend_v1/js/campaign-wizard.js** (1,190 lines) - Campaign creation wizard system
+- **frontend_v1/js/enhanced-search.js** (396 lines) - Advanced search functionality
+- **frontend_v1/js/component-enhancer.js** (364 lines) - UI component enhancement
+- **frontend_v1/js/visual-validator.js** (297 lines) - Visual validation system
+- **frontend_v1/js/test_planning_block_parsing.js** (322 lines) - Planning block parsing tests
+- **frontend_v1/js/animation-helpers.js** (215 lines) - Animation system helpers
+- **frontend_v1/js/inline-editor.js** (173 lines) - Inline editing functionality
+- **frontend_v1/js/theme-manager.js** (161 lines) - Theme switching and management
+- **frontend_v1/js/interface-manager.js** (132 lines) - Interface state management
+- **frontend_v1/js/settings.js** (130 lines) - Application settings management
+- **frontend_v1/js/loading-messages.js** (90 lines) - Dynamic loading message system
+- **frontend_v1/js/ui-utils.js** (29 lines) - UI utility functions
+
+## Key Components
+
+### 1. Campaign Management
+- **Purpose**: Create, read, update, and delete RPG campaigns
+- **Main Files**: `main.py` (API routes), `firestore_service.py` (database operations)
+- **Public Methods**:
+  - `create_campaign()` - Initialize new campaigns with AI-generated opening
+  - `get_campaigns_for_user()` - List user's campaigns
+  - `get_campaign_by_id()` - Retrieve specific campaign with story history
+  - `update_campaign_title()` - Modify campaign metadata
+
+### 2. Game State Management
+- **Purpose**: Track and synchronize all game data (characters, NPCs, world state)
+- **Main Files**: `game_state.py`, `firestore_service.py`
+- **Public Methods**:
+  - `GameState.from_dict()` / `GameState.to_dict()` - Serialization
+  - `validate_checkpoint_consistency()` - Validate narrative vs. state consistency
+  - `cleanup_defeated_enemies()` - Combat state cleanup
+  - `update_state_with_changes()` - Apply AI-generated state changes
+
+### 3. AI Integration
+- **Purpose**: Generate dynamic story content and manage game logic
+- **Main Files**: `gemini_service.py`, `entity_tracking.py`, `narrative_response_schema.py`
+- **Public Methods**:
+  - `get_initial_story()` - Generate campaign opening story
+  - `continue_story()` - Process user input and generate responses
+  - `PromptBuilder.build_core_system_instructions()` - Construct AI prompts
+  - `_call_gemini_api_with_model_cycling()` - Robust API calls with fallback
+
+### 4. Authentication & Authorization
+- **Purpose**: Secure user access using Firebase Authentication
+- **Main Files**: `main.py` (check_token decorator), `frontend_v1/auth.js`
+- **Public Methods**:
+  - `check_token()` - Decorator for protected routes
+  - Firebase integration for user management
+
+### 5. Document Export
+- **Purpose**: Export campaigns to various formats (PDF, DOCX, TXT)
+- **Main Files**: `document_generator.py`, `main.py` (export route)
+- **Public Methods**:
+  - `export_campaign()` - Generate downloadable campaign documents
+  - Support for PDF, DOCX, and TXT formats
+
+### 6. Advanced AI Generation
+- **Purpose**: Sophisticated AI content generation with dual-pass system
+- **Main Files**: `dual_pass_generator.py`, `gemini_response.py`, `robust_json_parser.py`
+- **Public Methods**:
+  - `DualPassGenerator.generate()` - Advanced multi-pass AI generation
+  - `GeminiResponse.parse()` - Structured response parsing
+  - `RobustJSONParser.parse()` - Error-resilient JSON parsing
+
+### 7. Entity & State Management
+- **Purpose**: Comprehensive entity validation and state synchronization
+- **Main Files**: `entity_validator.py`, `entity_preloader.py`, `narrative_sync_validator.py`
+- **Public Methods**:
+  - `EntityValidator.validate()` - Multi-layer entity validation
+  - `EntityPreloader.preload()` - Optimized entity loading
+  - `NarrativeSyncValidator.validate()` - State-narrative consistency
+
+### 8. Memory & Context Integration
+- **Purpose**: Advanced memory management and context preservation
+- **Main Files**: `memory_integration.py`, `file_cache.py`
+- **Public Methods**:
+  - `MemoryIntegration.store()` - Context storage and retrieval
+  - `FileCache.get()` - TTL-based file caching
+
+### 9. Frontend Module System
+- **Purpose**: Modular JavaScript architecture with theme support
+- **Main Files**: `frontend_v1/js/` modules, theme system
+- **Public Methods**:
+  - `CampaignWizard.create()` - Guided campaign creation
+  - `ThemeManager.switch()` - Dynamic theme switching
+  - `ComponentEnhancer.enhance()` - UI component enhancement
+
+## Directory Structure
+
+```
+mvp_site/
+├── main.py                    # Flask application entry point (1,875 lines)
+├── gemini_service.py          # AI service integration (2,209 lines)
+├── firestore_service.py       # Database operations (1,101 lines)
+├── narrative_response_schema.py # AI response validation (752 lines)
+├── entity_validator.py        # Entity state validation (636 lines)
+├── game_state.py              # Game state management (488 lines)
+├── gemini_response.py         # AI response processing (487 lines)
+├── entity_instructions.py     # Entity handling (407 lines)
+├── dual_pass_generator.py     # Advanced AI generation (326 lines)
+├── json_utils.py              # JSON parsing utilities (324 lines)
+├── memory_integration.py      # Memory and context management (303 lines)
+├── entity_preloader.py        # Entity preloading (283 lines)
+├── robust_json_parser.py      # Robust JSON parsing (254 lines)
+├── narrative_sync_validator.py # Narrative synchronization (227 lines)
+├── constants.py               # Shared constants (216 lines)
+├── logging_util.py            # Logging utilities (212 lines)
+├── debug_mode_parser.py       # Debug command parsing (194 lines)
+├── document_generator.py      # Document export functionality (157 lines)
+├── custom_types.py            # Type definitions (145 lines)
+├── file_cache.py              # File caching system (142 lines)
+├── world_loader.py            # World content management (121 lines)
+├── decorators.py              # Common decorators (79 lines)
+├── entity_tracking.py         # Entity state tracking (68 lines)
+├── frontend_v1/               # Frontend assets
+│   ├── index.html            # Main HTML template
+│   ├── app.js                # Core frontend logic
+│   ├── api.js                # API communication
+│   ├── auth.js               # Authentication handling
+│   ├── style.css             # Main stylesheet
+│   ├── themes/               # Theme support (5 themes)
+│   │   ├── base.css         # Base theme foundation
+│   │   ├── light.css        # Light theme
+│   │   ├── dark.css         # Dark theme
+│   │   ├── fantasy.css      # Fantasy theme
+│   │   └── cyberpunk.css    # Cyberpunk theme
+│   ├── js/                   # Modular JavaScript components
+│   │   ├── campaign-wizard.js    # Campaign creation wizard (1,190 lines)
+│   │   ├── enhanced-search.js    # Advanced search (396 lines)
+│   │   ├── component-enhancer.js # UI enhancement (364 lines)
+│   │   ├── visual-validator.js   # Visual validation (297 lines)
+│   │   ├── animation-helpers.js  # Animation system (215 lines)
+│   │   ├── inline-editor.js      # Inline editing (173 lines)
+│   │   ├── theme-manager.js      # Theme management (161 lines)
+│   │   ├── interface-manager.js  # Interface state (132 lines)
+│   │   ├── settings.js           # Settings management (130 lines)
+│   │   ├── loading-messages.js   # Loading messages (90 lines)
+│   │   └── ui-utils.js          # UI utilities (29 lines)
+│   ├── css/                  # Feature-specific CSS
+│   │   ├── inline-editor.css     # Complete inline editing with theme support
+│   │   └── pagination-styles.css # Story pagination with responsive design
+│   └── styles/               # Organized CSS by purpose
+│       ├── globals.css           # Global variables and resets
+│       ├── components.css        # Base component styles
+│       ├── enhanced-components.css # Advanced component styles
+│       ├── interactive-features.css # Interactive element styles
+│       ├── animations.css        # Animation definitions
+│       ├── planning-blocks.css   # Planning block specific styles
+│       └── bridge.css           # Integration/compatibility styles
+├── schemas/                   # Pydantic schemas and validators
+├── prompts/                   # AI system instructions and templates
+├── tests/                     # Unit tests (166 test files)
+├── test_integration/          # Integration test suite
+├── testing_ui/                # Browser-based UI tests
+├── testing_framework/         # Testing utilities and frameworks
+├── mocks/                     # Mock services for testing
+├── prototype/                 # Prototype and experimental code
+├── world/                     # World content and lore data
+├── docs/                      # Documentation and guides
+├── templates/                 # Additional HTML templates
+└── analysis/                  # Code analysis and metrics
 ```
 
-## 🛠️ Technologies
+## Testing Infrastructure
 
-### **MCP Architecture (Model Context Protocol)**
-- **MCP Server** (world_logic.py) - JSON-RPC 2.0 protocol exposing D&D game mechanics as AI tools
-- **API Gateway** (main.py) - Pure HTTP ↔ MCP translation layer
-- **Unified API Functions** - Consistent interface for both HTTP and MCP access
-- **Performance Options** - Direct function calls or network-based MCP communication
+### Unit Tests
+- **Location**: `tests/` directory
+- **Test Files**: 166 test files covering all core functionality
+- **Coverage**: 67% overall (21,031 statements, 6,975 missing)
+- **Run Command**: `./run_tests.sh`
+
+### Integration Tests
+- **Location**: `test_integration/` directory
+- **Purpose**: End-to-end testing with real APIs
+- **Run Command**: `./run_integration_tests.sh`
+
+### Browser Tests
+- **Location**: `../testing_ui/` directory
+- **Purpose**: Frontend UI testing with Playwright (headless mode)
+- **Run Command**: `./run_ui_tests.sh mock`
+
+## Key Features
+
+### 1. Interactive Story Generation
+- Real-time AI-powered narrative generation
+- User input processing and response generation
+- Planning block enforcement for user choices
+- Debug mode for development and testing
+
+### 2. State Synchronization
+- Automatic state updates from AI responses
+- Consistency validation between narrative and game state
+- Legacy state cleanup and migration
+- Combat state management
+
+### 3. Multi-Modal Interface
+- Character mode for player interactions
+- God mode for GM/debugging commands
+- Export functionality for campaign documents
+- Responsive design with multiple themes
+
+### 4. Robust Error Handling
+- Model fallback for AI service reliability
+- Comprehensive logging with emoji enhancement
+- Graceful degradation for service failures
+- Test bypass mechanisms for development
+
+### 5. Advanced AI Systems
+- Dual-pass AI generation for complex content
+- Sophisticated JSON parsing with error recovery
+- Memory integration for context preservation
+- Entity-aware prompt construction
+- Token management and cost optimization
+
+### 6. Modular Frontend Architecture
+- Campaign creation wizard with guided workflows
+- Dynamic theme switching (5 themes available)
+- Component-based enhancement system
+- Advanced search and filtering capabilities
+- Inline editing with real-time validation
+- Animation system with smooth transitions
+- Visual validation and feedback systems
+
+### 7. Comprehensive Testing Framework
+- 166 unit test files with 67% coverage
+- Browser automation testing with Playwright
+- Integration testing with real API endpoints
+- Mock service architecture for development
+- Performance testing and validation
+- Visual regression testing capabilities
+
+## Development Notes
+
+### Areas Needing Cleanup
+
+1. **main.py** (~900 lines) - **✅ SIGNIFICANTLY IMPROVED** with MCP refactor:
+   - **Pure API Gateway**: Now only translates HTTP requests to MCP calls
+   - **75% code reduction**: Business logic moved to world_logic.py MCP server
+   - **Clean separation**: Zero business logic in API layer
+   - **Maintainable routes**: Each route is a simple HTTP-to-MCP translation
+
+2. **gemini_service.py** (2,209 lines) - Largest file with complex AI logic:
+   - PromptBuilder class has evolved but still handles many concerns
+   - Advanced features like dual-pass generation add complexity
+   - Model cycling and error handling are sophisticated but dense
+
+3. **Entity system complexity** - Multiple validation layers:
+   - `entity_validator.py`, `entity_preloader.py`, `narrative_sync_validator.py`
+   - Good separation of concerns but complex interactions
+   - Could benefit from unified entity management interface
+
+4. **Frontend organization** - Significantly improved modularization:
+   - Successfully separated into focused modules in `frontend_v1/js/`
+   - Campaign wizard is comprehensive but very large (1,190 lines)
+   - Theme system is well-organized with 5 distinct themes
+
+### MCP Architecture Benefits (NEW)
+
+The recent **Model Context Protocol (MCP)** refactor has dramatically improved the codebase:
+
+1. **Separation of Concerns**:
+   - **API Layer** (`main.py`): Pure HTTP-to-MCP translation, no business logic
+   - **Business Logic** (`world_logic.py`): Complete D&D game mechanics and AI integration
+   - **Protocol Layer** (`mcp_client.py`): JSON-RPC 2.0 communication with context manager support
+
+2. **Improved Testability**:
+   - Business logic can be tested independently of HTTP layer
+   - MCP tools can be called directly for unit testing
+   - Clear interfaces between components
+
+3. **Enhanced Maintainability**:
+   - 75% reduction in main.py complexity
+   - Single responsibility principle enforced
+   - Easy to add new features without touching API gateway
+
+4. **Future Scalability**:
+   - MCP server can be deployed independently
+   - Multiple API gateways can connect to same business logic
+   - Protocol-based architecture enables microservices migration
+
+### Technical Debt
+
+1. **Complex file interdependencies** - Large files create tight coupling
+2. **Entity validation layers** - Multiple overlapping validation systems
+3. **Testing coverage gaps** - 33% of statements still lack coverage
+4. **AI service complexity** - gemini_service.py has grown very large
+5. **Memory management** - Multiple memory/context systems need unification
+6. **Debug system integration** - Debug tools spread across multiple files
+
+## Next Steps for Improvement
+
+1. **Modularize large files** - Split gemini_service.py and main.py into focused modules
+2. **Achieve 80%+ test coverage** - Focus on critical AI and state management paths
+3. **Unify entity management** - Create single interface for entity operations
+4. **Optimize AI performance** - Improve dual-pass generation efficiency
+5. **Enhance memory systems** - Consolidate memory and context management
+6. **API documentation** - Add OpenAPI/Swagger documentation for all routes
+7. **Performance monitoring** - Add metrics and monitoring for AI operations
+8. **Cache optimization** - Expand caching strategy for frequently accessed data
+
+## Dependencies
 
 ### Backend
-- **Python 3.11** with Flask framework
-- **Google Gemini AI** (2.5-flash model)
-- **Firebase** (Authentication & Firestore)
-- **Docker** containerization
-- **Google Cloud Run** deployment
+- **Flask 3.0.0** - Modern web framework with latest features
+- **Gunicorn 21.2.0** - WSGI HTTP server for production deployment
+- **Firebase Admin SDK 6.5.0** - Authentication and database integration
+- **Google Generative AI (latest)** - State-of-the-art AI service integration
+- **Google Cloud Firestore 2.16.0** - NoSQL document database
+- **Pydantic** - Data validation and settings management
+- **python-docx** - Microsoft Word document generation
+- **fpdf2** - PDF generation and manipulation
+- **PyJWT 2.8.0** - JSON Web Token implementation
+- **Flask-Cors 4.0.0** - Cross-Origin Resource Sharing support
+
+### Development & Testing
+- **Playwright 1.40.0+** - Browser automation for testing
+- **Selenium** - Web browser automation (fallback)
+- **BeautifulSoup4 4.12.0+** - HTML parsing and manipulation
+- **Requests 2.31.0+** - HTTP library for API testing
+- **psutil 5.9.0+** - System and process utilities
+
+### Code Quality & Analysis
+- **Ruff 0.6.0+** - Fast Python linter and formatter
+- **MyPy 1.8.0+** - Static type checker
+- **Bandit 1.7.0+** - Security linter for Python
+- **isort 5.13.0+** - Import statement organizer
+- **Type stubs** - Flask, requests type definitions
 
 ### Frontend
-- **Vanilla JavaScript** (ES6+)
-- **Bootstrap 5.3.2** responsive UI
-- **Multiple theme support** (Light, Dark, Fantasy, Cyberpunk)
-- **Reorganized Assets** - Clean `frontend_v1/` structure with backward compatibility
+- **Bootstrap 5.3.2** - Modern CSS framework
+- **Bootstrap Icons 1.11.3** - Comprehensive icon library
+- **Vanilla JavaScript ES6+** - Modern JavaScript without framework overhead
+- **Custom CSS Grid & Flexbox** - Advanced layout systems
+- **CSS Custom Properties** - Dynamic theming support
+- **Web APIs** - Local Storage, Fetch API, Web Components
 
-### AI & Game Logic
-- **MCP Tool Integration** - 8 specialized tools: `create_campaign`, `get_campaign_state`, `process_action`, `update_campaign`, `export_campaign`, `get_campaigns_list`, `get_user_settings`, `update_user_settings`
-- **Pydantic** structured generation for improved consistency
-- **MBTI personality system** for deep character interactions
-- **Entity tracking** for narrative consistency
-- **Dual-pass generation** for accuracy
+## Configuration
 
-## 🚀 Quick Start
+### Environment Variables
+- `TESTING` - Enable test mode
+- `GEMINI_API_KEY` - AI service API key
+- `PORT` - Server port (default: 8080)
+- `FIREBASE_CONFIG` - Firebase configuration
 
-### Prerequisites
-- Python 3.11+
-- Firebase project with Firestore
-- Google Cloud project with Gemini API access
+### Testing Configuration
+- Test bypass headers for authentication
+- Mock service implementations
+- Separate test database configurations
 
-### Installation
+## MCP Server Integration
 
-```bash
-# Clone the repository
-git clone https://github.com/jleechanorg/worldarchitect.ai.git
-cd worldarchitect.ai
+The WorldArchitect.AI MCP server (`mcp_api.py`) provides AI assistant integration through the Model Context Protocol (MCP).
 
-# Set up virtual environment (see VENV_SETUP.md for detailed instructions)
-python3 -m venv venv
-source venv/bin/activate
-pip install --upgrade pip
-pip install -r mvp_site/requirements.txt
+### Server Modes
 
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your API keys
+#### Dual Transport Mode (Recommended)
+- **Command**: `python3 mvp_site/mcp_api.py --dual`
+- **Purpose**: Supports both HTTP and stdio simultaneously
+- **Protocols**: HTTP JSON-RPC 2.0 + stdio JSON-RPC 2.0 (MCP standard)
+- **Use case**: Best of both worlds - manual testing via HTTP + AI integration via stdio
+- **Health Check**: `curl http://localhost:8000/health`
 
-# Run locally using vpython script (includes MCP server auto-start)
-./vpython mvp_site/main.py serve
+#### HTTP-Only Mode (Legacy)
+- **Command**: `python3 mvp_site/mcp_api.py --host localhost --port 8000`
+- **Purpose**: HTTP endpoint only for local development
+- **Protocol**: HTTP JSON-RPC 2.0
+- **Use case**: When stdio transport is not needed
 
-# Alternative: Run MCP server separately for development
-# Terminal 1: Start MCP server (package entry point)
-python -m mvp_site.mcp_api --http-only --port 8000
+#### Stdio-Only Mode (Legacy)
+- **Command**: `python3 mvp_site/mcp_api.py --stdio`
+- **Purpose**: AI assistant tool integration only
+- **Protocol**: stdio JSON-RPC 2.0 (MCP standard)
+- **Use case**: Pure Claude Code integration without HTTP
 
-# Terminal 2: Start API gateway
-MCP_SERVER_URL=http://localhost:8000 ./vpython mvp_site/main.py serve
-```
+### MCP Tools Available
+- `create_campaign` - Create new D&D campaigns
+- `get_campaign_state` - Retrieve campaign data
+- `process_action` - Process player actions and generate responses
+- `update_campaign` - Modify campaign metadata
+- `export_campaign` - Generate campaign documents (PDF/DOCX/TXT)
+- `get_campaigns_list` - List user campaigns
+- `get_user_settings` / `update_user_settings` - User preference management
 
-## 🤖 Claude Code Plugin Distribution
-
-WorldArchitect.AI's `.claude/` automation suite is now packaged as an official Claude Code plugin so teams can install the same slash commands, subagents, and hooks with a single `/plugin` workflow. The repository doubles as a marketplace host via `.claude-plugin/marketplace.json`, letting you develop locally or share the plugin from any git URL.
-
-### Install locally during development
-
-1. Trust the repository folder in Claude Code.
-2. Add the local marketplace from the project root:
-   ```
-   /plugin marketplace add ./
-   ```
-3. Install the plugin bundle:
-   ```
-   /plugin install worldarchitect-ai-suite@worldarchitect-suite
-   ```
-4. Restart Claude Code so the commands, agents, and hooks load.
-
-### What the plugin enables
-
-- Reuses all existing `.claude/commands/` slash commands and `.claude/agents/` subagents in one installable bundle.
-- Registers the governance hooks via `hooks.plugin.json`, which automatically locate the correct scripts using `${CLAUDE_PLUGIN_ROOT}` when the plugin is enabled.
-- Ships marketplace metadata so your team can host this repository or mirror it for distribution without additional packaging steps.
-
-See `.claude-plugin/README` and `.claude/hooks/hooks.plugin.json` for component details, or run `claude --debug` to inspect plugin loading if you need to troubleshoot.
-
-## 🔐 Credentials & Configuration
-
-WorldArchitect.AI requires several credentials and configuration files. Here's exactly where each one should be placed:
-
-### 🔥 Firebase Credentials
-
-**Firebase is used for both backend database operations and frontend user authentication.**
-
-#### Backend (Python/Flask) - Service Account Key
-```bash
-# Location (required):
-<PROJECT_ROOT>/serviceAccountKey.json
-
-# Purpose: Server-side Firebase Admin SDK operations
-# Used by: Backend Python code, integration tests, analytics scripts
-# Detection: Automatic via firebase_admin.initialize_app()
-```
-
-#### Frontend (React V2) - Client Configuration
-```bash
-# Location (required):
-<PROJECT_ROOT>/mvp_site/frontend_v2/.env
-
-# Setup Instructions:
-1. Copy the template: cp mvp_site/frontend_v2/.env.example mvp_site/frontend_v2/.env
-2. Edit .env with your actual Firebase project credentials from Firebase Console
-3. The .env file is gitignored and will not be committed to version control
-
-# Required Variables (get from Firebase Console > Project Settings):
-VITE_FIREBASE_API_KEY=your-actual-firebase-api-key
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-# ... other Firebase config values
-```
-
-### 🤖 Gemini AI Credentials
-
-**Gemini API powers the AI Game Master functionality.**
-
-#### Option 1: Environment Variable (Recommended)
-```bash
-export GEMINI_API_KEY=your-gemini-api-key-here
-```
-
-#### Option 2: File-based (Legacy Support)
-```bash
-# Any of these locations work:
-~/.gemini_api_key.txt
-<PROJECT_ROOT>/gemini_api_key.txt
-<PROJECT_ROOT>/local_api_key.txt
-```
-
-### 🌍 Environment Files Summary
-
-| Component | File Location | Purpose |
-|-----------|---------------|---------|
-| **Backend** | `serviceAccountKey.json` (project root) | Firebase Admin SDK |
-| **Frontend V2** | `mvp_site/frontend_v2/.env` | Client-side Firebase config |
-| **Testing** | `testing_http/testing_full/.env` | HTTP testing configuration |
-| **Gemini** | Environment variable or `~/*.txt` file | AI API access |
-
-### 🛡️ Security Notes
-
-- ✅ **All credential files are gitignored** - Safe to place in specified locations
-- ✅ **No hardcoded credentials** - Everything uses environment variables or secure files
-- ✅ **Separate privileges** - Backend has admin access, frontend has user-level access
-- ⚠️ **Never commit** `.env` files or API keys to version control
-
-### 🔧 Troubleshooting Credential Issues
-
-#### Firebase Authentication Errors
-
-**"Token used too early" / Clock Skew Error**
-```
-Error: Authentication failed: Token used too early, 1754334195 < 1754334197
-```
-- **Cause**: System clock is slightly ahead of Firebase servers (2+ seconds)
-- **Fix**: Automatic retry with progressive delays (1.5s, 3s) - should resolve automatically
-- **Manual Fix**: Sync system clock with `sudo ntpdate -s time.nist.gov` (Linux/Mac)
-
-**"Missing Firebase environment variables"**
-```
-Error: Missing required Firebase environment variables: VITE_FIREBASE_API_KEY
-```
-- **Cause**: `.env` file missing or incorrect location
-- **Fix**: Ensure `.env` file exists at `mvp_site/frontend_v2/.env` with all VITE_FIREBASE_* variables
-
-**"Could not find Firebase key"**
-```
-Error: Could not find Firebase key at /path/to/serviceAccountKey.json
-```
-- **Cause**: Service account key not in project root
-- **Fix**: Copy `serviceAccountKey.json` to `<PROJECT_ROOT>/serviceAccountKey.json`
-
-#### Gemini API Errors
-
-**"GEMINI_API_KEY environment variable not found"**
-- **Cause**: API key not set in environment or file
-- **Fix**: Set environment variable or create file at `~/.gemini_api_key.txt`
-
-#### Quick Setup Verification
-```bash
-# Check if all credentials are in place:
-ls -la <PROJECT_ROOT>/serviceAccountKey.json
-ls -la <PROJECT_ROOT>/mvp_site/frontend_v2/.env
-echo $GEMINI_API_KEY
-```
-
-### Docker Deployment
-
-```bash
-# Build the container
-docker build -t worldarchitect-ai .
-
-# Run with environment variables
-docker run -p 8080:8080 \
-  -e GEMINI_API_KEY=your-key \
-  -e FIREBASE_PROJECT_ID=your-project \
-  worldarchitect-ai
-```
-
-## 📚 Documentation
-
-For a comprehensive understanding of the platform, including detailed architecture, game mechanics, and development guidelines, see our [Product Specification](product_spec.md).
-
-### **🏗️ MCP Architecture Transformation**
-
-WorldArchitect.AI has undergone a complete architectural transformation to implement the Model Context Protocol (MCP), representing the largest change in the project's history:
-
-- **Before**: Monolithic 1885-line main.py handling everything from HTTP routing to D&D game mechanics
-- **After**: Clean separation with 1,373-line MCP server (`world_logic.py`) and 1,170-line API gateway (`main.py`)
-- **Benefits**: 75% code reduction in request handling, improved testability, AI tool integration ready, microservices foundation
-- **Compatibility**: 100% backward compatible - all existing APIs work identically
-
-The MCP server exposes the same 8 specialized tools listed above, enabling future AI assistant integrations while maintaining the same user experience.
-
-## 🎮 Features
-
-- **Campaign Management**: Create and manage multiple campaigns
-- **AI Game Master**: Three specialized personas for different play styles
-- **Full D&D 5e Support**: Complete rule implementation
-- **Character & God Modes**: Standard play or administrative control
-- **State Persistence**: Never lose your progress
-- **Export Functionality**: Save your adventures in multiple formats
-- **Debug Mode**: Full transparency into AI decisions
-
-## 🧪 Testing
-
-### **Core Testing**
-```bash
-# Run all tests (includes MCP integration tests)
-./run_tests.sh
-
-# Run with coverage
-./run_tests.sh --coverage
-
-# Run integration tests
-./run_tests.sh --integration
-
-# Run specific test with vpython
-TESTING=true ./vpython mvp_site/test_file.py
-```
-
-### **MCP Architecture Testing**
+### Testing MCP Server
 ```bash
 # Run MCP-specific tests
-./testing_mcp/run_mcp_tests.sh
+./run_tests.sh --mcp
 
-# Test MCP server integration
-./vpython testing_mcp/integration/test_end_to_end.py
-
-# Performance benchmarks (MCP vs direct calls)
-./vpython testing_mcp/performance/benchmark_mcp_vs_direct.py
-
-# Docker-based deployment testing
-cd testing_mcp && docker-compose up --build
+# Manual health check
+curl http://localhost:8000/health
 ```
-
-### **Browser & API Testing**
-```bash
-# Browser tests (using real browser automation)
-./run_ui_tests.sh mock
-
-# HTTP API tests
-./run_http_tests.sh mock
-
-# Full end-to-end tests with real APIs (costs money)
-./run_ui_tests.sh real
-```
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [contributing guidelines](CONTRIBUTING.md) and refer to the [product specification](product_spec.md) for architectural details.
-
-### 🤖 Claude Code Integration
-
-This repository includes Claude Code GitHub Action for AI-assisted development. You can interact with Claude directly in pull requests by mentioning `@claude`. See [Claude Code Setup Guide](.github/CLAUDE_CODE_SETUP.md) for configuration instructions.
-
-## 🔬 Command Composition System Validation
-
-### Overview
-We've validated a **True Universal Command Composition System** that enables natural language control of AI behavior through semantic composition. This system allows commands like `/think /analyze /arch` to reliably modify how Claude approaches problems.
-
-### Key Findings from A/B Testing
-
-**✅ Proven Capabilities:**
-- **Behavioral Modification**: Reliably changes thinking patterns across 15+ headless Claude instances
-- **Tool Integration**: Commands consistently trigger appropriate MCP tools (99% vs 20% for natural language)
-- **Emergent Structure**: Complex 8-step analytical frameworks emerge naturally from command combinations
-- **Cross-Context Consistency**: Patterns hold across debugging, strategic analysis, and meta-cognitive tasks
-
-**📊 Test Results:**
-- **Test Set A** (Debugging): Command composition → systematic 6-8 thought analysis; Natural language → direct problem-solving
-- **Test Set B** (Strategic Analysis): Command composition → comprehensive risk-reward frameworks; Natural language → focused recommendations
-- **Sample Evidence**: `tmp/ab_test_results_analysis.md` contains full behavioral pattern documentation
-
-**🎯 Honest Positioning:**
-- **Accurate Claim**: "Behavioral modification technology that reliably changes how Claude approaches problems"
-- **What It Provides**: Consistent systematic analysis, tool integration, behavioral predictability
-- **What Needs Validation**: Outcome quality improvements, user preference, cost-benefit analysis
-
-### Architecture & Implementation
-- **Meta-prompt Approach**: Leverages Claude's natural language processing vs rigid parsing
-- **Universal Composition**: Any command combination works through semantic understanding
-- **Tool Ecosystem Integration**: Reliable bridge between user intent and MCP capabilities
-
-### Next Steps
-1. **Outcome Validation**: Measure solution effectiveness, not just process sophistication
-2. **User Studies**: Blind evaluation of output quality and user preferences
-3. **Mechanism Research**: Test alternative explanations vs architectural uniqueness
-4. **Real-world Application**: Identify specific use cases where behavioral consistency adds value
-
-*See `roadmap/scratchpad_dev1752948734.md` for complete validation methodology and balanced critical assessment.*
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- Dungeons & Dragons 5th Edition by Wizards of the Coast
-- Google Gemini AI for powering our Game Master
-- The tabletop RPG community for inspiration
-
----
-
-**Ready to embark on your AI-powered adventure?** Visit [worldarchitect.ai](https://worldarchitect.ai) to start playing!
