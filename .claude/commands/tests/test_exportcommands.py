@@ -4,6 +4,7 @@ Matrix-style tests for /exportcommands functionality.
 Tests the complete export workflow with comprehensive coverage.
 """
 
+import json
 import os
 import sys
 import tempfile

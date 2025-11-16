@@ -2230,7 +2230,7 @@ if should_install_server "beads"; then
             else
                 echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
                 echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
-                BD_PATH="$HOME/go/bin/bd"  # Set expected path for future use
+                BD_PATH=""  # Let beads-mcp use its default fallback
             fi
 
             # Remove existing beads server to reconfigure
