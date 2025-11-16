@@ -2221,16 +2221,18 @@ if should_install_server "beads"; then
 
             # Check if bd (beads CLI) is available
             BD_PATH=""
+            BD_FOUND=false
             if command -v bd >/dev/null 2>&1; then
                 BD_PATH=$(command -v bd)
+                BD_FOUND=true
                 echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
             elif [ -x "$HOME/go/bin/bd" ]; then
                 BD_PATH="$HOME/go/bin/bd"
+                BD_FOUND=true
                 echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
             else
-                echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
+                echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will use default fallback${NC}"
                 echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
-                BD_PATH="$HOME/go/bin/bd"  # Set expected path for future use
             fi
 
             # Remove existing beads server to reconfigure
@@ -2242,7 +2244,10 @@ if should_install_server "beads"; then
 
             beads_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
             beads_env_flags+=(--env "BEADS_USE_DAEMON=1")
-            beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
+            # Only set BEADS_PATH if bd CLI was found (don't pass empty string)
+            if [ "$BD_FOUND" = true ]; then
+                beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
+            fi
             capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "beads" "${beads_env_flags[@]}" -- "beads-mcp"
 
             if [ $add_exit_code -eq 0 ]; then
