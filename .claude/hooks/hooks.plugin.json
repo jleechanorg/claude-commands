@@ -8,12 +8,12 @@
           {
             "type": "command",
             "description": "Optimize tool selection before each tool invocation.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/pre_command_optimize.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/pre_command_optimize.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Monitor context usage and emit proactive guidance.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/context_monitor.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/context_monitor.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
           }
         ]
       },
@@ -23,12 +23,12 @@
           {
             "type": "command",
             "description": "Block new file creation when existing integration paths exist.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/pre_creation_blocker.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/pre_creation_blocker.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Prevent root-level file pollution before writes execute.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/check_root_files.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/check_root_files.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           }
         ]
       }
@@ -50,12 +50,12 @@
           {
             "type": "command",
             "description": "Aggressive fake code detection across commands.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/detect_speculation_and_fake_code.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/detect_speculation_and_fake_code.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Trim oversized command outputs to conserve context.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/command_output_trimmer.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/command_output_trimmer.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
           }
         ]
       },
@@ -65,22 +65,22 @@
           {
             "type": "command",
             "description": "Auto-correct file placement violations after writes.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/auto_fix_placement.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/auto_fix_placement.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Validate new files against CLAUDE.md protocols post-write.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/post_file_creation_validator.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/post_file_creation_validator.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Run post-write fake code audits via claude -p workflows.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/smart_fake_code_detection.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/smart_fake_code_detection.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\"; else exec bash \"$SCRIPT\"; fi; fi; done; exit 0'"
           },
           {
             "type": "command",
             "description": "Kick off asynchronous Python linting after file writes.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\"; do SCRIPT=\"$BASE/.claude/hooks/python_async_lint.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/python_async_lint.py\"; if [ -f \"$SCRIPT\" ]; then exec python3 \"$SCRIPT\"; fi; done; exit 0'"
           }
         ]
       }
@@ -91,7 +91,7 @@
           {
             "type": "command",
             "description": "Compose slash commands to support chained invocations.",
-            "command": "bash -c 'set -- \"$@\"; PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT/.claude/hooks\" \"$PLUGIN/.claude/hooks\"; do SCRIPT=\"$BASE/compose-commands.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" \"$@\"; else exec bash \"$SCRIPT\" \"$@\"; fi; fi; done; printf %s\\n \"$*\"; exit 0' --"
+            "command": "bash -c 'set -- \"$@\"; PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT/.claude/hooks\" \"$PLUGIN/.claude/hooks\" \"$HOME/.claude/hooks\"; do SCRIPT=\"$BASE/compose-commands.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" \"$@\"; else exec bash \"$SCRIPT\" \"$@\"; fi; fi; done; printf %s\\n \"$*\"; exit 0' --"
           }
         ]
       }
@@ -101,8 +101,13 @@
         "hooks": [
           {
             "type": "command",
+            "description": "Display git status header with branch, remote, and PR info.",
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/hooks/git-header.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" --status-only; else exec bash \"$SCRIPT\" --status-only; fi; fi; done; exit 0'"
+          },
+          {
+            "type": "command",
             "description": "Notify Slack when Claude pauses for next instruction.",
-            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT/scripts\" \"$PLUGIN/scripts\"; do SCRIPT=\"$BASE/slack_notify.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" \"\u2705 Claude Code: Work completed - awaiting next instruction\"; else exec bash \"$SCRIPT\" \"\u2705 Claude Code: Work completed - awaiting next instruction\"; fi; fi; done; exit 0'"
+            "command": "bash -c 'PROJECT=${CLAUDE_PROJECT_DIR:-$(pwd)}; PLUGIN=${CLAUDE_PLUGIN_ROOT:-$PROJECT}; for BASE in \"$PROJECT\" \"$PLUGIN\" \"$HOME\"; do SCRIPT=\"$BASE/.claude/scripts/slack_notify.sh\"; if [ -f \"$SCRIPT\" ]; then if [ -x \"$SCRIPT\" ]; then exec \"$SCRIPT\" \"\u2705 Claude Code: Work completed - awaiting next instruction\"; else exec bash \"$SCRIPT\" \"\u2705 Claude Code: Work completed - awaiting next instruction\"; fi; fi; done; exit 0'"
           }
         ]
       }
