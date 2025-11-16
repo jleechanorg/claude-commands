@@ -4,15 +4,15 @@ Test suite for the enhanced command_output_trimmer.py
 Tests the new argument sanitization functionality.
 """
 
-import sys
 import os
+import sys
 import unittest
-from unittest.mock import patch, mock_open
 
 # Add the hooks directory (parent of tests) to the path so we can import the trimmer
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from command_output_trimmer import OptimizedCommandOutputTrimmer, Config
+from command_output_trimmer import Config, OptimizedCommandOutputTrimmer
+
 
 class TestArgumentSanitization(unittest.TestCase):
     """Test the new argument sanitization functionality."""
@@ -207,28 +207,27 @@ def run_comprehensive_tests():
 
     # Summary
     print("\n" + "=" * 60)
-    print(f"📊 TEST SUMMARY:")
+    print("📊 TEST SUMMARY:")
     print(f"   Tests Run: {result.testsRun}")
     print(f"   Failures: {len(result.failures)}")
     print(f"   Errors: {len(result.errors)}")
     print(f"   Success Rate: {((result.testsRun - len(result.failures) - len(result.errors)) / result.testsRun * 100):.1f}%")
 
     if result.failures:
-        print(f"\n❌ FAILURES:")
+        print("\n❌ FAILURES:")
         for test, traceback in result.failures:
             print(f"   {test}: {traceback}")
 
     if result.errors:
-        print(f"\n🚨 ERRORS:")
+        print("\n🚨 ERRORS:")
         for test, traceback in result.errors:
             print(f"   {test}: {traceback}")
 
     if not result.failures and not result.errors:
-        print(f"\n✅ ALL TESTS PASSED!")
+        print("\n✅ ALL TESTS PASSED!")
         return True
-    else:
-        print(f"\n❌ Some tests failed. See details above.")
-        return False
+    print("\n❌ Some tests failed. See details above.")
+    return False
 
 if __name__ == "__main__":
     success = run_comprehensive_tests()

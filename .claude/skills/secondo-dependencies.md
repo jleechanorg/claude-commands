@@ -122,7 +122,7 @@ export FIREBASE_PROJECT_ID="your-project"
 node scripts/auth-cli.mjs login
 
 # 5. Test secondo command
-./scripts/secondo-cli.sh "test question"
+~/.claude/scripts/secondo-cli.sh "test question"
 ```
 
 ## Troubleshooting

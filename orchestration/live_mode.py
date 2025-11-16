@@ -136,7 +136,7 @@ class LiveMode:
         if self._session_exists(session_name):
             print(f"📌 Session '{session_name}' already exists.")
             if attach:
-                print(f"🔗 Attaching to existing session...")
+                print("🔗 Attaching to existing session...")
                 self.attach_to_session(session_name)
             else:
                 print(f"   Use 'ai_orch attach {session_name}' to attach.")
@@ -216,7 +216,7 @@ class LiveMode:
             return session_name
 
         except subprocess.TimeoutExpired:
-            print(f"❌ Error: tmux session creation timed out after 30 seconds.")
+            print("❌ Error: tmux session creation timed out after 30 seconds.")
             print("   This may indicate tmux is unresponsive. Please check tmux status.")
             sys.exit(1)
         except subprocess.CalledProcessError as e:
@@ -233,7 +233,7 @@ class LiveMode:
 
         if not self._session_exists(session_name):
             print(f"❌ Error: Session '{session_name}' does not exist.")
-            print(f"\n📋 Available sessions:")
+            print("\n📋 Available sessions:")
             sessions = self.list_sessions()
             if sessions:
                 for s in sessions:
@@ -275,7 +275,7 @@ class LiveMode:
             )
             print(f"✅ Session '{session_name}' killed.")
         except subprocess.TimeoutExpired:
-            print(f"❌ Error: Killing session timed out after 10 seconds.")
+            print("❌ Error: Killing session timed out after 10 seconds.")
             print("   The session may still be running. Please check tmux status.")
             sys.exit(1)
         except subprocess.CalledProcessError as e:

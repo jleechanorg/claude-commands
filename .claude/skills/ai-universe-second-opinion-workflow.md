@@ -112,7 +112,7 @@ The script:
 4. Parses the embedded JSON and prints model count, token usage, cost, and the primary + synthesis responses.
 5. Writes raw artifacts to `/tmp`; set `KEEP_TEMP_FILES=1` when running the script to keep them after completion.
 
-For advanced prompting templates and interactive options, see the existing `scripts/secondo-cli.sh` utility.
+For advanced prompting templates and interactive options, see the existing `~/.claude/scripts/secondo-cli.sh` utility.
 
 ## Troubleshooting
 - **502 Bad Gateway / cold start** → Retry after 30–60 seconds. Send a lightweight `"What is 2+2?"` request first to warm the backend.

@@ -1824,78 +1824,6 @@ install_ios_simulator_mcp() {
     fi
 }
 
-# Function to install Beads MCP server
-install_beads_mcp() {
-    echo -e "${BLUE}  📋 Installing Beads MCP server for git-backed issue tracking...${NC}"
-
-    update_stats "TOTAL" "beads" ""
-
-    # Check if server already exists
-    if server_already_exists "beads"; then
-        echo -e "${GREEN}  ✅ Server beads already exists, skipping installation${NC}"
-        log_with_timestamp "Server beads already exists, skipping"
-        update_stats "SUCCESS" "beads" "ALREADY_EXISTS"
-        return 0
-    fi
-
-    # Check if beads-mcp command is available
-    if ! command -v beads-mcp >/dev/null 2>&1; then
-        echo -e "${YELLOW}  ⚠️ beads-mcp command not found in PATH${NC}"
-        echo -e "${YELLOW}     Install beads-mcp: pip3 install beads-mcp${NC}"
-        echo -e "${YELLOW}     Install bd CLI: https://github.com/steveyegge/beads${NC}"
-        log_with_timestamp "WARN: beads-mcp not found in PATH"
-        update_stats "FAILURE" "beads" "DEPENDENCY_MISSING"
-        return 0
-    fi
-
-    echo -e "${GREEN}  ✅ Found beads-mcp command in PATH${NC}"
-    log_with_timestamp "Found beads-mcp command"
-
-    # Check if bd (beads CLI) is available
-    local BD_PATH=""
-    if command -v bd >/dev/null 2>&1; then
-        BD_PATH=$(command -v bd)
-        echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
-    elif [ -x "$HOME/go/bin/bd" ]; then
-        BD_PATH="$HOME/go/bin/bd"
-        echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
-    else
-        echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
-        echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
-        BD_PATH="$HOME/go/bin/bd"  # Set expected path for future use
-    fi
-
-    # Remove existing beads server to reconfigure
-    ${MCP_CLI_BIN} mcp remove "beads" >/dev/null 2>&1 || true
-
-    # Add Beads MCP server
-    echo -e "${BLUE}  🔗 Adding Beads MCP server...${NC}"
-    log_with_timestamp "Attempting to add Beads MCP server"
-
-    local add_output=""
-    local add_exit_code=0
-    local beads_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
-    beads_env_flags+=(--env "BEADS_USE_DAEMON=1")
-    beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
-
-    capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "beads" "${beads_env_flags[@]}" -- "beads-mcp"
-
-    if [ $add_exit_code -eq 0 ]; then
-        echo -e "${GREEN}  ✅ Successfully configured Beads MCP server${NC}"
-        echo -e "${BLUE}  📋 Server info:${NC}"
-        echo -e "     • Command: beads-mcp"
-        echo -e "     • BD CLI path: $BD_PATH"
-        echo -e "     • Features: Git-backed issue tracking, dependency management, ready work detection"
-        echo -e "     • Tools: create, update, close, dep, ready, list, show, stats"
-        log_with_timestamp "Successfully added Beads MCP server"
-        update_stats "SUCCESS" "beads" "SUCCESS"
-    else
-        echo -e "${RED}  ❌ Failed to add Beads MCP server${NC}"
-        log_error_details "${MCP_CLI_BIN} mcp add beads" "beads" "$add_output"
-        update_stats "FAILURE" "beads" "ADD_FAILED"
-    fi
-}
-
 # Function to install GitHub MCP server with environment guard
 install_github_mcp() {
     if [[ "$GITHUB_MCP_ENABLED" != "true" ]]; then
@@ -2275,7 +2203,73 @@ fi
 # Setup Beads MCP Server
 if should_install_server "beads"; then
     display_step "Setting up Beads MCP Server..."
-    install_beads_mcp
+    TOTAL_SERVERS=$((TOTAL_SERVERS + 1))
+    echo -e "${BLUE}  📋 Configuring Beads MCP server for git-backed issue tracking...${NC}"
+    log_with_timestamp "Setting up MCP server: beads (beads-mcp Python package)"
+
+    # Check if server already exists
+    if server_already_exists "beads"; then
+        echo -e "${GREEN}  ✅ Server beads already exists, skipping installation${NC}"
+        log_with_timestamp "Server beads already exists, skipping"
+        INSTALL_RESULTS["beads"]="ALREADY_EXISTS"
+        SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+    else
+        # Check if beads-mcp command is available
+        if command -v beads-mcp >/dev/null 2>&1; then
+            echo -e "${GREEN}  ✅ Found beads-mcp command in PATH${NC}"
+            log_with_timestamp "Found beads-mcp command"
+
+            # Check if bd (beads CLI) is available
+            BD_PATH=""
+            if command -v bd >/dev/null 2>&1; then
+                BD_PATH=$(command -v bd)
+                echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
+            elif [ -x "$HOME/go/bin/bd" ]; then
+                BD_PATH="$HOME/go/bin/bd"
+                echo -e "${GREEN}  ✅ Found bd CLI at: $BD_PATH${NC}"
+            else
+                echo -e "${YELLOW}  ⚠️ bd CLI not found - beads-mcp will work but bd command won't be available${NC}"
+                echo -e "${YELLOW}     Install bd from: https://github.com/steveyegge/beads${NC}"
+                BD_PATH="$HOME/go/bin/bd"  # Set expected path for future use
+            fi
+
+            # Remove existing beads server to reconfigure
+            ${MCP_CLI_BIN} mcp remove "beads" >/dev/null 2>&1 || true
+
+            # Add Beads MCP server
+            echo -e "${BLUE}  🔗 Adding Beads MCP server...${NC}"
+            log_with_timestamp "Attempting to add Beads MCP server"
+
+            beads_env_flags=("${DEFAULT_MCP_ENV_FLAGS[@]}")
+            beads_env_flags+=(--env "BEADS_USE_DAEMON=1")
+            beads_env_flags+=(--env "BEADS_PATH=$BD_PATH")
+            capture_command_output add_output add_exit_code "${MCP_CLI_BIN}" mcp add "${MCP_SCOPE_ARGS[@]}" "beads" "${beads_env_flags[@]}" -- "beads-mcp"
+
+            if [ $add_exit_code -eq 0 ]; then
+                echo -e "${GREEN}  ✅ Successfully configured Beads MCP server${NC}"
+                echo -e "${BLUE}  📋 Server info:${NC}"
+                echo -e "     • Command: beads-mcp"
+                echo -e "     • BD CLI path: $BD_PATH"
+                echo -e "     • Features: Git-backed issue tracking, dependency management, ready work detection"
+                echo -e "     • Tools: create, update, close, dep, ready, list, show, stats"
+                log_with_timestamp "Successfully added Beads MCP server"
+                INSTALL_RESULTS["beads"]="SUCCESS"
+                SUCCESSFUL_INSTALLS=$((SUCCESSFUL_INSTALLS + 1))
+            else
+                echo -e "${RED}  ❌ Failed to add Beads MCP server${NC}"
+                log_error_details "${MCP_CLI_BIN} mcp add beads" "beads" "$add_output"
+                INSTALL_RESULTS["beads"]="ADD_FAILED"
+                FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+            fi
+        else
+            echo -e "${YELLOW}  ⚠️ beads-mcp command not found in PATH${NC}"
+            echo -e "${YELLOW}     Install beads-mcp: pip3 install beads-mcp${NC}"
+            echo -e "${YELLOW}     Install bd CLI: https://github.com/steveyegge/beads${NC}"
+            log_with_timestamp "WARN: beads-mcp not found in PATH"
+            INSTALL_RESULTS["beads"]="DEPENDENCY_MISSING"
+            FAILED_INSTALLS=$((FAILED_INSTALLS + 1))
+        fi
+    fi
 fi
 
 # Final verification and results

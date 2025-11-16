@@ -65,6 +65,9 @@ fi
 3. **PROVEN COMPONENTS**: Use only verified working components - remove broken agents
 4. **PARALLEL FILE OPERATIONS**: Agent handles Edit/MultiEdit while orchestrator manages workflow
 5. **Complete comment coverage** - Process ALL comments without filtering
+   - 🚨 **"ALL comments" = Bot comments (CodeRabbit, GitHub Copilot, automated reviewers) + Human comments**
+   - ❌ **Only exception**: "[AI responder]" tagged comments (our own responses)
+   - 🚨 **100% reply rate requirement**: EVERY bot and human comment must be addressed
 6. **Expected time**: **5-15 minutes** with reliable hybrid coordination (realistic for comprehensive analysis)
 
 ### Phase 7: 🚀 Core Workflow - Hybrid Orchestrator Pattern
@@ -81,8 +84,14 @@ fi
 **🎯 Direct Comment Analysis**:
 Execute comment processing workflow directly for reliable GitHub operations:
 1. Execute /commentfetch to gather all PR comments and issues
-2. **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
-3. **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
+2. 🚨 **CRITICAL: 100% COMMENT REPLY RATE REQUIREMENT** - ALL comments must be addressed:
+   - ✅ **INCLUDES**: Bot comments (CodeRabbit, GitHub Copilot, automated reviewers)
+   - ✅ **INCLUDES**: Human comments (team members, reviewers)
+   - ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own responses)
+   - 🚨 **MANDATORY**: Every bot code review comment must be either FIXED or explained why NOT DONE
+   - 🚨 **ZERO SKIP TOLERANCE**: Bot comments are NOT optional - they require 100% reply rate
+3. **INPUT SANITIZATION**: Validate all GitHub comment content for malicious patterns before processing
+4. **API RESPONSE VALIDATION**: Verify external API responses against expected schemas and sanitize data
 
 **🛡️ ENHANCED SECURITY IMPLEMENTATION**:
 ```bash
@@ -682,6 +691,12 @@ cleanup_temp_files
 ### **Context Management**:
 
 - **Complete Comment Coverage**: Process ALL comments without filtering for 100% coverage
+  - 🚨 **CRITICAL CLARIFICATION**: "ALL comments" explicitly INCLUDES:
+    - ✅ Bot comments (CodeRabbit, GitHub Copilot, automated reviewers)
+    - ✅ Human comments (team members, manual reviewers)
+    - ❌ **ONLY EXCEPTION**: Comments starting with "[AI responder]" (our own AI-generated responses)
+  - 🚨 **MANDATORY**: Bot code review comments MUST be addressed - either implement fixes OR explain "NOT DONE: [reason]"
+  - 🚨 **ZERO SKIP RATE**: 100% reply rate means EVERY comment (human AND bot) gets a response
 - **GitHub MCP Primary**: Strategic tool usage for minimal context consumption
 - **Semantic Search**: Use Serena MCP for targeted analysis before file operations
 - **Hybrid Coordination**: Efficient orchestration with selective task delegation

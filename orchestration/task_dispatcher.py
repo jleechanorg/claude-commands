@@ -11,7 +11,6 @@ import re
 import shlex
 import shutil
 import subprocess
-import sys
 import tempfile
 import time
 from pathlib import Path
@@ -215,7 +214,7 @@ class TaskDispatcher:
             # If no completion indicators found, assume agent is actively working
             return True
 
-        except Exception as e:
+        except Exception:
             # If we can't determine, assume it's active to be safe
             return True
 
