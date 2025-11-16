@@ -4,15 +4,13 @@ Matrix-style tests for /exportcommands functionality.
 Tests the complete export workflow with comprehensive coverage.
 """
 
+import json
 import os
 import sys
 import tempfile
 import shutil
 import unittest
-import json
-import subprocess
-from unittest.mock import Mock, patch, MagicMock
-from pathlib import Path
+from unittest.mock import Mock, patch
 
 # Add the parent directory ('.claude/commands') to path for importing
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))

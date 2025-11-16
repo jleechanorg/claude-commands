@@ -7,7 +7,6 @@ Pre-push review, validation, PR create/update, and test server startup
 import os
 import socket
 import subprocess
-import sys
 import time
 from datetime import datetime
 from lint_utils import run_lint_check, should_run_linting

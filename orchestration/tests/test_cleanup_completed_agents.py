@@ -7,11 +7,8 @@ Tests all key functions with mocking for subprocess calls and file operations.
 import os
 import pytest
 import subprocess
-import sys
 import tempfile
-import time
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 from orchestration.cleanup_completed_agents import (
     check_agent_completion,
@@ -20,7 +17,6 @@ from orchestration.cleanup_completed_agents import (
     cleanup_completed_agents,
     get_all_monitoring_sessions,
     get_session_timeout,
-    get_task_agent_sessions,
     get_tmux_sessions,
 )
 

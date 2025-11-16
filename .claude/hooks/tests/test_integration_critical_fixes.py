@@ -4,16 +4,17 @@ TDD Test Suite for Critical Issues in PR #1777
 RED PHASE: These tests MUST FAIL initially to expose the issues
 """
 
-import sys
 import os
+import sys
 import unittest
-from unittest.mock import patch, mock_open
 from io import StringIO
+from unittest.mock import patch
 
 # Add the hooks directory (parent of tests) to the path
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from command_output_trimmer import OptimizedCommandOutputTrimmer, Config
+from command_output_trimmer import Config, OptimizedCommandOutputTrimmer
+
 
 class TestCriticalIssues(unittest.TestCase):
     """RED PHASE: Tests for critical issues that MUST fail initially."""
@@ -94,7 +95,7 @@ class TestCriticalIssues(unittest.TestCase):
         script_dir = os.path.dirname(__file__)
         trimmer_path = os.path.join(os.path.dirname(script_dir), 'command_output_trimmer.py')
 
-        with open(trimmer_path, 'r') as f:
+        with open(trimmer_path) as f:
             source_code = f.read()
 
         # GREEN: important_patterns should no longer be defined as unused code
@@ -210,10 +211,9 @@ class TestTDDMatrixCoverage(unittest.TestCase):
                                 self.assertLessEqual(len(key), Config.ARG_LENGTH_LIMIT)
                             if isinstance(value, str):
                                 self.assertLessEqual(len(value), Config.ARG_LENGTH_LIMIT)
-                else:
-                    # For non-truncated items, verify type preservation
-                    if not isinstance(input_value, (list, dict)):
-                        self.assertEqual(type(result), expected_type)
+                # For non-truncated items, verify type preservation
+                elif not isinstance(input_value, (list, dict)):
+                    self.assertEqual(type(result), expected_type)
 
 def run_red_phase_tests():
     """Run all RED phase tests and verify they fail."""
@@ -228,7 +228,7 @@ def run_red_phase_tests():
     result = runner.run(suite)
 
     print("\n" + "=" * 60)
-    print(f"📊 RED PHASE RESULTS:")
+    print("📊 RED PHASE RESULTS:")
     print(f"   Tests Run: {result.testsRun}")
     print(f"   Failures: {len(result.failures)}")
     print(f"   Errors: {len(result.errors)}")
@@ -237,9 +237,8 @@ def run_red_phase_tests():
         print(f"\n✅ RED PHASE SUCCESS: {len(result.failures + result.errors)} tests failed as expected")
         print("Now we can move to GREEN phase to fix these issues!")
         return True
-    else:
-        print(f"\n❌ RED PHASE FAILED: All tests passed - issues may not be properly exposed")
-        return False
+    print("\n❌ RED PHASE FAILED: All tests passed - issues may not be properly exposed")
+    return False
 
 if __name__ == "__main__":
     success = run_red_phase_tests()

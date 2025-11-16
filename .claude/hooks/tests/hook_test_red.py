@@ -32,11 +32,10 @@ class PaymentProcessor:
                 "processed_at": "2024-01-01T00:00:00Z",
                 "verification_required": True
             }
-        else:
-            return {
-                "status": "success",
-                "transaction_id": str(uuid.uuid4()),
-                "amount": amount,
-                "processed_at": "2024-01-01T00:00:00Z",
-                "verification_required": False
-            }
+        return {
+            "status": "success",
+            "transaction_id": str(uuid.uuid4()),
+            "amount": amount,
+            "processed_at": "2024-01-01T00:00:00Z",
+            "verification_required": False
+        }

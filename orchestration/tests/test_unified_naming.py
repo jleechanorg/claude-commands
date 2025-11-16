@@ -4,10 +4,7 @@ TDD Tests for Unified Naming System
 Tests the orchestration system's unified agent/workspace naming approach
 """
 
-import importlib
 import os
-import sys
-import tempfile
 import time
 import unittest
 from unittest.mock import MagicMock, patch

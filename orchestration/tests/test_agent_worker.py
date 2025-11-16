@@ -4,7 +4,6 @@ Simple test agent that processes tasks and returns results.
 Used to verify A2A integration functionality.
 """
 
-import os
 import sys
 import time
 from orchestration.message_broker import MessageBroker, MessageType
