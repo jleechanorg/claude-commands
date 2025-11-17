@@ -5,7 +5,9 @@ Provides programmatic testing interface for the MCP server
 """
 
 import argparse
+import json
 import sys
+from datetime import datetime
 from typing import Any
 
 import requests
@@ -16,11 +18,12 @@ MCP_HTTP_PATH = "/mcp"
 class MCPTestClient:
     """Test client for WorldArchitect.AI MCP server."""
 
-    def __init__(self, base_url: str = "http://localhost:8000"):
+    def __init__(self, base_url: str = "http://localhost:8000", log_file: str | None = None):
         """Initialize MCP test client.
 
         Args:
             base_url: Base URL of the MCP server
+            log_file: Optional path to log file for request/response logging
         """
         self.base_url = base_url
         self.session = requests.Session()
@@ -30,6 +33,56 @@ class MCPTestClient:
                 "User-Agent": "WorldArchitect-MCP-TestClient/1.0",
             }
         )
+        self.log_file = log_file
+        self.request_counter = 0
+
+        # Initialize log file if specified
+        if self.log_file:
+            with open(self.log_file, 'w') as f:
+                json.dump({
+                    "test_run": {
+                        "start_time": datetime.utcnow().isoformat() + "Z",
+                        "base_url": base_url
+                    },
+                    "requests": []
+                }, f, indent=2)
+
+    def _log_request_response(self, endpoint: str, method: str, request_data: Any, response_data: Any, status_code: int):
+        """Log request and response to file.
+
+        Args:
+            endpoint: API endpoint
+            method: HTTP method or RPC method
+            request_data: Request payload
+            response_data: Response data
+            status_code: HTTP status code
+        """
+        if not self.log_file:
+            return
+
+        self.request_counter += 1
+
+        try:
+            # Read existing log
+            with open(self.log_file, 'r') as f:
+                log_data = json.load(f)
+
+            # Add new entry
+            log_data["requests"].append({
+                "sequence": self.request_counter,
+                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "endpoint": endpoint,
+                "method": method,
+                "request": request_data,
+                "response": response_data,
+                "status_code": status_code
+            })
+
+            # Write updated log
+            with open(self.log_file, 'w') as f:
+                json.dump(log_data, f, indent=2)
+        except Exception as e:
+            print(f"Warning: Failed to log request/response: {e}", file=sys.stderr)
 
     def health_check(self) -> dict[str, Any]:
         """Check server health status.
@@ -42,7 +95,18 @@ class MCPTestClient:
         """
         response = self.session.get(f"{self.base_url}/health")
         response.raise_for_status()
-        return response.json()
+        response_data = response.json()
+
+        # Log request/response
+        self._log_request_response(
+            endpoint="/health",
+            method="GET",
+            request_data=None,
+            response_data=response_data,
+            status_code=response.status_code
+        )
+
+        return response_data
 
     def json_rpc_request(
         self, method: str, params: dict | None = None, request_id: str | int = 1
@@ -69,7 +133,18 @@ class MCPTestClient:
             f"{self.base_url.rstrip('/')}{MCP_HTTP_PATH}", json=payload
         )
         response.raise_for_status()
-        return response.json()
+        response_data = response.json()
+
+        # Log request/response
+        self._log_request_response(
+            endpoint=MCP_HTTP_PATH,
+            method=method,
+            request_data=payload,
+            response_data=response_data,
+            status_code=response.status_code
+        )
+
+        return response_data
 
     def list_tools(self) -> list[dict[str, Any]]:
         """List available MCP tools.
@@ -432,10 +507,14 @@ def main():
         default="all",
         help="Test to run",
     )
+    parser.add_argument(
+        "--log-file",
+        help="Path to JSON file for logging requests/responses"
+    )
 
     args = parser.parse_args()
 
-    client = MCPTestClient(args.server)
+    client = MCPTestClient(args.server, log_file=args.log_file)
 
     try:
         # Test server connectivity
