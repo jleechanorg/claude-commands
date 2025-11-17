@@ -71,11 +71,11 @@ else
     echo -e "${YELLOW}⚠️  Skipping Grok server installation check (GROK_API_KEY or XAI_API_KEY not set)${NC}"
 fi
 
-# Test 6: Token file exists
-run_test "Token file exists" "[ -f '$HOME/.token' ]"
+# Test 6: GitHub token available (environment variable or token file)
+run_test "GitHub token available" "[ -n \"\${GITHUB_TOKEN:-}\" ] || [ -f '$HOME/.token' ]"
 
-# Test 7: GitHub token in token file
-run_test "GitHub token configured" "grep -q 'GITHUB_TOKEN' '$HOME/.token'"
+# Test 7: GitHub token configured (environment variable or in token file)
+run_test "GitHub token configured" "[ -n \"\${GITHUB_TOKEN:-}\" ] || grep -q 'GITHUB_TOKEN' '$HOME/.token'"
 
 # Test 8: Node.js availability
 run_test "Node.js availability" "command -v node"
@@ -110,7 +110,7 @@ if [ $FAILED_TESTS -eq 0 ]; then
     echo "   - Premium deep research with Sonar models"
     echo "   - Supports recency filters, temperature, and token controls"
     echo "   - Returns citations and reasoning traces via perplexity_search_web"
-    echo "   - Requires PERPLEXITY_API_KEY (set in ~/.token)"
+    echo "   - Requires PERPLEXITY_API_KEY environment variable"
 
     echo -e "\n${GREEN}✅ Grok (grok-mcp):${NC}"
     echo "   - Real-time intelligence and trending insights"
@@ -138,8 +138,8 @@ else
         echo "- Grok server missing: Re-run './claude_mcp.sh' after configuring GROK credentials"
     fi
 
-    if [ ! -f "$HOME/.token" ]; then
-        echo "- Token file missing: Create ~/.token with required API keys"
+    if [ -z "$GITHUB_TOKEN" ] && [ -z "$PERPLEXITY_API_KEY" ]; then
+        echo "- API keys missing: Set GITHUB_TOKEN and PERPLEXITY_API_KEY environment variables"
     fi
 
     exit 1

@@ -346,20 +346,21 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 
 🚨 **GITHUB TOKEN AVAILABILITY:** ⚠️ MANDATORY - GitHub token access for agents and operations
 
-**⚠️ Security Note**: This documents the current token storage approach. For production use, consider more secure alternatives like `gh auth login` (uses OS credential manager) or environment-only token management.
+**⚠️ Security Note**: This documents the current token storage approach. For production use, consider more secure alternatives like `gh auth login` (uses OS credential manager).
 
-- ✅ **ALWAYS AVAILABLE**: User's GitHub token is currently accessible at `~/.token`
-  - **Security**: Plain text storage - ensure proper file permissions (`chmod 600 ~/.token`)
+- ✅ **ALWAYS AVAILABLE**: User's GitHub token is set as the `GITHUB_TOKEN` environment variable
+  - **Security**: Environment variable is the recommended secure approach
   - **Alternative**: Use `gh auth login` for secure OS keychain/credential manager storage
-- ✅ **GITHUB CLI (local)**: Use `GITHUB_TOKEN=$(cat ~/.token)` for gh CLI authentication
-  - **Recommended**: After `gh auth login`, use `gh` commands directly without manual token management
+- ✅ **GITHUB CLI (local)**: GitHub CLI automatically uses `GITHUB_TOKEN` environment variable
+  - **No prefix needed**: Commands like `~/.local/bin/gh pr list` work directly
+  - **Recommended**: After installation (see GitHub CLI section), use `gh` commands without manual token management
 - ✅ **GITHUB ACTIONS**: Use `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` environment variable (automatically provided by GitHub Actions)
-- ✅ **AGENT ACCESS**: All agents can read from `~/.token` and set `GITHUB_TOKEN` environment variable
+- ✅ **AGENT ACCESS**: All agents can access the `GITHUB_TOKEN` environment variable directly
 - ✅ **SCOPE COVERAGE**: Current token has admin scopes (admin:org) which encompass read scopes (read:org)
   - **Best Practice**: Use minimum required scopes (e.g., `repo`, `read:org`) for production tokens
   - **Note**: Admin scopes should only be used when necessary for specific operations
 - ✅ **USAGE PATTERNS**:
-  - Local/agents: `export GITHUB_TOKEN=$(cat ~/.token)` or `GITHUB_TOKEN=$(cat ~/.token) gh command`
+  - Local/agents: GitHub CLI automatically uses `GITHUB_TOKEN` environment variable (no manual prefix needed)
   - GitHub Actions: `GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}` as environment variable in workflow steps
 
 ## GitHub Actions Security
@@ -400,13 +401,69 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 - **MCP Config**: Point to `node $(npm root -g)/<package>/build/index.js` or use full path
 - **Benefits**: Simple, standard npm workflow, automatic PATH availability, easy updates with `npm update -g`
 
-🚨 **GITHUB CLI INSTALLATION:** ⚠️ MANDATORY - Use precompiled binary method
-- **Download precompiled binary from GitHub releases:**
-  `curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz | tar -xz -C /tmp`
-- **Verify installation:**
-  `/tmp/gh_2.40.1_linux_amd64/bin/gh --version`
-- **Authenticate with existing GitHub token:**
-  `/tmp/gh_2.40.1_linux_amd64/bin/gh auth status`
+🚨 **GITHUB CLI INSTALLATION & USAGE:** ⚠️ MANDATORY - Step-by-step protocol
+
+**INSTALLATION (ONE-TIME SETUP):**
+```bash
+# Step 0: Check if gh is already installed
+if [ -f ~/.local/bin/gh ]; then
+    echo "✅ gh CLI already installed at ~/.local/bin/gh"
+    ~/.local/bin/gh --version
+else
+    echo "Installing gh CLI to ~/.local/bin..."
+
+    # Step 1: Download and extract gh CLI (complies with TEMPORARY FILE ISOLATION policy)
+    TMP_GH_DIR="$(mktemp -d)"
+    cd "$TMP_GH_DIR"
+    curl -sL https://github.com/cli/cli/releases/download/v2.40.1/gh_2.40.1_linux_amd64.tar.gz -o gh.tar.gz
+    tar -xzf gh.tar.gz
+    mkdir -p ~/.local/bin
+    cp gh_2.40.1_linux_amd64/bin/gh ~/.local/bin/gh
+    chmod +x ~/.local/bin/gh
+    cd - > /dev/null
+    rm -rf "$TMP_GH_DIR"
+
+    # Step 2: Verify installation
+    ~/.local/bin/gh --version
+    # Expected output: gh version 2.40.1 (2023-12-13)
+fi
+
+# Step 3: Test authentication (GITHUB_TOKEN environment variable is already set)
+~/.local/bin/gh auth status
+# Expected: ✓ Logged in to github.com account <username> (GITHUB_TOKEN)
+```
+
+**USAGE - CRITICAL RULES:**
+- ✅ **ALWAYS use full path**: `~/.local/bin/gh` (installed to avoid /tmp conflicts)
+- ✅ **GITHUB_TOKEN automatically used**: No prefix needed - gh uses environment variable
+- ❌ **NEVER use**: Just `gh` (won't work - not in PATH)
+- ✅ **Note**: Installation uses `mktemp -d` for temporary storage (complies with TEMPORARY FILE ISOLATION policy)
+
+**COMMON COMMANDS (COPY-PASTE READY):**
+```bash
+# List pull requests
+~/.local/bin/gh pr list --repo jleechanorg/worldarchitect.ai --limit 10
+
+# View specific PR
+~/.local/bin/gh pr view <PR_NUMBER> --repo jleechanorg/worldarchitect.ai
+
+# List issues
+~/.local/bin/gh issue list --repo jleechanorg/worldarchitect.ai
+
+# Check workflow runs
+~/.local/bin/gh run list --repo jleechanorg/worldarchitect.ai --limit 5
+
+# Use GitHub API directly
+~/.local/bin/gh api repos/jleechanorg/worldarchitect.ai/branches
+
+# Get repository info
+~/.local/bin/gh repo view jleechanorg/worldarchitect.ai
+```
+
+**TROUBLESHOOTING:**
+- ❌ **Error: "command not found"** → You used `gh` instead of full path `~/.local/bin/gh`
+- ❌ **Error: "not logged in"** → GITHUB_TOKEN environment variable not set (verify with `echo $GITHUB_TOKEN`)
+- ✅ **Solution**: Always use full path `~/.local/bin/gh` as shown above
 
 🚨 **RENDER API ENVIRONMENT VARIABLE MANAGEMENT:** ⚠️ CRITICAL - PUT replaces ALL variables
 - **API Behavior**: Render API PUT method for `/services/{id}/env-vars` **REPLACES ALL** environment variables, not just one

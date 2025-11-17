@@ -1063,21 +1063,23 @@ else
     echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
     log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
 
-    # Fallback to legacy token loading
-    HOME_TOKEN_FILE="$HOME/.token"
-    if [ -f "$HOME_TOKEN_FILE" ]; then
-        echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
-        source "$HOME_TOKEN_FILE"
+    # Fallback: try environment variable first, then ~/.token file
+    if [ -n "$GITHUB_TOKEN" ]; then
+        echo -e "${GREEN}✅ Loading tokens from GITHUB_TOKEN environment variable${NC}"
+        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+    elif [ -f "$HOME/.token" ]; then
+        echo -e "${GREEN}✅ Loading tokens from $HOME/.token${NC}"
+        source "$HOME/.token"
         export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
     else
-        echo -e "${RED}❌ No token file found${NC}"
-        echo -e "${YELLOW}💡 Create ~/.token file with your tokens${NC}"
+        echo -e "${RED}❌ No GitHub token found${NC}"
+        echo -e "${YELLOW}💡 Set GITHUB_TOKEN environment variable or create ~/.token file${NC}"
         safe_exit 1
     fi
 fi
 
-# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility
-export GITHUB_PERSONAL_ACCESS_TOKEN
+# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility (already exported above)
+# export GITHUB_PERSONAL_ACCESS_TOKEN  # Removed: causes unbound variable error if not set
 
 # Function to check environment requirements
 check_github_requirements() {
@@ -1097,7 +1099,7 @@ check_github_requirements() {
     else
         echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
         echo -e "${YELLOW}   Server will work for public repositories only${NC}"
-        echo -e "${YELLOW}   For private repos, add GITHUB_TOKEN to ~/.token file${NC}"
+        echo -e "${YELLOW}   For private repos, set GITHUB_TOKEN environment variable${NC}"
     fi
 }
 
@@ -1240,7 +1242,7 @@ setup_render_mcp_server() {
         else
             echo -e "${YELLOW}  ⚠️ Render API key not found - skipping cloud infrastructure server${NC}"
             echo -e "${YELLOW}  💡 Render server provides cloud infrastructure management with natural language${NC}"
-            echo -e "${YELLOW}  💡 Add RENDER_API_KEY to ~/.token file or environment to enable${NC}"
+            echo -e "${YELLOW}  💡 Set RENDER_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Render API key not found, skipping server installation"
             INSTALL_RESULTS["render"]="API_KEY_MISSING"
             # Don't count as failure since this is expected without API key
@@ -2066,7 +2068,7 @@ if should_install_server "perplexity-ask"; then
         else
             echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
             echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
-            echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
+            echo -e "${YELLOW}💡 Set PERPLEXITY_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Perplexity API key not found, skipping premium server installation"
         fi
     fi
