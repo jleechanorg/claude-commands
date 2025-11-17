@@ -107,7 +107,7 @@ GITHUB_TOKEN_LOADED=${GITHUB_TOKEN_LOADED:-false}
 RENDER_API_KEY=${RENDER_API_KEY:-}
 PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
 GROK_API_KEY=${GROK_API_KEY:-}
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
@@ -1311,10 +1311,8 @@ fi
 # Group servers that can be installed concurrently without conflicts
 
 # Environment flags for optional MCP servers (disabled by default for context optimization)
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
-REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
-IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
-GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
+# Note: PLAYWRIGHT_ENABLED, REACT_MCP_ENABLED, IOS_SIMULATOR_ENABLED, GITHUB_MCP_ENABLED
+# are declared at the top of this file (around line 110)
 
 declare -A BATCH_1=(
     ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
