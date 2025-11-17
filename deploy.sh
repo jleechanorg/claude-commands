@@ -160,11 +160,30 @@ BASE_SERVICE_NAME=$(basename "$TARGET_REALPATH" | tr '_' '-')-app
 SERVICE_NAME="$BASE_SERVICE_NAME-$ENVIRONMENT"
 PROJECT_ID=$(deploy_common::get_project_id)
 
+# --- Capture Commit SHA for Traceability ---
+# In CI: Use GITHUB_SHA; Locally: Use git rev-parse HEAD; Fallback: timestamp-based
+if [ -n "${GITHUB_SHA:-}" ]; then
+    COMMIT_SHA="${GITHUB_SHA:0:7}"  # Short SHA (7 chars) for cleaner tags
+    COMMIT_SHA_FULL="${GITHUB_SHA}"
+    echo "📌 Using commit SHA from GitHub Actions: $COMMIT_SHA_FULL"
+elif command -v git >/dev/null 2>&1 && git rev-parse HEAD >/dev/null 2>&1; then
+    COMMIT_SHA_FULL=$(git rev-parse HEAD)
+    COMMIT_SHA="${COMMIT_SHA_FULL:0:7}"
+    echo "📌 Using commit SHA from local git: $COMMIT_SHA_FULL"
+else
+    COMMIT_SHA="local-$(date +%Y%m%d-%H%M%S)"
+    COMMIT_SHA_FULL="$COMMIT_SHA"
+    echo "⚠️  Git not available, using timestamp-based identifier: $COMMIT_SHA"
+fi
+
 echo "--- Preparing to deploy service '$SERVICE_NAME' to project '$PROJECT_ID' ---"
 
 # --- Build Step ---
-IMAGE_TAG="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest"
+# Use commit SHA in image tag for traceability (Best Practice #2 from guidance)
+IMAGE_TAG="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-$COMMIT_SHA"
+IMAGE_TAG_LATEST="gcr.io/$PROJECT_ID/$BASE_SERVICE_NAME:$ENVIRONMENT-latest"
 echo "Building container image from '$TARGET_DIR' with tag '$IMAGE_TAG'..."
+echo "Also tagging as latest: $IMAGE_TAG_LATEST"
 
 # Copy world directory into mvp_site for deployment
 echo "DEBUG: TARGET_DIR = '$TARGET_DIR'"
@@ -216,10 +235,25 @@ elif [ -z "$WORLD_DIR" ]; then
     echo "Deployment may fail if world files are required."
 fi
 
-deploy_common::submit_build "$BUILD_CONTEXT" "$IMAGE_TAG"
+deploy_common::submit_build "$BUILD_CONTEXT" "$IMAGE_TAG" "$IMAGE_TAG_LATEST"
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run as service '$SERVICE_NAME' with max instances set to ${MAX_INSTANCES}..."
+echo "📌 Commit SHA: $COMMIT_SHA_FULL"
+
+##
+# Sanitize commit SHA for Cloud Run labels (lowercase only)
+# `--labels` on `gcloud run deploy` overwrites existing labels, so allow callers to
+# append any additional labels via EXTRA_LABELS (comma-separated) to preserve
+# metadata they want to keep alongside commit tracking.
+COMMIT_SHA_LABEL=$(echo "$COMMIT_SHA" | tr '[:upper:]' '[:lower:]')
+COMMIT_SHA_FULL_LABEL=$(echo "$COMMIT_SHA_FULL" | tr '[:upper:]' '[:lower:]')
+LABELS_ARG="commit-sha=$COMMIT_SHA_LABEL,commit-sha-full=$COMMIT_SHA_FULL_LABEL"
+
+if [[ -n "${EXTRA_LABELS:-}" ]]; then
+    LABELS_ARG+="${EXTRA_LABELS:+,$EXTRA_LABELS}"
+fi
+
 deploy_common::deploy_service \
     "$SERVICE_NAME" \
     "$IMAGE_TAG" \
@@ -228,7 +262,10 @@ deploy_common::deploy_service \
     "300" \
     "1" \
     "$MAX_INSTANCES" \
-    "10"
+    "10" \
+    "" \
+    "" \
+    "--labels" "$LABELS_ARG"
 
 echo "--- Deployment of '$SERVICE_NAME' complete. ---"
 

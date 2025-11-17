@@ -9,11 +9,21 @@ deploy_common::get_project_id() {
 deploy_common::submit_build() {
   local context_dir=$1
   local image_tag=$2
+  local image_tag_latest=${3:-}  # Optional second tag (e.g., latest)
+
   # Use --async to avoid "This tool can only stream logs if you are Viewer/Owner" error
   # when service account lacks Viewer/Owner role. We poll for completion instead.
   echo "Starting build asynchronously..."
+
+  # Build with both tags if second tag provided, otherwise single tag
   local build_id
-  build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
+  if [[ -n "$image_tag_latest" ]]; then
+    # Build with both tags: commit SHA and latest
+    build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --tag "$image_tag_latest" --async --format="value(id)")
+  else
+    # Build with single tag only
+    build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
+  fi
 
   echo "Build ID: $build_id"
   echo "Polling for build completion..."
