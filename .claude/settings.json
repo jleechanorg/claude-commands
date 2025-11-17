@@ -170,7 +170,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "*",
+        "matcher": {"tools": ["*"]},
         "hooks": [
           {
             "type": "command",
@@ -185,7 +185,7 @@
         ]
       },
       {
-        "matcher": "Write",
+        "matcher": {"tools": ["Write"]},
         "hooks": [
           {
             "type": "command",
@@ -202,7 +202,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "DISABLED_Bash(git commit *)",
+        "matcher": {"tools": ["DISABLED_Bash(git commit *)"]},
         "hooks": [
           {
             "type": "command",
@@ -212,7 +212,7 @@
         ]
       },
       {
-        "matcher": "*",
+        "matcher": {"tools": ["*"]},
         "hooks": [
           {
             "type": "command",
@@ -222,7 +222,7 @@
         ]
       },
       {
-        "matcher": "*",
+        "matcher": {"tools": ["*"]},
         "hooks": [
           {
             "type": "command",
@@ -232,7 +232,7 @@
         ]
       },
       {
-        "matcher": "Write",
+        "matcher": {"tools": ["Write"]},
         "hooks": [
           {
             "type": "command",
@@ -259,7 +259,6 @@
     ],
     "UserPromptSubmit": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -272,7 +271,6 @@
     "SessionStart": [],
     "Stop": [
       {
-        "matcher": "*",
         "hooks": [
           {
             "type": "command",
