@@ -292,7 +292,6 @@ declare -a ALL_SERVER_NAMES=(
     "playwright-mcp"
     "gemini-cli-mcp"
     "grok"
-    "ddg-search"
     "perplexity-ask"
     # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
@@ -1324,7 +1323,6 @@ declare -A BATCH_1=(
 
 declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
-    ["ddg-search"]="@oevortex/ddg_search"
     ["grok"]="@chinchillaenterprises/mcp-grok"
 )
 
@@ -2029,7 +2027,7 @@ fi
 #     fi
 # fi
 
-if should_install_server "gemini-cli-mcp" || should_install_server "ddg-search" || should_install_server "grok"; then
+if should_install_server "gemini-cli-mcp" || should_install_server "grok"; then
     display_step "Installing Batch 2 Servers (Parallel)..."
     install_batch_parallel BATCH_2 "Batch 2"
 fi
@@ -2040,15 +2038,9 @@ fi
 #     install_ios_simulator_mcp
 # fi
 
-if should_install_server "perplexity-ask" || should_install_server "ddg-search"; then
+if should_install_server "perplexity-ask"; then
     display_step "Setting up Web Search MCP Servers..."
-    echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
-
-    if should_install_server "ddg-search"; then
-        echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
-        echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
-        echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
-    fi
+    echo -e "${BLUE}📋 Installing Perplexity search server${NC}"
 
     if should_install_server "perplexity-ask"; then
         echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
