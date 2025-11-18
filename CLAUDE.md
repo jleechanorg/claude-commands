@@ -339,6 +339,29 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 
 **Core:** Main = Truth | All changes via PRs | `git push origin HEAD:branch-name` | Fresh branches from main
 
+## 🚨 CRITICAL: NO DIRECT MERGE TO MAIN PROTOCOL
+
+**🚨 ZERO TOLERANCE FOR DIRECT MAIN MERGES**: ⚠️ MANDATORY - Never merge directly to main branch
+- ❌ **ABSOLUTELY FORBIDDEN**: Merging any branch directly to main without a PR
+- ❌ **ABSOLUTELY FORBIDDEN**: `git merge feature-branch` while on main branch
+- ❌ **ABSOLUTELY FORBIDDEN**: `git push origin main` with direct commits
+- ✅ **MANDATORY WORKFLOW**: ALL changes must go through Pull Requests
+- ✅ **MANDATORY**: Create PR from feature branch → main
+- ✅ **MANDATORY**: Use `git push origin HEAD:branch-name` for feature branches only
+- ✅ **MANDATORY**: Merge via GitHub PR interface after review and approval
+
+**🚨 ENFORCEMENT**: This rule applies to ALL changes including:
+- Code changes
+- Documentation updates
+- Configuration changes
+- Test updates
+- Any file modifications
+
+**🚨 EXCEPTIONS**:
+- ✅ **EXPLICIT USER APPROVAL**: User must type "MERGE APPROVED" to allow direct merge to main
+- ✅ **MANDATORY APPROVAL PHRASE**: Only "MERGE APPROVED" (exact phrase) permits bypassing PR workflow
+- ❌ **DEFAULT**: All changes require PR workflow unless user explicitly types "MERGE APPROVED"
+
 🚨 **CRITICAL RULES:**
 - No main push: ❌ `git push origin main` | ✅ `git push origin HEAD:feature`
 - ALL changes require PR (including docs)
