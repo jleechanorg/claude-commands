@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "BASH_MAX_OUTPUT_LENGTH": "5000",
     "BASH_DEFAULT_TIMEOUT_MS": "60000",
@@ -170,7 +171,7 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": {"tools": ["*"]},
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -185,7 +186,7 @@
         ]
       },
       {
-        "matcher": {"tools": ["Write"]},
+        "matcher": "Write",
         "hooks": [
           {
             "type": "command",
@@ -202,7 +203,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": {"tools": ["DISABLED_Bash(git commit *)"]},
+        "matcher": "DISABLED_Bash(git commit *)",
         "hooks": [
           {
             "type": "command",
@@ -212,7 +213,7 @@
         ]
       },
       {
-        "matcher": {"tools": ["*"]},
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -222,7 +223,7 @@
         ]
       },
       {
-        "matcher": {"tools": ["*"]},
+        "matcher": "*",
         "hooks": [
           {
             "type": "command",
@@ -232,7 +233,7 @@
         ]
       },
       {
-        "matcher": {"tools": ["Write"]},
+        "matcher": "Write",
         "hooks": [
           {
             "type": "command",
@@ -259,6 +260,7 @@
     ],
     "UserPromptSubmit": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -271,6 +273,7 @@
     "SessionStart": [],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",

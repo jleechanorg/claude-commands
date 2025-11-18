@@ -1,5 +1,6 @@
 ---
-name: "Claude Code Agent System Documentation"
+name: CLAUDE
+description: Reference documentation for understanding and using the custom agent system
 ---
 
 # Claude Code Agent System Documentation
