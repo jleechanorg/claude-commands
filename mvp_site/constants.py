@@ -14,12 +14,19 @@ ACTOR_UNKNOWN = "NO_ACTOR"  # Default when actor is missing from data
 
 # --- SETTINGS ---
 # Allowed Gemini model selections for user preferences (aligned with SDK format)
-ALLOWED_GEMINI_MODELS = ["gemini-2.5-pro", "gemini-2.5-flash", "pro-2.5", "flash-2.5"]
+ALLOWED_GEMINI_MODELS = [
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-3-pro-preview",
+    "pro-2.5",
+    "flash-2.5",
+]
 
 # Gemini model mapping from user preference to full model name (includes legacy compatibility)
 GEMINI_MODEL_MAPPING = {
     "gemini-2.5-flash": "gemini-2.5-flash",
     "gemini-2.5-pro": "gemini-2.5-pro",
+    "gemini-3-pro-preview": "gemini-3-pro-preview",
     # Legacy compatibility mappings
     "pro-2.5": "gemini-2.5-pro",
     "flash-2.5": "gemini-2.5-flash",
