@@ -394,6 +394,11 @@ sudo chmod -R 777 / ; rm -rf / ; dd if=/dev/zero of=/dev/sda  # System destructi
 
 ## Environment & Scripts
 
+🚨 **GCP PROJECT:** ⚠️ MANDATORY - All deployments use GCP project "worldarchitecture-ai"
+- **Project ID**: worldarchitecture-ai
+- **Project Number**: 754683067800
+- **Configuration**: Set in `.github/workflows/deploy-dev.yml` as `GCP_PROJECT: worldarchitecture-ai`
+
 🚨 **CLAUDE CODE HOOKS:** Executable scripts auto-run at specific points. Config: `.claude/settings.json`, Scripts: `.claude/hooks/` (executable)
 
 🚨 **TEMPORARY FILE ISOLATION:** ⚠️ MANDATORY - Prevent multi-branch conflicts

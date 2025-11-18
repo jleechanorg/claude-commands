@@ -15,15 +15,9 @@ deploy_common::submit_build() {
   # when service account lacks Viewer/Owner role. We poll for completion instead.
   echo "Starting build asynchronously..."
 
-  # Build with both tags if second tag provided, otherwise single tag
+  # Build with primary tag first
   local build_id
-  if [[ -n "$image_tag_latest" ]]; then
-    # Build with both tags: commit SHA and latest
-    build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --tag "$image_tag_latest" --async --format="value(id)")
-  else
-    # Build with single tag only
-    build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
-  fi
+  build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
 
   echo "Build ID: $build_id"
   echo "Polling for build completion..."
@@ -43,6 +37,15 @@ deploy_common::submit_build() {
   fi
 
   echo "Build completed successfully!"
+
+  # Add additional tag if provided
+  # Note: gcloud builds submit with multiple --tag flags only creates the last tag
+  # We must add additional tags AFTER the build completes
+  if [[ -n "$image_tag_latest" ]]; then
+    echo "Adding additional tag: $image_tag_latest"
+    gcloud container images add-tag "$image_tag" "$image_tag_latest" --quiet
+    echo "Additional tag added successfully!"
+  fi
 }
 
 deploy_common::deploy_service() {
