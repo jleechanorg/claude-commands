@@ -465,6 +465,95 @@ def setup_mcp_logging() -> None:
     logging_util.info(f"MCP server logging configured: {log_file}")
 
 
+def handle_jsonrpc(request_data: dict) -> dict:
+    """
+    Handle JSON-RPC 2.0 request.
+
+    This is a standalone function that can be called from both the HTTP server
+    and Flask routes, providing unified MCP JSON-RPC handling.
+
+    Args:
+        request_data: JSON-RPC 2.0 request dict with method, params, and id
+
+    Returns:
+        JSON-RPC 2.0 response dict
+    """
+    method = request_data.get("method")
+    params = request_data.get("params", {})
+    request_id = request_data.get("id")
+
+    logging_util.info(f"JSON-RPC call: {method} with params: {params}")
+
+    if method == "tools/call":
+        # Handle tool call
+        tool_name = params.get("name")
+        arguments = params.get("arguments", {})
+
+        # Use asyncio.run() instead of manual loop management for better performance
+        result = asyncio.run(handle_call_tool(tool_name, arguments))
+
+        # Extract text content from result
+        if result and len(result) > 0 and hasattr(result[0], "text"):
+            result_data = json.loads(result[0].text)
+        else:
+            result_data = {"error": "No result returned"}
+
+        return {"jsonrpc": "2.0", "result": result_data, "id": request_id}
+
+    if method == "tools/list":
+        # Handle tools list using asyncio.run() for better performance
+        tools = asyncio.run(handle_list_tools())
+
+        # Convert tools to JSON-serializable format
+        tools_data = [
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "inputSchema": tool.inputSchema,
+            }
+            for tool in tools
+        ]
+        return {
+            "jsonrpc": "2.0",
+            "result": {"tools": tools_data},
+            "id": request_id,
+        }
+
+    if method == "resources/list":
+        # Handle resources list using asyncio.run() for better performance
+        resources = asyncio.run(handle_list_resources())
+
+        # Convert resources to JSON-serializable format
+        resources_data = [
+            {
+                "uri": str(resource.uri),  # Convert AnyUrl to string
+                "name": resource.name,
+                "description": resource.description,
+                "mimeType": resource.mimeType,
+            }
+            for resource in resources
+        ]
+        return {
+            "jsonrpc": "2.0",
+            "result": {"resources": resources_data},
+            "id": request_id,
+        }
+
+    if method == "resources/read":
+        # Handle resource read
+        uri = params.get("uri")
+
+        # Use asyncio.run() instead of manual loop management for better performance
+        result = asyncio.run(handle_read_resource(uri))
+        return {"jsonrpc": "2.0", "result": result, "id": request_id}
+
+    return {
+        "jsonrpc": "2.0",
+        "error": {"code": -32601, "message": f"Method not found: {method}"},
+        "id": request_id,
+    }
+
+
 def run_server():
     """Run the World Logic MCP server."""
 
@@ -661,80 +750,8 @@ def run_server():
                 self.end_headers()
 
         def _handle_jsonrpc(self, request_data):
-            """Handle JSON-RPC 2.0 request"""
-            method = request_data.get("method")
-            params = request_data.get("params", {})
-            request_id = request_data.get("id")
-
-            logging_util.info(f"JSON-RPC call: {method} with params: {params}")
-
-            if method == "tools/call":
-                # Handle tool call
-                tool_name = params.get("name")
-                arguments = params.get("arguments", {})
-
-                # Use asyncio.run() instead of manual loop management for better performance
-                result = asyncio.run(handle_call_tool(tool_name, arguments))
-
-                # Extract text content from result
-                if result and len(result) > 0 and hasattr(result[0], "text"):
-                    result_data = json.loads(result[0].text)
-                else:
-                    result_data = {"error": "No result returned"}
-
-                return {"jsonrpc": "2.0", "result": result_data, "id": request_id}
-
-            if method == "tools/list":
-                # Handle tools list using asyncio.run() for better performance
-                tools = asyncio.run(handle_list_tools())
-
-                # Convert tools to JSON-serializable format
-                tools_data = [
-                    {
-                        "name": tool.name,
-                        "description": tool.description,
-                        "inputSchema": tool.inputSchema,
-                    }
-                    for tool in tools
-                ]
-                return {
-                    "jsonrpc": "2.0",
-                    "result": {"tools": tools_data},
-                    "id": request_id,
-                }
-
-            if method == "resources/list":
-                # Handle resources list using asyncio.run() for better performance
-                resources = asyncio.run(handle_list_resources())
-
-                # Convert resources to JSON-serializable format
-                resources_data = [
-                    {
-                        "uri": str(resource.uri),  # Convert AnyUrl to string
-                        "name": resource.name,
-                        "description": resource.description,
-                        "mimeType": resource.mimeType,
-                    }
-                    for resource in resources
-                ]
-                return {
-                    "jsonrpc": "2.0",
-                    "result": {"resources": resources_data},
-                    "id": request_id,
-                }
-
-            if method == "resources/read":
-                # Handle resource read
-                uri = params.get("uri")
-
-                # Use asyncio.run() instead of manual loop management for better performance
-                result = asyncio.run(handle_read_resource(uri))
-                return {"jsonrpc": "2.0", "result": result, "id": request_id}
-            return {
-                "jsonrpc": "2.0",
-                "error": {"code": -32601, "message": f"Method not found: {method}"},
-                "id": request_id,
-            }
+            """Handle JSON-RPC 2.0 request - delegates to standalone function."""
+            return handle_jsonrpc(request_data)
 
         def log_message(self, format, *args):
             # Suppress default logging for cleaner output

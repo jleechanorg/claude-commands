@@ -84,6 +84,9 @@ from mvp_site import constants, firestore_service, logging_util
 from mvp_site.custom_types import CampaignId, UserId
 from mvp_site.firestore_service import json_default_serializer
 
+# MCP JSON-RPC handler import
+from mvp_site.mcp_api import handle_jsonrpc
+
 # MCP client import
 from mvp_site.mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
@@ -879,6 +882,61 @@ def create_app() -> Flask:
                 "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
             }
         )
+
+    # --- MCP JSON-RPC Endpoint ---
+    @app.route("/mcp", methods=["POST"])
+    @limiter.exempt  # MCP endpoint should not be rate limited (used by internal tools)
+    def mcp_endpoint() -> Response | tuple[Response, int]:
+        """
+        MCP JSON-RPC 2.0 endpoint for Cloud Run deployment.
+
+        Handles JSON-RPC 2.0 requests for MCP tools without requiring a separate
+        HTTP server process. This enables MCP functionality in Cloud Run's single-port
+        architecture.
+
+        Supported methods:
+        - tools/list: List available MCP tools
+        - tools/call: Execute an MCP tool
+        - resources/list: List available resources
+        - resources/read: Read a resource
+
+        Returns:
+            JSON-RPC 2.0 response with result or error
+        """
+        try:
+            # Get JSON-RPC request data
+            request_data = request.get_json()
+            if not request_data:
+                return jsonify(
+                    {
+                        "jsonrpc": "2.0",
+                        "error": {
+                            "code": -32700,
+                            "message": "Parse error: No JSON data in request",
+                        },
+                        "id": None,
+                    }
+                ), 400
+
+            # Call the standalone JSON-RPC handler from mcp_api.py
+            response_data = handle_jsonrpc(request_data)
+
+            # Return JSON-RPC response
+            return jsonify(response_data)
+
+        except Exception as e:
+            # Log error for debugging
+            logging_util.error(f"MCP endpoint error: {e}")
+            logging_util.error(traceback.format_exc())
+
+            # Return JSON-RPC 2.0 error response
+            return jsonify(
+                {
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32603, "message": f"Internal error: {str(e)}"},
+                    "id": request_data.get("id") if request_data else None,
+                }
+            ), 500
 
     # --- Settings Routes ---
     @app.route("/settings")

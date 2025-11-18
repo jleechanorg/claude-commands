@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+
+# Keep prompts directory - critical for app functionality
+!prompts/*.md
+
+# Analysis and debug files
+coverage_report.txt
+ai_token_discovery_results.json
+analysis/
+CODE_REVIEW_SUMMARY.md
