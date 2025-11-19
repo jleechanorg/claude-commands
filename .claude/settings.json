@@ -325,16 +325,6 @@
         "@oevortex/ddg_search"
       ]
     },
-    "playwright-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp"
-      ],
-      "env": {
-        "PLAYWRIGHT_HEADLESS": "true"
-      }
-    },
     "memory-server": {
       "command": "npx",
       "args": [

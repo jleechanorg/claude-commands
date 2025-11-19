@@ -289,7 +289,7 @@ declare -a ALL_SERVER_NAMES=(
     "context7"
     "sequential-thinking"
     "chrome-superpower"
-    "playwright-mcp"
+    # "playwright-mcp"  # Disabled by default - uncomment to enable
     "gemini-cli-mcp"
     "grok"
     "perplexity-ask"
@@ -1968,10 +1968,11 @@ if should_install_server "chrome-superpower"; then
     install_chrome_superpower_mcp
 fi
 
-if should_install_server "playwright-mcp"; then
-    display_step "Installing Optional Playwright MCP Server..."
-    install_playwright_mcp
-fi
+# DISABLED: Playwright MCP Server (disabled by default - users can enable if needed)
+# if should_install_server "playwright-mcp"; then
+#     display_step "Installing Optional Playwright MCP Server..."
+#     install_playwright_mcp
+# fi
 
 # DISABLED: Memory MCP Server (not needed - using standard state management)
 # if should_install_server "memory-server"; then

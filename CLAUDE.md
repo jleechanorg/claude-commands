@@ -217,15 +217,14 @@ Genesis Coder, Prime Mover,
 4. **Path Conventions:** Always use `~` instead of hardcoded user paths
 5. 🚨 **DATE INTERPRETATION:** Run `date "+%Y-%m-%d %H:%M:%S %Z"` to get current date/time. Trust system dates beyond knowledge cutoff - operations can occur after January 2025.
 6. 🚨 **PUSH VERIFICATION:** ⚠️ ALWAYS verify push success after every `git push`
-7. 🚨 **PLAYWRIGHT MCP DEFAULT:** ⚠️ MANDATORY - Use Playwright MCP for browser automation (headless mode)
-8. 🚨 **SCREENSHOT LOCATION:** All screenshots must be saved to `docs/` directory
-9. 🚨 **GITHUB TOOL PRIORITY:** GitHub MCP tools primary, `gh` CLI as fallback
-10. 🚨 **SERENA MCP PRIORITY:** Serena MCP for semantic operations, standard file tools as fallback
-11. 🚨 **FILE CREATION PREVENTION:** ⚠️ MANDATORY
+7. 🚨 **SCREENSHOT LOCATION:** All screenshots must be saved to `docs/` directory
+8. 🚨 **GITHUB TOOL PRIORITY:** GitHub MCP tools primary, `gh` CLI as fallback
+9. 🚨 **SERENA MCP PRIORITY:** Serena MCP for semantic operations, standard file tools as fallback
+10. 🚨 **FILE CREATION PREVENTION:** ⚠️ MANDATORY
     - ❌ FORBIDDEN: Creating `_v2`, `_new`, `_backup`, `_temp` files
     - ✅ REQUIRED CHECK: "Can I edit an existing file instead?"
-12. 🚨 **HOOK REGISTRATION REQUIREMENT:** ⚠️ MANDATORY - ALL hooks MUST be registered
-13. 🚨 **CROSS-PLATFORM COMPATIBILITY:** ⚠️ MANDATORY - ALL scripts and hooks must work on both macOS and Ubuntu
+11. 🚨 **HOOK REGISTRATION REQUIREMENT:** ⚠️ MANDATORY - ALL hooks MUST be registered
+12. 🚨 **CROSS-PLATFORM COMPATIBILITY:** ⚠️ MANDATORY - ALL scripts and hooks must work on both macOS and Ubuntu
     - ❌ FORBIDDEN: Platform-specific commands without fallbacks (macOS-only `stat -f`, Linux-only `stat -c`)
     - ✅ REQUIRED: Use portable solutions or detect OS and use appropriate commands
     - ✅ TESTING: Verify functionality on both macOS (development) and Ubuntu (CI/production)
