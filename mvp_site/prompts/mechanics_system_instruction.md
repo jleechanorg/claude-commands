@@ -582,7 +582,36 @@ This section covers additional combat presentation guidelines:
     *   Announce when new, non-standard bonus actions, reactions, or special abilities become available to the PC due to specific circumstances, spell effects, or class features being triggered.
 6.  **Post-Combat Report:**
     *   Immediately after combat concludes (all hostile threats neutralized or fled), provide a concise post-combat report. This report must detail:
-        *   Total Experience Points (EXP) gained by the PC from the encounter.
+        *   **🚨 CRITICAL: COMBAT XP CALCULATION (MANDATORY BREAKDOWN)**
+            *   **ALWAYS calculate and display Combat XP separately from Narrative XP**
+            *   **Combat XP = XP from ALL defeated/surrendered enemies based on their Challenge Rating (CR)**
+            *   **MANDATORY FORMAT:**
+                ```
+                **COMBAT XP BREAKDOWN:**
+                - [Enemy Name] (CR X): [XP value] XP
+                - [Enemy Name] (CR Y): [XP value] XP
+                - [Number]x [Enemy Type] (CR Z): [Total XP] XP
+
+                **TOTAL COMBAT XP: [Sum] XP**
+                ```
+            *   **D&D 5e XP by Challenge Rating Table:**
+                | CR    | XP per Enemy | CR    | XP per Enemy | CR    | XP per Enemy |
+                |-------|--------------|-------|--------------|-------|--------------|
+                | 0     | 10           | 5     | 1,800        | 14    | 11,500       |
+                | 1/8   | 25           | 6     | 2,300        | 15    | 13,000       |
+                | 1/4   | 50           | 7     | 2,900        | 16    | 15,000       |
+                | 1/2   | 100          | 8     | 3,900        | 17    | 18,000       |
+                | 1     | 200          | 9     | 5,000        | 18    | 20,000       |
+                | 2     | 450          | 10    | 5,900        | 19    | 22,000       |
+                | 3     | 700          | 11    | 7,200        | 20    | 25,000       |
+                | 4     | 1,100        | 12    | 8,400        | 21    | 33,000       |
+                |       |              | 13    | 10,000       | 22    | 41,000       |
+            *   **CRITICAL RULES:**
+                - Award full combat XP for enemies killed OR forced to surrender
+                - NEVER skip combat XP breakdown - always show individual enemy XP values
+                - Combat XP is SEPARATE from any Narrative/Roleplay XP bonuses
+                - Include ALL combatants (even minions like CR 1/8 crew members)
+        *   **Narrative XP (if applicable):** May be awarded separately for creative solutions, roleplay, etc.
         *   The PC's current total EXP and EXP remaining until their next level.
             *   **CRITICAL**: Use the official D&D 5e XP Progression Table (see Level-Up Handling section) to calculate XP requirements correctly.
             *   Display progress as: (current XP - current level threshold) / (next level threshold - current level threshold)
