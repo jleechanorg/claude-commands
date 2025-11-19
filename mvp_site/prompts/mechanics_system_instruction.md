@@ -584,6 +584,9 @@ This section covers additional combat presentation guidelines:
     *   Immediately after combat concludes (all hostile threats neutralized or fled), provide a concise post-combat report. This report must detail:
         *   Total Experience Points (EXP) gained by the PC from the encounter.
         *   The PC's current total EXP and EXP remaining until their next level.
+            *   **CRITICAL**: Use the official D&D 5e XP Progression Table (see Level-Up Handling section) to calculate XP requirements correctly.
+            *   Display progress as: (current XP - current level threshold) / (next level threshold - current level threshold)
+            *   Example: Level 6 character with 15,775 total XP should show "1775/9000 XP to level 7" (15,775 - 14,000 = 1,775 of 9,000 needed)
         *   Any significant loot, items, or information recovered from defeated enemies or the location.
 
 ## Part 6.5: Narrative Experience Awards (DIRECT STATE MANAGEMENT)
@@ -645,10 +648,48 @@ You may include XP award context in your narrative text, but state_changes is th
 ```
 
 **Level-Up Handling:**
+
+**🚨 CRITICAL: Official D&D 5e XP Progression Table**
+
+Use this table for ALL XP calculations. The table shows:
+- **XP Required (Total)**: Cumulative XP needed to REACH that level
+- **XP Needed from Previous Level**: Additional XP needed to advance FROM the previous level
+
+| Level | XP Required (Total) | XP Needed from Previous Level |
+|-------|---------------------|-------------------------------|
+| 1     | 0                   | -                             |
+| 2     | 300                 | 300                           |
+| 3     | 900                 | 600                           |
+| 4     | 2,700               | 1,800                         |
+| 5     | 6,500               | 3,800                         |
+| 6     | 14,000              | 7,500                         |
+| 7     | 23,000              | 9,000                         |
+| 8     | 34,000              | 11,000                        |
+| 9     | 48,000              | 14,000                        |
+| 10    | 64,000              | 16,000                        |
+| 11    | 85,000              | 21,000                        |
+| 12    | 100,000             | 15,000                        |
+| 13    | 120,000             | 20,000                        |
+| 14    | 140,000             | 20,000                        |
+| 15    | 165,000             | 25,000                        |
+| 16    | 195,000             | 30,000                        |
+| 17    | 225,000             | 30,000                        |
+| 18    | 265,000             | 40,000                        |
+| 19    | 305,000             | 40,000                        |
+| 20    | 355,000             | 50,000                        |
+
+**CRITICAL RULE FOR XP DISPLAY:**
+- When showing XP progress for a character at level N, the denominator should be the "XP Needed from Previous Level" value (column 3), NOT the "XP Required (Total)" value (column 2)
+- Example: A level 6 character with 1,775 XP toward next level should display as "1775/9000" (9,000 XP needed from 6→7), NOT "1775/14000" (14,000 is the total needed to reach level 6)
+- The `xp_current` value in state_changes should track total cumulative XP
+- The `xp_next_level` value should be the "XP Required (Total)" for the next level
+
+**Implementation Steps:**
 When XP reaches the next level requirement:
 1. Increment level in state_changes
-2. Set new xp_next_level target (typically doubled from previous)
-3. Keep xp_current at the earned total
+2. Set new xp_next_level to the "XP Required (Total)" value from the table for the next level
+3. Keep xp_current at the earned cumulative total
+4. When displaying progress to player, show: (xp_current - current_level_threshold) / (next_level_threshold - current_level_threshold)
 
 **Quality Assurance Checklist:**
 - Did the player's action demonstrate meaningful agency or growth?
@@ -669,7 +710,7 @@ When XP reaches the next level requirement:
 -   **rewind list**: Display the last 5 STORY MODE [HASH] identifiers, which can be used to revert the game state.
 -   **save state**: Designates the current timeline as the "golden timeline." This state cannot be reverted unless the user confirms with the exact phrase "confirm 1234". You must remind the user of the codeword if they attempt to revert without it.
 -   **summary**: Provide a report including: current follower count, gold, income, major threats, active quests, potential quests, and projected follower growth at 1, 3, 6, and 12 months.
--   **summarize exp**: Provide a report including: current level and XP, XP needed for the next level, and a list of recent events that awarded XP.
+-   **summarize exp**: Provide a report including: current level and total XP, XP needed for the next level (calculated using the official D&D 5e XP Progression Table in the Level-Up Handling section), and a list of recent events that awarded XP. Display progress as: (current XP - current level threshold) / (next level threshold - current level threshold).
 
 -   **think/plan/options**: Invokes the Think Block State Management Protocol (see CRITICAL section at top of narrative_system_instruction.md). This forces AI to generate only internal thoughts + numbered options, then WAIT for player selection.
 -   **wait X** (e.g., `wait 7 days`, `wait 3 weeks`, `wait 8 hours`): Advance in-game time by the specified duration X.
