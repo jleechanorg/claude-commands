@@ -33,6 +33,7 @@ from typing import Any
 
 import requests
 from flask import Request, Response
+from urllib3.util.retry import Retry
 
 from mvp_site import firestore_service, logging_util
 
@@ -91,6 +92,7 @@ class MCPClient:
     _shared_event_loop = None
     _loop_lock = threading.RLock()
     _loop_thread = None
+    _loop_ready = threading.Event()  # Synchronization for event loop initialization
 
     def __init__(
         self,
@@ -128,6 +130,43 @@ class MCPClient:
             )
             # Ensure SSL verification is enabled for security
             self.session.verify = True
+
+            # Configure connection pooling for improved performance
+            # pool_connections: Number of connection pools to cache (default: 10)
+            # pool_maxsize: Maximum number of connections to save in the pool (default: 20)
+            #   - Preview env: 1 worker × 4 threads = 4 concurrent, 20 pool = 5× headroom
+            #   - Production: max ~3 workers × 4 threads = 12 concurrent, 20 pool = 1.6× headroom
+            # max_retries: Retry configuration object for failed requests
+            # pool_block: Whether to block when no connections are available
+            #   - False = fail fast if pool exhausted (better than hiding issues with blocking)
+
+            # Configure retry strategy with backoff
+            # IMPORTANT: POST is excluded from retries because MCP operations (create_campaign,
+            # process_action, etc.) are NOT idempotent. Retrying POST on 5xx errors could
+            # cause duplicate operations (e.g., creating campaigns twice).
+            # Only safe, idempotent methods are retried automatically.
+            retry_strategy = Retry(
+                total=3,  # Total number of retries
+                backoff_factor=0.3,  # Exponential backoff: 0.3s, 0.6s, 1.2s
+                status_forcelist=[500, 502, 503, 504],  # Retry on server errors
+                allowed_methods=[
+                    "HEAD",
+                    "GET",
+                    "OPTIONS",
+                    "TRACE",
+                    # POST excluded - MCP operations are not idempotent
+                ],
+            )
+
+            adapter = requests.adapters.HTTPAdapter(
+                pool_connections=10,  # Cache pools for up to 10 hosts
+                pool_maxsize=20,      # Max 20 connections per pool
+                max_retries=retry_strategy,  # Use Retry object for better control
+                pool_block=False      # Don't block, raise error if pool full
+            )
+            self.session.mount('http://', adapter)
+            self.session.mount('https://', adapter)
+
             self.world_logic = None
         else:
             self.session = None
@@ -504,9 +543,18 @@ class MCPClient:
 
     @classmethod
     def _get_shared_event_loop(cls):
-        """Get or create shared event loop for sync operations (performance fix)"""
+        """
+        Get or create shared event loop for sync operations (performance fix)
+
+        Thread-safe event loop initialization with synchronization to ensure
+        the loop is fully ready before returning.
+
+        Returns:
+            asyncio.AbstractEventLoop: Running event loop ready for use
+        """
         with cls._loop_lock:
             if cls._shared_event_loop is None or cls._shared_event_loop.is_closed():
+                cls._loop_ready.clear()  # Reset event for new loop
                 cls._shared_event_loop = asyncio.new_event_loop()
                 # Start the event loop in a background thread
                 cls._loop_thread = threading.Thread(
@@ -515,6 +563,9 @@ class MCPClient:
                     name="MCP-EventLoop",
                 )
                 cls._loop_thread.start()
+                # Wait for event loop to be ready (with timeout)
+                if not cls._loop_ready.wait(timeout=1.0):
+                    logger.warning("Event loop not ready after 1s, proceeding anyway")
                 logger.debug("Created and started shared event loop for MCP operations")
             return cls._shared_event_loop
 
@@ -522,6 +573,7 @@ class MCPClient:
     def _run_event_loop_forever(cls):
         """Run the shared event loop forever in background thread"""
         asyncio.set_event_loop(cls._shared_event_loop)
+        cls._loop_ready.set()  # Signal that loop is ready
         try:
             cls._shared_event_loop.run_forever()
         except Exception as e:

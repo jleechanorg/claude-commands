@@ -90,6 +90,9 @@ from mvp_site.mcp_api import handle_jsonrpc
 # MCP client import
 from mvp_site.mcp_client import MCPClient, MCPClientError, handle_mcp_errors
 
+# Infrastructure helpers
+from infrastructure.mcp_helpers import create_thread_safe_mcp_getter
+
 # --- CONSTANTS ---
 # API Configuration
 CORS_RESOURCES = {
@@ -272,32 +275,8 @@ def create_app() -> Flask:
 
     # Defer MCP client initialization until first use to avoid race condition
     # with command-line argument configuration
-    app._mcp_client = None
-
-    def get_mcp_client():
-        """Lazy initialization of MCP client with proper configuration."""
-        if app._mcp_client is None:
-            skip_http_mode = getattr(
-                app, "_skip_mcp_http", True
-            )  # Default: direct calls
-            mcp_server_url = getattr(
-                app,
-                "_mcp_server_url",
-                os.environ.get("MCP_SERVER_URL", "http://localhost:8000"),
-            )
-            # Import world_logic module for direct calls when skip_http=True
-            world_logic_module = None
-            if skip_http_mode:
-                # world_logic already imported at module level
-                world_logic_module = world_logic
-
-            app._mcp_client = MCPClient(
-                mcp_server_url,
-                timeout=300,
-                skip_http=skip_http_mode,
-                world_logic_module=world_logic_module,
-            )
-        return app._mcp_client
+    # Use infrastructure helper for thread-safe lazy initialization
+    get_mcp_client = create_thread_safe_mcp_getter(app, world_logic_module=world_logic)
 
     # Cache busting route for testing - only activates with special header
     @app.route("/frontend_v1/<path:filename>")
@@ -873,15 +852,64 @@ def create_app() -> Flask:
         Health check endpoint for deployment verification.
 
         Used by Cloud Run and deployment workflows to verify service availability.
-        Returns 200 OK with service status information.
+        Returns 200 OK with service status information including concurrency configuration.
         """
-        return jsonify(
-            {
-                "status": "healthy",
-                "service": "worldarchitect-ai",
-                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        # Gather system information for monitoring
+        health_info = {
+            "status": "healthy",
+            "service": "worldarchitect-ai",
+            "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+        }
+
+        # Include Gunicorn worker configuration if available (from environment)
+        gunicorn_workers_raw = os.getenv("GUNICORN_WORKERS")
+        gunicorn_threads_raw = os.getenv("GUNICORN_THREADS")
+
+        concurrency: dict[str, int] = {}
+
+        def _safe_parse_int(value: str | None, env_name: str) -> int | None:
+            """Safely parse an integer environment variable."""
+
+            if value is None:
+                return None
+
+            try:
+                return int(value)
+            except ValueError:
+                logging_util.warning(
+                    "Invalid %s value %r provided; ignoring for /health response",
+                    env_name,
+                    value,
+                )
+                return None
+
+        gunicorn_workers = _safe_parse_int(gunicorn_workers_raw, "GUNICORN_WORKERS")
+        gunicorn_threads = _safe_parse_int(gunicorn_threads_raw, "GUNICORN_THREADS")
+
+        if gunicorn_workers is not None:
+            concurrency["workers"] = gunicorn_workers
+        if gunicorn_threads is not None:
+            concurrency["threads"] = gunicorn_threads
+        if gunicorn_workers is not None and gunicorn_threads is not None:
+            concurrency["max_concurrent_requests"] = (
+                gunicorn_workers * gunicorn_threads
+            )
+
+        if concurrency:
+            health_info["concurrency"] = concurrency
+
+        # Include MCP client status (check if already initialized, don't trigger initialization)
+        # Health checks should be fast and not trigger expensive operations
+        if hasattr(app, "_mcp_client") and app._mcp_client is not None:
+            health_info["mcp_client"] = {
+                "initialized": True,
+                "base_url": app._mcp_client.base_url,
+                "skip_http": app._mcp_client.skip_http,
             }
-        )
+        else:
+            health_info["mcp_client"] = {"initialized": False}
+
+        return jsonify(health_info)
 
     # --- MCP JSON-RPC Endpoint ---
     @app.route("/mcp", methods=["POST"])

@@ -5,6 +5,7 @@ on:
     types: [opened, reopened, synchronize, ready_for_review]
     paths:
       - 'mvp_site/**'
+      - 'infrastructure/**'
       - 'deploy.sh'
       - 'scripts/deploy_common.sh'
       - 'Dockerfile'
@@ -110,13 +111,21 @@ jobs:
           IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$GITHUB_SHA"
 
           echo "Building Docker image: $IMAGE_TAG"
+          # Create inline cloudbuild.yaml to build from project root with Dockerfile in mvp_site/
+          cat > /tmp/cloudbuild.yaml <<EOF
+          steps:
+          - name: 'gcr.io/cloud-builders/docker'
+            args: ['build', '-t', '$IMAGE_TAG', '-f', 'mvp_site/Dockerfile', '.']
+          images: ['$IMAGE_TAG']
+          EOF
+
           gcloud builds submit \
-            --tag "$IMAGE_TAG" \
+            --config=/tmp/cloudbuild.yaml \
             --project="${{ env.GCP_PROJECT }}" \
             --timeout=15m \
             --quiet \
             --suppress-logs \
-            mvp_site/ || {
+            . || {
             echo "⚠️ Build command returned non-zero exit code, but build may still be running"
             echo "Checking if image was created..."
             sleep 30
