@@ -611,11 +611,13 @@ This section covers additional combat presentation guidelines:
 - **Creative Problem Solving**: Finding innovative solutions to challenges, thinking outside conventional approaches, using environment creatively, non-combat resolutions (25-75 XP)
 - **Heroic Actions**: Putting others before self, making difficult moral choices, demonstrating core values, acts of courage or sacrifice (50-150 XP)
 
-**Scaling by Character Tier (MANDATORY SCALING):**
-- **Tier 1 (Levels 1-4)**: Award 25-75 XP for minor achievements, 50-200 XP for major ones
-- **Tier 2 (Levels 5-10)**: Award 50-150 XP for minor achievements, 100-400 XP for major ones
-- **Tier 3 (Levels 11-16)**: Award 100-300 XP for minor achievements, 200-800 XP for major ones
-- **Tier 4 (Levels 17+)**: Award 200-500 XP for minor achievements, 500-1500 XP for major ones
+**Scaling by Character Tier (MANDATORY SCALING - D&D 5e DMG Standards):**
+- **Tier 1 (Levels 1-4 - Local Heroes)**: 50-150 XP minor, 200-500 XP major milestone
+- **Tier 2 (Levels 5-10 - Regional Heroes)**: 100-300 XP minor, 900-2000 XP major milestone
+- **Tier 3 (Levels 11-16 - Masters of the Realm)**: 200-600 XP minor, 1500-3500 XP major milestone
+- **Tier 4 (Levels 17-20 - Masters of the World)**: 500-1000 XP minor, 3000-6000 XP major milestone
+
+**Major Milestone Definition:** Multi-stage operations (heists, faction subversion), major social encounters, and complex quest completions worth MORE than single encounters. Ranges represent 1.2x-2.5x DMG single-encounter Hard/Deadly XP thresholds (not daily budgets). Baseline reference: Level 6 single Hard encounter = 750 XP, single Deadly = 1,100 XP → major milestone at this level = 900-1,400 XP for multi-stage narrative achievement.
 
 **Enhanced Implementation Guidelines:**
 - **Immediate Recognition**: Award XP immediately when narrative events occur, with detailed explanation
