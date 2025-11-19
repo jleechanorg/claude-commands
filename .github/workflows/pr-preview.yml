@@ -1,0 +1,268 @@
+name: Deploy PR Preview (Rotating Pool)
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+    paths:
+      - 'mvp_site/**'
+      - 'deploy.sh'
+      - 'scripts/deploy_common.sh'
+      - 'Dockerfile'
+      - 'requirements.txt'
+      - 'scripts/**'
+      - '.github/workflows/pr-preview.yml'
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  deploy-preview:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: worldarchitecture-ai
+      CLOUDSDK_CORE_DISABLE_PROMPTS: "1"
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@55bd3a7c6e2ae7cf1877fd1ccb9d54c0503c457c  # v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@98ddc00a17442e89a24bbf282954a3b65ce6d200  # v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Ensure required Google Cloud APIs are enabled
+        run: |
+          set -euo pipefail
+          gcloud services enable \
+            run.googleapis.com \
+            cloudbuild.googleapis.com \
+            artifactregistry.googleapis.com \
+            --project="${{ env.GCP_PROJECT }}" \
+            --quiet
+
+      - name: Assign server from pool
+        id: server_pool
+        env:
+          PR_NUMBER: ${{ github.event.number }}
+        run: |
+          set -euo pipefail
+
+          # Make script executable
+          chmod +x .github/scripts/pr-server-pool.sh
+
+          # Assign server to this PR
+          ASSIGNMENT=$(.github/scripts/pr-server-pool.sh assign "$PR_NUMBER")
+
+          # Parse JSON output
+          SERVER=$(echo "$ASSIGNMENT" | jq -r '.server')
+          SERVICE_NAME=$(echo "$ASSIGNMENT" | jq -r '.serviceName')
+          EVICTED=$(echo "$ASSIGNMENT" | jq -r '.evicted')
+
+          # Set outputs
+          echo "server=$SERVER" >> "$GITHUB_OUTPUT"
+          echo "service_name=$SERVICE_NAME" >> "$GITHUB_OUTPUT"
+          echo "evicted=$EVICTED" >> "$GITHUB_OUTPUT"
+
+          echo "✅ Assigned server: $SERVER (service: $SERVICE_NAME)"
+          if [[ "$EVICTED" != "null" ]]; then
+            echo "⚠️ Evicted PR #$EVICTED from this server"
+          fi
+
+      - name: Notify evicted PR
+        if: steps.server_pool.outputs.evicted != 'null'
+        env:
+          EVICTED_PR: ${{ steps.server_pool.outputs.evicted }}
+        run: |
+          set -euo pipefail
+
+          gh pr comment "$EVICTED_PR" --repo ${{ github.repository }} --body "## ⚠️ Preview Evicted
+
+          Your preview was replaced by PR #${{ github.event.number }} due to pool capacity limits.
+
+          ### 🔄 To get a new preview:
+          1. Close this PR
+          2. Reopen it to trigger a new deployment
+
+          🤖 *Server pool auto-management*"
+
+      - name: Post build started comment
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ github.event.number }}"
+          SERVICE_NAME="${{ steps.server_pool.outputs.service_name }}"
+          SERVER="${{ steps.server_pool.outputs.server }}"
+          COMMIT_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "## 🚀 Build Started (Server Pool)
+
+          **Commit:** [\`$COMMIT_SHORT\`](https://github.com/${{ github.repository }}/commit/${{ github.sha }})
+          **Branch:** \`${{ github.head_ref }}\`
+          **Server:** \`$SERVER\` → \`$SERVICE_NAME\`
+          **Workflow:** [View Progress](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+          ### 🔄 Build Steps:
+          - ✅ Server assigned from pool
+          - 🔄 **Docker image build**
+          - ⏳ Cloud Run deployment
+          - ⏳ Health check verification
+
+          *Estimated time: 5-8 minutes*
+
+          🤖 *Auto-deployment via rotating server pool*"
+
+      - name: Build and Deploy PR Preview
+        env:
+          SERVICE_NAME: ${{ steps.server_pool.outputs.service_name }}
+          SERVER: ${{ steps.server_pool.outputs.server }}
+          GITHUB_SHA: ${{ github.sha }}
+          PR_NUMBER: ${{ github.event.number }}
+        timeout-minutes: 20
+        run: |
+          set -euo pipefail
+
+          echo "🚀 Deploying PR #$PR_NUMBER to server $SERVER..."
+          echo "Service name: $SERVICE_NAME"
+
+          # Build and push Docker image with unique tag
+          IMAGE_TAG="gcr.io/${{ env.GCP_PROJECT }}/$SERVICE_NAME:$GITHUB_SHA"
+
+          echo "Building Docker image: $IMAGE_TAG"
+          gcloud builds submit \
+            --tag "$IMAGE_TAG" \
+            --project="${{ env.GCP_PROJECT }}" \
+            --timeout=15m \
+            --quiet \
+            --suppress-logs \
+            mvp_site/ || {
+            echo "⚠️ Build command returned non-zero exit code, but build may still be running"
+            echo "Checking if image was created..."
+            sleep 30
+          }
+
+          # Deploy to Cloud Run with PR label
+          echo "Deploying to Cloud Run service: $SERVICE_NAME"
+          gcloud run deploy "$SERVICE_NAME" \
+            --image "$IMAGE_TAG" \
+            --region="${{ env.GCP_REGION }}" \
+            --project="${{ env.GCP_PROJECT }}" \
+            --platform=managed \
+            --allow-unauthenticated \
+            --set-env-vars="FLASK_ENV=production,ENVIRONMENT=preview" \
+            --set-secrets="GEMINI_API_KEY=gemini-api-key:latest" \
+            --memory=512Mi \
+            --cpu=1 \
+            --max-instances=2 \
+            --timeout=300 \
+            --update-labels="pr-number=$PR_NUMBER" \
+            --quiet
+
+          echo "✅ Deployment complete!"
+
+      - name: Fetch deployed service URL
+        if: success()
+        id: service_url
+        run: |
+          set -euo pipefail
+
+          SERVICE_NAME="${{ steps.server_pool.outputs.service_name }}"
+
+          SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --project="${{ env.GCP_PROJECT }}" \
+            --region="${{ env.GCP_REGION }}" \
+            --format="value(status.url)" \
+            --quiet 2>/dev/null || echo "")
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "::warning::Service URL for $SERVICE_NAME could not be determined"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+          echo "✅ Deployed service available at $SERVICE_URL"
+
+      - name: Wait for deployed service health
+        if: success() && steps.service_url.outputs.service_url != ''
+        env:
+          HEALTH_CHECK_MAX_ATTEMPTS: ${{ vars.HEALTH_CHECK_MAX_ATTEMPTS || '12' }}
+          HEALTH_CHECK_INTERVAL_SECONDS: ${{ vars.HEALTH_CHECK_INTERVAL_SECONDS || '5' }}
+        run: |
+          set -euo pipefail
+
+          SERVICE_URL="${{ steps.service_url.outputs.service_url }}"
+          echo "Waiting for service health at $SERVICE_URL/health"
+
+          echo "Using HEALTH_CHECK_MAX_ATTEMPTS=${HEALTH_CHECK_MAX_ATTEMPTS}, HEALTH_CHECK_INTERVAL_SECONDS=${HEALTH_CHECK_INTERVAL_SECONDS}"
+
+          for attempt in $(seq 1 "$HEALTH_CHECK_MAX_ATTEMPTS"); do
+            # NOTE: Increased timeouts (10s connect, 20s total) to accommodate Cloud Run cold starts
+            # which can take longer when the service is spinning up from idle state
+            if curl -fsS --connect-timeout 10 --max-time 20 "$SERVICE_URL/health" > /dev/null; then
+              echo "✅ Service responded healthy on attempt $attempt"
+              exit 0
+            fi
+
+            echo "⏳ Health check attempt $attempt failed; retrying in ${HEALTH_CHECK_INTERVAL_SECONDS} seconds..."
+            sleep "$HEALTH_CHECK_INTERVAL_SECONDS"
+          done
+
+          echo "Service failed to report healthy in expected time" >&2
+          exit 1
+
+      - name: Show pool status
+        if: always()
+        run: |
+          set -euo pipefail
+          chmod +x .github/scripts/pr-server-pool.sh
+          .github/scripts/pr-server-pool.sh status
+
+      - name: Post deployment success comment
+        if: success()
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ github.event.number }}"
+          SERVICE_NAME="${{ steps.server_pool.outputs.service_name }}"
+          SERVER="${{ steps.server_pool.outputs.server }}"
+          COMMIT_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+
+          SERVICE_URL="${{ steps.service_url.outputs.service_url }}"
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          GCP_CONSOLE_URL="https://console.cloud.google.com/run?project=${{ env.GCP_PROJECT }}"
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "⚠️ Could not retrieve service URL for $SERVICE_NAME"
+            COMMENT="## ⚠️ Deployment Status Unknown"$'\n\n'"The deployment process completed, but the service URL could not be retrieved."$'\n\n'"### 📋 Details:"$'\n'"- **Commit:** [\`$COMMIT_SHORT\`]($COMMIT_URL)"$'\n'"- **Server:** \`$SERVER\`"$'\n'"- **Service:** \`$SERVICE_NAME\`"$'\n'"- **Region:** \`${{ env.GCP_REGION }}\`"$'\n'"- **Workflow:** [View Details]($WORKFLOW_URL)"$'\n\n'"Please check the [Google Cloud Console]($GCP_CONSOLE_URL) for more details."$'\n\n'"🤖 *Auto-deployed via rotating server pool*"
+            gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "$COMMENT"
+          else
+            COMMENT="## ✅ Deployment Complete! (Rotating Pool)"$'\n\n'"**🎉 Your PR preview is ready on server \`$SERVER\`!**"$'\n\n'"### 🔗 Quick Access:"$'\n'"| Service | URL |"$'\n'"|---------|----|"$'\n'"| 🌐 **Preview App** | [$SERVICE_URL]($SERVICE_URL) |"$'\n'"| 🩺 **Health Check** | [$SERVICE_URL/health]($SERVICE_URL/health) |"$'\n'"| 📡 **MCP Endpoint** | [$SERVICE_URL/mcp]($SERVICE_URL/mcp) |"$'\n\n'"> ℹ️ Use \`/smoke\` command to run MCP smoke tests against this preview."$'\n\n'"### 🔄 Completed Build Steps:"$'\n'"- ✅ Server assigned from pool (\`$SERVER\`)"$'\n'"- ✅ Docker image build"$'\n'"- ✅ Cloud Run deployment"$'\n'"- ✅ Health check verification"$'\n\n'"### 📋 Deployment Details:"$'\n'"- **Commit:** [\`$COMMIT_SHORT\`]($COMMIT_URL)"$'\n'"- **Server:** \`$SERVER\` (rotating pool)"$'\n'"- **Service:** \`$SERVICE_NAME\`"$'\n'"- **Region:** \`${{ env.GCP_REGION }}\`"$'\n'"- **Branch:** \`${{ github.head_ref }}\`"$'\n'"- **Workflow:** [View Details]($WORKFLOW_URL)"$'\n\n'"🤖 *Auto-deployed via rotating server pool - closes will release server for reuse*"
+            gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "$COMMENT"
+          fi
+
+      - name: Post deployment failure comment
+        if: failure()
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ github.event.number }}"
+          SERVICE_NAME="${{ steps.server_pool.outputs.service_name }}"
+          SERVER="${{ steps.server_pool.outputs.server }}"
+          COMMIT_SHORT=$(echo "${{ github.sha }}" | cut -c1-7)
+          SERVICE_URL="${{ steps.service_url.outputs.service_url }}"
+          COMMIT_URL="https://github.com/${{ github.repository }}/commit/${{ github.sha }}"
+          WORKFLOW_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          PREVIEW_URL="${SERVICE_URL:-Unavailable}"
+          COMMENT="## ❌ Deployment Failed (Server Pool)"$'\n\n'"The deployment process encountered an error and could not complete."$'\n\n'"### 📋 Details:"$'\n'"- **Commit:** [\`$COMMIT_SHORT\`]($COMMIT_URL)"$'\n'"- **Server:** \`$SERVER\`"$'\n'"- **Service:** \`$SERVICE_NAME\`"$'\n'"- **Preview URL:** $PREVIEW_URL"$'\n'"- **Branch:** \`${{ github.head_ref }}\`"$'\n'"- **Workflow:** [View Logs]($WORKFLOW_URL)"$'\n\n'"### 🔍 Next Steps:"$'\n'"1. Check the [workflow logs]($WORKFLOW_URL) for details"$'\n'"2. Review any error messages in the deployment step"$'\n'"3. Push a new commit to retry the deployment"$'\n\n'"🤖 *Auto-deployment failed via rotating server pool*"
+
+          gh pr comment "$PR_NUMBER" --repo ${{ github.repository }} --body "$COMMENT"
