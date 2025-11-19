@@ -164,3 +164,35 @@ jobs:
           echo "⚠️ **PRODUCTION WAS NOT UPDATED**" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Review the workflow logs for details and retry after fixing the issue." >> $GITHUB_STEP_SUMMARY
+
+      - name: Send failure email notification
+        if: failure()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: failure
+          environment: production
+          service_name: mvp-site-app-stable
+          region: us-central1
+          project: worldarchitecture-ai
+          branch: ${{ github.ref_name }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+      - name: Send success email notification
+        if: success()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: success
+          environment: production
+          service_name: mvp-site-app-stable
+          region: us-central1
+          project: worldarchitecture-ai
+          branch: ${{ github.ref_name }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}

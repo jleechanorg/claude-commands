@@ -1,0 +1,101 @@
+# Test Workflow for Email Notification Action
+# Manual trigger only - tests both success and failure notification scenarios
+#
+# Usage: Go to Actions tab -> Test Email Notification -> Run workflow
+# Select either "success" or "failure" to test different notification types
+
+name: Test Email Notification
+
+on:
+  workflow_dispatch:
+    inputs:
+      notification_type:
+        description: 'Type of notification to test'
+        required: true
+        type: choice
+        options:
+          - success
+          - failure
+      environment:
+        description: 'Test environment name'
+        required: false
+        default: 'test'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  test-notification:
+    name: Test Email Notification Action
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4
+
+      - name: Simulate deployment (success scenario)
+        if: inputs.notification_type == 'success'
+        run: |
+          echo "✅ Simulating successful deployment..."
+          echo "This would be where actual deployment happens"
+          echo "Deployment completed successfully!"
+
+      - name: Simulate deployment (failure scenario)
+        if: inputs.notification_type == 'failure'
+        run: |
+          echo "❌ Simulating failed deployment..."
+          echo "This would be where deployment fails"
+          exit 1
+
+      - name: Send failure email notification
+        if: failure()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: failure
+          environment: ${{ inputs.environment }}
+          service_name: mvp-site-app-test
+          region: us-central1
+          project: worldarchitecture-ai
+          branch: ${{ github.ref_name }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: https://test-deployment.example.com
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+      - name: Send success email notification
+        if: success()
+        uses: ./.github/actions/send-deploy-notification
+        with:
+          status: success
+          environment: ${{ inputs.environment }}
+          service_name: mvp-site-app-test
+          region: us-central1
+          project: worldarchitecture-ai
+          branch: ${{ github.ref_name }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: https://test-deployment.example.com
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+      - name: Test summary
+        if: always()
+        run: |
+          echo "## 📧 Email Notification Test Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Notification Type Tested:** ${{ inputs.notification_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Environment:** ${{ inputs.environment }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Result" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ inputs.notification_type }}" = "success" ]; then
+            echo "✅ Success notification should have been sent" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Failure notification should have been sent" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Check your email inbox to verify the notification was received." >> $GITHUB_STEP_SUMMARY

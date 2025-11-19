@@ -1,0 +1,97 @@
+# Centralized Email Notification Action for Deployments
+# This composite action sends email notifications for deployment success or failure
+#
+# Usage:
+#   - name: Send deployment notification
+#     uses: ./.github/actions/send-deploy-notification
+#     with:
+#       status: success  # or failure
+#       environment: dev
+#       service_name: mvp-site-app-dev
+#       region: us-central1
+#       project: worldarchitecture-ai
+#       branch: main
+#       commit_sha: ${{ github.sha }}
+#       deployment_url: https://example.com
+#       workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+#       email_user: ${{ secrets.EMAIL_USER }}
+#       email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
+
+name: 'Send Deployment Email Notification'
+description: 'Sends email notifications for deployment success or failure'
+
+inputs:
+  status:
+    description: 'Deployment status (success or failure)'
+    required: true
+  environment:
+    description: 'Deployment environment (dev, production, etc.)'
+    required: true
+  service_name:
+    description: 'Name of the deployed service'
+    required: true
+  region:
+    description: 'GCP region'
+    required: false
+    default: 'us-central1'
+  project:
+    description: 'GCP project ID'
+    required: false
+    default: 'worldarchitecture-ai'
+  branch:
+    description: 'Git branch name'
+    required: true
+  commit_sha:
+    description: 'Git commit SHA'
+    required: true
+  deployment_url:
+    description: 'URL of the deployed service'
+    required: false
+    default: ''
+  workflow_url:
+    description: 'URL of the GitHub Actions workflow run'
+    required: true
+  email_user:
+    description: 'Email username (for SMTP authentication and recipient)'
+    required: true
+  email_password:
+    description: 'Email password or app password'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Send email notification
+      continue-on-error: true
+      uses: dawidd6/action-send-mail@6d98ae34d733f9a723a9e04e94f2f24ba05e1402  # v6
+      with:
+        server_address: smtp.gmail.com
+        server_port: 587
+        username: ${{ inputs.email_user }}
+        password: ${{ inputs.email_password }}
+        subject: >-
+          ${{ inputs.status == 'success' && '✅ SUCCESS' || '❌ FAILED' }}:
+          ${{ inputs.environment }} Deployment - ${{ inputs.service_name }}
+        to: ${{ inputs.email_user }}
+        from: WorldArchitect.AI Deploy Bot <${{ inputs.email_user }}>
+        body: |
+          ${{ inputs.status == 'success' && '✅' || '🚨' }} ${{ inputs.environment }} Deployment ${{ inputs.status == 'success' && 'Successful' || 'Failed' }}
+
+          Environment: ${{ inputs.environment }}
+          Service: ${{ inputs.service_name }}
+          ${{ inputs.region && format('Region: {0}', inputs.region) || '' }}
+          ${{ inputs.project && format('Project: {0}', inputs.project) || '' }}
+          Branch: ${{ inputs.branch }}
+          Commit: ${{ inputs.commit_sha }}
+
+          Status: ${{ inputs.status == 'success' && 'SUCCESS ✅' || 'FAILED ❌' }}
+
+          ${{ inputs.deployment_url && format('Deployment URL: {0}', inputs.deployment_url) || '' }}
+          ${{ inputs.deployment_url && format('Health Check: {0}/health', inputs.deployment_url) || '' }}
+
+          ${{ inputs.region && inputs.project && inputs.service_name && format('Console: https://console.cloud.google.com/run/detail/{0}/{1}?project={2}', inputs.region, inputs.service_name, inputs.project) || '' }}
+          ${{ inputs.project && inputs.service_name && format('Logs: https://console.cloud.google.com/logs/query?project={0}&query=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22{1}%22', inputs.project, inputs.service_name) || '' }}
+
+          Workflow: ${{ inputs.workflow_url }}
+
+          ${{ inputs.status == 'failure' && format('Please check the workflow logs for details: {0}', inputs.workflow_url) || '' }}

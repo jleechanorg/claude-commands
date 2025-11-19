@@ -135,58 +135,32 @@ jobs:
 
       - name: Send failure email notification
         if: failure()
-        continue-on-error: true
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2  # v3.12.0
+        uses: ./.github/actions/send-deploy-notification
         with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USER }}
-          password: ${{ secrets.EMAIL_APP_PASSWORD }}
-          subject: "❌ FAILED: Dev Deployment - ${{ env.SERVICE_NAME }}"
-          to: ${{ secrets.EMAIL_USER }}
-          from: WorldArchitect.AI Deploy Bot <${{ secrets.EMAIL_USER }}>
-          body: |
-            🚨 Dev Deployment Failed
-
-            Environment: dev
-            Service: ${{ env.SERVICE_NAME }}
-            Branch: ${{ env.REF_NAME }}
-            Commit: ${{ github.sha }}
-            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            Status: FAILED ❌
-
-            Please check the workflow logs for details:
-            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          status: failure
+          environment: dev
+          service_name: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          project: ${{ env.GCP_PROJECT }}
+          branch: ${{ env.REF_NAME }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
 
       - name: Send success email notification
         if: success()
-        continue-on-error: true
-        uses: dawidd6/action-send-mail@6063705cefe50cb915fc53bb06d4049cae2953b2  # v3.12.0
+        uses: ./.github/actions/send-deploy-notification
         with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          username: ${{ secrets.EMAIL_USER }}
-          password: ${{ secrets.EMAIL_APP_PASSWORD }}
-          subject: "✅ SUCCESS: Dev Deployment - ${{ env.SERVICE_NAME }}"
-          to: ${{ secrets.EMAIL_USER }}
-          from: WorldArchitect.AI Deploy Bot <${{ secrets.EMAIL_USER }}>
-          body: |
-            ✅ Dev Deployment Successful
-
-            Environment: dev
-            Service: ${{ env.SERVICE_NAME }}
-            Region: ${{ env.GCP_REGION }}
-            Project: ${{ env.GCP_PROJECT }}
-            Branch: ${{ env.REF_NAME }}
-            Commit: ${{ github.sha }}
-
-            Status: SUCCESS ✅
-
-            Deployment URL: ${{ steps.get-url.outputs.url }}
-            Health Check: ${{ steps.get-url.outputs.url }}/health
-
-            Console: https://console.cloud.google.com/run/detail/${{ env.GCP_REGION }}/${{ env.SERVICE_NAME }}?project=${{ env.GCP_PROJECT }}
-            Logs: https://console.cloud.google.com/logs/query?project=${{ env.GCP_PROJECT }}&query=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22${{ env.SERVICE_NAME }}%22
-
-            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          status: success
+          environment: dev
+          service_name: ${{ env.SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          project: ${{ env.GCP_PROJECT }}
+          branch: ${{ env.REF_NAME }}
+          commit_sha: ${{ github.sha }}
+          deployment_url: ${{ steps.get-url.outputs.url }}
+          workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          email_user: ${{ secrets.EMAIL_USER }}
+          email_password: ${{ secrets.EMAIL_APP_PASSWORD }}
