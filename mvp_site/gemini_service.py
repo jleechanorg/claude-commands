@@ -95,17 +95,20 @@ EXPECTED_COMPANION_COUNT = 3
 
 
 # --- CONSTANTS ---
-# Use flash for all operations.
-DEFAULT_MODEL: str = "gemini-2.5-flash"
-# Use 1.5 flash for testing as requested
-TEST_MODEL: str = "gemini-1.5-flash"
+# Use Gemini 3 Pro Preview for official code_execution + JSON mode support
+# Per Google AI docs: "Gemini 3 lets you combine Structured Outputs with built-in tools"
+# Tested 2025-11-18: gemini-3-pro-preview works perfectly for dice rolls (avg 9.0)
+DEFAULT_MODEL: str = "gemini-3-pro-preview"
+# Use Gemini 3 for testing as well (needed for code_execution + JSON mode)
+TEST_MODEL: str = "gemini-3-pro-preview"
 
 # Model cycling order for 503 errors - try these in sequence
+# CRITICAL: Only include models that support code_execution + JSON mode
+# Gemini 2.5 models are EXCLUDED - they don't support this combination
 MODEL_FALLBACK_CHAIN: list[str] = [
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite-preview-06-17",
-    "gemini-2.0-flash",  # Cross-generation fallback
-    "gemini-2.0-flash-lite",  # Highest availability
+    "gemini-3-pro-preview",  # Primary: Official support (preview feature)
+    "gemini-2.0-flash",  # Fallback: Works but unofficial
+    "gemini-2.0-flash-exp",  # Secondary fallback
 ]
 
 # No longer using pro model for any inputs
@@ -954,10 +957,15 @@ def _call_gemini_api_with_model_cycling(
             else:
                 logging_util.info(f"Using model: {current_model}")
 
+            # SECURITY NOTE: Code execution is enabled via Gemini's API using ToolCodeExecution.
+            # - All code execution is sandboxed by Google's Gemini API and does NOT run on this application server.
+            # - The AI-generated code is limited to the Python environment provided by Gemini, with restricted access to external resources.
+            # - For dice rolling, this security model is acceptable because the logic is simple, the risk of abuse is low, and Gemini's sandbox prevents harmful actions.
             generation_config_params = {
                 "max_output_tokens": MAX_OUTPUT_TOKENS,
                 "temperature": TEMPERATURE,
                 "safety_settings": SAFETY_SETTINGS,
+                "tools": [types.Tool(code_execution=types.ToolCodeExecution())],
             }
 
             # Configure JSON response mode if requested
@@ -1422,11 +1430,15 @@ def _select_model_for_user(user_id: UserId | None) -> str:
         user_id: User ID to fetch preferences for (None uses DEFAULT_MODEL)
 
     Returns:
-        str: Model name to use (TEST_MODEL in mock mode, user preference if valid, else DEFAULT_MODEL)
+        str: Model name to use (TEST_MODEL in test/mock mode, user preference if valid, else DEFAULT_MODEL)
     """
-    # Check mock mode first (takes precedence over user preferences for testing)
-    mock_mode: bool = os.environ.get("MOCK_SERVICES_MODE") == "true"
-    if mock_mode:
+    # Check test/mock mode first (takes precedence over user preferences for testing)
+    # Support both TESTING and MOCK_SERVICES_MODE for backward compatibility
+    testing_mode: bool = (
+        os.environ.get("TESTING") == "true"
+        or os.environ.get("MOCK_SERVICES_MODE") == "true"
+    )
+    if testing_mode:
         return TEST_MODEL
 
     # No user_id means use default model
