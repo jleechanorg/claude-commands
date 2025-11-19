@@ -1411,6 +1411,69 @@ MOCK_INITIAL_STORY_NO_COMPANIONS = """{
 }"""
 
 
+def _select_model_for_user(user_id: UserId | None) -> str:
+    """
+    Select Gemini model based on user preferences and environment.
+
+    Centralized model selection logic used by both get_initial_story() and continue_story().
+    Handles mock mode, user preferences, validation, and fallback to default model.
+
+    Args:
+        user_id: User ID to fetch preferences for (None uses DEFAULT_MODEL)
+
+    Returns:
+        str: Model name to use (TEST_MODEL in mock mode, user preference if valid, else DEFAULT_MODEL)
+    """
+    # Check mock mode first (takes precedence over user preferences for testing)
+    mock_mode: bool = os.environ.get("MOCK_SERVICES_MODE") == "true"
+    if mock_mode:
+        return TEST_MODEL
+
+    # No user_id means use default model
+    if not user_id:
+        return DEFAULT_MODEL
+
+    # Attempt to fetch and apply user preferences
+    try:
+        user_settings = get_user_settings(user_id)
+        if user_settings is None:
+            # Database error occurred
+            logging_util.warning(
+                "Database error retrieving settings for user, falling back to default model"
+            )
+            return DEFAULT_MODEL
+
+        user_preferred_model = user_settings.get("gemini_model")
+
+        # Validate user preference against allowed models
+        if (
+            user_preferred_model
+            and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
+        ):
+            # Use centralized model mapping from constants
+            model_to_use = constants.GEMINI_MODEL_MAPPING.get(
+                user_preferred_model, DEFAULT_MODEL
+            )
+            # Only warn if the mapping fell back to default (key not found in mapping)
+            if (
+                user_preferred_model not in constants.GEMINI_MODEL_MAPPING
+                and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
+            ):
+                logging_util.warning(
+                    f"No mapping found for allowed model: {user_preferred_model}"
+                )
+            return model_to_use
+        else:
+            if user_preferred_model:
+                logging_util.warning(
+                    f"Invalid user model preference: {user_preferred_model}"
+                )
+            return DEFAULT_MODEL
+    except (KeyError, AttributeError, ValueError) as e:
+        logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
+        return DEFAULT_MODEL
+
+
 @log_exceptions
 def get_initial_story(
     prompt: str,
@@ -1566,53 +1629,8 @@ def get_initial_story(
         logging_util.info("Added character creation reminder to initial story prompt")
 
     # --- MODEL SELECTION ---
-    # Use user preferred model if available, fallback to default
-    mock_mode: bool = os.environ.get("MOCK_SERVICES_MODE") == "true"
-
-    if mock_mode:
-        model_to_use: str = TEST_MODEL
-    elif user_id:
-        # Get user settings and use preferred model
-        try:
-            user_settings = get_user_settings(user_id)
-            if user_settings is None:
-                # Database error occurred
-                logging_util.warning(
-                    "Database error retrieving settings for user, falling back to default model"
-                )
-                model_to_use = DEFAULT_MODEL
-            else:
-                user_preferred_model = user_settings.get("gemini_model")
-
-                # Validate user preference against allowed models
-                if (
-                    user_preferred_model
-                    and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-                ):
-                    # Use centralized model mapping from constants
-                    model_to_use = constants.GEMINI_MODEL_MAPPING.get(
-                        user_preferred_model, DEFAULT_MODEL
-                    )
-                    # Only warn if the mapping fell back to default (key not found in mapping)
-                    if (
-                        user_preferred_model not in constants.GEMINI_MODEL_MAPPING
-                        and user_preferred_model in constants.ALLOWED_GEMINI_MODELS
-                    ):
-                        logging_util.warning(
-                            f"No mapping found for allowed model: {user_preferred_model}"
-                        )
-                else:
-                    if user_preferred_model:
-                        logging_util.warning(
-                            f"Invalid user model preference: {user_preferred_model}"
-                        )
-                    model_to_use = DEFAULT_MODEL
-        except (KeyError, AttributeError, ValueError) as e:
-            logging_util.warning(f"Failed to get user settings for {user_id}: {e}")
-            model_to_use = DEFAULT_MODEL
-    else:
-        model_to_use = DEFAULT_MODEL
-
+    # Use centralized helper for consistent model selection across all story generation
+    model_to_use: str = _select_model_for_user(user_id)
     logging_util.info(f"Using model: {model_to_use} for initial story generation.")
 
     # ONLY use GeminiRequest structured JSON architecture (NO legacy fallbacks)
@@ -2084,6 +2102,7 @@ def continue_story(
     current_game_state: GameState,
     selected_prompts: list[str] | None = None,
     use_default_world: bool = False,
+    user_id: UserId | None = None,
 ) -> GeminiResponse:
     """
     Continues the story by calling the Gemini API with the current context and game state.
@@ -2095,12 +2114,18 @@ def continue_story(
         current_game_state: Current GameState object
         selected_prompts: List of selected prompt types
         use_default_world: Whether to include world content in system instructions
+        user_id: Optional user ID to retrieve user-specific settings (e.g., preferred model)
 
     Returns:
         GeminiResponse: Custom response object containing:
             - narrative_text: Clean text for display (guaranteed to be clean narrative)
             - structured_response: Parsed JSON with state updates, entities, etc.
     """
+
+    # Determine which model to use based on user preferences
+    # Use centralized helper for consistent model selection across all story generation
+    model_to_use = _select_model_for_user(user_id)
+    logging_util.info(f"Using model: {model_to_use} for story continuation.")
 
     # Check for multiple think commands in input using regex
     think_pattern: str = r"Main Character:\s*think[^\n]*"
@@ -2109,18 +2134,6 @@ def continue_story(
         logging_util.warning(
             f"Multiple think commands detected: {len(think_matches)}. Processing as single response."
         )
-
-    # Calculate user input count for model selection (count existing user entries + current input)
-    user_input_count: int = (
-        len(
-            [
-                entry
-                for entry in (story_context or [])
-                if entry.get(constants.KEY_ACTOR) == constants.ACTOR_USER
-            ]
-        )
-        + 1
-    )
 
     # --- NEW: Validate checkpoint consistency before generating response ---
     if story_context:
@@ -2209,7 +2222,7 @@ def continue_story(
 
     # Truncate the story context if it exceeds the budget
     truncated_story_context = _truncate_context(
-        story_context, char_budget_for_story, DEFAULT_MODEL, current_game_state
+        story_context, char_budget_for_story, model_to_use, current_game_state
     )
 
     # Now that we have the final, truncated context, we can generate the real prompt parts.
@@ -2281,8 +2294,8 @@ def continue_story(
         current_prompt_text,
     )
 
-    # Select appropriate model
-    chosen_model: str = _select_model_for_continuation(user_input_count)
+    # Select appropriate model (use user preference if available, otherwise default selection)
+    chosen_model: str = model_to_use
 
     # ONLY use GeminiRequest structured JSON architecture (NO legacy fallbacks)
     user_id_from_state = getattr(current_game_state, "user_id", None)

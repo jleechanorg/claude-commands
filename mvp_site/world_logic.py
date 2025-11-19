@@ -469,6 +469,7 @@ async def process_action_unified(request_data: dict[str, Any]) -> dict[str, Any]
             current_game_state,
             selected_prompts,
             use_default_world,
+            user_id,  # Pass user_id to enable user model preference selection
         )
 
         # Convert GeminiResponse to dict format for compatibility
