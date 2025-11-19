@@ -14,24 +14,26 @@ The MCP smoke tests validate critical D&D campaign functionality through the MCP
 
 ## Test Modes
 
+Both modes hit the real deployed server - the difference is test coverage:
+
 ### Mock Mode (Default)
-Uses pre-defined mock responses for fast CI/CD validation. No external API calls.
+Quick validation with limited test coverage for fast CI/CD feedback. Runs health and tools/list checks only against the real server.
 
 ```bash
 # Run locally
-MCP_TEST_MODE=mock node scripts/mcp-smoke-tests.mjs
+MCP_SERVER_URL=https://your-server.com MCP_TEST_MODE=mock node scripts/mcp-smoke-tests.mjs
 
-# Or simply
-node scripts/mcp-smoke-tests.mjs
+# Or simply (mock is default)
+MCP_SERVER_URL=https://your-server.com node scripts/mcp-smoke-tests.mjs
 ```
 
 **Use for:**
-- Local development
+- Automatic validation after deployment
 - Fast CI validation
-- Testing error handling logic
+- Quick server availability checks
 
 ### Real Mode
-Hits actual deployed servers for end-to-end validation.
+Full end-to-end validation with complete campaign workflows against the real server.
 
 ```bash
 # Against specific server
@@ -39,44 +41,37 @@ MCP_SERVER_URL=https://your-server.com MCP_TEST_MODE=real node scripts/mcp-smoke
 ```
 
 **Use for:**
-- Preview deployment validation
-- Production smoke tests
-- Integration testing
+- Manual comprehensive testing via `/smoke` command
+- Full E2E validation with Gemini AI and Firebase
+- Complete campaign workflow testing
 
 ## GitHub Actions Workflows
 
-### 1. Mock Smoke Tests (Automatic)
-**File:** `.github/workflows/mcp-smoke-tests.yml`
-**Trigger:** Automatic on PR (when MCP files change)
+### Unified Smoke Test Workflow ✅
+**File:** `.github/workflows/mcp-manual-smoke-tests.yml`
 
-Runs mock tests in CI for fast feedback without API calls.
+**Triggers:**
+- **Manual `/smoke` comment on PR** → Runs real mode (full E2E with Gemini + Firebase)
+- **Automatic after preview deployment** → Runs mock mode (quick validation)
+- **Manual workflow_dispatch** → Configurable mode
 
-### 2. Real API Smoke Tests
-**File:** `.github/workflows/manual-mcp-smoke-tests.yml`
-**Trigger:** `/smoke` comment on PR
-**Status:** ⚠️ CONFLICTS with new preview workflow (both use `/smoke`)
+**What it does:**
+1. Authenticates to GCP
+2. Discovers PR-specific Cloud Run preview URL
+3. Runs smoke tests against deployed preview server
+4. Posts PR comment with results
+5. Uploads test artifacts (logs and JSON results)
 
-Tests against production APIs (Gemini + Firebase) for full integration validation.
+**Test Modes:**
+- **Mock (automatic):** Quick validation - health + tools/list checks only
+- **Real (manual `/smoke`):** Full E2E - campaign creation, gameplay, dice mechanics, error handling
 
-**Note:** This workflow will conflict with the new preview server workflow. Consider:
-- Renaming this trigger to `/smoke-real` for production API testing
-- Or disabling this workflow in favor of preview server testing
-
-### 3. Preview Server Smoke Tests (NEW) ✅
-**File:** `.github/workflows/mcp-preview-smoke-tests.yml`
-**Trigger:** `/smoke` comment on PR
-
-Tests deployed GCP Cloud Run preview instances for PR validation. This is the recommended workflow for testing preview deployments.
-
-```
-/smoke
-```
-
-**Why this is better:**
-- Tests the actual deployed preview server (real Cloud Run environment)
-- Validates the full deployment stack (Docker, Secret Manager, Cloud Run)
+**Why this approach:**
+- Tests actual deployed preview server (real Cloud Run environment)
+- Validates full deployment stack (Docker, Secret Manager, Cloud Run)
 - No local API key management needed
 - Matches production architecture exactly
+- Both modes hit real server with real APIs
 
 ## Test Coverage
 
@@ -185,8 +180,8 @@ Environment variables:
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `MCP_SERVER_URL` | (required for real mode) | Base URL of MCP server |
-| `MCP_TEST_MODE` | `mock` | Test mode: `mock` or `real` |
+| `MCP_SERVER_URL` | (required) | Base URL of MCP server (required for both modes) |
+| `MCP_TEST_MODE` | `mock` | Test mode: `mock` (quick) or `real` (full E2E) |
 | `MCP_TEST_TIMEOUT_MS` | `60000` | Request timeout (60 seconds) |
 | `MCP_TEST_MAX_ATTEMPTS` | `3` | Number of retry attempts |
 | `MCP_TEST_RETRY_DELAY_MS` | `2000` | Delay between retries |
@@ -329,9 +324,8 @@ graph LR
 
 | Test Type | Purpose | When to Run | API Calls |
 |-----------|---------|-------------|-----------|
-| **Mock Smoke Tests** | Fast validation | Every PR (automatic) | None (mocked) |
-| **Real API Smoke Tests** | Integration test | On-demand (`/smoke`) | Production APIs |
-| **Preview Smoke Tests** | Deployment validation | On-demand (`/smoke`) | Preview server |
+| **Mock Smoke Tests** | Fast validation | Automatic after deployment | Health + tools/list (real server) |
+| **Real Smoke Tests** | Full E2E validation | On-demand (`/smoke` comment) | All tests (real Gemini + Firebase) |
 | **Unit Tests** | Code correctness | Every commit | None (mocked) |
 | **Integration Tests** | Multi-service | Pre-production | Staging APIs |
 

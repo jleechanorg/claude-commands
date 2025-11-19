@@ -24,7 +24,7 @@ const getRepoName = () => {
   try {
     return execSync('basename $(git rev-parse --show-toplevel)', { encoding: 'utf8' }).trim();
   } catch {
-    return 'worldarchitect_ai';
+    return 'worldarchitect.ai';
   }
 };
 
@@ -194,19 +194,6 @@ function logStep(message) {
   addLogEntry({ kind: 'step', message });
 }
 
-// Mock responses for testing
-function getMockResponse(url, method) {
-  if (url.includes('/health')) {
-    return {
-      status: 'healthy',
-      timestamp: new Date().toISOString(),
-      service: 'worldarchitect-ai'
-    };
-  }
-
-  throw new Error(`No mock response available for ${url}`);
-}
-
 // Test functions
 async function checkHealthEndpoint() {
   logStep(`Checking health endpoint at ${healthUrl}`);
@@ -361,7 +348,8 @@ async function testErrorHandling() {
     }
   );
 
-  if (!payload1?.result?.error) {
+  // Check for JSON-RPC 2.0 error (top-level error field) or result.error
+  if (!payload1?.error && !payload1?.result?.error) {
     throw new Error('Expected error for invalid campaign ID, got success');
   }
 
@@ -379,7 +367,8 @@ async function testErrorHandling() {
     }
   );
 
-  if (!payload2?.result?.error && !payload2?.error) {
+  // Check for JSON-RPC 2.0 error (top-level error field) or result.error
+  if (!payload2?.error && !payload2?.result?.error) {
     throw new Error('Expected error for missing campaign_id, got success');
   }
 
