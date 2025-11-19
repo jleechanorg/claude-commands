@@ -212,7 +212,11 @@ cleanup_temp_context() {
 }
 
 if [[ $(basename "$TARGET_REALPATH") == "mvp_site" ]]; then
-    if [ -n "$WORLD_DIR" ]; then
+    # Check if world directory exists in mvp_site first (preferred)
+    if [ -d "$TARGET_REALPATH/world" ] && [ -f "$TARGET_REALPATH/world/world_assiah_compressed.md" ]; then
+        echo "DEBUG: Found world directory in mvp_site, using it directly"
+        BUILD_CONTEXT="$TARGET_REALPATH"
+    elif [ -n "$WORLD_DIR" ]; then
         echo "Creating temporary build context for mvp_site..."
         TEMP_CONTEXT=$(mktemp -d)
         trap cleanup_temp_context EXIT
@@ -226,9 +230,22 @@ if [[ $(basename "$TARGET_REALPATH") == "mvp_site" ]]; then
 
         echo "DEBUG: World files copied from $WORLD_DIR to $TEMP_CONTEXT/world"
         find "$TEMP_CONTEXT/world" -mindepth 1 -maxdepth 1 | head -5
+
+        # Verify critical file exists
+        if [ ! -f "$TEMP_CONTEXT/world/world_assiah_compressed.md" ]; then
+            echo "ERROR: world_assiah_compressed.md not found after copy!"
+            echo "World directory contents:"
+            ls -la "$TEMP_CONTEXT/world/" || true
+            exit 1
+        fi
     else
-        echo "WARNING: No world directory found to copy!"
-        echo "Deployment may fail if world files are required."
+        echo "ERROR: No world directory found to copy!"
+        echo "Checked locations:"
+        echo "  - $TARGET_REALPATH/world"
+        echo "  - ./world"
+        echo "  - ../world"
+        echo "Deployment will fail without world files."
+        exit 1
     fi
 elif [ -z "$WORLD_DIR" ]; then
     echo "WARNING: No world directory found to copy!"
