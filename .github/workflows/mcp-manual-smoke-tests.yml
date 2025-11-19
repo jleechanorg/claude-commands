@@ -1,0 +1,295 @@
+name: MCP Smoke Tests
+
+# Trigger on PR comments (/smoke) OR after preview deployment (auto)
+on:
+  issue_comment:
+    types: [created]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'PR number to test'
+        required: true
+        type: number
+      test_mode:
+        description: 'Test mode (mock or real)'
+        required: false
+        type: string
+        default: 'real'
+  workflow_run:
+    workflows: ["Deploy PR Preview to GCP"]
+    types: [completed]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  smoke-tests:
+    # Run on PR comments with /smoke OR manual workflow dispatch OR after preview deployment
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.issue.pull_request && startsWith(github.event.comment.body, '/smoke')) ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    env:
+      GCP_REGION: us-central1
+      GCP_PROJECT: worldarchitecture-ai
+      MCP_TEST_TIMEOUT_MS: ${{ vars.MCP_TEST_TIMEOUT_MS || '60000' }}
+      MCP_TEST_MAX_ATTEMPTS: ${{ vars.MCP_TEST_MAX_ATTEMPTS || '3' }}
+      MCP_TEST_RETRY_DELAY_MS: ${{ vars.MCP_TEST_RETRY_DELAY_MS || '2000' }}
+
+    steps:
+      - name: Post acknowledgment comment
+        if: github.event_name == 'issue_comment'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '🔥 **MCP Smoke Tests Started**\n\nRunning MCP smoke tests against deployed GCP preview server...\n\n[View workflow run →](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})'
+            });
+
+      - name: Get PR ref
+        id: pr_ref
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          result-encoding: string
+          script: |
+            let prNumber;
+            if (context.eventName === 'workflow_dispatch') {
+              const rawInput = context.payload?.inputs?.pr_number;
+              if (rawInput) {
+                prNumber = Number(rawInput);
+              }
+            } else if (context.eventName === 'issue_comment') {
+              prNumber = context.issue.number;
+            }
+
+            if (!prNumber || Number.isNaN(prNumber)) {
+              return '';
+            }
+
+            const pr = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber
+            });
+
+            return `refs/pull/${pr.data.number}/head`;
+
+      - name: Checkout repository
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+        with:
+          ref: ${{ steps.pr_ref.outputs.result || github.ref }}
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up gcloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.GCP_PROJECT }}
+
+      - name: Get PR number
+        id: pr_number
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          result-encoding: string
+          script: |
+            let prNumber;
+            if (context.eventName === 'workflow_dispatch') {
+              prNumber = context.payload?.inputs?.pr_number;
+            } else if (context.eventName === 'issue_comment') {
+              prNumber = context.issue.number;
+            } else if (context.eventName === 'workflow_run') {
+              // Extract PR number from workflow_run event
+              const workflowRun = context.payload.workflow_run;
+              if (workflowRun.pull_requests && workflowRun.pull_requests.length > 0) {
+                prNumber = workflowRun.pull_requests[0].number;
+              } else {
+                // Try to extract from head_branch (format: pr-NUMBER or feature-branch)
+                const match = workflowRun.head_branch.match(/pr-(\d+)/);
+                if (match) {
+                  prNumber = match[1];
+                }
+              }
+            }
+            core.setOutput('number', prNumber || '');
+            return prNumber || '';
+
+      - name: Determine test mode
+        id: test_config
+        run: |
+          # Auto after deployment → Quick validation (mock mode)
+          # Manual /smoke comment → Full E2E testing (real mode with real APIs)
+          if [[ "${{ github.event_name }}" = "workflow_run" ]]; then
+            TEST_MODE="mock"
+            echo "⚡ Auto-validation: Quick endpoint check (mock mode)"
+          else
+            TEST_MODE="${{ github.event.inputs.test_mode || 'real' }}"
+            echo "🔍 Manual /smoke: Full E2E with real APIs (${TEST_MODE} mode)"
+          fi
+
+          echo "mode=$TEST_MODE" >> "$GITHUB_OUTPUT"
+
+      - name: Determine deployed service URL
+        id: service_url
+        run: |
+          set -euo pipefail
+
+          PR_NUMBER="${{ steps.pr_number.outputs.number }}"
+          SERVICE_NAME="mvp-site-app-pr-$PR_NUMBER"
+
+          SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
+            --region="${{ env.GCP_REGION }}" \
+            --format="value(status.url)" \
+            --quiet 2>/dev/null || echo "")
+
+          if [ -z "$SERVICE_URL" ]; then
+            echo "::error::No deployed preview found for PR #$PR_NUMBER (service: $SERVICE_NAME)"
+            echo "service_url=" >> "$GITHUB_OUTPUT"
+            echo "deployed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "service_url=$SERVICE_URL" >> "$GITHUB_OUTPUT"
+          echo "deployed=true" >> "$GITHUB_OUTPUT"
+          echo "✅ Found deployed preview at $SERVICE_URL"
+
+      - name: Post "no preview" comment
+        if: github.event_name == 'issue_comment' && steps.service_url.outputs.deployed == 'false'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '⚠️ **No Deployed Preview Found**\n\nCannot run MCP smoke tests - no preview deployment exists for this PR.\n\nPlease wait for the preview to deploy first, or trigger a new deployment.'
+            });
+
+      - name: Set up Node.js 20.x
+        if: steps.service_url.outputs.deployed == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run MCP smoke tests
+        if: steps.service_url.outputs.deployed == 'true'
+        id: smoke_tests
+        timeout-minutes: 5
+        env:
+          MCP_SERVER_URL: ${{ steps.service_url.outputs.service_url }}
+          MCP_TEST_MODE: ${{ steps.test_config.outputs.mode }}
+        run: |
+          set -euo pipefail
+
+          echo "🧪 Running MCP smoke tests against deployed preview..."
+          echo "Target: $MCP_SERVER_URL/mcp"
+
+          set +e
+          node scripts/mcp-smoke-tests.mjs
+          EXIT_CODE=$?
+          set -e
+
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ MCP smoke tests passed"
+          else
+            echo "❌ MCP smoke tests failed"
+            exit $EXIT_CODE
+          fi
+
+      - name: Upload smoke test logs
+        if: always() && steps.service_url.outputs.deployed == 'true'
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: mcp-smoke-logs-pr-${{ steps.pr_number.outputs.number }}
+          path: /tmp/**/smoke_tests/*.log
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Upload smoke test results
+        if: always() && steps.service_url.outputs.deployed == 'true'
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3  # v4.3.1
+        with:
+          name: mcp-smoke-results-pr-${{ steps.pr_number.outputs.number }}
+          path: /tmp/**/smoke_tests/test_results.json
+          retention-days: 14
+          if-no-files-found: ignore
+
+      - name: Post success comment
+        if: github.event_name == 'issue_comment' && steps.smoke_tests.outcome == 'success'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            const testMode = '${{ steps.test_config.outputs.mode }}';
+            let body = `## ✅ MCP Smoke Tests Passed\n\n`;
+            body += 'All MCP smoke tests against the deployed preview server with **REAL APIs** completed successfully!\n\n';
+
+            if (testMode === 'real') {
+              body += '### Full E2E Tests Executed\n';
+              body += '- ✅ Health endpoint verification\n';
+              body += '- ✅ MCP tools/list (8 tools confirmed)\n';
+              body += '- ✅ Campaign creation with **real Gemini AI**\n';
+              body += '- ✅ Gameplay with **real Firebase** persistence\n';
+              body += '- ✅ Dice mechanics validation\n';
+              body += '- ✅ Error handling validation\n\n';
+              body += '**All workflows validated end-to-end with production APIs!**\n\n';
+            } else {
+              body += '### Quick Validation Tests\n';
+              body += '- ✅ Health endpoint responding\n';
+              body += '- ✅ MCP tools/list available\n\n';
+            }
+
+            body += '### Service Details\n';
+            body += `**Preview URL**: ${{ steps.service_url.outputs.service_url }}\n`;
+            body += `**MCP Endpoint**: ${{ steps.service_url.outputs.service_url }}/mcp\n`;
+            body += `**Test Mode**: ${testMode} (${testMode === 'real' ? 'full E2E with real APIs' : 'quick endpoint validation'})\n\n`;
+            body += '### Logs\n';
+            body += `- [View workflow run →](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            body += `- [Download test logs](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)\n`;
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
+
+      - name: Post failure comment
+        if: github.event_name == 'issue_comment' && steps.smoke_tests.outcome == 'failure'
+        uses: actions/github-script@60a0d83039c74a4aee543508d2ffcb1c3799cdea  # v7.0.1
+        with:
+          script: |
+            let body = '## ❌ MCP Smoke Tests Failed\n\n';
+            body += 'Some MCP smoke tests against the deployed preview server failed.\n\n';
+            body += '### Service Details\n';
+            body += `**Preview URL**: ${{ steps.service_url.outputs.service_url }}\n`;
+            body += `**MCP Endpoint**: ${{ steps.service_url.outputs.service_url }}/mcp\n\n`;
+            body += '### Troubleshooting\n';
+            body += `1. Check the [workflow logs](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for detailed error messages\n`;
+            body += `2. Download the [test artifacts](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts) for complete logs\n`;
+            body += '3. Test manually:\n';
+            body += '   ```bash\n';
+            body += `   curl ${{ steps.service_url.outputs.service_url }}/health\n`;
+            body += `   curl -X POST ${{ steps.service_url.outputs.service_url }}/mcp \\\\\n`;
+            body += '     -H "Content-Type: application/json" \\\\\n';
+            body += "     -d '{\"jsonrpc\":\"2.0\",\"method\":\"tools/list\",\"params\":{},\"id\":1}'\n";
+            body += '   ```\n\n';
+            body += '### Next Steps\n';
+            body += '- Fix the failing tests\n';
+            body += '- Re-run smoke tests with `/smoke` comment\n';
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: body
+            });
