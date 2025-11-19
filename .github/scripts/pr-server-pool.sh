@@ -40,9 +40,44 @@ get_pool_services() {
 }
 
 # Reserve server by setting label immediately (prevents race conditions)
+# NOTE: This requires services to be pre-created. Run this once:
+#   for i in {1..10}; do
+#     gcloud run deploy "mvp-site-app-s${i}" \
+#       --image=gcr.io/cloudrun/hello \
+#       --region=us-central1 \
+#       --allow-unauthenticated \
+#       --quiet
+#   done
 reserve_server() {
   local service_name="$1"
   local pr_number="$2"
+
+  # Check if service exists first
+  local service_exists=$(gcloud run services describe "$service_name" \
+    --project="$GCP_PROJECT" \
+    --region="$GCP_REGION" \
+    --format="value(metadata.name)" 2>/dev/null || echo "")
+
+  if [[ -z "$service_exists" ]]; then
+    # Service doesn't exist - create placeholder to enable label-based locking
+    echo "⚠️  Service $service_name doesn't exist, creating placeholder..." >&2
+    if ! gcloud run deploy "$service_name" \
+      --image=gcr.io/cloudrun/hello \
+      --project="$GCP_PROJECT" \
+      --region="$GCP_REGION" \
+      --platform=managed \
+      --allow-unauthenticated \
+      --memory=256Mi \
+      --cpu=1 \
+      --max-instances=1 \
+      --min-instances=0 \
+      --timeout=60 \
+      --quiet 2>/dev/null; then
+      echo "❌ Failed to create placeholder service $service_name" >&2
+      return 1
+    fi
+    echo "✅ Created placeholder service $service_name" >&2
+  fi
 
   # Try to update label and verify it stuck (prevents concurrent assignment)
   local max_retries=3
@@ -104,41 +139,16 @@ assign_server() {
     fi
   done <<< "$services"
 
-  # Round-robin assignment: Find next available server in sequence (s1→s2→...→s10→s1)
-  # Find the most recently assigned server (newest timestamp) to determine where to continue
-  local last_assigned_num=0
-  local newest_time=""
-
+  # Find first available server (null PR)
   while IFS='|' read -r server service_name pr last_update; do
-    if [[ "$pr" != "null" && "$last_update" != "null" ]]; then
-      # Extract server number (s1 → 1, s2 → 2, etc.)
-      local server_num="${server#s}"
-
-      if [[ -z "$newest_time" ]] || [[ "$last_update" > "$newest_time" ]]; then
-        newest_time="$last_update"
-        last_assigned_num="$server_num"
+    if [[ "$pr" == "null" ]]; then
+      # Found available server - reserve immediately to prevent race conditions
+      if reserve_server "$service_name" "$pr_number"; then
+        echo "{\"server\":\"$server\",\"serviceName\":\"$service_name\",\"evicted\":null}"
+        return 0
       fi
     fi
   done <<< "$services"
-
-  # Try to assign starting from next server in sequence
-  for offset in $(seq 1 $POOL_SIZE); do
-    local next_num=$(( (last_assigned_num + offset - 1) % POOL_SIZE + 1 ))
-    local next_server="s${next_num}"
-    local next_service="${SERVICE_PREFIX}-${next_server}"
-
-    # Check if this server is available
-    while IFS='|' read -r server service_name pr last_update; do
-      if [[ "$server" == "$next_server" && "$pr" == "null" ]]; then
-        # Found available server in round-robin sequence - reserve immediately
-        if reserve_server "$service_name" "$pr_number"; then
-          echo "{\"server\":\"$server\",\"serviceName\":\"$service_name\",\"evicted\":null}"
-          return 0
-        fi
-        break
-      fi
-    done <<< "$services"
-  done
 
   # Pool is full - evict server with oldest timestamp
   local oldest_server=""
