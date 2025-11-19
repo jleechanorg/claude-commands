@@ -120,10 +120,9 @@ You must use the GitHub Actions workflow with manual approval:
 
 1. Go to: https://github.com/jleechanorg/worldarchitect.ai/actions/workflows/deploy-production.yml
 2. Click "Run workflow"
-3. Type "DEPLOY TO PRODUCTION" in the confirmation field
-4. Click "Run workflow"
-5. Wait for designated reviewer approval
-6. Deployment proceeds after approval
+3. Click "Run workflow" button to start
+4. Wait for designated reviewer approval
+5. Deployment proceeds after approval
 
 This ensures:
 ✅ Proper approval process
