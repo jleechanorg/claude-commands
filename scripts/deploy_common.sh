@@ -19,6 +19,10 @@ deploy_common::submit_build() {
   local build_id
   build_id=$(cd "$context_dir" && gcloud builds submit . --tag "$image_tag" --async --format="value(id)")
 
+  # Get project ID for logs URL
+  local project_id
+  project_id=$(deploy_common::get_project_id)
+
   echo "Build ID: $build_id"
   echo "Polling for build completion..."
 
@@ -32,7 +36,7 @@ deploy_common::submit_build() {
 
   if [[ "$status" != "SUCCESS" ]]; then
     echo "Build failed with status: $status"
-    echo "View logs at: https://console.cloud.google.com/cloud-build/builds/$build_id"
+    echo "View logs at: https://console.cloud.google.com/cloud-build/builds/$build_id?project=$project_id"
     return 1
   fi
 
