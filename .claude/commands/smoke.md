@@ -65,10 +65,19 @@ The `/smoke` command in a PR comment triggers:
 The smoke tests verify:
 - ✅ MCP server health endpoint
 - ✅ MCP initialization and handshake
-- ✅ Tool listing and discovery
-- ✅ Basic tool execution (browser automation, code search, etc.)
-- ✅ Error handling and graceful degradation
+- ✅ Tool listing and discovery (8 D&D campaign tools)
+- ✅ Campaign creation (basic and custom configurations)
+- ✅ Campaign state retrieval (with D&D 5e attribute system validation - warning-level check)
+- ✅ Campaign list retrieval and verification
+- ✅ Multiple gameplay actions with dice mechanics (search, combat, persuasion)
+- ✅ State persistence across actions
+- ✅ Comprehensive error handling:
+  - Invalid campaign IDs
+  - Missing required parameters
+  - Invalid user access attempts
+  - Empty user inputs
 - ✅ Response format validation
+- ✅ Real API integration (Gemini + Firebase)
 
 ## Expected Output
 
@@ -96,8 +105,16 @@ All MCP smoke tests against live APIs completed successfully!
 Tests Passed:
 - ✅ MCP health check
 - ✅ MCP initialization
-- ✅ Tool discovery
-- ✅ Tool execution (real APIs)
+- ✅ Tool discovery (8 D&D tools)
+- ✅ Basic campaign creation
+- ✅ Custom campaign creation
+- ✅ Campaign state retrieval (D&D 5e attribute system – warning-level check)
+- ✅ Campaign list verification
+- ✅ Gameplay action #1 (search with dice rolls)
+- ✅ Gameplay action #2 (combat with dice rolls)
+- ✅ Gameplay action #3 (persuasion with dice rolls)
+- ✅ State persistence verification
+- ✅ Error handling (4 scenarios tested)
 
 Service URL: https://mvp-site-app-pr-123-xxx.run.app
 ```

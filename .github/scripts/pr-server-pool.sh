@@ -12,23 +12,35 @@ GCP_REGION="${GCP_REGION:-us-central1}"
 get_pool_services() {
   local services=()
 
+  # First, get list of existing services in one batch (much faster)
+  local existing_services=$(gcloud run services list \
+    --project="$GCP_PROJECT" \
+    --region="$GCP_REGION" \
+    --filter="metadata.name:${SERVICE_PREFIX}-s" \
+    --format="json" 2>/dev/null || echo "[]")
+
+  # Create associative array of existing services for fast lookup
+  declare -A service_metadata
+  while IFS= read -r line; do
+    if [[ -n "$line" && "$line" != "[]" ]]; then
+      local name=$(echo "$line" | jq -r '.metadata.name')
+      local pr=$(echo "$line" | jq -r '.metadata.labels["pr-number"] // "null"')
+      local last_update=$(echo "$line" | jq -r '(
+        .status.conditions[]? | select(.type == "Ready") | .lastTransitionTime
+      ) // .metadata.creationTimestamp // "null"')
+      service_metadata["$name"]="$pr|$last_update"
+    fi
+  done < <(echo "$existing_services" | jq -c '.[]' 2>/dev/null)
+
+  # Now iterate through pool and use cached data
   for i in $(seq 1 $POOL_SIZE); do
     local server="s${i}"
     local service_name="${SERVICE_PREFIX}-${server}"
 
-    # Query service metadata from Cloud Run
-    local service_data=$(gcloud run services describe "$service_name" \
-      --project="$GCP_PROJECT" \
-      --region="$GCP_REGION" \
-      --format="json" 2>/dev/null || echo "{}")
-
-    if [[ "$service_data" != "{}" ]]; then
-      # Service exists - extract metadata
-      local pr_number=$(echo "$service_data" | jq -r '.metadata.labels["pr-number"] // "null"')
-      local last_update=$(echo "$service_data" | jq -r '(
-        .status.conditions[]? | select(.type == "Ready") | .lastTransitionTime
-      ) // .metadata.creationTimestamp // "null"')
-
+    if [[ -n "${service_metadata[$service_name]:-}" ]]; then
+      # Service exists - use cached metadata
+      local pr_number=$(echo "${service_metadata[$service_name]}" | cut -d'|' -f1)
+      local last_update=$(echo "${service_metadata[$service_name]}" | cut -d'|' -f2)
       services+=("$server|$service_name|$pr_number|$last_update")
     else
       # Service doesn't exist yet - available
@@ -84,8 +96,8 @@ reserve_server() {
   local retry=0
 
   while [ $retry -lt $max_retries ]; do
-    # Attempt to set the label
-    if gcloud run services update "$service_name" \
+    # Attempt to set the label (with timeout)
+    if timeout 30 gcloud run services update "$service_name" \
       --project="$GCP_PROJECT" \
       --region="$GCP_REGION" \
       --update-labels="pr-number=$pr_number" \
@@ -94,8 +106,8 @@ reserve_server() {
       # Wait briefly for label update to propagate
       sleep 1
 
-      # Verify the label wasn't overwritten by a concurrent workflow
-      local current_pr=$(gcloud run services describe "$service_name" \
+      # Verify the label wasn't overwritten by a concurrent workflow (with timeout)
+      local current_pr=$(timeout 15 gcloud run services describe "$service_name" \
         --project="$GCP_PROJECT" \
         --region="$GCP_REGION" \
         --format="value(metadata.labels.pr-number)" 2>/dev/null || echo "")
