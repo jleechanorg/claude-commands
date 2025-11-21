@@ -271,9 +271,11 @@ async function testCampaignCreation(userId) {
       arguments: {
         user_id: userId,
         title: 'Smoke Test Campaign',
-        player_name: 'Test Hero',
-        player_class: 'Fighter',
-        campaign_setting: 'Test dungeon for smoke tests',
+        character: 'Test Hero, Fighter',
+        setting: 'Test dungeon for smoke tests',
+        description: 'Automated MCP smoke test scenario',
+        selected_prompts: ['mechanicalPrecision'],
+        custom_options: [],
         debug_mode: true
       }
     }
@@ -292,14 +294,68 @@ async function testCampaignCreation(userId) {
   addLogEntry({
     kind: 'campaign-created',
     campaign_id: result.campaign_id,
-    title: result.title
+    title: result.title,
+    full_response: result
   });
 
   return result;
 }
 
-async function testGameplayAction(userId, campaignId) {
-  logStep('Testing gameplay action via process_action tool');
+async function testCampaignCreationWithDefaultWorld(userId) {
+  logStep('Testing campaign creation with defaultWorld enabled');
+
+  const payload = await callRpc(
+    'tools/call',
+    {
+      name: 'create_campaign',
+      arguments: {
+        user_id: userId,
+        title: 'Smoke Test Campaign - Default World',
+        character: '',
+        setting: 'World of Assiah. Caught between an oath to a ruthless tyrant and a vow to protect the innocent.',
+        selected_prompts: ['defaultWorld', 'mechanicalPrecision'],
+        custom_options: ['defaultWorld'],
+        debug_mode: true
+      }
+    }
+  );
+
+  if (payload?.error || payload?.result?.error) {
+    const error = payload.error ?? payload.result?.error;
+    const errorMsg = JSON.stringify(error);
+    const isFileError =
+      error?.code === 'FILE_NOT_FOUND' ||
+      errorMsg.includes('FileNotFoundError') ||
+      errorMsg.includes('world_assiah_compressed.md');
+    // Check for FileNotFoundError which indicates missing world files
+    if (isFileError) {
+      throw new Error(
+        `❌ WORLD FILE DEPLOYMENT ISSUE: ${errorMsg}\n` +
+        '💡 The world directory may not be included in the Docker build.\n' +
+        '   Check deploy.sh world directory copy logic.'
+      );
+    }
+    throw new Error(`create_campaign with defaultWorld returned error: ${errorMsg}`);
+  }
+
+  const result = payload?.result;
+  if (!result?.campaign_id) {
+    throw new Error(`create_campaign with defaultWorld missing campaign_id: ${JSON.stringify(result)}`);
+  }
+
+  logInfo(`✅ Campaign with defaultWorld created: ${result.campaign_id}`);
+  addLogEntry({
+    kind: 'campaign-created-defaultworld',
+    campaign_id: result.campaign_id,
+    title: result.title,
+    full_response: result
+  });
+
+  return result;
+}
+
+async function testGameplayAction(userId, campaignId, contextLabel = 'campaign') {
+  logStep(`Testing gameplay action via process_action tool (${contextLabel})`);
 
   const payload = await callRpc(
     'tools/call',
@@ -324,11 +380,27 @@ async function testGameplayAction(userId, campaignId) {
   }
 
   // Check for dice rolls in the response
-  if (!result.dice_rolls || result.dice_rolls.length === 0) {
+  const diceRolls = result.dice_rolls ?? [];
+  if (diceRolls.length === 0) {
     logInfo('⚠️  No dice rolls in action result (may be expected for some actions)');
   } else {
-    logInfo(`✅ Gameplay action completed with ${result.dice_rolls.length} dice roll(s)`);
+    const successMessage = `✅ Gameplay action for ${contextLabel} completed with ${diceRolls.length} dice roll(s)`;
+    logInfo(successMessage);
+    addLogEntry({
+      kind: 'gameplay',
+      campaign_id: campaignId,
+      dice_rolls: diceRolls.length,
+      message: successMessage,
+    });
   }
+
+  addLogEntry({
+    kind: 'gameplay-action',
+    campaign_id: campaignId,
+    dice_rolls_count: result.dice_rolls?.length || 0,
+    narrative_length: result.narrative?.length || 0,
+    full_response: result
+  });
 
   return result;
 }
@@ -402,12 +474,20 @@ async function main() {
       // Generate consistent user ID for campaign tests
       const userId = `smoke-test-${Date.now()}`;
 
-      // Test 3: Campaign creation
+      // Test 3: Campaign creation (basic)
       const campaign = await testCampaignCreation(userId);
+
+      // Test 3b: Campaign creation with defaultWorld (catches missing world files)
+      const defaultWorldCampaign = await testCampaignCreationWithDefaultWorld(userId);
 
       // Test 4: Gameplay action (only if we got a real campaign ID)
       if (campaign.campaign_id) {
-        await testGameplayAction(userId, campaign.campaign_id);
+        await testGameplayAction(userId, campaign.campaign_id, 'basic campaign');
+      }
+
+      // Test 4b: Gameplay with defaultWorld campaign (verifies campaign can progress)
+      if (defaultWorldCampaign.campaign_id) {
+        await testGameplayAction(userId, defaultWorldCampaign.campaign_id, 'defaultWorld campaign');
       }
 
       // Test 5: Error handling

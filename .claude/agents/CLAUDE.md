@@ -114,6 +114,10 @@ Task({
 - **Evidence-Based**: testvalidator requires proof files for all claims
 - **Independence**: testvalidator gets zero context from testexecutor
 
+### **File Tracking**
+- **NEVER gitignore .beads/**: Issue tracking database must be version controlled
+- **User Requirement**: `.beads/` directory and contents MUST be tracked in git
+
 ## 🎯 Usage Guidelines
 
 ### **Task Tool Best Practices**

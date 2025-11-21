@@ -100,6 +100,20 @@ Genesis Coder, Prime Mover,
 3. **VERIFY PHASE**: Ensure no broken dependencies remain
 4. **DELETE PHASE**: Only delete file after ALL references fixed
 
+## 🚨 CRITICAL: FILE TRACKING PROTOCOL - ZERO TOLERANCE
+
+**🚨 NEVER GITIGNORE .beads/ DIRECTORY**: ⚠️ MANDATORY - Beads issue tracking must be version controlled
+- ❌ **FORBIDDEN**: Adding `.beads/` to .gitignore or excluding it from version control
+- ✅ **REQUIRED**: `.beads/` directory and all its contents MUST be tracked in git
+- ✅ **RATIONALE**: Beads database contains project issue tracking that should be shared across the team
+- ❌ **NEVER ASSUME**: Do not assume local development databases should be gitignored
+- ✅ **USER EXPLICIT REQUIREMENT**: User has explicitly stated "I dont wanna gitignore beads"
+
+**🚨 MANDATORY VERIFICATION**: ⚠️ Before modifying .gitignore
+1. Check if the directory is explicitly meant to be version controlled
+2. Verify user requirements about tracking vs ignoring
+3. If uncertain, ask user before adding to .gitignore
+
 ## 🚨 CRITICAL: CONVERSATION HISTORY PROTECTION PROTOCOL
 
 **🚨 NEVER TOUCH ~/.claude/projects/ DIRECTORY**: ⚠️ MANDATORY - Absolute protection of conversation history

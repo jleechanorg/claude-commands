@@ -230,10 +230,11 @@ jobs:
         with:
           script: |
             const testMode = '${{ steps.test_config.outputs.mode }}';
-            let body = `## ✅ MCP Smoke Tests Passed\n\n`;
-            body += 'All MCP smoke tests against the deployed preview server with **REAL APIs** completed successfully!\n\n';
+            const modeLabel = testMode === 'real' ? '[Real APIs]' : '[Mock APIs]';
+            let body = `## ✅ ${modeLabel} MCP Smoke Tests Passed\n\n`;
 
             if (testMode === 'real') {
+              body += 'All MCP smoke tests against the deployed preview server with **REAL APIs** completed successfully!\n\n';
               body += '### Full E2E Tests Executed\n';
               body += '- ✅ Health endpoint verification\n';
               body += '- ✅ MCP tools/list (8 tools confirmed)\n';
@@ -243,6 +244,7 @@ jobs:
               body += '- ✅ Error handling validation\n\n';
               body += '**All workflows validated end-to-end with production APIs!**\n\n';
             } else {
+              body += 'All MCP smoke tests against the deployed preview server completed successfully in **mock/quick validation mode**.\n\n';
               body += '### Quick Validation Tests\n';
               body += '- ✅ Health endpoint responding\n';
               body += '- ✅ MCP tools/list available\n\n';

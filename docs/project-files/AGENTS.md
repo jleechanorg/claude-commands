@@ -80,6 +80,10 @@ See `.claude/` for orchestrator command references and additional skill examples
 - Firebase `serviceAccountKey.json` and `GEMINI_API_KEY` must be set as documented in `README.md`.
 - Prefer local mocks for tests; guard credentials with environment variables.
 
+### Beads Issue Tracking
+- **NEVER gitignore `.beads/`**: Issue tracking database MUST be version controlled and tracked in git.
+- The `.beads/` directory contains project issue tracking shared across the team.
+
 ### GitHub Token Access
 **Available for all agents and automation:**
 

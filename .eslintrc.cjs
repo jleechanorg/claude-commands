@@ -14,4 +14,17 @@ module.exports = {
     'no-undef': 'error',
     'semi': ['error', 'always'],
   },
+  overrides: [
+    {
+      files: ['**/*.mjs'],
+      env: {
+        node: true,
+        es2021: true,
+      },
+      parserOptions: {
+        ecmaVersion: 'latest',
+        sourceType: 'module',
+      },
+    },
+  ],
 };
