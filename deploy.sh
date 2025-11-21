@@ -201,41 +201,35 @@ else
 fi
 
 # Handle different possible values of TARGET_DIR
-BUILD_CONTEXT="$TARGET_REALPATH"
-TEMP_CONTEXT=""
+# Always use project root as build context to access both mvp_site/ and infrastructure/
+PROJECT_ROOT=$(pwd)
+BUILD_CONTEXT="$PROJECT_ROOT"
+DOCKERFILE_PATH="$TARGET_DIR/Dockerfile"
 
-cleanup_temp_context() {
-    if [[ -n "$TEMP_CONTEXT" && -d "$TEMP_CONTEXT" ]]; then
-        rm -rf "$TEMP_CONTEXT"
-    fi
-}
+echo "DEBUG: Using project root as build context: $BUILD_CONTEXT"
+echo "DEBUG: Dockerfile path: $DOCKERFILE_PATH"
 
+# For mvp_site, ensure world directory exists at project root
 if [[ $(basename "$TARGET_REALPATH") == "mvp_site" ]]; then
     # Check if world directory exists in mvp_site first (preferred)
     if [ -d "$TARGET_REALPATH/world" ] && [ -f "$TARGET_REALPATH/world/world_assiah_compressed.md" ]; then
-        echo "DEBUG: Found world directory in mvp_site, using it directly"
-        BUILD_CONTEXT="$TARGET_REALPATH"
+        echo "DEBUG: Found world directory in mvp_site, no copying needed"
     elif [ -n "$WORLD_DIR" ]; then
-        echo "Creating temporary build context for mvp_site..."
-        TEMP_CONTEXT=$(mktemp -d)
-        trap cleanup_temp_context EXIT
+        echo "DEBUG: Copying world directory for build..."
+        # Copy world to project root if not already there
+        if [ ! -d "$PROJECT_ROOT/world" ] || [ ! -f "$PROJECT_ROOT/world/world_assiah_compressed.md" ]; then
+            rm -rf "$PROJECT_ROOT/world"
+            mkdir -p "$PROJECT_ROOT/world"
+            rsync -a "${WORLD_DIR%/}/" "$PROJECT_ROOT/world/"
+            echo "DEBUG: World files copied from $WORLD_DIR to $PROJECT_ROOT/world"
 
-        rsync -a "$TARGET_REALPATH/" "$TEMP_CONTEXT/"
-        rm -rf "$TEMP_CONTEXT/world"
-        mkdir -p "$TEMP_CONTEXT/world"
-        rsync -a "${WORLD_DIR%/}/" "$TEMP_CONTEXT/world/"
-
-        BUILD_CONTEXT="$TEMP_CONTEXT"
-
-        echo "DEBUG: World files copied from $WORLD_DIR to $TEMP_CONTEXT/world"
-        find "$TEMP_CONTEXT/world" -mindepth 1 -maxdepth 1 | head -5
-
-        # Verify critical file exists
-        if [ ! -f "$TEMP_CONTEXT/world/world_assiah_compressed.md" ]; then
-            echo "ERROR: world_assiah_compressed.md not found after copy!"
-            echo "World directory contents:"
-            ls -la "$TEMP_CONTEXT/world/" || true
-            exit 1
+            # Verify critical file exists
+            if [ ! -f "$PROJECT_ROOT/world/world_assiah_compressed.md" ]; then
+                echo "ERROR: world_assiah_compressed.md not found after copy!"
+                echo "World directory contents:"
+                ls -la "$PROJECT_ROOT/world/" || true
+                exit 1
+            fi
         fi
     else
         echo "ERROR: No world directory found to copy!"
@@ -251,7 +245,7 @@ elif [ -z "$WORLD_DIR" ]; then
     echo "Deployment may fail if world files are required."
 fi
 
-deploy_common::submit_build "$BUILD_CONTEXT" "$IMAGE_TAG" "$IMAGE_TAG_LATEST"
+deploy_common::submit_build "$BUILD_CONTEXT" "$IMAGE_TAG" "$IMAGE_TAG_LATEST" "$DOCKERFILE_PATH"
 
 # --- Deploy Step ---
 echo "Deploying to Cloud Run as service '$SERVICE_NAME' with max instances set to ${MAX_INSTANCES}..."
