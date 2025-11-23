@@ -83,7 +83,7 @@ execution_mode: immediate
        # CRITICAL: Use double quotes for variable expansion, escape properly
        sed -i '/^<<<<<<< HEAD$/d' "$file"
        sed -i '/^=======$/d' "$file"
-       sed -i '/^>>>>>>> /d' "$file"
+       sed -i '/^>>>>>>> [^[:space:]]*$/d' "$file"
        # Deduplicate lines
        awk '!seen[$0]++' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
        git add "$file"
@@ -233,7 +233,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 3. **Commit with descriptive message**:
    ```
    test: add comprehensive TDD tests for {feature}
-   
+
    - Add {N} tests covering {feature} functionality from PR #{pr_number}
    - Test files: {list}
    - All {N} tests passing locally
@@ -414,4 +414,3 @@ This command integrates with `/tdd` command:
 - Runs before test addition (Phase 2)
 - Ensures clean merge state before TDD workflow
 - Maintains full audit trail in proof directory
-

@@ -14,8 +14,6 @@ import tempfile
 import os
 import subprocess
 import shutil
-from pathlib import Path
-from unittest.mock import patch, MagicMock
 
 
 class TestConflictDocumentationDirectoryCreation(unittest.TestCase):
@@ -28,9 +26,15 @@ class TestConflictDocumentationDirectoryCreation(unittest.TestCase):
         os.chdir(self.test_dir)
 
         # Initialize git repo for testing
-        subprocess.run(['git', 'init'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], check=True, capture_output=True)
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            check=True,
+            capture_output=True,
+        )
 
     def tearDown(self):
         """Clean up temporary directory."""
@@ -51,7 +55,7 @@ class TestConflictDocumentationDirectoryCreation(unittest.TestCase):
         # Verify directory exists at correct flat path
         self.assertTrue(os.path.isdir(conflict_docs_dir))
         # Verify it's flat (no nested feature/ directory)
-        self.assertFalse(os.path.exists("docs/conflicts/feature/test-branch1234"))
+        self.assertFalse(os.path.exists("docs/conflicts/feature"))
         # Verify expected sanitized path
         self.assertTrue(os.path.exists("docs/conflicts/feature-test-branch-pr1234"))
 
@@ -104,9 +108,15 @@ class TestConflictDocumentationTemplate(unittest.TestCase):
         os.chdir(self.test_dir)
 
         # Initialize git repo for testing
-        subprocess.run(['git', 'init'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], check=True, capture_output=True)
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            check=True,
+            capture_output=True,
+        )
 
     def tearDown(self):
         """Clean up temporary directory."""
@@ -168,12 +178,12 @@ import sys
 """
 
         summary_path = os.path.join(conflict_docs_dir, "conflict_summary.md")
-        with open(summary_path, 'w') as f:
+        with open(summary_path, "w") as f:
             f.write(summary_content)
 
         # Verify file exists and has required sections
         self.assertTrue(os.path.exists(summary_path))
-        with open(summary_path, 'r') as f:
+        with open(summary_path, "r") as f:
             content = f.read()
             self.assertIn("Merge Conflict Resolution Report", content)
             self.assertIn("Conflicts Resolved", content)
@@ -215,12 +225,12 @@ import sys
 """
 
         index_path = os.path.join(conflict_docs_dir, "index.md")
-        with open(index_path, 'w') as f:
+        with open(index_path, "w") as f:
             f.write(index_content)
 
         # Verify file exists and has required sections
         self.assertTrue(os.path.exists(index_path))
-        with open(index_path, 'r') as f:
+        with open(index_path, "r") as f:
             content = f.read()
             self.assertIn("Conflict Resolution Index", content)
             self.assertIn("PR", content)
@@ -240,15 +250,23 @@ class TestGitCommandsForDocumentation(unittest.TestCase):
         os.chdir(self.test_dir)
 
         # Initialize git repo for testing
-        subprocess.run(['git', 'init'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.name', 'Test User'], check=True, capture_output=True)
-        subprocess.run(['git', 'config', 'user.email', 'test@example.com'], check=True, capture_output=True)
+        subprocess.run(["git", "init"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "config", "user.name", "Test User"], check=True, capture_output=True
+        )
+        subprocess.run(
+            ["git", "config", "user.email", "test@example.com"],
+            check=True,
+            capture_output=True,
+        )
 
         # Create initial commit
-        with open('README.md', 'w') as f:
-            f.write('# Test Repo\n')
-        subprocess.run(['git', 'add', 'README.md'], check=True, capture_output=True)
-        subprocess.run(['git', 'commit', '-m', 'Initial commit'], check=True, capture_output=True)
+        with open("README.md", "w") as f:
+            f.write("# Test Repo\n")
+        subprocess.run(["git", "add", "README.md"], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "commit", "-m", "Initial commit"], check=True, capture_output=True
+        )
 
     def tearDown(self):
         """Clean up temporary directory."""
@@ -266,14 +284,12 @@ class TestGitCommandsForDocumentation(unittest.TestCase):
 
         # Create a test file
         test_file = os.path.join(conflict_docs_dir, "conflict_summary.md")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("# Test\n")
 
         # Add directory to git
         result = subprocess.run(
-            ['git', 'add', conflict_docs_dir],
-            capture_output=True,
-            text=True
+            ["git", "add", conflict_docs_dir], capture_output=True, text=True
         )
 
         # Verify no errors
@@ -281,9 +297,7 @@ class TestGitCommandsForDocumentation(unittest.TestCase):
 
         # Verify file is staged
         result = subprocess.run(
-            ['git', 'status', '--porcelain'],
-            capture_output=True,
-            text=True
+            ["git", "status", "--porcelain"], capture_output=True, text=True
         )
         self.assertIn(conflict_docs_dir, result.stdout)
 
@@ -298,16 +312,16 @@ class TestGitCommandsForDocumentation(unittest.TestCase):
 
         # Create a test file
         test_file = os.path.join(conflict_docs_dir, "conflict_summary.md")
-        with open(test_file, 'w') as f:
+        with open(test_file, "w") as f:
             f.write("# Test\n")
 
         # Add and commit
-        subprocess.run(['git', 'add', conflict_docs_dir], check=True, capture_output=True)
+        subprocess.run(
+            ["git", "add", conflict_docs_dir], check=True, capture_output=True
+        )
         commit_message = f"docs: Document conflict resolution for PR #{pr_number}"
         result = subprocess.run(
-            ['git', 'commit', '-m', commit_message],
-            capture_output=True,
-            text=True
+            ["git", "commit", "-m", commit_message], capture_output=True, text=True
         )
 
         # Verify commit succeeded
@@ -315,9 +329,7 @@ class TestGitCommandsForDocumentation(unittest.TestCase):
 
         # Verify commit message is correct
         result = subprocess.run(
-            ['git', 'log', '-1', '--pretty=%B'],
-            capture_output=True,
-            text=True
+            ["git", "log", "-1", "--pretty=%B"], capture_output=True, text=True
         )
         self.assertIn(commit_message, result.stdout)
 
@@ -385,7 +397,7 @@ No conflicts were found.
 """
 
         summary_path = os.path.join(conflict_docs_dir, "conflict_summary.md")
-        with open(summary_path, 'w') as f:
+        with open(summary_path, "w") as f:
             f.write(summary_content)
 
         self.assertTrue(os.path.exists(summary_path))
