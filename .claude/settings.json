@@ -1,4 +1,5 @@
 {
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "env": {
     "BASH_MAX_OUTPUT_LENGTH": "5000",
     "BASH_DEFAULT_TIMEOUT_MS": "60000",
@@ -259,7 +260,7 @@
     ],
     "UserPromptSubmit": [
       {
-        "matcher": "*",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -272,7 +273,7 @@
     "SessionStart": [],
     "Stop": [
       {
-        "matcher": "*",
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
@@ -323,16 +324,6 @@
         "-y",
         "@oevortex/ddg_search"
       ]
-    },
-    "playwright-mcp": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@playwright/mcp"
-      ],
-      "env": {
-        "PLAYWRIGHT_HEADLESS": "true"
-      }
     },
     "memory-server": {
       "command": "npx",

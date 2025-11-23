@@ -107,7 +107,7 @@ GITHUB_TOKEN_LOADED=${GITHUB_TOKEN_LOADED:-false}
 RENDER_API_KEY=${RENDER_API_KEY:-}
 PERPLEXITY_API_KEY=${PERPLEXITY_API_KEY:-}
 GROK_API_KEY=${GROK_API_KEY:-}
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
+PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-false}
 REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
 IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
 GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
@@ -289,10 +289,9 @@ declare -a ALL_SERVER_NAMES=(
     "context7"
     "sequential-thinking"
     "chrome-superpower"
-    "playwright-mcp"
+    # "playwright-mcp"  # Disabled by default - uncomment to enable
     "gemini-cli-mcp"
     "grok"
-    "ddg-search"
     "perplexity-ask"
     # "filesystem"  # Disabled by default - uncomment to enable
     "react-mcp"
@@ -1064,21 +1063,23 @@ else
     echo -e "${YELLOW}⚠️ Centralized token helper not found, falling back to legacy method${NC}"
     log_with_timestamp "WARNING: Token helper not found at $TOKEN_HELPER, using fallback"
 
-    # Fallback to legacy token loading
-    HOME_TOKEN_FILE="$HOME/.token"
-    if [ -f "$HOME_TOKEN_FILE" ]; then
-        echo -e "${GREEN}✅ Loading tokens from $HOME_TOKEN_FILE${NC}"
-        source "$HOME_TOKEN_FILE"
+    # Fallback: try environment variable first, then ~/.token file
+    if [ -n "$GITHUB_TOKEN" ]; then
+        echo -e "${GREEN}✅ Loading tokens from GITHUB_TOKEN environment variable${NC}"
+        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+    elif [ -f "$HOME/.token" ]; then
+        echo -e "${GREEN}✅ Loading tokens from $HOME/.token${NC}"
+        source "$HOME/.token"
         export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
     else
-        echo -e "${RED}❌ No token file found${NC}"
-        echo -e "${YELLOW}💡 Create ~/.token file with your tokens${NC}"
+        echo -e "${RED}❌ No GitHub token found${NC}"
+        echo -e "${YELLOW}💡 Set GITHUB_TOKEN environment variable or create ~/.token file${NC}"
         safe_exit 1
     fi
 fi
 
-# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility
-export GITHUB_PERSONAL_ACCESS_TOKEN
+# Ensure GITHUB_PERSONAL_ACCESS_TOKEN is exported for compatibility (already exported above)
+# export GITHUB_PERSONAL_ACCESS_TOKEN  # Removed: causes unbound variable error if not set
 
 # Function to check environment requirements
 check_github_requirements() {
@@ -1098,7 +1099,7 @@ check_github_requirements() {
     else
         echo -e "${YELLOW}⚠️ No GitHub token found${NC}"
         echo -e "${YELLOW}   Server will work for public repositories only${NC}"
-        echo -e "${YELLOW}   For private repos, add GITHUB_TOKEN to ~/.token file${NC}"
+        echo -e "${YELLOW}   For private repos, set GITHUB_TOKEN environment variable${NC}"
     fi
 }
 
@@ -1241,7 +1242,7 @@ setup_render_mcp_server() {
         else
             echo -e "${YELLOW}  ⚠️ Render API key not found - skipping cloud infrastructure server${NC}"
             echo -e "${YELLOW}  💡 Render server provides cloud infrastructure management with natural language${NC}"
-            echo -e "${YELLOW}  💡 Add RENDER_API_KEY to ~/.token file or environment to enable${NC}"
+            echo -e "${YELLOW}  💡 Set RENDER_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Render API key not found, skipping server installation"
             INSTALL_RESULTS["render"]="API_KEY_MISSING"
             # Don't count as failure since this is expected without API key
@@ -1312,10 +1313,8 @@ fi
 # Group servers that can be installed concurrently without conflicts
 
 # Environment flags for optional MCP servers (disabled by default for context optimization)
-PLAYWRIGHT_ENABLED=${PLAYWRIGHT_ENABLED:-true}
-REACT_MCP_ENABLED=${REACT_MCP_ENABLED:-false}
-IOS_SIMULATOR_ENABLED=${IOS_SIMULATOR_ENABLED:-false}
-GITHUB_MCP_ENABLED=${GITHUB_MCP_ENABLED:-false}
+# Note: PLAYWRIGHT_ENABLED, REACT_MCP_ENABLED, IOS_SIMULATOR_ENABLED, GITHUB_MCP_ENABLED
+# are declared at the top of this file (around line 110)
 
 declare -A BATCH_1=(
     ["sequential-thinking"]="@modelcontextprotocol/server-sequential-thinking"
@@ -1324,7 +1323,6 @@ declare -A BATCH_1=(
 
 declare -A BATCH_2=(
     ["gemini-cli-mcp"]="@yusukedev/gemini-cli-mcp"
-    ["ddg-search"]="@oevortex/ddg_search"
     ["grok"]="@chinchillaenterprises/mcp-grok"
 )
 
@@ -1970,10 +1968,11 @@ if should_install_server "chrome-superpower"; then
     install_chrome_superpower_mcp
 fi
 
-if should_install_server "playwright-mcp"; then
-    display_step "Installing Optional Playwright MCP Server..."
-    install_playwright_mcp
-fi
+# DISABLED: Playwright MCP Server (disabled by default - users can enable if needed)
+# if should_install_server "playwright-mcp"; then
+#     display_step "Installing Optional Playwright MCP Server..."
+#     install_playwright_mcp
+# fi
 
 # DISABLED: Memory MCP Server (not needed - using standard state management)
 # if should_install_server "memory-server"; then
@@ -2029,7 +2028,7 @@ fi
 #     fi
 # fi
 
-if should_install_server "gemini-cli-mcp" || should_install_server "ddg-search" || should_install_server "grok"; then
+if should_install_server "gemini-cli-mcp" || should_install_server "grok"; then
     display_step "Installing Batch 2 Servers (Parallel)..."
     install_batch_parallel BATCH_2 "Batch 2"
 fi
@@ -2040,15 +2039,9 @@ fi
 #     install_ios_simulator_mcp
 # fi
 
-if should_install_server "perplexity-ask" || should_install_server "ddg-search"; then
+if should_install_server "perplexity-ask"; then
     display_step "Setting up Web Search MCP Servers..."
-    echo -e "${BLUE}📋 Installing both free DuckDuckGo and premium Perplexity search servers${NC}"
-
-    if should_install_server "ddg-search"; then
-        echo -e "${BLUE}  → DuckDuckGo Web Search (Free) - installed in Batch 2${NC}"
-        echo -e "${GREEN}✅ DuckDuckGo search - completely free, no API key needed${NC}"
-        echo -e "${BLUE}📋 Features: Web search, content fetching, privacy-focused${NC}"
-    fi
+    echo -e "${BLUE}📋 Installing Perplexity search server${NC}"
 
     if should_install_server "perplexity-ask"; then
         echo -e "\n${BLUE}  → Perplexity AI Search (Premium)...${NC}"
@@ -2076,7 +2069,7 @@ if should_install_server "perplexity-ask" || should_install_server "ddg-search";
         else
             echo -e "${YELLOW}⚠️ Perplexity API key not found - skipping premium server${NC}"
             echo -e "${YELLOW}💡 Perplexity server provides AI-powered search with real-time web research${NC}"
-            echo -e "${YELLOW}💡 Add PERPLEXITY_API_KEY to ~/.token file to enable${NC}"
+            echo -e "${YELLOW}💡 Set PERPLEXITY_API_KEY environment variable to enable${NC}"
             log_with_timestamp "Perplexity API key not found, skipping premium server installation"
         fi
     fi

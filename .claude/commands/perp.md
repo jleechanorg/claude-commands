@@ -46,9 +46,8 @@ Use `CURRENT_DATE` when crafting queries (e.g., adding `2025` or "as of $CURRENT
 This command provides comprehensive multi-engine search by intelligently using whatever search tools are available:
 1. **Claude Default Search** (WebSearch) - Claude's built-in web search
 2. **Perplexity MCP** (`perplexity-mcp`) - Premium deep-research web search via `perplexity_search_web`
-3. **DuckDuckGo MCP** (`ddg-search`) - Free privacy-focused search
-4. **Gemini MCP** - AI development consultation and code assistance
-5. **Grok MCP** - Real-time intelligence and trending analysis from X.ai (always include when available)
+3. **Gemini MCP** - AI development consultation and code assistance
+4. **Grok MCP** - Real-time intelligence and trending analysis from X.ai (always include when available)
 
 ### Search Engine Details
 
@@ -150,7 +149,6 @@ This command provides comprehensive multi-engine search by intelligently using w
 2. Execute all available searches in parallel:
     - `WebSearch(query=user_query)`
     - If `perplexity-mcp` is present in `claude mcp list`, call `mcp__perplexity-mcp__perplexity_search_web(query=user_query, recency="month", return_citations=true, stream=false)`
-    - If `ddg-search` is present in `claude mcp list`, call `mcp__ddg-search__search(query=user_query)`
    - Gemini MCP with fallback:
      - Try `mcp__gemini-cli-mcp__gemini_chat_pro(message=user_query)`
      - If quota exceeded, fallback to `mcp__gemini-cli-mcp__gemini_chat_flash(message=user_query)`
