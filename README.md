@@ -880,7 +880,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 
 ## 📚 Version History
 
-### v1.1.0 (2025-11-22)
+### v1.7.0 (2025-11-22)
 
 **Export Statistics**:
 - **191 Commands**: Complete workflow orchestration system
@@ -910,7 +910,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-15)
+### v1.6.0 (2025-11-15)
 
 **Export Statistics**:
 - **186 Commands**: Complete workflow orchestration system
@@ -940,7 +940,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-11)
+### v1.5.0 (2025-11-11)
 
 **Export Statistics**:
 - **186 Commands**: Complete workflow orchestration system
@@ -970,7 +970,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-08)
+### v1.4.0 (2025-11-08)
 
 **Export Statistics**:
 - **186 Commands**: Complete workflow orchestration system
@@ -1000,7 +1000,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-11-07)
+### v1.3.0 (2025-11-07)
 
 **Export Statistics**:
 - **185 Commands**: Complete workflow orchestration system
@@ -1030,7 +1030,7 @@ The productivity gains available right now represent the largest arbitrage oppor
 - Clear separation between project-specific and generally useful scripts
 - Improved adaptation guidance for cross-project usage
 
-### v1.1.0 (2025-10-26)
+### v1.2.0 (2025-10-26)
 
 **Export Statistics**:
 - **182 Commands**: Complete workflow orchestration system
