@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: worldarchitect.ai
+    env: docker
+    dockerfilePath: ./mvp_site/Dockerfile
+    dockerContext: .
+    repo: https://github.com/jleechanorg/worldarchitect.ai
+    branch: main
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: RENDER
+        value: "true"

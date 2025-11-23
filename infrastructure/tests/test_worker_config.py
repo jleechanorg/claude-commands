@@ -89,6 +89,18 @@ class TestWorkerConfig(unittest.TestCase):
             result = worker_config.get_threads()
             self.assertEqual(result, 12)
 
+    def test_get_workers_for_render_environment(self):
+        """RED: Should return 1 worker for Render.com free tier (512MB limit)"""
+        with patch.dict('os.environ', {'RENDER': 'true'}, clear=True):
+            result = worker_config.get_workers()
+            self.assertEqual(result, 1)
+
+    def test_get_workers_render_override_with_gunicorn_workers(self):
+        """RED: GUNICORN_WORKERS should override Render default"""
+        with patch.dict('os.environ', {'RENDER': 'true', 'GUNICORN_WORKERS': '3'}, clear=True):
+            result = worker_config.get_workers()
+            self.assertEqual(result, 3)
+
 
 if __name__ == '__main__':
     unittest.main()
