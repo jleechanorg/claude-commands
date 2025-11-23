@@ -1070,7 +1070,12 @@ else
     elif [ -f "$HOME/.token" ]; then
         echo -e "${GREEN}✅ Loading tokens from $HOME/.token${NC}"
         source "$HOME/.token"
-        export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+        # Only export if GITHUB_TOKEN was defined in the file
+        if [ -n "${GITHUB_TOKEN:-}" ]; then
+            export GITHUB_PERSONAL_ACCESS_TOKEN="$GITHUB_TOKEN"
+        else
+            echo -e "${YELLOW}⚠️ ~/.token file exists but GITHUB_TOKEN not defined${NC}"
+        fi
     else
         echo -e "${RED}❌ No GitHub token found${NC}"
         echo -e "${YELLOW}💡 Set GITHUB_TOKEN environment variable or create ~/.token file${NC}"

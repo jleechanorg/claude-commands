@@ -318,13 +318,6 @@
         "@yusukedev/gemini-cli-mcp"
       ]
     },
-    "ddg-search": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@oevortex/ddg_search"
-      ]
-    },
     "memory-server": {
       "command": "npx",
       "args": [
