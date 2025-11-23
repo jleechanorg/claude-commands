@@ -79,12 +79,13 @@ execution_mode: immediate
    - **For each conflicted file**:
      - **learnings.md pattern**: Keep both sides, remove markers
        ```bash
-       # Remove conflict markers (use specific patterns to avoid false positives)
+       # Remove conflict markers (use permissive pattern to handle most branch names)
        # CRITICAL: Use double quotes for variable expansion, escape properly
-       # Pattern matches: <<<<<<< HEAD, =======, >>>>>>> branch-name (alphanumeric, dashes, underscores, slashes)
+       # Pattern matches: <<<<<<< HEAD, =======, >>>>>>> followed by any non-whitespace chars
+       # Note: [^[:space:]]* handles unicode chars, #, @, etc. in branch names
        sed -i '/^<<<<<<< HEAD$/d' "$file"
        sed -i '/^=======$/d' "$file"
-       sed -i '/^>>>>>>> [a-zA-Z0-9_./-]*$/d' "$file"
+       sed -i '/^>>>>>>> [^[:space:]]*$/d' "$file"
        # Deduplicate lines
        awk '!seen[$0]++' "$file" > "${file}.tmp" && mv "${file}.tmp" "$file"
        git add "$file"
