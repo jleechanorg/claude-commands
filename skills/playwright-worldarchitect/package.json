@@ -1,0 +1,23 @@
+{
+  "name": "playwright-worldarchitect-skill",
+  "version": "1.0.0",
+  "description": "Playwright browser automation skill for WorldArchitect.AI RPG testing",
+  "main": "run.js",
+  "scripts": {
+    "test": "node run.js",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "playwright",
+    "worldarchitect",
+    "rpg",
+    "testing",
+    "browser-automation"
+  ],
+  "author": "WorldArchitect.AI Team",
+  "license": "MIT"
+}

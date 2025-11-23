@@ -1,0 +1,21 @@
+{
+  "name": "playwright-worldarchitect",
+  "version": "1.0.0",
+  "description": "Claude Code Skill for WorldArchitect.AI browser automation - testing RPG campaigns, character creation, dice mechanics, and game interactions",
+  "author": {
+    "name": "WorldArchitect.AI Team"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/jleechanorg/worldarchitect.ai",
+  "keywords": [
+    "playwright",
+    "browser-automation",
+    "testing",
+    "e2e",
+    "rpg",
+    "dnd",
+    "worldarchitect",
+    "campaign-testing",
+    "game-testing"
+  ]
+}

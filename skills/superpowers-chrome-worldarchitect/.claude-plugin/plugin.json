@@ -1,0 +1,20 @@
+{
+  "name": "superpowers-chrome-worldarchitect",
+  "version": "1.0.0",
+  "description": "WorldArchitect.AI integration for obra/superpowers-chrome - lightweight browser automation via Chrome DevTools Protocol",
+  "author": {
+    "name": "WorldArchitect.AI Team"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/jleechanorg/worldarchitect.ai",
+  "keywords": [
+    "chrome",
+    "browser-automation",
+    "cdp",
+    "devtools-protocol",
+    "worldarchitect",
+    "rpg",
+    "testing",
+    "zero-dependencies"
+  ]
+}
